@@ -85,15 +85,15 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err := head.SetSlot(req.Slot); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set slot to calculate proposer index: %v", err)
 	}
-	idx, err := helpers.BeaconProposerIndex(head);
+	idx, err := helpers.BeaconProposerIndex(head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
 	}
 
 	blk := &ethpb.BeaconBlock{
-		Slot:       req.Slot,
-		ParentRoot: parentRoot[:],
-		StateRoot:  stateRoot,
+		Slot:          req.Slot,
+		ParentRoot:    parentRoot[:],
+		StateRoot:     stateRoot,
 		ProposerIndex: idx,
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:          eth1Data,

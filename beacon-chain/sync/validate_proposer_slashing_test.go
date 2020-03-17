@@ -75,10 +75,10 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: 1,
-			Slot:       0,
-			ParentRoot: someRoot[:],
-			StateRoot:  someRoot[:],
-			BodyRoot:   someRoot[:],
+			Slot:          0,
+			ParentRoot:    someRoot[:],
+			StateRoot:     someRoot[:],
+			BodyRoot:      someRoot[:],
 		},
 	}
 	signingRoot, err := ssz.HashTreeRoot(header1.Header)
@@ -90,10 +90,10 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: 1,
-			Slot:       0,
-			ParentRoot: someRoot2[:],
-			StateRoot:  someRoot2[:],
-			BodyRoot:   someRoot2[:],
+			Slot:          0,
+			ParentRoot:    someRoot2[:],
+			StateRoot:     someRoot2[:],
+			BodyRoot:      someRoot2[:],
 		},
 	}
 	signingRoot, err = ssz.HashTreeRoot(header2.Header)
@@ -103,8 +103,8 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 	header2.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
 
 	slashing := &ethpb.ProposerSlashing{
-		Header_1:      header1,
-		Header_2:      header2,
+		Header_1: header1,
+		Header_2: header2,
 	}
 	val, err := state.ValidatorAtIndex(1)
 	if err != nil {

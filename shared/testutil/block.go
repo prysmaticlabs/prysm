@@ -136,8 +136,8 @@ func GenerateFullBlock(
 	}
 
 	block := &ethpb.BeaconBlock{
-		Slot:       slot,
-		ParentRoot: parentRoot[:],
+		Slot:          slot,
+		ParentRoot:    parentRoot[:],
 		ProposerIndex: idx,
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:          eth1Data,
@@ -170,8 +170,8 @@ func GenerateProposerSlashingForValidator(
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
-			Slot:     bState.Slot(),
-			BodyRoot: []byte{0, 1, 0},
+			Slot:          bState.Slot(),
+			BodyRoot:      []byte{0, 1, 0},
 		},
 	}
 	root, err := ssz.HashTreeRoot(header1.Header)
@@ -188,8 +188,8 @@ func GenerateProposerSlashingForValidator(
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
-			Slot:     bState.Slot(),
-			BodyRoot: []byte{0, 2, 0},
+			Slot:          bState.Slot(),
+			BodyRoot:      []byte{0, 2, 0},
 		},
 	}
 	root, err = ssz.HashTreeRoot(header2.Header)
@@ -199,8 +199,8 @@ func GenerateProposerSlashingForValidator(
 	header2.Signature = priv.Sign(root[:], domain).Marshal()
 
 	return &ethpb.ProposerSlashing{
-		Header_1:      header1,
-		Header_2:      header2,
+		Header_1: header1,
+		Header_2: header2,
 	}, nil
 }
 

@@ -49,7 +49,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: proposerIdx,
-			Slot: 0,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -156,7 +156,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: 5669,
-			Slot: 0,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -207,7 +207,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: 5669,
-			Slot: 0,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -257,7 +257,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: 5669,
-			Slot: 0,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -408,13 +408,13 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					Slot: params.BeaconConfig().SlotsPerEpoch + 1,
+					Slot:          params.BeaconConfig().SlotsPerEpoch + 1,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					Slot: 0,
+					Slot:          0,
 				},
 			},
 		},
@@ -440,13 +440,13 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					Slot: 0,
+					Slot:          0,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					Slot: 0,
+					Slot:          0,
 				},
 			},
 		},
@@ -479,14 +479,14 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 0,
-					Slot: 0,
+					Slot:          0,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 0,
-					Slot: 0,
+					Slot:          0,
 				},
 				Signature: []byte("B"),
 			},
@@ -525,8 +525,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			Slot:      0,
-			StateRoot: []byte("A"),
+			Slot:          0,
+			StateRoot:     []byte("A"),
 		},
 	}
 	signingRoot, err := ssz.HashTreeRoot(header1.Header)
@@ -538,8 +538,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerIdx,
-			Slot:      0,
-			StateRoot: []byte("B"),
+			Slot:          0,
+			StateRoot:     []byte("B"),
 		},
 	}
 	signingRoot, err = ssz.HashTreeRoot(header2.Header)
@@ -550,8 +550,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			Header_1:      header1,
-			Header_2:      header2,
+			Header_1: header1,
+			Header_2: header2,
 		},
 	}
 

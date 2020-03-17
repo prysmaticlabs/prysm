@@ -204,14 +204,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
-					Slot: 1,
+					Slot:          1,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
-					Slot: 1,
+					Slot:          1,
 				},
 				Signature: []byte("B"),
 			},
@@ -331,8 +331,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
-			Slot:      1,
-			StateRoot: []byte("A"),
+			Slot:          1,
+			StateRoot:     []byte("A"),
 		},
 	}
 	signingRoot, err := ssz.HashTreeRoot(header1.Header)
@@ -344,8 +344,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
-			Slot:      1,
-			StateRoot: []byte("B"),
+			Slot:          1,
+			StateRoot:     []byte("B"),
 		},
 	}
 	signingRoot, err = ssz.HashTreeRoot(header2.Header)
@@ -356,8 +356,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			Header_1:      header1,
-			Header_2:      header2,
+			Header_1: header1,
+			Header_2: header2,
 		},
 	}
 	validators := beaconState.Validators()
@@ -595,14 +595,14 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					Slot: 0,
+					Slot:          0,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 1,
-					Slot: 0,
+					Slot:          0,
 				},
 				Signature: []byte("B"),
 			},

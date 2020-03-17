@@ -41,20 +41,20 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 				Header_1: &ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1212,
-						Slot:       10,
-						ParentRoot: someRoot[:],
-						StateRoot:  someRoot[:],
-						BodyRoot:   someRoot[:],
+						Slot:          10,
+						ParentRoot:    someRoot[:],
+						StateRoot:     someRoot[:],
+						BodyRoot:      someRoot[:],
 					},
 					Signature: make([]byte, 96),
 				},
 				Header_2: &ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
 						ProposerIndex: 1212,
-						Slot:       10,
-						ParentRoot: someRoot[:],
-						StateRoot:  someRoot[:],
-						BodyRoot:   someRoot[:],
+						Slot:          10,
+						ParentRoot:    someRoot[:],
+						StateRoot:     someRoot[:],
+						BodyRoot:      someRoot[:],
 					},
 					Signature: make([]byte, 96),
 				},
