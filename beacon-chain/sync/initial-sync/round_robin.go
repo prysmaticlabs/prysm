@@ -199,7 +199,6 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 }
 
 func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock) error {
-
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 	}
