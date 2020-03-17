@@ -290,7 +290,7 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 
 func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
 	roots := [][32]byte{}
-	rootCreater := func(input *pb.PendingAttestation) error {
+	rootCreator := func(input *pb.PendingAttestation) error {
 		newRoot, err := stateutil.PendingAttestationRoot(input)
 		if err != nil {
 			return err
@@ -300,7 +300,7 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 	}
 	if convertAll {
 		for i := range val {
-			err := rootCreater(val[i])
+			err := rootCreator(val[i])
 			if err != nil {
 				return nil, err
 			}
@@ -308,7 +308,7 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 		return roots, nil
 	}
 	for _, idx := range indices {
-		err := rootCreater(val[idx])
+		err := rootCreator(val[idx])
 		if err != nil {
 			return nil, err
 		}
