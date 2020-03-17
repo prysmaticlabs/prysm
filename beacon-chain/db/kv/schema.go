@@ -42,6 +42,7 @@ var (
 	justifiedCheckpointKey    = []byte("justified-checkpoint")
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
 	powchainDataKey           = []byte("powchain-data")
+	lastArchivedIndexKey      = []byte("last-archived")
 
 	// Migration bucket.
 	migrationBucket = []byte("migrations")

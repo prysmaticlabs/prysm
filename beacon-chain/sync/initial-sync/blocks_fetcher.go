@@ -24,8 +24,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const fetchRequestsBuffer = 8 // number of pending fetch requests
-
 var (
 	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
 	errFetcherCtxIsDone   = errors.New("fetcher's context is done, reinitialize")
@@ -74,7 +72,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	rateLimiter := leakybucket.NewCollector(
 		allowedBlocksPerSecond, /* rate */
 		allowedBlocksPerSecond, /* capacity */
-		false /* deleteEmptyBuckets */)
+		false                   /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:            ctx,
@@ -82,8 +80,8 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		headFetcher:    cfg.headFetcher,
 		p2p:            cfg.p2p,
 		rateLimiter:    rateLimiter,
-		fetchRequests:  make(chan *fetchRequestParams, fetchRequestsBuffer),
-		fetchResponses: make(chan *fetchRequestResponse, fetchRequestsBuffer),
+		fetchRequests:  make(chan *fetchRequestParams, queueMaxPendingRequests),
+		fetchResponses: make(chan *fetchRequestResponse, queueMaxPendingRequests),
 		quit:           make(chan struct{}),
 	}
 }

@@ -48,6 +48,8 @@ type Flags struct {
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
+	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
+	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -164,6 +166,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
+	}
+	if ctx.GlobalBool(newStateMgmt.Name) {
+		log.Warn("Enabling experimental state management service")
+		cfg.NewStateMgmt = true
+	}
+	if ctx.GlobalBool(enableInitSyncQueue.Name) {
+		log.Warn("Enabling initial sync queue")
+		cfg.EnableInitSyncQueue = true
 	}
 	Init(cfg)
 }

@@ -20,7 +20,8 @@ func TestResume(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 2)
 
-	service.beaconDB.SaveState(ctx, beaconState, root)
+	service.beaconDB.SaveArchivedPointState(ctx, beaconState, 1)
+	service.beaconDB.SaveLastArchivedIndex(ctx, 1)
 
 	resumeState, err := service.Resume(ctx, root)
 	if err != nil {
