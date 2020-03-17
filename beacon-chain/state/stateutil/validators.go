@@ -59,6 +59,49 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	return mixInLength(balancesRootsRoot, balancesRootsBufRoot), nil
 }
 
+// ValidatorRoot describes a method from which the hash tree root
+// of a validator is returned.
+func ValidatorRoot(validator *ethpb.Validator) ([32]byte, error) {
+	fieldRoots := [][32]byte{}
+	if validator != nil {
+		pubkey := bytesutil.ToBytes48(validator.PublicKey)
+		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
+		effectiveBalanceBuf := [32]byte{}
+		binary.LittleEndian.PutUint64(effectiveBalanceBuf[:8], validator.EffectiveBalance)
+		// Slashed.
+		slashBuf := [32]byte{}
+		if validator.Slashed {
+			slashBuf[0] = uint8(1)
+		} else {
+			slashBuf[0] = uint8(0)
+		}
+		activationEligibilityBuf := [32]byte{}
+		binary.LittleEndian.PutUint64(activationEligibilityBuf[:8], validator.ActivationEligibilityEpoch)
+
+		activationBuf := [32]byte{}
+		binary.LittleEndian.PutUint64(activationBuf[:8], validator.ActivationEpoch)
+
+		exitBuf := [32]byte{}
+		binary.LittleEndian.PutUint64(exitBuf[:8], validator.ExitEpoch)
+
+		withdrawalBuf := [32]byte{}
+		binary.LittleEndian.PutUint64(withdrawalBuf[:8], validator.WithdrawableEpoch)
+
+		// Public key.
+		pubKeyChunks, err := pack([][]byte{pubkey[:]})
+		if err != nil {
+			return [32]byte{}, err
+		}
+		pubKeyRoot, err := bitwiseMerkleize(pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots = [][32]byte{pubKeyRoot, withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
+			activationBuf, exitBuf, withdrawalBuf}
+	}
+	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+}
+
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][32]byte, len(validators))
