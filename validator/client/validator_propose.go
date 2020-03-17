@@ -2,7 +2,6 @@ package client
 
 // Validator client proposer functions.
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -85,13 +84,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
-	}
-
-	// Insert its own validator index to the beacon block proposal.
-	for _, duty := range v.duties.Duties {
-		if bytes.Equal(duty.PublicKey, pubKey[:]) {
-			b.ProposerIndex = duty.ValidatorIndex
-		}
 	}
 
 	if featureconfig.Get().ProtectProposer {

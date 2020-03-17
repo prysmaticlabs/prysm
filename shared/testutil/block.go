@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -110,7 +111,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 	newHeader.StateRoot = prevStateRoot[:]
-	parentRoot, err := ssz.HashTreeRoot(newHeader)
+	parentRoot, err := stateutil.BlockHeaderRoot(bState.LatestBlockHeader())
 	if err != nil {
 		return nil, err
 	}
@@ -129,9 +130,15 @@ func GenerateFullBlock(
 		return nil, err
 	}
 
+	idx, err := helpers.BeaconProposerIndex(bState)
+	if err != nil {
+		return nil, err
+	}
+
 	block := &ethpb.BeaconBlock{
 		Slot:       slot,
 		ParentRoot: parentRoot[:],
+		ProposerIndex: idx,
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:          eth1Data,
 			RandaoReveal:      reveal,
@@ -162,6 +169,7 @@ func GenerateProposerSlashingForValidator(
 ) (*ethpb.ProposerSlashing, error) {
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: idx,
 			Slot:     bState.Slot(),
 			BodyRoot: []byte{0, 1, 0},
 		},
@@ -179,6 +187,7 @@ func GenerateProposerSlashingForValidator(
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: idx,
 			Slot:     bState.Slot(),
 			BodyRoot: []byte{0, 2, 0},
 		},
@@ -190,7 +199,6 @@ func GenerateProposerSlashingForValidator(
 	header2.Signature = priv.Sign(root[:], domain).Marshal()
 
 	return &ethpb.ProposerSlashing{
-		ProposerIndex: idx,
 		Header_1:      header1,
 		Header_2:      header2,
 	}, nil
