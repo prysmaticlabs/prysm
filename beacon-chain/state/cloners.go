@@ -87,6 +87,7 @@ func CopyBeaconBlock(block *ethpb.BeaconBlock) *ethpb.BeaconBlock {
 	}
 	return &ethpb.BeaconBlock{
 		Slot:       block.Slot,
+		ProposerIndex: block.ProposerIndex,
 		ParentRoot: bytesutil.SafeCopyBytes(block.ParentRoot),
 		StateRoot:  bytesutil.SafeCopyBytes(block.StateRoot),
 		Body:       CopyBeaconBlockBody(block.Body),
@@ -128,7 +129,6 @@ func CopyProposerSlashing(slashing *ethpb.ProposerSlashing) *ethpb.ProposerSlash
 		return nil
 	}
 	return &ethpb.ProposerSlashing{
-		ProposerIndex: slashing.ProposerIndex,
 		Header_1:      CopySignedBeaconBlockHeader(slashing.Header_1),
 		Header_2:      CopySignedBeaconBlockHeader(slashing.Header_2),
 	}
@@ -155,6 +155,7 @@ func CopyBeaconBlockHeader(header *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHe
 	bodyRoot := bytesutil.SafeCopyBytes(header.BodyRoot)
 	return &ethpb.BeaconBlockHeader{
 		Slot:       header.Slot,
+		ProposerIndex: header.ProposerIndex,
 		ParentRoot: parentRoot[:],
 		StateRoot:  stateRoot[:],
 		BodyRoot:   bodyRoot[:],
