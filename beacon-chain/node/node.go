@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	initialsyncv1 "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync-v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -431,16 +432,25 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	is := initialsync.NewInitialSync(&initialsync.Config{
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		is := initialsync.NewInitialSync(&initialsync.Config{
+			DB:            b.db,
+			Chain:         chainService,
+			P2P:           b.fetchP2P(ctx),
+			StateNotifier: b,
+			BlockNotifier: b,
+		})
+		return b.services.RegisterService(is)
+	}
+
+	is := initialsyncv1.NewInitialSync(&initialsyncv1.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(ctx),
 		StateNotifier: b,
 		BlockNotifier: b,
 	})
-
 	return b.services.RegisterService(is)
-
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
