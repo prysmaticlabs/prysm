@@ -38,9 +38,9 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 		},
 		ProposerSlashings: []*ethpb.ProposerSlashing{
 			{
-				ProposerIndex: 1212,
 				Header_1: &ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
+						ProposerIndex: 1212,
 						Slot:       10,
 						ParentRoot: someRoot[:],
 						StateRoot:  someRoot[:],
@@ -50,6 +50,7 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 				},
 				Header_2: &ethpb.SignedBeaconBlockHeader{
 					Header: &ethpb.BeaconBlockHeader{
+						ProposerIndex: 1212,
 						Slot:       10,
 						ParentRoot: someRoot[:],
 						StateRoot:  someRoot[:],
