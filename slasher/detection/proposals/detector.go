@@ -27,6 +27,7 @@ func NewProposeDetector(db db.Database) *ProposeDetector {
 	}
 }
 
+// DetectDoublePropose detects double proposals given a block by looking in the db.
 func (dd *ProposeDetector) DetectDoublePropose(
 	ctx context.Context,
 	incomingBlk *ethpb.SignedBeaconBlockHeader,
