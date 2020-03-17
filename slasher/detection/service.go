@@ -130,7 +130,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
-			ds.submitAttesterSlashings(ctx, slashings, att.Data.Target.Epoch)
+			ds.submitAttesterSlashings(ctx, slashings)
 		}
 	}
 
