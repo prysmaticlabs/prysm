@@ -18,10 +18,6 @@ var (
 	lock        sync.RWMutex
 )
 
-func LayerCache(field string) [][][32]byte {
-	return layersCache[field]
-}
-
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
 // according to the Simple Serialize specification of eth2.
 func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
