@@ -36,7 +36,10 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		if err != nil {
 			log.WithError(err).Error("Could not receive block from beacon node")
 		}
-		log.WithField("slot", res.Block.Slot).Debug("Received block from beacon node")
+		if res == nil {
+			continue
+		}
+		log.WithField("slot", res.Block.Slot).Info("Received block from beacon node")
 		// We send the received block over the block feed.
 		bs.blockFeed.Send(res)
 	}
@@ -70,6 +73,9 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			log.WithError(err).Error("Could not receive attestations from beacon node")
 			continue
 		}
+		if res == nil {
+			continue
+		}
 		bs.receivedAttestationsBuffer <- res
 	}
 }
@@ -94,7 +100,9 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 				log.WithError(err).Error("Could not save indexed attestation")
 				continue
 			}
-			log.Infof("%d attestations for slot %d saved to slasher DB", len(collectedAtts), collectedAtts[0].Data.Slot)
+			log.WithFields(logrus.Fields{
+				"slot": collectedAtts[0].Data.Slot,
+			}).Infof("%d attestations saved to slasher DB", len(collectedAtts))
 			slasherNumAttestationsReceived.Add(float64(len(collectedAtts)))
 
 			// After saving, we send the received attestation over the attestation feed.
