@@ -12,34 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
-func init() {
-	fieldMap = make(map[fieldIndex]dataType)
-
-	// initialize our fixed sized arrays
-	fieldMap[blockRoots] = basicArray
-	fieldMap[stateRoots] = basicArray
-	fieldMap[randaoMixes] = basicArray
-
-	// initialize our composite arrays
-	fieldMap[eth1DataVotes] = compositeArray
-	fieldMap[validators] = compositeArray
-	fieldMap[previousEpochAttestations] = compositeArray
-	fieldMap[currentEpochAttestations] = compositeArray
-}
-
-// dataType signifies the data type of the field/
-type dataType int
-
-// list of current data types the state supports
-const (
-	basicArray dataType = iota
-	compositeArray
-)
-
-// fieldMap keeps track of each field
-// to its corresponding data type.
-var fieldMap map[fieldIndex]dataType
-
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
