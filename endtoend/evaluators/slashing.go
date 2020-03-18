@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/grpc"
@@ -84,14 +83,6 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		return err
 	}
 
-	domainResp, err := valClient.DomainData(ctx, &eth.DomainRequest{
-		Epoch:  attData.Target.Epoch,
-		Domain: params.BeaconConfig().DomainBeaconAttester[:],
-	})
-	if err != nil {
-		return err
-	}
-
 	valsToSlash := uint64(2)
 	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
 		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{committee[i]})) > 0 {
@@ -105,7 +96,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		att := &eth.Attestation{
 			AggregationBits: attBitfield,
 			Data:            attData,
-			Signature:       privKeys[committee[i]].Sign(dataRoot[:], domainResp.SignatureDomain).Marshal(),
+			Signature:       privKeys[committee[i]].Sign(dataRoot[:]).Marshal(),
 		}
 		for _, conn := range conns {
 			client := eth.NewBeaconNodeValidatorClient(conn)

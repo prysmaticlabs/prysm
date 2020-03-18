@@ -286,6 +286,7 @@ func ProcessBlockHeaderNoVerify(
 	if block.ProposerIndex != idx {
 		return nil, fmt.Errorf("proposer index: %d is different than calculated: %d", block.ProposerIndex, idx)
 	}
+	fmt.Println(beaconState.LatestBlockHeader())
 	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		return nil, err

@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +16,7 @@ import (
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
