@@ -94,3 +94,10 @@ message SigningRoot {
   // The domain for the particular object being signed.
   bytes domain = 2 [(gogoproto.moretags) = "ssz-size:\"8\""];
 }
+
+message ForkData {
+  // The current version of the fork.
+  bytes current_version = 1;
+  // The genesis validators root of the fork.
+  bytes genesis_validators_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+}
