@@ -35,13 +35,18 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
-
 	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+	}
+	// save the next set of assignments so as to determine subnet subscription
+	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
 	var committeeIndices []uint64
+	var nextCommitteeIndices []uint64
 	var validatorAssignments []*ethpb.DutiesResponse_Duty
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
@@ -68,15 +73,23 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.CommitteeIndex = ca.CommitteeIndex
 				committeeIndices = append(committeeIndices, ca.CommitteeIndex)
 			}
+			// we also cache the next set of assignments
+			ca, ok = nextCommitteeAssignments[idx]
+			if ok {
+				nextCommitteeIndices = append(nextCommitteeIndices, ca.CommitteeIndex)
+			}
+
 		} else {
 			vs := vs.validatorStatus(ctx, pubKey, s)
 			assignment.Status = vs.Status
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
+
 	}
 
 	if featureconfig.Get().EnableDynamicCommitteeSubnets {
 		cache.TrackedCommitteeIndices.AddIndices(committeeIndices, req.Epoch)
+		cache.TrackedCommitteeIndices.AddIndices(nextCommitteeIndices, req.Epoch+1)
 	}
 
 	return &ethpb.DutiesResponse{
