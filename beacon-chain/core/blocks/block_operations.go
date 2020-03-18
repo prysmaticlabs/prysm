@@ -233,7 +233,7 @@ func ProcessBlockHeader(
 
 	// Verify proposer signature.
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +353,7 @@ func ProcessRandao(
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -472,7 +472,7 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -827,7 +827,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 
-	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -1000,7 +1000,10 @@ func ProcessDeposit(
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	numVals := beaconState.NumValidators()
 	if !ok {
-		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit, nil)
+		domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, beaconState.GenesisValidatorRoot())
+		if err != nil {
+			return nil, err
+		}
 		depositSig := deposit.Data.Signature
 		if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 			// Ignore this error as in the spec pseudo code.
@@ -1110,7 +1113,7 @@ func ProcessVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		if err := VerifyExit(val, beaconState.Slot(), beaconState.Fork(), exit); err != nil {
+		if err := VerifyExit(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorRoot()); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
@@ -1161,7 +1164,7 @@ func ProcessVoluntaryExitsNoVerify(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit) error {
+func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}
@@ -1188,7 +1191,7 @@ func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, s
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
 	if err != nil {
 		return err
 	}

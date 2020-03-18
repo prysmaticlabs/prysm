@@ -253,7 +253,7 @@ func Domain(fork *pb.Fork, epoch uint64, domainType [bls.DomainByteLength]byte, 
 	}
 	var forkVersionArray [4]byte
 	copy(forkVersionArray[:], forkVersion[:4])
-	return bls.Domain(domainType, forkVersionArray, genesisRoot), nil
+	return ComputeDomain(domainType, forkVersionArray[:], genesisRoot)
 }
 
 // IsEligibleForActivationQueue checks if the validator is eligible to
