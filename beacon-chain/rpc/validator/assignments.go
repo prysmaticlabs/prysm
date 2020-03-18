@@ -39,7 +39,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
-	// save the next set of assignments so as to determine subnet subscription
+	// Query the next epoch assignments for committee subnet subscriptions.
 	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
