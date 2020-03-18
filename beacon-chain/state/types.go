@@ -112,7 +112,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			HistoricalRoots: b.state.HistoricalRoots,
 
 			// Everything else, too small to be concerned about, constant size.
-			GenesisValidatorsRoot: b.GenesisValidatorRoot(),
+			GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 			Fork:                        b.Fork(),
 			LatestBlockHeader:           b.LatestBlockHeader(),
 			Eth1Data:                    b.Eth1Data(),
