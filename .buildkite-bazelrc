@@ -55,3 +55,4 @@ test:fuzz --flaky_test_attempts=1
 # Expose test environment variables in CI
 test:fuzzit --test_env=GITHUB_REF
 test:fuzzit --test_env=GITHUB_SHA
+test:fuzzit --test_env=DOCKER_HOST
