@@ -232,3 +232,13 @@ func ReverseBytes32Slice(arr [][32]byte) [][32]byte {
 	}
 	return arr
 }
+
+
+// PadTo pads a byte slice to the given size. If the byte slice is larger than the given size, the
+// original slice is returned.
+func PadTo(b []byte, size int) []byte {
+	if len(b) > size {
+		return b
+	}
+	return append(b, make([]byte, size-len(b))...)
+}

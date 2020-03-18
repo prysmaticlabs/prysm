@@ -69,8 +69,8 @@ go_fuzz_test(
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
     func = "BeaconFuzzBlock",
     importpath = IMPORT_PATH,
-    deps = FUZZ_DEPS,
     input_size = 302,
+    deps = FUZZ_DEPS,
 )
 
 go_fuzz_test(
@@ -80,8 +80,8 @@ go_fuzz_test(
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
     func = "BeaconFuzzBlockHeader",
     importpath = IMPORT_PATH,
-    deps = FUZZ_DEPS,
     input_size = 302,
+    deps = FUZZ_DEPS,
 )
 
 go_fuzz_test(
@@ -129,6 +129,7 @@ go_test(
 
 go_library(
     name = "go_default_library",
+    testonly = 1,
     srcs = [
         "attestation_fuzz.go",
         "block_fuzz.go",

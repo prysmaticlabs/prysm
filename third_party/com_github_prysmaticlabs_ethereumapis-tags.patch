@@ -3,11 +3,11 @@ index c0fbe31..d5982ea 100644
 --- a/eth/v1alpha1/BUILD.bazel
 +++ b/eth/v1alpha1/BUILD.bazel
 @@ -4,6 +4,7 @@
- 
+
  load("@rules_proto//proto:defs.bzl", "proto_library")
  load("@rules_java//java:defs.bzl", "java_proto_library")
 +load("@prysm//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
- 
+
  ##############################################################################
  # Go
 @@ -25,7 +26,6 @@ proto_library(
@@ -49,11 +49,11 @@ index c0fbe31..d5982ea 100644
 +        "BeaconBlock",
 +        "SignedBeaconBlock",
 +        "Validator",
-+	"BeaconBlockHeader",
-+	"AttesterSlashing",
-+	"VoluntaryExit",
-+	"Deposit",
-+	"ProposerSlashing",
++        "BeaconBlockHeader",
++        "AttesterSlashing",
++        "VoluntaryExit",
++        "Deposit",
++        "ProposerSlashing",
 +    ],
 +)
 +
@@ -75,7 +75,7 @@ index c0fbe31..d5982ea 100644
          "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
      ],
 @@ -60,9 +96,12 @@ go_proto_library(
- 
+
  go_library(
      name = "go_default_library",
 +    srcs = [":ssz_generated_files"],
@@ -85,7 +85,7 @@ index c0fbe31..d5982ea 100644
 +    deps = SSZ_DEPS,
 +    gc_goopts = ["-d=libfuzzer"],
  )
- 
+
  protoc_gen_swagger(
 diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
 index b177b76..28b4b46 100644
