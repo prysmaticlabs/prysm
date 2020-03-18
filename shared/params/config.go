@@ -26,6 +26,9 @@ type BeaconChainConfig struct {
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain.
 	TargetAggregatorsPerCommittee  uint64 // TargetAggregatorsPerCommittee defines the number of aggregators inside one committee.
+	HysteresisQuotient             uint64 // HysteresisQuotient defines the hysteresis quotient for effective balance calculations.
+	HysteresisDownwardMultiplier   uint64 // HysteresisDownwardMultiplier defines the hysteresis downward multiplier for effective balance calculations.
+	HysteresisUpwardMultiplier     uint64 // HysteresisUpwardMultiplier defines the hysteresis upward multiplier for effective balance calculations.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -117,6 +120,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinGenesisActiveValidatorCount: 16384,
 	MinGenesisTime:                 0, // Zero until a proper time is decided.
 	TargetAggregatorsPerCommittee:  16,
+	HysteresisQuotient:             4,
+	HysteresisDownwardMultiplier:   1,
+	HysteresisUpwardMultiplier:     5,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,
