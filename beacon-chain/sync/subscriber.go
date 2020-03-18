@@ -90,16 +90,16 @@ func (r *Service) registerSubscribers() {
 		r.attesterSlashingSubscriber,
 	)
 	if featureconfig.Get().EnableDynamicCommitteeSubnets {
-		r.subscribeDynamic(
+		r.subscribeDynamicWithSubnets(
 			"/eth2/committee_index%d_beacon_attestation",
-			r.committeesCount,                           /* determineSubsLen */
+			r.committeeIndices,                          /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)
 	} else {
-		r.subscribeDynamicWithSubnets(
+		r.subscribeDynamic(
 			"/eth2/committee_index%d_beacon_attestation",
-			r.committeeIndices,                          /* determineSubsLen */
+			r.committeesCount,                           /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)
