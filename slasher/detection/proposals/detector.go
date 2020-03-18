@@ -32,7 +32,7 @@ func (dd *ProposeDetector) DetectDoublePropose(
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoublePropose")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(incomingBlk.Header.Slot)
-	//TODO: #5119 remove constand and use input from block header.
+	//TODO(#5119) remove constand and use input from block header.
 	//validatorIdx:=blk.Header.ProposerIndex
 	proposerIdx := uint64(0)
 	bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, proposerIdx)
