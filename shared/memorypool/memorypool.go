@@ -10,10 +10,16 @@ import (
 // for 2d byte slices.
 var DoubleByteSlicePool = new(sync.Pool)
 
+// BlockRootsMemoryPool represents the memory pool
+// for block roots trie.
 var BlockRootsMemoryPool = new(sync.Pool)
 
+// StateRootsMemoryPool represents the memory pool
+// for state roots trie.
 var StateRootsMemoryPool = new(sync.Pool)
 
+// RandaoMixesMemoryPool represents the memory pool
+// for randao mixes trie.
 var RandaoMixesMemoryPool = new(sync.Pool)
 
 // GetDoubleByteSlice retrieves the 2d byte slice of
@@ -86,7 +92,7 @@ func GetStateRootsTrie(size int) [][]*[32]byte {
 	return append(byteSlice, make([][]*[32]byte, size-len(byteSlice))...)
 }
 
-// PutTripleByteSliceRoots places the provided 2d byte slice
+// PutStateRootsTrie places the provided trie
 // in the memory pool.
 func PutStateRootsTrie(data [][]*[32]byte) {
 	if featureconfig.Get().EnableByteMempool {

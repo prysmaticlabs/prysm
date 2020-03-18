@@ -4,17 +4,44 @@ import (
 	"reflect"
 	"sync"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/pkg/errors"
-
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
+func init() {
+	fieldMap = make(map[fieldIndex]dataType)
+
+	// initialize our fixed sized arrays
+	fieldMap[blockRoots] = basicArray
+	fieldMap[stateRoots] = basicArray
+	fieldMap[randaoMixes] = basicArray
+
+	// initialize our composite arrays
+	fieldMap[eth1DataVotes] = compositeArray
+	fieldMap[validators] = compositeArray
+	fieldMap[previousEpochAttestations] = compositeArray
+	fieldMap[currentEpochAttestations] = compositeArray
+}
+
+// dataType signifies the data type of the field/
+type dataType int
+
+// list of current data types the state supports
+const (
+	basicArray dataType = iota
+	compositeArray
+)
+
+// fieldMap keeps track of each field
+// to its corresponding data type.
+var fieldMap map[fieldIndex]dataType
+
+// FieldTrie is the representation of the representative
+// trie of the particular field.
 type FieldTrie struct {
 	*sync.Mutex
 	*reference
@@ -22,6 +49,9 @@ type FieldTrie struct {
 	field       fieldIndex
 }
 
+// NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
+// trie according to the given parameters. Depending on whether the field is a basic/composite array
+// which is either fixed/variable length, it will appropriately determine the trie.
 func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
@@ -59,6 +89,9 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 
 }
 
+// RecomputeTrie rebuilds the affected branches in the trie according to the provided
+// changed indices and elements. This recomputes the trie according to the particular
+// field the trie is based on.
 func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]byte, error) {
 	f.Lock()
 	defer f.Unlock()
@@ -90,6 +123,8 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 
 }
 
+// CopyTrie copies the references to the elements the trie
+// is built on.
 func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
@@ -126,6 +161,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	}
 }
 
+// TrieRoot returns the corresponding root of the trie.
 func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 	datType, ok := fieldMap[f.field]
 	if !ok {
@@ -142,6 +178,7 @@ func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 	}
 }
 
+// this converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case blockRoots, stateRoots, randaoMixes:
@@ -253,7 +290,7 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 
 func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
 	roots := [][32]byte{}
-	rootCreater := func(input *pb.PendingAttestation) error {
+	rootCreator := func(input *pb.PendingAttestation) error {
 		newRoot, err := stateutil.PendingAttestationRoot(input)
 		if err != nil {
 			return err
@@ -263,7 +300,7 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 	}
 	if convertAll {
 		for i := range val {
-			err := rootCreater(val[i])
+			err := rootCreator(val[i])
 			if err != nil {
 				return nil, err
 			}
@@ -271,7 +308,7 @@ func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, co
 		return roots, nil
 	}
 	for _, idx := range indices {
-		err := rootCreater(val[idx])
+		err := rootCreator(val[idx])
 		if err != nil {
 			return nil, err
 		}
