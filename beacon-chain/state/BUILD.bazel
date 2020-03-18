@@ -4,8 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cloners.go",
+        "field_trie.go",
         "getters.go",
         "setters.go",
+        "state_trie.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
@@ -20,9 +22,11 @@ go_library(
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/memorypool:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/sliceutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_protolambda_zssz//merkle:go_default_library",
@@ -34,6 +38,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "field_trie_test.go",
         "getters_test.go",
         "references_test.go",
         "types_test.go",
@@ -45,6 +50,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",

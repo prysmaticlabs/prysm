@@ -133,6 +133,10 @@ var (
 		Name:  "enable-initial-sync-queue",
 		Usage: "Enables concurrent fetching and processing of blocks on initial sync.",
 	}
+	enableFieldTrie = cli.BoolFlag{
+		Name:  "enable-state-field-trie",
+		Usage: "Enables the usage of state field tries to compute the state root",
+	}
 )
 
 // Deprecated flags list.
@@ -313,6 +317,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	broadcastSlashingFlag,
 	newStateMgmt,
 	enableInitSyncQueue,
+	enableFieldTrie,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
