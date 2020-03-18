@@ -99,7 +99,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
 			StartSlot:     s.chain.HeadSlot() + 1,
-			Count:         mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, 256),
+			Count:         mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, blockBatchSize),
 			Step:          1,
 		}
 
