@@ -122,7 +122,7 @@ def go_fuzz_test(
 
     native.cc_test(
         name = name + "_with_libfuzzer",
-        linkopts = ["-fsanitize=fuzzer"],
+        linkopts = ["-fsanitize=fuzzer,address"],
         linkstatic = 1,
         testonly = 1,
         srcs = [":" + name],
