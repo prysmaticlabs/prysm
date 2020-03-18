@@ -45,8 +45,8 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
-	var committeeIndices []uint64
-	var nextCommitteeIndices []uint64
+	var committeeIDs []uint64
+	var nextCommitteeIDs []uint64
 	var validatorAssignments []*ethpb.DutiesResponse_Duty
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
@@ -71,12 +71,12 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
-				committeeIndices = append(committeeIndices, ca.CommitteeIndex)
+				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
 			// Save the next epoch assignments.
 			ca, ok = nextCommitteeAssignments[idx]
 			if ok {
-				nextCommitteeIndices = append(nextCommitteeIndices, ca.CommitteeIndex)
+				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
 			}
 
 		} else {
@@ -88,8 +88,8 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	}
 
 	if featureconfig.Get().EnableDynamicCommitteeSubnets {
-		cache.TrackedCommitteeIndices.AddIndices(committeeIndices, req.Epoch)
-		cache.TrackedCommitteeIndices.AddIndices(nextCommitteeIndices, req.Epoch+1)
+		cache.CommitteeIDs.AddIDs(committeeIDs, req.Epoch)
+		cache.CommitteeIDs.AddIDs(nextCommitteeIDs, req.Epoch+1)
 	}
 
 	return &ethpb.DutiesResponse{

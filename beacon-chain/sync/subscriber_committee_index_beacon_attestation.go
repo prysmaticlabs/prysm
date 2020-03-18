@@ -45,6 +45,6 @@ func (r *Service) committeesCount() int {
 
 func (r *Service) committeeIndices() []uint64 {
 	currentEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
-	return sliceutil.UnionUint64(cache.TrackedCommitteeIndices.GetIndices(currentEpoch),
-		cache.TrackedCommitteeIndices.GetIndices(currentEpoch+1))
+	return sliceutil.UnionUint64(cache.CommitteeIDs.GetIDs(currentEpoch),
+		cache.CommitteeIDs.GetIDs(currentEpoch+1))
 }
