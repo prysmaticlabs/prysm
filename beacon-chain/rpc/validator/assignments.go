@@ -73,7 +73,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.CommitteeIndex = ca.CommitteeIndex
 				committeeIndices = append(committeeIndices, ca.CommitteeIndex)
 			}
-			// we also cache the next set of assignments
+			// Save the next epoch assignments.
 			ca, ok = nextCommitteeAssignments[idx]
 			if ok {
 				nextCommitteeIndices = append(nextCommitteeIndices, ca.CommitteeIndex)
