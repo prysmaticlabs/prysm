@@ -21,6 +21,10 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
+	enableDynamicCommitteeSubnets = cli.BoolFlag{
+		Name:  "enable-dynamic-committee-subnets",
+		Usage: "Enable dynamic committee attestation subnets.",
+	}
 	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -293,6 +297,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
+	enableDynamicCommitteeSubnets,
 	enableSSZCache,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
@@ -325,4 +330,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-initial-sync-queue",
+	"--enable-dynamic-committee-subnets",
 }
