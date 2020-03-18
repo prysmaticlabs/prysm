@@ -15,6 +15,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -32,6 +33,12 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
+
+	// If attestation committee subnets are enabled, we track the committee
+	// index into a cache.
+	if featureconfig.Get().EnableDynamicCommitteeSubnets {
+		cache.CommitteeIDs.AddIDs([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
+	}
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
@@ -121,6 +128,12 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation) (*ethpb.AttestResponse, error) {
 	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
+	}
+
+	// If attestation committee subnets are enabled, we track the committee
+	// index into a cache.
+	if featureconfig.Get().EnableDynamicCommitteeSubnets {
+		cache.CommitteeIDs.AddIDs([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
 	}
 
 	root, err := ssz.HashTreeRoot(att.Data)
