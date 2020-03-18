@@ -186,7 +186,12 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
-	randaoReveal, err := v.keyManager.Sign(pubKey, sigRoot)
+	var randaoReveal *bls.Signature
+	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+		randaoReveal, err = protectingKeymanager.SignGeneric(pubKey, sigRoot, bytesutil.ToBytes32(domain.SignatureDomain))
+	} else {
+		randaoReveal, err = v.keyManager.Sign(pubKey, sigRoot)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}
@@ -211,7 +216,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 			ParentRoot: b.ParentRoot,
 			BodyRoot:   bodyRoot[:],
 		}
-		sig, err = protectingKeymanager.SignProposal(pubKey, domain.SignatureDomain, blockHeader)
+		sig, err = protectingKeymanager.SignProposal(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), blockHeader)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
