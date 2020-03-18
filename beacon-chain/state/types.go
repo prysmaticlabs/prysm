@@ -79,6 +79,9 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = &reference{refs: 1}
 	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 
+	// Make sure genesis root by default is zero hash.
+	b.state.GenesisValidatorsRoot = b.GenesisValidatorRoot()
+
 	return b, nil
 }
 

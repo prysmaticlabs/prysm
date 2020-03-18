@@ -9,6 +9,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // EffectiveBalance returns the effective balance of the
@@ -134,6 +135,10 @@ func (b *BeaconState) GenesisTime() uint64 {
 func (b *BeaconState) GenesisValidatorRoot() []byte {
 	if !b.HasInnerState() {
 		return nil
+	}
+
+	if b.state.GenesisValidatorsRoot == nil {
+		return params.BeaconConfig().ZeroHash[:]
 	}
 
 	root := make([]byte, 32)

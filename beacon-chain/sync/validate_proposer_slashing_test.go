@@ -63,6 +63,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		state.Fork(),
 		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
+		state.GenesisValidatorRoot(),
 	)
 	if err != nil {
 		t.Fatal(err)
