@@ -322,7 +322,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
-	"--enable-dynamic-committee-subnets",
 	"--enable-ssz-cache",
 	"--cache-filtered-block-tree",
 	"--enable-skip-slots-cache",
