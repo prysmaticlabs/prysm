@@ -45,7 +45,7 @@ func BenchmarkHashTreeRootState_Custom_512(b *testing.B) {
 		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
 			b.Fatal(err)
 		}
-	}
+}
 }
 
 func BenchmarkHashTreeRootState_Custom_16384(b *testing.B) {

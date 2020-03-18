@@ -20,6 +20,7 @@ type fieldIndex int
 // of the beacon state.
 const (
 	genesisTime fieldIndex = iota
+	genesisValidatorRoot
 	slot
 	fork
 	latestBlockHeader
@@ -48,6 +49,16 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 
 	b.state.GenesisTime = val
 	b.markFieldAsDirty(genesisTime)
+	return nil
+}
+
+// SetGenesisValidatorRoot for the beacon state.
+func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.GenesisValidatorsRoot = val
+	b.markFieldAsDirty(genesisValidatorRoot)
 	return nil
 }
 

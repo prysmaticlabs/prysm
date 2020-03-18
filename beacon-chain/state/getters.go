@@ -93,6 +93,7 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	}
 	return &pbp2p.BeaconState{
 		GenesisTime:                 b.GenesisTime(),
+		GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 		Slot:                        b.Slot(),
 		Fork:                        b.Fork(),
 		LatestBlockHeader:           b.LatestBlockHeader(),
@@ -127,6 +128,17 @@ func (b *BeaconState) GenesisTime() uint64 {
 		return 0
 	}
 	return b.state.GenesisTime
+}
+
+// GenesisValidatorRoot of the beacon state.
+func (b *BeaconState) GenesisValidatorRoot() []byte {
+	if !b.HasInnerState() {
+		return nil
+	}
+
+	root := make([]byte, 32)
+	copy(root, b.state.GenesisValidatorsRoot)
+	return root
 }
 
 // Slot of the current beacon chain state.
