@@ -145,7 +145,7 @@ func (b *BeaconState) Copy() *BeaconState {
 	}
 
 	for field, ref := range b.sharedFieldReferences {
-		ref.refs++
+		ref.AddRef()
 		dst.sharedFieldReferences[field] = ref
 	}
 

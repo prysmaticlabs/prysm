@@ -25,6 +25,7 @@ func init() {
 
 type fieldIndex int
 
+// dataType signifies the data type of the field/
 type dataType int
 
 // Below we define a set of useful enum values for the field
@@ -55,11 +56,14 @@ const (
 	finalizedCheckpoint
 )
 
+// list of current data types the state supports
 const (
 	basicArray dataType = iota
 	compositeArray
 )
 
+// fieldMap keeps track of each field
+// to its corresponding data type.
 var fieldMap map[fieldIndex]dataType
 
 // Reference structs are shared across BeaconState copies to understand when the state must use

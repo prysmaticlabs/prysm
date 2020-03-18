@@ -95,7 +95,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		// Copy on write since this is a shared array.
 		r = b.BlockRoots()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -148,7 +148,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		r = b.StateRoots()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -225,7 +225,7 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	votes := b.state.Eth1DataVotes
 	if b.sharedFieldReferences[eth1DataVotes].refs > 1 {
 		votes = b.Eth1DataVotes()
-		b.sharedFieldReferences[eth1DataVotes].refs--
+		b.sharedFieldReferences[eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -283,7 +283,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		v = b.Validators()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -325,7 +325,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		v = b.Validators()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -385,7 +385,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	bals := b.state.Balances
 	if b.sharedFieldReferences[balances].refs > 1 {
 		bals = b.Balances()
-		b.sharedFieldReferences[balances].refs--
+		b.sharedFieldReferences[balances].MinusRef()
 		b.sharedFieldReferences[balances] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -431,7 +431,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
 		mixes = b.RandaoMixes()
-		b.sharedFieldReferences[randaoMixes].refs--
+		b.sharedFieldReferences[randaoMixes].MinusRef()
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -479,7 +479,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 
 	if b.sharedFieldReferences[slashings].refs > 1 {
 		s = b.Slashings()
-		b.sharedFieldReferences[slashings].refs--
+		b.sharedFieldReferences[slashings].MinusRef()
 		b.sharedFieldReferences[slashings] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -541,7 +541,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	roots := b.state.HistoricalRoots
 	if b.sharedFieldReferences[historicalRoots].refs > 1 {
 		roots = b.HistoricalRoots()
-		b.sharedFieldReferences[historicalRoots].refs--
+		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -565,7 +565,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].refs > 1 {
 		atts = b.CurrentEpochAttestations()
-		b.sharedFieldReferences[currentEpochAttestations].refs--
+		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -589,7 +589,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
 		atts = b.PreviousEpochAttestations()
-		b.sharedFieldReferences[previousEpochAttestations].refs--
+		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -614,7 +614,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
 		vals = b.Validators()
-		b.sharedFieldReferences[validators].refs--
+		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -639,7 +639,7 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	bals := b.state.Balances
 	if b.sharedFieldReferences[balances].refs > 1 {
 		bals = b.Balances()
-		b.sharedFieldReferences[balances].refs--
+		b.sharedFieldReferences[balances].MinusRef()
 		b.sharedFieldReferences[balances] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
