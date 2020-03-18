@@ -331,4 +331,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-initial-sync-queue",
+	"--enable-dynamic-committee-subnets",
 }
