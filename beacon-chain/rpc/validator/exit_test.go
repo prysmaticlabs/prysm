@@ -68,7 +68,7 @@ func TestSub(t *testing.T) {
 			ValidatorIndex: validatorIndex,
 		},
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}

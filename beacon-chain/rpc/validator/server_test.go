@@ -153,7 +153,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
 	}
-	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit, nil)
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := helpers.ComputeSigningRoot(depData, domain)
 	if err != nil {
 		t.Error(err)
