@@ -101,8 +101,9 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 				continue
 			}
 			log.WithFields(logrus.Fields{
-				"slot": collectedAtts[0].Data.Slot,
-			}).Infof("%d attestations saved to slasher DB", len(collectedAtts))
+				"amountSaved": len(collectedAtts),
+				"slot":        collectedAtts[0].Data.Slot,
+			}).Info("Attestations saved to slasher DB")
 			slasherNumAttestationsReceived.Add(float64(len(collectedAtts)))
 
 			// After saving, we send the received attestation over the attestation feed.
