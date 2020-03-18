@@ -31,8 +31,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	initialsyncold "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync-old"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -69,6 +71,7 @@ type BeaconNode struct {
 	blockFeed       *event.Feed
 	opFeed          *event.Feed
 	forkChoiceStore forkchoice.ForkChoicer
+	stateGen        *stategen.State
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -103,6 +106,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
 	}
+
+	beacon.startStateGen()
 
 	if err := beacon.registerP2P(ctx); err != nil {
 		return nil, err
@@ -258,6 +263,10 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	return nil
 }
 
+func (b *BeaconNode) startStateGen() {
+	b.stateGen = stategen.New(b.db)
+}
+
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodeAddrs := strings.Split(ctx.GlobalString(cmd.BootstrapNode.Name), ",")
@@ -336,6 +345,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
 		OpsService:        opsService,
+		StateGen:          b.stateGen,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -395,9 +405,19 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var initSync *initialsync.Service
-	if err := b.services.FetchService(&initSync); err != nil {
-		return err
+	var initSync prysmsync.Checker
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		var initSyncTmp *initialsync.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		initSync = initSyncTmp
+	} else {
+		var initSyncTmp *initialsyncold.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		initSync = initSyncTmp
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
@@ -422,16 +442,25 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	is := initialsync.NewInitialSync(&initialsync.Config{
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		is := initialsync.NewInitialSync(&initialsync.Config{
+			DB:            b.db,
+			Chain:         chainService,
+			P2P:           b.fetchP2P(ctx),
+			StateNotifier: b,
+			BlockNotifier: b,
+		})
+		return b.services.RegisterService(is)
+	}
+
+	is := initialsyncold.NewInitialSync(&initialsyncold.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(ctx),
 		StateNotifier: b,
 		BlockNotifier: b,
 	})
-
 	return b.services.RegisterService(is)
-
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
@@ -445,9 +474,19 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *initialsync.Service
-	if err := b.services.FetchService(&syncService); err != nil {
-		return err
+	var syncService prysmsync.Checker
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		var initSyncTmp *initialsync.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		syncService = initSyncTmp
+	} else {
+		var initSyncTmp *initialsyncold.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		syncService = initSyncTmp
 	}
 
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
@@ -503,6 +542,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		OperationNotifier:     b,
 		SlasherCert:           slasherCert,
 		SlasherProvider:       slasherProvider,
+		StateGen:              b.stateGen,
 	})
 
 	return b.services.RegisterService(rpcService)

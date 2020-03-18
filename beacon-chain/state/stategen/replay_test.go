@@ -352,8 +352,8 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:         db,
-		lastArchivedSlot: 128,
+		beaconDB:  db,
+		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -385,28 +385,28 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:         db,
-		lastArchivedSlot: 128,
+		beaconDB:  db,
+		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 5}}
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 5}}
 	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
 		t.Fatal(err)
 	}
-	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 10}}
+	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 10}}
 	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
-	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 20}}
+	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 20}}
 	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
 		t.Fatal(err)
 	}
 
-	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+100)
+	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.splitInfo.slot+100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if savedSlot != s.lastArchivedSlot+20 {
+	if savedSlot != s.splitInfo.slot+20 {
 		t.Error("Did not save correct slot")
 	}
 	wantedRoot, _ := ssz.HashTreeRoot(b3.Block)
@@ -420,8 +420,8 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:         db,
-		lastArchivedSlot: 128,
+		beaconDB:  db,
+		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
@@ -429,7 +429,7 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, slot, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+1)
+	r, slot, err := s.lastSavedBlock(ctx, s.splitInfo.slot+1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -443,8 +443,8 @@ func TestLastSavedState_Genesis(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:         db,
-		lastArchivedSlot: 128,
+		beaconDB:  db,
+		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -473,32 +473,32 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:         db,
-		lastArchivedSlot: 128,
+		beaconDB:  db,
+		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 5}}
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 5}}
 	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
 		t.Fatal(err)
 	}
-	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 10}}
+	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 10}}
 	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
 	b2Root, _ := ssz.HashTreeRoot(b2.Block)
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{Slot: s.lastArchivedSlot + 10})
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{Slot: s.splitInfo.slot + 10})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := s.beaconDB.SaveState(ctx, st, b2Root); err != nil {
 		t.Fatal(err)
 	}
-	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 20}}
+	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.splitInfo.slot + 20}}
 	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
 		t.Fatal(err)
 	}
 
-	savedRoot, err := s.lastSavedState(ctx, s.lastArchivedSlot+100)
+	savedRoot, err := s.lastSavedState(ctx, s.splitInfo.slot+100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -512,8 +512,8 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB:         db,
-		lastArchivedSlot: 128,
+		beaconDB:  db,
+		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
@@ -521,7 +521,7 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := s.lastSavedState(ctx, s.lastArchivedSlot+1)
+	r, err := s.lastSavedState(ctx, s.splitInfo.slot+1)
 	if err != nil {
 		t.Fatal(err)
 	}
