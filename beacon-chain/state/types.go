@@ -112,6 +112,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			HistoricalRoots: b.state.HistoricalRoots,
 
 			// Everything else, too small to be concerned about, constant size.
+			GenesisValidatorsRoot: b.GenesisValidatorRoot(),
 			Fork:                        b.Fork(),
 			LatestBlockHeader:           b.LatestBlockHeader(),
 			Eth1Data:                    b.Eth1Data(),
@@ -223,6 +224,8 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return stateutil.Uint64Root(b.state.GenesisTime), nil
+	case genesisValidatorRoot:
+		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return stateutil.Uint64Root(b.state.Slot), nil
 	case eth1DepositIndex:
