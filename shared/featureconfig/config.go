@@ -50,6 +50,7 @@ type Flags struct {
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
 	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
+	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -174,6 +175,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableInitSyncQueue.Name) {
 		log.Warn("Enabling initial sync queue")
 		cfg.EnableInitSyncQueue = true
+	}
+	if ctx.GlobalBool(enableFieldTrie.Name) {
+		log.Warn("Enabling state field trie")
+		cfg.EnableFieldTrie = true
 	}
 	Init(cfg)
 }
