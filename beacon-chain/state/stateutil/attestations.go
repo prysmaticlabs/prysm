@@ -22,6 +22,8 @@ func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	return nocachedHasher.epochAttestationsRoot(atts)
 }
 
+// PendingAttestationRoot describes a method from which the hash tree root
+// of a pending attestation is returned.
 func PendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 	fieldRoots := [][32]byte{}
 	if att != nil {
