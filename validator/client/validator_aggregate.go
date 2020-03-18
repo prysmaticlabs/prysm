@@ -3,6 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -113,7 +115,12 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 		return nil, err
 	}
 
-	sig, err := v.keyManager.Sign(pubKey, slotRoot, domain.SignatureDomain)
+	var sig *bls.Signature
+	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+		sig, err = protectingKeymanager.SignSlot(pubKey, domain.SignatureDomain, slotRoot)
+	} else {
+		sig, err = v.keyManager.Sign(pubKey, slotRoot, domain.SignatureDomain)
+	}
 	if err != nil {
 		return nil, err
 	}

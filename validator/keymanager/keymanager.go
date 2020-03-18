@@ -31,4 +31,7 @@ type ProtectingKeyManager interface {
 
 	// SignAttestation signs an attestation for the validator to broadcast.
 	SignAttestation(pubKey [48]byte, domain uint64, data *ethpb.AttestationData) (*bls.Signature, error)
+
+	// SignSlot signs an aggregate attestation for the validator to broadcast.
+	SignSlot(pubKey [48]byte, domain uint64, slot [32]byte) (*bls.Signature, error)
 }

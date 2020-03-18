@@ -3,7 +3,9 @@ package keymanager
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	RW "github.com/alonmuroch/validatorremotewallet/wallet/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	grpc "google.golang.org/grpc"
@@ -69,6 +71,8 @@ type RemoteWallet struct {
 
 // FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 func (km *RemoteWallet) FetchValidatingKeys() ([][48]byte, error) {
+	// TODO - how can i dynamically controll keys?
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -89,10 +93,41 @@ func (km *RemoteWallet) updateAccounts (response *RW.FetchValidatingKeysResponse
 
 // Sign signs a message for the validator to broadcast.
 func (km *RemoteWallet) Sign(pubKey [48]byte, root [32]byte, domain uint64) (*bls.Signature, error) {
+	return nil, fmt.Errorf("This is a protected signer, please use SignProposal or SignAttestation")
+}
+
+// SignProposal signs a block proposal for the validator to broadcast.
+func (km *RemoteWallet) SignProposal(pubKey [48]byte, domain uint64, data *ethpb.BeaconBlockHeader) (*bls.Signature, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	r, err := km.rw.Sign(ctx, &RW.SignRequest{PublicKey:pubKey[:], Root:root[:], Domain:domain})
+	r, err := km.rw.SignProposal(ctx, &RW.SignProposalRequest{PublicKey:pubKey[:], Data:data, Domain:domain})
+	if err != nil {
+		return nil, err
+	}
+
+	return bls.SignatureFromBytes(r.Sig)
+}
+
+// SignAttestation signs an attestation for the validator to broadcast.
+func (km *RemoteWallet) SignAttestation(pubKey [48]byte, domain uint64, data *ethpb.AttestationData) (*bls.Signature, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	r, err := km.rw.SignAttestation(ctx, &RW.SignAttestationRequest{PublicKey:pubKey[:], Data:data, Domain:domain})
+	if err != nil {
+		return nil, err
+	}
+
+	return bls.SignatureFromBytes(r.Sig)
+}
+
+// SignSlot signs an aggregate attestation for the validator to broadcast.
+func (km *RemoteWallet) SignSlot(pubKey [48]byte, domain uint64, slot [32]byte) (*bls.Signature, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	r, err := km.rw.SignSlot(ctx, &RW.SignSlotRequest{PublicKey:pubKey[:], Slot:slot[:], Domain:domain})
 	if err != nil {
 		return nil, err
 	}
