@@ -110,8 +110,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 	newHeader.StateRoot = prevStateRoot[:]
-	fmt.Println(bState.LatestBlockHeader())
-	parentRoot, err := stateutil.BlockHeaderRoot(bState.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(newHeader)
 	if err != nil {
 		return nil, err
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -62,7 +63,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,8 +77,9 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	beaconState.SetSlot(beaconState.Slot() - 1)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot:       beaconState.Slot() + 1,
-			ParentRoot: parentRoot[:],
+			ProposerIndex: 37,
+			Slot:          beaconState.Slot() + 1,
+			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: randaoReveal,
 				Eth1Data:     eth1Data,
@@ -462,7 +464,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	exit.Signature = privKeys[exit.Exit.ValidatorIndex].Sign(signingRoot[:]).Marshal()[:]
 
-	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -473,8 +475,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ParentRoot: parentRoot[:],
-			Slot:       beaconState.Slot(),
+			ParentRoot:    parentRoot[:],
+			Slot:          beaconState.Slot(),
+			ProposerIndex: 20,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
@@ -777,11 +780,12 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	}
 
 	epochSignature, _ := testutil.RandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
-	parentRoot, _ := ssz.HashTreeRoot(s.LatestBlockHeader())
+	parentRoot, _ := stateutil.BlockHeaderRoot(s.LatestBlockHeader())
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot:       s.Slot(),
-			ParentRoot: parentRoot[:],
+			ProposerIndex: 37,
+			Slot:          s.Slot(),
+			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
 				Eth1Data:     &ethpb.Eth1Data{},
 				RandaoReveal: epochSignature,
