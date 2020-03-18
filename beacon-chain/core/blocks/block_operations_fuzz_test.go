@@ -7,6 +7,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	fuzz "github.com/google/gofuzz"
 	//"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -432,6 +433,6 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 		fuzzer.Fuzz(val)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
-		VerifyExit(val, slot, fork, ve)
+		VerifyExit(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
 	}
 }

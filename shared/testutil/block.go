@@ -174,7 +174,7 @@ func GenerateProposerSlashingForValidator(
 		},
 	}
 	currentEpoch := helpers.CurrentEpoch(bState)
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{idx},
 	}
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +392,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 		)
 	}
 
-	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +484,7 @@ func generateVoluntaryExits(
 				ValidatorIndex: valIndex,
 			},
 		}
-		domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit, bState.GenesisValidatorRoot())
 		if err != nil {
 			return nil, err
 		}
