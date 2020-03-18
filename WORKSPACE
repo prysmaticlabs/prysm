@@ -185,7 +185,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.1/general.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.0/general.tar.gz",
 )
 
 http_archive(
@@ -200,7 +200,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.1/minimal.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.0/minimal.tar.gz",
 )
 
 http_archive(
@@ -215,7 +215,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.1/mainnet.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.0/mainnet.tar.gz",
 )
 
 http_archive(
