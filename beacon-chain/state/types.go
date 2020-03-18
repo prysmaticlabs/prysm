@@ -85,7 +85,7 @@ type BeaconState struct {
 	state                 *pbp2p.BeaconState
 	lock                  sync.RWMutex
 	dirtyFields           map[fieldIndex]interface{}
-	dirtyIndexes          map[fieldIndex][]uint64
+	dirtyIndices          map[fieldIndex][]uint64
 	stateFieldLeaves      map[fieldIndex]*FieldTrie
 	rebuildTrie           map[fieldIndex]bool
 	valIdxMap             map[[48]byte]uint64

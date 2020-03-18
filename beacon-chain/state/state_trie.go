@@ -31,7 +31,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndexes:          make(map[fieldIndex][]uint64, 20),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		rebuildTrie:           make(map[fieldIndex]bool, 20),
@@ -41,7 +41,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	for i := 0; i < 20; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
 		b.rebuildTrie[fieldIndex(i)] = true
-		b.dirtyIndexes[fieldIndex(i)] = []uint64{}
+		b.dirtyIndices[fieldIndex(i)] = []uint64{}
 		b.stateFieldLeaves[fieldIndex(i)] = &FieldTrie{
 			field:     fieldIndex(i),
 			reference: &reference{1},
@@ -103,7 +103,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndexes:          make(map[fieldIndex][]uint64, 20),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
 		rebuildTrie:           make(map[fieldIndex]bool, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
@@ -121,10 +121,10 @@ func (b *BeaconState) Copy() *BeaconState {
 		dst.dirtyFields[i] = true
 	}
 
-	for i := range b.dirtyIndexes {
-		indices := make([]uint64, len(b.dirtyIndexes[i]))
-		copy(indices, b.dirtyIndexes[i])
-		dst.dirtyIndexes[i] = indices
+	for i := range b.dirtyIndices {
+		indices := make([]uint64, len(b.dirtyIndices[i]))
+		copy(indices, b.dirtyIndices[i])
+		dst.dirtyIndices[i] = indices
 	}
 
 	for i := range b.rebuildTrie {
@@ -254,7 +254,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 				if err != nil {
 					return [32]byte{}, err
 				}
-				b.dirtyIndexes[field] = []uint64{}
+				b.dirtyIndices[field] = []uint64{}
 				delete(b.rebuildTrie, field)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
@@ -268,7 +268,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 				if err != nil {
 					return [32]byte{}, err
 				}
-				b.dirtyIndexes[field] = []uint64{}
+				b.dirtyIndices[field] = []uint64{}
 				delete(b.rebuildTrie, field)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
@@ -286,7 +286,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 				if err != nil {
 					return [32]byte{}, err
 				}
-				b.dirtyIndexes[field] = []uint64{}
+				b.dirtyIndices[field] = []uint64{}
 				delete(b.rebuildTrie, field)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
@@ -300,7 +300,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 				if err != nil {
 					return [32]byte{}, err
 				}
-				b.dirtyIndexes[validators] = []uint64{}
+				b.dirtyIndices[validators] = []uint64{}
 				delete(b.rebuildTrie, validators)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
@@ -316,7 +316,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 				if err != nil {
 					return [32]byte{}, err
 				}
-				b.dirtyIndexes[field] = []uint64{}
+				b.dirtyIndices[field] = []uint64{}
 				delete(b.rebuildTrie, field)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
@@ -332,7 +332,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 				if err != nil {
 					return [32]byte{}, err
 				}
-				b.dirtyIndexes[field] = []uint64{}
+				b.dirtyIndices[field] = []uint64{}
 				delete(b.rebuildTrie, field)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
@@ -346,7 +346,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 				if err != nil {
 					return [32]byte{}, err
 				}
-				b.dirtyIndexes[field] = []uint64{}
+				b.dirtyIndices[field] = []uint64{}
 				delete(b.rebuildTrie, field)
 				return b.stateFieldLeaves[field].TrieRoot()
 			}
@@ -376,16 +376,16 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 		fTrie = newTrie
 	}
 	// remove duplicate indexes
-	b.dirtyIndexes[index] = sliceutil.UnionUint64(b.dirtyIndexes[index], []uint64{})
+	b.dirtyIndices[index] = sliceutil.UnionUint64(b.dirtyIndices[index], []uint64{})
 	// sort indexes again
-	sort.Slice(b.dirtyIndexes[index], func(i int, j int) bool {
-		return b.dirtyIndexes[index][i] < b.dirtyIndexes[index][j]
+	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
+		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]
 	})
-	root, err := fTrie.RecomputeTrie(b.dirtyIndexes[index], elements)
+	root, err := fTrie.RecomputeTrie(b.dirtyIndices[index], elements)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	b.dirtyIndexes[index] = []uint64{}
+	b.dirtyIndices[index] = []uint64{}
 
 	return root, nil
 }
@@ -398,6 +398,6 @@ func (b *BeaconState) resetFieldTrie(index fieldIndex, elements interface{}, len
 		return err
 	}
 	b.stateFieldLeaves[index] = fTrie
-	b.dirtyIndexes[index] = []uint64{}
+	b.dirtyIndices[index] = []uint64{}
 	return nil
 }
