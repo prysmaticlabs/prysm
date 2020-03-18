@@ -738,7 +738,7 @@ func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
 	// do nothing if field already exists
 }
 
-// AddDirtyIndices adds the relevant dirty field indexes, so that they
+// AddDirtyIndices adds the relevant dirty field indices, so that they
 // can be recomputed.
 func (b *BeaconState) AddDirtyIndices(index fieldIndex, indices []uint64) {
 	b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)

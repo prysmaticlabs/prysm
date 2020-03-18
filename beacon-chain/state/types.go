@@ -11,12 +11,12 @@ import (
 func init() {
 	fieldMap = make(map[fieldIndex]dataType)
 
-	// initialize our fixed sized arrays
+	// Initialize the fixed sized arrays.
 	fieldMap[blockRoots] = basicArray
 	fieldMap[stateRoots] = basicArray
 	fieldMap[randaoMixes] = basicArray
 
-	// initialize our composite arrays
+	// Initialize the composite arrays.
 	fieldMap[eth1DataVotes] = compositeArray
 	fieldMap[validators] = compositeArray
 	fieldMap[previousEpochAttestations] = compositeArray
@@ -25,7 +25,7 @@ func init() {
 
 type fieldIndex int
 
-// dataType signifies the data type of the field/
+// dataType signifies the data type of the field.
 type dataType int
 
 // Below we define a set of useful enum values for the field
@@ -56,7 +56,7 @@ const (
 	finalizedCheckpoint
 )
 
-// list of current data types the state supports
+// List of current data types the state supports.
 const (
 	basicArray dataType = iota
 	compositeArray
