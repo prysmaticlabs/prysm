@@ -204,17 +204,6 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
-func (b *BeaconState) InnerMerkleTrie(field fieldIndex) [][][32]byte {
-	refLayers := make([][][32]byte, len(b.stateFieldLeaves[field].fieldLayers))
-	for i, val := range b.stateFieldLeaves[field].fieldLayers {
-		refLayers[i] = make([][32]byte, len(val))
-		for j, innerVal := range val {
-			refLayers[i][j] = *innerVal
-		}
-	}
-	return refLayers
-}
-
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
 // the resulting layers of the trie based on the appropriate depth. This function
 // pads the leaves to a power-of-two length.
