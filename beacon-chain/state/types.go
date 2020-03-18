@@ -105,7 +105,7 @@ func (r *reference) AddRef() {
 
 func (r *reference) MinusRef() {
 	// Do not reduce further if object
-	// already has 0 references to prevent overflow.
+	// already has 0 reference to prevent overflow.
 	if r.refs == 0 {
 		return
 	}
