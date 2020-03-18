@@ -51,5 +51,3 @@ test --define kafka_enabled=true
 
 # Disable flaky test detection for fuzzing.
 test:fuzz --flaky_test_attempts=1
-test:fuzz --test_env=GITHUB_SHA=$BUILDKITE_COMMIT
-test:fuzz --test_env=GITHUB_REF=$BUILDKITE_BRANCH
