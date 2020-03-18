@@ -8,11 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
-	"github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface"
 	"go.opencensus.io/trace"
 )
-
-var _ = iface.ProposalsDetector(&ProposeDetector{})
 
 // ProposeDetector defines a struct which can detect slashable
 // block proposals.
@@ -35,6 +32,7 @@ func (dd *ProposeDetector) DetectDoublePropose(
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoublePropose")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(incomingBlk.Header.Slot)
+	//TODO: #5119 remove constand and use input from block header.
 	//validatorIdx:=blk.Header.ProposerIndex
 	proposerIdx := uint64(0)
 	bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, proposerIdx)

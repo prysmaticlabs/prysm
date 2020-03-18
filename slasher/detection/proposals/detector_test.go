@@ -9,35 +9,10 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface"
 )
 
-func signedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
-	sig, err := genRandomSig()
-	if err != nil {
-		return nil, err
-	}
-	root := [32]byte{1, 2, 3}
-	return &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			//ProposerIndex proposerIndex,
-			Slot:       slot,
-			ParentRoot: root[:],
-			StateRoot:  root[:],
-			BodyRoot:   root[:],
-		},
-		Signature: sig,
-	}, nil
-}
-
-func genRandomSig() (blk []byte, err error) {
-	blk = make([]byte, 96)
-	_, err = rand.Read(blk)
-	return
-}
-
-func startSlot(epoch uint64) uint64 {
-	return epoch * params.BeaconConfig().SlotsPerEpoch
-}
+var _ = iface.ProposalsDetector(&ProposeDetector{})
 
 func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 	type testStruct struct {
@@ -108,4 +83,32 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 
 		})
 	}
+}
+
+func signedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
+	sig, err := genRandomSig()
+	if err != nil {
+		return nil, err
+	}
+	root := [32]byte{1, 2, 3}
+	return &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			//ProposerIndex proposerIndex,
+			Slot:       slot,
+			ParentRoot: root[:],
+			StateRoot:  root[:],
+			BodyRoot:   root[:],
+		},
+		Signature: sig,
+	}, nil
+}
+
+func genRandomSig() (blk []byte, err error) {
+	blk = make([]byte, 96)
+	_, err = rand.Read(blk)
+	return
+}
+
+func startSlot(epoch uint64) uint64 {
+	return epoch * params.BeaconConfig().SlotsPerEpoch
 }

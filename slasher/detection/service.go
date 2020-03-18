@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
-	iface2 "github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface"
+	proposerIface "github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -31,7 +31,7 @@ type Service struct {
 	attesterSlashingsFeed *event.Feed
 	proposerSlashingsFeed *event.Feed
 	minMaxSpanDetector    iface.SpanDetector
-	proposalsDetector     iface2.ProposalsDetector
+	proposalsDetector     proposerIface.ProposalsDetector
 }
 
 // Config options for the detection service.
