@@ -3,8 +3,6 @@ package state
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -108,9 +106,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	b.state.BlockRoots = r
 
 	b.markFieldAsDirty(blockRoots)
-	indexes := b.dirtyIndexes[blockRoots]
-	indexes = append(indexes, idx)
-	b.dirtyIndexes[blockRoots] = indexes
+	b.AddDirtyIndices(blockRoots, []uint64{idx})
 	return nil
 }
 
@@ -128,6 +124,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
+	b.rebuildTrie[stateRoots] = true
 	return nil
 }
 
@@ -161,9 +158,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	b.state.StateRoots = r
 
 	b.markFieldAsDirty(stateRoots)
-	indexes := b.dirtyIndexes[stateRoots]
-	indexes = append(indexes, idx)
-	b.dirtyIndexes[stateRoots] = indexes
+	b.AddDirtyIndices(stateRoots, []uint64{idx})
 	return nil
 }
 
@@ -235,9 +230,7 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 
 	b.state.Eth1DataVotes = append(votes, val)
 	b.markFieldAsDirty(eth1DataVotes)
-	indexes := b.dirtyIndexes[eth1DataVotes]
-	indexes = append(indexes, uint64(len(b.state.Eth1DataVotes)-1))
-	b.dirtyIndexes[eth1DataVotes] = indexes
+	b.AddDirtyIndices(eth1DataVotes, []uint64{uint64(len(b.state.Eth1DataVotes) - 1)})
 	return nil
 }
 
@@ -303,8 +296,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
-	newIndices := sliceutil.UnionUint64(b.dirtyIndexes[validators], changedVals)
-	b.dirtyIndexes[validators] = newIndices
+	b.AddDirtyIndices(validators, changedVals)
 
 	return nil
 }
@@ -336,7 +328,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v[idx] = val
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
-	b.dirtyIndexes[validators] = append(b.dirtyIndexes[validators], idx)
+	b.AddDirtyIndices(validators, []uint64{idx})
 
 	return nil
 }
@@ -442,9 +434,8 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
 	b.markFieldAsDirty(randaoMixes)
-	indexes := b.dirtyIndexes[randaoMixes]
-	indexes = append(indexes, idx)
-	b.dirtyIndexes[randaoMixes] = indexes
+	b.AddDirtyIndices(randaoMixes, []uint64{idx})
+
 	return nil
 }
 
@@ -599,7 +590,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 
 	b.state.PreviousEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(previousEpochAttestations)
-	b.dirtyIndexes[previousEpochAttestations] = append(b.dirtyIndexes[previousEpochAttestations], uint64(len(b.state.PreviousEpochAttestations)-1))
+	b.AddDirtyIndices(previousEpochAttestations, []uint64{uint64(len(b.state.PreviousEpochAttestations) - 1)})
 
 	return nil
 }
@@ -624,7 +615,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	b.state.Validators = append(vals, val)
 	b.markFieldAsDirty(validators)
-	b.dirtyIndexes[validators] = append(b.dirtyIndexes[validators], uint64(len(b.state.Validators)-1))
+	b.AddDirtyIndices(validators, []uint64{uint64(len(b.state.Validators) - 1)})
 	return nil
 }
 
@@ -745,4 +736,10 @@ func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
 		b.dirtyFields[field] = true
 	}
 	// do nothing if field already exists
+}
+
+// AddDirtyIndices adds the relevant dirty field indexes, so that they
+// can be recomputed.
+func (b *BeaconState) AddDirtyIndices(index fieldIndex, indices []uint64) {
+	b.dirtyIndexes[index] = append(b.dirtyIndexes[index], indices...)
 }
