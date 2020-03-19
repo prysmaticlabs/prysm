@@ -76,7 +76,6 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
-			flags.NoCustomConfigFlag,
 			flags.InteropMockEth1DataVotesFlag,
 			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
@@ -89,6 +88,9 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeyFlag,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
+			flags.SetGCPercent,
+			flags.UnsafeSync,
+			flags.SlotsPerArchivedPoint,
 		},
 	},
 	{

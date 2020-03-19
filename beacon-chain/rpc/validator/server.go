@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -16,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -56,6 +60,7 @@ type Server struct {
 	BlockNotifier          blockfeed.Notifier
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
+	SlashingsPool          *slashings.Pool
 	ExitPool               *voluntaryexits.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
@@ -63,6 +68,7 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	GenesisTime            time.Time
+	StateGen               *stategen.State
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -149,7 +155,10 @@ func (vs *Server) ExitedValidators(
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
-	dv := helpers.Domain(fork, request.Epoch, request.Domain)
+	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain))
+	if err != nil {
+		return nil, err
+	}
 	return &ethpb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil
@@ -158,7 +167,11 @@ func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) 
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
-	return vs.HeadFetcher.HeadBlock(), nil
+	headBlk, err := vs.HeadFetcher.HeadBlock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
+	}
+	return headBlk, nil
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain

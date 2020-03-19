@@ -28,25 +28,37 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	NoCustomConfig                             bool   // NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
 	CustomGenesisDelay                         uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 	MinimalConfig                              bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions                   bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	EnableDynamicCommitteeSubnets              bool   // Enables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool   // Skips BLS verification across the runtime.
 	EnableBackupWebhook                        bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool   // EnableSnappyDBCompression in the database.
-	InitSyncCacheState                         bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-
+	EnableByteMempool                          bool   // EnaableByteMempool memory management.
+	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
+	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
+	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
+	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
+	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
+	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
+	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
 	DisableForkChoice bool
+
+	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
+	BroadcastSlashings bool
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -76,15 +88,13 @@ func Init(c *Flags) {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	delay := ctx.Uint64(customGenesisDelayFlag.Name)
-	if delay != params.BeaconConfig().MinGenesisDelay {
+	cfg = configureConfig(ctx, cfg)
+	delay := params.BeaconConfig().MinGenesisDelay
+	if ctx.IsSet(customGenesisDelayFlag.Name) {
+		delay = ctx.Uint64(customGenesisDelayFlag.Name)
 		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
 	}
 	cfg.CustomGenesisDelay = delay
-	if ctx.Bool(minimalConfigFlag.Name) {
-		log.Warn("Using minimal config")
-		cfg.MinimalConfig = true
-	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
@@ -92,6 +102,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableForkChoiceUnsafeFlag.Name) {
 		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
 		cfg.DisableForkChoice = true
+	}
+	if ctx.Bool(enableDynamicCommitteeSubnets.Name) {
+		log.Warn("Enabled dynamic attestation committee subnets")
+		cfg.EnableDynamicCommitteeSubnets = true
 	}
 	if ctx.Bool(enableSSZCache.Name) {
 		log.Warn("Enabled unsafe ssz cache")
@@ -123,10 +137,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.Bool(initSyncCacheStateFlag.Name) {
-		log.Warn("Enabled initial sync cache state mode.")
-		cfg.InitSyncCacheState = true
-	}
 	if ctx.Bool(enableSlasherFlag.Name) {
 		log.Warn("Enable slasher connection.")
 		cfg.EnableSlasherConnection = true
@@ -143,7 +153,38 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
 	}
-
+	if ctx.Bool(enableByteMempool.Name) {
+		log.Warn("Enabling experimental memory management for beacon state")
+		cfg.EnableByteMempool = true
+	}
+	if ctx.Bool(enableStateGenSigVerify.Name) {
+		log.Warn("Enabling sig verify for state gen")
+		cfg.EnableStateGenSigVerify = true
+	}
+	if ctx.Bool(checkHeadState.Name) {
+		log.Warn("Enabling check head state for chainservice")
+		cfg.CheckHeadState = true
+	}
+	if ctx.Bool(enableNoiseHandshake.Name) {
+		log.Warn("Enabling noise handshake for peer")
+		cfg.EnableNoise = true
+	}
+	if ctx.Bool(dontPruneStateStartUp.Name) {
+		log.Warn("Not enabling state pruning upon start up")
+		cfg.DontPruneStateStartUp = true
+	}
+	if ctx.Bool(newStateMgmt.Name) {
+		log.Warn("Enabling experimental state management service")
+		cfg.NewStateMgmt = true
+	}
+	if ctx.Bool(enableInitSyncQueue.Name) {
+		log.Warn("Enabling initial sync queue")
+		cfg.EnableInitSyncQueue = true
+	}
+	if ctx.Bool(enableFieldTrie.Name) {
+		log.Warn("Enabling state field trie")
+		cfg.EnableFieldTrie = true
+	}
 	Init(cfg)
 }
 
@@ -152,10 +193,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(minimalConfigFlag.Name) {
-		log.Warn("Using minimal config")
-		cfg.MinimalConfig = true
-	}
+	cfg = configureConfig(ctx, cfg)
 	if ctx.Bool(protectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")
 		cfg.ProtectProposer = true
@@ -163,6 +201,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(protectAttesterFlag.Name) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
+	}
+	if ctx.Bool(enableDomainDataCacheFlag.Name) {
+		log.Warn("Enabled domain data cache.")
+		cfg.EnableDomainDataCache = true
 	}
 	Init(cfg)
 }
@@ -173,4 +215,30 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
 		}
 	}
+}
+
+func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
+	if ctx.Bool(noCustomConfigFlag.Name) {
+		log.Warn("Using default mainnet config")
+		cfg.NoCustomConfig = true
+	}
+	if ctx.Bool(minimalConfigFlag.Name) {
+		log.Warn("Using minimal config")
+		cfg.MinimalConfig = true
+	}
+	// Use custom config values if the --no-custom-config flag is not set.
+	if !cfg.NoCustomConfig {
+		if cfg.MinimalConfig {
+			log.WithField(
+				"config", "minimal-spec",
+			).Info("Using custom chain parameters")
+			params.UseMinimalConfig()
+		} else {
+			log.WithField(
+				"config", "demo",
+			).Info("Using custom chain parameters")
+			params.UseDemoBeaconConfig()
+		}
+	}
+	return cfg
 }

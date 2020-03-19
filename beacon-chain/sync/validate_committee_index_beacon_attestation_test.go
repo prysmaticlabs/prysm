@@ -14,7 +14,10 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -48,6 +51,9 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	savedState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	db.SaveState(context.Background(), savedState, validBlockRoot)
 
 	tests := []struct {
 		name                      string
@@ -103,7 +109,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1010},
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: []byte("missing"),
+					BeaconBlockRoot: bytesutil.PadTo([]byte("missing"), 32),
 					CommitteeIndex:  1,
 					Slot:            63,
 				},

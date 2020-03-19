@@ -1,7 +1,9 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -13,6 +15,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -28,10 +31,39 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
-	baseState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(c.Root))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+	var baseState *stateTrie.BeaconState
+	if featureconfig.Get().NewStateMgmt {
+		baseState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+		}
+	} else {
+		if featureconfig.Get().CheckHeadState {
+			headRoot, err := s.HeadRoot(ctx)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get head root")
+			}
+			if bytes.Equal(headRoot, c.Root) {
+				st, err := s.HeadState(ctx)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get head state")
+				}
+				if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+					Checkpoint: c,
+					State:      st.Copy(),
+				}); err != nil {
+					return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+				}
+				return st, nil
+			}
+		}
+
+		baseState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(c.Root))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+		}
 	}
+
 	if baseState == nil {
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
@@ -95,6 +127,36 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	}
 
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
+		if err == blocks.ErrSigFailedToVerify {
+			// When sig fails to verify, check if there's a differences in committees due to
+			// different seeds.
+			var aState *stateTrie.BeaconState
+			var err error
+			if featureconfig.Get().NewStateMgmt {
+				aState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				return nil, err
+			}
+
+			aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+			if err != nil {
+				return nil, err
+			}
+
+			epoch := helpers.SlotToEpoch(a.Data.Slot)
+			origSeed, err := helpers.Seed(baseState, epoch, params.BeaconConfig().DomainBeaconAttester)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get original seed")
+			}
+
+			aSeed, err := helpers.Seed(aState, epoch, params.BeaconConfig().DomainBeaconAttester)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get attester's seed")
+			}
+			if origSeed != aSeed {
+				return nil, fmt.Errorf("could not verify indexed attestation due to differences in seeds: %v != %v",
+					hex.EncodeToString(bytesutil.Trunc(origSeed[:])), hex.EncodeToString(bytesutil.Trunc(aSeed[:])))
+			}
+		}
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 

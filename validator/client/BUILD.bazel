@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "grpc_interceptor.go",
         "runner.go",
         "service.go",
         "validator.go",
@@ -18,6 +19,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//proto/slashing:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
@@ -26,8 +28,11 @@ go_library(
         "//shared/slotutil:go_default_library",
         "//validator/db:go_default_library",
         "//validator/keymanager:go_default_library",
+        "@com_github_dgraph_io_ristretto//:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
+        "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -42,6 +47,7 @@ go_library(
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
+        "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
     ],
 )

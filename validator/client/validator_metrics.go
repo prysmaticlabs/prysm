@@ -20,7 +20,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 	},
 	[]string{
 		// validator pubkey
-		"pkey",
+		"pubkey",
 	},
 )
 
@@ -30,7 +30,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot <= params.BeaconConfig().SlotsPerEpoch {
-		// Do nothing if we are not at the start of a new epoch and before the first epoch.
+		// Do nothing unless we are at the start of the epoch, and not in the first epoch.
 		return nil
 	}
 	if !v.logValidatorBalances {
@@ -61,13 +61,15 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	votedTarget := 0
 	votedHead := 0
 
-	for i, pkey := range pubKeys {
+	reported := 0
+	for _, pkey := range pubKeys {
 		pubKey := fmt.Sprintf("%#x", pkey[:8])
 		log := log.WithField("pubKey", pubKey)
+		fmtKey := fmt.Sprintf("%#x", pkey[:])
 		if missingValidators[bytesutil.ToBytes48(pkey)] {
 			log.Info("Validator not in beacon chain")
 			if v.emitAccountMetrics {
-				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(0)
+				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
 			}
 			continue
 		}
@@ -75,41 +77,43 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
 		}
 
-		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 && len(resp.BalancesAfterEpochTransition) > i {
-			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
-			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
+		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 && len(resp.BalancesAfterEpochTransition) > reported {
+			newBalance := float64(resp.BalancesAfterEpochTransition[reported]) / float64(params.BeaconConfig().GweiPerEth)
+			prevBalance := float64(resp.BalancesBeforeEpochTransition[reported]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
 				"epoch":                (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
-				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
-				"correctlyVotedTarget": resp.CorrectlyVotedTarget[i],
-				"correctlyVotedHead":   resp.CorrectlyVotedHead[i],
-				"inclusionSlot":        resp.InclusionSlots[i],
-				"inclusionDistance":    resp.InclusionDistances[i],
+				"correctlyVotedSource": resp.CorrectlyVotedSource[reported],
+				"correctlyVotedTarget": resp.CorrectlyVotedTarget[reported],
+				"correctlyVotedHead":   resp.CorrectlyVotedHead[reported],
+				"inclusionSlot":        resp.InclusionSlots[reported],
+				"inclusionDistance":    resp.InclusionDistances[reported],
 				"oldBalance":           prevBalance,
 				"newBalance":           newBalance,
 				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
-				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(newBalance)
+				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
 			}
 		}
 
-		if i < len(resp.InclusionSlots) && resp.InclusionSlots[i] != ^uint64(0) {
+		if reported < len(resp.InclusionSlots) && resp.InclusionSlots[reported] != ^uint64(0) {
 			included++
 		}
-		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
+		if reported < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[reported] {
 			votedSource++
 		}
-		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
+		if reported < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[reported] {
 			votedTarget++
 		}
-		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
+		if reported < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[reported] {
 			votedHead++
 		}
-		if i < len(resp.BalancesAfterEpochTransition) {
-			v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
+		if reported < len(resp.BalancesAfterEpochTransition) {
+			v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[reported]
 		}
+
+		reported++
 	}
 
 	log.WithFields(logrus.Fields{

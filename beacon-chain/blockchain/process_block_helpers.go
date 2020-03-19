@@ -58,30 +58,48 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	if featureconfig.Get().InitSyncCacheState {
-		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-		var err error
-		if preState == nil {
-			preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-			}
-			if preState == nil {
-				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-			}
-			return preState, nil // No copy needed from newly hydrated DB object.
+	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
+	defer span.End()
+
+	if featureconfig.Get().NewStateMgmt {
+		preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 		}
-		return preState.Copy(), nil
+		if preState == nil {
+			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		}
+		return preState, nil // No copy needed from newly hydrated state gen object.
 	}
 
-	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-	}
+	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+	var err error
 	if preState == nil {
-		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+		if featureconfig.Get().CheckHeadState {
+			headRoot, err := s.HeadRoot(ctx)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get head root")
+			}
+			if bytes.Equal(headRoot, b.ParentRoot) {
+				return s.HeadState(ctx)
+			}
+		}
+		preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		}
+		if preState == nil {
+			if bytes.Equal(s.finalizedCheckpt.Root, b.ParentRoot) {
+				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+			}
+			preState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), bytesutil.ToBytes32(b.ParentRoot))
+			if err != nil {
+				return nil, err
+			}
+		}
+		return preState, nil // No copy needed from newly hydrated DB object.
 	}
-	return preState, nil
+	return preState.Copy(), nil
 }
 
 // verifyBlkDescendant validates input block root is a descendant of the
@@ -254,14 +272,21 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		s.justifiedCheckpt = cpt
 	}
 
-	if featureconfig.Get().InitSyncCacheState {
+	if !featureconfig.Get().NewStateMgmt {
 		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
 		if justifiedState == nil {
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			if s.beaconDB.HasState(ctx, justifiedRoot) {
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
+			justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
+			if err != nil {
+				log.Error(err)
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
 		}
 		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
@@ -274,25 +299,27 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 // This saves every finalized state in DB during initial sync, needed as part of optimization to
 // use cache state during initial sync in case of restart.
 func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconState) error {
-	if !featureconfig.Get().InitSyncCacheState {
-		return nil
-	}
 	cpt := state.FinalizedCheckpoint()
 	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
 	fs := s.initSyncState[finalizedRoot]
 	if fs == nil {
-		// This might happen if the client was in sync and is now re-syncing for whatever reason.
-		log.Warn("Initial sync cache did not have finalized state root cached")
-		return nil
+		var err error
+		fs, err = s.beaconDB.State(ctx, finalizedRoot)
+		if err != nil {
+			return err
+		}
+		if fs == nil {
+			fs, err = s.generateState(ctx, bytesutil.ToBytes32(s.prevFinalizedCheckpt.Root), finalizedRoot)
+			if err != nil {
+				// This might happen if the client was in sync and is now re-syncing for whatever reason.
+				log.Warn("Initial sync cache did not have finalized state root cached")
+				return err
+			}
+		}
 	}
 
 	if err := s.beaconDB.SaveState(ctx, fs, finalizedRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
-	}
-	for r, oldState := range s.initSyncState {
-		if oldState.Slot() < cpt.Epoch*params.BeaconConfig().SlotsPerEpoch {
-			delete(s.initSyncState, r)
-		}
 	}
 	return nil
 }

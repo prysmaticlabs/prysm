@@ -11,36 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-type fieldIndex int
-
-// Below we define a set of useful enum values for the field
-// indices of the beacon state. For example, genesisTime is the
-// 0th field of the beacon state. This is helpful when we are
-// updating the Merkle branches up the trie representation
-// of the beacon state.
-const (
-	genesisTime fieldIndex = iota
-	slot
-	fork
-	latestBlockHeader
-	blockRoots
-	stateRoots
-	historicalRoots
-	eth1Data
-	eth1DataVotes
-	eth1DepositIndex
-	validators
-	balances
-	randaoMixes
-	slashings
-	previousEpochAttestations
-	currentEpochAttestations
-	justificationBits
-	previousJustifiedCheckpoint
-	currentJustifiedCheckpoint
-	finalizedCheckpoint
-)
-
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.lock.Lock()
@@ -53,6 +23,9 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 
 // SetSlot for the beacon state.
 func (b *BeaconState) SetSlot(val uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -63,6 +36,9 @@ func (b *BeaconState) SetSlot(val uint64) error {
 
 // SetFork version for the beacon chain.
 func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -73,6 +49,9 @@ func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
 
 // SetLatestBlockHeader in the beacon state.
 func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -84,6 +63,9 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 // SetBlockRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -98,6 +80,9 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 // UpdateBlockRootAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	if len(b.state.BlockRoots) <= int(idx) {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
@@ -108,7 +93,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		// Copy on write since this is a shared array.
 		r = b.BlockRoots()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -121,12 +106,16 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	b.state.BlockRoots = r
 
 	b.markFieldAsDirty(blockRoots)
+	b.AddDirtyIndices(blockRoots, []uint64{idx})
 	return nil
 }
 
 // SetStateRoots for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -135,12 +124,16 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
+	b.rebuildTrie[stateRoots] = true
 	return nil
 }
 
 // UpdateStateRootAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	if len(b.state.StateRoots) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -152,7 +145,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		r = b.StateRoots()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -165,12 +158,16 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	b.state.StateRoots = r
 
 	b.markFieldAsDirty(stateRoots)
+	b.AddDirtyIndices(stateRoots, []uint64{idx})
 	return nil
 }
 
 // SetHistoricalRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -184,6 +181,9 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 
 // SetEth1Data for the beacon state.
 func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -195,6 +195,9 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 // SetEth1DataVotes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -203,17 +206,21 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 
 	b.state.Eth1DataVotes = val
 	b.markFieldAsDirty(eth1DataVotes)
+	b.rebuildTrie[eth1DataVotes] = true
 	return nil
 }
 
 // AppendEth1DataVotes for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 	votes := b.state.Eth1DataVotes
 	if b.sharedFieldReferences[eth1DataVotes].refs > 1 {
 		votes = b.Eth1DataVotes()
-		b.sharedFieldReferences[eth1DataVotes].refs--
+		b.sharedFieldReferences[eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -223,11 +230,15 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 
 	b.state.Eth1DataVotes = append(votes, val)
 	b.markFieldAsDirty(eth1DataVotes)
+	b.AddDirtyIndices(eth1DataVotes, []uint64{uint64(len(b.state.Eth1DataVotes) - 1)})
 	return nil
 }
 
 // SetEth1DepositIndex for the beacon state.
 func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -239,6 +250,9 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 // SetValidators for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -246,27 +260,34 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	b.sharedFieldReferences[validators].refs--
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.markFieldAsDirty(validators)
+	b.rebuildTrie[validators] = true
 	return nil
 }
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, error)) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		v = b.Validators()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
-
+	changedVals := []uint64{}
 	for i, val := range v {
-		err := f(i, val)
+		changed, err := f(i, val)
 		if err != nil {
 			return err
+		}
+		if changed {
+			changedVals = append(changedVals, uint64(i))
 		}
 	}
 
@@ -275,12 +296,17 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
+	b.AddDirtyIndices(validators, changedVals)
+
 	return nil
 }
 
 // UpdateValidatorAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	if len(b.state.Validators) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -291,7 +317,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		v = b.Validators()
 
-		ref.refs--
+		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -302,6 +328,8 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v[idx] = val
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
+	b.AddDirtyIndices(validators, []uint64{idx})
+
 	return nil
 }
 
@@ -321,6 +349,9 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ui
 // SetBalances for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -335,6 +366,9 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	if len(b.state.Balances) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -343,7 +377,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	bals := b.state.Balances
 	if b.sharedFieldReferences[balances].refs > 1 {
 		bals = b.Balances()
-		b.sharedFieldReferences[balances].refs--
+		b.sharedFieldReferences[balances].MinusRef()
 		b.sharedFieldReferences[balances] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -360,6 +394,9 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 // SetRandaoMixes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -368,12 +405,16 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
+	b.rebuildTrie[randaoMixes] = true
 	return nil
 }
 
 // UpdateRandaoMixesAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	if len(b.state.RandaoMixes) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -382,7 +423,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
 		mixes = b.RandaoMixes()
-		b.sharedFieldReferences[randaoMixes].refs--
+		b.sharedFieldReferences[randaoMixes].MinusRef()
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -393,12 +434,17 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
 	b.markFieldAsDirty(randaoMixes)
+	b.AddDirtyIndices(randaoMixes, []uint64{idx})
+
 	return nil
 }
 
 // SetSlashings for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -413,6 +459,9 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 // UpdateSlashingsAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	if len(b.state.Slashings) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -421,7 +470,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 
 	if b.sharedFieldReferences[slashings].refs > 1 {
 		s = b.Slashings()
-		b.sharedFieldReferences[slashings].refs--
+		b.sharedFieldReferences[slashings].MinusRef()
 		b.sharedFieldReferences[slashings] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -440,6 +489,9 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 // SetPreviousEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -448,12 +500,16 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 
 	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
+	b.rebuildTrie[previousEpochAttestations] = true
 	return nil
 }
 
 // SetCurrentEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -462,17 +518,21 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 
 	b.state.CurrentEpochAttestations = val
 	b.markFieldAsDirty(currentEpochAttestations)
+	b.rebuildTrie[currentEpochAttestations] = true
 	return nil
 }
 
 // AppendHistoricalRoots for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 	roots := b.state.HistoricalRoots
 	if b.sharedFieldReferences[historicalRoots].refs > 1 {
 		roots = b.HistoricalRoots()
-		b.sharedFieldReferences[historicalRoots].refs--
+		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -488,12 +548,15 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 // AppendCurrentEpochAttestations for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].refs > 1 {
 		atts = b.CurrentEpochAttestations()
-		b.sharedFieldReferences[currentEpochAttestations].refs--
+		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -503,17 +566,21 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	b.state.CurrentEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(currentEpochAttestations)
+	b.dirtyIndices[currentEpochAttestations] = append(b.dirtyIndices[currentEpochAttestations], uint64(len(b.state.CurrentEpochAttestations)-1))
 	return nil
 }
 
 // AppendPreviousEpochAttestations for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
 		atts = b.PreviousEpochAttestations()
-		b.sharedFieldReferences[previousEpochAttestations].refs--
+		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -523,17 +590,22 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 
 	b.state.PreviousEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(previousEpochAttestations)
+	b.AddDirtyIndices(previousEpochAttestations, []uint64{uint64(len(b.state.PreviousEpochAttestations) - 1)})
+
 	return nil
 }
 
 // AppendValidator for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
 		vals = b.Validators()
-		b.sharedFieldReferences[validators].refs--
+		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -543,18 +615,22 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	b.state.Validators = append(vals, val)
 	b.markFieldAsDirty(validators)
+	b.AddDirtyIndices(validators, []uint64{uint64(len(b.state.Validators) - 1)})
 	return nil
 }
 
 // AppendBalance for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 
 	bals := b.state.Balances
 	if b.sharedFieldReferences[balances].refs > 1 {
 		bals = b.Balances()
-		b.sharedFieldReferences[balances].refs--
+		b.sharedFieldReferences[balances].MinusRef()
 		b.sharedFieldReferences[balances] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
@@ -569,6 +645,9 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 
 // SetJustificationBits for the beacon state.
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -579,6 +658,9 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 
 // SetPreviousJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -589,6 +671,9 @@ func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) erro
 
 // SetCurrentJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -599,6 +684,9 @@ func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error
 
 // SetFinalizedCheckpoint for the beacon state.
 func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -648,4 +736,10 @@ func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
 		b.dirtyFields[field] = true
 	}
 	// do nothing if field already exists
+}
+
+// AddDirtyIndices adds the relevant dirty field indices, so that they
+// can be recomputed.
+func (b *BeaconState) AddDirtyIndices(index fieldIndex, indices []uint64) {
+	b.dirtyIndices[index] = append(b.dirtyIndices[index], indices...)
 }

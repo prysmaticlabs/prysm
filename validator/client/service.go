@@ -3,12 +3,13 @@ package client
 import (
 	"context"
 
+	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
@@ -34,6 +35,7 @@ type ValidatorService struct {
 	logValidatorBalances bool
 	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
+	grpcRetries          uint
 }
 
 // Config for the validator service.
@@ -46,6 +48,7 @@ type Config struct {
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	GrpcMaxCallRecvMsgSizeFlag int
+	GrpcRetriesFlag            uint
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -63,6 +66,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:          cfg.GrpcRetriesFlag,
 	}, nil
 }
 
@@ -94,15 +98,19 @@ func (v *ValidatorService) Start() {
 		dialOpt,
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
+			grpc_retry.WithMax(v.grpcRetries),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),
 			grpc_prometheus.StreamClientInterceptor,
+			grpc_retry.StreamClientInterceptor(),
 		)),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
+			grpc_retry.UnaryClientInterceptor(),
+			logDebugRequestInfoUnaryInterceptor,
 		)),
 	}
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)
@@ -125,11 +133,19 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.conn = conn
+	cache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1280, // number of keys to track.
+		MaxCost:     128,  // maximum cost of cache, 1 item = 1 cost.
+		BufferItems: 64,   // number of keys per Get buffer.
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	v.validator = &validator{
 		db:                   valDB,
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
-		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keyManager:           v.keyManager,
 		graffiti:             v.graffiti,
@@ -137,6 +153,7 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:   v.emitAccountMetrics,
 		prevBalance:          make(map[[48]byte]uint64),
 		attLogs:              make(map[[32]byte]*attSubmitted),
+		domainDataCache:      cache,
 	}
 	go run(v.ctx, v.validator)
 }

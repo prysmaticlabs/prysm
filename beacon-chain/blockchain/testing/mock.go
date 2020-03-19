@@ -160,8 +160,8 @@ func (ms *ChainService) HeadRoot(ctx context.Context) ([]byte, error) {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (ms *ChainService) HeadBlock() *ethpb.SignedBeaconBlock {
-	return ms.Block
+func (ms *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, error) {
+	return ms.Block, nil
 }
 
 // HeadState mocks HeadState method in chain service.
@@ -219,7 +219,7 @@ func (ms *ChainService) GenesisTime() time.Time {
 
 // CurrentSlot mocks the same method in the chain service.
 func (ms *ChainService) CurrentSlot() uint64 {
-	return 0
+	return ms.HeadSlot()
 }
 
 // Participation mocks the same method in the chain service.

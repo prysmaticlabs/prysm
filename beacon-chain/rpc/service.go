@@ -29,13 +29,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -91,6 +91,7 @@ type Service struct {
 	slasherCert            string
 	slasherCredentialError error
 	slasherClient          slashpb.SlasherClient
+	stateGen               *stategen.State
 }
 
 // Config options for the beacon node RPC server.
@@ -123,6 +124,7 @@ type Config struct {
 	StateNotifier         statefeed.Notifier
 	BlockNotifier         blockfeed.Notifier
 	OperationNotifier     opfeed.Notifier
+	StateGen              *stategen.State
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -162,6 +164,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		operationNotifier:     cfg.OperationNotifier,
 		slasherProvider:       cfg.SlasherProvider,
 		slasherCert:           cfg.SlasherCert,
+		stateGen:              cfg.StateGen,
 	}
 }
 
@@ -208,7 +211,6 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	genesisTime := s.genesisTimeFetcher.GenesisTime()
-	ticker := slotutil.GetSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
 	validatorServer := &validator.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
@@ -234,6 +236,8 @@ func (s *Service) Start() {
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		GenesisTime:            genesisTime,
+		SlashingsPool:          s.slashingsPool,
+		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -243,27 +247,26 @@ func (s *Service) Start() {
 		PeersFetcher:       s.peersFetcher,
 	}
 	beaconChainServer := &beacon.Server{
-		Ctx:                  s.ctx,
-		BeaconDB:             s.beaconDB,
-		AttestationsPool:     s.attestationsPool,
-		SlashingsPool:        s.slashingsPool,
-		HeadFetcher:          s.headFetcher,
-		FinalizationFetcher:  s.finalizationFetcher,
-		ParticipationFetcher: s.participationFetcher,
-		ChainStartFetcher:    s.chainStartFetcher,
-		CanonicalStateChan:   s.canonicalStateChan,
-		GenesisTimeFetcher:   s.genesisTimeFetcher,
-		StateNotifier:        s.stateNotifier,
-		BlockNotifier:        s.blockNotifier,
-		SlotTicker:           ticker,
+		Ctx:                         s.ctx,
+		BeaconDB:                    s.beaconDB,
+		AttestationsPool:            s.attestationsPool,
+		SlashingsPool:               s.slashingsPool,
+		HeadFetcher:                 s.headFetcher,
+		FinalizationFetcher:         s.finalizationFetcher,
+		ParticipationFetcher:        s.participationFetcher,
+		ChainStartFetcher:           s.chainStartFetcher,
+		DepositFetcher:              s.depositFetcher,
+		BlockFetcher:                s.powChainService,
+		CanonicalStateChan:          s.canonicalStateChan,
+		GenesisTimeFetcher:          s.genesisTimeFetcher,
+		StateNotifier:               s.stateNotifier,
+		BlockNotifier:               s.blockNotifier,
+		AttestationNotifier:         s.operationNotifier,
+		Broadcaster:                 s.p2p,
+		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
+		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),
 	}
-	aggregatorServer := &aggregator.Server{
-		BeaconDB:    s.beaconDB,
-		HeadFetcher: s.headFetcher,
-		SyncChecker: s.syncService,
-		AttPool:     s.attestationsPool,
-		P2p:         s.p2p,
-	}
+	aggregatorServer := &aggregator.Server{ValidatorServer: validatorServer}
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)

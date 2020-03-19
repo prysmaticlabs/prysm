@@ -73,11 +73,11 @@ type BeaconChainConfig struct {
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
 
 	// BLS domain values.
-	DomainBeaconProposer []byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
-	DomainRandao         []byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
-	DomainBeaconAttester []byte `yaml:"DOMAIN_ATTESTATION"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
-	DomainDeposit        []byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
-	DomainVoluntaryExit  []byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainBeaconProposer [4]byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
+	DomainRandao         [4]byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
+	DomainBeaconAttester [4]byte `yaml:"DOMAIN_ATTESTATION"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
+	DomainDeposit        [4]byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainVoluntaryExit  [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -89,7 +89,6 @@ type BeaconChainConfig struct {
 	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
-	TestnetContractEndpoint   string        // TestnetContractEndpoint to fetch the contract address of the Prysmatic Labs testnet.
 	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
@@ -165,11 +164,11 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer: bytesutil.Bytes4(0),
-	DomainBeaconAttester: bytesutil.Bytes4(1),
-	DomainRandao:         bytesutil.Bytes4(2),
-	DomainDeposit:        bytesutil.Bytes4(3),
-	DomainVoluntaryExit:  bytesutil.Bytes4(4),
+	DomainBeaconProposer: bytesutil.ToBytes4(bytesutil.Bytes4(0)),
+	DomainBeaconAttester: bytesutil.ToBytes4(bytesutil.Bytes4(1)),
+	DomainRandao:         bytesutil.ToBytes4(bytesutil.Bytes4(2)),
+	DomainDeposit:        bytesutil.ToBytes4(bytesutil.Bytes4(3)),
+	DomainVoluntaryExit:  bytesutil.ToBytes4(bytesutil.Bytes4(4)),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
@@ -190,9 +189,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
 	PruneSlasherStoragePeriod: 10,
-
-	// Testnet misc values.
-	TestnetContractEndpoint: "https://prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
 var beaconConfig = defaultBeaconConfig
@@ -285,11 +281,11 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxVoluntaryExits = 16
 
 	// Signature domains
-	minimalConfig.DomainBeaconProposer = bytesutil.Bytes4(0)
-	minimalConfig.DomainBeaconAttester = bytesutil.Bytes4(1)
-	minimalConfig.DomainRandao = bytesutil.Bytes4(2)
-	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
-	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
+	minimalConfig.DomainBeaconProposer = bytesutil.ToBytes4(bytesutil.Bytes4(0))
+	minimalConfig.DomainBeaconAttester = bytesutil.ToBytes4(bytesutil.Bytes4(1))
+	minimalConfig.DomainRandao = bytesutil.ToBytes4(bytesutil.Bytes4(2))
+	minimalConfig.DomainDeposit = bytesutil.ToBytes4(bytesutil.Bytes4(3))
+	minimalConfig.DomainVoluntaryExit = bytesutil.ToBytes4(bytesutil.Bytes4(4))
 
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1

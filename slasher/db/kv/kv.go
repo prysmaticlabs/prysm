@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/slasher/cache"
 )
 
 var databaseFileName = "slasher.db"
@@ -17,7 +17,7 @@ var databaseFileName = "slasher.db"
 type Store struct {
 	db               *bolt.DB
 	databasePath     string
-	spanCache        *ristretto.Cache
+	spanCache        *cache.EpochSpansCache
 	spanCacheEnabled bool
 }
 
@@ -25,8 +25,7 @@ type Store struct {
 type Config struct {
 	// SpanCacheEnabled uses span cache to detect surround slashing.
 	SpanCacheEnabled bool
-	CacheItems       int64
-	MaxCacheSize     int64
+	SpanCacheSize    int
 }
 
 // Close closes the underlying boltdb database.
@@ -34,7 +33,7 @@ func (db *Store) Close() error {
 	return db.db.Close()
 }
 
-// ClearSpanCache clears the MinMaxSpans cache.
+// ClearSpanCache clears the spans cache.
 func (db *Store) ClearSpanCache() {
 	db.spanCache.Clear()
 }
@@ -86,37 +85,30 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		}
 		return nil, err
 	}
-	if cfg.CacheItems == 0 {
-		cfg.CacheItems = 20000
-	}
-	if cfg.MaxCacheSize == 0 {
-		cfg.MaxCacheSize = 2 << 30 //(2GB)
-	}
 	kv := &Store{db: boltDB, databasePath: datafile, spanCacheEnabled: cfg.SpanCacheEnabled}
-	spanCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: cfg.CacheItems,   // number of keys to track frequency of (10M).
-		MaxCost:     cfg.MaxCacheSize, // maximum cost of cache.
-		BufferItems: 64,               // number of keys per Get buffer.
-		OnEvict:     saveToDB(kv),
-	})
+	spanCache, err := cache.NewEpochSpansCache(cfg.SpanCacheSize, persistSpanMapsOnEviction(kv))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to start span cache")
+		return nil, errors.Wrap(err, "could not create new cache")
 	}
 	kv.spanCache = spanCache
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
 			tx,
+			indexedAttestationsBucket,
+			indexedAttestationsRootsByTargetBucket,
 			historicIndexedAttestationsBucket,
 			historicBlockHeadersBucket,
 			compressedIdxAttsBucket,
 			validatorsPublicKeysBucket,
 			validatorsMinMaxSpanBucket,
 			slashingBucket,
+			chainDataBucket,
 		)
 	}); err != nil {
 		return nil, err
 	}
+
 	return kv, err
 }
 

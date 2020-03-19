@@ -82,6 +82,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
 			flags.GrpcMaxCallRecvMsgSizeFlag,
+			flags.GrpcRetriesFlag,
 			flags.AccountMetricsFlag,
 		},
 	},

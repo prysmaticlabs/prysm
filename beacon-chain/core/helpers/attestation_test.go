@@ -62,6 +62,22 @@ func TestAggregateAttestation_OverlapFails(t *testing.T) {
 	}
 }
 
+func TestAggregateAttestation_DiffLengthFails(t *testing.T) {
+	tests := []struct {
+		a1 *ethpb.Attestation
+		a2 *ethpb.Attestation
+	}{
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0F}},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}}},
+	}
+	for _, tt := range tests {
+		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)
+		if err != helpers.ErrAttestationAggregationBitsDifferentLen {
+			t.Error("Did not receive wanted error")
+		}
+	}
+}
+
 func bitlistWithAllBitsSet(length uint64) bitfield.Bitlist {
 	b := bitfield.NewBitlist(length)
 	for i := uint64(0); i < length; i++ {
@@ -167,6 +183,19 @@ func TestAggregateAttestations(t *testing.T) {
 				{0b00000011, 0b1},
 			},
 		},
+		{
+			name: "attestations with different bitlist lengths",
+			inputs: []bitfield.Bitlist{
+				{0b00000011, 0b10},
+				{0b00000111, 0b100},
+				{0b00000100, 0b1},
+			},
+			want: []bitfield.Bitlist{
+				{0b00000011, 0b10},
+				{0b00000111, 0b100},
+				{0b00000100, 0b1},
+			},
+		},
 	}
 
 	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
@@ -226,7 +255,10 @@ func TestSlotSignature_Verify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	msg, _ := ssz.HashTreeRoot(slot)
 	if !sig.Verify(msg[:], pub, domain) {
 		t.Error("Could not verify slot signature")

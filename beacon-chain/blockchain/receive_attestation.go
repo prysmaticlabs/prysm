@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -37,6 +38,21 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process attestation")
 	}
 
+	if !featureconfig.Get().DisableUpdateHeadPerAttestation {
+		baseState, err := s.getAttPreState(ctx, att.Data.Target)
+		if err != nil {
+			return err
+		}
+
+		// This updates fork choice head, if a new head could not be updated due to
+		// long range or intermediate forking. It simply logs a warning and returns nil
+		// as that's more appropriate than returning errors.
+		if err := s.updateHead(ctx, baseState.Balances()); err != nil {
+			log.Warnf("Resolving fork due to new attestation: %v", err)
+			return nil
+		}
+	}
+
 	return nil
 }
 
@@ -57,10 +73,11 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
-func (s *Service) processAttestation() {
+func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	subscribedToStateEvents <- struct{}{}
 	<-stateChannel
 	stateSub.Unsubscribe()
 
@@ -73,7 +90,13 @@ func (s *Service) processAttestation() {
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
-				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
+				var hasState bool
+				if featureconfig.Get().NewStateMgmt {
+					hasState = s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				} else {
+					hasState = s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
+				}
+
 				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if !(hasState && hasBlock) {
 					continue

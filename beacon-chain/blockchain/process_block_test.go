@@ -17,7 +17,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -80,7 +79,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "parent block root does not have a state",
 			blk:           &ethpb.BeaconBlock{},
 			s:             st.Copy(),
-			wantErrString: "pre state of slot 0 does not exist",
+			wantErrString: "provided block root does not have block saved in the db",
 		},
 		{
 			name:          "block is from the feature",
@@ -324,32 +323,6 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	service.initSyncState[r] = s
 
-	wanted := "pre state of slot 1 does not exist"
-	if _, err := service.verifyBlkPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
-		t.Fatal("Not expected error")
-	}
-}
-
-func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	config := &featureconfig.Flags{
-		InitSyncCacheState: true,
-	}
-	featureconfig.Init(config)
-
-	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	r := [32]byte{'A'}
-	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
-	service.initSyncState[r] = s
-
 	received, err := service.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
@@ -373,6 +346,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	_, err = service.verifyBlkPreState(ctx, b)
 	wanted := "pre state of slot 1 does not exist"
 	if err.Error() != wanted {
@@ -402,11 +376,6 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config := &featureconfig.Flags{
-		InitSyncCacheState: true,
-	}
-	featureconfig.Init(config)
-
 	for i := uint64(0); i < 64; i++ {
 		b := &ethpb.BeaconBlock{Slot: i}
 		s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: i})
@@ -430,11 +399,6 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	}
 	if finalizedState == nil {
 		t.Error("finalized state can't be nil")
-	}
-
-	// Verify cached state is properly pruned
-	if len(service.initSyncState) != int(params.BeaconConfig().SlotsPerEpoch) {
-		t.Errorf("wanted: %d, got: %d", len(service.initSyncState), params.BeaconConfig().SlotsPerEpoch)
 	}
 }
 
@@ -534,6 +498,46 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 
 	if !reflect.DeepEqual(wanted, received) {
 		t.Error("Did not filter correctly")
+	}
+}
+
+func TestPersistCache_CanSave(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+
+	for i := uint64(0); i < initialSyncCacheSize; i++ {
+		st.SetSlot(i)
+		root := [32]byte{}
+		copy(root[:], bytesutil.Bytes32(i))
+		service.initSyncState[root] = st.Copy()
+		service.boundaryRoots = append(service.boundaryRoots, root)
+	}
+
+	if err = service.persistCachedStates(ctx, initialSyncCacheSize); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := uint64(0); i < initialSyncCacheSize-minimumCacheSize; i++ {
+		root := [32]byte{}
+		copy(root[:], bytesutil.Bytes32(i))
+		state, err := db.State(context.Background(), root)
+		if err != nil {
+			t.Errorf("State with root of %#x , could not be retrieved: %v", root, err)
+		}
+		if state == nil {
+			t.Errorf("State with root of %#x , does not exist", root)
+		}
+		if state.Slot() != i {
+			t.Errorf("Incorrect slot retrieved. Wanted %d but got %d", i, state.Slot())
+		}
 	}
 }
 

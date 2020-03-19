@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"path"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
@@ -59,6 +61,9 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 		attesterSlashingsFeed: new(event.Feed),
 		services:              registry,
 		stop:                  make(chan struct{}),
+	}
+	if err := slasher.registerPrometheusService(ctx); err != nil {
+		return nil, err
 	}
 
 	if err := slasher.startDB(ctx); err != nil {
@@ -117,6 +122,15 @@ func (s *SlasherNode) Close() {
 	close(s.stop)
 }
 
+func (s *SlasherNode) registerPrometheusService(ctx *cli.Context) error {
+	service := prometheus.NewPrometheusService(
+		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
+		s.services,
+	)
+	logrus.AddHook(prometheus.NewLogrusCollector())
+	return s.services.RegisterService(service)
+}
+
 func (s *SlasherNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.String(cmd.DataDirFlag.Name)
 	clearDB := ctx.Bool(cmd.ClearDB.Name)
@@ -161,6 +175,7 @@ func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
 
 	bs := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
 		BeaconCert:            beaconCert,
+		SlasherDB:             s.db,
 		BeaconProvider:        beaconProvider,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
@@ -175,6 +190,9 @@ func (s *SlasherNode) registerDetectionService() error {
 	}
 	ds := detection.NewDetectionService(context.Background(), &detection.Config{
 		Notifier:              bs,
+		SlasherDB:             s.db,
+		BeaconClient:          bs,
+		ChainFetcher:          bs,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 	})

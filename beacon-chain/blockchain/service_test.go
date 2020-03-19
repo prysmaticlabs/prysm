@@ -133,6 +133,10 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
 
+	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
+	if err != nil {
+		t.Fatal(err)
+	}
 	cfg := &Config{
 		BeaconBlockBuf:    0,
 		BeaconDB:          beaconDB,
@@ -142,10 +146,12 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
+		OpsService:        opsService,
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
+
 	chainService, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
@@ -305,7 +311,11 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if _, err := bc.HeadState(ctx); err != nil {
 		t.Error(err)
 	}
-	if bc.HeadBlock() == nil {
+	headBlk, err := bc.HeadBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headBlk == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
 	if bc.headRoot() == params.BeaconConfig().ZeroHash {
@@ -356,7 +366,11 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err := c.initializeChainInfo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(c.HeadBlock(), headBlock) {
+	headBlk, err := c.HeadBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(headBlk, headBlock) {
 		t.Error("head block incorrect")
 	}
 	s, err := c.HeadState(ctx)

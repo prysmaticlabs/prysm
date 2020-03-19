@@ -2,13 +2,19 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["attestations.go"],
+    srcs = [
+        "mock_spanner.go",
+        "spanner.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/detection/attestations",
     visibility = ["//slasher:__subpackages__"],
     deps = [
-        "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
+        "//slasher/db:go_default_library",
+        "//slasher/detection/attestations/iface:go_default_library",
+        "//slasher/detection/attestations/types:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
     ],
@@ -16,17 +22,12 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "attestation_test.go",
-        "attestations_bench_test.go",
-    ],
+    srcs = ["spanner_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//proto/slashing:go_default_library",
-        "//shared/params:go_default_library",
+        "//shared/sliceutil:go_default_library",
         "//slasher/db/testing:go_default_library",
-        "//slasher/flags:go_default_library",
-        "@com_github_gogo_protobuf//proto:go_default_library",
-        "@in_gopkg_urfave_cli_v2//:go_default_library",
+        "//slasher/detection/attestations/types:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )

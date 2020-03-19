@@ -2,6 +2,7 @@ package bytesutil_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -151,6 +152,36 @@ func TestBytes8(t *testing.T) {
 	}
 }
 
+func TestFromBool(t *testing.T) {
+	tests := []byte{
+		0,
+		1,
+	}
+	for _, tt := range tests {
+		b := bytesutil.ToBool(tt)
+		c := bytesutil.FromBool(b)
+		if c != tt {
+			t.Errorf("Wanted %d but got %d", tt, c)
+		}
+	}
+}
+
+func TestFromBytes2(t *testing.T) {
+	tests := []uint64{
+		0,
+		1776,
+		96726,
+		(1 << 16) - 1,
+	}
+	for _, tt := range tests {
+		b := bytesutil.ToBytes(tt, 2)
+		c := bytesutil.FromBytes2(b)
+		if c != uint16(tt) {
+			t.Errorf("Wanted %d but got %d", tt, c)
+		}
+	}
+}
+
 func TestFromBytes4(t *testing.T) {
 	tests := []uint64{
 		0,
@@ -204,6 +235,25 @@ func TestTruncate(t *testing.T) {
 		b := bytesutil.Trunc(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Trunc(%d) = %v, want = %d", tt.a, b, tt.b)
+		}
+	}
+}
+
+func TestReverse(t *testing.T) {
+	tests := []struct {
+		input  [][32]byte
+		output [][32]byte
+	}{
+		{[][32]byte{[32]byte{'A'}, [32]byte{'B'}, [32]byte{'C'}, [32]byte{'D'}, [32]byte{'E'}, [32]byte{'F'}, [32]byte{'G'}, [32]byte{'H'}},
+			[][32]byte{[32]byte{'H'}, [32]byte{'G'}, [32]byte{'F'}, [32]byte{'E'}, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'B'}, [32]byte{'A'}}},
+		{[][32]byte{[32]byte{1}, [32]byte{2}, [32]byte{3}, [32]byte{4}},
+			[][32]byte{[32]byte{4}, [32]byte{3}, [32]byte{2}, [32]byte{1}}},
+		{[][32]byte{}, [][32]byte{}},
+	}
+	for _, tt := range tests {
+		b := bytesutil.ReverseBytes32Slice(tt.input)
+		if !reflect.DeepEqual(b, tt.output) {
+			t.Errorf("Reverse(%d) = %v, want = %d", tt.input, b, tt.output)
 		}
 	}
 }

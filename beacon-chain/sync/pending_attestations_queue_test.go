@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -77,7 +78,9 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	r32, _ := ssz.HashTreeRoot(b.Block)
+	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
 	r.db.SaveBlock(context.Background(), b)
+	r.db.SaveState(context.Background(), s, r32)
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.AggregateAttestationAndProof{a}
 	if err := r.processPendingAtts(context.Background()); err != nil {
@@ -133,7 +136,10 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
@@ -172,6 +178,8 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	sb = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	r32, _ := ssz.HashTreeRoot(sb.Block)
 	r.db.SaveBlock(context.Background(), sb)
+	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	r.db.SaveState(context.Background(), s, r32)
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.AggregateAttestationAndProof{aggregateAndProof}
 	if err := r.processPendingAtts(context.Background()); err != nil {

@@ -86,6 +86,15 @@ func LowerThan(x []byte, y []byte) bool {
 	return true
 }
 
+// ToBytes4 is a convenience method for converting a byte slice to a fix
+// sized 4 byte array. This method will truncate the input if it is larger
+// than 4 bytes.
+func ToBytes4(x []byte) [4]byte {
+	var y [4]byte
+	copy(y[:], x)
+	return y
+}
+
 // ToBytes8 is a convenience method for converting a byte slice to a fix
 // sized 8 byte array. This method will truncate the input if it is larger
 // than 8 bytes.
@@ -120,6 +129,27 @@ func ToBytes48(x []byte) [48]byte {
 	var y [48]byte
 	copy(y[:], x)
 	return y
+}
+
+// ToBool is a convenience method for converting a byte to a bool.
+// This method will use the first bit of the 0 byte to generate the returned value.
+func ToBool(x byte) bool {
+	return x&1 == 1
+}
+
+// FromBytes2 returns an integer which is stored in the little-endian format(2, 'little')
+// from a byte array.
+func FromBytes2(x []byte) uint16 {
+	return binary.LittleEndian.Uint16(x[:2])
+}
+
+// FromBool is a convenience method for converting a bool to a byte.
+// This method will use the first bit to generate the returned value.
+func FromBool(x bool) byte {
+	if x {
+		return 1
+	}
+	return 0
 }
 
 // FromBytes32 is a convenience method for converting a fixed-size byte array
@@ -193,4 +223,22 @@ func Copy2dBytes(ary [][]byte) [][]byte {
 		return copied
 	}
 	return nil
+}
+
+// ReverseBytes32Slice will reverse the provided slice's order.
+func ReverseBytes32Slice(arr [][32]byte) [][32]byte {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
+	}
+	return arr
+}
+
+
+// PadTo pads a byte slice to the given size. If the byte slice is larger than the given size, the
+// original slice is returned.
+func PadTo(b []byte, size int) []byte {
+	if len(b) > size {
+		return b
+	}
+	return append(b, make([]byte, size-len(b))...)
 }

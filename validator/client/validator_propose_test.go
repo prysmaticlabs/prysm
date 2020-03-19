@@ -18,24 +18,21 @@ import (
 )
 
 type mocks struct {
-	validatorClient  *internal.MockBeaconNodeValidatorClient
-	aggregatorClient *internal.MockAggregatorServiceClient
+	validatorClient *internal.MockBeaconNodeValidatorClient
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
 	valDB := db.SetupDB(t, [][48]byte{validatorPubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient:  internal.NewMockBeaconNodeValidatorClient(ctrl),
-		aggregatorClient: internal.NewMockAggregatorServiceClient(ctrl),
+		validatorClient: internal.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 	validator := &validator{
-		db:               valDB,
-		validatorClient:  m.validatorClient,
-		aggregatorClient: m.aggregatorClient,
-		keyManager:       testKeyManager,
-		graffiti:         []byte{},
-		attLogs:          make(map[[32]byte]*attSubmitted),
+		db:              valDB,
+		validatorClient: m.validatorClient,
+		keyManager:      testKeyManager,
+		graffiti:        []byte{},
+		attLogs:         make(map[[32]byte]*attSubmitted),
 	}
 
 	return validator, m, ctrl.Finish

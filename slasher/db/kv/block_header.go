@@ -8,13 +8,14 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
 func unmarshalBlockHeader(ctx context.Context, enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalBlockHeader")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.unmarshalBlockHeader")
 	defer span.End()
 	protoBlockHeader := &ethpb.SignedBeaconBlockHeader{}
 	err := proto.Unmarshal(enc, protoBlockHeader)
@@ -27,7 +28,7 @@ func unmarshalBlockHeader(ctx context.Context, enc []byte) (*ethpb.SignedBeaconB
 // BlockHeaders accepts an epoch and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
 func (db *Store) BlockHeaders(ctx context.Context, epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.BlockHeaders")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.BlockHeaders")
 	defer span.End()
 	var blockHeaders []*ethpb.SignedBeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
@@ -47,7 +48,7 @@ func (db *Store) BlockHeaders(ctx context.Context, epoch uint64, validatorID uin
 
 // HasBlockHeader accepts an epoch and validator id and returns true if the block header exists.
 func (db *Store) HasBlockHeader(ctx context.Context, epoch uint64, validatorID uint64) bool {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.HasBlockHeader")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.HasBlockHeader")
 	defer span.End()
 	prefix := encodeEpochValidatorID(epoch, validatorID)
 	var hasBlockHeader bool
@@ -66,9 +67,10 @@ func (db *Store) HasBlockHeader(ctx context.Context, epoch uint64, validatorID u
 }
 
 // SaveBlockHeader accepts a block header and writes it to disk.
-func (db *Store) SaveBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveBlockHeader")
+func (db *Store) SaveBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveBlockHeader")
 	defer span.End()
+	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {
@@ -95,9 +97,10 @@ func (db *Store) SaveBlockHeader(ctx context.Context, epoch uint64, validatorID 
 }
 
 // DeleteBlockHeader deletes a block header using the epoch and validator id.
-func (db *Store) DeleteBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteBlockHeader")
+func (db *Store) DeleteBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteBlockHeader")
 	defer span.End()
+	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
@@ -110,7 +113,7 @@ func (db *Store) DeleteBlockHeader(ctx context.Context, epoch uint64, validatorI
 
 // PruneBlockHistory leaves only records younger then history size.
 func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.pruneBlockHistory")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneBlockHistory")
 	defer span.End()
 	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)
 	if pruneTill <= 0 {

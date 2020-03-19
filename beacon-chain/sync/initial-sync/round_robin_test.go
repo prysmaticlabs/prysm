@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,8 +27,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var rootCache map[uint64][32]byte
-var parentSlotCache map[uint64]uint64
+type testCache struct {
+	sync.RWMutex
+	rootCache       map[uint64][32]byte
+	parentSlotCache map[uint64]uint64
+}
+
+var cache = &testCache{}
 
 type peerData struct {
 	blocks         []uint64 // slots that peer has blocks
@@ -235,13 +241,15 @@ func TestRoundRobinSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			initializeRootCache(tt.expectedBlockSlots, t)
+			cache.initializeRootCache(tt.expectedBlockSlots, t)
 
 			p := p2pt.NewTestP2P(t)
 			beaconDB := dbtest.SetupDB(t)
 
 			connectPeers(t, p, tt.peers, p.Peers())
-			genesisRoot := rootCache[0]
+			cache.RLock()
+			genesisRoot := cache.rootCache[0]
+			cache.RUnlock()
 
 			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
 				Block: &eth.BeaconBlock{
@@ -330,7 +338,9 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 				if (slot-req.StartSlot)%req.Step != 0 {
 					continue
 				}
-				parentRoot := rootCache[parentSlotCache[slot]]
+				cache.RLock()
+				parentRoot := cache.rootCache[cache.parentSlotCache[slot]]
+				cache.RUnlock()
 				blk := &eth.SignedBeaconBlock{
 					Block: &eth.BeaconBlock{
 						Slot:       slot,
@@ -352,7 +362,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			}
 
 			for i := 0; i < len(ret); i++ {
-				if err := sync.WriteChunk(stream, peer.Encoding(), ret[i]); err != nil {
+				if err := beaconsync.WriteChunk(stream, peer.Encoding(), ret[i]); err != nil {
 					t.Error(err)
 				}
 			}
@@ -398,9 +408,12 @@ func makeSequence(start, end uint64) []uint64 {
 	return seq
 }
 
-func initializeRootCache(reqSlots []uint64, t *testing.T) {
-	rootCache = make(map[uint64][32]byte)
-	parentSlotCache = make(map[uint64]uint64)
+func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.rootCache = make(map[uint64][32]byte)
+	c.parentSlotCache = make(map[uint64]uint64)
 	parentSlot := uint64(0)
 	genesisBlock := &eth.BeaconBlock{
 		Slot: 0,
@@ -409,7 +422,7 @@ func initializeRootCache(reqSlots []uint64, t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rootCache[0] = genesisRoot
+	c.rootCache[0] = genesisRoot
 	parentRoot := genesisRoot
 	for _, slot := range reqSlots {
 		currentBlock := &eth.BeaconBlock{
@@ -420,8 +433,8 @@ func initializeRootCache(reqSlots []uint64, t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		rootCache[slot] = parentRoot
-		parentSlotCache[slot] = parentSlot
+		c.rootCache[slot] = parentRoot
+		c.parentSlotCache[slot] = parentSlot
 		parentSlot = slot
 	}
 }

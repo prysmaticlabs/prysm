@@ -4,13 +4,20 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -110,18 +117,120 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
+// ListIndexedAttestations retrieves indexed attestations by target epoch.
+// IndexedAttestationsForEpoch are sorted by data slot by default. Either a target epoch filter
+// or a boolean filter specifying a request for genesis epoch attestations may be used.
+//
+// The server may return an empty list when no attestations match the given
+// filter criteria. This RPC should not return NOT_FOUND. Only one filter
+// criteria should be used.
+func (bs *Server) ListIndexedAttestations(
+	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
+) (*ethpb.ListIndexedAttestationsResponse, error) {
+	atts := make([]*ethpb.Attestation, 0)
+	var err error
+	epoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListIndexedAttestationsRequest_TargetEpoch:
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		}
+		epoch = q.TargetEpoch
+	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(0))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		}
+		epoch = 0
+	default:
+		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
+	}
+	// We sort attestations according to the Sortable interface.
+	sort.Sort(sortableAttestations(atts))
+	numAttestations := len(atts)
+
+	// If there are no attestations, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 attestations below would result in an error.
+	if numAttestations == 0 {
+		return &ethpb.ListIndexedAttestationsResponse{
+			IndexedAttestations: make([]*ethpb.IndexedAttestation, 0),
+			TotalSize:           int32(0),
+			NextPageToken:       strconv.Itoa(0),
+		}, nil
+	}
+
+	committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(ctx, epoch)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve committees for epoch %d: %v",
+			epoch,
+			err,
+		)
+	}
+
+	// We use the retrieved committees for the epoch to convert all attestations
+	// into indexed form effectively.
+	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
+	startSlot := helpers.StartSlot(epoch)
+	endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+	for i := 0; i < len(indexedAtts); i++ {
+		att := atts[i]
+		// Out of range check, the attestation slot cannot be greater
+		// the last slot of the requested epoch or smaller than its start slot
+		// given committees are accessed as a map of slot -> commitees list, where there are
+		// SLOTS_PER_EPOCH keys in the map.
+		if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
+			continue
+		}
+		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
+		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not convert attestation with slot %d to indexed form: %v",
+				att.Data.Slot,
+				err,
+			)
+		}
+		indexedAtts[i] = idxAtt
+	}
+
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(indexedAtts))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
+	}
+	return &ethpb.ListIndexedAttestationsResponse{
+		IndexedAttestations: indexedAtts[start:end],
+		TotalSize:           int32(len(indexedAtts)),
+		NextPageToken:       nextPageToken,
+	}, nil
+}
+
 // StreamAttestations to clients at the end of every slot. This method retrieves the
 // aggregated attestations currently in the pool at the start of a slot and sends
 // them over a gRPC stream.
 func (bs *Server) StreamAttestations(
 	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
+	attestationsChannel := make(chan *feed.Event, 1)
+	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
+	defer attSub.Unsubscribe()
 	for {
 		select {
-		case <-bs.SlotTicker.C():
-			atts := bs.AttestationsPool.AggregatedAttestations()
-			for i := 0; i < len(atts); i++ {
-				if err := stream.Send(atts[i]); err != nil {
+		case event := <-attestationsChannel:
+			if event.Type == operation.UnaggregatedAttReceived {
+				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
+				if !ok {
+					// Got bad data over the stream.
+					continue
+				}
+				if data.Attestation == nil {
+					// One nil attestation shouldn't stop the stream.
+					continue
+				}
+				if err := stream.Send(data.Attestation); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 			}
@@ -129,6 +238,126 @@ func (bs *Server) StreamAttestations(
 			return status.Error(codes.Canceled, "Context canceled")
 		case <-stream.Context().Done():
 			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
+}
+
+// StreamIndexedAttestations to clients at the end of every slot. This method retrieves the
+// aggregated attestations currently in the pool, converts them into indexed form, and
+// sends them over a gRPC stream.
+func (bs *Server) StreamIndexedAttestations(
+	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
+) error {
+	attestationsChannel := make(chan *feed.Event, 1)
+	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
+	defer attSub.Unsubscribe()
+	go bs.collectReceivedAttestations(stream.Context())
+	for {
+		select {
+		case event := <-attestationsChannel:
+			if event.Type == operation.UnaggregatedAttReceived {
+				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
+				if !ok {
+					// Got bad data over the stream.
+					continue
+				}
+				if data.Attestation == nil {
+					// One nil attestation shouldn't stop the stream.
+					continue
+				}
+				bs.ReceivedAttestationsBuffer <- data.Attestation
+			}
+		case atts := <-bs.CollectedAttestationsBuffer:
+			// We aggregate the received attestations.
+			aggAtts, err := helpers.AggregateAttestations(atts)
+			if err != nil {
+				return status.Errorf(
+					codes.Internal,
+					"Could not aggregate attestations: %v",
+					err,
+				)
+			}
+			if len(aggAtts) == 0 {
+				continue
+			}
+			// All attestations we receive have the same target epoch given they
+			// have the same data root, so we just use the target epoch from
+			// the first one to determine committees for converting into indexed
+			// form.
+			epoch := aggAtts[0].Data.Target.Epoch
+			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
+			if err != nil {
+				return status.Errorf(
+					codes.Internal,
+					"Could not retrieve committees for epoch %d: %v",
+					epoch,
+					err,
+				)
+			}
+			// We use the retrieved committees for the epoch to convert all attestations
+			// into indexed form effectively.
+			startSlot := helpers.StartSlot(epoch)
+			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+			for _, att := range aggAtts {
+				// Out of range check, the attestation slot cannot be greater
+				// the last slot of the requested epoch or smaller than its start slot
+				// given committees are accessed as a map of slot -> commitees list, where there are
+				// SLOTS_PER_EPOCH keys in the map.
+				if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
+					continue
+				}
+				committeesForSlot, ok := committeesBySlot[att.Data.Slot]
+				if !ok || committeesForSlot.Committees == nil {
+					continue
+				}
+				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
+				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
+				if err != nil {
+					return status.Errorf(
+						codes.Internal,
+						"Could not convert attestation with slot %d to indexed form: %v",
+						att.Data.Slot,
+						err,
+					)
+				}
+				if err := stream.Send(idxAtt); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
+			}
+		case <-bs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
+}
+
+// TODO(#5031): Instead of doing aggregation here, leverage the aggregation
+// already being done by the attestation pool in the operations service.
+func (bs *Server) collectReceivedAttestations(ctx context.Context) {
+	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
+	halfASlot := time.Duration(params.BeaconConfig().SecondsPerSlot / 2)
+	ticker := time.NewTicker(time.Second * halfASlot)
+	for {
+		select {
+		case <-ticker.C:
+			for root, atts := range attsByRoot {
+				if len(atts) > 0 {
+					bs.CollectedAttestationsBuffer <- atts
+					attsByRoot[root] = make([]*ethpb.Attestation, 0)
+				}
+			}
+		case att := <-bs.ReceivedAttestationsBuffer:
+			attDataRoot, err := ssz.HashTreeRoot(att.Data)
+			if err != nil {
+				logrus.Errorf("Could not hash tree root data: %v", err)
+				continue
+			}
+			attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
+		case <-ctx.Done():
+			return
+		case <-bs.Ctx.Done():
+			return
 		}
 	}
 }

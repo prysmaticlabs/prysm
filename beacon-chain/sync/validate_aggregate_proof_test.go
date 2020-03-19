@@ -19,7 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -101,7 +103,10 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sig := privKeys[0].Sign(slotRoot[:], domain)
 
 	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); err != nil {
@@ -165,6 +170,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	db.SaveBlock(context.Background(), b)
 	root, _ := ssz.HashTreeRoot(b.Block)
+	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	db.SaveState(context.Background(), s, root)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -305,6 +312,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	db.SaveBlock(context.Background(), b)
 	root, _ := ssz.HashTreeRoot(b.Block)
+	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	db.SaveState(context.Background(), s, root)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -329,7 +338,10 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)

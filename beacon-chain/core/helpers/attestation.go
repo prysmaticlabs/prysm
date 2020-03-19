@@ -16,6 +16,10 @@ var (
 	// ErrAttestationAggregationBitsOverlap is returned when two attestations aggregation
 	// bits overlap with each other.
 	ErrAttestationAggregationBitsOverlap = errors.New("overlapping aggregation bits")
+
+	// ErrAttestationAggregationBitsDifferentLen is returned when two attestation aggregation bits
+	// have different lengths.
+	ErrAttestationAggregationBitsDifferentLen = errors.New("different bitlist lengths")
 )
 
 // AggregateAttestations such that the minimal number of attestations are returned.
@@ -32,7 +36,7 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 		}
 		for j := i + 1; j < len(atts); j++ {
 			b := atts[j]
-			if !a.AggregationBits.Overlaps(b.AggregationBits) {
+			if a.AggregationBits.Len() == b.AggregationBits.Len() && !a.AggregationBits.Overlaps(b.AggregationBits) {
 				var err error
 				a, err = AggregateAttestation(a, b)
 				if err != nil {
@@ -50,6 +54,11 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 	for i, a := range atts {
 		for j := i + 1; j < len(atts); j++ {
 			b := atts[j]
+
+			if a.AggregationBits.Len() != b.AggregationBits.Len() {
+				continue
+			}
+
 			if a.AggregationBits.Contains(b.AggregationBits) {
 				// If b is fully contained in a, then b can be removed.
 				atts = append(atts[:j], atts[j+1:]...)
@@ -74,6 +83,9 @@ var signatureFromBytes = bls.SignatureFromBytes
 
 // AggregateAttestation aggregates attestations a1 and a2 together.
 func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
+	if a1.AggregationBits.Len() != a2.AggregationBits.Len() {
+		return nil, ErrAttestationAggregationBitsDifferentLen
+	}
 	if a1.AggregationBits.Overlaps(a2.AggregationBits) {
 		return nil, ErrAttestationAggregationBitsOverlap
 	}
@@ -112,7 +124,10 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
 //    return bls_sign(privkey, hash_tree_root(slot), domain)
 func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
-	d := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	d, err := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
 	s, err := ssz.HashTreeRoot(slot)
 	if err != nil {
 		return nil, err

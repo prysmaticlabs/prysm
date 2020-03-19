@@ -25,7 +25,6 @@ import (
 )
 
 var appFlags = []cli.Flag{
-	flags.NoCustomConfigFlag,
 	flags.DepositContractFlag,
 	flags.Web3ProviderFlag,
 	flags.HTTPWeb3ProviderFlag,
@@ -37,6 +36,8 @@ var appFlags = []cli.Flag{
 	flags.MinSyncPeers,
 	flags.RPCMaxPageSize,
 	flags.ContractDeploymentBlock,
+	flags.SetGCPercent,
+	flags.UnsafeSync,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,
@@ -45,6 +46,7 @@ var appFlags = []cli.Flag{
 	flags.ArchiveValidatorSetChangesFlag,
 	flags.ArchiveBlocksFlag,
 	flags.ArchiveAttestationsFlag,
+	flags.SlotsPerArchivedPoint,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
@@ -133,6 +135,9 @@ func main() {
 			}
 		}
 
+		if ctx.IsSet(flags.SetGCPercent.Name) {
+			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
+		}
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
 	}

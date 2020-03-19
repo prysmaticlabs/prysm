@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -25,7 +25,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pkey",
+			"pubkey",
 		},
 	)
 	validatorAggFailVec = promauto.NewCounterVec(
@@ -35,7 +35,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pkey",
+			"pubkey",
 		},
 	)
 )
@@ -49,7 +49,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	fmtKey := fmt.Sprintf("%#x", pubKey[:8])
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
@@ -74,7 +74,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
 	v.waitToSlotTwoThirds(ctx, slot)
 
-	_, err = v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
+	_, err = v.validatorClient.SubmitAggregateAndProof(ctx, &ethpb.AggregationRequest{
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
 		PublicKey:      pubKey[:],
@@ -83,7 +83,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err != nil {
 		log.Errorf("Could not submit slot signature to beacon node: %v", err)
 		if v.emitAccountMetrics {
-			validatorAggFailVec.WithLabelValues().Inc()
+			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -104,10 +104,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 // This implements selection logic outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) ([]byte, error) {
-	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
-		Epoch:  helpers.SlotToEpoch(slot),
-		Domain: params.BeaconConfig().DomainBeaconAttester,
-	})
+	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainBeaconAttester[:])
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +116,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 
 	sig, err := v.keyManager.Sign(pubKey, slotRoot, domain.SignatureDomain)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to sign slot")
 	}
 
 	return sig.Marshal(), nil

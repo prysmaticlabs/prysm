@@ -14,6 +14,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -22,33 +23,46 @@ import (
 
 var log = logrus.WithField("prefix", "beaconclient")
 
-// Notifier defines a struct which exposes event feeds
-// for beacon blocks and attestations received from a beacon node.
+// Notifier defines a struct which exposes event feeds regarding beacon blocks,
+// attestations, and more information received from a beacon node.
 type Notifier interface {
 	BlockFeed() *event.Feed
 	AttestationFeed() *event.Feed
+	ClientReadyFeed() *event.Feed
+}
+
+// ChainFetcher defines a struct which can retrieve
+// chain information from a beacon node such as the latest chain head.
+type ChainFetcher interface {
+	ChainHead(ctx context.Context) (*ethpb.ChainHead, error)
 }
 
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	cert                  string
-	conn                  *grpc.ClientConn
-	provider              string
-	client                ethpb.BeaconChainClient
-	blockFeed             *event.Feed
-	attestationFeed       *event.Feed
-	proposerSlashingsChan chan *ethpb.ProposerSlashing
-	attesterSlashingsChan chan *ethpb.AttesterSlashing
-	attesterSlashingsFeed *event.Feed
-	proposerSlashingsFeed *event.Feed
+	ctx                         context.Context
+	cancel                      context.CancelFunc
+	cert                        string
+	conn                        *grpc.ClientConn
+	provider                    string
+	beaconClient                ethpb.BeaconChainClient
+	slasherDB                   db.Database
+	nodeClient                  ethpb.NodeClient
+	clientFeed                  *event.Feed
+	blockFeed                   *event.Feed
+	attestationFeed             *event.Feed
+	proposerSlashingsChan       chan *ethpb.ProposerSlashing
+	attesterSlashingsChan       chan *ethpb.AttesterSlashing
+	attesterSlashingsFeed       *event.Feed
+	proposerSlashingsFeed       *event.Feed
+	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
+	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
 }
 
 // Config options for the beaconclient service.
 type Config struct {
 	BeaconProvider        string
 	BeaconCert            string
+	SlasherDB             db.Database
 	ProposerSlashingsFeed *event.Feed
 	AttesterSlashingsFeed *event.Feed
 }
@@ -57,16 +71,20 @@ type Config struct {
 func NewBeaconClientService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		cert:                  cfg.BeaconCert,
-		ctx:                   ctx,
-		cancel:                cancel,
-		provider:              cfg.BeaconProvider,
-		blockFeed:             new(event.Feed),
-		attestationFeed:       new(event.Feed),
-		proposerSlashingsChan: make(chan *ethpb.ProposerSlashing, 1),
-		attesterSlashingsChan: make(chan *ethpb.AttesterSlashing, 1),
-		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
-		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
+		cert:                        cfg.BeaconCert,
+		ctx:                         ctx,
+		cancel:                      cancel,
+		provider:                    cfg.BeaconProvider,
+		blockFeed:                   new(event.Feed),
+		clientFeed:                  new(event.Feed),
+		attestationFeed:             new(event.Feed),
+		slasherDB:                   cfg.SlasherDB,
+		proposerSlashingsChan:       make(chan *ethpb.ProposerSlashing, 1),
+		attesterSlashingsChan:       make(chan *ethpb.AttesterSlashing, 1),
+		attesterSlashingsFeed:       cfg.AttesterSlashingsFeed,
+		proposerSlashingsFeed:       cfg.ProposerSlashingsFeed,
+		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
+		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 	}
 }
 
@@ -80,6 +98,12 @@ func (bs *Service) BlockFeed() *event.Feed {
 // attestations received via the beacon node through gRPC.
 func (bs *Service) AttestationFeed() *event.Feed {
 	return bs.attestationFeed
+}
+
+// ClientReadyFeed returns a feed other services in slasher can subscribe to
+// to indicate when the gRPC connection is ready.
+func (bs *Service) ClientReadyFeed() *event.Feed {
+	return bs.clientFeed
 }
 
 // Stop the beacon client service by closing the gRPC connection.
@@ -137,10 +161,23 @@ func (bs *Service) Start() {
 	}
 	log.Info("Successfully started gRPC connection")
 	bs.conn = conn
-	bs.client = ethpb.NewBeaconChainClient(bs.conn)
+	bs.beaconClient = ethpb.NewBeaconChainClient(bs.conn)
+	bs.nodeClient = ethpb.NewNodeClient(bs.conn)
 
-	go bs.receiveBlocks(bs.ctx)
-	go bs.receiveAttestations(bs.ctx)
+	// We poll for the sync status of the beacon node until it is fully synced.
+	bs.querySyncStatus(bs.ctx)
+
+	// We notify other services in slasher that the beacon client is ready
+	// and the connection is active.
+	bs.clientFeed.Send(true)
+
+	// We register subscribers for any detected proposer/attester slashings
+	// in the slasher services that we can submit to the beacon node
+	// as they are found.
 	go bs.subscribeDetectedProposerSlashings(bs.ctx, bs.proposerSlashingsChan)
 	go bs.subscribeDetectedAttesterSlashings(bs.ctx, bs.attesterSlashingsChan)
+
+	// We listen to a stream of blocks and attestations from the beacon node.
+	go bs.receiveBlocks(bs.ctx)
+	go bs.receiveAttestations(bs.ctx)
 }

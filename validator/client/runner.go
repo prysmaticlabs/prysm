@@ -2,10 +2,13 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -28,6 +31,7 @@ type Validator interface {
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
+	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -67,9 +71,11 @@ func run(ctx context.Context, v Validator) {
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
-			slotCtx, cancel := context.WithDeadline(ctx, v.SlotDeadline(slot))
+			deadline := v.SlotDeadline(slot)
+			slotCtx, cancel := context.WithDeadline(ctx, deadline)
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			log := log.WithField("slot", slot)
+			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.WithError(err).Error("Could not report validator's rewards/penalties")
 			}
@@ -81,6 +87,11 @@ func run(ctx context.Context, v Validator) {
 				cancel()
 				span.End()
 				continue
+			}
+
+			// Start fetching domain data for the next epoch.
+			if helpers.IsEpochEnd(slot) {
+				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 
 			var wg sync.WaitGroup
@@ -102,7 +113,7 @@ func run(ctx context.Context, v Validator) {
 						case pb.ValidatorRole_AGGREGATOR:
 							go v.SubmitAggregateAndProof(slotCtx, slot, id)
 						case pb.ValidatorRole_UNKNOWN:
-							log.Debug("No active roles, doing nothing")
+							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)
 						}

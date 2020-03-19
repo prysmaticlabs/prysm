@@ -60,8 +60,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]
 		s.pendingAttsLock.RUnlock()
-		// Has the pending attestation's missing block arrived yet?
-		if s.db.HasBlock(ctx, bRoot) {
+		// Has the pending attestation's missing block arrived and the node processed block yet?
+		if s.db.HasBlock(ctx, bRoot) && s.db.HasState(ctx, bRoot) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, att := range attestations {
 				// The pending attestations can arrive in both aggregated and unaggregated forms,
@@ -117,6 +117,9 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer or equal to the pending attestation's target boundary slot.
+			if len(pids) == 0 {
+				return nil
+			}
 			pid := pids[rand.Int()%len(pids)]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Aggregate.Data.Target.Epoch)
 			for _, p := range pids {

@@ -31,8 +31,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	initialsyncold "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync-old"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -69,6 +71,7 @@ type BeaconNode struct {
 	blockFeed       *event.Feed
 	opFeed          *event.Feed
 	forkChoiceStore forkchoice.ForkChoicer
+	stateGen        *stategen.State
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -83,24 +86,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
+
 	featureconfig.ConfigureBeaconChain(ctx)
 	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
-
-	// Use custom config values if the --no-custom-config flag is not set.
-	if !ctx.Bool(flags.NoCustomConfigFlag.Name) {
-		if featureconfig.Get().MinimalConfig {
-			log.WithField(
-				"config", "minimal-spec",
-			).Info("Using custom chain parameters")
-			params.UseMinimalConfig()
-		} else {
-			log.WithField(
-				"config", "demo",
-			).Info("Using custom chain parameters")
-			params.UseDemoBeaconConfig()
-		}
-	}
 
 	beacon := &BeaconNode{
 		ctx:             ctx,
@@ -118,6 +107,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	beacon.startStateGen()
+
 	if err := beacon.registerP2P(ctx); err != nil {
 		return nil, err
 	}
@@ -126,7 +117,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerAttestationPool(ctx); err != nil {
+	if err := beacon.registerAttestationPool(); err != nil {
 		return nil, err
 	}
 
@@ -272,6 +263,10 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	return nil
 }
 
+func (b *BeaconNode) startStateGen() {
+	b.stateGen = stategen.New(b.db)
+}
+
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodeAddrs := strings.Split(ctx.String(cmd.BootstrapNode.Name), ",")
@@ -316,9 +311,24 @@ func (b *BeaconNode) fetchP2P(ctx *cli.Context) p2p.P2P {
 	return p
 }
 
+func (b *BeaconNode) registerAttestationPool() error {
+	s, err := attestations.NewService(context.Background(), &attestations.Config{
+		Pool: b.attestationPool,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not register atts pool service")
+	}
+	return b.services.RegisterService(s)
+}
+
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
+	}
+
+	var opsService *attestations.Service
+	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
 
@@ -329,25 +339,18 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		ChainStartFetcher: web3Service,
 		AttPool:           b.attestationPool,
 		ExitPool:          b.exitPool,
+		SlashingPool:      b.slashingsPool,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
+		OpsService:        opsService,
+		StateGen:          b.stateGen,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}
 	return b.services.RegisterService(blockchainService)
-}
-
-func (b *BeaconNode) registerAttestationPool(ctx *cli.Context) error {
-	attPoolService, err := attestations.NewService(context.Background(), &attestations.Config{
-		Pool: b.attestationPool,
-	})
-	if err != nil {
-		return err
-	}
-	return b.services.RegisterService(attPoolService)
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
@@ -356,11 +359,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	depAddress := cliCtx.String(flags.DepositContractFlag.Name)
 	if depAddress == "" {
-		var err error
-		depAddress, err = fetchDepositContract()
-		if err != nil {
-			log.WithError(err).Fatal("Cannot fetch deposit contract")
-		}
+		log.Fatal(fmt.Sprintf("%s is required", flags.DepositContractFlag.Name))
 	}
 
 	if !common.IsHexAddress(depAddress) {
@@ -406,20 +405,32 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var initSync *initialsync.Service
-	if err := b.services.FetchService(&initSync); err != nil {
-		return err
+	var initSync prysmsync.Checker
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		var initSyncTmp *initialsync.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		initSync = initSyncTmp
+	} else {
+		var initSyncTmp *initialsyncold.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		initSync = initSyncTmp
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:            b.db,
-		P2P:           b.fetchP2P(ctx),
-		Chain:         chainService,
-		InitialSync:   initSync,
-		StateNotifier: b,
-		BlockNotifier: b,
-		AttPool:       b.attestationPool,
-		ExitPool:      b.exitPool,
+		DB:                  b.db,
+		P2P:                 b.fetchP2P(ctx),
+		Chain:               chainService,
+		InitialSync:         initSync,
+		StateNotifier:       b,
+		BlockNotifier:       b,
+		AttestationNotifier: b,
+		AttPool:             b.attestationPool,
+		ExitPool:            b.exitPool,
+		SlashingPool:        b.slashingsPool,
 	})
 
 	return b.services.RegisterService(rs)
@@ -431,16 +442,25 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	is := initialsync.NewInitialSync(&initialsync.Config{
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		is := initialsync.NewInitialSync(&initialsync.Config{
+			DB:            b.db,
+			Chain:         chainService,
+			P2P:           b.fetchP2P(ctx),
+			StateNotifier: b,
+			BlockNotifier: b,
+		})
+		return b.services.RegisterService(is)
+	}
+
+	is := initialsyncold.NewInitialSync(&initialsyncold.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(ctx),
 		StateNotifier: b,
 		BlockNotifier: b,
 	})
-
 	return b.services.RegisterService(is)
-
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
@@ -454,9 +474,19 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *initialsync.Service
-	if err := b.services.FetchService(&syncService); err != nil {
-		return err
+	var syncService prysmsync.Checker
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		var initSyncTmp *initialsync.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		syncService = initSyncTmp
+	} else {
+		var initSyncTmp *initialsyncold.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		syncService = initSyncTmp
 	}
 
 	genesisValidators := ctx.Uint64(flags.InteropNumValidatorsFlag.Name)
@@ -512,6 +542,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		OperationNotifier:     b,
 		SlasherCert:           slasherCert,
 		SlasherProvider:       slasherProvider,
+		StateGen:              b.stateGen,
 	})
 
 	return b.services.RegisterService(rpcService)

@@ -38,13 +38,10 @@ func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch 
 //
 // Spec pseudocode definition:
 //  def is_slashable_validator(validator: Validator, epoch: Epoch) -> bool:
-//    """
-//    Check if ``validator`` is slashable.
-//    """
-//    return (
-//        validator.activation_epoch <= epoch < validator.withdrawable_epoch and
-//        validator.slashed is False
-// 		)
+//  """
+//  Check if ``validator`` is slashable.
+//  """
+//  return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
 func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 	active := validator.ActivationEpoch <= epoch
 	beforeWithdrawable := epoch < validator.WithdrawableEpoch
@@ -104,7 +101,7 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 	return count, nil
 }
 
-// DelayedActivationExitEpoch takes in epoch number and returns when
+// ActivationExitEpoch takes in epoch number and returns when
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
@@ -112,8 +109,8 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 //    """
 //    Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
 //    """
-//    return Epoch(epoch + 1 + ACTIVATION_EXIT_DELAY)
-func DelayedActivationExitEpoch(epoch uint64) uint64 {
+//    return Epoch(epoch + 1 + MIN_SEED_LOOKAHEAD)
+func ActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 }
 
@@ -243,18 +240,26 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return bls_domain(domain_type, fork_version)
-func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
+func Domain(fork *pb.Fork, epoch uint64, domainType [bls.DomainByteLength]byte) (uint64, error) {
+	if fork == nil {
+		return 0, errors.New("nil fork or domain type")
+	}
 	var forkVersion []byte
 	if epoch < fork.Epoch {
 		forkVersion = fork.PreviousVersion
 	} else {
 		forkVersion = fork.CurrentVersion
 	}
-	return bls.Domain(domainType, forkVersion)
+	if len(forkVersion) != 4 {
+		return 0, errors.New("fork version length is not 4 byte")
+	}
+	var forkVersionArray [4]byte
+	copy(forkVersionArray[:], forkVersion[:4])
+	return bls.Domain(domainType, forkVersionArray), nil
 }
 
 // IsEligibleForActivationQueue checks if the validator is eligible to
-// be places into the activation queue.
+// be placed into the activation queue.
 //
 // Spec pseudocode definition:
 //  def is_eligible_for_activation_queue(validator: Validator) -> bool:
@@ -266,8 +271,19 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 //        and validator.effective_balance == MAX_EFFECTIVE_BALANCE
 //    )
 func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
-	return validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
-		validator.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+}
+
+// IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
+// be placed into the activation queue.
+func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidator) bool {
+	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
+}
+
+// isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
+func isEligibileForActivationQueue(activationEligibilityEpoch uint64, effectiveBalance uint64) bool {
+	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
 
 // IsEligibleForActivation checks if the validator is eligible for activation.
@@ -285,6 +301,20 @@ func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
 //    )
 func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Validator) bool {
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
-	return validator.ActivationEligibilityEpoch <= finalizedEpoch &&
-		validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch
+	return isEligibleForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
+}
+
+// IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
+func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *stateTrie.ReadOnlyValidator) bool {
+	cpt := state.FinalizedCheckpoint()
+	if cpt == nil {
+		return false
+	}
+	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+}
+
+// isEligibleForActivation carries out the logic for IsEligibleForActivation*
+func isEligibleForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
+	return activationEligibilityEpoch <= finalizedEpoch &&
+		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }

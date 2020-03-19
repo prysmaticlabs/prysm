@@ -5,6 +5,8 @@
 package validators
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -38,6 +40,9 @@ import (
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie.BeaconState, error) {
 	vals := state.Validators()
+	if idx >= uint64(len(vals)) {
+		return nil, fmt.Errorf("validator idx %d is higher then validator count %d", idx, len(vals))
+	}
 	validator := vals[idx]
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state, nil
@@ -48,7 +53,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 			exitEpochs = append(exitEpochs, val.ExitEpoch)
 		}
 	}
-	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
+	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(helpers.CurrentEpoch(state)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
 	exitQueueEpoch := uint64(0)
@@ -161,10 +166,10 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlow
 	return state, nil
 }
 
-// ActivatedValidatorIndices determines the indices activated during the current epoch.
+// ActivatedValidatorIndices determines the indices activated during the given epoch.
 func ActivatedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	activations := make([]uint64, 0)
-	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	delayedActivationEpoch := helpers.ActivationExitEpoch(epoch)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
 		if val.ActivationEpoch == delayedActivationEpoch {
@@ -174,7 +179,7 @@ func ActivatedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []ui
 	return activations
 }
 
-// SlashedValidatorIndices determines the indices slashed during the current epoch.
+// SlashedValidatorIndices determines the indices slashed during the given epoch.
 func SlashedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	slashed := make([]uint64, 0)
 	for i := 0; i < len(validators); i++ {
@@ -220,9 +225,51 @@ func ExitedValidatorIndices(epoch uint64, validators []*ethpb.Validator, activeV
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	for i, val := range validators {
-		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch {
+		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
+			val.EffectiveBalance > params.BeaconConfig().EjectionBalance {
 			exited = append(exited, uint64(i))
 		}
 	}
 	return exited, nil
+}
+
+// EjectedValidatorIndices determines the indices ejected during the given epoch.
+func EjectedValidatorIndices(epoch uint64, validators []*ethpb.Validator, activeValidatorCount uint64) ([]uint64, error) {
+	ejected := make([]uint64, 0)
+	exitEpochs := make([]uint64, 0)
+	for i := 0; i < len(validators); i++ {
+		val := validators[i]
+		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		}
+	}
+	exitQueueEpoch := uint64(0)
+	for _, i := range exitEpochs {
+		if exitQueueEpoch < i {
+			exitQueueEpoch = i
+		}
+	}
+
+	// We use the exit queue churn to determine if we have passed a churn limit.
+	exitQueueChurn := 0
+	for _, val := range validators {
+		if val.ExitEpoch == exitQueueEpoch {
+			exitQueueChurn++
+		}
+	}
+	churn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get churn limit")
+	}
+	if churn < uint64(exitQueueChurn) {
+		exitQueueEpoch++
+	}
+	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	for i, val := range validators {
+		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
+			val.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
+			ejected = append(ejected, uint64(i))
+		}
+	}
+	return ejected, nil
 }

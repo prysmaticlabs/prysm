@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -89,8 +89,14 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
-		return nil, errors.Wrap(err, "could not save state")
+	if featureconfig.Get().NewStateMgmt {
+		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
+			return nil, errors.Wrap(err, "could not save state")
+		}
+	} else {
+		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+			return nil, errors.Wrap(err, "could not save state")
+		}
 	}
 
 	// Update justified check point.
@@ -106,18 +112,21 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if endSlot > startSlot {
-			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-					startSlot, endSlot)
+		if !featureconfig.Get().NewStateMgmt {
+			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+			if endSlot > startSlot {
+				if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+					return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+						startSlot, endSlot)
+				}
 			}
 		}
+		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 
 		// Prune proto array fork choice nodes, all nodes before finalized check point will
 		// be pruned.
-		s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
+		s.forkChoiceStore.Prune(ctx, fRoot)
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
@@ -125,17 +134,27 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 			return nil, errors.Wrap(err, "could not save new justified")
 		}
+
+		if featureconfig.Get().NewStateMgmt {
+			finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.stateGen.MigrateToCold(ctx, finalizedState, fRoot); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return nil, errors.Wrap(err, "could not save finalized checkpoint")
+		return nil, errors.Wrap(err, "could not save new validators")
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		logEpochData(postState)
-		metrics.ReportEpochMetrics(postState)
+		reportEpochMetrics(postState)
 
 		// Update committees cache at epoch boundary slot.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
@@ -151,6 +170,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	// Delete the processed block attestations from attestation pool.
 	if err := s.deletePoolAtts(b.Body.Attestations); err != nil {
 		return nil, err
+	}
+
+	// Delete the processed block attester slashings from slashings pool.
+	for i := 0; i < len(b.Body.AttesterSlashings); i++ {
+		s.slashingPool.MarkIncludedAttesterSlashing(b.Body.AttesterSlashings[i])
 	}
 
 	return postState, nil
@@ -169,16 +193,18 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	b := signed.Block
 
-	s.initSyncStateLock.Lock()
-	defer s.initSyncStateLock.Unlock()
-
 	// Retrieve incoming block's pre state.
 	preState, err := s.verifyBlkPreState(ctx, b)
 	if err != nil {
 		return err
 	}
-	preStateValidatorCount := preState.NumValidators()
 
+	// Exit early if the pre state slot is higher than incoming block's slot.
+	if preState.Slot() >= signed.Block.Slot {
+		return nil
+	}
+
+	preStateValidatorCount := preState.NumValidators()
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
@@ -196,11 +222,21 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if featureconfig.Get().InitSyncCacheState {
-		s.initSyncState[root] = postState
-	} else {
-		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+	if featureconfig.Get().NewStateMgmt {
+		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
 			return errors.Wrap(err, "could not save state")
+		}
+	} else {
+		s.initSyncStateLock.Lock()
+		defer s.initSyncStateLock.Unlock()
+		s.initSyncState[root] = postState.Copy()
+		s.filterBoundaryCandidates(ctx, root, postState)
+	}
+
+	if flags.Get().EnableArchive {
+		atts := signed.Block.Body.Attestations
+		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
+			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
 		}
 	}
 
@@ -213,17 +249,19 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if endSlot > startSlot {
-			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-					startSlot, endSlot)
+		if !featureconfig.Get().NewStateMgmt {
+			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+			if endSlot > startSlot {
+				if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+					return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+						startSlot, endSlot)
+				}
 			}
-		}
 
-		if err := s.saveInitState(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save init sync finalized state")
+			if err := s.saveInitState(ctx, postState); err != nil {
+				return errors.Wrap(err, "could not save init sync finalized state")
+			}
 		}
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
@@ -236,16 +274,40 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 			return errors.Wrap(err, "could not save new justified")
 		}
+
+		if featureconfig.Get().NewStateMgmt {
+			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
+			finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+			if err != nil {
+				return errors.Wrap(err, "could not get state by root for migration")
+			}
+			if err := s.stateGen.MigrateToCold(ctx, finalizedState, fRoot); err != nil {
+				return errors.Wrap(err, "could not migrate with new finalized root")
+
+			}
+		}
 	}
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
+		return errors.Wrap(err, "could not save new validators")
+	}
+
+	if !featureconfig.Get().NewStateMgmt {
+		numOfStates := len(s.boundaryRoots)
+		if numOfStates > initialSyncCacheSize {
+			if err = s.persistCachedStates(ctx, numOfStates); err != nil {
+				return err
+			}
+		}
+		if len(s.initSyncState) > maxCacheSize {
+			s.pruneOldNonFinalizedStates()
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
-		metrics.ReportEpochMetrics(postState)
+		reportEpochMetrics(postState)
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 
 		// Update committees cache at epoch boundary slot.
@@ -256,11 +318,9 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return err
 		}
 
-		if featureconfig.Get().InitSyncCacheState {
-			if helpers.IsEpochStart(postState.Slot()) {
-				if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
-					return errors.Wrap(err, "could not save state")
-				}
+		if !featureconfig.Get().NewStateMgmt && helpers.IsEpochStart(postState.Slot()) {
+			if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+				return errors.Wrap(err, "could not save state")
 			}
 		}
 	}

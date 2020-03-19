@@ -5,11 +5,6 @@ import (
 )
 
 var (
-	// NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	NoCustomConfigFlag = &cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
 	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
@@ -26,6 +21,7 @@ var (
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
+		Value: "0x4689a3C63CE249355C8a573B5974db21D2d1b8Ef",
 	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{
@@ -74,6 +70,17 @@ var (
 		Usage: "The eth1 block in which the deposit contract was deployed.",
 		Value: 1960177,
 	}
+	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.
+	SetGCPercent = &cli.IntFlag{
+		Name:  "gc-percent",
+		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
+		Value: 100,
+	}
+	// UnsafeSync starts the beacon node from the previously saved head state and syncs from there.
+	UnsafeSync = &cli.BoolFlag{
+		Name:  "unsafe-sync",
+		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
+	}
 	// SlasherCertFlag defines a flag for the slasher TLS certificate.
 	SlasherCertFlag = &cli.StringFlag{
 		Name:  "slasher-tls-cert",
@@ -84,5 +91,12 @@ var (
 		Name:  "slasher-provider",
 		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
 		Value: "127.0.0.1:5000",
+	}
+	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
+	// section of DB.
+	SlotsPerArchivedPoint = &cli.IntFlag{
+		Name:  "slots-per-archive-point",
+		Usage: "The slot durations of when an archived state gets saved in the DB.",
+		Value: 128,
 	}
 )

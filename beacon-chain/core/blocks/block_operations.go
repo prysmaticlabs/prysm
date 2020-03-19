@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -25,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -103,6 +103,12 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
 //        state.latest_eth1_data = body.eth1_data
 func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
+	if beaconState == nil {
+		return nil, errors.New("nil state")
+	}
+	if block == nil || block.Body == nil {
+		return nil, errors.New("nil block or block withought body")
+	}
 	if err := beaconState.AppendEth1DataVotes(block.Body.Eth1Data); err != nil {
 		return nil, err
 	}
@@ -119,6 +125,9 @@ func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.Bea
 }
 
 func areEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+	if a == nil || b == nil {
+		return false
+	}
 	return a.DepositCount == b.DepositCount &&
 		bytes.Equal(a.BlockHash, b.BlockHash) &&
 		bytes.Equal(a.DepositRoot, b.DepositRoot)
@@ -210,7 +219,10 @@ func ProcessBlockHeader(
 
 	// Verify proposer signature.
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, err
+	}
 	if err := verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, ErrSigFailedToVerify
 	}
@@ -322,7 +334,10 @@ func ProcessRandao(
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 
-	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao)
+	if err != nil {
+		return nil, err
+	}
 	if err := verifySignature(buf, proposerPub[:], body.RandaoReveal, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
@@ -356,6 +371,9 @@ func ProcessRandaoNoVerify(
 		return nil, err
 	}
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
+	if len(blockRandaoReveal) != len(latestMixSlice) {
+		return nil, errors.New("blockRandaoReveal length doesnt match latestMixSlice length")
+	}
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
@@ -394,6 +412,9 @@ func ProcessProposerSlashings(
 ) (*stateTrie.BeaconState, error) {
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
+		if slashing == nil {
+			return nil, errors.New("nil proposer slashings in block body")
+		}
 		if int(slashing.ProposerIndex) >= beaconState.NumValidators() {
 			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
 		}
@@ -419,7 +440,9 @@ func VerifyProposerSlashing(
 	if err != nil {
 		return err
 	}
-
+	if slashing.Header_1 == nil || slashing.Header_1.Header == nil || slashing.Header_2 == nil || slashing.Header_2.Header == nil {
+		return errors.New("nil header cannot be verified")
+	}
 	if slashing.Header_1.Header.Slot != slashing.Header_2.Header.Slot {
 		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Header.Slot, slashing.Header_2.Header.Slot)
 	}
@@ -430,7 +453,10 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain := helpers.Domain(beaconState.Fork(), helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return err
+	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
 		if err := verifySigningRoot(header.Header, proposer.PublicKey, header.Signature, domain); err != nil {
@@ -499,6 +525,15 @@ func ProcessAttesterSlashings(
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
 func VerifyAttesterSlashing(ctx context.Context, beaconState *stateTrie.BeaconState, slashing *ethpb.AttesterSlashing) error {
+	if slashing == nil {
+		return errors.New("nil slashing")
+	}
+	if slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
+		return errors.New("nil attestation")
+	}
+	if slashing.Attestation_1.Data == nil || slashing.Attestation_2.Data == nil {
+		return errors.New("nil attestation data")
+	}
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -529,12 +564,18 @@ func VerifyAttesterSlashing(ctx context.Context, beaconState *stateTrie.BeaconSt
 //        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
 //    )
 func IsSlashableAttestationData(data1 *ethpb.AttestationData, data2 *ethpb.AttestationData) bool {
+	if data1 == nil || data2 == nil || data1.Target == nil || data2.Target == nil || data1.Source == nil || data2.Source == nil {
+		return false
+	}
 	isDoubleVote := !proto.Equal(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
 	isSurroundVote := data1.Source.Epoch < data2.Source.Epoch && data2.Target.Epoch < data1.Target.Epoch
 	return isDoubleVote || isSurroundVote
 }
 
 func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
+	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
+		return nil
+	}
 	indices1 := slashing.Attestation_1.AttestingIndices
 	indices2 := slashing.Attestation_1.AttestingIndices
 	return sliceutil.IntersectionUint64(indices1, indices2)
@@ -742,7 +783,9 @@ func ProcessAttestationNoVerify(
 func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
-
+	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
+		return errors.New("nil or missing indexed attestation data")
+	}
 	indices := indexedAtt.AttestingIndices
 
 	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
@@ -765,9 +808,11 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 
-	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return err
+	}
 	var pubkey *bls.PublicKey
-	var err error
 	if len(indices) > 0 {
 		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[0])
 		pubkey, err = bls.PublicKeyFromBytes(pubkeyAtIdx[:])
@@ -804,6 +849,9 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
+	if att == nil || att.Data == nil {
+		return fmt.Errorf("nil or missing attestation data: %v", att)
+	}
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
@@ -830,6 +878,9 @@ func ProcessDeposits(
 	var err error
 	deposits := body.Deposits
 	for _, deposit := range deposits {
+		if deposit == nil || deposit.Data == nil {
+			return nil, errors.New("got a nil deposit in block")
+		}
 		beaconState, err = ProcessDeposit(beaconState, deposit)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
@@ -922,6 +973,9 @@ func ProcessDeposit(
 	deposit *ethpb.Deposit,
 ) (*stateTrie.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
+		if deposit == nil || deposit.Data == nil {
+			return nil, err
+		}
 		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
@@ -971,16 +1025,20 @@ func ProcessDeposit(
 
 func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
+	if deposit == nil || deposit.Data == nil {
+		return errors.New("received nil deposit or nil deposit data")
+	}
 	eth1Data := beaconState.Eth1Data()
 	if eth1Data == nil {
 		return errors.New("received nil eth1data in the beacon state")
 	}
+
 	receiptRoot := eth1Data.DepositRoot
 	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
-	if ok := trieutil.VerifyMerkleProof(
+	if ok := trieutil.VerifyMerkleBranch(
 		receiptRoot,
 		leaf[:],
 		int(beaconState.Eth1DepositIndex()),
@@ -1024,6 +1082,9 @@ func ProcessVoluntaryExits(
 ) (*stateTrie.BeaconState, error) {
 	exits := body.VoluntaryExits
 	for idx, exit := range exits {
+		if exit == nil || exit.Exit == nil {
+			return nil, errors.New("nil voluntary exit in block body")
+		}
 		if int(exit.Exit.ValidatorIndex) >= beaconState.NumValidators() {
 			return nil, fmt.Errorf(
 				"validator index out of bound %d > %d",
@@ -1056,6 +1117,9 @@ func ProcessVoluntaryExitsNoVerify(
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
+		if exit == nil || exit.Exit == nil {
+			return nil, errors.New("nil exit")
+		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
@@ -1110,7 +1174,10 @@ func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, s
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	domain := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	if err != nil {
+		return err
+	}
 	if err := verifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
 		return ErrSigFailedToVerify
 	}

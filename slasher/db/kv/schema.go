@@ -5,13 +5,21 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 )
 
-const latestEpochKey = "LATEST_EPOCH_DETECTED"
+const (
+	latestEpochKey       = "LATEST_EPOCH_DETECTED"
+	chainHeadKey         = "CHAIN_HEAD"
+	cachedSpanerEpochs   = 256
+	spannerEncodedLength = 7
+)
 
 var (
-	// Slasher
+	indexedAttestationsRootsByTargetBucket = []byte("indexed-attestations-roots-by-target")
+	indexedAttestationsBucket              = []byte("indexed-attestations")
+	// Slasher-related buckets.
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
 	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
 	slashingBucket                    = []byte("slashing-bucket")
+	chainDataBucket                   = []byte("chain-data-bucket")
 	compressedIdxAttsBucket           = []byte("compressed-idx-atts-bucket")
 	validatorsPublicKeysBucket        = []byte("validators-public-keys-bucket")
 	// In order to quickly detect surround and surrounded attestations we need to store

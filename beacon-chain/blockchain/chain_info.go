@@ -32,7 +32,7 @@ type TimeFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() uint64
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock() *ethpb.SignedBeaconBlock
+	HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (*state.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
@@ -135,23 +135,25 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 }
 
 // HeadBlock returns the head block of the chain.
-func (s *Service) HeadBlock() *ethpb.SignedBeaconBlock {
-	return s.headBlock()
+// If the head state is nil from service struct,
+// it will attempt to get the head block from DB.
+func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+	if s.hasHeadState() {
+		return s.headBlock(), nil
+	}
+
+	return s.beaconDB.HeadBlock(ctx)
 }
 
 // HeadState returns the head state of the chain.
 // If the head state is nil from service struct,
-// it will attempt to get from DB and error if nil again.
+// it will attempt to get the head state from DB.
 func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	if s.hasHeadState() {
 		return s.headState(), nil
 	}
 
-	headState, err := s.beaconDB.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return headState, nil
+	return s.beaconDB.HeadState(ctx)
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
@@ -184,7 +186,7 @@ func (s *Service) CurrentFork() *pb.Fork {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
 	}
-	return s.headState().Fork()
+	return s.head.state.Fork()
 }
 
 // Participation returns the participation stats of a given epoch.
