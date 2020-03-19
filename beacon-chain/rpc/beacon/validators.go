@@ -200,13 +200,13 @@ func (bs *Server) ListValidators(
 
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
 
-	for _, indice := range req.Indices {
-		val, err := headState.ValidatorAtIndex(indice)
+	for _, index := range req.Indices {
+		val, err := headState.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get validator")
 		}
 		validatorList = append(validatorList, &ethpb.Validators_ValidatorContainer{
-			Index:     indice,
+			Index:     index,
 			Validator: val,
 		})
 	}
