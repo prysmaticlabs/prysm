@@ -1,14 +1,15 @@
 package fuzz
 
 import (
-	"io/ioutil"
 	"strings"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/go-ssz"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 const PanicOnError = "false"
+const ReturnSSZPostState = false
 
 func init() {
 	featureconfig.Init(&featureconfig.Flags{
@@ -23,14 +24,14 @@ func fail(err error) ([]byte, bool) {
 	return nil, false
 }
 
-func bazelFileBytes(path string) ([]byte, error) {
-	filepath, err := bazel.Runfile(path)
-	if err != nil {
-		return nil, err
+func success(post *stateTrie.BeaconState) ([]byte, bool) {
+	if !ReturnSSZPostState {
+		return nil, true
 	}
-	fileBytes, err := ioutil.ReadFile(filepath)
+
+	result, err := ssz.Marshal(post.InnerStateUnsafe())
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return fileBytes, nil
+	return result, true
 }

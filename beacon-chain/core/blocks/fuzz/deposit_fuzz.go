@@ -26,10 +26,5 @@ func BeaconFuzzDeposit(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-
-	result, err := ssz.Marshal(post.InnerStateUnsafe())
-	if err != nil {
-		panic(err)
-	}
-	return result, true
+	return success(post)
 }

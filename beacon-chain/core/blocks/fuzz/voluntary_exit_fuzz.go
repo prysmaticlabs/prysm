@@ -4,7 +4,6 @@ package fuzz
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prylabs_testing "github.com/prysmaticlabs/prysm/beacon-chain/testing"
@@ -30,10 +29,5 @@ func BeaconFuzzVoluntaryExit(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-
-	result, err := ssz.Marshal(post.InnerStateUnsafe())
-	if err != nil {
-		panic(err)
-	}
-	return result, true
+	return success(post)
 }

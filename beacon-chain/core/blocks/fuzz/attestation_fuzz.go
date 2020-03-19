@@ -29,9 +29,5 @@ func BeaconFuzzAttestation(b []byte) ([]byte, bool) {
 		return fail(err)
 	}
 
-	result, err := ssz.Marshal(post.InnerStateUnsafe())
-	if err != nil {
-		panic(err)
-	}
-	return result, true
+	return success(post)
 }
