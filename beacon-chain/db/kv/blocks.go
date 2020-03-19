@@ -354,20 +354,6 @@ func (k *Store) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, err
 	return block, err
 }
 
-// GenesisBlockRoot retrieves the genesis block root from db.
-func (k *Store) GenesisBlockRoot(ctx context.Context) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlock")
-	defer span.End()
-	var root []byte
-	err := k.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		root = bkt.Get(genesisBlockRootKey)
-		return nil
-	})
-
-	return bytesutil.ToBytes32(root), err
-}
-
 // SaveGenesisBlockRoot to the db.
 func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")

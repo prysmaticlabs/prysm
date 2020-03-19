@@ -27,7 +27,6 @@ type ReadOnlyDatabase interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
-	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	// Validator related methods.
 	ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey []byte) bool

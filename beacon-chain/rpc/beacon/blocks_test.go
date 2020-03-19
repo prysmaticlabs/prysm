@@ -638,9 +638,8 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	}
 	st.SetFork(wantedFork)
 	ctx := context.Background()
-	gbr := [32]byte{1, 2, 3}
-	db.SaveGenesisBlockRoot(ctx, gbr)
-	if err != nil {
+	gvr := [32]byte{1, 2, 3}
+	if err := st.SetGenesisValidatorRoot(gvr[:]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -648,7 +647,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 		Slot:          1,
 		ProposerIndex: 0,
 	}
-	domain, err := helpers.Domain(st.Fork(), helpers.CurrentEpoch(st), params.BeaconConfig().DomainBeaconProposer, gbr[:])
+	domain, err := helpers.Domain(st.Fork(), helpers.CurrentEpoch(st), params.BeaconConfig().DomainBeaconProposer, gvr[:])
 	if err != nil {
 		t.Fatal(err)
 	}
