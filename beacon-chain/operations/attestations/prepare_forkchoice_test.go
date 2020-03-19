@@ -20,7 +20,7 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	var mockRoot [32]byte
 
 	unaggregatedAtts := []*ethpb.Attestation{
@@ -134,7 +134,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -194,7 +194,7 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -226,7 +226,7 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],

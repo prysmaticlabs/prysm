@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -206,7 +206,7 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		return nil, err
 	}
 
-	root, err := ssz.HashTreeRoot(data)
+	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 		sig, err = protectingKeymanager.SignAttestation(pubKey, domain.SignatureDomain, data)
 	} else {
-		sig, err = v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+		sig, err = v.keyManager.Sign(pubKey, root)
 	}
 	if err != nil {
 		return nil, err

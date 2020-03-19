@@ -20,7 +20,7 @@ func TestAggregateAttestations_SingleAttestation(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 
 	unaggregatedAtts := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
@@ -46,7 +46,7 @@ func TestAggregateAttestations_MultipleAttestationsSameRoot(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 
 	attsToBeAggregated := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b110001}, Signature: sig.Marshal()},
@@ -88,7 +88,7 @@ func TestAggregateAttestations_MultipleAttestationsDifferentRoots(t *testing.T) 
 	d2.Slot = 2
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 
 	atts := []*ethpb.Attestation{
 		{Data: d, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},

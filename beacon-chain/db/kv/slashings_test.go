@@ -14,7 +14,12 @@ func TestStore_ProposerSlashing_CRUD(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 	prop := &ethpb.ProposerSlashing{
-		ProposerIndex: 5,
+		Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{ProposerIndex: 5},
+		},
+		Header_2: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{ProposerIndex: 5},
+		},
 	}
 	slashingRoot, err := ssz.HashTreeRoot(prop)
 	if err != nil {

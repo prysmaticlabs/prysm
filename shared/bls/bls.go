@@ -10,7 +10,6 @@ import (
 	"github.com/dgraph-io/ristretto"
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,14 +20,11 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	bls12.SetETHserialization(true)
+	bls12.SetETHmode(1)
 }
 
 // DomainByteLength length of domain byte array.
 const DomainByteLength = 4
-
-// ForkVersionByteLength length of fork version byte array.
-const ForkVersionByteLength = 4
 
 var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
@@ -133,11 +129,11 @@ func concatMsgAndDomain(msg []byte, domain uint64) []byte {
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
-func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
+func (s *SecretKey) Sign(msg []byte) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}
-	signature := s.p.SignHashWithDomain(concatMsgAndDomain(msg, domain))
+	signature := s.p.SignByte(msg)
 	return &Signature{s: signature}
 }
 
@@ -172,18 +168,18 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 	return p
 }
 
-// Verify a bls signature given a public key, a message, and a domain.
-func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
+// Verify a bls signature given a public key, a message.
+func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	return s.s.VerifyHashWithDomain(pub.p, concatMsgAndDomain(msg, domain))
+	return s.s.VerifyByte(pub.p, msg)
 }
 
 // VerifyAggregate verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
+func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -194,21 +190,40 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 	if size != len(msg) {
 		return false
 	}
-	b := [8]byte{}
-	binary.LittleEndian.PutUint64(b[:], domain)
-	hashWithDomains := make([]byte, 0, size*concatMsgDomainSize)
+	hashes := make([][]byte, 0, len(msg))
 	var rawKeys []bls12.PublicKey
 	for i := 0; i < size; i++ {
-		hashWithDomains = append(hashWithDomains, concatMsgAndDomain(msg[i][:], domain)...)
+		hashes = append(hashes, msg[i][:])
 		rawKeys = append(rawKeys, *pubKeys[i].p)
 	}
-	return s.s.VerifyAggregateHashWithDomain(rawKeys, hashWithDomains)
+	return s.s.VerifyAggregateHashes(rawKeys, hashes)
 }
 
-// VerifyAggregateCommon verifies each public key against its respective message.
+// AggregateVerify verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, domain uint64) bool {
+func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool {
+	if featureconfig.Get().SkipBLSVerify {
+		return true
+	}
+	size := len(pubKeys)
+	if size == 0 {
+		return false
+	}
+	if size != len(msgs) {
+		return false
+	}
+	msgSlices := []byte{}
+	var rawKeys []bls12.PublicKey
+	for i := 0; i < size; i++ {
+		msgSlices = append(msgSlices, msgs[i][:]...)
+		rawKeys = append(rawKeys, *pubKeys[i].p)
+	}
+	return s.s.AggregateVerify(rawKeys, msgSlices)
+}
+
+// FastAggregateVerify verifies all the provided pubkeys with their aggregated signature.
+func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -216,13 +231,12 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, do
 		return false
 	}
 	//#nosec G104
-	aggregated, _ := pubKeys[0].Copy()
-
-	for i := 1; i < len(pubKeys); i++ {
-		aggregated.p.Add(pubKeys[i].p)
+	rawKeys := make([]bls12.PublicKey, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		rawKeys[i] = *pubKeys[i].p
 	}
 
-	return s.s.VerifyHashWithDomain(aggregated.p, concatMsgAndDomain(msg[:], domain))
+	return s.s.FastAggregateVerify(rawKeys, msg[:])
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
@@ -262,36 +276,6 @@ func (s *Signature) Marshal() []byte {
 
 	rawBytes := s.s.Serialize()
 	return rawBytes
-}
-
-// Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
-//
-// Spec pseudocode definition:
-//  def get_domain(state: BeaconState, domain_type: DomainType, message_epoch: Epoch=None) -> Domain:
-//    """
-//    Return the signature domain (fork version concatenated with domain type) of a message.
-//    """
-//    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
-//    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
-//    return compute_domain(domain_type, fork_version)
-func Domain(domainType [DomainByteLength]byte, forkVersion [ForkVersionByteLength]byte) uint64 {
-
-	b := []byte{}
-	b = append(b, domainType[:4]...)
-	b = append(b, forkVersion[:4]...)
-	return bytesutil.FromBytes8(b)
-}
-
-// ComputeDomain returns the domain version for BLS private key to sign and verify with a zeroed 4-byte
-// array as the fork version.
-//
-// def compute_domain(domain_type: DomainType, fork_version: Version=Version()) -> Domain:
-//    """
-//    Return the domain for the ``domain_type`` and ``fork_version``.
-//    """
-//    return Domain(domain_type + fork_version)
-func ComputeDomain(domainType [DomainByteLength]byte) uint64 {
-	return Domain(domainType, [4]byte{0, 0, 0, 0})
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element

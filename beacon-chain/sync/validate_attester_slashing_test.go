@@ -11,7 +11,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -40,16 +39,16 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	sig0 := privKeys[0].Sign(hashTreeRoot[:])
+	sig1 := privKeys[1].Sign(hashTreeRoot[:])
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
@@ -60,12 +59,12 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
+	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	sig0 = privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 = privKeys[1].Sign(hashTreeRoot[:], domain)
+	sig0 = privKeys[0].Sign(hashTreeRoot[:])
+	sig1 = privKeys[1].Sign(hashTreeRoot[:])
 	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
 	att2.Signature = aggregateSig.Marshal()[:]
 

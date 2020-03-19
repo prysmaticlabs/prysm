@@ -21,14 +21,14 @@ type KeyManager interface {
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 	FetchValidatingKeys() ([][48]byte, error)
 	// Sign signs a message for the validator to broadcast.
-	Sign(pubKey [48]byte, root [32]byte, domain uint64) (*bls.Signature, error)
+	Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error)
 }
 
 // ProtectingKeyManager provides access to a keymanager that protects its clients from slashing events.
 type ProtectingKeyManager interface {
 	// SignProposal signs a block proposal for the validator to broadcast.
-	SignProposal(pubKey [48]byte, domain uint64, data *ethpb.BeaconBlockHeader) (*bls.Signature, error)
+	SignProposal(pubKey [48]byte, domain []byte, data *ethpb.BeaconBlockHeader) (*bls.Signature, error)
 
 	// SignAttestation signs an attestation for the validator to broadcast.
-	SignAttestation(pubKey [48]byte, domain uint64, data *ethpb.AttestationData) (*bls.Signature, error)
+	SignAttestation(pubKey [48]byte, domain []byte, data *ethpb.AttestationData) (*bls.Signature, error)
 }

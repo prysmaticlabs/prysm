@@ -9,11 +9,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -66,10 +64,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	currentSlot := helpers.SlotsSince(s.chain.GenesisTime())
-	upper := att.Data.Slot + params.BeaconConfig().AttestationPropagationSlotRange
-	lower := att.Data.Slot
-	if currentSlot > upper || currentSlot < lower {
+	if err := validateAggregateAttTime(att.Data.Slot, uint64(s.chain.GenesisTime().Unix())); err != nil {
+		traceutil.AnnotateError(span, err)
 		return false
 	}
 

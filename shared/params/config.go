@@ -26,6 +26,9 @@ type BeaconChainConfig struct {
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain.
 	TargetAggregatorsPerCommittee  uint64 // TargetAggregatorsPerCommittee defines the number of aggregators inside one committee.
+	HysteresisQuotient             uint64 // HysteresisQuotient defines the hysteresis quotient for effective balance calculations.
+	HysteresisDownwardMultiplier   uint64 // HysteresisDownwardMultiplier defines the hysteresis downward multiplier for effective balance calculations.
+	HysteresisUpwardMultiplier     uint64 // HysteresisUpwardMultiplier defines the hysteresis upward multiplier for effective balance calculations.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -51,7 +54,7 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	SafeSlotsToUpdateJustified       uint64 // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
 	AttestationPropagationSlotRange  uint64 // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
-
+	SecondsPerETH1Block              uint64 `yaml:"SECONDS_PER_ETH1_BLOCK"` // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
 	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
@@ -117,6 +120,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinGenesisActiveValidatorCount: 16384,
 	MinGenesisTime:                 0, // Zero until a proper time is decided.
 	TargetAggregatorsPerCommittee:  16,
+	HysteresisQuotient:             4,
+	HysteresisDownwardMultiplier:   1,
+	HysteresisUpwardMultiplier:     5,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,
@@ -142,6 +148,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               1024,
 	SafeSlotsToUpdateJustified:       8,
 	AttestationPropagationSlotRange:  32,
+	SecondsPerETH1Block:              14,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -259,6 +266,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2
+	minimalConfig.SecondsPerETH1Block = 14
 
 	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64
@@ -286,6 +294,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainRandao = bytesutil.ToBytes4(bytesutil.Bytes4(2))
 	minimalConfig.DomainDeposit = bytesutil.ToBytes4(bytesutil.Bytes4(3))
 	minimalConfig.DomainVoluntaryExit = bytesutil.ToBytes4(bytesutil.Bytes4(4))
+	minimalConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
 
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1

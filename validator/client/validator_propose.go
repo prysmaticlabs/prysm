@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -181,7 +182,11 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	}
 	var buf [32]byte
 	binary.LittleEndian.PutUint64(buf[:], epoch)
-	randaoReveal, err := v.keyManager.Sign(pubKey, buf, domain.SignatureDomain)
+	sigRoot, err := helpers.ComputeSigningRoot(epoch, domain.SignatureDomain)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute signing root")
+	}
+	randaoReveal, err := v.keyManager.Sign(pubKey, sigRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}
@@ -211,11 +216,11 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
 	} else {
-		blockRoot, err := ssz.HashTreeRoot(b)
+		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
 		}
-		sig, err = v.keyManager.Sign(pubKey, blockRoot, domain.SignatureDomain)
+		sig, err = v.keyManager.Sign(pubKey, blockRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}

@@ -62,6 +62,9 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = &reference{refs: 1}
 	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 
+	// Make sure genesis root by default is zero hash.
+	b.state.GenesisValidatorsRoot = b.GenesisValidatorRoot()
+
 	return b, nil
 }
 
@@ -101,6 +104,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+			GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
 		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
@@ -239,6 +243,8 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return stateutil.Uint64Root(b.state.GenesisTime), nil
+	case genesisValidatorRoot:
+		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return stateutil.Uint64Root(b.state.Slot), nil
 	case eth1DepositIndex:

@@ -70,7 +70,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	validators := uint64(2048)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	sig := privKeys[0].Sign([]byte{}, 0)
+	sig := privKeys[0].Sign([]byte{'A'})
 	data := &ethpb.AttestationData{}
 
 	wanted := "validator is not an aggregator for slot"
@@ -84,7 +84,7 @@ func TestVerifySelection_BadSignature(t *testing.T) {
 	validators := uint64(256)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	sig := privKeys[0].Sign([]byte{}, 0)
+	sig := privKeys[0].Sign([]byte{'A'})
 	data := &ethpb.AttestationData{}
 
 	wanted := "could not validate slot signature"
@@ -99,15 +99,15 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	data := &ethpb.AttestationData{}
-	slotRoot, err := ssz.HashTreeRoot(data.Slot)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	slotRoot, err := helpers.ComputeSigningRoot(data.Slot, domain)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[0].Sign(slotRoot[:], domain)
+	sig := privKeys[0].Sign(slotRoot[:])
 
 	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); err != nil {
 		t.Fatal(err)
@@ -219,7 +219,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		t.Error("Expected validate to fail")
 	}
 
-	att.Data.Slot = 1<<64 - 1
+	att.Data.Slot = 1<<32 - 1
 
 	buf = new(bytes.Buffer)
 	if _, err := p.Encoding().Encode(buf, aggregateAndProof); err != nil {
@@ -334,31 +334,31 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	if err != nil {
+		t.Error(err)
+	}
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	slotRoot, err := ssz.HashTreeRoot(att.Data.Slot)
+	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, domain)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sig := privKeys[154].Sign(slotRoot[:], domain)
+	sig := privKeys[33].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 154,
+		AggregatorIndex: 33,
 	}
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {

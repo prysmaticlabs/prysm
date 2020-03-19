@@ -8,7 +8,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -64,7 +63,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	}
 
 	priv := bls.RandKey()
-	sig := priv.Sign([]byte{'A'}, 0)
+	sig := priv.Sign([]byte{'A'})
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
 	if _, err := server.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
@@ -89,7 +88,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	}
 
 	priv := bls.RandKey()
-	sig := priv.Sign([]byte{'A'}, 0)
+	sig := priv.Sign([]byte{'A'})
 	pubKey := pubKey(1)
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
@@ -133,7 +132,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	}
 
 	priv := bls.RandKey()
-	sig := priv.Sign([]byte{'B'}, 0)
+	sig := priv.Sign([]byte{'B'})
 	pubKey := pubKey(2)
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
@@ -188,7 +187,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 
 	priv := bls.RandKey()
-	sig := priv.Sign([]byte{'B'}, 0)
+	sig := priv.Sign([]byte{'B'})
 	pubKey := pubKey(2)
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
@@ -222,7 +221,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 	}
 	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 	if err != nil {
 		return nil, err
 	}
@@ -232,8 +231,8 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
-		hashTreeRoot, _ := ssz.HashTreeRoot(att.Data)
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		hashTreeRoot, _ := helpers.ComputeSigningRoot(att.Data, domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 

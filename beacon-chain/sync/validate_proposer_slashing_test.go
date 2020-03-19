@@ -11,7 +11,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -64,6 +63,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		state.Fork(),
 		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
+		state.GenesisValidatorRoot(),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -74,36 +74,37 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 	someRoot2 := [32]byte{4, 5, 6}
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:       0,
-			ParentRoot: someRoot[:],
-			StateRoot:  someRoot[:],
-			BodyRoot:   someRoot[:],
+			ProposerIndex: 1,
+			Slot:          0,
+			ParentRoot:    someRoot[:],
+			StateRoot:     someRoot[:],
+			BodyRoot:      someRoot[:],
 		},
 	}
-	signingRoot, err := ssz.HashTreeRoot(header1.Header)
+	signingRoot, err := helpers.ComputeSigningRoot(header1.Header, domain)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKey.Sign(signingRoot[:]).Marshal()[:]
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:       0,
-			ParentRoot: someRoot2[:],
-			StateRoot:  someRoot2[:],
-			BodyRoot:   someRoot2[:],
+			ProposerIndex: 1,
+			Slot:          0,
+			ParentRoot:    someRoot2[:],
+			StateRoot:     someRoot2[:],
+			BodyRoot:      someRoot2[:],
 		},
 	}
-	signingRoot, err = ssz.HashTreeRoot(header2.Header)
+	signingRoot, err = helpers.ComputeSigningRoot(header2.Header, domain)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKey.Sign(signingRoot[:]).Marshal()[:]
 
 	slashing := &ethpb.ProposerSlashing{
-		ProposerIndex: 1,
-		Header_1:      header1,
-		Header_2:      header2,
+		Header_1: header1,
+		Header_2: header2,
 	}
 	val, err := state.ValidatorAtIndex(1)
 	if err != nil {

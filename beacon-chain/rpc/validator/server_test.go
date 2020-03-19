@@ -16,6 +16,7 @@ import (
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
@@ -152,12 +153,15 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
 	}
-	signingRoot, err := ssz.HashTreeRoot(depData)
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(depData, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	depData.Signature = priv1.Sign(signingRoot[:], domain).Marshal()[:]
+	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()[:]
 
 	deposit := &ethpb.Deposit{
 		Data: depData,

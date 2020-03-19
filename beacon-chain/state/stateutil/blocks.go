@@ -16,18 +16,22 @@ import (
 // a BeaconBlockHeader struct according to the eth2
 // Simple Serialize specification.
 func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
-	fieldRoots := make([][]byte, 4)
+	fieldRoots := make([][]byte, 5)
 	if header != nil {
 		headerSlotBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
 		headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
 		fieldRoots[0] = headerSlotRoot[:]
+		proposerIdxBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(proposerIdxBuf, header.ProposerIndex)
+		proposerIndexRoot := bytesutil.ToBytes32(headerSlotBuf)
+		fieldRoots[1] = proposerIndexRoot[:]
 		parentRoot := bytesutil.ToBytes32(header.ParentRoot)
-		fieldRoots[1] = parentRoot[:]
+		fieldRoots[2] = parentRoot[:]
 		stateRoot := bytesutil.ToBytes32(header.StateRoot)
-		fieldRoots[2] = stateRoot[:]
+		fieldRoots[3] = stateRoot[:]
 		bodyRoot := bytesutil.ToBytes32(header.BodyRoot)
-		fieldRoots[3] = bodyRoot[:]
+		fieldRoots[4] = bodyRoot[:]
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }

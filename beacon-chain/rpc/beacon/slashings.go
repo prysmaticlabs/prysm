@@ -28,7 +28,7 @@ func (bs *Server) SubmitProposerSlashing(
 		bs.Broadcaster.Broadcast(ctx, req)
 	}
 	return &ethpb.SubmitSlashingResponse{
-		SlashedIndices: []uint64{req.ProposerIndex},
+		SlashedIndices: []uint64{req.Header_1.Header.ProposerIndex},
 	}, nil
 }
 

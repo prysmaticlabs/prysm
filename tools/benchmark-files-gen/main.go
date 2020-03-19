@@ -133,10 +133,6 @@ func generateMarshalledFullStateAndBlock() error {
 		return errors.Wrap(err, "could not calculate state root")
 	}
 	block.Block.StateRoot = s[:]
-	blockRoot, err := ssz.HashTreeRoot(block.Block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root of block")
-	}
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
 	beaconState.SetSlot(beaconState.Slot() + 1)
@@ -144,14 +140,18 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer, nil)
 	if err != nil {
 		return err
 	}
-	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
+	blockRoot, err := helpers.ComputeSigningRoot(block.Block, domain)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root of block")
+	}
+	block.Signature = privs[proposerIdx].Sign(blockRoot[:]).Marshal()
 	beaconState.SetSlot(beaconState.Slot() - 1)
 
-	beaconBytes, err := ssz.Marshal(beaconState)
+	beaconBytes, err := ssz.Marshal(beaconState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := ssz.Marshal(beaconState)
+	beaconBytes, err := ssz.Marshal(beaconState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}

@@ -7,10 +7,9 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	//"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -52,7 +51,7 @@ func TestFuzzverifySigningRoot_10000(t *testing.T) {
 	domain := [4]byte{}
 	p := []byte{}
 	s := []byte{}
-	d := uint64(0)
+	d := []byte{}
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(&pubkey)
@@ -62,8 +61,7 @@ func TestFuzzverifySigningRoot_10000(t *testing.T) {
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		domain := bytesutil.FromBytes4(domain[:])
-		verifySigningRoot(state, pubkey[:], sig[:], domain)
+		verifySigningRoot(state, pubkey[:], sig[:], domain[:])
 		verifySigningRoot(state, p, s, d)
 
 	}
@@ -77,7 +75,7 @@ func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
 	domain := [4]byte{}
 	p := []byte{}
 	s := []byte{}
-	d := uint64(0)
+	d := []byte{}
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(&ba)
 		fuzzer.Fuzz(&pubkey)
@@ -86,8 +84,7 @@ func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		domain := bytesutil.FromBytes4(domain[:])
-		verifySignature(ba, pubkey[:], sig[:], domain)
+		verifySignature(ba, pubkey[:], sig[:], domain[:])
 		verifySignature(ba, p, s, d)
 	}
 }
@@ -436,6 +433,6 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 		fuzzer.Fuzz(val)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
-		VerifyExit(val, slot, fork, ve)
+		VerifyExit(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
 	}
 }
