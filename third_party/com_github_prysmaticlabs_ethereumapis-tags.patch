@@ -1,8 +1,16 @@
 diff --git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
-index c0fbe31..ae4ff87 100644
+index c0fbe31..1211829 100644
 --- a/eth/v1alpha1/BUILD.bazel
 +++ b/eth/v1alpha1/BUILD.bazel
-@@ -25,7 +25,6 @@ proto_library(
+@@ -4,6 +4,7 @@
+ 
+ load("@rules_proto//proto:defs.bzl", "proto_library")
+ load("@rules_java//java:defs.bzl", "java_proto_library")
++load("@prysm//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
+ 
+ ##############################################################################
+ # Go
+@@ -25,7 +26,6 @@ proto_library(
          "beacon_chain.proto",
          "node.proto",
          "validator.proto",
@@ -10,7 +18,7 @@ index c0fbe31..ae4ff87 100644
      ],
      visibility = ["//visibility:public"],
      deps = [
-@@ -33,6 +32,7 @@ proto_library(
+@@ -33,6 +33,7 @@ proto_library(
          "@com_google_protobuf//:any_proto",
          "@com_google_protobuf//:timestamp_proto",
          "@go_googleapis//google/api:annotations_proto",
@@ -18,7 +26,7 @@ index c0fbe31..ae4ff87 100644
          "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
      ],
  )
-@@ -48,11 +48,30 @@ java_proto_library(
+@@ -48,11 +49,46 @@ java_proto_library(
  
  go_proto_library(
      name = "go_proto",
@@ -30,6 +38,22 @@ index c0fbe31..ae4ff87 100644
      deps = [
 +        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
 +        "@go_googleapis//google/api:annotations_go_proto",
++    ],
++)
++
++ssz_gen_marshal(
++    name = "ssz_generated_files",
++    go_proto = ":go_proto",
++    objs = [
++        "Attestation",
++        "BeaconBlock",
++        "SignedBeaconBlock",
++        "Validator",
++        "BeaconBlockHeader",
++        "AttesterSlashing",
++        "VoluntaryExit",
++        "Deposit",
++        "ProposerSlashing",
 +    ],
 +)
 +
@@ -50,6 +74,18 @@ index c0fbe31..ae4ff87 100644
          "@go_googleapis//google/api:annotations_go_proto",
          "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
      ],
+@@ -60,9 +96,11 @@ go_proto_library(
+ 
+ go_library(
+     name = "go_default_library",
++    srcs = [":ssz_generated_files"],
+     embed = [":go_proto"],
+     importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1",
+     visibility = ["//visibility:public"],
++    deps = SSZ_DEPS,
+ )
+ 
+ protoc_gen_swagger(
 diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
 index b177b76..28b4b46 100644
 --- a/eth/v1alpha1/attestation.proto
