@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/iface"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func setupDB(t testing.TB, ctx *cli.Context) *Store {
@@ -23,7 +23,7 @@ func setupDB(t testing.TB, ctx *cli.Context) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	cfg := &Config{SpanCacheEnabled: ctx.Bool(flags.UseSpanCacheFlag.Name)}
 	db, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)

@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var appHelpTemplate = `NAME:
@@ -60,6 +60,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MaxGoroutines,
 			cmd.ForceClearDB,
 			cmd.ClearDB,
+			cmd.ConfigFileFlag,
 		},
 	},
 	{
@@ -117,7 +118,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.BeaconChainFlags,
+		Flags: featureconfig.ActiveFlags(featureconfig.BeaconChainFlags),
 	},
 	{
 		Name: "interop",
