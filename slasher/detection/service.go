@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
+	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
+	proposerIface "github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -29,6 +31,7 @@ type Service struct {
 	attesterSlashingsFeed *event.Feed
 	proposerSlashingsFeed *event.Feed
 	minMaxSpanDetector    iface.SpanDetector
+	proposalsDetector     proposerIface.ProposalsDetector
 }
 
 // Config options for the detection service.
@@ -56,6 +59,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
 		minMaxSpanDetector:    attestations.NewSpanDetector(cfg.SlasherDB),
+		proposalsDetector:     proposals.NewProposeDetector(cfg.SlasherDB),
 	}
 }
 
