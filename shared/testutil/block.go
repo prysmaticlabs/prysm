@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -163,7 +164,7 @@ func GenerateProposerSlashingForValidator(
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:     bState.Slot(),
-			BodyRoot: []byte{0, 1, 0},
+			BodyRoot: bytesutil.PadTo([]byte{0, 1, 0}, 32),
 		},
 	}
 	root, err := ssz.HashTreeRoot(header1.Header)
@@ -171,13 +172,16 @@ func GenerateProposerSlashingForValidator(
 		return nil, err
 	}
 	currentEpoch := helpers.CurrentEpoch(bState)
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, err
+	}
 	header1.Signature = priv.Sign(root[:], domain).Marshal()
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:     bState.Slot(),
-			BodyRoot: []byte{0, 2, 0},
+			BodyRoot: bytesutil.PadTo([]byte{0, 2, 0}, 32),
 		},
 	}
 	root, err = ssz.HashTreeRoot(header2.Header)
@@ -240,7 +244,10 @@ func GenerateAttesterSlashingForValidator(
 	if err != nil {
 		return nil, err
 	}
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
 	sig := priv.Sign(dataRoot[:], domain)
 	att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
@@ -379,7 +386,10 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 		)
 	}
 
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Printf("Justified: %d\n", bState.CurrentJustifiedCheckpoint().Epoch)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
@@ -472,7 +482,10 @@ func generateVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		if err != nil {
+			return nil, err
+		}
 		exit.Signature = privs[valIndex].Sign(root[:], domain).Marshal()
 		voluntaryExits[i] = exit
 	}

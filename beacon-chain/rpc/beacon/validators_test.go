@@ -1106,7 +1106,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	ctx := context.Background()
-	validators := make([]*ethpb.Validator, 6)
+	validators := make([]*ethpb.Validator, 8)
 	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: validators,
@@ -1119,9 +1119,10 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		withdrawableEpoch := params.BeaconConfig().FarFutureEpoch
 		exitEpoch := params.BeaconConfig().FarFutureEpoch
 		slashed := false
+		balance := params.BeaconConfig().MaxEffectiveBalance
 		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
-			activationEpoch = helpers.DelayedActivationExitEpoch(0)
+			activationEpoch = helpers.ActivationExitEpoch(0)
 		} else if i%3 == 0 {
 			// Mark indices divisible by 3 as slashed.
 			withdrawableEpoch = params.BeaconConfig().EpochsPerSlashingsVector
@@ -1130,10 +1131,16 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 			// Mark indices divisible by 5 as exited.
 			exitEpoch = 0
 			withdrawableEpoch = params.BeaconConfig().MinValidatorWithdrawabilityDelay
+		} else if i%7 == 0 {
+			// Mark indices divisible by 7 as ejected.
+			exitEpoch = 0
+			withdrawableEpoch = params.BeaconConfig().MinValidatorWithdrawabilityDelay
+			balance = params.BeaconConfig().EjectionBalance
 		}
 		if err := headState.UpdateValidatorAtIndex(uint64(i), &ethpb.Validator{
 			ActivationEpoch:       activationEpoch,
 			PublicKey:             pubKey(uint64(i)),
+			EffectiveBalance:      balance,
 			WithdrawalCredentials: make([]byte, 32),
 			WithdrawableEpoch:     withdrawableEpoch,
 			Slashed:               slashed,
@@ -1158,21 +1165,34 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		pubKey(0),
 		pubKey(2),
 		pubKey(4),
+		pubKey(6),
 	}
-	wantedSlashed := [][]byte{
-		pubKey(3),
-	}
+	wantedActiveIndices := []uint64{0, 2, 4, 6}
 	wantedExited := [][]byte{
 		pubKey(5),
 	}
+	wantedExitedIndices := []uint64{5}
+	wantedSlashed := [][]byte{
+		pubKey(3),
+	}
+	wantedSlashedIndices := []uint64{3}
+	wantedEjected := [][]byte{
+		pubKey(7),
+	}
+	wantedEjectedIndices := []uint64{7}
 	wanted := &ethpb.ActiveSetChanges{
 		Epoch:               0,
 		ActivatedPublicKeys: wantedActive,
+		ActivatedIndices:    wantedActiveIndices,
 		ExitedPublicKeys:    wantedExited,
+		ExitedIndices:       wantedExitedIndices,
 		SlashedPublicKeys:   wantedSlashed,
+		SlashedIndices:      wantedSlashedIndices,
+		EjectedPublicKeys:   wantedEjected,
+		EjectedIndices:      wantedEjectedIndices,
 	}
 	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
 	}
 }
 
@@ -1180,7 +1200,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
-	validators := make([]*ethpb.Validator, 6)
+	validators := make([]*ethpb.Validator, 8)
 	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       helpers.StartSlot(100),
 		Validators: validators,
@@ -1189,8 +1209,9 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		t.Fatal(err)
 	}
 	activatedIndices := make([]uint64, 0)
-	slashedIndices := make([]uint64, 0)
 	exitedIndices := make([]uint64, 0)
+	slashedIndices := make([]uint64, 0)
+	ejectedIndices := make([]uint64, 0)
 	for i := 0; i < len(validators); i++ {
 		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
@@ -1201,6 +1222,9 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		} else if i%5 == 0 {
 			// Mark indices divisible by 5 as exited.
 			exitedIndices = append(exitedIndices, uint64(i))
+		} else if i%7 == 0 {
+			// Mark indices divisible by 7 as ejected.
+			ejectedIndices = append(ejectedIndices, uint64(i))
 		}
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
@@ -1214,6 +1238,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		Activated: activatedIndices,
 		Exited:    exitedIndices,
 		Slashed:   slashedIndices,
+		Ejected:   ejectedIndices,
 	}
 	// We store the changes during the genesis epoch.
 	if err := db.SaveArchivedActiveValidatorChanges(ctx, 0, archivedChanges); err != nil {
@@ -1235,7 +1260,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantedKeys := make([][]byte, 6)
+	wantedKeys := make([][]byte, 8)
 	for i := 0; i < len(wantedKeys); i++ {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
@@ -1245,21 +1270,34 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		wantedKeys[0],
 		wantedKeys[2],
 		wantedKeys[4],
+		wantedKeys[6],
 	}
-	wantedSlashed := [][]byte{
-		wantedKeys[3],
-	}
+	wantedActiveIndices := []uint64{0, 2, 4, 6}
 	wantedExited := [][]byte{
 		wantedKeys[5],
 	}
+	wantedExitedIndices := []uint64{5}
+	wantedSlashed := [][]byte{
+		wantedKeys[3],
+	}
+	wantedSlashedIndices := []uint64{3}
+	wantedEjected := [][]byte{
+		wantedKeys[7],
+	}
+	wantedEjectedIndices := []uint64{7}
 	wanted := &ethpb.ActiveSetChanges{
 		Epoch:               0,
 		ActivatedPublicKeys: wantedActive,
+		ActivatedIndices:    wantedActiveIndices,
 		ExitedPublicKeys:    wantedExited,
+		ExitedIndices:       wantedExitedIndices,
 		SlashedPublicKeys:   wantedSlashed,
+		SlashedIndices:      wantedSlashedIndices,
+		EjectedPublicKeys:   wantedEjected,
+		EjectedIndices:      wantedEjectedIndices,
 	}
 	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
 	}
 	res, err = bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
 		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{Epoch: 5},
@@ -1269,7 +1307,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	}
 	wanted.Epoch = 5
 	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
 	}
 }
 
@@ -1277,19 +1315,19 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEpoch:            helpers.ActivationExitEpoch(0),
 				ActivationEligibilityEpoch: 3,
 				PublicKey:                  pubKey(3),
 				WithdrawalCredentials:      make([]byte, 32),
 			},
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEpoch:            helpers.ActivationExitEpoch(0),
 				ActivationEligibilityEpoch: 2,
 				PublicKey:                  pubKey(2),
 				WithdrawalCredentials:      make([]byte, 32),
 			},
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEpoch:            helpers.ActivationExitEpoch(0),
 				ActivationEligibilityEpoch: 1,
 				PublicKey:                  pubKey(1),
 				WithdrawalCredentials:      make([]byte, 32),

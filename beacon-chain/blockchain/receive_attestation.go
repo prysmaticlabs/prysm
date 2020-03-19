@@ -73,10 +73,11 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
-func (s *Service) processAttestation() {
+func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	subscribedToStateEvents <- struct{}{}
 	<-stateChannel
 	stateSub.Unsubscribe()
 
@@ -89,7 +90,13 @@ func (s *Service) processAttestation() {
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
-				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
+				var hasState bool
+				if featureconfig.Get().NewStateMgmt {
+					hasState = s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				} else {
+					hasState = s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
+				}
+
 				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if !(hasState && hasBlock) {
 					continue

@@ -5,6 +5,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
@@ -54,7 +55,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		attsChan:              make(chan *ethpb.IndexedAttestation, 1),
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
-		minMaxSpanDetector:    attestations.NewSpanDetector(),
+		minMaxSpanDetector:    attestations.NewSpanDetector(cfg.SlasherDB),
 	}
 }
 
@@ -73,7 +74,6 @@ func (ds *Service) Status() error {
 
 // Start the detection service runtime.
 func (ds *Service) Start() {
-
 	// We wait for the gRPC beacon client to be ready and the beacon node
 	// to be fully synced before proceeding.
 	ch := make(chan bool)
@@ -83,7 +83,7 @@ func (ds *Service) Start() {
 
 	// The detection service runs detection on all historical
 	// chain data since genesis.
-	go ds.detectHistoricalChainData(ds.ctx)
+	// TODO(#5030): Re-enable after issue is resolved.
 
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
@@ -108,6 +108,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	if latestStoredHead != nil {
 		latestStoredEpoch = latestStoredHead.HeadEpoch
 	}
+
 	// We retrieve historical chain data from the last persisted chain head in the
 	// slasher DB up to the current beacon node's head epoch we retrieved via gRPC.
 	// If no data was persisted from previous sessions, we request data starting from
@@ -122,6 +123,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			len(indexedAtts),
 			epoch,
 		)
+
 		for _, att := range indexedAtts {
 			slashings, err := ds.detectAttesterSlashings(ctx, att)
 			if err != nil {
@@ -131,6 +133,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			ds.submitAttesterSlashings(ctx, slashings)
 		}
 	}
+
 	if err := ds.slasherDB.SaveChainHead(ctx, currentChainHead); err != nil {
 		log.WithError(err).Error("Could not persist chain head to disk")
 	}
@@ -138,10 +141,19 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 }
 
 func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
-	if len(slashings) > 0 {
-		log.Infof("Found %d attester slashings, submitting to beacon node...", len(slashings))
-	}
+	ctx, span := trace.StartSpan(ctx, "detection.submitAttesterSlashings")
+	defer span.End()
 	for i := 0; i < len(slashings); i++ {
-		ds.attesterSlashingsFeed.Send(slashings[i])
+		slash := slashings[i]
+		if slash != nil && slash.Attestation_1 != nil && slash.Attestation_2 != nil {
+			slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
+			log.WithFields(logrus.Fields{
+				"sourceEpoch":  slash.Attestation_1.Data.Source.Epoch,
+				"targetEpoch":  slash.Attestation_1.Data.Target.Epoch,
+				"surroundVote": isSurrounding(slash.Attestation_1, slash.Attestation_2),
+				"indices":      slashableIndices,
+			}).Info("Found an attester slashing! Submitting to beacon node")
+			ds.attesterSlashingsFeed.Send(slashings[i])
+		}
 	}
 }

@@ -19,7 +19,9 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		epochsToRun:    6,
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
+		testSync:       true,
 		evaluators: []ev.Evaluator{
+			ev.PeersConnect,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,

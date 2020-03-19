@@ -55,7 +55,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error)
 	layers[0] = transformedLeaves
 	for i := 0; i < depth; i++ {
 		if len(layers[i])%2 == 1 {
-			layers[i] = append(layers[i], zeroHashes[i])
+			layers[i] = append(layers[i], ZeroHashes[i][:])
 		}
 		updatedValues := make([][]byte, 0, 0)
 		for j := 0; j < len(layers[i]); j += 2 {
@@ -86,7 +86,7 @@ func (m *SparseMerkleTrie) Root() [32]byte {
 // Insert an item into the trie.
 func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 	for index >= len(m.branches[0]) {
-		m.branches[0] = append(m.branches[0], zeroHashes[0])
+		m.branches[0] = append(m.branches[0], ZeroHashes[0][:])
 	}
 	someItem := bytesutil.ToBytes32(item)
 	m.branches[0][index] = someItem[:]
@@ -102,7 +102,7 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 		neighborIdx := currentIndex ^ 1
 		neighbor := make([]byte, 32)
 		if neighborIdx >= len(m.branches[i]) {
-			neighbor = zeroHashes[i][:]
+			neighbor = ZeroHashes[i][:]
 		} else {
 			neighbor = m.branches[i][neighborIdx]
 		}
@@ -139,7 +139,7 @@ func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 			item := bytesutil.ToBytes32(m.branches[i][subIndex])
 			proof[i] = item[:]
 		} else {
-			proof[i] = zeroHashes[i]
+			proof[i] = ZeroHashes[i][:]
 		}
 	}
 	enc := [32]byte{}
@@ -179,8 +179,8 @@ func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
 	return trie
 }
 
-// VerifyMerkleProof verifies a Merkle branch against a root of a trie.
-func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
+// VerifyMerkleBranch verifies a Merkle branch against a root of a trie.
+func VerifyMerkleBranch(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	node := bytesutil.ToBytes32(item)
 	currentIndex := merkleIndex
 	for i := 0; i < len(proof); i++ {

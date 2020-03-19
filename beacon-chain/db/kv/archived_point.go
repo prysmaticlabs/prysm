@@ -41,6 +41,67 @@ func (k *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, i
 	})
 }
 
+// SaveLastArchivedIndex to the db.
+func (k *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
+	defer span.End()
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedIndexRootBucket)
+		return bucket.Put(lastArchivedIndexKey, uint64ToBytes(index))
+	})
+}
+
+// LastArchivedIndexRoot from the db.
+func (k *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndexRoot")
+	defer span.End()
+
+	var blockRoot []byte
+	// #nosec G104. Always returns nil.
+	k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedIndexRootBucket)
+		lastArchivedIndex := bucket.Get(lastArchivedIndexKey)
+		if lastArchivedIndex == nil {
+			return nil
+		}
+		blockRoot = bucket.Get(lastArchivedIndex)
+		return nil
+	})
+
+	return bytesutil.ToBytes32(blockRoot)
+}
+
+// LastArchivedIndexState from the db.
+func (k *Store) LastArchivedIndexState(ctx context.Context) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndexState")
+	defer span.End()
+
+	var s *pb.BeaconState
+	err := k.db.View(func(tx *bolt.Tx) error {
+		indexRootBucket := tx.Bucket(archivedIndexRootBucket)
+		lastArchivedIndex := indexRootBucket.Get(lastArchivedIndexKey)
+		if lastArchivedIndex == nil {
+			return nil
+		}
+		indexStateBucket := tx.Bucket(archivedIndexStateBucket)
+		enc := indexStateBucket.Get(lastArchivedIndex)
+		if enc == nil {
+			return nil
+		}
+
+		var err error
+		s, err = createState(enc)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	return state.InitializeFromProtoUnsafe(s)
+}
+
 // ArchivedPointState returns the state of an archived point from the DB.
 // This is essential for cold state management and to restore a cold state.
 func (k *Store) ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error) {

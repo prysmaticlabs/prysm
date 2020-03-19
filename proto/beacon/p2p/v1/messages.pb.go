@@ -5,11 +5,12 @@ package ethereum_beacon_p2p_v1
 
 import (
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
 	io "io"
 	math "math"
 	math_bits "math/bits"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -178,7 +179,9 @@ func init() {
 	proto.RegisterType((*BeaconBlocksByRangeRequest)(nil), "ethereum.beacon.p2p.v1.BeaconBlocksByRangeRequest")
 }
 
-func init() { proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_a1d590cda035b632) }
+func init() {
+	proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_a1d590cda035b632)
+}
 
 var fileDescriptor_a1d590cda035b632 = []byte{
 	// 365 bytes of a gzipped FileDescriptorProto

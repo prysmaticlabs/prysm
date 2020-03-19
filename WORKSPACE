@@ -4,6 +4,46 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
+    name = "bazel_toolchains",
+    sha256 = "b5a8039df7119d618402472f3adff8a1bd0ae9d5e253f53fcc4c47122e91a3d2",
+    strip_prefix = "bazel-toolchains-2.1.1",
+    urls = [
+        "https://github.com/bazelbuild/bazel-toolchains/releases/download/2.1.1/bazel-toolchains-2.1.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/2.1.1.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "com_grail_bazel_toolchain",
+    sha256 = "0bec89e35d8a141c87f28cfc506d6d344785c8eb2ff3a453140a1fe972ada79d",
+    strip_prefix = "bazel-toolchain-77a87103145f86f03f90475d19c2c8854398a444",
+    urls = ["https://github.com/grailbio/bazel-toolchain/archive/77a87103145f86f03f90475d19c2c8854398a444.tar.gz"],
+)
+
+load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
+
+bazel_toolchain_dependencies()
+
+load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
+
+llvm_toolchain(
+    name = "llvm_toolchain",
+    llvm_version = "9.0.0",
+)
+
+load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
+
+llvm_register_toolchains()
+
+load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
+
+configure_prysm_toolchains()
+
+load("@prysm//tools/cross-toolchain:rbe_toolchains_config.bzl", "rbe_toolchains_config")
+
+rbe_toolchains_config()
+
+http_archive(
     name = "bazel_skylib",
     sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
     strip_prefix = "bazel-skylib-0.8.0",
@@ -12,10 +52,10 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "86c6d481b3f7aedc1d60c1c211c6f76da282ae197c3b3160f54bd3a8f847896f",
+    sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
     ],
 )
 
@@ -28,17 +68,17 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    #    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
-    strip_prefix = "rules_docker-0.12.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.12.1.tar.gz",
+    sha256 = "dc97fccceacd4c6be14e800b2a00693d5e8d07f69ee187babfd04a80a9f8e250",
+    strip_prefix = "rules_docker-0.14.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.14.1.tar.gz",
 )
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "e88471aea3a3a4f19ec1310a55ba94772d087e9ce46e41ae38ecebe17935de7b",
+    sha256 = "e6a6c016b0663e06fa5fccf1cd8152eab8aa8180c583ec20c872f4f9953a7ac5",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.22.1/rules_go-v0.22.1.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.22.1/rules_go-v0.22.1.tar.gz",
     ],
 )
 
@@ -52,7 +92,7 @@ git_repository(
     name = "graknlabs_bazel_distribution",
     commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
     remote = "https://github.com/graknlabs/bazel-distribution",
-    shallow_since = "1563544980 +0300",
+    shallow_since = "1569509514 +0300",
 )
 
 # Override default import in rules_go with special patch until
@@ -66,7 +106,7 @@ git_repository(
         "//third_party:com_github_gogo_protobuf-equal.patch",
     ],
     remote = "https://github.com/gogo/protobuf",
-    shallow_since = "1567336231 +0200",
+    shallow_since = "1571033717 +0200",
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
@@ -76,6 +116,10 @@ load(
 )
 
 container_repositories()
+
+load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
+
+bls_dependencies()
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
@@ -96,15 +140,8 @@ load(
     _go_image_repos = "repositories",
 )
 
-_go_image_repos()
-
 # Golang images
 # This is using gcr.io/distroless/base
-load(
-    "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
-)
-
 _go_image_repos()
 
 # CC images
@@ -191,13 +228,6 @@ http_archive(
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
 )
 
-http_archive(
-    name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "b5628a95bd1e6ff84f73d87c134bb1e7e9c1a5a2a10b831867d9dad7d8defc3e",
-    strip_prefix = "bls-go-binary-8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d",
-    url = "https://github.com/nisdas/bls-go-binary/archive/8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d.zip",
-)
-
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
 
 buildifier_dependencies()
@@ -224,8 +254,9 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 
 http_archive(
     name = "rules_foreign_cc",
-    strip_prefix = "rules_foreign_cc-master",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/master.zip",
+    sha256 = "450563dc2938f38566a59596bb30a3e905fbbcc35b3fff5a1791b122bc140465",
+    strip_prefix = "rules_foreign_cc-456425521973736ef346d93d3d6ba07d807047df",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/456425521973736ef346d93d3d6ba07d807047df.zip",
 )
 
 load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
@@ -237,6 +268,7 @@ rules_foreign_cc_dependencies([
 http_archive(
     name = "librdkafka",
     build_file_content = all_content,
+    sha256 = "f6be27772babfdacbbf2e4c5432ea46c57ef5b7d82e52a81b885e7b804781fd6",
     strip_prefix = "librdkafka-1.2.1",
     urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
 )
@@ -260,6 +292,10 @@ go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
     commit = "e24db4d9e9637cf88ee9e4a779e339a1686a84ee",
     importpath = "github.com/prysmaticlabs/go-ssz",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_prysmaticlabs_go_ssz.patch",
+    ],
 )
 
 go_repository(
@@ -596,8 +632,9 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "4def268fd1a49955bfb3dda92fe3db4f924f2285",
     importpath = "golang.org/x/crypto",
+    sum = "h1:1ZiEyfaQIg3Qh0EoqpwAakHVhecoE5wlSg5GjnafJGw=",
+    version = "v0.0.0-20200221231518-2aa609cf4a9d",
 )
 
 go_repository(
@@ -723,10 +760,12 @@ go_repository(
     importpath = "github.com/matttproud/golang_protobuf_extensions",
 )
 
-go_repository(
-    name = "com_github_boltdb_bolt",
-    commit = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",  # v1.3.1
-    importpath = "github.com/boltdb/bolt",
+http_archive(
+    name = "com_github_boltdb_bolt",  # v1.3.1
+    build_file = "//third_party:boltdb/bolt.BUILD",
+    sha256 = "95dc5842dab55f7519b7002bbec648321277b5d6f0ad59aab509ee59313b6386",
+    strip_prefix = "bolt-2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",
+    urls = ["https://github.com/boltdb/bolt/archive/2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8.tar.gz"],
 )
 
 go_repository(
@@ -1168,8 +1207,9 @@ go_ssz_dependencies()
 go_repository(
     name = "org_golang_google_grpc",
     build_file_proto_mode = "disable",
-    commit = "1d89a3c832915b2314551c1d2a506874d62e53f7",  # v1.22.0
     importpath = "google.golang.org/grpc",
+    sum = "h1:zvIju4sqAGvwKspUQOhwnpcqSbzi7/H6QomNNjTL4sk=",
+    version = "v1.27.1",
 )
 
 go_repository(
@@ -1194,12 +1234,6 @@ go_repository(
     name = "org_golang_x_time",
     commit = "9d24e82272b4f38b78bc8cff74fa936d31ccd8ef",
     importpath = "golang.org/x/time",
-)
-
-go_repository(
-    name = "in_gopkg_natefinch_npipe_v2",
-    commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
-    importpath = "gopkg.in/natefinch/npipe.v2",
 )
 
 go_repository(
@@ -1259,12 +1293,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_googleapis_gnostic",
-    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
-    importpath = "github.com/googleapis/gnostic",
-)
-
-go_repository(
     name = "com_github_patrickmn_go_cache",
     commit = "46f407853014144407b6c2ec7ccc76bf67958d93",
     importpath = "github.com/patrickmn/go-cache",
@@ -1282,8 +1310,9 @@ go_repository(
 
 go_repository(
     name = "com_github_cloudflare_roughtime",
-    commit = "d41fdcee702eb3e5c3296288a453b9340184d37e",
     importpath = "github.com/cloudflare/roughtime",
+    sum = "h1:jeSxE3fepJdhASERvBHI6RFkMhISv6Ir2JUybYLIVXs=",
+    version = "v0.0.0-20200205191924-a69ef1dab727",
 )
 
 go_repository(
@@ -1434,9 +1463,9 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_emicklei_dot",
-    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
-    importpath = "github.com/emicklei/dot",
+    name = "com_github_googleapis_gnostic",
+    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
+    importpath = "github.com/googleapis/gnostic",
 )
 
 go_repository(
@@ -1477,18 +1506,6 @@ go_repository(
     importpath = "github.com/ipfs/go-detect-race",
     sum = "h1:qX/xay2W3E4Q1U7d9lNs1sU9nvguX0a7319XbyQ6cOk=",
     version = "v0.0.1",
-)
-
-go_repository(
-    name = "com_github_dgraph_io_ristretto",
-    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
-    importpath = "github.com/dgraph-io/ristretto",
-)
-
-go_repository(
-    name = "com_github_cespare_xxhash",
-    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
-    importpath = "github.com/cespare/xxhash",
 )
 
 go_repository(
@@ -1574,4 +1591,17 @@ go_repository(
     name = "com_github_shibukawa_configdir",
     commit = "e180dbdc8da04c4fa04272e875ce64949f38bd3e",
     importpath = "github.com/shibukawa/configdir",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_noise",
+    importpath = "github.com/libp2p/go-libp2p-noise",
+    sum = "h1:J1gHJRNFEk7NdiaPQQqAvxEy+7hhCsVv3uzduWybmqY=",
+    version = "v0.0.0-20200302201340-8c54356e12c9",
+)
+
+go_repository(
+    name = "com_github_ferranbt_fastssz",
+    commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
+    importpath = "github.com/ferranbt/fastssz",
 )

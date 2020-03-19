@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/slasher/db/iface"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
@@ -22,7 +23,7 @@ func setupDB(t testing.TB, ctx *cli.Context) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{CacheItems: 0, MaxCacheSize: 0, SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	cfg := &Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
 	db, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
@@ -30,7 +31,7 @@ func setupDB(t testing.TB, ctx *cli.Context) *Store {
 	return db
 }
 
-func setupDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *Store {
+func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -39,7 +40,7 @@ func setupDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *S
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{CacheItems: cacheItems, MaxCacheSize: maxCacheSize, SpanCacheEnabled: true}
+	cfg := &Config{SpanCacheEnabled: true, SpanCacheSize: cacheSize}
 	newDB, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
@@ -47,7 +48,7 @@ func setupDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *S
 	return newDB
 }
 
-func teardownDB(t testing.TB, db *Store) {
+func teardownDB(t testing.TB, db iface.Database) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}

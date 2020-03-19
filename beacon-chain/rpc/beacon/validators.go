@@ -337,8 +337,9 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	}
 
 	activatedIndices := make([]uint64, 0)
-	slashedIndices := make([]uint64, 0)
 	exitedIndices := make([]uint64, 0)
+	slashedIndices := make([]uint64, 0)
+	ejectedIndices := make([]uint64, 0)
 	if requestingGenesis || requestedEpoch < currentEpoch {
 		archivedChanges, err := bs.BeaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
 		if err != nil {
@@ -352,8 +353,9 @@ func (bs *Server) GetValidatorActiveSetChanges(
 			)
 		}
 		activatedIndices = archivedChanges.Activated
-		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
+		slashedIndices = archivedChanges.Slashed
+		ejectedIndices = archivedChanges.Ejected
 	} else if requestedEpoch == currentEpoch {
 		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
 		if err != nil {
@@ -361,10 +363,14 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		}
 		vals := headState.Validators()
 		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), vals)
-		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), vals)
 		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), vals, activeValidatorCount)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
+		}
+		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), vals)
+		ejectedIndices, err = validators.EjectedValidatorIndices(helpers.PrevEpoch(headState), vals, activeValidatorCount)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine ejected validator indices: %v", err)
 		}
 	} else {
 		// We are requesting data from the future and we return an error.
@@ -378,25 +384,35 @@ func (bs *Server) GetValidatorActiveSetChanges(
 
 	// We retrieve the public keys for the indices.
 	activatedKeys := make([][]byte, len(activatedIndices))
-	slashedKeys := make([][]byte, len(slashedIndices))
 	exitedKeys := make([][]byte, len(exitedIndices))
+	slashedKeys := make([][]byte, len(slashedIndices))
+	ejectedKeys := make([][]byte, len(ejectedIndices))
 	for i, idx := range activatedIndices {
 		pubkey := headState.PubkeyAtIndex(idx)
 		activatedKeys[i] = pubkey[:]
-	}
-	for i, idx := range slashedIndices {
-		pubkey := headState.PubkeyAtIndex(idx)
-		slashedKeys[i] = pubkey[:]
 	}
 	for i, idx := range exitedIndices {
 		pubkey := headState.PubkeyAtIndex(idx)
 		exitedKeys[i] = pubkey[:]
 	}
+	for i, idx := range slashedIndices {
+		pubkey := headState.PubkeyAtIndex(idx)
+		slashedKeys[i] = pubkey[:]
+	}
+	for i, idx := range ejectedIndices {
+		pubkey := headState.PubkeyAtIndex(idx)
+		ejectedKeys[i] = pubkey[:]
+	}
 	return &ethpb.ActiveSetChanges{
 		Epoch:               requestedEpoch,
 		ActivatedPublicKeys: activatedKeys,
+		ActivatedIndices:    activatedIndices,
 		ExitedPublicKeys:    exitedKeys,
+		ExitedIndices:       exitedIndices,
 		SlashedPublicKeys:   slashedKeys,
+		SlashedIndices:      slashedIndices,
+		EjectedPublicKeys:   ejectedKeys,
+		EjectedIndices:      ejectedIndices,
 	}, nil
 }
 
@@ -500,7 +516,7 @@ func (bs *Server) GetValidatorQueue(
 	vals := headState.Validators()
 	for idx, validator := range vals {
 		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
-		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(headState.FinalizedCheckpointEpoch())
+		canBeActive := validator.ActivationEpoch >= helpers.ActivationExitEpoch(headState.FinalizedCheckpointEpoch())
 		if eligibleActivated && canBeActive {
 			activationQ = append(activationQ, uint64(idx))
 		}
@@ -603,6 +619,11 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", key, err)
 		}
 		if !ok {
+			missingValidators = append(missingValidators, key)
+			continue
+		}
+		if idx >= uint64(len(validatorSummary)) {
+			// Not listed in validator summary yet; treat it as missing.
 			missingValidators = append(missingValidators, key)
 			continue
 		}

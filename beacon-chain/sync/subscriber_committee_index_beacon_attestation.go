@@ -6,9 +6,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context, msg proto.Message) error {
@@ -33,10 +35,16 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	return r.attPool.SaveUnaggregatedAttestation(a)
 }
 
-func (r *Service) currentCommitteeIndex() int {
+func (r *Service) committeesCount() int {
 	activeValidatorIndices, err := r.chain.HeadValidatorsIndices(helpers.SlotToEpoch(r.chain.HeadSlot()))
 	if err != nil {
 		panic(err)
 	}
 	return int(helpers.SlotCommitteeCount(uint64(len(activeValidatorIndices))))
+}
+
+func (r *Service) committeeIndices() []uint64 {
+	currentEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
+	return sliceutil.UnionUint64(cache.CommitteeIDs.GetIDs(currentEpoch),
+		cache.CommitteeIDs.GetIDs(currentEpoch+1))
 }

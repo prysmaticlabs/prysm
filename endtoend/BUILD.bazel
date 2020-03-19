@@ -2,16 +2,18 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_test(
     name = "go_default_test",
-    size = "enormous",
+    size = "large",
     srcs = [
         "demo_e2e_test.go",
         "endtoend_test.go",
         "minimal_e2e_test.go",
+        "minimal_slashing_e2e_test.go",
     ],
     args = ["-test.v"],
     data = [
         "//beacon-chain",
         "//validator",
+        "//slasher",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
     embed = [":go_default_library"],
@@ -43,6 +45,7 @@ go_library(
         "epochTimer.go",
         "eth1.go",
         "helpers.go",
+        "slasher.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/endtoend",

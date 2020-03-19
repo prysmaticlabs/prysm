@@ -33,7 +33,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -72,6 +74,7 @@ type Service struct {
 	checkpointState        *cache.CheckpointStateCache
 	checkpointStateLock    sync.Mutex
 	stateGen               *stategen.State
+	opsService             *attestations.Service
 }
 
 // Config options for the service.
@@ -87,6 +90,8 @@ type Config struct {
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
+	OpsService        *attestations.Service
+	StateGen          *stategen.State
 }
 
 // NewService instantiates a new block service instance that will
@@ -110,7 +115,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
 		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
-		stateGen:           stategen.New(cfg.BeaconDB),
+		opsService:         cfg.OpsService,
+		stateGen:           cfg.StateGen,
 	}, nil
 }
 
@@ -136,10 +142,14 @@ func (s *Service) Start() {
 		}
 	}
 
+	// Make sure that attestation processor is subscribed and ready for state initializing event.
+	attestationProcessorSubscribed := make(chan struct{}, 1)
+
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
+		s.opsService.SetGenesisTime(beaconState.GenesisTime())
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -182,6 +192,7 @@ func (s *Service) Start() {
 			stateChannel := make(chan *feed.Event, 1)
 			stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 			defer stateSub.Unsubscribe()
+			<-attestationProcessorSubscribed
 			for {
 				select {
 				case event := <-stateChannel:
@@ -202,7 +213,7 @@ func (s *Service) Start() {
 		}()
 	}
 
-	go s.processAttestation()
+	go s.processAttestation(attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
@@ -255,6 +266,8 @@ func (s *Service) initializeBeaconChain(
 		return err
 	}
 
+	s.opsService.SetGenesisTime(genesisState.GenesisTime())
+
 	return nil
 }
 
@@ -306,8 +319,21 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
+	if featureconfig.Get().NewStateMgmt {
+		if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
+			return errors.Wrap(err, "could not save genesis state")
+		}
+		if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+			Slot:         0,
+			Root:         genesisBlkRoot[:],
+			BoundaryRoot: genesisBlkRoot[:],
+		}); err != nil {
+			return err
+		}
+	} else {
+		if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+			return errors.Wrap(err, "could not save genesis state")
+		}
 	}
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")
@@ -383,11 +409,25 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	finalizedState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized state from db")
+	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
+	var finalizedState *stateTrie.BeaconState
+	if featureconfig.Get().NewStateMgmt {
+		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+		finalizedState, err = s.stateGen.Resume(ctx, finalizedRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized state from db")
+		}
+		if finalizedRoot == params.BeaconConfig().ZeroHash {
+			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
+		}
+	} else {
+		finalizedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized state from db")
+		}
 	}
-	finalizedBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
+
+	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
@@ -396,7 +436,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.New("finalized state and block can't be nil")
 	}
 
-	s.setHead(bytesutil.ToBytes32(finalized.Root), finalizedBlock, finalizedState)
+	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
 
 	return nil
 }
@@ -404,6 +444,10 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 // This is called when a client starts from a non-genesis slot. It deletes the states in DB
 // from slot 1 (avoid genesis state) to `slot`.
 func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
+	if featureconfig.Get().DontPruneStateStartUp {
+		return nil
+	}
+
 	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
 	roots, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {

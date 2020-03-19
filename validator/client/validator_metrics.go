@@ -20,7 +20,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 	},
 	[]string{
 		// validator pubkey
-		"pkey",
+		"pubkey",
 	},
 )
 
@@ -65,10 +65,11 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	for _, pkey := range pubKeys {
 		pubKey := fmt.Sprintf("%#x", pkey[:8])
 		log := log.WithField("pubKey", pubKey)
+		fmtKey := fmt.Sprintf("%#x", pkey[:])
 		if missingValidators[bytesutil.ToBytes48(pkey)] {
 			log.Info("Validator not in beacon chain")
 			if v.emitAccountMetrics {
-				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(0)
+				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
 			}
 			continue
 		}
@@ -92,7 +93,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
-				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(newBalance)
+				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
 			}
 		}
 

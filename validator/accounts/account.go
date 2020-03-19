@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/pkg/errors"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -24,7 +23,7 @@ var log = logrus.WithField("prefix", "accounts")
 func DecryptKeysFromKeystore(directory string, password string) (map[string]*keystore.Key, error) {
 	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
-	validatorKeys, err := ks.GetKeys(directory, validatorPrefix, password)
+	validatorKeys, err := ks.GetKeys(directory, validatorPrefix, password, true /* warnOnFail */)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get private key")
 	}
@@ -42,10 +41,10 @@ func VerifyAccountNotExists(directory string, password string) error {
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
-	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password); err == nil {
+	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password, false /* warnOnFail */); err == nil {
 		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
 	}
-	if _, err := ks.GetKeys(directory, validatorKeyFile, password); err == nil {
+	if _, err := ks.GetKeys(directory, validatorKeyFile, password, false /* warnOnFail */); err == nil {
 		return fmt.Errorf("keystore at path already exists: %s", validatorKeyFile)
 	}
 	return nil
@@ -136,7 +135,7 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		reader := bufio.NewReader(os.Stdin)
 		log.Info("Create a new validator account for eth2")
 		log.Info("Enter a password:")
-		bytePassword, err := terminal.ReadPassword(syscall.Stdin)
+		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			log.Fatalf("Could not read account password: %v", err)
 		}

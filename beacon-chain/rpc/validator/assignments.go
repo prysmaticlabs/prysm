@@ -4,8 +4,10 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -33,12 +35,18 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
-
 	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
+	// Query the next epoch assignments for committee subnet subscriptions.
+	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(s, req.Epoch+1)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+	}
 
+	var committeeIDs []uint64
+	var nextCommitteeIDs []uint64
 	var validatorAssignments []*ethpb.DutiesResponse_Duty
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
@@ -57,16 +65,31 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
-				assignment.Status = ethpb.ValidatorStatus_ACTIVE
+				assignment.Status = vs.assignmentStatus(idx, s)
 				assignment.ValidatorIndex = idx
 				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
+				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
-		}
+			// Save the next epoch assignments.
+			ca, ok = nextCommitteeAssignments[idx]
+			if ok {
+				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
+			}
 
+		} else {
+			vs := vs.validatorStatus(ctx, pubKey, s)
+			assignment.Status = vs.Status
+		}
 		validatorAssignments = append(validatorAssignments, assignment)
+
+	}
+
+	if featureconfig.Get().EnableDynamicCommitteeSubnets {
+		cache.CommitteeIDs.AddIDs(committeeIDs, req.Epoch)
+		cache.CommitteeIDs.AddIDs(nextCommitteeIDs, req.Epoch+1)
 	}
 
 	return &ethpb.DutiesResponse{

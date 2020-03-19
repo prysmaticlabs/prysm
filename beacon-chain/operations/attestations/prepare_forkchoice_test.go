@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -172,7 +171,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations(append(unaggregatedAtts, aggregatedAtts...))
+	wanted, err := helpers.AggregateAttestations(append(aggregatedAtts, unaggregatedAtts...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +181,8 @@ func TestBatchAttestations_Single(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(wanted, s.pool.ForkchoiceAttestations()) {
+	got := s.pool.ForkchoiceAttestations()
+	if !reflect.DeepEqual(wanted, got) {
 		t.Error("Did not aggregate and save for batch")
 	}
 }
@@ -296,8 +296,6 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 		t.Error("Wanted false, got true")
 	}
 
-	time.Sleep(100 * time.Millisecond)
-
 	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
 	got, err = s.seen(att2)
 	if err != nil {
@@ -306,8 +304,6 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 	if got {
 		t.Error("Wanted false, got true")
 	}
-
-	time.Sleep(100 * time.Millisecond)
 
 	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
 	got, err = s.seen(att3)
@@ -375,9 +371,12 @@ func TestService_seen(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		if got, _ := s.seen(tt.att); got != tt.want {
+		got, err := s.seen(tt.att)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != tt.want {
 			t.Errorf("Test %d failed. Got=%v want=%v", i, got, tt.want)
 		}
-		time.Sleep(10) // Sleep briefly for cache to routine to buffer.
 	}
 }

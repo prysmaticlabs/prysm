@@ -11,11 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"gopkg.in/d4l3k/messagediff.v1"
+	messagediff "gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
@@ -209,7 +210,7 @@ func TestPruneNonBoundary_CanPrune(t *testing.T) {
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)

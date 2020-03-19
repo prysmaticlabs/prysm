@@ -99,7 +99,7 @@ func TestGetBlock_OK(t *testing.T) {
 		privKeys[0],
 		0, /* validator index */
 	)
-	if err := proposerServer.SlashingsPool.InsertProposerSlashing(beaconState, proposerSlashing); err != nil {
+	if err := proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,7 +109,7 @@ func TestGetBlock_OK(t *testing.T) {
 		privKeys[1],
 		1, /* validator index */
 	)
-	if err := proposerServer.SlashingsPool.InsertAttesterSlashing(beaconState, attesterSlashing); err != nil {
+	if err := proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing); err != nil {
 		t.Fatal(err)
 	}
 
@@ -375,7 +375,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
 	req.Signature = blockSig[:]
 
@@ -1308,8 +1311,10 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
-
+		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			t.Fatal(err)
+		}
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		zeroSig := [96]byte{}
 		atts[i].Signature = zeroSig[:]

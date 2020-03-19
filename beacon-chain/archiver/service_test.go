@@ -284,7 +284,7 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 		State: headState,
 	}
 	prevEpoch := helpers.PrevEpoch(headState)
-	delayedActEpoch := helpers.DelayedActivationExitEpoch(prevEpoch)
+	delayedActEpoch := helpers.ActivationExitEpoch(prevEpoch)
 	val1, err := headState.ValidatorAtIndex(4)
 	if err != nil {
 		t.Fatal(err)

@@ -1,11 +1,18 @@
 package featureconfig
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli"
 )
 
 var (
+	broadcastSlashingFlag = cli.BoolFlag{
+		Name:  "broadcast-slashing",
+		Usage: "Broadcast slashings from slashing pool.",
+	}
+	noCustomConfigFlag = cli.BoolFlag{
+		Name:  "no-custom-config",
+		Usage: "Run the beacon chain with the real parameters from phase 0.",
+	}
 	minimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
@@ -13,6 +20,10 @@ var (
 	writeSSZStateTransitionsFlag = cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
+	}
+	enableDynamicCommitteeSubnets = cli.BoolFlag{
+		Name:  "enable-dynamic-committee-subnets",
+		Usage: "Enable dynamic committee attestation subnets.",
 	}
 	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -63,7 +74,6 @@ var (
 		Name: "custom-genesis-delay",
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
 			"This flag should be used for local development and testing only.",
-		Value: params.BeaconConfig().MinGenesisDelay,
 	}
 	cacheFilteredBlockTreeFlag = cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
@@ -105,6 +115,27 @@ var (
 	checkHeadState = cli.BoolFlag{
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
+	}
+	enableNoiseHandshake = cli.BoolFlag{
+		Name: "enable-noise",
+		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
+			"securing transports between peers",
+	}
+	dontPruneStateStartUp = cli.BoolFlag{
+		Name:  "dont-prune-state-start-up",
+		Usage: "Don't prune historical states upon start up",
+	}
+	newStateMgmt = cli.BoolFlag{
+		Name:  "new-state-mgmt",
+		Usage: "This enables the usage of experimental state mgmt service across Prysm",
+	}
+	enableInitSyncQueue = cli.BoolFlag{
+		Name:  "enable-initial-sync-queue",
+		Usage: "Enables concurrent fetching and processing of blocks on initial sync.",
+	}
+	enableFieldTrie = cli.BoolFlag{
+		Name:  "enable-state-field-trie",
+		Usage: "Enables the usage of state field tries to compute the state root",
 	}
 )
 
@@ -261,10 +292,12 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+	noCustomConfigFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
+	enableDynamicCommitteeSubnets,
 	enableSSZCache,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
@@ -279,17 +312,23 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
+	enableNoiseHandshake,
+	dontPruneStateStartUp,
+	broadcastSlashingFlag,
+	newStateMgmt,
+	enableInitSyncQueue,
+	enableFieldTrie,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--enable-ssz-cache",
-	"--cache-proposer-indices",
 	"--cache-filtered-block-tree",
 	"--enable-skip-slots-cache",
 	"--enable-eth1-data-vote-cache",
-	"--proto-array-forkchoice",
 	"--enable-byte-mempool",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
+	"--enable-initial-sync-queue",
+	"--enable-dynamic-committee-subnets",
 }

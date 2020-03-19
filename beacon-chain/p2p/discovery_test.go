@@ -132,7 +132,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-	cfg := &Config{Encoding: "ssz"}
+	cfg := &Config{Encoding: "ssz", MaxPeers: 30}
 	port := 3000
 	var staticPeers []string
 	var hosts []host.Host
@@ -161,6 +161,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	s.Start()
 	s.dv5Listener = &mockListener{}
 	defer s.Stop()
+	time.Sleep(100 * time.Millisecond)
 
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {

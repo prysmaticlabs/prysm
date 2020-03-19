@@ -16,6 +16,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -48,6 +50,18 @@ type validator struct {
 	domainDataLock       sync.Mutex
 	domainDataCache      *ristretto.Cache
 }
+
+var validatorStatusesGaugeVec = promauto.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Namespace: "validator",
+		Name:      "statuses",
+		Help:      "validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED",
+	},
+	[]string{
+		// Validator pubkey.
+		"pubkey",
+	},
+)
 
 // Done cleans up the validator.
 func (v *validator) Done() {
@@ -175,6 +189,10 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
 			"status": status.Status.Status.String(),
 		})
+		if v.emitAccountMetrics {
+			fmtKey := fmt.Sprintf("%#x", status.PublicKey[:])
+			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
+		}
 		if status.Status.Status == ethpb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
 			continue
@@ -269,6 +287,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				"status":         duty.Status,
 			}
 
+			if v.emitAccountMetrics {
+				fmtKey := fmt.Sprintf("%#x", duty.PublicKey[:])
+				validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+			}
+
 			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
 				if duty.ProposerSlot > 0 {
 					lFields["proposerSlot"] = duty.ProposerSlot
@@ -348,9 +371,9 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 	}
 
 	for _, d := range [][]byte{
-		params.BeaconConfig().DomainRandao,
-		params.BeaconConfig().DomainBeaconAttester,
-		params.BeaconConfig().DomainBeaconProposer,
+		params.BeaconConfig().DomainRandao[:],
+		params.BeaconConfig().DomainBeaconAttester[:],
+		params.BeaconConfig().DomainBeaconProposer[:],
 	} {
 		_, err := v.domainData(ctx, helpers.SlotToEpoch(slot), d)
 		if err != nil {
