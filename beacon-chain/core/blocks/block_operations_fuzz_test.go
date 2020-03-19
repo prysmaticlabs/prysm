@@ -10,6 +10,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestFuzzProcessAttestationNoVerify_10000(t *testing.T) {
@@ -430,6 +431,6 @@ func TestFuzzVerifyExit_10000(t *testing.T) {
 		fuzzer.Fuzz(val)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
-		VerifyExit(val, slot, fork, ve)
+		VerifyExit(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
 	}
 }

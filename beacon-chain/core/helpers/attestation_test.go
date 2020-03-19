@@ -255,7 +255,7 @@ func TestSlotSignature_Verify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}

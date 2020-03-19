@@ -208,6 +208,8 @@ func TestPruneNonBoundary_CanPrune(t *testing.T) {
 }
 
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
+	t.Skip("To be resolved until 5119 gets in")
+
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}

@@ -8,15 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -92,7 +88,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{SignatureDomain: bls.Domain(params.BeaconConfig().DomainBeaconAttester, bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion))}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: []byte{}}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -115,17 +111,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		AggregationBits: aggregationBitfield,
 	}
 
-	domain, err := helpers.Domain(&pb.Fork{
-		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-		Epoch:           0,
-	}, 0, params.BeaconConfig().DomainBeaconAttester)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, domain)
+	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}

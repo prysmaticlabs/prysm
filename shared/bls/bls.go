@@ -26,9 +26,6 @@ func init() {
 // DomainByteLength length of domain byte array.
 const DomainByteLength = 4
 
-// ForkVersionByteLength length of fork version byte array.
-const ForkVersionByteLength = 4
-
 var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
@@ -279,42 +276,6 @@ func (s *Signature) Marshal() []byte {
 
 	rawBytes := s.s.Serialize()
 	return rawBytes
-}
-
-// Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
-//
-// Spec pseudocode definition:
-//  def get_domain(state: BeaconState, domain_type: DomainType, message_epoch: Epoch=None) -> Domain:
-//    """
-//    Return the signature domain (fork version concatenated with domain type) of a message.
-//    """
-//    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
-//    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
-//    return compute_domain(domain_type, fork_version)
-func Domain(domainType [DomainByteLength]byte, forkVersion [ForkVersionByteLength]byte) []byte {
-	b := []byte{}
-	b = append(b, domainType[:4]...)
-	b = append(b, forkVersion[:4]...)
-	return b
-}
-
-// ComputeDomain returns the domain version for BLS private key to sign and verify with a zeroed 4-byte
-// array as the fork version.
-//
-// def compute_domain(domain_type: DomainType, fork_version: Optional[Version]=None) -> Domain:
-//    """
-//    Return the domain for the ``domain_type`` and ``fork_version``.
-//    """
-//    if fork_version is None:
-//        fork_version = GENESIS_FORK_VERSION
-//    return Domain(domain_type + fork_version)
-func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte) []byte {
-	if forkVersion == nil {
-		forkVersion = params.BeaconConfig().GenesisForkVersion
-	}
-	forkBytes := [ForkVersionByteLength]byte{}
-	copy(forkBytes[:], forkVersion)
-	return Domain(domainType, forkBytes)
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element

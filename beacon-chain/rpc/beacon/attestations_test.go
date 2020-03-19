@@ -26,6 +26,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -937,7 +938,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		for j := 0; j < numValidators; j++ {
 			attExample := &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: []byte("root"),
+					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
 					Slot:            i,
 					Target: &ethpb.Checkpoint{
 						Epoch: 0,

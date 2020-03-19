@@ -33,7 +33,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			Slot:       1,
 			ParentRoot: testutil.Random32Bytes(t),
 		},
-		Signature: []byte("fake"),
+		Signature: bytesutil.PadTo([]byte("fake"), 96),
 	}
 
 	p := p2ptest.NewTestP2P(t)

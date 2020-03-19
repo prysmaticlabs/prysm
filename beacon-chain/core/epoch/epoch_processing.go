@@ -170,7 +170,7 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
-	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) error {
+	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
@@ -178,10 +178,11 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
-				return err
+				return false, err
 			}
+			return true, nil
 		}
-		return nil
+		return false, nil
 	})
 	return state, err
 }
@@ -198,10 +199,13 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 //    # Update effective balances with hysteresis
 //    for index, validator in enumerate(state.validators):
 //        balance = state.balances[index]
-//        HALF_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // 2
-//        if balance < validator.effective_balance or validator.effective_balance + 3 * HALF_INCREMENT < balance:
-//            validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
-//    # Set active index root
+//        HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT // HYSTERESIS_QUOTIENT
+//        DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER
+//        UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER
+//        if (
+//            balance + DOWNWARD_THRESHOLD < validator.effective_balance
+//            or validator.effective_balance + UPWARD_THRESHOLD < balance
+//        ):
 //    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
 //    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
 //    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
@@ -235,22 +239,26 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	bals := state.Balances()
 	// Update effective balances with hysteresis.
-	validatorFunc := func(idx int, val *ethpb.Validator) error {
+	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
 		if val == nil {
-			return fmt.Errorf("validator %d is nil in state", idx)
+			return false, fmt.Errorf("validator %d is nil in state", idx)
 		}
 		if idx >= len(bals) {
-			return fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
 		balance := bals[idx]
-		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
-		if balance < val.EffectiveBalance || val.EffectiveBalance+3*halfInc < balance {
+		hysteresisInc := params.BeaconConfig().EffectiveBalanceIncrement / params.BeaconConfig().HysteresisQuotient
+		downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
+		upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
+
+		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
 			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 			if val.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
 				val.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
 			}
+			return true, nil
 		}
-		return nil
+		return false, nil
 	}
 
 	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {

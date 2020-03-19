@@ -349,7 +349,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 80,
+			ProposerIndex: 9,
 			ParentRoot:    parentRoot[:],
 			Slot:          1,
 			Body: &ethpb.BeaconBlockBody{
@@ -372,7 +372,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	beaconState.SetSlot(beaconState.Slot() - 1)
 	req.Block.Body.RandaoReveal = randaoReveal[:]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1262,6 +1262,9 @@ func TestFilterAttestation_OK(t *testing.T) {
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
 	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
+	if err := state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]); err != nil {
+		t.Fatal(err)
+	}
 
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
@@ -1312,7 +1315,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 		if err != nil {
 			t.Fatal(err)
 		}
