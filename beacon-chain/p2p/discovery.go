@@ -94,8 +94,8 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
 	listener := createListener(addr, privKey, cfg)
-	node := listener.Self()
-	log.WithField("nodeID", node.ID()).Info("Started discovery v5")
+	record := listener.Self()
+	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil
 }
 

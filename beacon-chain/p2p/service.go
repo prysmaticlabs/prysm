@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -156,7 +158,7 @@ func (s *Service) Start() {
 		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
-	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
+	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || flags.Get().EnableDiscv5 {
 		ipAddr := ipAddr()
 		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {

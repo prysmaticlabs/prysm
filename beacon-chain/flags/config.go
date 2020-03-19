@@ -17,6 +17,7 @@ type GlobalFlags struct {
 	MaxPageSize                       int
 	DeploymentBlock                   int
 	UnsafeSync                        bool
+	EnableDiscv5                      bool
 }
 
 var globalConfig *GlobalFlags
@@ -52,6 +53,9 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	}
 	if ctx.GlobalBool(UnsafeSync.Name) {
 		cfg.UnsafeSync = true
+	}
+	if ctx.GlobalBool(EnableDiscv5.Name) {
+		cfg.EnableDiscv5 = true
 	}
 	cfg.MaxPageSize = ctx.GlobalInt(RPCMaxPageSize.Name)
 	cfg.DeploymentBlock = ctx.GlobalInt(ContractDeploymentBlock.Name)
