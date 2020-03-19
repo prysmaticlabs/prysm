@@ -121,6 +121,9 @@ func (bs *Server) ListValidatorBalances(
 		}
 		balancesCount = len(res)
 	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Index < res[j].Index
+	})
 
 	// If there are no balances, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 balances below would result in an error.
