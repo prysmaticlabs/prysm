@@ -306,6 +306,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	var zeroHash [32]byte
 	nsh := newState.LatestBlockHeader()
 	expected := &ethpb.BeaconBlockHeader{
+		ProposerIndex: 5669,
 		Slot:       block.Block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
