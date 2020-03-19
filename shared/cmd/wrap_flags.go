@@ -7,7 +7,7 @@ import (
 	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
-// Wrap flags so that they can be loaded from alternative sources.
+// WrapFlags so that they can be loaded from alternative sources.
 func WrapFlags(flags []cli.Flag) []cli.Flag {
 	wrapped := make([]cli.Flag, 0, len(flags))
 	for _, f := range flags {
