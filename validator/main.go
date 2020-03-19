@@ -146,8 +146,10 @@ contract in order to activate the validator client`,
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
-		if err := altsrc.InitInputSourceWithContext(appFlags, altsrc.NewYamlSourceFromFlagFunc("config-file"))(ctx); err != nil {
-			return err
+		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
+			if err := altsrc.InitInputSourceWithContext(appFlags, altsrc.NewYamlSourceFromFlagFunc(cmd.ConfigFileFlag.Name))(ctx); err != nil {
+				return err
+			}
 		}
 
 		format := ctx.String(cmd.LogFormat.Name)
