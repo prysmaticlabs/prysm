@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -685,6 +686,59 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 	}
 
 	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(want, received.ValidatorList) {
+		t.Fatal("Incorrect respond of validators")
+	}
+}
+
+func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	validators, _ := setupValidators(t, db, 100)
+	indicesWanted := []uint64{2, 7, 11, 17}
+	pubkeyIndicesWanted := []uint64{3, 5, 9, 15}
+	allIndicesWanted := append(indicesWanted, pubkeyIndicesWanted...)
+	want := make([]*ethpb.Validators_ValidatorContainer, len(allIndicesWanted))
+	for i, idx := range allIndicesWanted {
+		want[i] = &ethpb.Validators_ValidatorContainer{
+			Index:     idx,
+			Validator: validators[idx],
+		}
+	}
+	sort.Slice(want, func(i int, j int) bool {
+		return want[i].Index < want[j].Index
+	})
+
+	headState, err := db.HeadState(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
+	}
+
+	pubKeysWanted := make([][]byte, len(pubkeyIndicesWanted))
+	for i, indice := range pubkeyIndicesWanted {
+		pubKeysWanted[i] = pubKey(indice)
+	}
+	req := &ethpb.ListValidatorsRequest{
+		Indices:    indicesWanted,
+		PublicKeys: pubKeysWanted,
+	}
+	received, err := bs.ListValidators(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
