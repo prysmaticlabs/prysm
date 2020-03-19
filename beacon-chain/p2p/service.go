@@ -300,6 +300,10 @@ func (s *Service) Peers() *peers.Status {
 // Think of a better way to do this rather than
 // running this in sync.
 func (s *Service) RefreshENR(epoch uint64) {
+	// return early if discv5 isnt running
+	if s.dv5Listener == nil {
+		return
+	}
 	bitV := bitfield.NewBitvector64()
 	committees := cache.CommitteeIDs.GetIDs(epoch)
 	for _, idx := range committees {
