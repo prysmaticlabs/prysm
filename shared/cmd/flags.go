@@ -16,7 +16,6 @@ var (
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases and keystore",
-		Value: "TODO!", // TODO: Set to the correct value before merge.
 	}
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
 	EnableTracingFlag = &cli.BoolFlag{

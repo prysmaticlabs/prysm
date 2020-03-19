@@ -25,7 +25,6 @@ var (
 	KeystorePathFlag = &cli.StringFlag{
 		Name:  "keystore-path",
 		Usage: "Path to the desired keystore directory",
-		Value: "TODO!", // TODO: Replace this before merge.
 	}
 	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
 	// alternative from launching the validator client from decrypting a keystore directory.
