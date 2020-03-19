@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -15,6 +17,9 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 )
+
+const attestationSubnetCount = 64
+const attSubnetEnrKey = "attnets"
 
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
@@ -84,13 +89,13 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
-	return localNode, nil
+	return intializeAttSubnets(localNode), nil
 }
 
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
 	listener := createListener(addr, privKey, cfg)
-	node := listener.Self()
-	log.WithField("nodeID", node.ID()).Info("Started discovery v5")
+	record := listener.Self()
+	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil
 }
 
@@ -106,6 +111,29 @@ func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 	}
 	err = host.Connect(context.Background(), *peerInfo)
 	return err
+}
+
+func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
+	bitV := bitfield.NewBitvector64()
+	entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
+	node.Set(entry)
+	return node
+}
+
+func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
+	bitV := bitfield.NewBitvector64()
+	entry := enr.WithEntry(attSubnetEnrKey, bitV)
+	err := record.Load(entry)
+	if err != nil {
+		return nil, err
+	}
+	committeeIdxs := []uint64{}
+	for i := uint64(0); i < 64; i++ {
+		if bitV.BitAt(i) {
+			committeeIdxs = append(committeeIdxs, i)
+		}
+	}
+	return committeeIdxs, nil
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {

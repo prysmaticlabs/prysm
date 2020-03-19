@@ -3,8 +3,11 @@ package sync
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"runtime/debug"
 	"time"
+
+	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -247,6 +250,13 @@ func (r *Service) subscribeDynamicWithSubnets(
 				}
 				for _, idx := range wantedSubs {
 					if _, exists := subscriptions[idx]; !exists {
+						// do not subscribe if we have no peers in the same
+						// subnet
+						topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+						numOfPeers := r.p2p.PubSub().ListPeers(fmt.Sprintf(topic, idx))
+						if len(r.p2p.Peers().SubscribedToSubnet(idx)) == 0 && len(numOfPeers) == 0 {
+							continue
+						}
 						subscriptions[idx] = r.subscribeWithBase(base, fmt.Sprintf(topicFormat, idx), validate, handle)
 					}
 				}

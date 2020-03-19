@@ -68,6 +68,7 @@ type peerStatus struct {
 	chainState            *pb.Status
 	chainStateLastUpdated time.Time
 	badResponses          int
+	committeeIndices      []uint64
 }
 
 // NewStatus creates a new status entity.
@@ -85,7 +86,7 @@ func (p *Status) MaxBadResponses() int {
 
 // Add adds a peer.
 // If a peer already exists with this ID its address and direction are updated with the supplied data.
-func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direction) {
+func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direction, indices []uint64) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -93,6 +94,9 @@ func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direct
 		// Peer already exists, just update its address info.
 		status.address = address
 		status.direction = direction
+		if indices != nil {
+			status.committeeIndices = indices
+		}
 		return
 	}
 
@@ -100,7 +104,8 @@ func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direct
 		address:   address,
 		direction: direction,
 		// Peers start disconnected; state will be updated when the handshake process begins.
-		peerState: PeerDisconnected,
+		peerState:        PeerDisconnected,
+		committeeIndices: indices,
 	}
 }
 
@@ -149,6 +154,41 @@ func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
 		return status.chainState, nil
 	}
 	return nil, ErrPeerUnknown
+}
+
+// CommitteeIndices retrieves the committee subnets the peer is subscribed to.
+func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	if status, ok := p.status[pid]; ok {
+		if status.committeeIndices == nil {
+			return []uint64{}, nil
+		}
+		return status.committeeIndices, nil
+	}
+	return nil, ErrPeerUnknown
+}
+
+// SubscribedToSubnet retrieves the peers subscribed to the given
+// committee subnet.
+func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	peers := make([]peer.ID, 0)
+	for pid, status := range p.status {
+		// look at active peers
+		if status.peerState == PeerConnecting || status.peerState == PeerConnected &&
+			status.committeeIndices != nil {
+			for _, idx := range status.committeeIndices {
+				if idx == index {
+					peers = append(peers, pid)
+				}
+			}
+		}
+	}
+	return peers
 }
 
 // SetConnectionState sets the connection state of the given remote peer.
