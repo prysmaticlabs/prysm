@@ -85,7 +85,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
 	}, nil)
 
-
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch

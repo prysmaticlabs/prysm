@@ -307,10 +307,10 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	nsh := newState.LatestBlockHeader()
 	expected := &ethpb.BeaconBlockHeader{
 		ProposerIndex: 5669,
-		Slot:       block.Block.Slot,
-		ParentRoot: latestBlockSignedRoot[:],
-		BodyRoot:   bodyRoot[:],
-		StateRoot:  zeroHash[:],
+		Slot:          block.Block.Slot,
+		ParentRoot:    latestBlockSignedRoot[:],
+		BodyRoot:      bodyRoot[:],
+		StateRoot:     zeroHash[:],
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %v", expected, nsh)

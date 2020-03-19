@@ -46,7 +46,7 @@ type BeaconChainConfig struct {
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
 	MaxSeedLookahead                 uint64 `yaml:"MAX_SEED_LOOKAHEAD"`                  // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
-	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	EpochsPerEth1VotingPeriod        uint64 `yaml:"EPOCHS_PER_ETH1_VOTING_PERIOD"`       // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node on per epoch basis.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
@@ -140,7 +140,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,
-	SlotsPerEth1VotingPeriod:         1024,
+	EpochsPerEth1VotingPeriod:        32,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
 	PersistentCommitteePeriod:        2048,
@@ -259,7 +259,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
-	minimalConfig.SlotsPerEth1VotingPeriod = 16
+	minimalConfig.EpochsPerEth1VotingPeriod = 2
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048

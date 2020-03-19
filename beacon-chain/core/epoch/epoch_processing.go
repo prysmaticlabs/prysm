@@ -194,7 +194,7 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 //    current_epoch = get_current_epoch(state)
 //    next_epoch = Epoch(current_epoch + 1)
 //    # Reset eth1 data votes
-//    if (state.slot + 1) % SLOTS_PER_ETH1_VOTING_PERIOD == 0:
+//    if next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0:
 //        state.eth1_data_votes = []
 //    # Update effective balances with hysteresis
 //    for index, validator in enumerate(state.validators):
@@ -231,7 +231,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	nextEpoch := currentEpoch + 1
 
 	// Reset ETH1 data votes.
-	if (state.Slot()+1)%params.BeaconConfig().SlotsPerEth1VotingPeriod == 0 {
+	if nextEpoch%params.BeaconConfig().EpochsPerEth1VotingPeriod == 0 {
 		if err := state.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
 			return nil, err
 		}
