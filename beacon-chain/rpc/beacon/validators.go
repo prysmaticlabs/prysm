@@ -121,6 +121,7 @@ func (bs *Server) ListValidatorBalances(
 		}
 		balancesCount = len(res)
 	}
+	// Depending on the indices and public keys given, results might not be sorted.
 	sort.Slice(res, func(i, j int) bool {
 		return res[i].Index < res[j].Index
 	})
@@ -230,6 +231,7 @@ func (bs *Server) ListValidators(
 			Validator: val,
 		})
 	}
+	// Depending on the indices and public keys given, results might not be sorted.
 	sort.Slice(validatorList, func(i, j int) bool {
 		return validatorList[i].Index < validatorList[j].Index
 	})
