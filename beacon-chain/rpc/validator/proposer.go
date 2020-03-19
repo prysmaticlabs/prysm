@@ -393,7 +393,6 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 		}
 
 		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
-			fmt.Println(err)
 			inValidAtts = append(inValidAtts, att)
 			continue
 

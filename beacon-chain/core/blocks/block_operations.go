@@ -312,6 +312,7 @@ func ProcessBlockHeaderNoVerify(
 	}
 	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       block.Slot,
+		ProposerIndex: block.ProposerIndex,
 		ParentRoot: block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
