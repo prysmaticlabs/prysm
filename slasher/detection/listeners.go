@@ -84,8 +84,9 @@ func extractSignedBeaconBlockHeader(block *ethpb.SignedBeaconBlock) (*ethpb.Sign
 	}
 	return &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:          block.Block.Slot,
-			ProposerIndex: block.Block.ProposerIndex,
+			Slot: block.Block.Slot,
+			//TODO(#5119) remove stub and use input from block header.
+			ProposerIndex: 0,
 			ParentRoot:    block.Block.ParentRoot,
 			StateRoot:     block.Block.StateRoot,
 			BodyRoot:      bodyRoot[:],
