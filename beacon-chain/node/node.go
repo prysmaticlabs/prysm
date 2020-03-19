@@ -280,12 +280,17 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		}
 	}
 
+	datadir := ctx.String(cmd.DataDirFlag.Name)
+	if datadir == "" {
+		datadir = cmd.DefaultDataDir()
+	}
+
 	svc, err := p2p.NewService(&p2p.Config{
 		NoDiscovery:       ctx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeAddrs,
 		RelayNodeAddr:     ctx.String(cmd.RelayNode.Name),
-		DataDir:           ctx.String(cmd.DataDirFlag.Name),
+		DataDir:           datadir,
 		LocalIP:           ctx.String(cmd.P2PIP.Name),
 		HostAddress:       ctx.String(cmd.P2PHost.Name),
 		HostDNS:           ctx.String(cmd.P2PHostDNS.Name),

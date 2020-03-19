@@ -95,6 +95,9 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 		dataDir := ctx.String(cmd.DataDirFlag.Name)
+		if dataDir == "" {
+			dataDir = cmd.DefaultDataDir()
+		}
 		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
 			return nil, err
 		}
