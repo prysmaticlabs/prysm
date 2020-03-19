@@ -10,9 +10,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"go.opencensus.io/trace"
 )
 
@@ -33,7 +32,8 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 			if err != nil {
 				log.WithError(err)
 			}
-			//ds.submitAttesterSlashings(ctx, slashings)
+			slashing, err := ds.detectDoubleProposels(ctx, sbh)
+			ds.submitProposerSlashing(ctx, slashing)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return

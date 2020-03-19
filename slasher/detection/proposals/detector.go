@@ -32,10 +32,7 @@ func (dd *ProposeDetector) DetectDoublePropose(
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoublePropose")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(incomingBlk.Header.Slot)
-	//TODO(#5119) remove constand and use input from block header.
-	//validatorIdx:=blk.Header.ProposerIndex
-	proposerIdx := uint64(0)
-	bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, proposerIdx)
+	bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, incomingBlk.Header.ProposerIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +40,7 @@ func (dd *ProposeDetector) DetectDoublePropose(
 		if bytes.Equal(bh.Signature, incomingBlk.Signature) {
 			continue
 		}
-		ps := &ethpb.ProposerSlashing{ProposerIndex: proposerIdx, Header_1: incomingBlk, Header_2: bh}
+		ps := &ethpb.ProposerSlashing{Header_1: incomingBlk, Header_2: bh}
 		err := dd.slasherDB.SaveProposerSlashing(ctx, status.Active, ps)
 		if err != nil {
 			return nil, err
