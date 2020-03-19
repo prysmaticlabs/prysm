@@ -15,6 +15,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -170,7 +171,7 @@ func GenerateProposerSlashingForValidator(
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
-			BodyRoot:      []byte{0, 1, 0},
+			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
 		},
 	}
 	currentEpoch := helpers.CurrentEpoch(bState)
@@ -188,7 +189,7 @@ func GenerateProposerSlashingForValidator(
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
-			BodyRoot:      []byte{0, 2, 0},
+			BodyRoot:      bytesutil.PadTo([]byte{0, 2, 0}, 32),
 		},
 	}
 	root, err = helpers.ComputeSigningRoot(header2.Header, domain)
