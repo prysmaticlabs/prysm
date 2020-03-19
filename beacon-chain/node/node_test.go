@@ -9,7 +9,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 // Ensure BeaconNode implements interfaces.
@@ -22,7 +22,7 @@ func TestNodeClose_OK(t *testing.T) {
 	tmp := fmt.Sprintf("%s/datadirtest2", testutil.TempDir())
 	os.RemoveAll(tmp)
 
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	set.Bool("test-skip-pow", true, "skip pow dial")
@@ -31,7 +31,7 @@ func TestNodeClose_OK(t *testing.T) {
 	set.Bool("demo-config", true, "demo configuration")
 	set.String("deposit-contract", "0x0000000000000000000000000000000000000000", "deposit contract address")
 
-	context := cli.NewContext(app, set, nil)
+	context := cli.NewContext(&app, set, nil)
 
 	node, err := NewBeaconNode(context)
 	if err != nil {

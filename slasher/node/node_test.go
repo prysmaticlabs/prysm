@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 // Test that slasher node can close.
@@ -20,12 +20,12 @@ func TestNodeClose_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("beacon-rpc-provider", "localhost:4232", "beacon node RPC server")
 	set.String("datadir", tmp, "node data directory")
 
-	context := cli.NewContext(app, set, nil)
+	context := cli.NewContext(&app, set, nil)
 
 	node, err := NewSlasherNode(context)
 	if err != nil {

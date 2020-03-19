@@ -21,7 +21,7 @@ package featureconfig
 import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -90,98 +90,98 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
 	delay := params.BeaconConfig().MinGenesisDelay
-	if ctx.GlobalIsSet(customGenesisDelayFlag.Name) {
-		delay = ctx.GlobalUint64(customGenesisDelayFlag.Name)
+	if ctx.IsSet(customGenesisDelayFlag.Name) {
+		delay = ctx.Uint64(customGenesisDelayFlag.Name)
 		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
 	}
 	cfg.CustomGenesisDelay = delay
-	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
+	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.GlobalBool(disableForkChoiceUnsafeFlag.Name) {
+	if ctx.Bool(disableForkChoiceUnsafeFlag.Name) {
 		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
 		cfg.DisableForkChoice = true
 	}
-	if ctx.GlobalBool(enableDynamicCommitteeSubnets.Name) {
+	if ctx.Bool(enableDynamicCommitteeSubnets.Name) {
 		log.Warn("Enabled dynamic attestation committee subnets")
 		cfg.EnableDynamicCommitteeSubnets = true
 	}
-	if ctx.GlobalBool(enableSSZCache.Name) {
+	if ctx.Bool(enableSSZCache.Name) {
 		log.Warn("Enabled unsafe ssz cache")
 		cfg.EnableSSZCache = true
 	}
-	if ctx.GlobalBool(enableEth1DataVoteCacheFlag.Name) {
+	if ctx.Bool(enableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
-	if ctx.GlobalBool(initSyncVerifyEverythingFlag.Name) {
+	if ctx.Bool(initSyncVerifyEverythingFlag.Name) {
 		log.Warn("Initial syncing with verifying all block's content signatures.")
 		cfg.InitSyncNoVerify = false
 	} else {
 		cfg.InitSyncNoVerify = true
 	}
-	if ctx.GlobalBool(skipBLSVerifyFlag.Name) {
+	if ctx.Bool(skipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
 		cfg.SkipBLSVerify = true
 	}
-	if ctx.GlobalBool(enableBackupWebhookFlag.Name) {
+	if ctx.Bool(enableBackupWebhookFlag.Name) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
 	}
-	if ctx.GlobalBool(enableSkipSlotsCacheFlag.Name) {
+	if ctx.Bool(enableSkipSlotsCacheFlag.Name) {
 		log.Warn("Enabled skip slots cache.")
 		cfg.EnableSkipSlotsCache = true
 	}
-	if ctx.GlobalString(kafkaBootstrapServersFlag.Name) != "" {
+	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
-		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
+		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.GlobalBool(enableSlasherFlag.Name) {
+	if ctx.Bool(enableSlasherFlag.Name) {
 		log.Warn("Enable slasher connection.")
 		cfg.EnableSlasherConnection = true
 	}
-	if ctx.GlobalBool(cacheFilteredBlockTreeFlag.Name) {
+	if ctx.Bool(cacheFilteredBlockTreeFlag.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
 	}
-	if ctx.GlobalBool(disableStrictAttestationPubsubVerificationFlag.Name) {
+	if ctx.Bool(disableStrictAttestationPubsubVerificationFlag.Name) {
 		log.Warn("Disabled strict attestation signature verification in pubsub")
 		cfg.DisableStrictAttestationPubsubVerification = true
 	}
-	if ctx.GlobalBool(disableUpdateHeadPerAttestation.Name) {
+	if ctx.Bool(disableUpdateHeadPerAttestation.Name) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
 	}
-	if ctx.GlobalBool(enableByteMempool.Name) {
+	if ctx.Bool(enableByteMempool.Name) {
 		log.Warn("Enabling experimental memory management for beacon state")
 		cfg.EnableByteMempool = true
 	}
-	if ctx.GlobalBool(enableStateGenSigVerify.Name) {
+	if ctx.Bool(enableStateGenSigVerify.Name) {
 		log.Warn("Enabling sig verify for state gen")
 		cfg.EnableStateGenSigVerify = true
 	}
-	if ctx.GlobalBool(checkHeadState.Name) {
+	if ctx.Bool(checkHeadState.Name) {
 		log.Warn("Enabling check head state for chainservice")
 		cfg.CheckHeadState = true
 	}
-	if ctx.GlobalBool(enableNoiseHandshake.Name) {
+	if ctx.Bool(enableNoiseHandshake.Name) {
 		log.Warn("Enabling noise handshake for peer")
 		cfg.EnableNoise = true
 	}
-	if ctx.GlobalBool(dontPruneStateStartUp.Name) {
+	if ctx.Bool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.GlobalBool(newStateMgmt.Name) {
+	if ctx.Bool(newStateMgmt.Name) {
 		log.Warn("Enabling experimental state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.GlobalBool(enableInitSyncQueue.Name) {
+	if ctx.Bool(enableInitSyncQueue.Name) {
 		log.Warn("Enabling initial sync queue")
 		cfg.EnableInitSyncQueue = true
 	}
-	if ctx.GlobalBool(enableFieldTrie.Name) {
+	if ctx.Bool(enableFieldTrie.Name) {
 		log.Warn("Enabling state field trie")
 		cfg.EnableFieldTrie = true
 	}
@@ -194,15 +194,15 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	if ctx.GlobalBool(protectProposerFlag.Name) {
+	if ctx.Bool(protectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")
 		cfg.ProtectProposer = true
 	}
-	if ctx.GlobalBool(protectAttesterFlag.Name) {
+	if ctx.Bool(protectAttesterFlag.Name) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
 	}
-	if ctx.GlobalBool(enableDomainDataCacheFlag.Name) {
+	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")
 		cfg.EnableDomainDataCache = true
 	}
@@ -211,18 +211,18 @@ func ConfigureValidator(ctx *cli.Context) {
 
 func complainOnDeprecatedFlags(ctx *cli.Context) {
 	for _, f := range deprecatedFlags {
-		if ctx.IsSet(f.GetName()) {
-			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.GetName())
+		if ctx.IsSet(f.Names()[0]) {
+			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
 		}
 	}
 }
 
 func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
-	if ctx.GlobalBool(noCustomConfigFlag.Name) {
+	if ctx.Bool(noCustomConfigFlag.Name) {
 		log.Warn("Using default mainnet config")
 		cfg.NoCustomConfig = true
 	}
-	if ctx.GlobalBool(minimalConfigFlag.Name) {
+	if ctx.Bool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
