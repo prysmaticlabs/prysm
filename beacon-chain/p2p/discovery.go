@@ -120,7 +120,7 @@ func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 	return node
 }
 
-func retrieveAttSubnets(record enr.Record) ([]uint64, error) {
+func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 	bitV := bitfield.NewBitvector64()
 	entry := enr.WithEntry(attSubnetEnrKey, bitV)
 	err := record.Load(entry)

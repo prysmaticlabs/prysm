@@ -7,6 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	ds "github.com/ipfs/go-datastore"
@@ -293,11 +297,23 @@ func (s *Service) Peers() *peers.Status {
 	return s.peers
 }
 
+// Think of a better way to do this rather than
+// running this in sync.
+func (s *Service) RefreshENR(epoch uint64) {
+	bitV := bitfield.NewBitvector64()
+	committees := cache.CommitteeIDs.GetIDs(epoch)
+	for _, idx := range committees {
+		bitV.SetBitAt(idx, true)
+	}
+	entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
+	s.dv5Listener.Self().Record().Set(entry)
+}
+
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
 		nodes := s.dv5Listener.LookupRandom()
-		multiAddresses := convertToMultiAddr(nodes)
+		multiAddresses := s.processPeers(nodes)
 		s.connectWithAllPeers(multiAddresses)
 	})
 }
@@ -328,6 +344,36 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 			}
 		}(info)
 	}
+}
+
+// process new peers that come in from our dht.
+func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
+	var multiAddrs []ma.Multiaddr
+	for _, node := range nodes {
+		// ignore nodes with no ip address stored.
+		if node.IP() == nil {
+			continue
+		}
+		multiAddr, err := convertToSingleMultiAddr(node)
+		if err != nil {
+			log.WithError(err).Error("Could not convert to multiAddr")
+			continue
+		}
+		peerData, err := peer.AddrInfoFromP2pAddr(multiAddr)
+		if err != nil {
+			log.WithError(err).Error("Could not get peer id")
+			continue
+		}
+		indices, err := retrieveAttSubnets(node.Record())
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve attestation subnets")
+			continue
+		}
+		// add peer to peer handler.
+		s.peers.Add(peerData.ID, multiAddr, network.DirUnknown, indices)
+		multiAddrs = append(multiAddrs, multiAddr)
+	}
+	return multiAddrs
 }
 
 func (s *Service) connectToBootnodes() error {

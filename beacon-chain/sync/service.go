@@ -3,6 +3,10 @@ package sync
 import (
 	"context"
 	"sync"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
@@ -24,6 +28,9 @@ var _ = shared.Service(&Service{})
 
 const allowedBlocksPerSecond = 32.0
 const allowedBlocksBurst = 10 * allowedBlocksPerSecond
+
+// refresh enr every quarter of an epoch
+var refreshRate = (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch) / 4
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -110,6 +117,7 @@ func (r *Service) Start() {
 	r.processPendingAttsQueue()
 	r.maintainPeerStatuses()
 	r.resyncIfBehind()
+	r.refreshENR()
 }
 
 // Stop the regular sync service.
@@ -140,4 +148,14 @@ type Checker interface {
 	Syncing() bool
 	Status() error
 	Resync() error
+}
+
+// This runs every epoch to refresh the current node's ENR.
+func (s *Service) refreshENR() {
+	ctx := context.Background()
+	refreshTime := time.Duration(refreshRate) * time.Second
+	runutil.RunEvery(ctx, refreshTime, func() {
+		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(s.chain.GenesisTime()))
+		s.p2p.RefreshENR(currentEpoch)
+	})
 }
