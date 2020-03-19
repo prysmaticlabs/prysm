@@ -29,7 +29,7 @@ func (v *validator) LogAttestationsSubmitted() {
 			"TargetRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.Target.Root)),
 			"AttesterIndices":   attLog.attesterIndices,
 			"AggregatorIndices": attLog.aggregatorIndices,
-		}).Info("Submitted new attestation")
+		}).Info("Submitted new attestations")
 	}
 
 	v.attLogs = make(map[[32]byte]*attSubmitted)
