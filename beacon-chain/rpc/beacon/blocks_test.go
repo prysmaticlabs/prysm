@@ -637,6 +637,9 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 		Epoch:           0,
 	}
 	st.SetFork(wantedFork)
+	ctx := context.Background()
+	gbr := [32]byte{1, 2, 3}
+	db.SaveGenesisBlockRoot(ctx, gbr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -645,7 +648,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 		Slot:          1,
 		ProposerIndex: 0,
 	}
-	domain, err := helpers.Domain(st.Fork(), helpers.CurrentEpoch(st), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(st.Fork(), helpers.CurrentEpoch(st), params.BeaconConfig().DomainBeaconProposer, gbr[:])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -659,11 +662,12 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 		Signature: sig.Marshal(),
 	}
 	chainService := &mock.ChainService{State: st}
-	ctx := context.Background()
+
 	server := &Server{
 		Ctx:           ctx,
 		BlockNotifier: chainService.BlockNotifier(),
 		HeadFetcher:   chainService,
+		BeaconDB:      db,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

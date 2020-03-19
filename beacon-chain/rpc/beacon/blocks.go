@@ -193,6 +193,10 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					// One nil block shouldn't stop the stream.
 					continue
 				}
+				genesisRoot, err := bs.BeaconDB.GenesisBlockRoot(stream.Context())
+				if err != nil {
+					return status.Errorf(codes.Internal, "Could not genesis block root: %v", err)
+				}
 				beaconState, err := bs.HeadFetcher.HeadState(stream.Context())
 				if err != nil {
 					return err
@@ -204,7 +208,7 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 
 				// Verify proposer signature before sending to stream.
 				currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-				domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+				domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, genesisRoot[:])
 				if err != nil {
 					return err
 				}
