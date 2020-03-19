@@ -81,13 +81,10 @@ func (bs *Server) ListValidatorBalances(
 		if len(pubKey) == 0 {
 			continue
 		}
-
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, pubKey)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve validator index: %v", err)
-		}
+		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		index, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
-			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubKey)
+			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubkeyBytes)
 		}
 
 		filtered[index] = true
@@ -199,16 +196,54 @@ func (bs *Server) ListValidators(
 	}
 
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
-	for i := 0; i < headState.NumValidators(); i++ {
-		val, err := headState.ValidatorAtIndex(uint64(i))
+
+	for _, indice := range req.Indices {
+		val, err := headState.ValidatorAtIndex(indice)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get validator")
 		}
 		validatorList = append(validatorList, &ethpb.Validators_ValidatorContainer{
-			Index:     uint64(i),
+			Index:     indice,
 			Validator: val,
 		})
 	}
+
+	for _, pubKey := range req.PublicKeys {
+		// Skip empty public key.
+		if len(pubKey) == 0 {
+			continue
+		}
+		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		index, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
+		if !ok {
+			continue
+		}
+		val, err := headState.ValidatorAtIndex(index)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get validator")
+		}
+		validatorList = append(validatorList, &ethpb.Validators_ValidatorContainer{
+			Index:     index,
+			Validator: val,
+		})
+	}
+	sort.Slice(validatorList, func(i, j int) bool {
+		return validatorList[i].Index < validatorList[j].Index
+	})
+
+	if len(req.PublicKeys) == 0 && len(req.Indices) == 0 {
+		for i := 0; i < headState.NumValidators(); i++ {
+			val, err := headState.ValidatorAtIndex(uint64(i))
+			if err != nil {
+				return nil, status.Error(codes.Internal, "Could not get validator")
+			}
+			validatorList = append(validatorList, &ethpb.Validators_ValidatorContainer{
+				Index:     uint64(i),
+				Validator: val,
+			})
+		}
+	}
+
 	if requestedEpoch < currentEpoch {
 		stopIdx := len(validatorList)
 		for idx, item := range validatorList {
@@ -611,13 +646,15 @@ func (bs *Server) GetValidatorPerformance(
 	correctlyVotedHead := make([]bool, 0, reqPubKeysCount)
 	missingValidators := make([][]byte, 0, reqPubKeysCount)
 
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	// Convert the list of validator public keys to list of validator indices.
 	// Also track missing validators using public keys.
 	for _, key := range req.PublicKeys {
-		idx, ok, err := bs.BeaconDB.ValidatorIndex(ctx, key)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", key, err)
-		}
+		pubkeyBytes := bytesutil.ToBytes48(key)
+		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			missingValidators = append(missingValidators, key)
 			continue
