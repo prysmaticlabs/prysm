@@ -247,6 +247,11 @@ func (r *Service) subscribeDynamicWithSubnets(
 				}
 				for _, idx := range wantedSubs {
 					if _, exists := subscriptions[idx]; !exists {
+						// do not subscribe if we have no peers in the same
+						// subnet
+						if len(r.p2p.Peers().SubscribedToSubnet(idx)) == 0 {
+							continue
+						}
 						subscriptions[idx] = r.subscribeWithBase(base, fmt.Sprintf(topicFormat, idx), validate, handle)
 					}
 				}
