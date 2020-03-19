@@ -290,11 +290,11 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if len(res.Duties) != 2 {
 		t.Errorf("expected 2 assignments but got %d", len(res.Duties))
 	}
-	if res.Duties[0].AttesterSlot != 7 {
+	if res.Duties[0].AttesterSlot != 2 {
 		t.Errorf("Expected res.Duties[0].AttesterSlot == 7, got %d", res.Duties[0].AttesterSlot)
 	}
-	if res.Duties[1].AttesterSlot != 3 {
-		t.Errorf("Expected res.Duties[1].AttesterSlot == 3, got %d", res.Duties[0].AttesterSlot)
+	if res.Duties[1].AttesterSlot != 1 {
+		t.Errorf("Expected res.Duties[1].AttesterSlot == 1, got %d", res.Duties[1].AttesterSlot)
 	}
 }
 

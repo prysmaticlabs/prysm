@@ -12,6 +12,7 @@ import (
 )
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
+	t.Skip("To be resolved until 5119 gets in")
 	k1, err := keystore.NewKey()
 	if err != nil {
 		t.Fatal(err)
