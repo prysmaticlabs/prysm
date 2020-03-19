@@ -60,6 +60,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MaxGoroutines,
 			cmd.ForceClearDB,
 			cmd.ClearDB,
+			cmd.ConfigFileFlag,
 		},
 	},
 	{

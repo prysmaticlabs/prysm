@@ -30,6 +30,8 @@ func WrapFlags(flags []cli.Flag) []cli.Flag {
 			f = altsrc.NewStringSliceFlag(f.(*cli.StringSliceFlag))
 		case *cli.Uint64Flag:
 			f = altsrc.NewUint64Flag(f.(*cli.Uint64Flag))
+		case *cli.UintFlag:
+			f = altsrc.NewUintFlag(f.(*cli.UintFlag))
 		default:
 			panic(fmt.Sprintf("cannot convert type %T", f))
 		}

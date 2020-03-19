@@ -55,6 +55,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MonitoringPortFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
+			cmd.ConfigFileFlag,
 		},
 	},
 	{

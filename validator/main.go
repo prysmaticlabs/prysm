@@ -58,7 +58,6 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	cmd.BootstrapNode,
 	cmd.MonitoringPortFlag,
 	cmd.LogFormat,
 	debug.PProfFlag,
@@ -68,7 +67,6 @@ var appFlags = []cli.Flag{
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
 	cmd.LogFileName,
-	cmd.EnableUPnPFlag,
 	cmd.ConfigFileFlag,
 }
 
