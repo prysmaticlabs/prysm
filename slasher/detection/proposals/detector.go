@@ -32,7 +32,10 @@ func (dd *ProposeDetector) DetectDoublePropose(
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoublePropose")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(incomingBlk.Header.Slot)
-	bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, incomingBlk.Header.ProposerIndex)
+	//TODO(#5119) remove stub and use input from block header.
+	//bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, incomingBlk.Header.ProposerIndex)
+	proposerIdx := uint64(0)
+	bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, proposerIdx)
 	if err != nil {
 		return nil, err
 	}
