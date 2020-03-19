@@ -152,6 +152,10 @@ func (ds *Service) detectSurroundVotes(
 	return nil, errors.New("unexpected false positive in surround vote detection")
 }
 
+func (ds *Service) detectDoubleProposels(ctx context.Context, incommingBlk *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
+	return ds.proposalsDetector.DetectDoublePropose(ctx, incommingBlk)
+}
+
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
 	return !proto.Equal(incomingAtt.Data, prevAtt.Data) && incomingAtt.Data.Target.Epoch == prevAtt.Data.Target.Epoch
 }
