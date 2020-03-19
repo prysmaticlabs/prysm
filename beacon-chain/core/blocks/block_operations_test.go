@@ -399,7 +399,8 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		},
 	}
 	var err error
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEth1VotingPeriod; i++ {
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	for i := uint64(0); i < period; i++ {
 		beaconState, err = blocks.ProcessEth1DataInBlock(beaconState, block)
 		if err != nil {
 			t.Fatal(err)

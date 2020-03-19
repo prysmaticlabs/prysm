@@ -183,7 +183,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	//   DepositCount = state.eth1_deposit_index,
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
-	slotInVotingPeriod := slot % params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	slotInVotingPeriod := slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch)
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err

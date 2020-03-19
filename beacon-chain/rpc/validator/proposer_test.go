@@ -411,7 +411,8 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
-	for i := 0; i <= int(params.BeaconConfig().SlotsPerEth1VotingPeriod/2); i++ {
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
 
@@ -635,7 +636,8 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		BlockHash:    []byte("0x1"),
 		DepositCount: 7,
 	}
-	for i := 0; i <= int(params.BeaconConfig().SlotsPerEth1VotingPeriod/2); i++ {
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
 
@@ -1232,7 +1234,8 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantedSlot := 100 % params.BeaconConfig().SlotsPerEth1VotingPeriod
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
 	enc, err := ssz.Marshal(currentEpoch + wantedSlot)
 	if err != nil {
