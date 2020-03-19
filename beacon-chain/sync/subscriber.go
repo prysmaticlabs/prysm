@@ -12,7 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -88,12 +90,21 @@ func (r *Service) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
-	r.subscribeDynamic(
-		"/eth2/committee_index%d_beacon_attestation",
-		r.currentCommitteeIndex,                     /* determineSubsLen */
-		r.validateCommitteeIndexBeaconAttestation,   /* validator */
-		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
-	)
+	if featureconfig.Get().EnableDynamicCommitteeSubnets {
+		r.subscribeDynamicWithSubnets(
+			"/eth2/committee_index%d_beacon_attestation",
+			r.committeeIndices,                          /* determineSubsLen */
+			r.validateCommitteeIndexBeaconAttestation,   /* validator */
+			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+		)
+	} else {
+		r.subscribeDynamic(
+			"/eth2/committee_index%d_beacon_attestation",
+			r.committeesCount,                           /* determineSubsLen */
+			r.validateCommitteeIndexBeaconAttestation,   /* validator */
+			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+		)
+	}
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
@@ -188,6 +199,61 @@ func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.V
 		}
 		return b
 	}
+}
+
+// subscribe to a dynamically changing list of subnets. This method expects a fmt compatible
+// string for the topic name and the list of subnets for subscribed topics that should be
+// maintained.
+func (r *Service) subscribeDynamicWithSubnets(
+	topicFormat string,
+	determineSubIndices func() []uint64,
+	validate pubsub.Validator,
+	handle subHandler,
+) {
+	base := p2p.GossipTopicMappings[topicFormat]
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+	}
+
+	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	go func() {
+		for {
+			select {
+			case <-r.ctx.Done():
+				stateSub.Unsubscribe()
+				return
+			case <-stateChannel:
+				if r.chainStarted && r.initialSync.Syncing() {
+					continue
+				}
+				// Update desired topic indices.
+				wantedSubs := determineSubIndices()
+				// Resize as appropriate.
+				for k, v := range subscriptions {
+					var wanted bool
+					for _, idx := range wantedSubs {
+						if k == idx {
+							wanted = true
+							break
+						}
+					}
+					if !wanted && v != nil {
+						v.Cancel()
+						r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, k))
+						delete(subscriptions, k)
+					}
+				}
+				for _, idx := range wantedSubs {
+					if _, exists := subscriptions[idx]; !exists {
+						subscriptions[idx] = r.subscribeWithBase(base, fmt.Sprintf(topicFormat, idx), validate, handle)
+					}
+				}
+			}
+		}
+	}()
 }
 
 // subscribe to a dynamically increasing index of topics. This method expects a fmt compatible

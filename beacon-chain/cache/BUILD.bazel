@@ -6,6 +6,7 @@ go_library(
         "attestation_data.go",
         "checkpoint_state.go",
         "committee.go",
+        "committee_ids.go",
         "common.go",
         "eth1_data.go",
         "hot_state_cache.go",
