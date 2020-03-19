@@ -117,7 +117,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 // Official spec definition:
 //   def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
 //    state.eth1_data_votes.append(body.eth1_data)
-//    if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
+//    if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
 //        state.latest_eth1_data = body.eth1_data
 func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
 	if beaconState == nil {
@@ -191,7 +191,8 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 
 	// If 50+% majority converged on the same eth1data, then it has enough support to update the
 	// state.
-	return voteCount*2 > params.BeaconConfig().SlotsPerEth1VotingPeriod, nil
+	support := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	return voteCount*2 > support, nil
 }
 
 // ProcessBlockHeader validates a block by its header.
@@ -311,11 +312,11 @@ func ProcessBlockHeaderNoVerify(
 		return nil, err
 	}
 	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
-		Slot:       block.Slot,
+		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
-		ParentRoot: block.ParentRoot,
-		StateRoot:  params.BeaconConfig().ZeroHash[:],
-		BodyRoot:   bodyRoot[:],
+		ParentRoot:    block.ParentRoot,
+		StateRoot:     params.BeaconConfig().ZeroHash[:],
+		BodyRoot:      bodyRoot[:],
 	}); err != nil {
 		return nil, err
 	}

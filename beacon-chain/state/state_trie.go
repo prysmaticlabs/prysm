@@ -288,7 +288,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case eth1DataVotes:
 		if featureconfig.Get().EnableFieldTrie {
 			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().SlotsPerEth1VotingPeriod)
+				err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
 				if err != nil {
 					return [32]byte{}, err
 				}
