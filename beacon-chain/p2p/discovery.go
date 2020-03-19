@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -16,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 )
 
 const attestationSubnetCount = 64
@@ -122,7 +121,7 @@ func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 
 func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 	bitV := bitfield.NewBitvector64()
-	entry := enr.WithEntry(attSubnetEnrKey, bitV)
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	err := record.Load(entry)
 	if err != nil {
 		return nil, err
