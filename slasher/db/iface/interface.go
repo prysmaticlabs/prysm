@@ -50,8 +50,8 @@ type WriteAccessDatabase interface {
 	SetLatestEpochDetected(ctx context.Context, epoch uint64) error
 
 	// BlockHeader related methods.
-	SaveBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
-	DeleteBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
+	SaveBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
+	DeleteBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
 	PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// IndexedAttestations related methods.
