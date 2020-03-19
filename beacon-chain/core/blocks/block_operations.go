@@ -39,7 +39,8 @@ var eth1DataCache = cache.NewEth1DataVoteCache()
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
-func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []byte) error {
+// VerifySigningRoot of a given interface.
+func VerifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -237,7 +238,7 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-	if err := verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
+	if err := VerifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, ErrSigFailedToVerify
 	}
 
@@ -478,7 +479,7 @@ func VerifyProposerSlashing(
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
-		if err := verifySigningRoot(header.Header, proposer.PublicKey, header.Signature, domain); err != nil {
+		if err := VerifySigningRoot(header.Header, proposer.PublicKey, header.Signature, domain); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}
 	}
@@ -1192,7 +1193,7 @@ func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, s
 	if err != nil {
 		return err
 	}
-	if err := verifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
+	if err := VerifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
 		return ErrSigFailedToVerify
 	}
 	return nil

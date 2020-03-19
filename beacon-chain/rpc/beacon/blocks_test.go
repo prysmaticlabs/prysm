@@ -23,7 +23,9 @@ import (
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
@@ -623,23 +625,51 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	b := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot: 1,
-		},
+	numValidators := uint64(1)
+	st, _ := testutil.DeterministicGenesisState(t, numValidators)
+	privKeys, _, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedFork := &pbp2p.Fork{
+		PreviousVersion: []byte{'a', 'b', 'c', 'd'},
+		CurrentVersion:  []byte{'d', 'e', 'f', 'd'},
+		Epoch:           0,
+	}
+	st.SetFork(wantedFork)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	chainService := &mock.ChainService{}
+	blk := &ethpb.BeaconBlock{
+		Slot:          1,
+		ProposerIndex: 0,
+	}
+	domain, err := helpers.Domain(st.Fork(), helpers.CurrentEpoch(st), params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockRoot, err := helpers.ComputeSigningRoot(blk, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig := privKeys[0].Sign(blockRoot[:])
+	sb := &ethpb.SignedBeaconBlock{
+		Block:     blk,
+		Signature: sig.Marshal(),
+	}
+	chainService := &mock.ChainService{State: st}
 	ctx := context.Background()
 	server := &Server{
 		Ctx:           ctx,
 		BlockNotifier: chainService.BlockNotifier(),
+		HeadFetcher:   chainService,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconChain_StreamBlocksServer(ctrl)
-	mockStream.EXPECT().Send(b).Do(func(arg0 interface{}) {
+	mockStream.EXPECT().Send(sb).Do(func(arg0 interface{}) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -654,7 +684,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{SignedBlock: b},
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: sb},
 		})
 	}
 	<-exitRoutine
