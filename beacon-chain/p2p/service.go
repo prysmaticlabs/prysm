@@ -302,8 +302,9 @@ func (s *Service) Peers() *peers.Status {
 	return s.peers
 }
 
-// Think of a better way to do this rather than
-// running this in sync.
+// RefreshENR uses an epoch to refresh the enr entry for our node
+// with the tracked committee id's for the epoch, allowing our node
+// to be dynamically discoverable by others given our tracked committee id's.
 func (s *Service) RefreshENR(epoch uint64) {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {

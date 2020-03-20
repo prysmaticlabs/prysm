@@ -151,11 +151,11 @@ type Checker interface {
 }
 
 // This runs every epoch to refresh the current node's ENR.
-func (s *Service) refreshENR() {
+func (r *Service) refreshENR() {
 	ctx := context.Background()
 	refreshTime := time.Duration(refreshRate) * time.Second
 	runutil.RunEvery(ctx, refreshTime, func() {
-		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(s.chain.GenesisTime()))
-		s.p2p.RefreshENR(currentEpoch)
+		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(r.chain.GenesisTime()))
+		r.p2p.RefreshENR(currentEpoch)
 	})
 }
