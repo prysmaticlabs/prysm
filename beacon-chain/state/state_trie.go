@@ -191,9 +191,6 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
 		b.dirtyFields = make(map[fieldIndex]interface{}, 21)
-		b.dirtyIndices = make(map[fieldIndex][]uint64, 21)
-		b.rebuildTrie = make(map[fieldIndex]bool, 21)
-
 	}
 
 	for field := range b.dirtyFields {
