@@ -7,13 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/prysmaticlabs/go-bitfield"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -27,12 +23,13 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
