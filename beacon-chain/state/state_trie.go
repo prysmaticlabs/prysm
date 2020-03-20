@@ -30,15 +30,15 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
+		dirtyFields:           make(map[fieldIndex]interface{}, 21),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		rebuildTrie:           make(map[fieldIndex]bool, 20),
+		rebuildTrie:           make(map[fieldIndex]bool, 21),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 21; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
 		b.rebuildTrie[fieldIndex(i)] = true
 		b.dirtyIndices[fieldIndex(i)] = []uint64{}
@@ -61,9 +61,6 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.sharedFieldReferences[balances] = &reference{refs: 1}
 	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
-
-	// Make sure genesis root by default is zero hash.
-	b.state.GenesisValidatorsRoot = b.GenesisValidatorRoot()
 
 	return b, nil
 }
@@ -106,11 +103,11 @@ func (b *BeaconState) Copy() *BeaconState {
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 			GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 		},
-		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
-		rebuildTrie:           make(map[fieldIndex]bool, 20),
+		dirtyFields:           make(map[fieldIndex]interface{}, 21),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+		rebuildTrie:           make(map[fieldIndex]bool, 21),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
+		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
 
 		// Copy on write validator index map.
 		valIdxMap: b.valIdxMap,
@@ -193,7 +190,10 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{})
+		b.dirtyFields = make(map[fieldIndex]interface{}, 21)
+		b.dirtyIndices = make(map[fieldIndex][]uint64, 21)
+		b.rebuildTrie = make(map[fieldIndex]bool, 21)
+
 	}
 
 	for field := range b.dirtyFields {

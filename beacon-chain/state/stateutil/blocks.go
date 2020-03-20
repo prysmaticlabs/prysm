@@ -24,7 +24,7 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		fieldRoots[0] = headerSlotRoot[:]
 		proposerIdxBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(proposerIdxBuf, header.ProposerIndex)
-		proposerIndexRoot := bytesutil.ToBytes32(headerSlotBuf)
+		proposerIndexRoot := bytesutil.ToBytes32(proposerIdxBuf)
 		fieldRoots[1] = proposerIndexRoot[:]
 		parentRoot := bytesutil.ToBytes32(header.ParentRoot)
 		fieldRoots[2] = parentRoot[:]
