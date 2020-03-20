@@ -156,6 +156,15 @@ func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
 	return nil, ErrPeerUnknown
 }
 
+// IsActive checks if a peers is active and returns the result appropriately.
+func (p *Status) IsActive(pid peer.ID) bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	status, ok := p.status[pid]
+	return ok && (status.peerState == PeerConnected || status.peerState == PeerConnecting)
+}
+
 // CommitteeIndices retrieves the committee subnets the peer is subscribed to.
 func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 	p.lock.RLock()

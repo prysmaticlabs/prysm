@@ -256,7 +256,20 @@ func (r *Service) subscribeDynamicWithSubnets(
 						subnetTopic := fmt.Sprintf(topic, idx)
 						numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic)
 						if len(r.p2p.Peers().SubscribedToSubnet(idx)) == 0 && len(numOfPeers) == 0 {
-							log.Debugf("No peers found subscribed to attestation gossip subnet with committee index %d", idx)
+							log.Debugf("No peers found subscribed to attestation gossip subnet with "+
+								"committee index %d. Searching network for peers subscribed to the subnet.", idx)
+							go func(idx uint64) {
+								peerExists, err := r.p2p.FindPeersWithSubnet(idx)
+								if err != nil {
+									log.Errorf("Could not search for peers: %v", err)
+									return
+								}
+								// do not subscribe if we couldn't find a connected peer.
+								if !peerExists {
+									return
+								}
+								subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
+							}(idx)
 							continue
 						}
 						subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)

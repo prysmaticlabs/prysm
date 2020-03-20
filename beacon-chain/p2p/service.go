@@ -40,6 +40,9 @@ var _ = shared.Service(&Service{})
 // Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
 
+// search limit for number of peers in discovery v5.
+const searchLimit = 100
+
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
@@ -311,8 +314,52 @@ func (s *Service) RefreshENR(epoch uint64) {
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	s.dv5Listener.Self().Record().Set(entry)
+}
+
+// FindPeersWithSubnet performs a network search for peers
+// subscribed to a particular subnet. Then we try to connect
+// with those peers.
+func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
+	nodes := make([]*enode.Node, searchLimit)
+	num := s.dv5Listener.ReadRandomNodes(nodes)
+	exists := false
+	for _, node := range nodes[:num] {
+		if node.IP() == nil {
+			continue
+		}
+		subnets, err := retrieveAttSubnets(node.Record())
+		if err != nil {
+			return false, errors.Wrap(err, "could not retrieve subnets")
+		}
+		for _, comIdx := range subnets {
+			if comIdx == index {
+				multiAddr, err := convertToSingleMultiAddr(node)
+				if err != nil {
+					return false, err
+				}
+				info, err := peer.AddrInfoFromP2pAddr(multiAddr)
+				if err != nil {
+					return false, err
+				}
+				if s.peers.IsActive(info.ID) {
+					exists = true
+					continue
+				}
+				if s.host.Network().Connectedness(info.ID) == network.Connected {
+					exists = true
+					continue
+				}
+				s.peers.Add(info.ID, multiAddr, network.DirUnknown, subnets)
+				if err := s.connectWithPeer(*info); err != nil {
+					log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+				}
+				exists = true
+			}
+		}
+	}
+	return exists, nil
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
@@ -333,23 +380,30 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	for _, info := range addrInfos {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
-			if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
-				log.WithFields(logrus.Fields{"peer": info.ID.String(),
-					"reason": "at peer limit"}).Trace("Not dialing peer")
-				return
-			}
-			if info.ID == s.host.ID() {
-				return
-			}
-			if s.Peers().IsBad(info.ID) {
-				return
-			}
-			if err := s.host.Connect(s.ctx, info); err != nil {
+			if err := s.connectWithPeer(info); err != nil {
 				log.Errorf("Could not connect with peer %s: %v", info.String(), err)
-				s.Peers().IncrementBadResponses(info.ID)
 			}
 		}(info)
 	}
+}
+
+func (s *Service) connectWithPeer(info peer.AddrInfo) error {
+	if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
+		log.WithFields(logrus.Fields{"peer": info.ID.String(),
+			"reason": "at peer limit"}).Trace("Not dialing peer")
+		return nil
+	}
+	if info.ID == s.host.ID() {
+		return nil
+	}
+	if s.Peers().IsBad(info.ID) {
+		return nil
+	}
+	if err := s.host.Connect(s.ctx, info); err != nil {
+		s.Peers().IncrementBadResponses(info.ID)
+		return err
+	}
+	return nil
 }
 
 // process new peers that come in from our dht.
@@ -368,6 +422,12 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		peerData, err := peer.AddrInfoFromP2pAddr(multiAddr)
 		if err != nil {
 			log.WithError(err).Error("Could not get peer id")
+			continue
+		}
+		if s.peers.IsActive(peerData.ID) {
+			continue
+		}
+		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
 			continue
 		}
 		indices, err := retrieveAttSubnets(node.Record())
