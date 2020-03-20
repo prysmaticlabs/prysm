@@ -93,7 +93,7 @@ JW5Xg09Yct1izRb64SylduQC9a1bbjoMU0iABaDzCl7AHzK0RlkjALQ4sIt24nKL
 Geq0WUbSP2OuDkAf
 -----END CERTIFICATE-----`
 
-func TestNewRemoteErrors(t *testing.T) {
+func TestNewRemoteWallet(t *testing.T) {
 	tests := []struct {
 		name       string
 		opts       string
@@ -187,7 +187,7 @@ func TestNewRemoteErrors(t *testing.T) {
 				}
 			}
 
-			_, _, err := keymanager.NewRemote(test.opts)
+			_, _, err := keymanager.NewRemoteWallet(test.opts)
 			if test.err == "" {
 				if err != nil {
 					t.Fatalf("Received unexpected error: %v", err.Error())

@@ -67,8 +67,8 @@ using this as a template) is:
 	}
   }`
 
-// NewRemote creates a key manager populated with the keys from walletd.
-func NewRemote(input string) (KeyManager, string, error) {
+// NewRemoteWallet creates a key manager populated with the keys from walletd.
+func NewRemoteWallet(input string) (KeyManager, string, error) {
 	opts := &remoteOpts{}
 	err := json.Unmarshal([]byte(input), opts)
 	if err != nil {
