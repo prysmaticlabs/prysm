@@ -85,9 +85,9 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[0] = genesisRoot[:]
 
 	// Genesis validator root.
-	r := make([]byte, 32)
-	copy(r, state.GenesisValidatorsRoot)
-	fieldRoots[1] = r
+	r := [32]byte{}
+	copy(r[:], state.GenesisValidatorsRoot)
+	fieldRoots[1] = r[:]
 
 	// Slot root.
 	slotRoot := Uint64Root(state.Slot)
