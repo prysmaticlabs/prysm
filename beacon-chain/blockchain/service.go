@@ -135,10 +135,18 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Could not fetch finalized cp: %v", err)
 	}
+
 	if beaconState == nil {
-		beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
-		if err != nil {
-			log.Fatalf("Could not fetch beacon state: %v", err)
+		if featureconfig.Get().NewStateMgmt {
+			beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
+			if err != nil {
+				log.Fatalf("Could not fetch beacon state: %v", err)
+			}
+		} else {
+			beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
+			if err != nil {
+				log.Fatalf("Could not fetch beacon state: %v", err)
+			}
 		}
 	}
 
@@ -435,7 +443,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if finalizedState == nil || finalizedBlock == nil {
 		return errors.New("finalized state and block can't be nil")
 	}
-
 	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
 
 	return nil
