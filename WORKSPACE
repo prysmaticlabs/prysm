@@ -299,12 +299,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_urfave_cli",
-    commit = "e6cf83ec39f6e1158ced1927d4ed14578fda8edb",  # v1.21.0
-    importpath = "github.com/urfave/cli",
-)
-
-go_repository(
     name = "com_github_go_yaml_yaml",
     commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
     importpath = "github.com/go-yaml/yaml",
@@ -1300,7 +1294,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "fca4d6f69bedb8615c2fc916d1a68f2692285caa",
+    commit = "25f267e475788bf8e5e01cb9d73cfd0c87020822",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
@@ -1377,13 +1371,6 @@ go_repository(
     importpath = "github.com/elastic/gosigar",
     sum = "h1:GzPQ+78RaAb4J63unidA/JavQRKrB6s8IOzN6Ib59jo=",
     version = "v0.10.5",
-)
-
-go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    importpath = "gopkg.in/urfave/cli.v1",
-    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
-    version = "v1.20.0",
 )
 
 go_repository(
@@ -1604,4 +1591,46 @@ go_repository(
     name = "com_github_ferranbt_fastssz",
     commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     importpath = "github.com/ferranbt/fastssz",
+)
+
+go_repository(
+    name = "com_github_burntsushi_toml",
+    importpath = "github.com/BurntSushi/toml",
+    sum = "h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=",
+    version = "v0.3.1",
+)
+
+go_repository(
+    name = "com_github_cpuguy83_go_md2man_v2",
+    importpath = "github.com/cpuguy83/go-md2man/v2",
+    sum = "h1:EoUDS0afbrsXAZ9YQ9jdu/mZ2sXgT1/2yyNng4PGlyM=",
+    version = "v2.0.0",
+)
+
+go_repository(
+    name = "com_github_russross_blackfriday_v2",
+    importpath = "github.com/russross/blackfriday/v2",
+    sum = "h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=",
+    version = "v2.0.1",
+)
+
+go_repository(
+    name = "com_github_shurcool_sanitized_anchor_name",
+    importpath = "github.com/shurcooL/sanitized_anchor_name",
+    sum = "h1:PdmoCO6wvbs+7yrJyMORt4/BmY5IYyJwS/kOiWx8mHo=",
+    version = "v1.0.0",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v2",
+    importpath = "gopkg.in/urfave/cli.v2",
+    sum = "h1:OvXt/p4cdwNl+mwcWMq/AxaKFkhdxcjx+tx+qf4EOvY=",
+    version = "v2.0.0-20190806201727-b62605953717",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v1",
+    importpath = "gopkg.in/urfave/cli.v1",
+    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
+    version = "v1.20.0",
 )
