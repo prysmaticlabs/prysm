@@ -76,11 +76,13 @@ type BeaconChainConfig struct {
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
 
 	// BLS domain values.
-	DomainBeaconProposer [4]byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
-	DomainRandao         [4]byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
-	DomainBeaconAttester [4]byte `yaml:"DOMAIN_ATTESTATION"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
-	DomainDeposit        [4]byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
-	DomainVoluntaryExit  [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainBeaconProposer    [4]byte `yaml:"DOMAIN_BEACON_PROPOSER"`     // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
+	DomainRandao            [4]byte `yaml:"DOMAIN_RANDAO"`              // DomainRandao defines the BLS signature domain for randao verification.
+	DomainBeaconAttester    [4]byte `yaml:"DOMAIN_ATTESTATION"`         // DomainBeaconAttester defines the BLS signature domain for attestation verification.
+	DomainDeposit           [4]byte `yaml:"DOMAIN_DEPOSIT"`             // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainVoluntaryExit     [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`      // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainSelectionProof    [4]byte `yaml:"DOMAIN_SELECTION_PROOF"`     // DomainVoluntaryExit defines the BLS signature domain for selection proof.
+	DomainAggregateAndProof [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF"` // DomainVoluntaryExit defines the BLS signature domain for aggregate and proof.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -171,11 +173,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer: bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester: bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:         bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:        bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:  bytesutil.ToBytes4(bytesutil.Bytes4(4)),
+	DomainBeaconProposer:    bytesutil.ToBytes4(bytesutil.Bytes4(0)),
+	DomainBeaconAttester:    bytesutil.ToBytes4(bytesutil.Bytes4(1)),
+	DomainRandao:            bytesutil.ToBytes4(bytesutil.Bytes4(2)),
+	DomainDeposit:           bytesutil.ToBytes4(bytesutil.Bytes4(3)),
+	DomainVoluntaryExit:     bytesutil.ToBytes4(bytesutil.Bytes4(4)),
+	DomainSelectionProof:    bytesutil.ToBytes4(bytesutil.Bytes4(5)),
+	DomainAggregateAndProof: bytesutil.ToBytes4(bytesutil.Bytes4(6)),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
