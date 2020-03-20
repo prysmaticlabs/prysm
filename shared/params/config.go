@@ -262,7 +262,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.EpochsPerEth1VotingPeriod = 2
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
-	minimalConfig.PersistentCommitteePeriod = 2048
+	minimalConfig.PersistentCommitteePeriod = 128
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2
