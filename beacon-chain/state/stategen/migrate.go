@@ -78,7 +78,10 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 			}).Info("Saved archived point during state migration")
 		}
 
-		if s.beaconDB.HasState(ctx, r) {
+		// Do not delete the current finalized state in case user wants to
+		// switch back to old state service, deleting the recent finalized state
+		// could cause issue switching back.
+		if s.beaconDB.HasState(ctx, r) && r != finalizedRoot {
 			if err := s.beaconDB.DeleteState(ctx, r); err != nil {
 				return err
 			}
