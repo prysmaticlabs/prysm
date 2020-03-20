@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"reflect"
 	"testing"
 
@@ -47,7 +49,8 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Slot: 64,
+		GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
+		Slot:                  64,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +74,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(state.InnerStateUnsafe(), info1.State.InnerStateUnsafe()) {
+	if !proto.Equal(state.InnerStateUnsafe(), info1.State.InnerStateUnsafe()) {
 		t.Error("incorrectly cached state")
 	}
 
