@@ -447,7 +447,7 @@ index 0099328..8b8c6eb 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index d92a47f..4962115 100644
+index 068a04c..80f73b8 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -545,9 +545,9 @@ index d92a47f..4962115 100644
  }
  
  message AggregateSelectionResponse {
-@@ -353,16 +355,16 @@ message AggregateSubmitRequest {
+@@ -353,16 +355,16 @@ message SignedAggregateSubmitRequest {
  
- message AggregateSubmitResponse {
+ message SignedAggregateSubmitResponse {
      // The 32 byte hash tree root of the aggregated attestation data.
 -    bytes attestation_data_root = 1;
 +    bytes attestation_data_root = 1  [(gogoproto.moretags) = "ssz-size:\"32\""];

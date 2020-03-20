@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/sirupsen/logrus"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -70,4 +71,21 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		AggregatorIndex: validatorIndex,
 	}
 	return &ethpb.AggregateSelectionResponse{Aggregate: a}, nil
+}
+
+// SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
+// aggregated and proof object.
+func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+	if err := as.P2P.Broadcast(ctx, req.Aggregate); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast signed aggregated attestation: %v", err)
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":            req.Aggregate.Message.Aggregate.Data.Slot,
+		"committeeIndex":  req.Aggregate.Message.Aggregate.Data.CommitteeIndex,
+		"validatorIndex":  req.Aggregate.Message.AggregatorIndex,
+		"aggregatedCount": req.Aggregate.Message.Aggregate.AggregationBits.Count(),
+	}).Debug("Broadcasting aggregated attestation and proof")
+
+	return &ethpb.SignedAggregateSubmitResponse{}, nil
 }
