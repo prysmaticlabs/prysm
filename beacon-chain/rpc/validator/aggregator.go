@@ -11,10 +11,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// SubmitAggregateAndProof is called by a validator when its assigned to be an aggregator.
-// The beacon node will broadcast aggregated attestation and proof on the aggregator's behavior.
-func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *ethpb.AggregationRequest) (*ethpb.AggregationResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregation")
+// SubmitAggregateSelectionProof is called by a validator when its assigned to be an aggregator.
+// The aggregator submits the selection proof to obtain a signing root of the aggregated attestation
+// object to sign over.
+func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregateSelectionProof")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
