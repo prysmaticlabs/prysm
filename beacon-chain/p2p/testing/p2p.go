@@ -227,3 +227,13 @@ func (p *TestP2P) Started() bool {
 func (p *TestP2P) Peers() *peers.Status {
 	return p.peers
 }
+
+// FindPeersWithSubnet mocks the p2p func.
+func (p *TestP2P) FindPeersWithSubnet(index uint64) (bool, error) {
+	return false, nil
+}
+
+// RefreshENR mocks the p2p func.
+func (p *TestP2P) RefreshENR(epoch uint64) {
+	return
+}
