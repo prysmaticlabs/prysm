@@ -9,7 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 type spanMapTestStruct struct {
@@ -49,9 +49,9 @@ func init() {
 }
 
 func TestValidatorSpanMap_NilDB(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -66,9 +66,9 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 }
 
 func TestStore_SaveSpans(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -96,10 +96,10 @@ func TestStore_SaveSpans(t *testing.T) {
 }
 
 func TestStore_SaveCachedSpans(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -129,9 +129,9 @@ func TestStore_SaveCachedSpans(t *testing.T) {
 }
 
 func TestStore_DeleteEpochSpans(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -165,10 +165,10 @@ func TestStore_DeleteEpochSpans(t *testing.T) {
 }
 
 func TestValidatorSpanMap_DeletesOnCacheSavesToDB(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -240,10 +240,10 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 }
 
 func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 

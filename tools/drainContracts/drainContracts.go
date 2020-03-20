@@ -21,7 +21,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
@@ -36,36 +36,36 @@ func main() {
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
 
-	app := cli.NewApp()
+	app := cli.App{}
 	app.Name = "drainContracts"
 	app.Usage = "this is a util to drain all (testing) deposit contracts of their ETH."
 	app.Version = version.GetVersion()
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "keystoreUTCPath",
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "httpPath",
 			Value:       "https://goerli.infura.io/v3/be3fb7ed377c418087602876a40affa1",
 			Usage:       "HTTP-RPC server listening interface",
 			Destination: &httpPath,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "passwordFile",
 			Value:       "./password.txt",
 			Usage:       "Password file for unlock account",
 			Destination: &passwordFile,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "privKey",
 			Usage:       "Private key to send ETH transaction",
 			Destination: &privKeyString,
 		},
 	}
 
-	app.Action = func(c *cli.Context) {
+	app.Action = func(c *cli.Context) error {
 		// Set up RPC client
 		var rpcClient *rpc.Client
 		var err error
@@ -74,7 +74,7 @@ func main() {
 		// Uses HTTP-RPC if IPC is not set
 		rpcClient, err = rpc.Dial(httpPath)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		client := ethclient.NewClient(rpcClient)
@@ -83,14 +83,14 @@ func main() {
 		if privKeyString != "" {
 			privKey, err := crypto.HexToECDSA(privKeyString)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			txOps = bind.NewKeyedTransactor(privKey)
 			txOps.Value = big.NewInt(0)
 			txOps.GasLimit = 4000000
 			nonce, err := client.NonceAt(context.Background(), crypto.PubkeyToAddress(privKey.PublicKey), nil)
 			if err != nil {
-				log.Fatalf("could not get account nonce: %v", err)
+				return errors.Wrap(err, "could not get account nonce")
 			}
 			txOps.Nonce = big.NewInt(int64(nonce))
 			fmt.Printf("current address is %s\n", crypto.PubkeyToAddress(privKey.PublicKey).String())
@@ -102,11 +102,11 @@ func main() {
 			// #nosec - Inclusion of file via variable is OK for this tool.
 			keyJSON, err := ioutil.ReadFile(keystoreUTCPath)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			privKey, err := keystore.DecryptKey(keyJSON, password)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
@@ -114,7 +114,7 @@ func main() {
 			txOps.GasLimit = 4000000
 			nonce, err := client.NonceAt(context.Background(), privKey.Address, nil)
 			if err != nil {
-				log.Fatalf("could not get account nonce: %v", err)
+				return err
 			}
 			txOps.Nonce = big.NewInt(int64(nonce))
 			fmt.Printf("current address is %s\n", privKey.Address.String())
@@ -123,7 +123,7 @@ func main() {
 
 		addresses, err := allDepositContractAddresses(client)
 		if err != nil {
-			log.Fatalf("Could not get all deposit contract address: %v", err)
+			return errors.Wrap(err, "Could not get all deposit contract address")
 		}
 
 		fmt.Printf("%d contracts ready to drain found\n", len(addresses))
@@ -131,7 +131,7 @@ func main() {
 		for _, address := range addresses {
 			bal, err := client.BalanceAt(context.Background(), address, nil /*blockNum*/)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			if bal.Cmp(big.NewInt(0)) < 1 {
 				continue
@@ -150,6 +150,7 @@ func main() {
 			fmt.Printf("Contract address %s drained in TX hash: %s\n", address.String(), tx.Hash().String())
 			time.Sleep(time.Duration(1) * time.Second)
 		}
+		return nil
 	}
 
 	err := app.Run(os.Args)
