@@ -60,7 +60,7 @@ func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte, genesi
 	forkBytes := [ForkVersionByteLength]byte{}
 	copy(forkBytes[:], forkVersion)
 
-	forkDataRoot, err := computeForkDataRoot(forkVersion, genesisValidatorsRoot)
+	forkDataRoot, err := computeForkDataRoot(forkBytes[:], genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}

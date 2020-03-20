@@ -135,6 +135,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		return nil, nil
 	case "Fork":
 		obj = &pb.Fork{}
+	case "ForkData":
+		obj = &pb.ForkData{}
 	case "HistoricalBatch":
 		obj = &pb.HistoricalBatch{}
 	case "IndexedAttestation":
@@ -143,6 +145,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &pb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
+	case "SignedAggregateAndProof":
+		obj = &pb.SignedAggregateAndProof{}
 	case "SignedBeaconBlock":
 		obj = &ethpb.SignedBeaconBlock{}
 	case "SignedBeaconBlockHeader":

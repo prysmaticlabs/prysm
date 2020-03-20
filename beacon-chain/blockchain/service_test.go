@@ -342,7 +342,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}}
-	headState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: finalizedSlot})
+	headState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: finalizedSlot, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -24,7 +24,7 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		fieldRoots[0] = headerSlotRoot[:]
 		proposerIdxBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(proposerIdxBuf, header.ProposerIndex)
-		proposerIndexRoot := bytesutil.ToBytes32(headerSlotBuf)
+		proposerIndexRoot := bytesutil.ToBytes32(proposerIdxBuf)
 		fieldRoots[1] = proposerIndexRoot[:]
 		parentRoot := bytesutil.ToBytes32(header.ParentRoot)
 		fieldRoots[2] = parentRoot[:]
@@ -101,7 +101,7 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
 	}
-	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), params.BeaconConfig().SlotsPerEth1VotingPeriod)
+	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
