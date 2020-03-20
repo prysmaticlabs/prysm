@@ -7,13 +7,16 @@ import (
 	"net"
 	"os"
 	"path"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -100,6 +103,83 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
 			"Expected more than or equal to %d but got %d", 4, len(nodes))
 	}
+
+	// Close all ports
+	for _, listener := range listeners {
+		listener.Close()
+	}
+}
+
+func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
+	port := 2000
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	bootListener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
+	defer bootListener.Close()
+
+	bootNode := bootListener.Self()
+	cfg := &Config{
+		Discv5BootStrapAddr: []string{bootNode.String()},
+		Encoding:            "ssz",
+	}
+
+	var listeners []*discover.UDPv5
+	for i := 1; i <= 2; i++ {
+		port = 3000 + i
+		cfg.UDPPort = uint(port)
+		ipAddr, pkey := createAddrAndPrivKey(t)
+		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+		if err != nil {
+			t.Errorf("Could not start discovery for node: %v", err)
+		}
+		bitV := bitfield.NewBitvector64()
+		// We make listeners 1, 2 track committee indices 1 and 2.
+		if i == 1 {
+			committees := []uint64{1}
+			for _, idx := range committees {
+				bitV.SetBitAt(idx, true)
+			}
+			entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+			pre, err := retrieveAttSubnets(listener.Self().Record())
+			if err != nil {
+				t.Fatal(err)
+			}
+			listener.Self().Record().Set(entry)
+			post, err := retrieveAttSubnets(listener.Self().Record())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if reflect.DeepEqual(pre, post) {
+				t.Fatalf("Did not change, got pre %v, post %v", pre, post)
+			}
+		} else {
+			committees := []uint64{2}
+			for _, idx := range committees {
+				bitV.SetBitAt(idx, true)
+			}
+			entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+			pre, err := retrieveAttSubnets(listener.Self().Record())
+			if err != nil {
+				t.Fatal(err)
+			}
+			listener.Self().Record().Set(entry)
+			post, err := retrieveAttSubnets(listener.Self().Record())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if reflect.DeepEqual(pre, post) {
+				t.Fatalf("Did not change, got pre %v, post %v", pre, post)
+			}
+		}
+		listeners = append(listeners, listener)
+	}
+
+	// Wait for the nodes to have their local routing tables to be populated with the other nodes
+	time.Sleep(discoveryWaitTime)
+
+	// We then check if the particular peers are discovered
+	// by subnet entry.
+	t.Log(retrieveAttSubnets(listeners[0].Self().Record()))
+	t.Log(retrieveAttSubnets(listeners[1].Self().Record()))
 
 	// Close all ports
 	for _, listener := range listeners {
