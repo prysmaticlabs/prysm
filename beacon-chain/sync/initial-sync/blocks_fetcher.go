@@ -40,6 +40,7 @@ type blocksFetcherConfig struct {
 // On an incoming requests, requested block range is evenly divided
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
+	sync.Mutex
 	ctx            context.Context
 	cancel         context.CancelFunc
 	headFetcher    blockchain.HeadFetcher
@@ -72,7 +73,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	rateLimiter := leakybucket.NewCollector(
 		allowedBlocksPerSecond, /* rate */
 		allowedBlocksPerSecond, /* capacity */
-		false /* deleteEmptyBuckets */)
+		false                   /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:            ctx,
@@ -354,6 +355,7 @@ func (f *blocksFetcher) requestBlocks(
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
 ) ([]*eth.SignedBeaconBlock, error) {
+	f.Lock()
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
 		time.Sleep(f.rateLimiter.TillEmpty(pid.String()))
@@ -366,6 +368,7 @@ func (f *blocksFetcher) requestBlocks(
 		"step":  req.Step,
 		"head":  fmt.Sprintf("%#x", req.HeadBlockRoot),
 	}).Debug("Requesting blocks")
+	f.Unlock()
 	stream, err := f.p2p.Send(ctx, req, pid)
 	if err != nil {
 		return nil, err
