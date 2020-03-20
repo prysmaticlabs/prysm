@@ -95,7 +95,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := server.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(),"No aggregated attestation in beacon node") {
+	if _, err := server.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), "No aggregated attestation in beacon node") {
 		t.Error("Did not get wanted error")
 	}
 }

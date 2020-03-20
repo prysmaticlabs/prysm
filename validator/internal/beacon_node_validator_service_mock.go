@@ -277,6 +277,7 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitSignedAggregateSelect
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedAggregateSelectionProof", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitSignedAggregateSelectionProof), varargs...)
 }
+
 // ProposeExit mocks base method
 func (m *MockBeaconNodeValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit, opts ...grpc.CallOption) (*ptypes.Empty, error) {
 	m.ctrl.T.Helper()

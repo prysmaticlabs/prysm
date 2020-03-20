@@ -87,7 +87,6 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		return
 	}
 
-
 	d, err := v.domainData(ctx, helpers.SlotToEpoch(res.AggregateAndProof.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
 	if err != nil {
 		log.Errorf("Could not get domain data to sign aggregate and proof: %v", err)
@@ -100,9 +99,9 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	}
 
 	_, err = v.validatorClient.SubmitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
-		SignedAggregateAndProof:           &ethpb.SignedAggregateAttestationAndProof{
-			Message:              res.AggregateAndProof,
-			Signature:            signedRoot[:],
+		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
+			Message:   res.AggregateAndProof,
+			Signature: signedRoot[:],
 		},
 	})
 	if err != nil {

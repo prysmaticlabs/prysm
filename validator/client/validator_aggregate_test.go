@@ -43,10 +43,10 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
 	).Return(&ethpb.AggregateSelectionResponse{
-		AggregateAndProof:&ethpb.AggregateAttestationAndProof{
-			AggregatorIndex:      0,
-			Aggregate:            &ethpb.Attestation{Data:&ethpb.AttestationData{}},
-			SelectionProof:       nil,
+		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 0,
+			Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+			SelectionProof:  nil,
 		},
 	}, nil)
 

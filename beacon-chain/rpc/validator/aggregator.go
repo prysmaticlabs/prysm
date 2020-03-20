@@ -2,10 +2,10 @@ package validator
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -79,6 +79,10 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 // SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
 // aggregated and proof object.
 func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+	if req.SignedAggregateAndProof == nil {
+		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
+	}
+
 	if err := as.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast signed aggregated attestation: %v", err)
 	}
