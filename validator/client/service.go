@@ -10,6 +10,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
@@ -176,4 +177,12 @@ func (v *ValidatorService) Status() error {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
+}
+
+// signRoot signs a generic root, with protection if available.
+func (v *validator) signRoot(pubKey [48]byte, root [32]byte, domain [32]byte) (*bls.Signature, error) {
+	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+		return protectingKeymanager.SignGeneric(pubKey, root, domain)
+	}
+	return v.keyManager.Sign(pubKey, root)
 }

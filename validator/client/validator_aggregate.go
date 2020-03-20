@@ -10,12 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"go.opencensus.io/trace"
 )
 
@@ -115,12 +113,8 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 	if err != nil {
 		return nil, err
 	}
-	var sig *bls.Signature
-	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		sig, err = protectingKeymanager.SignGeneric(pubKey, root, bytesutil.ToBytes32(domain.SignatureDomain))
-	} else {
-		sig, err = v.keyManager.Sign(pubKey, root)
-	}
+
+	sig, err := v.signRoot(pubKey, root, bytesutil.ToBytes32(domain.SignatureDomain))
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to sign slot")
 	}

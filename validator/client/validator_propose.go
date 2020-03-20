@@ -186,12 +186,8 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
-	var randaoReveal *bls.Signature
-	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		randaoReveal, err = protectingKeymanager.SignGeneric(pubKey, sigRoot, bytesutil.ToBytes32(domain.SignatureDomain))
-	} else {
-		randaoReveal, err = v.keyManager.Sign(pubKey, sigRoot)
-	}
+
+	randaoReveal, err := v.signRoot(pubKey, sigRoot, bytesutil.ToBytes32(domain.SignatureDomain))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}
