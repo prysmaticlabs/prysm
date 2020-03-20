@@ -313,28 +313,29 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := uint64(0); i < count; i++ {
-		blockExample := &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot: i % params.BeaconConfig().SlotsPerEpoch,
-				Body: &ethpb.BeaconBlockBody{
-					Attestations: []*ethpb.Attestation{
-						{
-							Data: &ethpb.AttestationData{
-								CommitteeIndex:  4,
-								BeaconBlockRoot: []byte{uint8(i)},
-								Slot:            i % params.BeaconConfig().SlotsPerEpoch,
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		for s := uint64(0); s < 4; s++ {
+			blockExample := &ethpb.SignedBeaconBlock{
+				Block: &ethpb.BeaconBlock{
+					Slot: i,
+					Body: &ethpb.BeaconBlockBody{
+						Attestations: []*ethpb.Attestation{
+							{
+								Data: &ethpb.AttestationData{
+									CommitteeIndex: s,
+									Slot:           i,
+								},
+								AggregationBits: bitfield.Bitlist{0b11},
 							},
-							AggregationBits: bitfield.Bitlist{0b11},
 						},
 					},
 				},
-			},
+			}
+			if err := db.SaveBlock(ctx, blockExample); err != nil {
+				t.Fatal(err)
+			}
+			atts = append(atts, blockExample.Block.Body.Attestations...)
 		}
-		if err := db.SaveBlock(ctx, blockExample); err != nil {
-			t.Fatal(err)
-		}
-		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 	sort.Sort(sortableAttestations(atts))
 
@@ -389,8 +390,8 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 				QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
 					GenesisEpoch: true,
 				},
-				PageToken: strconv.Itoa(8),
-				PageSize:  2,
+				PageToken: strconv.Itoa(2),
+				PageSize:  8,
 			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
@@ -400,8 +401,10 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					atts[19],
 					atts[20],
 					atts[21],
+					atts[22],
+					atts[23],
 				},
-				NextPageToken: "",
+				NextPageToken: strconv.Itoa(3),
 				TotalSize:     int32(count)},
 		},
 	}
@@ -426,17 +429,25 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	count := uint64(1)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
+				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		if err := db.SaveAttestation(ctx, attExample); err != nil {
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
 			t.Fatal(err)
 		}
-		atts = append(atts, attExample)
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	bs := &Server{
@@ -476,17 +487,25 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	count := uint64(params.BeaconConfig().DefaultPageSize)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
+				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		if err := db.SaveAttestation(ctx, attExample); err != nil {
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
 			t.Fatal(err)
 		}
-		atts = append(atts, attExample)
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	bs := &Server{
