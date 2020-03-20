@@ -539,22 +539,26 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
-				CommitteeIndex:  0,
-				Target: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  make([]byte, 32),
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+								CommitteeIndex:  0,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
 				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		atts = append(atts, attExample)
-	}
-	if err := db.SaveAttestations(ctx, atts); err != nil {
-		t.Fatal(err)
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	// We setup 128 validators.
@@ -634,22 +638,30 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	startSlot := helpers.StartSlot(50)
 	epoch := uint64(50)
 	for i := startSlot; i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
-				CommitteeIndex:  0,
-				Target: &ethpb.Checkpoint{
-					Epoch: epoch,
-					Root:  make([]byte, 32),
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+								CommitteeIndex:  0,
+								Target: &ethpb.Checkpoint{
+									Epoch: epoch,
+									Root:  make([]byte, 32),
+								},
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
 				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		atts = append(atts, attExample)
-	}
-	if err := db.SaveAttestations(ctx, atts); err != nil {
-		t.Fatal(err)
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	// We setup 128 validators.
