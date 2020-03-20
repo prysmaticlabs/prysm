@@ -136,6 +136,7 @@ func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
+	log.Info(addrs)
 	discv5Nodes, kadDHTNodes = parseGenericAddrs(addrs)
 	if len(discv5Nodes) == 0 && len(kadDHTNodes) == 0 {
 		log.Warn("No bootstrap addresses supplied")

@@ -7,10 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 
 	"github.com/dgraph-io/ristretto"
@@ -28,11 +27,12 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -75,6 +75,7 @@ func NewService(cfg *Config) (*Service, error) {
 		BufferItems: 64,
 	})
 
+	log.Info(cfg.UDPPort)
 	s := &Service{
 		ctx:           ctx,
 		cancel:        cancel,
@@ -161,7 +162,7 @@ func (s *Service) Start() {
 		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
-	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || flags.Get().EnableDiscv5 {
+	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
 		ipAddr := ipAddr()
 		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {
