@@ -17,24 +17,16 @@ type RemotewalletOpts struct {
 }
 
 // TODO
-var RemotewalletOptsHelp = `The wallet key manager stores keys in a local encrypted store.  The options are:
+var RemotewalletOptsHelp = `The remote wallet key manager stores keys in a remote store.  The options are:
   - location This is the location to look for wallets.  If not supplied it will
     use the standard (operating system-dependent) path.
-  - accounts This is a list of account specifiers.  An account specifier is of
-    the form <wallet name>/[account name],  where the account name can be a
-    regular expression.  If the account specifier is just <wallet name> all
-    accounts in that wallet will be used.  Multiple account specifiers can be
-    supplied if required.
-  - passphrase This is the passphrase used to encrypt the accounts when they
-    were created.  Multiple passphrases can be supplied if required.
 
-An sample keymanager options file (with annotations; these should be removed if
-using this as a template) is:
+A remote wallet key manager service example here:  
+
+A sample remote keymanager options file is:
 
   {
-    "location":    "/wallets",               // Look for wallets in the directory '/wallets'
-    "accounts":    ["Validators/Account.*"], // Use all accounts in the 'Validators' wallet starting with 'Account'
-    "passphrases": ["secret1","secret2"]     // Use the passphrases 'secret1' and 'secret2' to decrypt accounts
+    "url":    "<url for your remote wallet service>",  
   }`
 
 func NewRemoteWallet(input string) (KeyManager, string, error) {
