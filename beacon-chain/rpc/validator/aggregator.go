@@ -58,6 +58,9 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
 	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
+	if len(aggregatedAtts) == 0 {
+		return nil, status.Error(codes.Internal, "No aggregated attestation in beacon node")
+	}
 	best := aggregatedAtts[0]
 	for _, aggregatedAtt := range aggregatedAtts[1:] {
 		if aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
@@ -70,21 +73,21 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		SelectionProof:  req.SlotSignature,
 		AggregatorIndex: validatorIndex,
 	}
-	return &ethpb.AggregateSelectionResponse{Aggregate: a}, nil
+	return &ethpb.AggregateSelectionResponse{AggregateAndProof: a}, nil
 }
 
 // SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
 // aggregated and proof object.
 func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
-	if err := as.P2P.Broadcast(ctx, req.Aggregate); err != nil {
+	if err := as.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast signed aggregated attestation: %v", err)
 	}
 
 	log.WithFields(logrus.Fields{
-		"slot":            req.Aggregate.Message.Aggregate.Data.Slot,
-		"committeeIndex":  req.Aggregate.Message.Aggregate.Data.CommitteeIndex,
-		"validatorIndex":  req.Aggregate.Message.AggregatorIndex,
-		"aggregatedCount": req.Aggregate.Message.Aggregate.AggregationBits.Count(),
+		"slot":            req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
+		"committeeIndex":  req.SignedAggregateAndProof.Message.Aggregate.Data.CommitteeIndex,
+		"validatorIndex":  req.SignedAggregateAndProof.Message.AggregatorIndex,
+		"aggregatedCount": req.SignedAggregateAndProof.Message.Aggregate.AggregationBits.Count(),
 	}).Debug("Broadcasting aggregated attestation and proof")
 
 	return &ethpb.SignedAggregateSubmitResponse{}, nil
