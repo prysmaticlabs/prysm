@@ -16,11 +16,12 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// Remote is a key manager that loads keys from a local Ethereum 2 wallet.
+// Remote is a key manager that accesses a remote wallet daemon.
 type Remote struct {
-	paths    []string
-	conn     *grpc.ClientConn
-	accounts map[[48]byte]*accountInfo
+	paths               []string
+	conn                *grpc.ClientConn
+	accounts            map[[48]byte]*accountInfo
+	signClientInitiator func(*grpc.ClientConn)
 }
 
 type accountInfo struct {
@@ -79,19 +80,30 @@ func NewRemote(input string) (KeyManager, string, error) {
 	}
 
 	// Load the client certificates.
+	if opts.Certificates == nil {
+		return nil, remoteOptsHelp, errors.New("certificates are required")
+	}
+	if opts.Certificates.ClientCert == "" {
+		return nil, remoteOptsHelp, errors.New("client certificate is required")
+	}
+	if opts.Certificates.ClientKey == "" {
+		return nil, remoteOptsHelp, errors.New("client key is required")
+	}
 	clientPair, err := tls.LoadX509KeyPair(opts.Certificates.ClientCert, opts.Certificates.ClientKey)
 	if err != nil {
 		return nil, remoteOptsHelp, errors.Wrap(err, "failed to obtain client's certificate and/or key")
 	}
 
-	// Load the CA for the server certificate.
-	serverCA, err := ioutil.ReadFile(opts.Certificates.CACert)
-	if err != nil {
-		return nil, remoteOptsHelp, errors.Wrap(err, "failed to obtain server's CA certificate")
-	}
+	// Load the CA for the server certificate if present.
 	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(serverCA) {
-		return nil, remoteOptsHelp, errors.Wrap(err, "failed to add server's CA certificate to pool")
+	if opts.Certificates.CACert != "" {
+		serverCA, err := ioutil.ReadFile(opts.Certificates.CACert)
+		if err != nil {
+			return nil, remoteOptsHelp, errors.Wrap(err, "failed to obtain server's CA certificate")
+		}
+		if !cp.AppendCertsFromPEM(serverCA) {
+			return nil, remoteOptsHelp, errors.Wrap(err, "failed to add server's CA certificate to pool")
+		}
 	}
 
 	tlsCfg := &tls.Config{
