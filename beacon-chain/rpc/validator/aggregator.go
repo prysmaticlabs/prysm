@@ -5,14 +5,13 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // SubmitAggregateSelectionProof is called by a validator when its assigned to be an aggregator.
-// The aggregator submits the selection proof to obtain a signing root of the aggregated attestation
+// The aggregator submits the selection proof to obtain the aggregated attestation
 // object to sign over.
 func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregateSelectionProof")
@@ -57,27 +56,18 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	// Retrieve the unaggregated attestation from pool.
 	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
-	for _, aggregatedAtt := range aggregatedAtts {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		if helpers.IsAggregated(aggregatedAtt) {
-			if err := as.P2P.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: validatorIndex,
-				SelectionProof:  req.SlotSignature,
-				Aggregate:       aggregatedAtt,
-			}); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
-			}
-
-			log.WithFields(logrus.Fields{
-				"slot":            req.Slot,
-				"committeeIndex":  req.CommitteeIndex,
-				"validatorIndex":  validatorIndex,
-				"aggregatedCount": aggregatedAtt.AggregationBits.Count(),
-			}).Debug("Broadcasting aggregated attestation and proof")
+	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
+	best := aggregatedAtts[0]
+	for _, aggregatedAtt := range aggregatedAtts[1:] {
+		if aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
+			best = aggregatedAtt
 		}
 	}
 
-	return &ethpb.AggregationResponse{}, nil
+	a := &ethpb.AggregateAttestationAndProof{
+		Aggregate:       best,
+		SelectionProof:  req.SlotSignature,
+		AggregatorIndex: validatorIndex,
+	}
+	return &ethpb.AggregateSelectionResponse{Aggregate: a}, nil
 }
