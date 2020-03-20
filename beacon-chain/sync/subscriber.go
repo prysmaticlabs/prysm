@@ -8,7 +8,6 @@ import (
 	"time"
 
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
