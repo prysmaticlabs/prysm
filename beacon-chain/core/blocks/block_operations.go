@@ -1002,7 +1002,7 @@ func ProcessDeposit(
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	numVals := beaconState.NumValidators()
 	if !ok {
-		domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, beaconState.GenesisValidatorRoot())
+		domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 		if err != nil {
 			return nil, err
 		}
