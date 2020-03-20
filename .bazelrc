@@ -65,7 +65,7 @@ build:fuzz --linkopt -Wl,--no-as-needed
 build:fuzz --define=gc_goopts=-d=libfuzzer
 build:fuzz --run_under=//tools:fuzz_wrapper
 
-test:fuzz ---local_test_jobs="HOST_CPUS*.5"
+test:fuzz --local_test_jobs="HOST_CPUS*.5"
 
 test:fuzzit --config=fuzz
 test:fuzzit --test_env=FUZZIT_API_KEY
