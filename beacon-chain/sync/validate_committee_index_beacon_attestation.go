@@ -54,7 +54,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Verify this the first attestation received for the participating validator for the slot.
-	if s.seenValidatorIndicesSlot(att.Data.Slot, att.AggregationBits) {
+	if s.seenValidatorCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return false
 	}
 
@@ -94,11 +94,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 }
 
 // Returns true if the attestation is the first seen for the participating validator for the slot.
-func (s *Service) seenValidatorIndicesSlot(slot uint64, aggregateBits []byte) bool {
+func (s *Service) seenValidatorCommitteeIndicesSlot(slot uint64, committeeID uint64, aggregateBits []byte) bool {
 	s.seenAttestationLock.Lock()
 	defer s.seenAttestationLock.Unlock()
 
-	b := append(bytesutil.Bytes32(slot), aggregateBits...)
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
+	b = append(b, aggregateBits...)
 	if _, seen := s.seenAttestationCache.Get(string(b)); seen {
 		return true
 	}

@@ -44,18 +44,19 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		traceutil.AnnotateError(span, err)
 		return false
 	}
-	m, ok := raw.(*ethpb.AggregateAttestationAndProof)
+	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
 		return false
 	}
 
 	// Verify this is the first aggregate received from the aggregator with index and slot.
-	if r.seenAggregatorIndexSlot(m.Aggregate.Data.Slot, m.AggregatorIndex) {
+	if r.seenAggregatorIndexSlot(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex) {
+		fmt.Println("wtf")
 		return false
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := r.attPool.HasAggregatedAttestation(m.Aggregate)
+	seen, err := r.attPool.HasAggregatedAttestation(m.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return false
@@ -63,15 +64,15 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if seen {
 		return false
 	}
-	if !r.validateBlockInAttestation(ctx, m) {
+	if !r.validateBlockInAttestation(ctx, m.Message) {
 		return false
 	}
 
-	if !r.validateAggregatedAtt(ctx, m) {
+	if !r.validateAggregatedAtt(ctx, m.Message) {
 		return false
 	}
 
-	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Aggregate) {
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Message.Aggregate) {
 		return false
 	}
 

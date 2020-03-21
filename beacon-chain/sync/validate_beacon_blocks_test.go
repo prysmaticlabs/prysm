@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"github.com/dgraph-io/ristretto"
 	"reflect"
 	"testing"
 	"time"
@@ -296,6 +297,64 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m)
 
+	if result {
+		t.Error("Expected false result, got true")
+	}
+}
+
+func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	b := []byte("sk")
+	b32 := bytesutil.ToBytes32(b)
+	sk, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ParentRoot: testutil.Random32Bytes(t),
+		},
+		Signature: sk.Sign([]byte("data")).Marshal(),
+	}
+
+	c, _ := ristretto.NewCache(&ristretto.Config{
+		NumCounters: seenBlockSize,
+		MaxCost:     seenBlockSize / 10,
+		BufferItems: 64,
+	})
+
+	r := &Service{
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Now(),
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
+		seenBlockCache: c,
+	}
+
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
+	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	if !result {
+		t.Error("Expected true result, got false")
+	}
+	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
+	result = r.validateBeaconBlockPubSub(ctx, "", m)
 	if result {
 		t.Error("Expected false result, got true")
 	}

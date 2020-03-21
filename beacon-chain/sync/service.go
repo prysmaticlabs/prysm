@@ -2,9 +2,9 @@ package sync
 
 import (
 	"context"
-	"github.com/dgraph-io/ristretto"
 	"sync"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -121,7 +121,7 @@ func (r *Service) Start() {
 	}
 	aCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: seenAttSize, // Max size is seenAttSize * 32byte.
-		MaxCost:     seenBlockSize / 10,
+		MaxCost:     seenAttSize / 10,
 		BufferItems: 64,
 	})
 	if err != nil {

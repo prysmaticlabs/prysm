@@ -86,12 +86,11 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 func (r *Service) seenBlockIndexSlot(slot uint64, proposerIdx uint64) bool {
 	r.seenBlockLock.Lock()
 	defer r.seenBlockLock.Unlock()
-
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
 	if _, seen := r.seenBlockCache.Get(string(b)); seen {
 		return true
 	}
 
-	r.seenAttestationCache.Set(b, true, 1)
+	r.seenBlockCache.Set(b, true, 1)
 	return false
 }
