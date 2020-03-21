@@ -94,9 +94,9 @@ func (r *Service) hasSeenBlockIndexSlot(slot uint64, proposerIdx uint64) bool {
 }
 
 // Set block proposer index and slot as seen for incoming blocks.
-func (s *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
-	s.seenBlockLock.Lock()
-	defer s.seenBlockLock.Unlock()
+func (r *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
+	r.seenBlockLock.Lock()
+	defer r.seenBlockLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
-	s.seenBlockCache.Set(b, true, 1)
+	r.seenBlockCache.Set(b, true, 1)
 }
