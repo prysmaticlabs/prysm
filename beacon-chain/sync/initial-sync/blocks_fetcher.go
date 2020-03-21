@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -256,7 +257,7 @@ func (f *blocksFetcher) collectPeerResponses(
 	}
 
 	// Spread load evenly among available peers.
-	perPeerCount := count / uint64(len(peers))
+	perPeerCount := mathutil.Min(count/uint64(len(peers)), allowedBlocksPerSecond)
 	remainder := int(count % uint64(len(peers)))
 	for i, pid := range peers {
 		start, step := start+uint64(i)*step, step*uint64(len(peers))
