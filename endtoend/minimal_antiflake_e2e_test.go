@@ -26,6 +26,7 @@ func TestEndToEnd_AntiFlake_MinimalConfig(t *testing.T) {
 			ev.ValidatorsAreActive,
 		},
 	}
+	// Running this test twice to test the quickest conditions (3 epochs) twice.
 	runEndToEndTest(t, minimalConfig)
 	runEndToEndTest(t, minimalConfig)
 }
