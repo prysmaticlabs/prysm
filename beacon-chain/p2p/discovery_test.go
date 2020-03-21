@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -159,6 +160,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(discoveryWaitTime)
 
+	// look up 3 different subnets
 	exists, err := s.FindPeersWithSubnet(1)
 	if err != nil {
 		t.Fatal(err)
@@ -174,6 +176,22 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	if !exists || !exists2 || !exists3 {
 		t.Fatal("Peer with subnet doesn't exist")
 	}
+
+	// update ENR of a peer
+	testService := &Service{dv5Listener: listeners[0]}
+	cache.CommitteeIDs.AddIDs([]uint64{10}, 0)
+	testService.RefreshENR(0)
+	time.Sleep(2 * time.Second)
+
+	exists, err = s.FindPeersWithSubnet(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !exists {
+		t.Fatal("Peer with subnet doesn't exist")
+	}
+
 }
 
 func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {

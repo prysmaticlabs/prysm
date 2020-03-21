@@ -3,7 +3,6 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
