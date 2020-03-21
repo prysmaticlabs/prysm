@@ -65,7 +65,9 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
 
 	indices := make([]uint64, 0, len(committee))
 	for _, idx := range bf.BitIndices() {
-		indices = append(indices, committee[idx])
+		if idx < len(committee) {
+			indices = append(indices, committee[idx])
+		}
 	}
 	return indices
 }
