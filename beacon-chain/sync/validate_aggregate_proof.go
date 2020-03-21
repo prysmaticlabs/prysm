@@ -49,6 +49,11 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
+	// Verify this is the first aggregate received from the aggregator with index and slot.
+	if r.seenAggregatorIndexSlot(m.Aggregate.Data.Slot, m.AggregatorIndex) {
+		return false
+	}
+
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
 	seen, err := r.attPool.HasAggregatedAttestation(m.Aggregate)
 	if err != nil {
@@ -131,6 +136,22 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.Aggre
 		return false
 	}
 	return true
+}
+
+// Returns true if the attestation is the first aggregate received for the aggregator with index and slot.
+func (r *Service) seenAggregatorIndexSlot(slot uint64, aggregatorIndex uint64) bool {
+	r.seenAttestationLock.Lock()
+	defer r.seenAttestationLock.Unlock()
+
+	i := bytesutil.Bytes32(aggregatorIndex)
+	s := bytesutil.Bytes32(slot)
+	b := append(s, i...)
+	if _, seen := r.seenAttestationCache.Get(string(b)); seen {
+		return true
+	}
+
+	r.seenAttestationCache.Set(b, true, 1)
+	return false
 }
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.
