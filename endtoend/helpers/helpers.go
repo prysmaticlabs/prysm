@@ -1,4 +1,4 @@
-package endtoend
+package helpers
 
 import (
 	"bufio"
@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/endtoend/components"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
 )
 
 const (
@@ -18,7 +21,7 @@ const (
 	filePollingInterval = 500 * time.Millisecond
 )
 
-func killProcesses(t *testing.T, pIDs []int) {
+func KillProcesses(t *testing.T, pIDs []int) {
 	for _, id := range pIDs {
 		process, err := os.FindProcess(id)
 		if err != nil {
@@ -33,7 +36,7 @@ func killProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
-func deleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {
+func DeleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {
 	filePath := path.Join(tmpPath, fileName)
 	if _, err := os.Stat(filePath); os.IsExist(err) {
 		if err := os.Remove(filePath); err != nil {
@@ -47,7 +50,7 @@ func deleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {
 	return newFile, nil
 }
 
-func waitForTextInFile(file *os.File, text string) error {
+func WaitForTextInFile(file *os.File, text string) error {
 	d := time.Now().Add(maxPollingWaitTime)
 	ctx, cancel := context.WithDeadline(context.Background(), d)
 	defer cancel()
@@ -82,23 +85,23 @@ func waitForTextInFile(file *os.File, text string) error {
 	}
 }
 
-func logOutput(t *testing.T, config *end2EndConfig) {
+func LogOutput(t *testing.T, config *types.E2EConfig) {
 	// Log out errors from beacon chain nodes.
-	for i := uint64(0); i < config.numBeaconNodes; i++ {
-		beaconLogFile, err := os.Open(path.Join(config.tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
+	for i := uint64(0); i < config.NumBeaconNodes; i++ {
+		beaconLogFile, err := os.Open(path.Join(config.TestPath, fmt.Sprintf(components.BeaconNodeLogFileName, i)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		logErrorOutput(t, beaconLogFile, "beacon chain node", i)
 
-		validatorLogFile, err := os.Open(path.Join(config.tmpPath, fmt.Sprintf(validatorLogFileName, i)))
+		validatorLogFile, err := os.Open(path.Join(config.TestPath, fmt.Sprintf(components.ValidatorLogFileName, i)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		logErrorOutput(t, validatorLogFile, "validator client", i)
 
-		if config.testSlasher {
-			slasherLogFile, err := os.Open(path.Join(config.tmpPath, fmt.Sprintf(slasherLogFileName, i)))
+		if config.TestSlasher {
+			slasherLogFile, err := os.Open(path.Join(config.TestPath, fmt.Sprintf(components.SlasherLogFileName, i)))
 			if err != nil {
 				t.Fatal(err)
 			}

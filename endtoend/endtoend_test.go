@@ -12,11 +12,13 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/endtoend/helpers"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 )
 
-func runEndToEndTest(t *testing.T, config *end2EndConfig) {
+func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	tmpPath := bazel.TestTmpDir()
 	config.tmpPath = tmpPath
 	t.Logf("Starting time: %s\n", time.Now().String())
@@ -72,9 +74,9 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
 
-	ticker := GetEpochTicker(genesisTime, epochSeconds)
+	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
-		for _, evaluator := range config.evaluators {
+		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
 				continue
@@ -86,7 +88,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			})
 		}
 
-		if t.Failed() || currentEpoch >= config.epochsToRun {
+		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
 			if t.Failed() {
 				return

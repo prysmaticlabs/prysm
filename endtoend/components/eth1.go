@@ -1,4 +1,4 @@
-package endtoend
+package components
 
 import (
 	"bytes"
@@ -21,17 +21,18 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// startEth1 starts an eth1 local dev chain and deploys a deposit contract.
-func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
+// StartEth1Node starts an eth1 local dev chain and deploys a deposit contract.
+func StartEth1Node(t *testing.T, testPath string) (common.Address, string, int) {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {
 		t.Fatal("go-ethereum binary not found")
 	}
 
-	eth1Path := path.Join(tmpPath, "eth1data/")
+	eth1Path := path.Join(testPath, "eth1data/")
 	// Clear out ETH1 to prevent issues.
 	if _, err := os.Stat(eth1Path); !os.IsNotExist(err) {
 		if err := os.RemoveAll(eth1Path); err != nil {
@@ -55,7 +56,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		"--ipcdisable",
 	}
 	cmd := exec.Command(binaryPath, args...)
-	file, err := os.Create(path.Join(tmpPath, "eth1.log"))
+	file, err := os.Create(path.Join(testPath, "eth1.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatalf("Failed to start eth1 chain: %v", err)
 	}
 
-	if err = waitForTextInFile(file, "Commit new mining work"); err != nil {
+	if err = helpers.WaitForTextInFile(file, "Commit new mining work"); err != nil {
 		t.Fatalf("mining log not found, this means the eth1 chain had issues starting: %v", err)
 	}
 
@@ -77,11 +78,11 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", path.Join(tmpPath, "eth1data/keystore")).Output()
+	fileName, err := exec.Command("ls", path.Join(testPath, "eth1data/keystore")).Output()
 	if err != nil {
 		t.Fatal(err)
 	}
-	keystorePath := path.Join(tmpPath, fmt.Sprintf("eth1data/keystore/%s", strings.TrimSpace(string(fileName))))
+	keystorePath := path.Join(testPath, fmt.Sprintf("eth1data/keystore/%s", strings.TrimSpace(string(fileName))))
 	jsonBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
 		t.Fatal(err)

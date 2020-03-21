@@ -1,4 +1,4 @@
-package endtoend
+package components
 
 import (
 	"fmt"
@@ -9,9 +9,10 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 )
 
-var slasherLogFileName = "slasher-%d.log"
+var SlasherLogFileName = "slasher-%d.log"
 
 // startSlasher starts a slasher client for use within E2E, connected to the first beacon node.
 // It returns the process ID of the slasher.
@@ -25,7 +26,7 @@ func startSlashers(t *testing.T, config *end2EndConfig) []int {
 
 	var processIDs []int
 	for i := uint64(0); i < config.numBeaconNodes; i++ {
-		stdOutFile, err := deleteAndCreateFile(tmpPath, fmt.Sprintf(slasherLogFileName, i))
+		stdOutFile, err := helpers.deleteAndCreateFile(tmpPath, fmt.Sprintf(slasherLogFileName, i))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,7 +53,7 @@ func startSlashers(t *testing.T, config *end2EndConfig) []int {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = waitForTextInFile(stdOutFile, "Beacon node is fully synced, starting slashing detection"); err != nil {
+	if err = helpers.waitForTextInFile(stdOutFile, "Beacon node is fully synced, starting slashing detection"); err != nil {
 		t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
 	}
 

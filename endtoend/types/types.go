@@ -1,8 +1,22 @@
-package evaluators
+package types
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc"
 )
+
+// E2EConfig defines the struct for all configurations needed for E2E testing.
+type E2EConfig struct {
+	BeaconFlags     []string
+	ValidatorFlags  []string
+	NumBeaconNodes  uint64
+	EpochsToRun     uint64
+	TestSync        bool
+	TestSlasher     bool
+	Evaluators      []Evaluator
+	ContractAddress common.Address
+	TestPath        string
+}
 
 // Evaluator defines the structure of the evaluators used to
 // conduct the current beacon state during the E2E.
@@ -21,4 +35,9 @@ type BeaconNodeInfo struct {
 	MonitorPort uint64
 	GRPCPort    uint64
 	MultiAddr   string
+}
+
+type ValidatorClientInfo struct {
+	ProcessID   int
+	MonitorPort uint64
 }
