@@ -40,9 +40,9 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 		BeaconDB:    db,
 	}
 
-	req := &ethpb.AggregationRequest{CommitteeIndex: 1}
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1}
 	wanted := "Syncing to latest head, not ready to respond"
-	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
+	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -64,14 +64,14 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'})
-	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
-	if _, err := server.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
+	if _, err := server.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Did not receive wanted error: expected %v, received %v", wanted, err.Error())
 	}
 }
 
-func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
+func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -90,13 +90,13 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'})
 	pubKey := pubKey(1)
-	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := server.SubmitAggregateAndProof(ctx, req); err != nil {
-		t.Fatal(err)
+	if _, err := server.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), "No aggregated attestation in beacon node") {
+		t.Error("Did not get wanted error")
 	}
 }
 
@@ -116,7 +116,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	att1, err := generateAtt(beaconState, 1, privKeys)
+	att1, err := generateAtt(beaconState, 2, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,19 +134,19 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'})
 	pubKey := pubKey(2)
-	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
+	if err := aggregatorServer.AttPool.SaveAggregatedAttestation(att0); err != nil {
 		t.Fatal(err)
 	}
-	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att1); err != nil {
+	if err := aggregatorServer.AttPool.SaveAggregatedAttestation(att1); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); err != nil {
+	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 
@@ -171,11 +171,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0, err := generateAtt(beaconState, 0, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	aggregatorServer := &Server{
@@ -189,18 +185,12 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'})
 	pubKey := pubKey(2)
-	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); err != nil {
-		t.Fatal(err)
-	}
+	aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 
 	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
 	if len(aggregatedAtts) != 0 {
@@ -211,6 +201,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
+	aggBits.SetBitAt(index+1, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 1,

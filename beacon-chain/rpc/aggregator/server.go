@@ -24,7 +24,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
-	request := &ethpb.AggregationRequest{
+	request := &ethpb.AggregateSelectionRequest{
 		Slot:           req.Slot,
 		CommitteeIndex: req.CommitteeIndex,
 		PublicKey:      req.PublicKey,
@@ -32,9 +32,9 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 
 	// Passthrough request to non-deprecated method.
-	res, err := as.ValidatorServer.SubmitAggregateAndProof(ctx, request)
+	_, err := as.ValidatorServer.SubmitAggregateSelectionProof(ctx, request)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.AggregationResponse{Root: res.AttestationDataRoot}, nil
+	return &pb.AggregationResponse{}, nil
 }
