@@ -16,6 +16,7 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
+	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -100,10 +101,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
-			if err != nil {
-				panic(err)
-			}
+			indices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 			for _, i := range indices {
 				m[r].score[i] = true
 			}

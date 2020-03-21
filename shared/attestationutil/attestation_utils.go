@@ -4,7 +4,6 @@ import (
 	"context"
 	"sort"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"go.opencensus.io/trace"
@@ -32,10 +31,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
 	defer span.End()
 
-	attIndices, err := AttestingIndices(attestation.AggregationBits, committee)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting indices")
-	}
+	attIndices := AttestingIndices(attestation.AggregationBits, committee)
 
 	sort.Slice(attIndices, func(i, j int) bool {
 		return attIndices[i] < attIndices[j]
@@ -61,7 +57,12 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    """
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error) {
+func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
+	// Short cut when the whole committee attested.
+	if int(bf.Count()) == len(committee) {
+		return committee
+	}
+
 	indices := make([]uint64, 0, len(committee))
 	indicesSet := make(map[uint64]bool, len(committee))
 	for i, idx := range committee {
@@ -72,5 +73,5 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error
 		}
 		indicesSet[idx] = true
 	}
-	return indices, nil
+	return indices
 }
