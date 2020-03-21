@@ -55,7 +55,7 @@ func TestSignNoSuchKey(t *testing.T) {
 	//	sks = append(sks, bls.RandKey())
 	direct := keymanager.NewDirect(sks)
 
-	sig, err := direct.Sign([params.KEY_BYTES_LENGTH]byte{}, [params.ROOT_BYTES_LENGTH]byte{}, 0)
+	sig, err := direct.Sign(params.KeyBytes{}, params.RootBytes{}, 0)
 	if err != keymanager.ErrNoSuchKey {
 		t.Fatalf("Incorrect error: expected %v, received %v", keymanager.ErrNoSuchKey, err)
 	}
@@ -68,7 +68,7 @@ func TestSign(t *testing.T) {
 	direct := keymanager.NewDirect(sks)
 
 	pubKey := bytesutil.ToBytes48(sks[0].PublicKey().Marshal())
-	msg := [params.ROOT_BYTES_LENGTH]byte{}
+	msg := params.RootBytes{}
 	sig, err := direct.Sign(pubKey, msg, 0)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)

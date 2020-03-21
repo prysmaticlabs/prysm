@@ -44,7 +44,7 @@ var (
 // via gRPC. Beacon node will verify the slot signature and determine if the validator is also
 // an aggregator. If yes, then beacon node will broadcast aggregated signature and
 // proof on the validator's behalf.
-func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {
+func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey params.KeyBytes) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProof")
 	defer span.End()
 
@@ -103,7 +103,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 // This implements selection logic outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
-func (v *validator) signSlot(ctx context.Context, pubKey [params.KEY_BYTES_LENGTH]byte, slot uint64) ([]byte, error) {
+func (v *validator) signSlot(ctx context.Context, pubKey params.KeyBytes, slot uint64) ([]byte, error) {
 	domain, err := v.domainData(ctx, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainBeaconAttester[:])
 	if err != nil {
 		return nil, err

@@ -78,25 +78,25 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[params.VALIDATOR_ROLE_BYTES_LENGTH]byte][]pb.ValidatorRole, error) {
+func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[params.ValidatorRoleBytes][]pb.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[[params.VALIDATOR_ROLE_BYTES_LENGTH]byte][]pb.ValidatorRole)
-	vr[[params.VALIDATOR_ROLE_BYTES_LENGTH]byte{1}] = fv.RolesAtRet
+	vr := make(map[params.ValidatorRoleBytes][]pb.ValidatorRole)
+	vr[params.ValidatorRoleBytes{1}] = fv.RolesAtRet
 	return vr, nil
 }
 
-func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {
+func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey params.KeyBytes) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
-func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {
+func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey params.KeyBytes) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
 
-func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {}
+func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey params.KeyBytes) {}
 
 func (fv *fakeValidator) LogAttestationsSubmitted() {}
 

@@ -58,7 +58,7 @@ func NewWallet(input string) (KeyManager, string, error) {
 	}
 
 	km := &Wallet{
-		accounts: make(map[[params.KEY_BYTES_LENGTH]byte]e2wtypes.Account),
+		accounts: make(map[params.KeyBytes]e2wtypes.Account),
 	}
 
 	if strings.Contains(opts.Location, "$") || strings.Contains(opts.Location, "~") || strings.Contains(opts.Location, "%") {
@@ -110,12 +110,12 @@ func NewWallet(input string) (KeyManager, string, error) {
 
 // Wallet is a key manager that loads keys from a local Ethereum 2 wallet.
 type Wallet struct {
-	accounts map[[params.KEY_BYTES_LENGTH]byte]e2wtypes.Account
+	accounts map[params.KeyBytes]e2wtypes.Account
 }
 
 // FetchValidatingKeys fetches the list of public keys that should be used to validate with.
-func (km *Wallet) FetchValidatingKeys() ([][params.KEY_BYTES_LENGTH]byte, error) {
-	res := make([][params.KEY_BYTES_LENGTH]byte, 0, len(km.accounts))
+func (km *Wallet) FetchValidatingKeys() ([]params.KeyBytes, error) {
+	res := make([]params.KeyBytes, 0, len(km.accounts))
 	for pubKey := range km.accounts {
 		res = append(res, pubKey)
 	}
@@ -123,7 +123,7 @@ func (km *Wallet) FetchValidatingKeys() ([][params.KEY_BYTES_LENGTH]byte, error)
 }
 
 // Sign signs a message for the validator to broadcast.
-func (km *Wallet) Sign(pubKey [params.KEY_BYTES_LENGTH]byte, root [params.ROOT_BYTES_LENGTH]byte, domain uint64) (*bls.Signature, error) {
+func (km *Wallet) Sign(pubKey params.KeyBytes, root params.RootBytes, domain uint64) (*bls.Signature, error) {
 	account, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey

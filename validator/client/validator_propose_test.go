@@ -22,7 +22,7 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
-	valDB := db.SetupDB(t, [][params.KEY_BYTES_LENGTH]byte{validatorPubKey})
+	valDB := db.SetupDB(t, []params.KeyBytes{validatorPubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: internal.NewMockBeaconNodeValidatorClient(ctrl),
@@ -32,7 +32,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		validatorClient: m.validatorClient,
 		keyManager:      testKeyManager,
 		graffiti:        []byte{},
-		attLogs:         make(map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted),
+		attLogs:         make(map[params.AttestationHashBytes]*attSubmitted),
 	}
 
 	return validator, m, ctrl.Finish

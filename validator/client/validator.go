@@ -42,10 +42,10 @@ type validator struct {
 	graffiti             []byte
 	node                 ethpb.NodeClient
 	keyManager           keymanager.KeyManager
-	prevBalance          map[[params.BALANCE_BYTES_LENGTH]byte]uint64
+	prevBalance          map[params.BalanceBytes]uint64
 	logValidatorBalances bool
 	emitAccountMetrics   bool
-	attLogs              map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted
+	attLogs              map[params.AttestationHashBytes]*attSubmitted
 	attLogsLock          sync.Mutex
 	domainDataLock       sync.Mutex
 	domainDataCache      *ristretto.Cache
@@ -315,8 +315,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[params.KEY_BYTES_LENGTH]byte][]pb.ValidatorRole, error) {
-	rolesAt := make(map[[params.KEY_BYTES_LENGTH]byte][]pb.ValidatorRole)
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[params.KeyBytes][]pb.ValidatorRole, error) {
+	rolesAt := make(map[params.KeyBytes][]pb.ValidatorRole)
 	for _, duty := range v.duties.Duties {
 		var roles []pb.ValidatorRole
 
@@ -342,7 +342,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[params.KEY_B
 			roles = append(roles, pb.ValidatorRole_UNKNOWN)
 		}
 
-		var pubKey [params.KEY_BYTES_LENGTH]byte
+		var pubKey params.KeyBytes
 		copy(pubKey[:], duty.PublicKey)
 		rolesAt[pubKey] = roles
 	}
@@ -351,7 +351,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[params.KEY_B
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
-func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) (bool, error) {
+func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey params.KeyBytes) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee

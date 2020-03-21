@@ -9,16 +9,16 @@ import (
 // Direct is a key manager that holds all secret keys directly.
 type Direct struct {
 	// Key to the map is the bytes of the public key.
-	publicKeys map[[params.KEY_BYTES_LENGTH]byte]*bls.PublicKey
+	publicKeys map[params.KeyBytes]*bls.PublicKey
 	// Key to the map is the bytes of the public key.
-	secretKeys map[[params.KEY_BYTES_LENGTH]byte]*bls.SecretKey
+	secretKeys map[params.KeyBytes]*bls.SecretKey
 }
 
 // NewDirect creates a new direct key manager from the secret keys provided to it.
 func NewDirect(sks []*bls.SecretKey) *Direct {
 	res := &Direct{
-		publicKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.PublicKey),
-		secretKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.SecretKey),
+		publicKeys: make(map[params.KeyBytes]*bls.PublicKey),
+		secretKeys: make(map[params.KeyBytes]*bls.SecretKey),
 	}
 	for _, sk := range sks {
 		publicKey := sk.PublicKey()
@@ -30,8 +30,8 @@ func NewDirect(sks []*bls.SecretKey) *Direct {
 }
 
 // FetchValidatingKeys fetches the list of public keys that should be used to validate with.
-func (km *Direct) FetchValidatingKeys() ([][params.KEY_BYTES_LENGTH]byte, error) {
-	keys := make([][params.KEY_BYTES_LENGTH]byte, 0, len(km.publicKeys))
+func (km *Direct) FetchValidatingKeys() ([]params.KeyBytes, error) {
+	keys := make([]params.KeyBytes, 0, len(km.publicKeys))
 	for key := range km.publicKeys {
 		keys = append(keys, key)
 	}
@@ -39,7 +39,7 @@ func (km *Direct) FetchValidatingKeys() ([][params.KEY_BYTES_LENGTH]byte, error)
 }
 
 // Sign signs a message for the validator to broadcast.
-func (km *Direct) Sign(pubKey [params.KEY_BYTES_LENGTH]byte, root [params.ROOT_BYTES_LENGTH]byte, domain uint64) (*bls.Signature, error) {
+func (km *Direct) Sign(pubKey params.KeyBytes, root params.RootBytes, domain uint64) (*bls.Signature, error) {
 	if secretKey, exists := km.secretKeys[pubKey]; exists {
 		return secretKey.Sign(root[:], domain), nil
 	}

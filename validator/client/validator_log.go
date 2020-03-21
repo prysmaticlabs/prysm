@@ -33,5 +33,5 @@ func (v *validator) LogAttestationsSubmitted() {
 		}).Info("Submitted new attestations")
 	}
 
-	v.attLogs = make(map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted)
+	v.attLogs = make(map[params.AttestationHashBytes]*attSubmitted)
 }

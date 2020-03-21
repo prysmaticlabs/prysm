@@ -26,10 +26,10 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
-	RolesAt(ctx context.Context, slot uint64) (map[[params.VALIDATOR_ROLE_BYTES_LENGTH]byte][]pb.ValidatorRole, error) // validator pubKey -> roles
-	SubmitAttestation(ctx context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte)
-	ProposeBlock(ctx context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte)
-	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte)
+	RolesAt(ctx context.Context, slot uint64) (map[params.ValidatorRoleBytes][]pb.ValidatorRole, error) // validator pubKey -> roles
+	SubmitAttestation(ctx context.Context, slot uint64, pubKey params.KeyBytes)
+	ProposeBlock(ctx context.Context, slot uint64, pubKey params.KeyBytes)
+	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey params.KeyBytes)
 	LogAttestationsSubmitted()
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 }
@@ -103,7 +103,7 @@ func run(ctx context.Context, v Validator) {
 			}
 			for id, roles := range allRoles {
 				wg.Add(1)
-				go func(roles []pb.ValidatorRole, id [params.KEY_BYTES_LENGTH]byte) {
+				go func(roles []pb.ValidatorRole, id params.KeyBytes) {
 					for _, role := range roles {
 						switch role {
 						case pb.ValidatorRole_ATTESTER:

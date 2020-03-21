@@ -62,8 +62,8 @@ func NewUnencrypted(input string) (*Unencrypted, string, error) {
 
 	km := &Unencrypted{
 		Direct: &Direct{
-			publicKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.PublicKey),
-			secretKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.SecretKey),
+			publicKeys: make(map[params.KeyBytes]*bls.PublicKey),
+			secretKeys: make(map[params.KeyBytes]*bls.SecretKey),
 		},
 	}
 	for i := 0; i < len(sks); i++ {

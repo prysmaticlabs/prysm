@@ -8,7 +8,7 @@ import (
 )
 
 func TestClearDB(t *testing.T) {
-	db := SetupDB(t, [][params.KEY_BYTES_LENGTH]byte{})
+	db := SetupDB(t, []params.KeyBytes{})
 	if err := db.ClearDB(); err != nil {
 		t.Fatal(err)
 	}

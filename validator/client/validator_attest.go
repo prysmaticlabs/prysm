@@ -49,7 +49,7 @@ var (
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {
+func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey params.KeyBytes) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
@@ -185,7 +185,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 }
 
 // Given the validator public key, this gets the validator assignment.
-func (v *validator) duty(pubKey [params.KEY_BYTES_LENGTH]byte) (*ethpb.DutiesResponse_Duty, error) {
+func (v *validator) duty(pubKey params.KeyBytes) (*ethpb.DutiesResponse_Duty, error) {
 	if v.duties == nil {
 		return nil, errors.New("no duties for validators")
 	}
@@ -200,7 +200,7 @@ func (v *validator) duty(pubKey [params.KEY_BYTES_LENGTH]byte) (*ethpb.DutiesRes
 }
 
 // Given validator's public key, this returns the signature of an attestation data.
-func (v *validator) signAtt(ctx context.Context, pubKey [params.KEY_BYTES_LENGTH]byte, data *ethpb.AttestationData) ([]byte, error) {
+func (v *validator) signAtt(ctx context.Context, pubKey params.KeyBytes, data *ethpb.AttestationData) ([]byte, error) {
 	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester[:])
 	if err != nil {
 		return nil, err

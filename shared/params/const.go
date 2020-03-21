@@ -1,7 +1,7 @@
 package params
 
-const KEY_BYTES_LENGTH = 48
-const VALIDATOR_ROLE_BYTES_LENGTH = 48
-const ROOT_BYTES_LENGTH = 32
-const DOMAIN_BYTES_LENGTH  	= 32
-const BALANCE_BYTES_LENGTH = 48
+type KeyBytes = [48]byte
+type ValidatorRoleBytes = [48]byte
+type RootBytes = [32]byte
+type AttestationHashBytes = [32]byte
+type BalanceBytes = [48]byte

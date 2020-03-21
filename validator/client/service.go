@@ -152,8 +152,8 @@ func (v *ValidatorService) Start() {
 		graffiti:             v.graffiti,
 		logValidatorBalances: v.logValidatorBalances,
 		emitAccountMetrics:   v.emitAccountMetrics,
-		prevBalance:          make(map[[params.BALANCE_BYTES_LENGTH]byte]uint64),
-		attLogs:              make(map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted),
+		prevBalance:          make(map[params.BalanceBytes]uint64),
+		attLogs:              make(map[params.AttestationHashBytes]*attSubmitted),
 		domainDataCache:      cache,
 	}
 	go run(v.ctx, v.validator)

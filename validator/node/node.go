@@ -259,7 +259,7 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	return km, nil
 }
 
-func clearDB(dataDir string, pubkeys [][params.KEY_BYTES_LENGTH]byte, force bool) error {
+func clearDB(dataDir string, pubkeys []params.KeyBytes, force bool) error {
 	var err error
 	clearDBConfirmed := force
 

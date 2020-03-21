@@ -68,7 +68,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, pubkeys [][params.KEY_BYTES_LENGTH]byte) (*Store, error) {
+func NewKVStore(dirPath string, pubkeys []params.KeyBytes) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
