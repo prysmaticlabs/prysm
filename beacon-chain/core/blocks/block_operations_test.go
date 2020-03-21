@@ -1240,7 +1240,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
+		ia := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
 		if err != nil {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}

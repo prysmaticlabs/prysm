@@ -27,7 +27,7 @@ import (
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) *ethpb.IndexedAttestation {
 	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
 	defer span.End()
 
@@ -41,7 +41,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 		Signature:        attestation.Signature,
 		AttestingIndices: attIndices,
 	}
-	return inAtt, nil
+	return inAtt
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The

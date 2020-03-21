@@ -16,7 +16,6 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
-	"github.com/protolambda/zrnt/eth2/util/ssz"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
