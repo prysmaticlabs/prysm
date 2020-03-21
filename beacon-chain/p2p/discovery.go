@@ -31,6 +31,7 @@ type Listener interface {
 	LookupRandom() []*enode.Node
 	Ping(*enode.Node) error
 	RequestENR(*enode.Node) (*enode.Node, error)
+	LocalNode() *enode.LocalNode
 }
 
 func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *discover.UDPv5 {

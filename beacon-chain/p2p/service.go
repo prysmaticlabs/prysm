@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -314,7 +315,7 @@ func (s *Service) RefreshENR(epoch uint64) {
 		bitV.SetBitAt(idx, true)
 	}
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	s.dv5Listener.Self().Record().Set(entry)
+	s.dv5Listener.LocalNode().Set(entry)
 }
 
 // FindPeersWithSubnet performs a network search for peers
