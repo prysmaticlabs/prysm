@@ -16,6 +16,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -121,6 +122,11 @@ func (f *blocksFetcher) loop() {
 	}()
 
 	for {
+		// Make sure there is are available peers before processing requests.
+		if _, err := f.waitForMinimumPeers(f.ctx); err != nil {
+			log.Error(err)
+		}
+
 		select {
 		case <-f.ctx.Done():
 			log.Debug("Context closed, exiting goroutine (blocks fetcher)")
@@ -409,4 +415,26 @@ func selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
 	})
 
 	return peers[0], nil
+}
+
+// waitForMinimumPeers spins and waits up until enough peers are available.
+func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, error) {
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
+	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		_, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+		if len(peers) >= required {
+			return peers, nil
+		}
+		log.WithFields(logrus.Fields{
+			"suitable": len(peers),
+			"required": required}).Info("Waiting for enough suitable peers before syncing")
+		time.Sleep(handshakePollingInterval)
+	}
 }
