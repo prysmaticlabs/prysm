@@ -16,12 +16,12 @@ import (
 const (
 	// queueMaxPendingRequests limits how many concurrent fetch request queue can initiate.
 	queueMaxPendingRequests = 8
-	// queueFetchRequestTimeout caps maximum amount of time before fetch requests is cancelled.
-	queueFetchRequestTimeout = 60 * time.Second
 	// queueMaxCachedBlocks hard limit on how many queue items to cache before forced dequeue.
 	queueMaxCachedBlocks = 8 * queueMaxPendingRequests * blockBatchSize
 	// queueStopCallTimeout is time allowed for queue to release resources when quitting.
 	queueStopCallTimeout = 1 * time.Second
+	// backoffInterval is an interval for which queue scheduler waits when a schedule request fails.
+	backoffInterval = 1 * time.Second
 )
 
 var (
@@ -200,6 +200,7 @@ func (q *blocksQueue) loop() {
 				// Schedule request.
 				if err := q.scheduleFetchRequests(q.ctx); err != nil {
 					q.state.scheduler.incrementCounter(failedBlock, blockBatchSize)
+					time.Sleep(backoffInterval)
 					releaseTicket()
 				}
 			}()
@@ -307,7 +308,6 @@ func (q *blocksQueue) scheduleFetchRequests(ctx context.Context) error {
 		return errStartSlotIsTooHigh
 	}
 
-	ctx, _ = context.WithTimeout(ctx, queueFetchRequestTimeout)
 	if err := q.blocksFetcher.scheduleRequest(ctx, start, count); err != nil {
 		return err
 	}
