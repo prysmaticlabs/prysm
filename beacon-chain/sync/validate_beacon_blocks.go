@@ -64,7 +64,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	if r.chain.FinalizedCheckpt().Epoch > helpers.SlotToEpoch(blk.Block.Slot) {
-		log.Debug("Block older than finalized checkpoint received,rejecting it")
+		log.Debug("Block older than finalized checkpoint received, rejecting it")
 		return false
 	}
 

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/dgraph-io/ristretto"
 	"sync"
 
 	"github.com/kevinms/leakybucket-go"
@@ -24,6 +25,8 @@ var _ = shared.Service(&Service{})
 
 const allowedBlocksPerSecond = 32.0
 const allowedBlocksBurst = 10 * allowedBlocksPerSecond
+const seenBlockSize = 1000
+const seenAttSize = 10000
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -100,10 +103,33 @@ type Service struct {
 	blockNotifier        blockfeed.Notifier
 	blocksRateLimiter    *leakybucket.Collector
 	attestationNotifier  operation.Notifier
+	seenBlockLock        sync.Mutex
+	seenBlockCache       *ristretto.Cache
+	seenAttestationLock  sync.Mutex
+	seenAttestationCache *ristretto.Cache
 }
 
 // Start the regular sync service.
 func (r *Service) Start() {
+	bCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: seenBlockSize, // Max size is seenBlockSize * 32byte.
+		MaxCost:     seenBlockSize / 10,
+		BufferItems: 64,
+	})
+	if err != nil {
+		panic(err)
+	}
+	aCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: seenAttSize, // Max size is seenAttSize * 32byte.
+		MaxCost:     seenBlockSize / 10,
+		BufferItems: 64,
+	})
+	if err != nil {
+		panic(err)
+	}
+	r.seenBlockCache = bCache
+	r.seenAttestationCache = aCache
+
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.processPendingBlocksQueue()
