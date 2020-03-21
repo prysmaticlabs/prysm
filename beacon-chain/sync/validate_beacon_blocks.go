@@ -48,7 +48,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify the block is the first block received for the proposer for the slot.
-	if r.seenBlockProposerSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
+	if r.seenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return false
 	}
 
@@ -83,13 +83,11 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 }
 
 // Returns true if the block is the first block proposed for the proposer for the slot.
-func (r *Service) seenBlockProposerSlot(slot uint64, proposerIdx uint64) bool {
+func (r *Service) seenBlockIndexSlot(slot uint64, proposerIdx uint64) bool {
 	r.seenBlockLock.Lock()
 	defer r.seenBlockLock.Unlock()
 
-	i := bytesutil.Bytes32(proposerIdx)
-	s := bytesutil.Bytes32(slot)
-	b := append(s, i...)
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
 	if _, seen := r.seenBlockCache.Get(string(b)); seen {
 		return true
 	}

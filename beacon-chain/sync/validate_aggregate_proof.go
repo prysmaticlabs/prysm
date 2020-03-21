@@ -143,9 +143,7 @@ func (r *Service) seenAggregatorIndexSlot(slot uint64, aggregatorIndex uint64) b
 	r.seenAttestationLock.Lock()
 	defer r.seenAttestationLock.Unlock()
 
-	i := bytesutil.Bytes32(aggregatorIndex)
-	s := bytesutil.Bytes32(slot)
-	b := append(s, i...)
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
 	if _, seen := r.seenAttestationCache.Get(string(b)); seen {
 		return true
 	}
