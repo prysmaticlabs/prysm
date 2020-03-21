@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -46,6 +47,11 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
+	// Verify the block is the first block received for the proposer for the slot.
+	if r.seenBlockProposerSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
+		return false
+	}
+
 	blockRoot, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		return false
@@ -74,4 +80,20 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	msg.ValidatorData = blk // Used in downstream subscriber
 	return true
+}
+
+// Returns true if the block is the first block proposed for the proposer for the slot.
+func (r *Service) seenBlockProposerSlot(slot uint64, proposerIdx uint64) bool {
+	r.seenBlockLock.Lock()
+	defer r.seenBlockLock.Unlock()
+
+	i := bytesutil.Bytes32(proposerIdx)
+	s := bytesutil.Bytes32(slot)
+	b := append(s, i...)
+	if _, seen := r.seenBlockCache.Get(string(b)); seen {
+		return true
+	}
+
+	r.seenAttestationCache.Set(b, true, 1)
+	return false
 }
