@@ -83,7 +83,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	}
 
 	var listeners []*discover.UDPv5
-	for i := 1; i <= 1; i++ {
+	for i := 1; i <= 5; i++ {
 		port = 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
