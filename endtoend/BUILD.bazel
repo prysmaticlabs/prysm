@@ -6,6 +6,7 @@ go_test(
     srcs = [
         "demo_e2e_test.go",
         "endtoend_test.go",
+        "minimal_antiflake_e2e_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],
@@ -17,7 +18,7 @@ go_test(
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
     embed = [":go_default_library"],
-    shard_count = 2,
+    shard_count = 3,
     tags = [
         "block-network",
         "e2e",

@@ -17,8 +17,11 @@ Evaluators have 3 parts, the name for it's test name, a `policy` which declares 
 ## Instructions
 If you wish to run all the E2E tests, you can run them through bazel with:
 
-```bazel test //endtoend:go_default_test --test_output=streamed```
+```
+bazel test //endtoend:go_default_test --test_output=streamed --test_arg=-test.v --nocache_test_results
+```
 
-To test only for a specific config, run:
-
-```bazel test //endtoend:go_default_test --test_output=streamed --test_filter=TestEndToEnd_DemoConfig```
+To run the anti-flake E2E tests, run:
+```
+bazel test //endtoend:go_default_test --test_output=streamed --test_filter=TestEndToEnd_AntiFlake_MinimalConfig --test_arg=-test.v --nocache_test_results
+```
