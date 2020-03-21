@@ -1210,7 +1210,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			wantedAttestingIndices: []uint64{43, 47},
 		},
 		{
-			aggregationBitfield:    bitfield.Bitlist{0x03},
+			aggregationBitfield:    bitfield.Bitlist{0x06},
 			wantedAttestingIndices: []uint64{47},
 		},
 		{
@@ -1241,9 +1241,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			t.Error(err)
 		}
 		ia := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
-		if err != nil {
-			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
-		}
 		if !reflect.DeepEqual(wanted, ia) {
 			diff, _ := messagediff.PrettyDiff(ia, wanted)
 			t.Log(diff)
