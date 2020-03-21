@@ -13,7 +13,7 @@ import (
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = Evaluator{
 	Name:       "validators_active_epoch_%d",
-	Policy:     allEpochs(),
+	Policy:     allEpochs,
 	Evaluation: validatorsAreActive,
 }
 
@@ -46,10 +46,8 @@ func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 }
 
 // All epochs.
-func allEpochs() func(uint64) bool {
-	return func(currentEpoch uint64) bool {
-		return true
-	}
+func allEpochs(currentEpoch uint64) bool {
+	return true
 }
 
 func validatorsAreActive(conns ...*grpc.ClientConn) error {
