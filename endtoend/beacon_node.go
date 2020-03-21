@@ -21,6 +21,7 @@ type end2EndConfig struct {
 	numValidators  uint64
 	numBeaconNodes uint64
 	testSync       bool
+	testSlasher    bool
 	contractAddr   common.Address
 	evaluators     []ev.Evaluator
 }
@@ -31,7 +32,7 @@ var beaconNodeLogFileName = "beacon-%d.log"
 func startBeaconNodes(t *testing.T, config *end2EndConfig) []*ev.BeaconNodeInfo {
 	numNodes := config.numBeaconNodes
 
-	nodeInfo := []*ev.BeaconNodeInfo{}
+	var nodeInfo []*ev.BeaconNodeInfo
 	for i := uint64(0); i < numNodes; i++ {
 		newNode := startNewBeaconNode(t, config, nodeInfo)
 		nodeInfo = append(nodeInfo, newNode)

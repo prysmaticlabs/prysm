@@ -33,8 +33,13 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	for _, bb := range beaconNodes {
 		processIDs = append(processIDs, bb.ProcessID)
 	}
-	defer logOutput(t, tmpPath, config)
+	defer logOutput(t, config)
 	defer killProcesses(t, processIDs)
+
+	if config.testSlasher {
+		slasherPIDs := startSlashers(t, config)
+		defer killProcesses(t, slasherPIDs)
+	}
 
 	beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, 0)))
 	if err != nil {
@@ -49,9 +54,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		return
 	}
 
-	slasherPIDs := startSlashers(t, config)
-	defer killProcesses(t, slasherPIDs)
-
 	conns := make([]*grpc.ClientConn, len(beaconNodes))
 	for i := 0; i < len(conns); i++ {
 		conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", beaconNodes[i].RPCPort), grpc.WithInsecure())
@@ -59,6 +61,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			t.Fatalf("Failed to dial: %v", err)
 		}
 		conns[i] = conn
+		defer conn.Close()
 	}
 	nodeClient := eth.NewNodeClient(conns[0])
 	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
