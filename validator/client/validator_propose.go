@@ -3,7 +3,6 @@ package client
 // Validator client proposer functions.
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -176,18 +175,11 @@ func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) 
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
-
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	var buf [32]byte
-	binary.LittleEndian.PutUint64(buf[:], epoch)
-	sigRoot, err := helpers.ComputeSigningRoot(epoch, domain.SignatureDomain)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute signing root")
-	}
 
-	randaoReveal, err := v.signRoot(pubKey, sigRoot, bytesutil.ToBytes32(domain.SignatureDomain))
+	randaoReveal, err := v.signObject(pubKey, epoch, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}

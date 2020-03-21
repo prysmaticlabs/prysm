@@ -245,7 +245,7 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	case "wallet":
 		km, help, err = keymanager.NewWallet(opts)
 	case "remote":
-		km, help, err = keymanager.NewRemote(opts)
+		km, help, err = keymanager.NewRemoteWallet(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}

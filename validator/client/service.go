@@ -10,7 +10,10 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
@@ -179,10 +182,19 @@ func (v *ValidatorService) Status() error {
 	return nil
 }
 
-// signRoot signs a generic root, with protection if available.
-func (v *validator) signRoot(pubKey [48]byte, root [32]byte, domain [32]byte) (*bls.Signature, error) {
+// signObject signs a generic object, with protection if available.
+func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byte) (*bls.Signature, error) {
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		return protectingKeymanager.SignGeneric(pubKey, root, domain)
+		root, err := ssz.HashTreeRoot(object)
+		if err != nil {
+			return nil, err
+		}
+		return protectingKeymanager.SignGeneric(pubKey, root, bytesutil.ToBytes32(domain))
+	}
+
+	root, err := helpers.ComputeSigningRoot(object, domain)
+	if err != nil {
+		return nil, err
 	}
 	return v.keyManager.Sign(pubKey, root)
 }

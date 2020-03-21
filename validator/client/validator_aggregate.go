@@ -10,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -109,12 +108,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 		return nil, err
 	}
 
-	root, err := helpers.ComputeSigningRoot(slot, domain.SignatureDomain)
-	if err != nil {
-		return nil, err
-	}
-
-	sig, err := v.signRoot(pubKey, root, bytesutil.ToBytes32(domain.SignatureDomain))
+	sig, err := v.signObject(pubKey, slot, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to sign slot")
 	}
