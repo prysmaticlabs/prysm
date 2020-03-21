@@ -39,7 +39,7 @@ type validator struct {
 	duties               *ethpb.DutiesResponse
 	validatorClient      ethpb.BeaconNodeValidatorClient
 	beaconClient         ethpb.BeaconChainClient
-	graffiti             []byte
+	graffiti             params.GraffitiBytes
 	node                 ethpb.NodeClient
 	keyManager           keymanager.KeyManager
 	prevBalance          map[params.BalanceBytes]uint64
@@ -251,7 +251,7 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 // UpdateDuties checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
-func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
+func (v *validator) UpdateDuties(ctx context.Context, slot params.SoltNumber) error {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.duties != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
@@ -315,7 +315,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[params.KeyBytes][]pb.ValidatorRole, error) {
+func (v *validator) RolesAt(ctx context.Context, slot params.SoltNumber) (map[params.KeyBytes][]pb.ValidatorRole, error) {
 	rolesAt := make(map[params.KeyBytes][]pb.ValidatorRole)
 	for _, duty := range v.duties.Duties {
 		var roles []pb.ValidatorRole
@@ -351,7 +351,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[params.KeyByt
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
-func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey params.KeyBytes) (bool, error) {
+func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot params.SoltNumber, pubKey params.KeyBytes) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
@@ -371,7 +371,7 @@ func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot u
 // the fork version changes which can happen once per epoch. Although changing for the fork version
 // is very rare, a validator should check these data every epoch to be sure the validator is
 // participating on the correct fork version.
-func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
+func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot params.SoltNumber) {
 	if !featureconfig.Get().EnableDomainDataCache {
 		return
 	}
@@ -388,7 +388,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 	}
 }
 
-func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {
+func (v *validator) domainData(ctx context.Context, epoch uint64, domain params.DomainBytes) (*ethpb.DomainResponse, error) {
 	v.domainDataLock.Lock()
 	defer v.domainDataLock.Unlock()
 

@@ -49,7 +49,7 @@ var (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey params.KeyBytes) {
+func (v *validator) ProposeBlock(ctx context.Context, slot params.SoltNumber, pubKey params.KeyBytes) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -173,7 +173,7 @@ func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) 
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey params.KeyBytes, epoch uint64) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey params.KeyBytes, epoch params.EpochNumber) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 
 	if err != nil {
@@ -189,7 +189,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey params.KeyBytes
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey params.KeyBytes, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey params.KeyBytes, epoch params.EpochNumber, b *ethpb.BeaconBlock) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
@@ -226,7 +226,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey params.KeyBytes, epoch
 // HasProposedForEpoch returns whether a validators proposal history has been marked for the entered epoch.
 // If the request is more in the future than what the history contains, it will return false.
 // If the request is from the past, and likely previously pruned it will return false.
-func HasProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) bool {
+func HasProposedForEpoch(history *slashpb.ProposalHistory, epoch params.EpochNumber) bool {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Previously pruned, we should return false.
 	if int(epoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
@@ -242,7 +242,7 @@ func HasProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) bool {
 // SetProposedForEpoch updates the proposal history to mark the indicated epoch in the bitlist
 // and updates the last epoch written if needed.
 // Returns the modified proposal history.
-func SetProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) *slashpb.ProposalHistory {
+func SetProposedForEpoch(history *slashpb.ProposalHistory, epoch params.EpochNumber) *slashpb.ProposalHistory {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	if epoch > history.LatestEpochWritten {

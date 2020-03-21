@@ -28,7 +28,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 // responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
-func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
+func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot params.SoltNumber) error {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the start of the epoch, and not in the first epoch.
 		return nil
