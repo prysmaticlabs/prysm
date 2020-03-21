@@ -15,7 +15,7 @@ import (
 
 const (
 	maxPollingWaitTime  = 60 * time.Second
-	filePollingInterval = 1 * time.Second
+	filePollingInterval = 500 * time.Millisecond
 )
 
 func killProcesses(t *testing.T, pIDs []int) {
@@ -82,26 +82,28 @@ func waitForTextInFile(file *os.File, text string) error {
 	}
 }
 
-func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
+func logOutput(t *testing.T, config *end2EndConfig) {
 	// Log out errors from beacon chain nodes.
 	for i := uint64(0); i < config.numBeaconNodes; i++ {
-		beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
+		beaconLogFile, err := os.Open(path.Join(config.tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		logErrorOutput(t, beaconLogFile, "beacon chain node", i)
 
-		validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
+		validatorLogFile, err := os.Open(path.Join(config.tmpPath, fmt.Sprintf(validatorLogFileName, i)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		logErrorOutput(t, validatorLogFile, "validator client", i)
 
-		slasherLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(slasherLogFileName, i)))
-		if err != nil {
-			t.Fatal(err)
+		if config.testSlasher {
+			slasherLogFile, err := os.Open(path.Join(config.tmpPath, fmt.Sprintf(slasherLogFileName, i)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			logErrorOutput(t, slasherLogFile, "slasher client", i)
 		}
-		logErrorOutput(t, slasherLogFile, "slasher client", i)
 	}
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
