@@ -39,10 +39,26 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().SubmitAggregateAndProof(
+	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.AggregationRequest{}),
-	).Return(&ethpb.AggregationResponse{}, nil)
+		gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
+	).Return(&ethpb.AggregateSelectionResponse{
+		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 0,
+			Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+			SelectionProof:  nil,
+		},
+	}, nil)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
+	).Return(&ethpb.SignedAggregateSubmitResponse{}, nil)
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
 }
