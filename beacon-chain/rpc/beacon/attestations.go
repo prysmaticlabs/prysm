@@ -125,9 +125,17 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	var atts []*ethpb.Attestation
+	totalLen := 0
 	for _, block := range blocks {
-		atts = append(atts, block.Block.Body.Attestations...)
+		totalLen += len(block.Block.Body.Attestations)
+	}
+	atts := make([]*ethpb.Attestation, totalLen)
+	prevLen := 0
+	for _, block := range blocks {
+		for r, att := range block.Block.Body.Attestations {
+			atts[prevLen+r] = att
+		}
+		prevLen += len(block.Block.Body.Attestations)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
