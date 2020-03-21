@@ -61,17 +61,9 @@ func (bs *Server) ListAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	totalLen := 0
+	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		totalLen += len(block.Block.Body.Attestations)
-	}
-	atts := make([]*ethpb.Attestation, totalLen)
-	prevLen := 0
-	for _, block := range blocks {
-		for r, att := range block.Block.Body.Attestations {
-			atts[prevLen+r] = att
-		}
-		prevLen += len(block.Block.Body.Attestations)
+		atts = append(atts, block.Block.Body.Attestations...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -125,17 +117,9 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	totalLen := 0
+	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		totalLen += len(block.Block.Body.Attestations)
-	}
-	atts := make([]*ethpb.Attestation, totalLen)
-	prevLen := 0
-	for _, block := range blocks {
-		for r, att := range block.Block.Body.Attestations {
-			atts[prevLen+r] = att
-		}
-		prevLen += len(block.Block.Body.Attestations)
+		atts = append(atts, block.Block.Body.Attestations...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
