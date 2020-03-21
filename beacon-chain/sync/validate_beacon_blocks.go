@@ -48,7 +48,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify the block is the first block received for the proposer for the slot.
-	if r.seenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
+	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return false
 	}
 
@@ -78,19 +78,25 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
+	r.setSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex)
+
 	msg.ValidatorData = blk // Used in downstream subscriber
 	return true
 }
 
-// Returns true if the block is the first block proposed for the proposer for the slot.
-func (r *Service) seenBlockIndexSlot(slot uint64, proposerIdx uint64) bool {
-	r.seenBlockLock.Lock()
-	defer r.seenBlockLock.Unlock()
+// Returns true if the block is not the first block proposed for the proposer for the slot.
+func (r *Service) hasSeenBlockIndexSlot(slot uint64, proposerIdx uint64) bool {
+	r.seenBlockLock.RLock()
+	defer r.seenBlockLock.RUnlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
-	if _, seen := r.seenBlockCache.Get(string(b)); seen {
-		return true
-	}
+	_, seen := r.seenBlockCache.Get(string(b))
+	return seen
+}
 
-	r.seenBlockCache.Set(b, true, 1)
-	return false
+// Set block proposer index and slot as seen for incoming blocks.
+func (s *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
+	s.seenBlockLock.Lock()
+	defer s.seenBlockLock.Unlock()
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
+	s.seenBlockCache.Set(b, true, 1)
 }

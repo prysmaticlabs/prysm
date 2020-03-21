@@ -50,8 +50,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify this is the first aggregate received from the aggregator with index and slot.
-	if r.seenAggregatorIndexSlot(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex) {
-		fmt.Println("wtf")
+	if r.hasSeenAggregatorIndexSlot(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex) {
 		return false
 	}
 
@@ -75,6 +74,8 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Message.Aggregate) {
 		return false
 	}
+
+	r.setAggregatorIndexSlotSeen(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
 
@@ -139,18 +140,21 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.Aggre
 	return true
 }
 
-// Returns true if the attestation is the first aggregate received for the aggregator with index and slot.
-func (r *Service) seenAggregatorIndexSlot(slot uint64, aggregatorIndex uint64) bool {
+// Returns true if the node has received aggregate for the aggregator with index and slot.
+func (r *Service) hasSeenAggregatorIndexSlot(slot uint64, aggregatorIndex uint64) bool {
+	r.seenAttestationLock.RLock()
+	defer r.seenAttestationLock.RUnlock()
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
+	_, seen := r.seenAttestationCache.Get(string(b))
+	return seen
+}
+
+// Set aggregate's aggregator index slot as seen.
+func (r *Service) setAggregatorIndexSlotSeen(slot uint64, aggregatorIndex uint64) {
 	r.seenAttestationLock.Lock()
 	defer r.seenAttestationLock.Unlock()
-
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
-	if _, seen := r.seenAttestationCache.Get(string(b)); seen {
-		return true
-	}
-
 	r.seenAttestationCache.Set(b, true, 1)
-	return false
 }
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.

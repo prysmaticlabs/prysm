@@ -103,9 +103,9 @@ type Service struct {
 	blockNotifier        blockfeed.Notifier
 	blocksRateLimiter    *leakybucket.Collector
 	attestationNotifier  operation.Notifier
-	seenBlockLock        sync.Mutex
+	seenBlockLock        sync.RWMutex
 	seenBlockCache       *ristretto.Cache
-	seenAttestationLock  sync.Mutex
+	seenAttestationLock  sync.RWMutex
 	seenAttestationCache *ristretto.Cache
 }
 
