@@ -53,6 +53,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return false
 	}
 
+	if att.Data == nil {
+		return false
+	}
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return false

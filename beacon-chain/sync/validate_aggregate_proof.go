@@ -49,6 +49,9 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
+	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
+		return false
+	}
 	// Verify this is the first aggregate received from the aggregator with index and slot.
 	if r.hasSeenAggregatorIndexSlot(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex) {
 		return false

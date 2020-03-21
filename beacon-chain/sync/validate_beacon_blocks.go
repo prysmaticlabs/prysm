@@ -47,6 +47,9 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
+	if blk.Block == nil {
+		return false
+	}
 	// Verify the block is the first block received for the proposer for the slot.
 	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return false
@@ -77,8 +80,6 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if _, err = bls.SignatureFromBytes(blk.Signature); err != nil {
 		return false
 	}
-
-	r.setSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex)
 
 	msg.ValidatorData = blk // Used in downstream subscriber
 	return true

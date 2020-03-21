@@ -353,6 +353,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	if !result {
 		t.Error("Expected true result, got false")
 	}
+	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
 	result = r.validateBeaconBlockPubSub(ctx, "", m)
 	if result {
