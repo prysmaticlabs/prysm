@@ -68,7 +68,7 @@ func TestSign(t *testing.T) {
 	direct := keymanager.NewDirect(sks)
 
 	pubKey := bytesutil.ToBytes48(sks[0].PublicKey().Marshal())
-	msg := [32]byte{}
+	msg := [params.ROOT_BYTES_LENGTH]byte{}
 	sig, err := direct.Sign(pubKey, msg, 0)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)

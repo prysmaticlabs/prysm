@@ -153,7 +153,7 @@ func (v *ValidatorService) Start() {
 		logValidatorBalances: v.logValidatorBalances,
 		emitAccountMetrics:   v.emitAccountMetrics,
 		prevBalance:          make(map[[params.BALANCE_BYTES_LENGTH]byte]uint64),
-		attLogs:              make(map[[32]byte]*attSubmitted),
+		attLogs:              make(map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted),
 		domainDataCache:      cache,
 	}
 	go run(v.ctx, v.validator)

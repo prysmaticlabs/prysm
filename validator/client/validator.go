@@ -45,7 +45,7 @@ type validator struct {
 	prevBalance          map[[params.BALANCE_BYTES_LENGTH]byte]uint64
 	logValidatorBalances bool
 	emitAccountMetrics   bool
-	attLogs              map[[32]byte]*attSubmitted
+	attLogs              map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted
 	attLogsLock          sync.Mutex
 	domainDataLock       sync.Mutex
 	domainDataCache      *ristretto.Cache

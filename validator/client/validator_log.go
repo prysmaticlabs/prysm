@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -32,5 +33,5 @@ func (v *validator) LogAttestationsSubmitted() {
 		}).Info("Submitted new attestations")
 	}
 
-	v.attLogs = make(map[[32]byte]*attSubmitted)
+	v.attLogs = make(map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted)
 }

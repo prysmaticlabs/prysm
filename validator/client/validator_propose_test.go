@@ -32,7 +32,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		validatorClient: m.validatorClient,
 		keyManager:      testKeyManager,
 		graffiti:        []byte{},
-		attLogs:         make(map[[32]byte]*attSubmitted),
+		attLogs:         make(map[[params.ATTESTATION_HASH_BYTES_LENGTH]byte]*attSubmitted),
 	}
 
 	return validator, m, ctrl.Finish
