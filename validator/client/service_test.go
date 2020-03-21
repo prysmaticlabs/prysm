@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"os"
 	"strings"
 	"testing"
@@ -18,15 +19,15 @@ import (
 
 var _ = shared.Service(&ValidatorService{})
 var validatorKey *keystore.Key
-var validatorPubKey [48]byte
-var keyMap map[[48]byte]*keystore.Key
-var keyMapThreeValidators map[[48]byte]*keystore.Key
+var validatorPubKey [params.KEY_BYTES_LENGTH]byte
+var keyMap map[[params.KEY_BYTES_LENGTH]byte]*keystore.Key
+var keyMapThreeValidators map[[params.KEY_BYTES_LENGTH]byte]*keystore.Key
 var testKeyManager keymanager.KeyManager
 var testKeyManagerThreeValidators keymanager.KeyManager
 
 func keySetup() {
-	keyMap = make(map[[48]byte]*keystore.Key)
-	keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
+	keyMap = make(map[[params.KEY_BYTES_LENGTH]byte]*keystore.Key)
+	keyMapThreeValidators = make(map[[params.KEY_BYTES_LENGTH]byte]*keystore.Key)
 
 	validatorKey, _ = keystore.NewKey()
 	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
@@ -39,7 +40,7 @@ func keySetup() {
 	sks = make([]*bls.SecretKey, 3)
 	for i := 0; i < 3; i++ {
 		vKey, _ := keystore.NewKey()
-		var pubKey [48]byte
+		var pubKey [params.KEY_BYTES_LENGTH]byte
 		copy(pubKey[:], vKey.PublicKey.Marshal())
 		keyMapThreeValidators[pubKey] = vKey
 		sks[i] = vKey.SecretKey

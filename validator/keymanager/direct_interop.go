@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"encoding/json"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -42,8 +43,8 @@ func NewInterop(input string) (*Interop, string, error) {
 
 	km := &Interop{
 		Direct: &Direct{
-			publicKeys: make(map[[48]byte]*bls.PublicKey),
-			secretKeys: make(map[[48]byte]*bls.SecretKey),
+			publicKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.PublicKey),
+			secretKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.SecretKey),
 		},
 	}
 	for i := 0; uint64(i) < opts.Keys; i++ {

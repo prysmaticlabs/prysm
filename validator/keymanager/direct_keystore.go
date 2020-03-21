@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"encoding/json"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -82,8 +83,8 @@ func NewKeystore(input string) (KeyManager, string, error) {
 
 	km := &Unencrypted{
 		Direct: &Direct{
-			publicKeys: make(map[[48]byte]*bls.PublicKey),
-			secretKeys: make(map[[48]byte]*bls.SecretKey),
+			publicKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.PublicKey),
+			secretKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.SecretKey),
 		},
 	}
 	for _, key := range keyMap {

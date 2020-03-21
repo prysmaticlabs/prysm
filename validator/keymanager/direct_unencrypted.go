@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"encoding/json"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"io"
 	"io/ioutil"
 	"os"
@@ -61,8 +62,8 @@ func NewUnencrypted(input string) (*Unencrypted, string, error) {
 
 	km := &Unencrypted{
 		Direct: &Direct{
-			publicKeys: make(map[[48]byte]*bls.PublicKey),
-			secretKeys: make(map[[48]byte]*bls.SecretKey),
+			publicKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.PublicKey),
+			secretKeys: make(map[[params.KEY_BYTES_LENGTH]byte]*bls.SecretKey),
 		},
 	}
 	for i := 0; i < len(sks); i++ {

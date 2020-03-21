@@ -51,7 +51,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return err
 	}
 
-	missingValidators := make(map[[48]byte]bool)
+	missingValidators := make(map[[params.KEY_BYTES_LENGTH]byte]bool)
 	for _, val := range resp.MissingValidators {
 		missingValidators[bytesutil.ToBytes48(val)] = true
 	}

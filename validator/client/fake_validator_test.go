@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -77,25 +78,25 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) {
+func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[params.VALIDATOR_ROLE_BYTES_LENGTH]byte][]pb.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[[48]byte][]pb.ValidatorRole)
-	vr[[48]byte{1}] = fv.RolesAtRet
+	vr := make(map[[params.VALIDATOR_ROLE_BYTES_LENGTH]byte][]pb.ValidatorRole)
+	vr[[params.VALIDATOR_ROLE_BYTES_LENGTH]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }
 
-func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *fakeValidator) SubmitAttestation(_ context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
-func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48]byte) {
+func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
 
-func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [48]byte) {}
+func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {}
 
 func (fv *fakeValidator) LogAttestationsSubmitted() {}
 

@@ -5,6 +5,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -258,7 +259,7 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	return km, nil
 }
 
-func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
+func clearDB(dataDir string, pubkeys [][params.KEY_BYTES_LENGTH]byte, force bool) error {
 	var err error
 	clearDBConfirmed := force
 

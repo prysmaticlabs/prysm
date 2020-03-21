@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -151,7 +152,7 @@ func (v *ValidatorService) Start() {
 		graffiti:             v.graffiti,
 		logValidatorBalances: v.logValidatorBalances,
 		emitAccountMetrics:   v.emitAccountMetrics,
-		prevBalance:          make(map[[48]byte]uint64),
+		prevBalance:          make(map[[params.BALANCE_BYTES_LENGTH]byte]uint64),
 		attLogs:              make(map[[32]byte]*attSubmitted),
 		domainDataCache:      cache,
 	}

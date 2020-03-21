@@ -49,7 +49,7 @@ var (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte) {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [params.KEY_BYTES_LENGTH]byte) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
@@ -173,7 +173,7 @@ func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) 
 }
 
 // Sign randao reveal with randao domain and private key.
-func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
+func (v *validator) signRandaoReveal(ctx context.Context, pubKey [params.KEY_BYTES_LENGTH]byte, epoch uint64) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
 
 	if err != nil {
@@ -189,7 +189,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 }
 
 // Sign block with proposer domain and private key.
-func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
+func (v *validator) signBlock(ctx context.Context, pubKey [params.KEY_BYTES_LENGTH]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")

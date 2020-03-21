@@ -2,6 +2,7 @@ package keymanager_test
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -54,7 +55,7 @@ func TestSignNoSuchKey(t *testing.T) {
 	//	sks = append(sks, bls.RandKey())
 	direct := keymanager.NewDirect(sks)
 
-	sig, err := direct.Sign([48]byte{}, [32]byte{}, 0)
+	sig, err := direct.Sign([params.KEY_BYTES_LENGTH]byte{}, [params.ROOT_BYTES_LENGTH]byte{}, 0)
 	if err != keymanager.ErrNoSuchKey {
 		t.Fatalf("Incorrect error: expected %v, received %v", keymanager.ErrNoSuchKey, err)
 	}

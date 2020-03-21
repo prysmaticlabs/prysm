@@ -37,7 +37,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 	}
 	someRoot := [32]byte{1, 2, 3, 4}
 	someSig := [96]byte{1, 2, 3, 4}
-	someKey := [48]byte{1, 2, 3, 4}
+	someKey := [params.KEY_BYTES_LENGTH]byte{1, 2, 3, 4}
 	dep := &ethpb.Deposit{
 		Proof: proof,
 		Data: &ethpb.Deposit_Data{
