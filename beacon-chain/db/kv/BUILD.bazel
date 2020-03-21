@@ -22,6 +22,7 @@ go_library(
         "utils.go",
         "validators.go",
     ],
+    gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kv",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [

@@ -36,6 +36,7 @@ go_library(
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
     ],
+    gc_goopts = ["-d=libfuzzer"],
 )
 
 go_test(
