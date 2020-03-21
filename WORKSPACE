@@ -60,6 +60,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:bazel-gazelle.patch",  # Temporary hack to apply libfuzz gc_opts to all external deps.
+    ],
     sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
     urls = [
         "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
@@ -1614,6 +1618,33 @@ go_repository(
     name = "com_github_ferranbt_fastssz",
     commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     importpath = "github.com/ferranbt/fastssz",
+)
+
+http_archive(
+    name = "sszgen",  # Hack because we don't want to build this binary with libfuzzer, but need it to build.
+    build_file_content = """
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_binary")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "sszgen/main.go",
+        "sszgen/marshal.go",
+        "sszgen/size.go",
+        "sszgen/unmarshal.go",
+    ],
+    importpath = "github.com/ferranbt/fastssz/sszgen",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "sszgen",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+    """,
+    strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
+    urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
 )
 
 go_repository(

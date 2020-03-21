@@ -73,7 +73,8 @@ ssz_gen_marshal = rule(
         "srcs": attr.label_list(allow_files = True),
         "go_proto": attr.label(providers = [GoLibrary]),
         "sszgen": attr.label(
-            default = Label("@com_github_ferranbt_fastssz//sszgen:sszgen"),
+            #default = Label("@com_github_ferranbt_fastssz//sszgen:sszgen"),
+            default = Label("@sszgen//:sszgen"),
             executable = True,
             cfg = "host",
         ),
