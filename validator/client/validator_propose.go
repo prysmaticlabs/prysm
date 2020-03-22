@@ -49,7 +49,7 @@ var (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot params.SoltNumber, pubKey params.KeyBytes) {
+func (v *validator) ProposeBlock(ctx context.Context, slot params.SlotNumber, pubKey params.KeyBytes) {
 	if slot == 0 {
 		log.Debug("Assigned to genesis slot, skipping proposal")
 		return

@@ -49,7 +49,7 @@ var (
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) SubmitAttestation(ctx context.Context, slot params.SoltNumber, pubKey params.KeyBytes) {
+func (v *validator) SubmitAttestation(ctx context.Context, slot params.SlotNumber, pubKey params.KeyBytes) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
