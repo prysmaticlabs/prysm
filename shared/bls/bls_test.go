@@ -291,3 +291,10 @@ func TestPublicKey_Copy(t *testing.T) {
 		t.Fatal("Pubkey was mutated after copy")
 	}
 }
+
+func TestSerialize(t *testing.T) {
+	rk := bls.RandKey()
+	b := rk.Marshal()
+
+	bls.SecretKeyFromBytes(b)
+}

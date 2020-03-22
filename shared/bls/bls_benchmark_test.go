@@ -5,6 +5,7 @@ import (
 
 	bls2 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -71,5 +72,30 @@ func BenchmarkSignature_VerifyAggregate(b *testing.B) {
 		if !aggregated.VerifyAggregateCommon(pks, msg, domain) {
 			b.Fatal("could not verify aggregate sig")
 		}
+	}
+}
+
+func BenchmarkSecretKey_Marshal(b *testing.B) {
+	key := bls.RandKey()
+	d := key.Marshal()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = bls.SecretKeyFromBytes(d)
+	}
+}
+
+func BenchmarkHashWithDomain(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		bls.HashWithDomain(
+			bytesutil.ToBytes32([]byte("foobar")),
+			bytesutil.ToBytes8([]byte("buzz")),
+		)
+	}
+}
+
+func BenchmarkDomain(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		bls.Domain([4]byte{'A', 'B', 'C', 'D'}, [4]byte{'E', 'F', 'G', 'H'})
 	}
 }
