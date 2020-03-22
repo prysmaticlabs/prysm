@@ -17,10 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
 	gologging "github.com/whyrusleeping/go-logging"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
+	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
