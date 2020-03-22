@@ -328,12 +328,12 @@ func TestHighestBitIndex(t *testing.T) {
 	}{
 		{nil, 0, true},
 		{[]byte{}, 0, true},
-		{[]byte{0b00000001}, 0, false},
-		{[]byte{0b10100101}, 7, false},
+		{[]byte{0b00000001}, 1, false},
+		{[]byte{0b10100101}, 8, false},
 		{[]byte{0x00, 0x00}, 0, false},
-		{[]byte{0xff, 0xa0}, 15, false},
-		{[]byte{12, 34, 56, 78}, 30, false},
-		{[]byte{255, 255, 255, 255}, 31, false},
+		{[]byte{0xff, 0xa0}, 16, false},
+		{[]byte{12, 34, 56, 78}, 31, false},
+		{[]byte{255, 255, 255, 255}, 32, false},
 	}
 	for _, tt := range tests {
 		i, err := bytesutil.HighestBitIndex(tt.a)
@@ -343,6 +343,58 @@ func TestHighestBitIndex(t *testing.T) {
 			}
 			if i != tt.b {
 				t.Errorf("HighestBitIndex(%d) = %v, want = %d", tt.a, i, tt.b)
+			}
+		} else {
+			if err.Error() != "input list can't be empty or nil" {
+				t.Error("Did not get wanted error")
+			}
+		}
+	}
+}
+
+func TestHighestBitIndexBelow(t *testing.T) {
+	tests := []struct {
+		a     []byte
+		b     int
+		c     int
+		error bool
+	}{
+		{nil, 0, 0, true},
+		{[]byte{}, 0, 0, true},
+		{[]byte{0b00010001}, 0, 0, false},
+		{[]byte{0b00010001}, 1, 1, false},
+		{[]byte{0b00010001}, 2, 1, false},
+		{[]byte{0b00010001}, 4, 1, false},
+		{[]byte{0b00010001}, 5, 5, false},
+		{[]byte{0b00010001}, 8, 5, false},
+		{[]byte{0b00010001, 0b00000000}, 0, 0, false},
+		{[]byte{0b00010001, 0b00000000}, 1, 1, false},
+		{[]byte{0b00010001, 0b00000000}, 2, 1, false},
+		{[]byte{0b00010001, 0b00000000}, 4, 1, false},
+		{[]byte{0b00010001, 0b00000000}, 5, 5, false},
+		{[]byte{0b00010001, 0b00000000}, 8, 5, false},
+		{[]byte{0b00010001, 0b00000000}, 15, 5, false},
+		{[]byte{0b00010001, 0b00000000}, 16, 5, false},
+		{[]byte{0b00010001, 0b00100010}, 8, 5, false},
+		{[]byte{0b00010001, 0b00100010}, 9, 5, false},
+		{[]byte{0b00010001, 0b00100010}, 10, 10, false},
+		{[]byte{0b00010001, 0b00100010}, 11, 10, false},
+		{[]byte{0b00010001, 0b00100010}, 14, 14, false},
+		{[]byte{0b00010001, 0b00100010}, 15, 14, false},
+		{[]byte{0b00010001, 0b00100010}, 24, 14, false},
+		{[]byte{0b00010001, 0b00100010, 0b10000000}, 23, 14, false},
+		{[]byte{0b00010001, 0b00100010, 0b10000000}, 24, 24, false},
+		{[]byte{12, 34, 56, 78}, 1000, 31, false},
+		{[]byte{255, 255, 255, 255}, 1000, 32, false},
+	}
+	for _, tt := range tests {
+		i, err := bytesutil.HighestBitIndexBelow(tt.a, tt.b)
+		if !tt.error {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if i != tt.c {
+				t.Errorf("HighestBitIndexBelow(%d) = %v, want = %d", tt.a, i, tt.c)
 			}
 		} else {
 			if err.Error() != "input list can't be empty or nil" {
