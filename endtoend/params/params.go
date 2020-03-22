@@ -21,14 +21,19 @@ type Params struct {
 	ValidatorMetricsPort  int
 }
 
+// TestParams is the globally accessible var for getting config elements.
 var TestParams *Params
 
+// BeaconNodeLogFileName is the file name used for the beacon chain node logs.
 var BeaconNodeLogFileName = "beacon-%d.log"
 
+// SlasherLogFileName is the file name used for the slasher client logs.
 var SlasherLogFileName = "slasher-%d.log"
 
+// ValidatorLogFileName is the file name used for the validator client logs.
 var ValidatorLogFileName = "vals-%d.log"
 
+// Init initializes the E2E config, properly handling test sharding.
 func Init(beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
 	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")

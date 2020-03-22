@@ -13,8 +13,8 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 )
 
-// startSlasher starts a slasher client for use within E2E, connected to the first beacon node.
-// It returns the process ID of the slasher.
+// StartSlashers starts slasher clients for use within E2E, connected to all beacon nodes.
+// It returns the process IDs of the slashers.
 func StartSlashers(t *testing.T) []int {
 	binaryPath, found := bazel.FindBinary("slasher", "slasher")
 	if !found {

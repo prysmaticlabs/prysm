@@ -21,6 +21,7 @@ const (
 	filePollingInterval = 500 * time.Millisecond
 )
 
+// KillProcesses finds the passed in process IDs and kills the process.
 func KillProcesses(t *testing.T, pIDs []int) {
 	for _, id := range pIDs {
 		process, err := os.FindProcess(id)
@@ -36,6 +37,8 @@ func KillProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
+// DeleteAndCreateFile checks if the file path given exists, if it does, it deletes it and creates a new file.
+// If not, it just creates the requested file.
 func DeleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {
 	filePath := path.Join(tmpPath, fileName)
 	if _, err := os.Stat(filePath); os.IsExist(err) {
@@ -50,6 +53,7 @@ func DeleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {
 	return newFile, nil
 }
 
+// WaitForTextInFile checks a file every polling interval for the text requested.
 func WaitForTextInFile(file *os.File, text string) error {
 	d := time.Now().Add(maxPollingWaitTime)
 	ctx, cancel := context.WithDeadline(context.Background(), d)
@@ -85,6 +89,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 	}
 }
 
+// LogOutput logs the output of all log files made.
 func LogOutput(t *testing.T, config *types.E2EConfig) {
 	// Log out errors from beacon chain nodes.
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
@@ -111,6 +116,7 @@ func LogOutput(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
 
+// LogErrorOutput logs the output of a specific file.
 func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 	var errorLines []string
 
@@ -121,7 +127,6 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 			errorLines = append(errorLines, currentLine)
 		}
 	}
-
 	if len(errorLines) < 1 {
 		return
 	}
