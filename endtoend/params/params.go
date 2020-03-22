@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Params struct defines the parameters needed for running E2E tests to properly handle test sharding.
 type Params struct {
 	TestPath              string
 	LogPath               string
