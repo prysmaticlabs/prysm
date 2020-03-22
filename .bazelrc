@@ -64,6 +64,7 @@ build:fuzz --copt=-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 build:fuzz --linkopt -Wl,--no-as-needed
 build:fuzz --define=gc_goopts=-d=libfuzzer
 build:fuzz --run_under=//tools:fuzz_wrapper
+build:fuzz --compilation_mode=opt
 
 test:fuzz --local_test_jobs="HOST_CPUS*.5"
 
