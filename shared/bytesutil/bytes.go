@@ -245,8 +245,8 @@ func PadTo(b []byte, size int) []byte {
 }
 
 // SetBit sets the index `i` of bitlist `b` to 1.
-// It grows and returns a longer bitlist if index `i`
-// is out of range.
+// It grows and returns a longer bitlist with 1 set
+// if index `i` is out of range.
 func SetBit(b []byte, i int) []byte {
 	if i >= len(b)*8 {
 		h := (i + (8 - i%8)) / 8
