@@ -321,19 +321,32 @@ func TestMakeEmptyBitfields(t *testing.T) {
 
 func TestHighestBitIndex(t *testing.T) {
 	tests := []struct {
-		a []byte
-		b int
+		a     []byte
+		b     int
+		error bool
 	}{
-		{[]byte{0b00000001}, 0},
-		{[]byte{0b10100101}, 7},
-		{[]byte{0x00, 0x00}, 0},
-		{[]byte{0xff, 0xa0}, 15},
-		{[]byte{12, 34, 56, 78}, 30},
-		{[]byte{255, 255, 255, 255}, 31},
+		{nil, 0, true},
+		{[]byte{}, 0, true},
+		{[]byte{0b00000001}, 0, false},
+		{[]byte{0b10100101}, 7, false},
+		{[]byte{0x00, 0x00}, 0, false},
+		{[]byte{0xff, 0xa0}, 15, false},
+		{[]byte{12, 34, 56, 78}, 30, false},
+		{[]byte{255, 255, 255, 255}, 31, false},
 	}
 	for _, tt := range tests {
-		if bytesutil.HighestBitIndex(tt.a) != tt.b {
-			t.Errorf("HighestBitIndex(%d) = %v, want = %d", tt.a, bytesutil.HighestBitIndex(tt.a), tt.b)
+		i, err := bytesutil.HighestBitIndex(tt.a)
+		if !tt.error {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if i != tt.b {
+				t.Errorf("HighestBitIndex(%d) = %v, want = %d", tt.a, i, tt.b)
+			}
+		} else {
+			if err.Error() != "input list can't be empty or nil" {
+				t.Error("Did not get wanted error")
+			}
 		}
 	}
 }

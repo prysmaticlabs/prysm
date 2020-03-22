@@ -3,6 +3,8 @@ package bytesutil
 
 import (
 	"encoding/binary"
+	"errors"
+	"math/bits"
 )
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
@@ -276,15 +278,17 @@ func MakeEmptyBitfields(i int) []byte {
 
 // HighestBitIndex returns the index of the highest
 // bit set from bitlist `b`.
-func HighestBitIndex(b []byte) int {
-	highestSlot := len(b)*8 - 1
-	for highestSlot >= 0 {
-		i := uint8(1 << (highestSlot % 8))
-		if b[highestSlot/8]&i == i {
-			return highestSlot
-		}
-		highestSlot--
+func HighestBitIndex(b []byte) (int, error) {
+	if b == nil || len(b) == 0 {
+		return 0, errors.New("input list can't be empty or nil")
 	}
 
-	return 0
+	for i := len(b) - 1; i >= 0; i-- {
+		if b[i] == 0 {
+			continue
+		}
+		return bits.Len8(b[i]) + (i*8 - 1), nil
+	}
+
+	return 0, nil
 }
