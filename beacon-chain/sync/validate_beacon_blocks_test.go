@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,6 +17,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -124,7 +124,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	}
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 1,
+			Slot:       1,
 			ParentRoot: testutil.Random32Bytes(t),
 		},
 		Signature: sk.Sign([]byte("data")).Marshal(),
@@ -134,7 +134,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		db:          db,
 		p2p:         p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot),0),
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
