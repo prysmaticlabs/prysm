@@ -160,15 +160,7 @@ func (bs *Server) ListIndexedAttestations(
 			continue
 		}
 		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not convert attestation with slot %d to indexed form: %v",
-				att.Data.Slot,
-				err,
-			)
-		}
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		indexedAtts[i] = idxAtt
 	}
 
@@ -286,15 +278,7 @@ func (bs *Server) StreamIndexedAttestations(
 					continue
 				}
 				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
-				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
-				if err != nil {
-					return status.Errorf(
-						codes.Internal,
-						"Could not convert attestation with slot %d to indexed form: %v",
-						att.Data.Slot,
-						err,
-					)
-				}
+				idxAtt := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
 				if err := stream.Send(idxAtt); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}

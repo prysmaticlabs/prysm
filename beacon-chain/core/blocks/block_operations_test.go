@@ -943,7 +943,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1004,7 +1004,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1032,7 +1032,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1082,7 +1082,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1109,7 +1109,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1240,10 +1240,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
-		if err != nil {
-			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
-		}
+		ia := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
 		if !reflect.DeepEqual(wanted, ia) {
 			diff, _ := messagediff.PrettyDiff(ia, wanted)
 			t.Log(diff)

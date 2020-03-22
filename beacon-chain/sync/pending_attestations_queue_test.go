@@ -128,7 +128,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
