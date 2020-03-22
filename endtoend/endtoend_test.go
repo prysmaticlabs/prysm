@@ -109,7 +109,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	index := uint64(len(beaconNodes) - 1)
 
 	// Sleep until the next epoch to give time for the newly started node to sync.
-	extraTimeToSync := (config.epochsToRun+3)*epochSeconds + 90
+	extraTimeToSync := (config.epochsToRun+3)*epochSeconds + 60
 	genesisTime.Add(time.Duration(extraTimeToSync) * time.Second)
 	// Wait until middle of epoch to request to prevent conflicts.
 	time.Sleep(time.Until(genesisTime))
