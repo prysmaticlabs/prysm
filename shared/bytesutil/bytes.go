@@ -288,7 +288,33 @@ func HighestBitIndex(b []byte) (int, error) {
 		if b[i] == 0 {
 			continue
 		}
-		return bits.Len8(b[i]) + (i*8 - 1), nil
+		return bits.Len8(b[i]) + (i * 8), nil
+	}
+
+	return 0, nil
+}
+
+// HighestBitIndexBelow returns the index of the highest
+// bit set from bitlist `b` that's below index `a`.
+func HighestBitIndexBelow(b []byte, a int) (int, error) {
+	if b == nil || len(b) == 0 {
+		return 0, errors.New("input list can't be empty or nil")
+	}
+
+	start := a / 8
+	if start >= len(b) {
+		start = len(b) - 1
+	}
+
+	mask := byte(1<<(a%8) - 1)
+	for i := start; i >= 0; i-- {
+		if b[i] == 0 || (bits.Len8(b[i]&mask) == 0 && a/8 <= i) {
+			continue
+		}
+		if a/8 > i {
+			mask = 0xff
+		}
+		return bits.Len8(b[i]&mask) + (i * 8), nil
 	}
 
 	return 0, nil
