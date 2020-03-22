@@ -297,13 +297,14 @@ func HighestBitIndex(b []byte) (int, error) {
 // HighestBitIndexAt returns the index of the highest
 // bit set from bitlist `b` that is at `index` (inclusive).
 func HighestBitIndexAt(b []byte, index int) (int, error) {
-	if b == nil || len(b) == 0 {
+	bLength := len(b)
+	if b == nil || bLength == 0 {
 		return 0, errors.New("input list can't be empty or nil")
 	}
 
 	start := index / 8
-	if start >= len(b) {
-		start = len(b) - 1
+	if start >= bLength {
+		start = bLength- 1
 	}
 
 	mask := byte(1<<(index%8) - 1)
