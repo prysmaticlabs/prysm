@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var log = logrus.WithField("prefix", "main")
