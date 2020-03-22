@@ -148,10 +148,7 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 	if err != nil {
 		return err
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-	if err != nil {
-		return err
-	}
+	attestingIndices := attestationutil.AttestingIndices(a.AggregationBits, committee)
 	var withinCommittee bool
 	for _, i := range attestingIndices {
 		if validatorIndex == i {

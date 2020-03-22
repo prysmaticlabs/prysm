@@ -428,7 +428,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -743,7 +743,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			t.Error(err)
 		}
