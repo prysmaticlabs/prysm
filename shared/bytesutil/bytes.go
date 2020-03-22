@@ -308,13 +308,15 @@ func HighestBitIndexAt(b []byte, a int) (int, error) {
 
 	mask := byte(1<<(a%8) - 1)
 	for i := start; i >= 0; i-- {
-		masked := b[i]&mask
-		if b[i] == 0 || (bits.Len8(masked) == 0 && a/8 <= i) {
-			continue
-		}
 		if a/8 > i {
 			mask = 0xff
 		}
+		masked := b[i]&mask
+
+		if b[i] == 0 || (bits.Len8(masked) == 0 && a/8 <= i) {
+			continue
+		}
+
 		return bits.Len8(masked) + (i * 8), nil
 	}
 
