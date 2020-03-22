@@ -1210,7 +1210,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			wantedAttestingIndices: []uint64{43, 47},
 		},
 		{
-			aggregationBitfield:    bitfield.Bitlist{0x06},
+			aggregationBitfield:    bitfield.Bitlist{0x03},
 			wantedAttestingIndices: []uint64{47},
 		},
 		{
