@@ -241,3 +241,50 @@ func PadTo(b []byte, size int) []byte {
 	}
 	return append(b, make([]byte, size-len(b))...)
 }
+
+// SetBit sets the index `i` of bitlist `b` to 1.
+// Returns the original bitlist if the index `i`
+// is out of range.
+func SetBit(b []byte, i int) []byte {
+	if i >= len(b)*8 {
+		return b
+	}
+
+	bit := uint8(1 << (i % 8))
+	b[i/8] |= bit
+	return b
+}
+
+// ClearBit clears the index `i` of bitlist `b`.
+// Returns the original bitlist if the index `i`
+// is out of range.
+func ClearBit(b []byte, i int) []byte {
+	if i >= len(b)*8 {
+		return b
+	}
+
+	bit := uint8(1 << (i % 8))
+	b[i/8] &^= bit
+	return b
+}
+
+// MakeEmptyBitfields returns an empty bitlist with
+// input size `i`.
+func MakeEmptyBitfields(i int) []byte {
+	return make([]byte, (i+(8-i%8))/8)
+}
+
+// HighestBitIndex returns the index of the highest
+// bit set from bitlist `b`.
+func HighestBitIndex(b []byte) int {
+	highestSlot := len(b)*8 - 1
+	for highestSlot >= 0 {
+		i := uint8(1 << (highestSlot % 8))
+		if b[highestSlot/8]&i == i {
+			return highestSlot
+		}
+		highestSlot--
+	}
+
+	return 0
+}

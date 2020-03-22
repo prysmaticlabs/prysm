@@ -257,3 +257,83 @@ func TestReverse(t *testing.T) {
 		}
 	}
 }
+
+func TestSetBit(t *testing.T) {
+	tests := []struct {
+		a []byte
+		b int
+		c []byte
+	}{
+		{[]byte{0b00000000}, 1, []byte{0b00000010}},
+		{[]byte{0b00000010}, 7, []byte{0b10000010}},
+		{[]byte{0b10000010}, 8, []byte{0b10000010}},
+		{[]byte{0b10000010, 0b00000000}, 8, []byte{0b10000010, 0b00000001}},
+		{[]byte{0b10000010, 0b00000000}, 10, []byte{0b10000010, 0b00000100}},
+	}
+	for _, tt := range tests {
+		if !bytes.Equal(bytesutil.SetBit(tt.a, tt.b), tt.c) {
+			t.Errorf("Setbit(%d) = %v, want = %d", tt.b, tt.c, bytesutil.SetBit(tt.a, tt.b))
+		}
+	}
+}
+
+func TestClearBit(t *testing.T) {
+	tests := []struct {
+		a []byte
+		b int
+		c []byte
+	}{
+		{[]byte{0b00000000}, 1, []byte{0b00000000}},
+		{[]byte{0b00000010}, 1, []byte{0b00000000}},
+		{[]byte{0b10000010}, 1, []byte{0b10000000}},
+		{[]byte{0b10000010}, 8, []byte{0b10000010}},
+		{[]byte{0b10000010, 0b00001111}, 7, []byte{0b00000010, 0b00001111}},
+		{[]byte{0b10000010, 0b00001111}, 10, []byte{0b10000010, 0b00001011}},
+	}
+	for _, tt := range tests {
+		if !bytes.Equal(bytesutil.ClearBit(tt.a, tt.b), tt.c) {
+			t.Errorf("ClearBit(%d) = %v, want = %d", tt.b, tt.c, bytesutil.ClearBit(tt.a, tt.b))
+		}
+	}
+}
+
+func TestMakeEmptyBitfields(t *testing.T) {
+	tests := []struct {
+		a int
+		b int
+	}{
+		{0, 1},
+		{1, 1},
+		{2, 1},
+		{7, 1},
+		{8, 2},
+		{15, 2},
+		{16, 3},
+		{100, 13},
+		{104, 14},
+	}
+	for _, tt := range tests {
+		if len(bytesutil.MakeEmptyBitfields(tt.a)) != tt.b {
+			t.Errorf("MakeEmptyBitfields(%d) = %v, want = %d", tt.a, len(bytesutil.MakeEmptyBitfields(tt.a)), tt.b)
+		}
+	}
+}
+
+func TestHighestBitIndex(t *testing.T) {
+	tests := []struct {
+		a []byte
+		b int
+	}{
+		{[]byte{0b00000001}, 0},
+		{[]byte{0b10100101}, 7},
+		{[]byte{0x00, 0x00}, 0},
+		{[]byte{0xff, 0xa0}, 15},
+		{[]byte{12, 34, 56, 78}, 30},
+		{[]byte{255, 255, 255, 255}, 31},
+	}
+	for _, tt := range tests {
+		if bytesutil.HighestBitIndex(tt.a) != tt.b {
+			t.Errorf("HighestBitIndex(%d) = %v, want = %d", tt.a, bytesutil.HighestBitIndex(tt.a), tt.b)
+		}
+	}
+}
