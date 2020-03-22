@@ -16,23 +16,23 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // StartEth1Node starts an eth1 local dev chain and deploys a deposit contract.
-func StartEth1Node(t *testing.T, testPath string) (common.Address, string, int) {
+func StartEth1Node(t *testing.T) (string, int) {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {
 		t.Fatal("go-ethereum binary not found")
 	}
 
-	eth1Path := path.Join(testPath, "eth1data/")
+	eth1Path := path.Join(e2e.TestParams.TestPath, "eth1data/")
 	// Clear out ETH1 to prevent issues.
 	if _, err := os.Stat(eth1Path); !os.IsNotExist(err) {
 		if err := os.RemoveAll(eth1Path); err != nil {
@@ -42,21 +42,21 @@ func StartEth1Node(t *testing.T, testPath string) (common.Address, string, int) 
 
 	args := []string{
 		fmt.Sprintf("--datadir=%s", eth1Path),
+		fmt.Sprintf("--rpcport=%d", e2e.TestParams.Eth1RPCPort),
+		fmt.Sprintf("--wsport=%d", e2e.TestParams.Eth1RPCPort+1),
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
 		"--rpccorsdomain=\"*\"",
 		"--rpcvhosts=\"*\"",
-		"--rpcport=8745",
 		"--ws",
 		"--wsaddr=0.0.0.0",
 		"--wsorigins=\"*\"",
-		"--wsport=8746",
 		"--dev",
 		"--dev.period=0",
 		"--ipcdisable",
 	}
 	cmd := exec.Command(binaryPath, args...)
-	file, err := os.Create(path.Join(testPath, "eth1.log"))
+	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1.log")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,18 +71,18 @@ func StartEth1Node(t *testing.T, testPath string) (common.Address, string, int) 
 	}
 
 	// Connect to the started geth dev chain.
-	client, err := rpc.DialHTTP("http://127.0.0.1:8745")
+	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
 	if err != nil {
 		t.Fatalf("Failed to connect to ipc: %v", err)
 	}
 	web3 := ethclient.NewClient(client)
 
 	// Access the dev account keystore to deploy the contract.
-	fileName, err := exec.Command("ls", path.Join(testPath, "eth1data/keystore")).Output()
+	fileName, err := exec.Command("ls", path.Join(eth1Path, "keystore")).Output()
 	if err != nil {
 		t.Fatal(err)
 	}
-	keystorePath := path.Join(testPath, fmt.Sprintf("eth1data/keystore/%s", strings.TrimSpace(string(fileName))))
+	keystorePath := path.Join(eth1Path, fmt.Sprintf("keystore/%s", strings.TrimSpace(string(fileName))))
 	jsonBytes, err := ioutil.ReadFile(keystorePath)
 	if err != nil {
 		t.Fatal(err)
@@ -110,6 +110,7 @@ func StartEth1Node(t *testing.T, testPath string) (common.Address, string, int) 
 	if err != nil {
 		t.Fatalf("Failed to deploy deposit contract: %v", err)
 	}
+	e2e.TestParams.ContractAddress = contractAddr
 
 	// Wait for contract to mine.
 	for pending := true; pending; _, pending, err = web3.TransactionByHash(context.Background(), tx.Hash()) {
@@ -124,7 +125,7 @@ func StartEth1Node(t *testing.T, testPath string) (common.Address, string, int) 
 		t.Fatalf("Unable to advance chain: %v", err)
 	}
 
-	return contractAddr, keystorePath, cmd.Process.Pid
+	return keystorePath, cmd.Process.Pid
 }
 
 func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uint64) error {

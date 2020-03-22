@@ -10,14 +10,12 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 )
-
-var SlasherLogFileName = "slasher-%d.log"
 
 // startSlasher starts a slasher client for use within E2E, connected to the first beacon node.
 // It returns the process ID of the slasher.
-func startSlashers(t *testing.T, config *end2EndConfig) []int {
-	tmpPath := config.tmpPath
+func StartSlashers(t *testing.T) []int {
 	binaryPath, found := bazel.FindBinary("slasher", "slasher")
 	if !found {
 		t.Log(binaryPath)
@@ -25,20 +23,20 @@ func startSlashers(t *testing.T, config *end2EndConfig) []int {
 	}
 
 	var processIDs []int
-	for i := uint64(0); i < config.numBeaconNodes; i++ {
-		stdOutFile, err := helpers.deleteAndCreateFile(tmpPath, fmt.Sprintf(slasherLogFileName, i))
+	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+		stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, i))
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		args := []string{
 			fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-			fmt.Sprintf("--datadir=%s/slasher-data-%d/", tmpPath, i),
+			fmt.Sprintf("--datadir=%s/slasher-data-%d/", e2e.TestParams.TestPath, i),
+			fmt.Sprintf("--monitoring-port=%d", 3535+i+e2e.TestParams.TestShardIndex*100),
+			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+i),
 			"--force-clear-db",
 			"--span-map-cache",
 			"--verbosity=debug",
-			fmt.Sprintf("--monitoring-port=%d", 3535+i),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+i),
 		}
 
 		t.Logf("Starting slasher %d with flags: %s", i, strings.Join(args[2:], " "))
@@ -49,11 +47,11 @@ func startSlashers(t *testing.T, config *end2EndConfig) []int {
 		processIDs = append(processIDs, cmd.Process.Pid)
 	}
 
-	stdOutFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(slasherLogFileName, 0)))
+	stdOutFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, 0)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = helpers.waitForTextInFile(stdOutFile, "Beacon node is fully synced, starting slashing detection"); err != nil {
+	if err = helpers.WaitForTextInFile(stdOutFile, "Beacon node is fully synced, starting slashing detection"); err != nil {
 		t.Fatalf("could not find starting logs for slasher, this means it had issues starting: %v", err)
 	}
 

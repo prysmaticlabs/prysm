@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/endtoend/components"
+	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 )
 
@@ -87,31 +87,31 @@ func WaitForTextInFile(file *os.File, text string) error {
 
 func LogOutput(t *testing.T, config *types.E2EConfig) {
 	// Log out errors from beacon chain nodes.
-	for i := uint64(0); i < config.NumBeaconNodes; i++ {
-		beaconLogFile, err := os.Open(path.Join(config.TestPath, fmt.Sprintf(components.BeaconNodeLogFileName, i)))
+	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+		beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, i)))
 		if err != nil {
 			t.Fatal(err)
 		}
-		logErrorOutput(t, beaconLogFile, "beacon chain node", i)
+		LogErrorOutput(t, beaconLogFile, "beacon chain node", i)
 
-		validatorLogFile, err := os.Open(path.Join(config.TestPath, fmt.Sprintf(components.ValidatorLogFileName, i)))
+		validatorLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, i)))
 		if err != nil {
 			t.Fatal(err)
 		}
-		logErrorOutput(t, validatorLogFile, "validator client", i)
+		LogErrorOutput(t, validatorLogFile, "validator client", i)
 
 		if config.TestSlasher {
-			slasherLogFile, err := os.Open(path.Join(config.TestPath, fmt.Sprintf(components.SlasherLogFileName, i)))
+			slasherLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.SlasherLogFileName, i)))
 			if err != nil {
 				t.Fatal(err)
 			}
-			logErrorOutput(t, slasherLogFile, "slasher client", i)
+			LogErrorOutput(t, slasherLogFile, "slasher client", i)
 		}
 	}
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
 
-func logErrorOutput(t *testing.T, file io.Reader, title string, index uint64) {
+func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 	var errorLines []string
 
 	scanner := bufio.NewScanner(file)

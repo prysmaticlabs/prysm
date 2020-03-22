@@ -9,54 +9,54 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var BeaconNodeLogFileName = "beacon-%d.log"
-
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, config *types.E2EConfig) []*types.BeaconNodeInfo {
-	var nodeInfo []*types.BeaconNodeInfo
-	for i := uint64(0); i < config.NumBeaconNodes; i++ {
-		newNode := StartNewBeaconNode(t, config, nodeInfo)
-		nodeInfo = append(nodeInfo, newNode)
+func StartBeaconNodes(t *testing.T, config *types.E2EConfig) ([]string, []int) {
+	var multiAddrs []string
+	var processIDs []int
+	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+		multiAddr, pID := StartNewBeaconNode(t, config, multiAddrs)
+		multiAddrs = append(multiAddrs, multiAddr)
+		processIDs = append(processIDs, pID)
 	}
-	return nodeInfo
+	return multiAddrs, processIDs
 }
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, beaconNodes []*types.BeaconNodeInfo) *types.BeaconNodeInfo {
-	testPath := config.TestPath
-	index := len(beaconNodes)
+func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []string) (string, int) {
+	index := len(multiAddrs)
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
 		t.Fatal("beacon chain binary not found")
 	}
 
-	stdOutFile, err := helpers.DeleteAndCreateFile(testPath, fmt.Sprintf(BeaconNodeLogFileName, index))
+	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	args := []string{
-		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", testPath, index),
+		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		"--force-clear-db",
-		"--no-discovery",
-		"--http-web3provider=http://127.0.0.1:8745",
-		"--web3provider=ws://127.0.0.1:8746",
-		fmt.Sprintf("--min-sync-peers=%d", config.NumBeaconNodes-1),
-		fmt.Sprintf("--deposit-contract=%s", config.ContractAddress.Hex()),
-		fmt.Sprintf("--rpc-port=%d", 4200+index),
-		fmt.Sprintf("--p2p-udp-port=%d", 12200+index),
-		fmt.Sprintf("--p2p-tcp-port=%d", 13200+index),
-		fmt.Sprintf("--monitoring-port=%d", 8280+index),
-		fmt.Sprintf("--grpc-gateway-port=%d", 3400+index),
+		fmt.Sprintf("--deposit-contract=%s", e2e.TestParams.ContractAddress.Hex()),
+		fmt.Sprintf("--rpc-port=%d", e2e.TestParams.BeaconNodeRPCPort+index),
+		fmt.Sprintf("--http-web3provider=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
+		fmt.Sprintf("--web3provider=ws://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort+1),
+		fmt.Sprintf("--min-sync-peers=%d", e2e.TestParams.BeaconNodeCount-1),
+		fmt.Sprintf("--p2p-udp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+10),      //12200
+		fmt.Sprintf("--p2p-tcp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+20),      //13200
+		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+30),   //8280
+		fmt.Sprintf("--grpc-gateway-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+40), // 3400
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
+		"--force-clear-db",
+		"--no-discovery",
 	}
 	args = append(args, featureconfig.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
@@ -64,7 +64,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, beaconNodes []*ty
 	// After the first node is made, have all following nodes connect to all previously made nodes.
 	if index >= 1 {
 		for p := 0; p < index; p++ {
-			args = append(args, fmt.Sprintf("--peer=%s", beaconNodes[p].MultiAddr))
+			args = append(args, fmt.Sprintf("--peer=%s", multiAddrs[p]))
 		}
 	}
 
@@ -83,14 +83,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, beaconNodes []*ty
 		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
 	}
 
-	return &types.BeaconNodeInfo{
-		ProcessID:   cmd.Process.Pid,
-		DataDir:     fmt.Sprintf("%s/eth2-beacon-node-%d", testPath, index),
-		RPCPort:     4200 + uint64(index),
-		MonitorPort: 8280 + uint64(index),
-		GRPCPort:    3400 + uint64(index),
-		MultiAddr:   multiAddr,
-	}
+	return multiAddr, cmd.Process.Pid
 }
 
 func getMultiAddrFromLogFile(name string) (string, error) {
