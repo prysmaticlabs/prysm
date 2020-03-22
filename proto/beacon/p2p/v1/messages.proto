@@ -13,8 +13,7 @@ message Status {
 }
 
 message BeaconBlocksByRangeRequest {
-  bytes head_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  uint64 start_slot = 2;
-  uint64 count = 3;
-  uint64 step = 4;
+  uint64 start_slot = 1;
+  uint64 count = 2;
+  uint64 step = 3;
 }
