@@ -7,12 +7,13 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
 )
 
 // FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
 // Requires to be run after at least 4 epochs have passed.
-var FinalizationOccurs = Evaluator{
+var FinalizationOccurs = types.Evaluator{
 	Name:       "finalizes_at_epoch_%d",
 	Policy:     afterNthEpoch(3),
 	Evaluation: finalizationOccurs,
