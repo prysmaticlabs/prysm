@@ -314,8 +314,8 @@ func TestMakeEmptyBitfields(t *testing.T) {
 		{104, 14},
 	}
 	for _, tt := range tests {
-		if len(bytesutil.MakeEmptyBitfields(tt.a)) != tt.b {
-			t.Errorf("MakeEmptyBitfields(%d) = %v, want = %d", tt.a, len(bytesutil.MakeEmptyBitfields(tt.a)), tt.b)
+		if len(bytesutil.MakeEmptyBitlists(tt.a)) != tt.b {
+			t.Errorf("MakeEmptyBitlists(%d) = %v, want = %d", tt.a, len(bytesutil.MakeEmptyBitlists(tt.a)), tt.b)
 		}
 	}
 }

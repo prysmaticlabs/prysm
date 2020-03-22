@@ -271,9 +271,9 @@ func ClearBit(b []byte, i int) []byte {
 	return b
 }
 
-// MakeEmptyBitfields returns an empty bitlist with
+// MakeEmptyBitlists returns an empty bitlist with
 // input size `i`.
-func MakeEmptyBitfields(i int) []byte {
+func MakeEmptyBitlists(i int) []byte {
 	return make([]byte, (i+(8-i%8))/8)
 }
 
@@ -295,25 +295,25 @@ func HighestBitIndex(b []byte) (int, error) {
 }
 
 // HighestBitIndexAt returns the index of the highest
-// bit set from bitlist `b` that's at index `a` (inclusive).
-func HighestBitIndexAt(b []byte, a int) (int, error) {
+// bit set from bitlist `b` that is at `index` (inclusive).
+func HighestBitIndexAt(b []byte, index int) (int, error) {
 	if b == nil || len(b) == 0 {
 		return 0, errors.New("input list can't be empty or nil")
 	}
 
-	start := a / 8
+	start := index / 8
 	if start >= len(b) {
 		start = len(b) - 1
 	}
 
-	mask := byte(1<<(a%8) - 1)
+	mask := byte(1<<(index%8) - 1)
 	for i := start; i >= 0; i-- {
-		if a/8 > i {
+		if index/8 > i {
 			mask = 0xff
 		}
-		masked := b[i]&mask
+		masked := b[i] & mask
 
-		if b[i] == 0 || (bits.Len8(masked) == 0 && a/8 <= i) {
+		if b[i] == 0 || (bits.Len8(masked) == 0 && index/8 <= i) {
 			continue
 		}
 
