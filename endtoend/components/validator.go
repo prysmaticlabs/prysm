@@ -1,4 +1,4 @@
-package endtoend
+package components
 
 import (
 	"bytes"
@@ -16,65 +16,60 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-type validatorClientInfo struct {
-	processID   int
-	monitorPort uint64
-}
-
-var validatorLogFileName = "vals-%d.log"
-
-// initializeValidators sends the deposits to the eth1 chain and starts the validator clients.
-func initializeValidators(
+// StartValidators sends the deposits to the eth1 chain and starts the validator clients.
+func StartValidators(
 	t *testing.T,
-	config *end2EndConfig,
+	config *types.E2EConfig,
 	keystorePath string,
-) []*validatorClientInfo {
+) []int {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
 		t.Fatal("validator binary not found")
 	}
 
-	tmpPath := config.tmpPath
-	validatorNum := config.numValidators
-	beaconNodeNum := config.numBeaconNodes
+	// Always using genesis count since using anything else would be difficult to test for.
+	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconNodeNum := e2e.TestParams.BeaconNodeCount
 	if validatorNum%beaconNodeNum != 0 {
 		t.Fatal("Validator count is not easily divisible by beacon node count.")
 	}
 
-	valClients := make([]*validatorClientInfo, beaconNodeNum)
+	processIDs := make([]int, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
-	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := deleteAndCreateFile(tmpPath, fmt.Sprintf(validatorLogFileName, n))
+	for n := 0; n < beaconNodeNum; n++ {
+		file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, n))
 		if err != nil {
 			t.Fatal(err)
 		}
 		args := []string{
-			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
+			fmt.Sprintf("--datadir=%s/eth2-val-%d", e2e.TestParams.TestPath, n),
 			fmt.Sprintf("--log-file=%s", file.Name()),
-			"--force-clear-db",
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
 			fmt.Sprintf("--monitoring-port=%d", 9280+n),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+n),
+			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+n),
+			"--force-clear-db",
 		}
-		args = append(args, config.validatorFlags...)
+		args = append(args, featureconfig.E2EValidatorFlags...)
+		args = append(args, config.ValidatorFlags...)
 
 		cmd := exec.Command(binaryPath, args...)
 		t.Logf("Starting validator client %d with flags: %s", n, strings.Join(args[2:], " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
-		valClients[n] = &validatorClientInfo{
-			processID:   cmd.Process.Pid,
-			monitorPort: 9280 + n,
-		}
+		processIDs[n] = cmd.Process.Pid
 	}
 
-	client, err := rpc.DialHTTP("http://127.0.0.1:8745")
+	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,12 +92,12 @@ func initializeValidators(
 	}
 	txOps.Nonce = big.NewInt(int64(nonce))
 
-	contract, err := contracts.NewDepositContract(config.contractAddr, web3)
+	contract, err := contracts.NewDepositContract(e2e.TestParams.ContractAddress, web3)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(validatorNum)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(validatorNum))
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -124,5 +119,5 @@ func initializeValidators(
 		t.Fatalf("failed to mine blocks %v", err)
 	}
 
-	return valClients
+	return processIDs
 }
