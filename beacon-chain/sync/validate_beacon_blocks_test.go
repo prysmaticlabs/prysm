@@ -3,11 +3,11 @@ package sync
 import (
 	"bytes"
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
