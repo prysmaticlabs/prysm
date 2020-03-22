@@ -157,7 +157,7 @@ func (r *Service) setAggregatorIndexSlotSeen(slot uint64, aggregatorIndex uint64
 	r.seenAttestationLock.Lock()
 	defer r.seenAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
-	r.seenAttestationCache.Set(b, true, 1)
+	r.seenAttestationCache.Add(string(b), true)
 }
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.

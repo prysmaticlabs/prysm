@@ -3,10 +3,10 @@ package sync
 import (
 	"bytes"
 	"context"
-	"github.com/dgraph-io/ristretto"
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -31,11 +31,8 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		Genesis:          time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
 		ValidAttestation: true,
 	}
-	c, _ := ristretto.NewCache(&ristretto.Config{
-		NumCounters: seenAttSize,
-		MaxCost:     seenAttSize / 10,
-		BufferItems: 64,
-	})
+
+	c, _ := lru.New(10)
 	s := &Service{
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		p2p:                  p,

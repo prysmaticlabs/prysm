@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -10,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -99,5 +99,5 @@ func (r *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
 	r.seenBlockLock.Lock()
 	defer r.seenBlockLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
-	r.seenBlockCache.Set(b, true, 1)
+	r.seenBlockCache.Add(string(b), true)
 }

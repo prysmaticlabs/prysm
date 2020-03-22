@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -44,6 +45,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	savedState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
 	db.SaveState(context.Background(), savedState, root)
 
+	c, _ := lru.New(10)
 	r := &Service{
 		attPool: attestations.NewPool(),
 		chain: &mock.ChainService{
@@ -51,13 +53,14 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 			Genesis:          time.Now(),
 			ValidAttestation: true,
 		},
-		chainStarted:        true,
-		p2p:                 p,
-		db:                  db,
-		ctx:                 ctx,
-		stateNotifier:       (&mock.ChainService{}).StateNotifier(),
-		attestationNotifier: (&mock.ChainService{}).OperationNotifier(),
-		initialSync:         &mockSync.Sync{IsSyncing: false},
+		chainStarted:         true,
+		p2p:                  p,
+		db:                   db,
+		ctx:                  ctx,
+		stateNotifier:        (&mock.ChainService{}).StateNotifier(),
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
+		initialSync:          &mockSync.Sync{IsSyncing: false},
+		seenAttestationCache: c,
 	}
 	r.registerSubscribers()
 	r.stateNotifier.StateFeed().Send(&feed.Event{

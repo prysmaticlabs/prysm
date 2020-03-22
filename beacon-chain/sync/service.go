@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/dgraph-io/ristretto"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -104,26 +104,18 @@ type Service struct {
 	blocksRateLimiter    *leakybucket.Collector
 	attestationNotifier  operation.Notifier
 	seenBlockLock        sync.RWMutex
-	seenBlockCache       *ristretto.Cache
+	seenBlockCache       *lru.Cache
 	seenAttestationLock  sync.RWMutex
-	seenAttestationCache *ristretto.Cache
+	seenAttestationCache *lru.Cache
 }
 
 // Start the regular sync service.
 func (r *Service) Start() {
-	bCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: seenBlockSize, // Max size is seenBlockSize * 32byte.
-		MaxCost:     seenBlockSize / 10,
-		BufferItems: 64,
-	})
+	bCache, err := lru.New(seenBlockSize)
 	if err != nil {
 		panic(err)
 	}
-	aCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: seenAttSize, // Max size is seenAttSize * 32byte.
-		MaxCost:     seenAttSize / 10,
-		BufferItems: 64,
-	})
+	aCache, err := lru.New(seenAttSize)
 	if err != nil {
 		panic(err)
 	}

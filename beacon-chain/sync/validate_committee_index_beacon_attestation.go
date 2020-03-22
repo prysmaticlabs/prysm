@@ -114,5 +114,5 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, a
 	defer s.seenAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
 	b = append(b, aggregateBits...)
-	s.seenAttestationCache.Set(b, true, 1)
+	s.seenAttestationCache.Add(string(b), true)
 }

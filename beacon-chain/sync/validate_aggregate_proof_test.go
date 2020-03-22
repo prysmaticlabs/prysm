@@ -3,7 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
-	"github.com/dgraph-io/ristretto"
+	lru "github.com/hashicorp/golang-lru"
 	"reflect"
 	"strings"
 	"testing"
@@ -134,12 +134,14 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
+	c, _ := lru.New(10)
 	r := &Service{
 		p2p:                  p,
 		db:                   db,
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		attPool:              attestations.NewPool(),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		seenAttestationCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -195,13 +197,16 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
 	}
+
+	c, _ := lru.New(10)
 	r := &Service{
 		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
-		attPool: attestations.NewPool(),
+		attPool:              attestations.NewPool(),
+		seenAttestationCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -274,6 +279,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
 	}
+	c, _ := lru.New(10)
 	r := &Service{
 		attPool:     attestations.NewPool(),
 		p2p:         p,
@@ -281,6 +287,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
+		seenAttestationCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -369,11 +376,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
 	}
-	c, _ := ristretto.NewCache(&ristretto.Config{
-		NumCounters: seenBlockSize,
-		MaxCost:     seenBlockSize / 10,
-		BufferItems: 64,
-	})
+	c, _ := lru.New(10)
 	r := &Service{
 		p2p:         p,
 		db:          db,
@@ -476,11 +479,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, _ := ristretto.NewCache(&ristretto.Config{
-		NumCounters: seenAttSize,
-		MaxCost:     seenAttSize / 10,
-		BufferItems: 64,
-	})
+	c, _ := lru.New(10)
 	r := &Service{
 		p2p:         p,
 		db:          db,
