@@ -211,7 +211,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 		AggregationBits: aggBits,
 	}
 	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 	if err != nil {
 		return nil, err
