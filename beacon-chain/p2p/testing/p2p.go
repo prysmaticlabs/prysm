@@ -159,7 +159,7 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
-				p.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
+				p.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction, []uint64{})
 				ctx := context.Background()
 
 				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
@@ -226,4 +226,14 @@ func (p *TestP2P) Started() bool {
 // Peers returns the peer status.
 func (p *TestP2P) Peers() *peers.Status {
 	return p.peers
+}
+
+// FindPeersWithSubnet mocks the p2p func.
+func (p *TestP2P) FindPeersWithSubnet(index uint64) (bool, error) {
+	return false, nil
+}
+
+// RefreshENR mocks the p2p func.
+func (p *TestP2P) RefreshENR(epoch uint64) {
+	return
 }
