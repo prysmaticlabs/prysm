@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -15,6 +16,12 @@ func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.SignedVoluntaryExit got: %T", msg)
 	}
+
+	if ve.Exit == nil {
+		return errors.New("exit can't be nil")
+	}
+	r.setExitIndexSeen(ve.Exit.ValidatorIndex)
+
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -41,6 +42,13 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return false
 	}
 
+	if exit.Exit == nil {
+		return false
+	}
+	if r.hasSeenExitIndex(exit.Exit.ValidatorIndex) {
+		return false
+	}
+
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
 		return false
@@ -61,4 +69,19 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	msg.ValidatorData = exit // Used in downstream subscriber
 
 	return true
+}
+
+// Returns true if the node has already received a valid exit request for the validator with index `i`.
+func (r *Service) hasSeenExitIndex(i uint64) bool {
+	r.seenExitLock.RLock()
+	defer r.seenExitLock.RUnlock()
+	_, seen := r.seenExitCache.Get(string(bytesutil.Bytes32(i)))
+	return seen
+}
+
+// Set exit request index `i` in seen exit request cache.
+func (r *Service) setExitIndexSeen(i uint64) {
+	r.seenExitLock.Lock()
+	defer r.seenExitLock.Unlock()
+	r.seenExitCache.Add(string(bytesutil.Bytes32(i)), true)
 }
