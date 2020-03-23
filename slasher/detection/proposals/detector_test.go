@@ -2,14 +2,13 @@ package proposals
 
 import (
 	"context"
-	"crypto/rand"
 	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface"
+	testDetect "github.com/prysmaticlabs/prysm/slasher/detection/testing"
 )
 
 var _ = iface.ProposalsDetector(&ProposeDetector{})
@@ -21,22 +20,18 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 		incomingBlk *ethpb.SignedBeaconBlockHeader
 		slashing    *ethpb.ProposerSlashing
 	}
-	blk1epoch0, err := signedBlockHeader(startSlot(0), 0)
+	blk1epoch0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blk2epoch0, err := signedBlockHeader(startSlot(0)+1, 0)
+	blk2epoch0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0)+1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blk1epoch1, err := signedBlockHeader(startSlot(1), 0)
+	blk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	//blk1epoch3, err := signedBlockHeader(startSlot(3), 0)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
 	tests := []testStruct{
 		{
 			name:        "same block sig dont slash",
@@ -83,32 +78,4 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 
 		})
 	}
-}
-
-func signedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
-	sig, err := genRandomSig()
-	if err != nil {
-		return nil, err
-	}
-	root := [32]byte{1, 2, 3}
-	return &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			//ProposerIndex proposerIndex,
-			Slot:       slot,
-			ParentRoot: root[:],
-			StateRoot:  root[:],
-			BodyRoot:   root[:],
-		},
-		Signature: sig,
-	}, nil
-}
-
-func genRandomSig() (blk []byte, err error) {
-	blk = make([]byte, 96)
-	_, err = rand.Read(blk)
-	return
-}
-
-func startSlot(epoch uint64) uint64 {
-	return epoch * params.BeaconConfig().SlotsPerEpoch
 }

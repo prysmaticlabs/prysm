@@ -156,6 +156,15 @@ func (ds *Service) detectDoubleProposels(ctx context.Context, incommingBlk *ethp
 	return ds.proposalsDetector.DetectDoublePropose(ctx, incommingBlk)
 }
 
+func isDoublePropose(incommingBlockHeader *ethpb.SignedBeaconBlockHeader, prevBlockHeader *ethpb.SignedBeaconBlockHeader) bool {
+	//TODO(#5119) remove comment
+	//if incommingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex && !bytes.Equal(incommingBlockHeader.Signature, prevBlockHeader.Signature) {
+	//	return true
+	//}
+	//return false
+	return true
+}
+
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
 	return !proto.Equal(incomingAtt.Data, prevAtt.Data) && incomingAtt.Data.Target.Epoch == prevAtt.Data.Target.Epoch
 }

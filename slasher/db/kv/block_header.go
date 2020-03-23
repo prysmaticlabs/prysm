@@ -67,7 +67,7 @@ func (db *Store) HasBlockHeader(ctx context.Context, epoch uint64, validatorID u
 }
 
 // SaveBlockHeader accepts a block header and writes it to disk.
-func (db *Store) SaveBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+func (db *Store) SaveBlockHeader(ctx context.Context, validatorID uint64 /*TODO(#5119) remove var and use blockheader proposer index*/, blockHeader *ethpb.SignedBeaconBlockHeader) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveBlockHeader")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
