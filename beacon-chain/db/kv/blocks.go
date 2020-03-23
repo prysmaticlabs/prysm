@@ -371,7 +371,7 @@ func (k *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot ui
 }
 
 // getBlockRootsByFilter retrieves the block roots given the filter criteria.
-func getBlockRootsByFilter(ctx context.Context, tx *bolt.Tx,  f *filters.QueryFilter) ([][]byte, error) {
+func getBlockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFilter) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.getBlockRootsByFilter")
 	defer span.End()
 
