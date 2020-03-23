@@ -29,6 +29,7 @@ startup --host_jvm_args=-Xmx1000m --host_jvm_args=-Xms1000m
 build --experimental_strict_action_env
 build --disk_cache=/tmp/bazelbuilds
 build --repository_cache=/tmp/repositorycache
+build --experimental_repository_cache_hardlinks
 build --experimental_multi_threaded_digest
 build --sandbox_tmpfs_path=/tmp
 build --verbose_failures
