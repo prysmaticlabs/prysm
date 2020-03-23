@@ -134,7 +134,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		result, err := attestationutil.AttestingIndices(tt.bitfield, committee)
+		result := attestationutil.AttestingIndices(tt.bitfield, committee)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -167,7 +167,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	indices, err := attestationutil.AttestingIndices(bitfield.NewBitlist(128), committee)
+	indices := attestationutil.AttestingIndices(bitfield.NewBitlist(128), committee)
 	if err != nil {
 		t.Fatalf("attesting indices failed: %v", err)
 	}
