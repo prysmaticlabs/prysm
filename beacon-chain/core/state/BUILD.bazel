@@ -52,6 +52,7 @@ go_test(
     ],
     data = ["//shared/benchutil/benchmark_files:benchmark_data"],
     embed = [":go_default_library"],
+    shard_count = 3,
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
