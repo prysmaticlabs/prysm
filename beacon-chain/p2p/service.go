@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -47,6 +48,7 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
+	beaconDB      db.Database
 	ctx           context.Context
 	cancel        context.CancelFunc
 	started       bool
@@ -74,6 +76,7 @@ func NewService(cfg *Config) (*Service, error) {
 
 	log.Info(cfg.UDPPort)
 	s := &Service{
+		beaconDB:      cfg.BeaconDB,
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,

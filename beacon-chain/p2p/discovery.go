@@ -15,6 +15,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
 const attestationSubnetCount = 64
@@ -43,7 +45,7 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort))
+	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort), cfg.BeaconDB)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,7 +76,13 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	return network
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpPort int) (*enode.LocalNode, error) {
+func createLocalNode(
+	privKey *ecdsa.PrivateKey,
+	ipAddr net.IP,
+	udpPort int,
+	tcpPort int,
+	beaconDB db.Database,
+) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open node's peer database")
@@ -89,7 +97,12 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
-	if err := addForkEntry(localNode); err != nil {
+	headState, err := beaconDB.HeadState(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	localNode, err = addForkEntry(localNode, headState)
+	if err != nil {
 		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
 	}
 	return intializeAttSubnets(localNode), nil
