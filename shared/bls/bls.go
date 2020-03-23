@@ -153,8 +153,7 @@ func (s *SecretKey) Marshal() []byte {
 
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
-	rawBytes := p.p.Serialize()
-	return rawBytes
+	return p.p.Serialize()
 }
 
 // Copy the public key to a new pointer reference.
@@ -194,8 +193,6 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 	if size != len(msg) {
 		return false
 	}
-	b := [8]byte{}
-	binary.LittleEndian.PutUint64(b[:], domain)
 	hashWithDomains := make([]byte, 0, size*concatMsgDomainSize)
 	var rawKeys []bls12.PublicKey
 	for i := 0; i < size; i++ {
@@ -243,15 +240,13 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return sigs[0]
 	}
-	marshalled := sigs[0].s.Serialize()
-	signature := &bls12.Sign{}
-	//#nosec G104
-	signature.Deserialize(marshalled)
 
+	// Copy signature
+	signature := *sigs[0].s
 	for i := 1; i < len(sigs); i++ {
 		signature.Add(sigs[i].s)
 	}
-	return &Signature{s: signature}
+	return &Signature{s: &signature}
 }
 
 // Marshal a signature into a LittleEndian byte slice.
@@ -260,8 +255,7 @@ func (s *Signature) Marshal() []byte {
 		return make([]byte, params.BeaconConfig().BLSSignatureLength)
 	}
 
-	rawBytes := s.s.Serialize()
-	return rawBytes
+	return s.s.Serialize()
 }
 
 // Domain returns the bls domain given by the domain type and the operation 4 byte fork version.
@@ -275,10 +269,9 @@ func (s *Signature) Marshal() []byte {
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version)
 func Domain(domainType [DomainByteLength]byte, forkVersion [ForkVersionByteLength]byte) uint64 {
-
-	b := []byte{}
-	b = append(b, domainType[:4]...)
-	b = append(b, forkVersion[:4]...)
+	b := make([]byte, 8)
+	copy(b[:4], domainType[:4])
+	copy(b[4:], forkVersion[:4])
 	return bytesutil.FromBytes8(b)
 }
 

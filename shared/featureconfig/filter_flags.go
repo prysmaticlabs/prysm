@@ -6,7 +6,6 @@ import (
 	"gopkg.in/urfave/cli.v2"
 )
 
-
 // ActiveFlags returns all of the flags that are not Hidden.
 func ActiveFlags(flags []cli.Flag) []cli.Flag {
 	visible := make([]cli.Flag, 0, len(flags))

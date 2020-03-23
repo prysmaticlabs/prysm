@@ -16,6 +16,7 @@ var (
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases and keystore",
+		Value: DefaultDataDir(),
 	}
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
 	EnableTracingFlag = &cli.BoolFlag{
@@ -164,7 +165,7 @@ var (
 	}
 	// ConfigFileFlag specifies the filepath to load flag values.
 	ConfigFileFlag = &cli.StringFlag{
-		Name: "config-file",
+		Name:  "config-file",
 		Usage: "The filepath to a yaml file with flag values",
 	}
 )
