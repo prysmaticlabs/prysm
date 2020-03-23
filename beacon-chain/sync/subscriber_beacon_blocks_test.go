@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -41,11 +42,13 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	}
 	parentRoot, _ := ssz.HashTreeRoot(parent.Block)
 	chain := &mock.ChainService{State: s}
+	c, _ := lru.New(10)
 	r := &Service{
-		db:            db,
-		chain:         chain,
-		blockNotifier: chain.BlockNotifier(),
-		attPool:       attestations.NewPool(),
+		db:             db,
+		chain:          chain,
+		blockNotifier:  chain.BlockNotifier(),
+		attPool:        attestations.NewPool(),
+		seenBlockCache: c,
 	}
 
 	b := &ethpb.SignedBeaconBlock{
