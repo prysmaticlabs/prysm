@@ -98,6 +98,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 			stateSummaryBucket,
 			archivedIndexRootBucket,
 			archivedIndexStateBucket,
+			slotsHasObjectBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
