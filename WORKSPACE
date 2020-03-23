@@ -270,6 +270,13 @@ http_archive(
     urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
 )
 
+http_archive(
+    name = "com_github_herumi_bls_eth_go_binary",
+    sha256 = "3b155ff597c307b5b0875c3b1ffc3beaa0a6634ee1cfad8768041b61c47eac39",
+    strip_prefix = "bls-eth-go-binary-946ee977cd0f585757741dda65073cbd84a160ac",
+    url = "https://github.com/prysmaticlabs/bls-eth-go-binary/archive/946ee977cd0f585757741dda65073cbd84a160ac.zip",
+)
+
 # External dependencies
 
 go_repository(
