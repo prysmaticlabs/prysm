@@ -124,6 +124,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	}
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
+			Slot:       1,
 			ParentRoot: testutil.Random32Bytes(t),
 		},
 		Signature: sk.Sign([]byte("data")).Marshal(),
