@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"strings"
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
@@ -13,9 +14,10 @@ import (
 )
 
 var (
-	beaconRPC = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
-	port      = flag.Int("port", 8000, "Port to serve on")
-	debug     = flag.Bool("debug", false, "Enable debug logging")
+	beaconRPC      = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
+	port           = flag.Int("port", 8000, "Port to serve on")
+	debug          = flag.Bool("debug", false, "Enable debug logging")
+	allowedOrigins = flag.String("corsdomain", "", "A comma separated list of CORS domains to allow.")
 )
 
 func init() {
@@ -31,7 +33,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	gw := gateway.New(context.Background(), *beaconRPC, fmt.Sprintf("0.0.0.0:%d", *port), mux)
+	gw := gateway.New(context.Background(), *beaconRPC, fmt.Sprintf("0.0.0.0:%d", *port), mux, strings.Split(*allowedOrigins, ","))
 	mux.HandleFunc("/swagger/", gateway.SwaggerServer())
 	mux.HandleFunc("/healthz", healthzServer(gw))
 	gw.Start()
