@@ -17,6 +17,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -132,7 +133,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		db:          db,
 		p2p:         p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Now(),
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot), 0) ,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
