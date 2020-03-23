@@ -18,20 +18,17 @@ type SszNetworkEncoder struct {
 }
 
 func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
-	b, err := ssz.Marshal(msg)
-	if err != nil {
-		return nil, err
-	}
-	if e.UseSnappyCompression {
-		b = snappy.Encode(nil /*dst*/, b)
-	}
-	return b, nil
+	return ssz.Marshal(msg)
 }
 
 // Encode the proto message to the io.Writer.
 func (e SszNetworkEncoder) Encode(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
 		return 0, nil
+	}
+	if e.UseSnappyCompression {
+		w := snappy.NewBufferedWriter(w)
+		defer w.Close()
 	}
 
 	b, err := e.doEncode(msg)
@@ -47,6 +44,10 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, 
 	if msg == nil {
 		return 0, nil
 	}
+	if e.UseSnappyCompression {
+		w := snappy.NewBufferedWriter(w)
+		defer w.Close()
+	}
 	b, err := e.doEncode(msg)
 	if err != nil {
 		return 0, err
@@ -61,6 +62,10 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 	if msg == nil {
 		return 0, nil
 	}
+	if e.UseSnappyCompression {
+		w := snappy.NewBufferedWriter(w)
+		defer w.Close()
+	}
 	b, err := e.doEncode(msg)
 	if err != nil {
 		return 0, err
@@ -74,14 +79,6 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 
 // Decode the bytes to the protobuf message provided.
 func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
-	if e.UseSnappyCompression {
-		var err error
-		b, err = snappy.Decode(nil /*dst*/, b)
-		if err != nil {
-			return err
-		}
-	}
-
 	return ssz.Unmarshal(b, to)
 }
 
@@ -90,6 +87,9 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err
+	}
+	if e.UseSnappyCompression {
+		r = snappy.NewReader(r)
 	}
 	b := make([]byte, msgLen)
 	_, err = r.Read(b)
@@ -105,6 +105,9 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err
+	}
+	if e.UseSnappyCompression {
+		r = snappy.NewReader(r)
 	}
 	if msgLen > maxSize {
 		return fmt.Errorf("size of decoded message is %d which is larger than the provided max limit of %d", msgLen, maxSize)
@@ -123,4 +126,13 @@ func (e SszNetworkEncoder) ProtocolSuffix() string {
 		return "/ssz_snappy"
 	}
 	return "/ssz"
+}
+
+// MaxLength specifies the maximum possible length of an encoded
+// chunk of data.
+func (e SszNetworkEncoder) MaxLength(length int) int {
+	if e.UseSnappyCompression {
+		return snappy.MaxEncodedLen(length)
+	}
+	return length
 }
