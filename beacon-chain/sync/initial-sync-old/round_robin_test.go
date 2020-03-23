@@ -370,7 +370,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 
 		peer.Connect(host)
 
-		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound)
+		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound, []uint64{})
 		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
 		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
 			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
