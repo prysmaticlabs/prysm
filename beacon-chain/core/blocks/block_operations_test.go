@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -36,7 +37,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9})
 
-	lbhsr, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	lbhsr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,14 +49,15 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: proposerIdx,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
 			ParentRoot: lbhsr[:],
 		},
 	}
-	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
@@ -99,7 +101,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
@@ -122,7 +124,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "is different then block slot"
+	want := "is different than block slot"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -149,7 +151,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	})
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
@@ -162,7 +164,8 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: 5669,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -198,12 +201,12 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	parentRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
@@ -216,7 +219,8 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: 5669,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -252,19 +256,21 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
+	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
+
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
 	priv := bls.RandKey()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: 5669,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -300,10 +306,11 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	var zeroHash [32]byte
 	nsh := newState.LatestBlockHeader()
 	expected := &ethpb.BeaconBlockHeader{
-		Slot:       block.Block.Slot,
-		ParentRoot: latestBlockSignedRoot[:],
-		BodyRoot:   bodyRoot[:],
-		StateRoot:  zeroHash[:],
+		ProposerIndex: 5669,
+		Slot:          block.Block.Slot,
+		ParentRoot:    latestBlockSignedRoot[:],
+		BodyRoot:      bodyRoot[:],
+		StateRoot:     zeroHash[:],
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %v", expected, nsh)
@@ -320,7 +327,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -392,7 +399,8 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		},
 	}
 	var err error
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEth1VotingPeriod; i++ {
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	for i := uint64(0); i < period; i++ {
 		beaconState, err = blocks.ProcessEth1DataInBlock(beaconState, block)
 		if err != nil {
 			t.Fatal(err)
@@ -416,15 +424,16 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: params.BeaconConfig().SlotsPerEpoch + 1,
+					ProposerIndex: 1,
+					Slot:          params.BeaconConfig().SlotsPerEpoch + 1,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 			},
 		},
@@ -447,15 +456,16 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 			},
 		},
@@ -485,16 +495,17 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 0,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 0,
+					Slot:          0,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 0,
+					Slot:          0,
 				},
 				Signature: []byte("B"),
 			},
@@ -526,14 +537,15 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	proposerIdx := uint64(1)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:      0,
-			StateRoot: []byte("A"),
+			ProposerIndex: proposerIdx,
+			Slot:          0,
+			StateRoot:     []byte("A"),
 		},
 	}
 	signingRoot, err := helpers.ComputeSigningRoot(header1.Header, domain)
@@ -544,8 +556,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:      0,
-			StateRoot: []byte("B"),
+			ProposerIndex: proposerIdx,
+			Slot:          0,
+			StateRoot:     []byte("B"),
 		},
 	}
 	signingRoot, err = helpers.ComputeSigningRoot(header2.Header, domain)
@@ -556,9 +569,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerIdx,
-			Header_1:      header1,
-			Header_2:      header2,
+			Header_1: header1,
+			Header_2: header2,
 		},
 	}
 
@@ -689,7 +701,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -960,11 +972,11 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -995,7 +1007,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1021,7 +1033,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1049,7 +1061,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1072,7 +1084,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1099,7 +1111,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1 := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1126,7 +1138,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2 := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1257,10 +1269,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
-		if err != nil {
-			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
-		}
+		ia := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
 		if !reflect.DeepEqual(wanted, ia) {
 			diff, _ := messagediff.PrettyDiff(ia, wanted)
 			t.Log(diff)
@@ -1328,7 +1337,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		domain, err := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+		domain, err := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1778,7 +1787,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	val.PublicKey = priv.PublicKey().Marshal()[:]
 	state.UpdateValidatorAtIndex(0, val)
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}

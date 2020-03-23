@@ -26,6 +26,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -599,7 +600,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
@@ -696,7 +697,7 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
@@ -937,7 +938,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		for j := 0; j < numValidators; j++ {
 			attExample := &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: []byte("root"),
+					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
 					Slot:            i,
 					Target: &ethpb.Checkpoint{
 						Epoch: 0,
@@ -988,7 +989,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := aggAtts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}

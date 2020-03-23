@@ -4,12 +4,13 @@ import (
 	"sync"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -65,7 +66,10 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit, nil)
+			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not compute domain")
+			}
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
@@ -234,7 +238,10 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit, nil)
+			domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not compute domain")
+			}
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")

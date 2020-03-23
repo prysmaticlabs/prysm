@@ -26,6 +26,9 @@ type BeaconChainConfig struct {
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
 	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain.
 	TargetAggregatorsPerCommittee  uint64 // TargetAggregatorsPerCommittee defines the number of aggregators inside one committee.
+	HysteresisQuotient             uint64 // HysteresisQuotient defines the hysteresis quotient for effective balance calculations.
+	HysteresisDownwardMultiplier   uint64 // HysteresisDownwardMultiplier defines the hysteresis downward multiplier for effective balance calculations.
+	HysteresisUpwardMultiplier     uint64 // HysteresisUpwardMultiplier defines the hysteresis upward multiplier for effective balance calculations.
 
 	// Gwei value constants.
 	MinDepositAmount          uint64 `yaml:"MIN_DEPOSIT_AMOUNT"`          // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
@@ -43,7 +46,7 @@ type BeaconChainConfig struct {
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
 	MaxSeedLookahead                 uint64 `yaml:"MAX_SEED_LOOKAHEAD"`                  // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
-	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	EpochsPerEth1VotingPeriod        uint64 `yaml:"EPOCHS_PER_ETH1_VOTING_PERIOD"`       // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node on per epoch basis.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
@@ -73,11 +76,13 @@ type BeaconChainConfig struct {
 	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
 
 	// BLS domain values.
-	DomainBeaconProposer [4]byte `yaml:"DOMAIN_BEACON_PROPOSER"` // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
-	DomainRandao         [4]byte `yaml:"DOMAIN_RANDAO"`          // DomainRandao defines the BLS signature domain for randao verification.
-	DomainBeaconAttester [4]byte `yaml:"DOMAIN_ATTESTATION"`     // DomainBeaconAttester defines the BLS signature domain for attestation verification.
-	DomainDeposit        [4]byte `yaml:"DOMAIN_DEPOSIT"`         // DomainDeposit defines the BLS signature domain for deposit verification.
-	DomainVoluntaryExit  [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`  // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainBeaconProposer    [4]byte `yaml:"DOMAIN_BEACON_PROPOSER"`     // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
+	DomainRandao            [4]byte `yaml:"DOMAIN_RANDAO"`              // DomainRandao defines the BLS signature domain for randao verification.
+	DomainBeaconAttester    [4]byte `yaml:"DOMAIN_ATTESTATION"`         // DomainBeaconAttester defines the BLS signature domain for attestation verification.
+	DomainDeposit           [4]byte `yaml:"DOMAIN_DEPOSIT"`             // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainVoluntaryExit     [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`      // DomainVoluntaryExit defines the BLS signature domain for exit verification.
+	DomainSelectionProof    [4]byte `yaml:"DOMAIN_SELECTION_PROOF"`     // DomainVoluntaryExit defines the BLS signature domain for selection proof.
+	DomainAggregateAndProof [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF"` // DomainVoluntaryExit defines the BLS signature domain for aggregate and proof.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -117,6 +122,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinGenesisActiveValidatorCount: 16384,
 	MinGenesisTime:                 0, // Zero until a proper time is decided.
 	TargetAggregatorsPerCommittee:  16,
+	HysteresisQuotient:             4,
+	HysteresisDownwardMultiplier:   1,
+	HysteresisUpwardMultiplier:     5,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,
@@ -134,7 +142,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,
-	SlotsPerEth1VotingPeriod:         1024,
+	EpochsPerEth1VotingPeriod:        32,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
 	PersistentCommitteePeriod:        2048,
@@ -165,11 +173,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer: bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester: bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:         bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:        bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:  bytesutil.ToBytes4(bytesutil.Bytes4(4)),
+	DomainBeaconProposer:    bytesutil.ToBytes4(bytesutil.Bytes4(0)),
+	DomainBeaconAttester:    bytesutil.ToBytes4(bytesutil.Bytes4(1)),
+	DomainRandao:            bytesutil.ToBytes4(bytesutil.Bytes4(2)),
+	DomainDeposit:           bytesutil.ToBytes4(bytesutil.Bytes4(3)),
+	DomainVoluntaryExit:     bytesutil.ToBytes4(bytesutil.Bytes4(4)),
+	DomainSelectionProof:    bytesutil.ToBytes4(bytesutil.Bytes4(5)),
+	DomainAggregateAndProof: bytesutil.ToBytes4(bytesutil.Bytes4(6)),
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
@@ -253,10 +263,10 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
-	minimalConfig.SlotsPerEth1VotingPeriod = 16
+	minimalConfig.EpochsPerEth1VotingPeriod = 2
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
-	minimalConfig.PersistentCommitteePeriod = 2048
+	minimalConfig.PersistentCommitteePeriod = 128
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2

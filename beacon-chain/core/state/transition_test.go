@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -62,7 +63,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,8 +77,9 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	beaconState.SetSlot(beaconState.Slot() - 1)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot:       beaconState.Slot() + 1,
-			ParentRoot: parentRoot[:],
+			ProposerIndex: 74,
+			Slot:          beaconState.Slot() + 1,
+			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: randaoReveal,
 				Eth1Data:     eth1Data,
@@ -131,7 +133,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.SetSlot(beaconState.Slot() - 1)
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +176,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 	beaconState.SetSlot(beaconState.Slot() - 1)
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,16 +203,17 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 3,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 1,
+					ProposerIndex: 3,
+					Slot:          1,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 1,
+					ProposerIndex: 3,
+					Slot:          1,
 				},
 				Signature: []byte("B"),
 			},
@@ -322,6 +325,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		beaconState.Fork(),
 		currentEpoch,
 		params.BeaconConfig().DomainBeaconProposer,
+		beaconState.GenesisValidatorRoot(),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -329,8 +333,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("A"),
+			ProposerIndex: proposerSlashIdx,
+			Slot:          1,
+			StateRoot:     []byte("A"),
 		},
 	}
 	root, err := helpers.ComputeSigningRoot(header1.Header, domain)
@@ -341,8 +346,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("B"),
+			ProposerIndex: proposerSlashIdx,
+			Slot:          1,
+			StateRoot:     []byte("B"),
 		},
 	}
 	root, err = helpers.ComputeSigningRoot(header2.Header, domain)
@@ -353,9 +359,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerSlashIdx,
-			Header_1:      header1,
-			Header_2:      header2,
+			Header_1: header1,
+			Header_2: header2,
 		},
 	}
 	validators := beaconState.Validators()
@@ -369,7 +374,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Target: &ethpb.Checkpoint{Epoch: 0}},
 		AttestingIndices: []uint64{0, 1},
 	}
-	domain, err = helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err = helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -429,7 +434,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(blockAtt.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -450,7 +455,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Epoch:          0,
 		},
 	}
-	domain, err = helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain, err = helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +465,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	exit.Signature = privKeys[exit.Exit.ValidatorIndex].Sign(signingRoot[:]).Marshal()[:]
 
-	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -471,8 +476,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ParentRoot: parentRoot[:],
-			Slot:       beaconState.Slot(),
+			ParentRoot:    parentRoot[:],
+			Slot:          beaconState.Slot(),
+			ProposerIndex: 17,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
@@ -498,8 +504,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Fatalf("Expected block to pass processing conditions: %v", err)
 	}
 
-	if v, _ := beaconState.ValidatorAtIndex(proposerSlashings[0].ProposerIndex); !v.Slashed {
-		t.Errorf("Expected validator at index %d to be slashed, received false", proposerSlashings[0].ProposerIndex)
+	if v, _ := beaconState.ValidatorAtIndex(proposerSlashings[0].Header_1.Header.ProposerIndex); !v.Slashed {
+		t.Errorf("Expected validator at index %d to be slashed, received false", proposerSlashings[0].Header_1.Header.ProposerIndex)
 	}
 
 	if v, _ := beaconState.ValidatorAtIndex(1); !v.Slashed {
@@ -591,16 +597,17 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	// Set up proposer slashing object for block
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 				Signature: []byte("B"),
 			},
@@ -653,7 +660,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	v[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
-	domain, err := helpers.Domain(s.Fork(), 0, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(s.Fork(), 0, params.BeaconConfig().DomainRandao, s.GenesisValidatorRoot())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -752,11 +759,11 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			t.Error(err)
 		}
-		domain, err := helpers.Domain(s.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+		domain, err := helpers.Domain(s.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -774,11 +781,12 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	}
 
 	epochSignature, _ := testutil.RandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
-	parentRoot, _ := ssz.HashTreeRoot(s.LatestBlockHeader())
+	parentRoot, _ := stateutil.BlockHeaderRoot(s.LatestBlockHeader())
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot:       s.Slot(),
-			ParentRoot: parentRoot[:],
+			ProposerIndex: 72,
+			Slot:          s.Slot(),
+			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
 				Eth1Data:     &ethpb.Eth1Data{},
 				RandaoReveal: epochSignature,

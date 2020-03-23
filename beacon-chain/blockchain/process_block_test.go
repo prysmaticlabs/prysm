@@ -318,7 +318,7 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	service.initSyncState[r] = s

@@ -135,7 +135,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not receive validator activation from stream")
 		}
-		log.Info("Waiting for validator to be activated in the beacon chain")
 		activatedKeys := v.checkAndLogValidatorStatus(res.Statuses)
 
 		if len(activatedKeys) > 0 {
@@ -206,6 +205,10 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 				"Deposit for validator received but not processed into state")
 			continue
 		}
+		if status.Status.DepositInclusionSlot == 0 && status.Status.PositionInActivationQueue == 0 {
+			log.Info("Waiting for deposit to be seen")
+			continue
+		}
 		if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
 			log.WithFields(logrus.Fields{
 				"depositInclusionSlot":      status.Status.DepositInclusionSlot,
@@ -268,6 +271,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
 
+	// If duties is nil it means we have had no prior duties and just started up.
+	firstDutiesReceived := v.duties == nil
 	resp, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
 		v.duties = nil // Clear assignments so we know to retry the request.
@@ -277,7 +282,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 	v.duties = resp
 	// Only log the full assignments output on epoch start to be less verbose.
-	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+	// Also log out on first launch so the user doesn't have to wait a whole epoch to see their assignments.
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
 		for _, duty := range v.duties.Duties {
 			lFields := logrus.Fields{
 				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),

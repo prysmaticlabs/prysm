@@ -47,10 +47,7 @@ func ProcessAttestations(
 		if err != nil {
 			return nil, nil, err
 		}
-		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-		if err != nil {
-			return nil, nil, err
-		}
+		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
 		vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
 	}
 

@@ -83,25 +83,6 @@ func TestVerifyAggregate_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	}
 }
 
-func TestComputeDomain_OK(t *testing.T) {
-	tests := []struct {
-		epoch      uint64
-		domainType [4]byte
-		domain     []byte
-	}{
-		{epoch: 1, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0}},
-		{epoch: 2, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0}},
-		{epoch: 2, domainType: [4]byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 0, 0, 0, 0}},
-		{epoch: 3, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0}},
-		{epoch: 3, domainType: [4]byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 0, 0, 0, 0}},
-	}
-	for _, tt := range tests {
-		if !bytes.Equal(bls.ComputeDomain(tt.domainType, nil), tt.domain) {
-			t.Errorf("wanted domain version: %d, got: %d", tt.domain, bls.ComputeDomain(tt.domainType, nil))
-		}
-	}
-}
-
 func TestSecretKeyFromBytes(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -289,4 +270,11 @@ func TestPublicKey_Copy(t *testing.T) {
 	if !bytes.Equal(pubkeyA.Marshal(), pubkeyBytes) {
 		t.Fatal("Pubkey was mutated after copy")
 	}
+}
+
+func TestSerialize(t *testing.T) {
+	rk := bls.RandKey()
+	b := rk.Marshal()
+
+	bls.SecretKeyFromBytes(b)
 }

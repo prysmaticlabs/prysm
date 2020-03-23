@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -50,7 +51,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 	); err != nil {
 		t.Fatal(err)
 	}
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,12 +87,14 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
+	c, _ := lru.New(10)
 	r := &Service{
 		p2p: p,
 		chain: &mock.ChainService{
 			State: s,
 		},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync:   &mockSync.Sync{IsSyncing: false},
+		seenExitCache: c,
 	}
 
 	buf := new(bytes.Buffer)

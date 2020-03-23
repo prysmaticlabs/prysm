@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +18,7 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -29,12 +31,15 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		Genesis:          time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
 		ValidAttestation: true,
 	}
+
+	c, _ := lru.New(10)
 	s := &Service{
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		p2p:                  p,
 		db:                   db,
 		chain:                chain,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		seenAttestationCache: c,
 	}
 
 	blk := &ethpb.SignedBeaconBlock{
@@ -76,6 +81,20 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			want:                      true,
 		},
 		{
+			name: "alreadySeen",
+			msg: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0b1010},
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: validBlockRoot[:],
+					CommitteeIndex:  1,
+					Slot:            63,
+				},
+			},
+			topic:                     "/eth2/committee_index1_beacon_attestation",
+			validAttestationSignature: true,
+			want:                      false,
+		},
+		{
 			name: "wrong committee index",
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1010},
@@ -108,7 +127,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1010},
 				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: []byte("missing"),
+					BeaconBlockRoot: bytesutil.PadTo([]byte("missing"), 32),
 					CommitteeIndex:  1,
 					Slot:            63,
 				},
@@ -148,7 +167,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			}
 			chain.ValidAttestation = tt.validAttestationSignature
 			if s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) != tt.want {
-				t.Errorf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)
+				t.Fatalf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)
 			}
 			if tt.want && m.ValidatorData == nil {
 				t.Error("Expected validator data to be set")

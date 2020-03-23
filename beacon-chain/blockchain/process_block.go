@@ -349,10 +349,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 		if err != nil {
 			return err
 		}
-		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-		if err != nil {
-			return err
-		}
+		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
 

@@ -313,7 +313,8 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	ne := ce + 1
 	s.SetEth1DataVotes([]*ethpb.Eth1Data{})
 	balances := s.Balances()
-	balances[0] = 29 * 1e9
+	balances[0] = 31.75 * 1e9
+	balances[1] = 31.74 * 1e9
 	s.SetBalances(balances)
 	slashings := s.Slashings()
 	slashings[ce] = 0
@@ -327,8 +328,11 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 
 	// Verify effective balance is correctly updated.
-	if newS.Validators()[0].EffectiveBalance != 29*1e9 {
+	if newS.Validators()[0].EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
 		t.Errorf("effective balance incorrectly updated, got %d", s.Validators()[0].EffectiveBalance)
+	}
+	if newS.Validators()[1].EffectiveBalance != 31*1e9 {
+		t.Errorf("effective balance incorrectly updated, got %d", s.Validators()[1].EffectiveBalance)
 	}
 
 	// Verify slashed balances correctly updated.

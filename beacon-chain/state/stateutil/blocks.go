@@ -16,18 +16,22 @@ import (
 // a BeaconBlockHeader struct according to the eth2
 // Simple Serialize specification.
 func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
-	fieldRoots := make([][]byte, 4)
+	fieldRoots := make([][]byte, 5)
 	if header != nil {
 		headerSlotBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
 		headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
 		fieldRoots[0] = headerSlotRoot[:]
+		proposerIdxBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(proposerIdxBuf, header.ProposerIndex)
+		proposerIndexRoot := bytesutil.ToBytes32(proposerIdxBuf)
+		fieldRoots[1] = proposerIndexRoot[:]
 		parentRoot := bytesutil.ToBytes32(header.ParentRoot)
-		fieldRoots[1] = parentRoot[:]
+		fieldRoots[2] = parentRoot[:]
 		stateRoot := bytesutil.ToBytes32(header.StateRoot)
-		fieldRoots[2] = stateRoot[:]
+		fieldRoots[3] = stateRoot[:]
 		bodyRoot := bytesutil.ToBytes32(header.BodyRoot)
-		fieldRoots[3] = bodyRoot[:]
+		fieldRoots[4] = bodyRoot[:]
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
@@ -97,7 +101,7 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
 	}
-	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), params.BeaconConfig().SlotsPerEth1VotingPeriod)
+	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
@@ -113,4 +117,17 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 		cachedHasher.rootsCache.Set(string(hashKey[:]), root, 32)
 	}
 	return root, nil
+}
+
+// AddInMixin describes a method from which a lenth mixin is added to the
+// provided root.
+func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
+	rootBuf := new(bytes.Buffer)
+	if err := binary.Write(rootBuf, binary.LittleEndian, length); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal eth1data votes length")
+	}
+	// We need to mix in the length of the slice.
+	rootBufRoot := make([]byte, 32)
+	copy(rootBufRoot, rootBuf.Bytes())
+	return mixInLength(root, rootBufRoot), nil
 }

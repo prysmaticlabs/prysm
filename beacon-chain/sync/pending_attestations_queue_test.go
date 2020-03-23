@@ -35,7 +35,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound)
+	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound, []uint64{})
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
@@ -129,11 +129,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,11 +152,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[18].Sign(slotRoot[:])
+	sig := privKeys[33].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 18,
+		AggregatorIndex: 33,
 	}
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
@@ -187,7 +187,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	}
 
 	if len(r.attPool.AggregatedAttestations()) != 1 {
-		t.Error("Did not save aggregated att")
+		t.Fatal("Did not save aggregated att")
 	}
 	if !reflect.DeepEqual(r.attPool.AggregatedAttestations()[0], att) {
 		t.Error("Incorrect saved att")

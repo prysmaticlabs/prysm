@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -39,7 +40,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,10 +93,12 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
+	c, _ := lru.New(10)
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: s},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		seenAttesterSlashingCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -130,10 +133,12 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
+	c, _ := lru.New(10)
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: state},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: state},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		seenAttesterSlashingCache: c,
 	}
 
 	buf := new(bytes.Buffer)

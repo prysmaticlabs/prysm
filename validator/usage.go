@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var appHelpTemplate = `NAME:
@@ -52,11 +52,10 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
-			cmd.BootstrapNode,
 			cmd.MonitoringPortFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
-			cmd.EnableUPnPFlag,
+			cmd.ConfigFileFlag,
 		},
 	},
 	{
@@ -90,7 +89,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.ValidatorFlags,
+		Flags: featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
 	},
 	{
 		Name: "interop",
