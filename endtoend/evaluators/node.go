@@ -8,18 +8,19 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
 )
 
 // PeersConnect checks all beacon nodes and returns whether they are connected to each other as peers.
-var PeersConnect = Evaluator{
+var PeersConnect = types.Evaluator{
 	Name:       "peers_connect_epoch_%d",
 	Policy:     onEpoch(0),
 	Evaluation: peersConnect,
 }
 
 // FinishedSyncing returns whether the beacon node with the given rpc port has finished syncing.
-var FinishedSyncing = Evaluator{
+var FinishedSyncing = types.Evaluator{
 	Name:       "finished_syncing",
 	Policy:     func(currentEpoch uint64) bool { return true },
 	Evaluation: finishedSyncing,
@@ -27,7 +28,7 @@ var FinishedSyncing = Evaluator{
 
 // AllNodesHaveSameHead ensures all nodes have the same head epoch. Checks finality and justification as well.
 // Not checking head block root as it may change irregularly for the validator connected nodes.
-var AllNodesHaveSameHead = Evaluator{
+var AllNodesHaveSameHead = types.Evaluator{
 	Name:       "all_nodes_have_same_head",
 	Policy:     func(currentEpoch uint64) bool { return true },
 	Evaluation: allNodesHaveSameHead,

@@ -100,10 +100,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
-			if err != nil {
-				panic(err)
-			}
+			indices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 			for _, i := range indices {
 				m[r].score[i] = true
 			}

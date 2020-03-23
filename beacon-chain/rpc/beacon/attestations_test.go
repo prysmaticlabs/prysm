@@ -600,7 +600,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
@@ -697,7 +697,7 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
@@ -989,7 +989,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := aggAtts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}

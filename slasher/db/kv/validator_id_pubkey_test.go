@@ -6,7 +6,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 type publicKeyTestStruct struct {
@@ -34,9 +34,9 @@ func init() {
 }
 
 func TestNilDBValidatorPublicKey(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -53,9 +53,9 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 }
 
 func TestSavePubKey(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -78,9 +78,9 @@ func TestSavePubKey(t *testing.T) {
 }
 
 func TestDeletePublicKey(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 

@@ -1314,7 +1314,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		attestingIndices, err := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
+		attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
 		if err != nil {
 			t.Error(err)
 		}

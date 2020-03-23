@@ -1,4 +1,4 @@
-package endtoend
+package helpers
 
 import (
 	"time"

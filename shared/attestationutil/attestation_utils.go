@@ -4,7 +4,6 @@ import (
 	"context"
 	"sort"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"go.opencensus.io/trace"
@@ -28,14 +27,11 @@ import (
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) *ethpb.IndexedAttestation {
 	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
 	defer span.End()
 
-	attIndices, err := AttestingIndices(attestation.AggregationBits, committee)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting indices")
-	}
+	attIndices := AttestingIndices(attestation.AggregationBits, committee)
 
 	sort.Slice(attIndices, func(i, j int) bool {
 		return attIndices[i] < attIndices[j]
@@ -45,7 +41,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 		Signature:        attestation.Signature,
 		AttestingIndices: attIndices,
 	}
-	return inAtt, nil
+	return inAtt
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The
@@ -61,16 +57,12 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    """
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error) {
+func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
 	indices := make([]uint64, 0, len(committee))
-	indicesSet := make(map[uint64]bool, len(committee))
-	for i, idx := range committee {
-		if !indicesSet[idx] {
-			if bf.BitAt(uint64(i)) {
-				indices = append(indices, idx)
-			}
+	for _, idx := range bf.BitIndices() {
+		if idx < len(committee) {
+			indices = append(indices, committee[idx])
 		}
-		indicesSet[idx] = true
 	}
-	return indices, nil
+	return indices
 }
