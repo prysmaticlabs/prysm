@@ -133,11 +133,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 		return nil, err
 	}
 
-	root, err := helpers.ComputeSigningRoot(slot, domain.SignatureDomain)
-	if err != nil {
-		return nil, err
-	}
-	sig, err := v.keyManager.Sign(pubKey, root)
+	sig, err := v.signObject(pubKey, slot, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to sign slot")
 	}
