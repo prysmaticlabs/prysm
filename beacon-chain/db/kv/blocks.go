@@ -70,50 +70,11 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Si
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
-		// If no filter criteria are specified, return an error.
-		if f == nil {
-			return errors.New("must specify a filter criteria for retrieving blocks")
-		}
-
-		// Creates a list of indices from the passed in filter values, such as:
-		// []byte("0x2093923") in the parent root indices bucket to be used for looking up
-		// block roots that were stored under each of those indices for O(1) lookup.
-		indicesByBucket, err := createBlockIndicesFromFilters(f)
+		keys, err := getBlockRootsByFilter(ctx, tx, f)
 		if err != nil {
-			return errors.Wrap(err, "could not determine lookup indices")
+			return err
 		}
 
-		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
-		filtersMap := f.Filters()
-		rootsBySlotRange := fetchBlockRootsBySlotRange(
-			tx.Bucket(blockSlotIndicesBucket),
-			filtersMap[filters.StartSlot],
-			filtersMap[filters.EndSlot],
-			filtersMap[filters.StartEpoch],
-			filtersMap[filters.EndEpoch],
-			filtersMap[filters.SlotStep],
-		)
-
-		// Once we have a list of block roots that correspond to each
-		// lookup index, we find the intersection across all of them and use
-		// that list of roots to lookup the block. These block will
-		// meet the filter criteria.
-		indices := lookupValuesForIndices(indicesByBucket, tx)
-		keys := rootsBySlotRange
-		if len(indices) > 0 {
-			// If we have found indices that meet the filter criteria, and there are also
-			// block roots that meet the slot range filter criteria, we find the intersection
-			// between these two sets of roots.
-			if len(rootsBySlotRange) > 0 {
-				joined := append([][][]byte{keys}, indices...)
-				keys = sliceutil.IntersectionByteSlices(joined...)
-			} else {
-				// If we have found indices that meet the filter criteria, but there are no block roots
-				// that meet the slot range filter criteria, we find the intersection
-				// of the regular filter indices.
-				keys = sliceutil.IntersectionByteSlices(indices...)
-			}
-		}
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			block := &ethpb.SignedBeaconBlock{}
@@ -133,48 +94,11 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
 	err := k.db.View(func(tx *bolt.Tx) error {
-		// If no filter criteria are specified, return an error.
-		if f == nil {
-			return errors.New("must specify a filter criteria for retrieving block roots")
-		}
-
-		// Creates a list of indices from the passed in filter values, such as:
-		// []byte("0x2093923") in the parent root indices bucket to be used for looking up
-		// block roots that were stored under each of those indices for O(1) lookup.
-		indicesByBucket, err := createBlockIndicesFromFilters(f)
+		keys, err := getBlockRootsByFilter(ctx, tx, f)
 		if err != nil {
-			return errors.Wrap(err, "could not determine lookup indices")
+			return err
 		}
 
-		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
-		filtersMap := f.Filters()
-		rootsBySlotRange := fetchBlockRootsBySlotRange(
-			tx.Bucket(blockSlotIndicesBucket),
-			filtersMap[filters.StartSlot],
-			filtersMap[filters.EndSlot],
-			filtersMap[filters.StartEpoch],
-			filtersMap[filters.EndEpoch],
-			filtersMap[filters.SlotStep],
-		)
-
-		// Once we have a list of block roots that correspond to each
-		// lookup index, we find the intersection across all of them.
-		indices := lookupValuesForIndices(indicesByBucket, tx)
-		keys := rootsBySlotRange
-		if len(indices) > 0 {
-			// If we have found indices that meet the filter criteria, and there are also
-			// block roots that meet the slot range filter criteria, we find the intersection
-			// between these two sets of roots.
-			if len(rootsBySlotRange) > 0 {
-				joined := append([][][]byte{keys}, indices...)
-				keys = sliceutil.IntersectionByteSlices(joined...)
-			} else {
-				// If we have found indices that meet the filter criteria, but there are no block roots
-				// that meet the slot range filter criteria, we find the intersection
-				// of the regular filter indices.
-				keys = sliceutil.IntersectionByteSlices(indices...)
-			}
-		}
 		for i := 0; i < len(keys); i++ {
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}
@@ -267,6 +191,9 @@ func (k *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		return nil
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
+		if err := k.updateSavedBlockSlot(ctx, tx, signed.Block.Slot); err != nil {
+			return err
+		}
 		bkt := tx.Bucket(blocksBucket)
 		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 			return nil
@@ -291,6 +218,10 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		for _, block := range blocks {
+			if err := k.updateSavedBlockSlot(ctx, tx, block.Block.Slot); err != nil {
+				return err
+			}
+
 			blockRoot, err := ssz.HashTreeRoot(block.Block)
 			if err != nil {
 				return err
@@ -362,6 +293,111 @@ func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(genesisBlockRootKey, blockRoot[:])
 	})
+}
+
+// HighestSlotBlock returns the block with the highest slot from the db.
+func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlock")
+	defer span.End()
+
+	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+	err := k.db.View(func(tx *bolt.Tx) error {
+		sBkt := tx.Bucket(slotsHasObjectBucket)
+		savedSlots := sBkt.Get(savedBlockSlotsKey)
+		highestIndex, err := bytesutil.HighestBitIndex(savedSlots)
+		if err != nil {
+			return err
+		}
+		highestSlot := highestIndex - 1
+		f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
+
+		keys, err := getBlockRootsByFilter(ctx, tx, f)
+		if err != nil {
+			return err
+		}
+
+		bBkt := tx.Bucket(blocksBucket)
+		for i := 0; i < len(keys); i++ {
+			encoded := bBkt.Get(keys[i])
+			block := &ethpb.SignedBeaconBlock{}
+			if err := decode(encoded, block); err != nil {
+				return err
+			}
+			blocks = append(blocks, block)
+		}
+		return nil
+	})
+
+	if len(blocks) != 1 {
+		return nil, errors.New("no highest slot block saved")
+	}
+
+	return blocks[0], err
+}
+
+// saveBlockSlot updates the block slot bitfield in DB. This tracks
+// which slot has block saved.
+func (k *Store) updateSavedBlockSlot(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateSavedBlockSlot")
+	defer span.End()
+
+		bucket := tx.Bucket(slotsHasObjectBucket)
+		bfs := bucket.Get(savedBlockSlotsKey)
+		bfs = bytesutil.SetBit(bfs, int(slot))
+		return bucket.Put(savedBlockSlotsKey, bfs)
+}
+
+// getBlockRootsByFilter retrieves the block roots given the filter criteria.
+func getBlockRootsByFilter(ctx context.Context, tx *bolt.Tx,  f *filters.QueryFilter) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.getBlockRootsByFilter")
+	defer span.End()
+
+	// If no filter criteria are specified, return an error.
+	if f == nil {
+		return nil, errors.New("must specify a filter criteria for retrieving blocks")
+	}
+
+	// Creates a list of indices from the passed in filter values, such as:
+	// []byte("0x2093923") in the parent root indices bucket to be used for looking up
+	// block roots that were stored under each of those indices for O(1) lookup.
+	indicesByBucket, err := createBlockIndicesFromFilters(f)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not determine lookup indices")
+	}
+
+	// We retrieve block roots that match a filter criteria of slot ranges, if specified.
+	filtersMap := f.Filters()
+	rootsBySlotRange := fetchBlockRootsBySlotRange(
+		tx.Bucket(blockSlotIndicesBucket),
+		filtersMap[filters.StartSlot],
+		filtersMap[filters.EndSlot],
+		filtersMap[filters.StartEpoch],
+		filtersMap[filters.EndEpoch],
+		filtersMap[filters.SlotStep],
+	)
+
+	// Once we have a list of block roots that correspond to each
+	// lookup index, we find the intersection across all of them and use
+	// that list of roots to lookup the block. These block will
+	// meet the filter criteria.
+	indices := lookupValuesForIndices(indicesByBucket, tx)
+	keys := rootsBySlotRange
+	if len(indices) > 0 {
+		// If we have found indices that meet the filter criteria, and there are also
+		// block roots that meet the slot range filter criteria, we find the intersection
+		// between these two sets of roots.
+		if len(rootsBySlotRange) > 0 {
+			joined := append([][][]byte{keys}, indices...)
+			keys = sliceutil.IntersectionByteSlices(joined...)
+		} else {
+			// If we have found indices that meet the filter criteria, but there are no block roots
+			// that meet the slot range filter criteria, we find the intersection
+			// of the regular filter indices.
+			keys = sliceutil.IntersectionByteSlices(indices...)
+		}
+	}
+
+	return keys, nil
 }
 
 // fetchBlockRootsBySlotRange looks into a boltDB bucket and performs a binary search
