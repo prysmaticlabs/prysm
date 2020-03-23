@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func TestInitFeatureConfig(t *testing.T) {
@@ -18,10 +18,10 @@ func TestInitFeatureConfig(t *testing.T) {
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(minimalConfigFlag.Name, true, "test")
-	context := cli.NewContext(app, set, nil)
+	context := cli.NewContext(&app, set, nil)
 	ConfigureBeaconChain(context)
 	if c := Get(); !c.MinimalConfig {
 		t.Errorf("MinimalConfig in FeatureFlags incorrect. Wanted true, got false")
