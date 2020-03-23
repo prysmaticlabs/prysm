@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	lru "github.com/hashicorp/golang-lru"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -104,6 +105,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
+	c, _ := lru.New(10)
 	r := Service{
 		ctx:          ctx,
 		p2p:          p2p,
@@ -111,6 +113,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		slashingPool: slashings.NewPool(),
 		chain:        chainService,
 		db:           d,
+		seenProposerSlashingCache: c,
 	}
 	topic := "/eth2/proposer_slashing"
 	var wg sync.WaitGroup

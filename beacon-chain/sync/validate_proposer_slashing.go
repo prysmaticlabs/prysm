@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -41,6 +42,10 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 
+	if r.hasSeenProposerSlashingIndex(slashing.Header_1.Header.ProposerIndex) {
+		return false
+	}
+
 	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
@@ -64,4 +69,19 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return true
+}
+
+// Returns true if the node has already received a valid proposer slashing received for the proposer with index
+func (r *Service) hasSeenProposerSlashingIndex(i uint64) bool {
+	r.seenProposerSlashingLock.RLock()
+	defer r.seenProposerSlashingLock.RUnlock()
+	_, seen := r.seenAttestationCache.Get(string(bytesutil.Bytes32(i)))
+	return seen
+}
+
+// Set proposer slashing index in proposer slashing cache.
+func (r *Service) setProposerSlashingIndexSeen(i uint64) {
+	r.seenProposerSlashingLock.Lock()
+	defer r.seenProposerSlashingLock.Unlock()
+	r.seenAttestationCache.Add(string(bytesutil.Bytes32(i)), true)
 }

@@ -49,6 +49,8 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
 	if ps.Header_1 != nil && ps.Header_1.Header != nil {
+		r.setProposerSlashingIndexSeen(ps.Header_1.Header.ProposerIndex)
+
 		root, err := ssz.HashTreeRoot(ps.Header_1.Header)
 		s, err := r.db.State(ctx, root)
 		if err != nil {

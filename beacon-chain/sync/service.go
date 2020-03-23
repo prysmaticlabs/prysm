@@ -27,7 +27,9 @@ const allowedBlocksPerSecond = 32.0
 const allowedBlocksBurst = 10 * allowedBlocksPerSecond
 const seenBlockSize = 1000
 const seenAttSize = 10000
-
+const seenExitSize = 100
+const seenAttesterSlashingSize = 100
+const seenProposerSlashingSize = 100
 // Config to set up the regular sync service.
 type Config struct {
 	P2P                 p2p.P2P
@@ -107,20 +109,19 @@ type Service struct {
 	seenBlockCache       *lru.Cache
 	seenAttestationLock  sync.RWMutex
 	seenAttestationCache *lru.Cache
+	seenExitLock        sync.RWMutex
+	seenExitCache       *lru.Cache
+	seenProposerSlashingLock  sync.RWMutex
+	seenProposerSlashingCache *lru.Cache
+	seenAttesterSlashingLock        sync.RWMutex
+	seenAttesterSlashingCache       *lru.Cache
 }
 
 // Start the regular sync service.
 func (r *Service) Start() {
-	bCache, err := lru.New(seenBlockSize)
-	if err != nil {
+	if err := r.initCaches(); err != nil {
 		panic(err)
 	}
-	aCache, err := lru.New(seenAttSize)
-	if err != nil {
-		panic(err)
-	}
-	r.seenBlockCache = bCache
-	r.seenAttestationCache = aCache
 
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
@@ -149,6 +150,38 @@ func (r *Service) Status() error {
 			return errors.New("out of sync")
 		}
 	}
+	return nil
+}
+
+// This initializes the caches to update seen beacon objects coming in from the wire
+// and prevent DoS.
+func (r *Service) initCaches() error {
+	blkCache, err := lru.New(seenBlockSize)
+	if err != nil {
+		return err
+	}
+	attCache, err := lru.New(seenAttSize)
+	if err != nil {
+		return err
+	}
+	exitCache, err := lru.New(seenExitSize)
+	if err != nil {
+		return err
+	}
+	attesterSlashingCache, err := lru.New(seenAttesterSlashingSize)
+	if err != nil {
+		return err
+	}
+	proposerSlashingCache, err := lru.New(seenProposerSlashingSize)
+	if err != nil {
+		return err
+	}
+	r.seenBlockCache = blkCache
+	r.seenAttestationCache = attCache
+	r.seenExitCache = exitCache
+	r.seenAttesterSlashingCache = attesterSlashingCache
+	r.seenProposerSlashingCache = proposerSlashingCache
+
 	return nil
 }
 
