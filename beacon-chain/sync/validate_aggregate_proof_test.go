@@ -443,10 +443,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	if err != nil {
-		t.Error(err)
-	}
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
