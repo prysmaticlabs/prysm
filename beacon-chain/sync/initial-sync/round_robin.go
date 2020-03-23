@@ -21,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const blockBatchSize = 64
+const blockBatchSize = 32
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
 
@@ -66,10 +66,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		s.logSyncStatus(genesis, blk.Block, counter)
 		if err := s.processBlock(ctx, blk); err != nil {
 			log.WithError(err).Info("Block is invalid")
-			queue.state.scheduler.incrementCounter(failedBlock, 1)
 			continue
 		}
-		queue.state.scheduler.incrementCounter(validBlock, 1)
 	}
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
