@@ -14,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 )
 
 const attestationSubnetCount = 64
@@ -111,29 +110,6 @@ func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 	}
 	err = host.Connect(context.Background(), *peerInfo)
 	return err
-}
-
-func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
-	bitV := bitfield.NewBitvector64()
-	entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
-	node.Set(entry)
-	return node
-}
-
-func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
-	bitV := bitfield.NewBitvector64()
-	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	err := record.Load(entry)
-	if err != nil {
-		return nil, err
-	}
-	committeeIdxs := []uint64{}
-	for i := uint64(0); i < 64; i++ {
-		if bitV.BitAt(i) {
-			committeeIdxs = append(committeeIdxs, i)
-		}
-	}
-	return committeeIdxs, nil
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
