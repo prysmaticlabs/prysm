@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -39,6 +40,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 
 	p := p2ptest.NewTestP2P(t)
 
+	c, _ := lru.New(10)
 	r := &Service{
 		db:          db,
 		p2p:         p,
@@ -47,6 +49,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
+		seenBlockCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -84,11 +87,13 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	c, _ := lru.New(10)
 	r := &Service{
-		db:          db,
-		p2p:         p,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain:       &mock.ChainService{Genesis: time.Now()},
+		db:             db,
+		p2p:            p,
+		initialSync:    &mockSync.Sync{IsSyncing: false},
+		chain:          &mock.ChainService{Genesis: time.Now()},
+		seenBlockCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -130,6 +135,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 
+	c, _ := lru.New(10)
 	r := &Service{
 		db:          db,
 		p2p:         p,
@@ -138,6 +144,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
+		seenBlockCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -228,11 +235,13 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 
+	c, _ := lru.New(10)
 	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain:       &mock.ChainService{Genesis: time.Now()},
+		p2p:            p,
+		db:             db,
+		initialSync:    &mockSync.Sync{IsSyncing: false},
+		chain:          &mock.ChainService{Genesis: time.Now()},
+		seenBlockCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -273,6 +282,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	}
 
 	genesisTime := time.Now()
+	c, _ := lru.New(10)
 	r := &Service{
 		db:          db,
 		p2p:         p,
@@ -282,6 +292,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 1,
 			}},
+		seenBlockCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -298,6 +309,61 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m)
 
+	if result {
+		t.Error("Expected false result, got true")
+	}
+}
+
+func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	b := []byte("sk")
+	b32 := bytesutil.ToBytes32(b)
+	sk, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 1,
+			ParentRoot: testutil.Random32Bytes(t),
+		},
+		Signature: sk.Sign([]byte("data")).Marshal(),
+	}
+
+	c, _ := lru.New(10)
+	r := &Service{
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot), 0) ,
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
+		seenBlockCache: c,
+	}
+
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
+	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	if !result {
+		t.Error("Expected true result, got false")
+	}
+	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
+	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
+	result = r.validateBeaconBlockPubSub(ctx, "", m)
 	if result {
 		t.Error("Expected false result, got true")
 	}
