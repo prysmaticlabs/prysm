@@ -5,13 +5,12 @@ import (
 	"io/ioutil"
 	"testing"
 
-	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
-	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
+	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
