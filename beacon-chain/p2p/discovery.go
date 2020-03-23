@@ -89,6 +89,9 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
+	if err := addForkEntry(localNode); err != nil {
+		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
+	}
 	return intializeAttSubnets(localNode), nil
 }
 
