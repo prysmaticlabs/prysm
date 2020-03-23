@@ -22,7 +22,7 @@ func (bs *Service) RequestHistoricalAttestations(
 	var err error
 	for {
 		res, err = bs.beaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
-			QueryFilter: &ethpb.ListIndexedAttestationsRequest_TargetEpoch{
+			QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{
 				TargetEpoch: epoch,
 			},
 			PageSize:  int32(params.BeaconConfig().DefaultPageSize),
