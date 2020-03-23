@@ -19,13 +19,14 @@ var _ = shared.Service(&Gateway{})
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward
 // it to the beacon-chain gRPC server.
 type Gateway struct {
-	conn        *grpc.ClientConn
-	ctx         context.Context
-	cancel      context.CancelFunc
-	gatewayAddr string
-	remoteAddr  string
-	server      *http.Server
-	mux         *http.ServeMux
+	conn           *grpc.ClientConn
+	ctx            context.Context
+	cancel         context.CancelFunc
+	gatewayAddr    string
+	remoteAddr     string
+	server         *http.Server
+	mux            *http.ServeMux
+	allowedOrigins []string
 
 	startFailure error
 }
@@ -64,7 +65,7 @@ func (g *Gateway) Start() {
 
 	g.server = &http.Server{
 		Addr:    g.gatewayAddr,
-		Handler: g.mux,
+		Handler: newCorsHandler(g.mux, g.allowedOrigins),
 	}
 	go func() {
 		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
@@ -105,16 +106,17 @@ func (g *Gateway) Stop() error {
 
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
-func New(ctx context.Context, remoteAddress, gatewayAddress string, mux *http.ServeMux) *Gateway {
+func New(ctx context.Context, remoteAddress, gatewayAddress string, mux *http.ServeMux, allowedOrigins []string) *Gateway {
 	if mux == nil {
 		mux = http.NewServeMux()
 	}
 
 	return &Gateway{
-		remoteAddr:  remoteAddress,
-		gatewayAddr: gatewayAddress,
-		ctx:         ctx,
-		mux:         mux,
+		remoteAddr:     remoteAddress,
+		gatewayAddr:    gatewayAddress,
+		ctx:            ctx,
+		mux:            mux,
+		allowedOrigins: allowedOrigins,
 	}
 }
 
