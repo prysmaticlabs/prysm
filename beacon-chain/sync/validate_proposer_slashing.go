@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -78,7 +77,7 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 func (r *Service) hasSeenProposerSlashingIndex(i uint64) bool {
 	r.seenProposerSlashingLock.RLock()
 	defer r.seenProposerSlashingLock.RUnlock()
-	_, seen := r.seenProposerSlashingCache.Get(string(bytesutil.Bytes32(i)))
+	_, seen := r.seenProposerSlashingCache.Get(i)
 	return seen
 }
 
@@ -86,5 +85,5 @@ func (r *Service) hasSeenProposerSlashingIndex(i uint64) bool {
 func (r *Service) setProposerSlashingIndexSeen(i uint64) {
 	r.seenProposerSlashingLock.Lock()
 	defer r.seenProposerSlashingLock.Unlock()
-	r.seenProposerSlashingCache.Add(string(bytesutil.Bytes32(i)), true)
+	r.seenProposerSlashingCache.Add(i, true)
 }

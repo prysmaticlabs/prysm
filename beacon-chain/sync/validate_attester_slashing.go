@@ -92,7 +92,7 @@ func (r *Service) hasSeenAttesterSlashingIndices(indices1 []uint64, indices2 []u
 	}
 	b := hashutil.FastSum256(IndicesInBytes)
 
-	_, seen := r.seenAttesterSlashingCache.Get(string(b[:]))
+	_, seen := r.seenAttesterSlashingCache.Get(b)
 	return seen
 }
 
@@ -111,5 +111,5 @@ func (r *Service) setAttesterSlashingIndicesSeen(indices1 []uint64, indices2 []u
 	}
 	b := hashutil.FastSum256(IndicesInBytes)
 
-	r.seenAttesterSlashingCache.Add(string(b[:]), true)
+	r.seenAttesterSlashingCache.Add(b, true)
 }
