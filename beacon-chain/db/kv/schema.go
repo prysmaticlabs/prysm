@@ -24,6 +24,7 @@ var (
 	powchainBucket                       = []byte("powchain")
 	archivedIndexRootBucket              = []byte("archived-index-root")
 	archivedIndexStateBucket             = []byte("archived-index-state")
+	slotsHasObjectBucket             = []byte("slots-has-objects")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
@@ -43,6 +44,9 @@ var (
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
 	powchainDataKey           = []byte("powchain-data")
 	lastArchivedIndexKey      = []byte("last-archived")
+	savedBlockSlotsKey      = []byte("saved-block-slots")
+	savedStateSlotsKey      = []byte("saved-state-slots")
+
 
 	// Migration bucket.
 	migrationBucket = []byte("migrations")
