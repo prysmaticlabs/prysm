@@ -34,3 +34,24 @@ func TestComputeDomain_OK(t *testing.T) {
 		}
 	}
 }
+
+func TestComputeForkDigest_OK(t *testing.T) {
+	tests := []struct {
+		version []byte
+		root    [32]byte
+		result  [4]byte
+	}{
+		{version: []byte{'A', 'B', 'C', 'D'}, root: [32]byte{'i', 'o', 'p'}, result: [4]byte{0x69, 0x5c, 0x26, 0x47}},
+		{version: []byte{'i', 'm', 'n', 'a'}, root: [32]byte{'z', 'a', 'b'}, result: [4]byte{0x1c, 0x38, 0x84, 0x58}},
+		{version: []byte{'b', 'w', 'r', 't'}, root: [32]byte{'r', 'd', 'c'}, result: [4]byte{0x83, 0x34, 0x38, 0x88}},
+	}
+	for _, tt := range tests {
+		digest, err := ComputeForkDigest(tt.version, tt.root[:])
+		if err != nil {
+			t.Error(err)
+		}
+		if digest != tt.result {
+			t.Errorf("wanted domain version: %#x, got: %#x", digest, tt.result)
+		}
+	}
+}
