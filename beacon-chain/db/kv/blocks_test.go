@@ -465,6 +465,8 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	b := make([]*ethpb.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b[i] = &ethpb.SignedBeaconBlock{
@@ -475,7 +477,6 @@ func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 		}
 	}
 
-	ctx := context.Background()
 	if err := db.SaveBlocks(ctx, b); err != nil {
 		t.Fatal(err)
 	}
@@ -484,6 +485,81 @@ func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !proto.Equal(b[len(b)-1], highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", b[len(b)-1], highestSavedBlock)
+	}
+}
+
+func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	b50 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 50}}
+	if err := db.SaveBlock(ctx, b50); err != nil {
+		t.Fatal(err)
+	}
+	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(b50, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", b50, highestSavedBlock)
+	}
+
+	b51 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 51}}
+	r51, _ := ssz.HashTreeRoot(b51.Block)
+	if err := db.SaveBlock(ctx, b51); err != nil {
+		t.Fatal(err)
+	}
+
+	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(b51, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", b51, highestSavedBlock)
+	}
+
+	if err := db.DeleteBlock(ctx, r51); err != nil {
+		t.Fatal(err)
+	}
+	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(b50, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", b50, highestSavedBlock)
+	}
+}
+
+func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	b := make([]*ethpb.SignedBeaconBlock, 100)
+	r := make([][32]byte, 100)
+	for i := 0; i < 100; i++ {
+		b[i] = &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				ParentRoot: []byte("parent"),
+				Slot:       uint64(i),
+			},
+		}
+		r[i], _ = ssz.HashTreeRoot(b[i].Block)
+	}
+
+	if err := db.SaveBlocks(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.DeleteBlocks(ctx, [][32]byte{r[99], r[98], r[97]}); err != nil {
+		t.Fatal(err)
+	}
+	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(b[96], highestSavedBlock) {
 		t.Errorf("Wanted %v, received %v", b[len(b)-1], highestSavedBlock)
 	}
 }

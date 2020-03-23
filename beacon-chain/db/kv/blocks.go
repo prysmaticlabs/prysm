@@ -146,6 +146,9 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		k.blockCache.Del(string(blockRoot[:]))
+		if err := k.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+			return err
+		}
 		return bkt.Delete(blockRoot[:])
 	})
 }
@@ -171,6 +174,9 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
 			k.blockCache.Del(string(blockRoot[:]))
+			if err := k.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+				return err
+			}
 			if err := bkt.Delete(blockRoot[:]); err != nil {
 				return err
 			}
@@ -191,9 +197,10 @@ func (k *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		return nil
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
-		if err := k.updateSavedBlockSlot(ctx, tx, signed.Block.Slot); err != nil {
+		if err := k.setBlockSlotBitField(ctx, tx, signed.Block.Slot); err != nil {
 			return err
 		}
+
 		bkt := tx.Bucket(blocksBucket)
 		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 			return nil
@@ -218,7 +225,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		for _, block := range blocks {
-			if err := k.updateSavedBlockSlot(ctx, tx, block.Block.Slot); err != nil {
+			if err := k.setBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 				return err
 			}
 
@@ -335,16 +342,32 @@ func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock,
 	return blocks[0], err
 }
 
-// saveBlockSlot updates the block slot bitfield in DB. This tracks
-// which slot has block saved.
-func (k *Store) updateSavedBlockSlot(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+// setBlockSlotBitField sets the block slot bit in DB.
+// This helps to track which slot has a saved block in db.
+func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateSavedBlockSlot")
 	defer span.End()
 
-		bucket := tx.Bucket(slotsHasObjectBucket)
-		bfs := bucket.Get(savedBlockSlotsKey)
-		bfs = bytesutil.SetBit(bfs, int(slot))
-		return bucket.Put(savedBlockSlotsKey, bfs)
+	bucket := tx.Bucket(slotsHasObjectBucket)
+	slotBitfields := bucket.Get(savedBlockSlotsKey)
+	tmp := make([]byte, len(slotBitfields))
+	copy(tmp, slotBitfields)
+	slotBitfields = bytesutil.SetBit(tmp, int(slot))
+	return bucket.Put(savedBlockSlotsKey, slotBitfields)
+}
+
+// clearBlockSlotBitField clears the block slot bit in DB.
+// This helps to track which slot has a saved block in db.
+func (k *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateSavedBlockSlot")
+	defer span.End()
+
+	bucket := tx.Bucket(slotsHasObjectBucket)
+	slotBitfields := bucket.Get(savedBlockSlotsKey)
+	tmp := make([]byte, len(slotBitfields))
+	copy(tmp, slotBitfields)
+	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
+	return bucket.Put(savedBlockSlotsKey, slotBitfields)
 }
 
 // getBlockRootsByFilter retrieves the block roots given the filter criteria.
