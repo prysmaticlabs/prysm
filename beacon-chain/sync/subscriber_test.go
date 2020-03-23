@@ -59,6 +59,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{}
+	c, _ := lru.New(10)
 	r := Service{
 		ctx:          ctx,
 		p2p:          p2p,
@@ -66,6 +67,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		slashingPool: slashings.NewPool(),
 		chain:        chainService,
 		db:           d,
+		seenAttesterSlashingCache: c,
 	}
 	topic := "/eth2/attester_slashing"
 	var wg sync.WaitGroup
