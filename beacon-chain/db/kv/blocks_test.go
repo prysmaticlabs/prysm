@@ -419,3 +419,45 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 		}
 	}
 }
+
+func TestStore_HighestSavedBlock(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot:1}}
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	}
+
+	block = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot:999}}
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	}
+
+	block = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot:300000000}} // 100 years.
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatal(err)
+	}
+	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	}
+}
