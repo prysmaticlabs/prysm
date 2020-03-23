@@ -342,10 +342,7 @@ func unslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get attester indices")
-		}
+		attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 		// Create a set for attesting indices
 		set := make([]uint64, 0, len(attestingIndices))
 		for _, index := range attestingIndices {
