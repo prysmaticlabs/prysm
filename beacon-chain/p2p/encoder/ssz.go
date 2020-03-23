@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -87,9 +88,23 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 	return w.Write(b)
 }
 
+func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
+	return ssz.Unmarshal(b, to)
+}
+
 // Decode the bytes to the protobuf message provided.
 func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
-	return ssz.Unmarshal(b, to)
+	if e.UseSnappyCompression {
+		newBuffer := bytes.NewBuffer(b)
+		r := snappy.NewReader(newBuffer)
+		newObj := make([]byte, len(b))
+		numOfBytes, err := r.Read(newObj)
+		if err != nil {
+			return err
+		}
+		return e.doDecode(newObj[:numOfBytes], to)
+	}
+	return e.doDecode(b, to)
 }
 
 // DecodeWithLength the bytes from io.Reader to the protobuf message provided.
@@ -101,12 +116,12 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
 	if e.UseSnappyCompression {
 		r = snappy.NewReader(r)
 	}
-	b := make([]byte, msgLen)
+	b := make([]byte, e.MaxLength(int(msgLen)))
 	_, err = r.Read(b)
 	if err != nil {
 		return err
 	}
-	return e.Decode(b, to)
+	return e.doDecode(b, to)
 }
 
 // DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
@@ -122,12 +137,12 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 	if msgLen > maxSize {
 		return fmt.Errorf("size of decoded message is %d which is larger than the provided max limit of %d", msgLen, maxSize)
 	}
-	b := make([]byte, msgLen)
+	b := make([]byte, e.MaxLength(int(msgLen)))
 	_, err = r.Read(b)
 	if err != nil {
 		return err
 	}
-	return e.Decode(b, to)
+	return e.doDecode(b, to)
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
