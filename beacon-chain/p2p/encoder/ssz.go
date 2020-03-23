@@ -117,11 +117,11 @@ func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
 		r = snappy.NewReader(r)
 	}
 	b := make([]byte, e.MaxLength(int(msgLen)))
-	_, err = r.Read(b)
+	numOfBytes, err := r.Read(b)
 	if err != nil {
 		return err
 	}
-	return e.doDecode(b, to)
+	return e.doDecode(b[:numOfBytes], to)
 }
 
 // DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
@@ -138,11 +138,11 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 		return fmt.Errorf("size of decoded message is %d which is larger than the provided max limit of %d", msgLen, maxSize)
 	}
 	b := make([]byte, e.MaxLength(int(msgLen)))
-	_, err = r.Read(b)
+	numOfBytes, err := r.Read(b)
 	if err != nil {
 		return err
 	}
-	return e.doDecode(b, to)
+	return e.doDecode(b[:numOfBytes], to)
 }
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
