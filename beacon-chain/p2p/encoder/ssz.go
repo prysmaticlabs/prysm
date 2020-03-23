@@ -26,14 +26,14 @@ func (e SszNetworkEncoder) Encode(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
-	if e.UseSnappyCompression {
-		w := snappy.NewBufferedWriter(w)
-		defer w.Close()
-	}
-
 	b, err := e.doEncode(msg)
 	if err != nil {
 		return 0, err
+	}
+	if e.UseSnappyCompression {
+		bufWriter := snappy.NewBufferedWriter(w)
+		defer bufWriter.Close()
+		return bufWriter.Write(b)
 	}
 	return w.Write(b)
 }
@@ -44,15 +44,20 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, 
 	if msg == nil {
 		return 0, nil
 	}
-	if e.UseSnappyCompression {
-		w := snappy.NewBufferedWriter(w)
-		defer w.Close()
-	}
 	b, err := e.doEncode(msg)
 	if err != nil {
 		return 0, err
 	}
-	b = append(proto.EncodeVarint(uint64(len(b))), b...)
+	// write varint first
+	_, err = w.Write(proto.EncodeVarint(uint64(len(b))))
+	if err != nil {
+		return 0, err
+	}
+	if e.UseSnappyCompression {
+		w := snappy.NewBufferedWriter(w)
+		defer w.Close()
+		return w.Write(b)
+	}
 	return w.Write(b)
 }
 
@@ -62,10 +67,6 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 	if msg == nil {
 		return 0, nil
 	}
-	if e.UseSnappyCompression {
-		w := snappy.NewBufferedWriter(w)
-		defer w.Close()
-	}
 	b, err := e.doEncode(msg)
 	if err != nil {
 		return 0, err
@@ -73,7 +74,16 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 	if uint64(len(b)) > maxSize {
 		return 0, fmt.Errorf("size of encoded message is %d which is larger than the provided max limit of %d", len(b), maxSize)
 	}
-	b = append(proto.EncodeVarint(uint64(len(b))), b...)
+	// write varint first
+	_, err = w.Write(proto.EncodeVarint(uint64(len(b))))
+	if err != nil {
+		return 0, err
+	}
+	if e.UseSnappyCompression {
+		w := snappy.NewBufferedWriter(w)
+		defer w.Close()
+		return w.Write(b)
+	}
 	return w.Write(b)
 }
 
