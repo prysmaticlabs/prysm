@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -48,4 +49,18 @@ func addForkEntry(node *enode.LocalNode, st *stateTrie.BeaconState) (*enode.Loca
 	forkEntry := enr.WithEntry(eth2EnrKey, enc)
 	node.Set(forkEntry)
 	return node, nil
+}
+
+func retrieveForkEntry(record *enr.Record) (*enrForkID, error) {
+	sszEncodedForkEntry := make([]byte, 16)
+	entry := enr.WithEntry(eth2EnrKey, &sszEncodedForkEntry)
+	err := record.Load(entry)
+	if err != nil {
+		return nil, err
+	}
+	forkEntry := &enrForkID{}
+	if err := ssz.Unmarshal(sszEncodedForkEntry, forkEntry); err != nil {
+		return nil, err
+	}
+	return forkEntry, nil
 }
