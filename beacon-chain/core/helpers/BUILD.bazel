@@ -23,6 +23,7 @@ go_library(
         "//slasher:__subpackages__",
         "//tools:__subpackages__",
         "//validator:__subpackages__",
+        "//endtoend/evaluators:__pkg__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
