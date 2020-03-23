@@ -134,7 +134,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		db:          db,
 		p2p:         p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot), 0) ,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
