@@ -32,9 +32,7 @@ func (e SszNetworkEncoder) Encode(w io.Writer, msg interface{}) (int, error) {
 		return 0, err
 	}
 	if e.UseSnappyCompression {
-		bufWriter := snappy.NewBufferedWriter(w)
-		defer bufWriter.Close()
-		return bufWriter.Write(b)
+		return writeSnappyBuffer(w, b)
 	}
 	return w.Write(b)
 }
@@ -55,9 +53,7 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, 
 		return 0, err
 	}
 	if e.UseSnappyCompression {
-		w := snappy.NewBufferedWriter(w)
-		defer w.Close()
-		return w.Write(b)
+		return writeSnappyBuffer(w, b)
 	}
 	return w.Write(b)
 }
@@ -81,9 +77,7 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 		return 0, err
 	}
 	if e.UseSnappyCompression {
-		w := snappy.NewBufferedWriter(w)
-		defer w.Close()
-		return w.Write(b)
+		return writeSnappyBuffer(w, b)
 	}
 	return w.Write(b)
 }
@@ -160,4 +154,11 @@ func (e SszNetworkEncoder) MaxLength(length int) int {
 		return snappy.MaxEncodedLen(length)
 	}
 	return length
+}
+
+// Writes a bytes value through a snappy buffered writer.
+func writeSnappyBuffer(w io.Writer, b []byte) (int, error) {
+	bufWriter := snappy.NewBufferedWriter(w)
+	defer bufWriter.Close()
+	return bufWriter.Write(b)
 }
