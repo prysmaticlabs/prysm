@@ -57,6 +57,10 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
+	GPRCGatewayCorsDomain = &cli.StringFlag{
+		Name: "grpc-gateway-corsdomain",
+		Usage: "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
+	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
 	MinSyncPeers = &cli.IntFlag{
