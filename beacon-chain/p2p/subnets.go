@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
