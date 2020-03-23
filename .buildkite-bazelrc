@@ -20,15 +20,16 @@ build:remote-cache --strategy=Genrule=standalone
 build:remote-cache --disk_cache=
 build:remote-cache --host_platform_remote_properties_override='properties:{name:\"cache-silo-key\" value:\"prysm\"}' 
 build:remote-cache --remote_instance_name=projects/prysmaticlabs/instances/default_instance
-
-build:remote-cache --experimental_remote_download_outputs=minimal
-build:remote-cache --experimental_inmemory_jdeps_files
-build:remote-cache --experimental_inmemory_dotd_files
+build:remote-cache --remote_download_minimal
 
 # Import workspace options.
 import %workspace%/.bazelrc
 
 startup --host_jvm_args=-Xmx1000m --host_jvm_args=-Xms1000m
+query --repository_cache=/tmp/repositorycache
+query --experimental_repository_cache_hardlinks
+build --repository_cache=/tmp/repositorycache
+build --experimental_repository_cache_hardlinks
 build --experimental_strict_action_env
 build --disk_cache=/tmp/bazelbuilds
 build --experimental_multi_threaded_digest
@@ -36,13 +37,10 @@ build --sandbox_tmpfs_path=/tmp
 build --verbose_failures
 build --announce_rc
 build --show_progress_rate_limit=5
-build --curses=yes --color=yes
+build --curses=yes --color=no
 build --keep_going
 build --test_output=errors
 build --flaky_test_attempts=5
-build --jobs=50
-build --stamp
-test --local_test_jobs=2
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
 
