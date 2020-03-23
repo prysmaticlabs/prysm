@@ -111,8 +111,8 @@ func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 //    4-bytes suffices for practical separation of forks/chains.
 //    """
 //    return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
-func ComputeForkDigest(version []byte, root []byte) ([4]byte, error) {
-	dataRoot, err := computeForkDataRoot(version, root)
+func ComputeForkDigest(version []byte, genesisValidatorsRoot []byte) ([4]byte, error) {
+	dataRoot, err := computeForkDataRoot(version, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, nil
 	}
