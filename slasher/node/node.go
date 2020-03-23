@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -46,10 +46,10 @@ type SlasherNode struct {
 func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 	if err := tracing.Setup(
 		"slasher", // Service name.
-		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
-		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
-		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
-		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
+		ctx.String(cmd.TracingProcessNameFlag.Name),
+		ctx.String(cmd.TracingEndpointFlag.Name),
+		ctx.Float64(cmd.TraceSampleFractionFlag.Name),
+		ctx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (s *SlasherNode) Close() {
 
 func (s *SlasherNode) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
@@ -132,11 +132,11 @@ func (s *SlasherNode) registerPrometheusService(ctx *cli.Context) error {
 }
 
 func (s *SlasherNode) startDB(ctx *cli.Context) error {
-	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
-	forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	baseDir := ctx.String(cmd.DataDirFlag.Name)
+	clearDB := ctx.Bool(cmd.ClearDB.Name)
+	forceClearDB := ctx.Bool(cmd.ForceClearDB.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	cfg := &kv.Config{SpanCacheEnabled: ctx.Bool(flags.UseSpanCacheFlag.Name)}
 	d, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err
@@ -167,8 +167,8 @@ func (s *SlasherNode) startDB(ctx *cli.Context) error {
 }
 
 func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
-	beaconCert := ctx.GlobalString(flags.BeaconCertFlag.Name)
-	beaconProvider := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
+	beaconCert := ctx.String(flags.BeaconCertFlag.Name)
+	beaconProvider := ctx.String(flags.BeaconRPCProviderFlag.Name)
 	if beaconProvider == "" {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}

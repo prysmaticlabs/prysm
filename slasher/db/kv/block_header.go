@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -66,9 +67,10 @@ func (db *Store) HasBlockHeader(ctx context.Context, epoch uint64, validatorID u
 }
 
 // SaveBlockHeader accepts a block header and writes it to disk.
-func (db *Store) SaveBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+func (db *Store) SaveBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveBlockHeader")
 	defer span.End()
+	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {
@@ -95,9 +97,10 @@ func (db *Store) SaveBlockHeader(ctx context.Context, epoch uint64, validatorID 
 }
 
 // DeleteBlockHeader deletes a block header using the epoch and validator id.
-func (db *Store) DeleteBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+func (db *Store) DeleteBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteBlockHeader")
 	defer span.End()
+	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)

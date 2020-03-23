@@ -47,7 +47,7 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return nil
 	}
 
-	// Handle block when the parent is unknown
+	// Handle block when the parent is unknown.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
 		r.pendingQueueLock.Lock()
 		r.slotToPendingBlocks[block.Slot] = signed

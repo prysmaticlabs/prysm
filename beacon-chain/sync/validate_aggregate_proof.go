@@ -133,7 +133,8 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 
 func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.AggregateAttestationAndProof) bool {
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
-	hasState := r.db.HasState(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot))
+	hasStateSummary := featureconfig.Get().NewStateMgmt && r.db.HasStateSummary(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot))
+	hasState := r.db.HasState(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)) || hasStateSummary
 	hasBlock := r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot))
 	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
@@ -169,10 +170,7 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 	if err != nil {
 		return err
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-	if err != nil {
-		return err
-	}
+	attestingIndices := attestationutil.AttestingIndices(a.AggregationBits, committee)
 	var withinCommittee bool
 	for _, i := range attestingIndices {
 		if validatorIndex == i {

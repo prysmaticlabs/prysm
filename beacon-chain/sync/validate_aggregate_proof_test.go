@@ -49,7 +49,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	indices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}

@@ -872,10 +872,7 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
-	if err != nil {
-		return errors.Wrap(err, "could not convert to indexed attestation")
-	}
+	indexedAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
