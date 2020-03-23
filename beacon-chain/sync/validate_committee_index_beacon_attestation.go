@@ -53,6 +53,14 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return false
 	}
 
+	if att.Data == nil {
+		return false
+	}
+	// Verify this the first attestation received for the participating validator for the slot.
+	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
+		return false
+	}
+
 	// The attestation's committee index (attestation.data.index) is for the correct subnet.
 	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, att.Data.CommitteeIndex)) {
 		return false
@@ -84,7 +92,28 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return false
 	}
 
+	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
+
 	msg.ValidatorData = att
 
 	return true
+}
+
+// Returns true if the attestation was already seen for the participating validator for the slot.
+func (s *Service) hasSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, aggregateBits []byte) bool {
+	s.seenAttestationLock.RLock()
+	defer s.seenAttestationLock.RUnlock()
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
+	b = append(b, aggregateBits...)
+	_, seen := s.seenAttestationCache.Get(string(b))
+	return seen
+}
+
+// Set committee's indices and slot as seen for incoming attestations.
+func (s *Service) setSeenCommitteeIndicesSlot(slot uint64, committeeID uint64, aggregateBits []byte) {
+	s.seenAttestationLock.Lock()
+	defer s.seenAttestationLock.Unlock()
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...)
+	b = append(b, aggregateBits...)
+	s.seenAttestationCache.Add(string(b), true)
 }

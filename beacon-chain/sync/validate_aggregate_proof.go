@@ -44,13 +44,21 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		traceutil.AnnotateError(span, err)
 		return false
 	}
-	m, ok := raw.(*ethpb.AggregateAttestationAndProof)
+	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
 		return false
 	}
 
+	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
+		return false
+	}
+	// Verify this is the first aggregate received from the aggregator with index and slot.
+	if r.hasSeenAggregatorIndexSlot(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex) {
+		return false
+	}
+
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := r.attPool.HasAggregatedAttestation(m.Aggregate)
+	seen, err := r.attPool.HasAggregatedAttestation(m.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return false
@@ -58,17 +66,19 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if seen {
 		return false
 	}
-	if !r.validateBlockInAttestation(ctx, m) {
+	if !r.validateBlockInAttestation(ctx, m.Message) {
 		return false
 	}
 
-	if !r.validateAggregatedAtt(ctx, m) {
+	if !r.validateAggregatedAtt(ctx, m.Message) {
 		return false
 	}
 
-	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Aggregate) {
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Message.Aggregate) {
 		return false
 	}
+
+	r.setAggregatorIndexSlotSeen(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
 
@@ -132,6 +142,23 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.Aggre
 		return false
 	}
 	return true
+}
+
+// Returns true if the node has received aggregate for the aggregator with index and slot.
+func (r *Service) hasSeenAggregatorIndexSlot(slot uint64, aggregatorIndex uint64) bool {
+	r.seenAttestationLock.RLock()
+	defer r.seenAttestationLock.RUnlock()
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
+	_, seen := r.seenAttestationCache.Get(string(b))
+	return seen
+}
+
+// Set aggregate's aggregator index slot as seen.
+func (r *Service) setAggregatorIndexSlotSeen(slot uint64, aggregatorIndex uint64) {
+	r.seenAttestationLock.Lock()
+	defer r.seenAttestationLock.Unlock()
+	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
+	r.seenAttestationCache.Add(string(b), true)
 }
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.

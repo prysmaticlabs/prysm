@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/kevinms/leakybucket-go"
@@ -27,6 +28,8 @@ var _ = shared.Service(&Service{})
 
 const allowedBlocksPerSecond = 32.0
 const allowedBlocksBurst = 10 * allowedBlocksPerSecond
+const seenBlockSize = 1000
+const seenAttSize = 10000
 
 // refresh enr every quarter of an epoch
 var refreshRate = (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch) / 4
@@ -106,10 +109,25 @@ type Service struct {
 	blockNotifier        blockfeed.Notifier
 	blocksRateLimiter    *leakybucket.Collector
 	attestationNotifier  operation.Notifier
+	seenBlockLock        sync.RWMutex
+	seenBlockCache       *lru.Cache
+	seenAttestationLock  sync.RWMutex
+	seenAttestationCache *lru.Cache
 }
 
 // Start the regular sync service.
 func (r *Service) Start() {
+	bCache, err := lru.New(seenBlockSize)
+	if err != nil {
+		panic(err)
+	}
+	aCache, err := lru.New(seenAttSize)
+	if err != nil {
+		panic(err)
+	}
+	r.seenBlockCache = bCache
+	r.seenAttestationCache = aCache
+
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.processPendingBlocksQueue()
