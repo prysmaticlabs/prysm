@@ -41,6 +41,13 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return false
 	}
 
+	if exit.Exit == nil {
+		return false
+	}
+	if r.hasSeenExitIndex(exit.Exit.ValidatorIndex) {
+		return false
+	}
+
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
 		return false
@@ -61,4 +68,19 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	msg.ValidatorData = exit // Used in downstream subscriber
 
 	return true
+}
+
+// Returns true if the node has already received a valid exit request for the validator with index `i`.
+func (r *Service) hasSeenExitIndex(i uint64) bool {
+	r.seenExitLock.RLock()
+	defer r.seenExitLock.RUnlock()
+	_, seen := r.seenExitCache.Get(i)
+	return seen
+}
+
+// Set exit request index `i` in seen exit request cache.
+func (r *Service) setExitIndexSeen(i uint64) {
+	r.seenExitLock.Lock()
+	defer r.seenExitLock.Unlock()
+	r.seenExitCache.Add(i, true)
 }

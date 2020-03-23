@@ -140,7 +140,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		db:          db,
 		p2p:         p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot), 0) ,
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
@@ -327,7 +327,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	}
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 1,
+			Slot:       1,
 			ParentRoot: testutil.Random32Bytes(t),
 		},
 		Signature: sk.Sign([]byte("data")).Marshal(),
@@ -338,7 +338,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 		db:          db,
 		p2p:         p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot), 0) ,
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
