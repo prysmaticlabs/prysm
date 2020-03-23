@@ -52,6 +52,10 @@ func (mockListener) RequestENR(*enode.Node) (*enode.Node, error) {
 	panic("implement me")
 }
 
+func (mockListener) LocalNode() *enode.LocalNode {
+	panic("implement me")
+}
+
 func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
 	h, pkey, ipAddr := createHost(t, port)
 	cfg.UDPPort = uint(port)

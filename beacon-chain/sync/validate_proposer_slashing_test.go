@@ -132,9 +132,9 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	c, _ := lru.New(10)
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: s},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
 		seenProposerSlashingCache: c,
 	}
 
@@ -171,9 +171,9 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 
 	c, _ := lru.New(10)
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: state},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: state},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
 		seenProposerSlashingCache: c,
 	}
 

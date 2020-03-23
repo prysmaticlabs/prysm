@@ -42,7 +42,7 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 
-	if slashing.Header_1 == nil || slashing.Header_1.Header == nil{
+	if slashing.Header_1 == nil || slashing.Header_1.Header == nil {
 		return false
 	}
 	if r.hasSeenProposerSlashingIndex(slashing.Header_1.Header.ProposerIndex) {

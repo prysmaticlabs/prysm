@@ -93,7 +93,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		chain: &mock.ChainService{
 			State: s,
 		},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync:   &mockSync.Sync{IsSyncing: false},
 		seenExitCache: c,
 	}
 

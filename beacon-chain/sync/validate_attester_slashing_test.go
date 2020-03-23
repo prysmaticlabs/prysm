@@ -95,9 +95,9 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	c, _ := lru.New(10)
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: s},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
 		seenAttesterSlashingCache: c,
 	}
 
@@ -135,9 +135,9 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 
 	c, _ := lru.New(10)
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: state},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: state},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
 		seenAttesterSlashingCache: c,
 	}
 

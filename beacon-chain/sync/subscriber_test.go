@@ -61,12 +61,12 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	c, _ := lru.New(10)
 	r := Service{
-		ctx:          ctx,
-		p2p:          p2p,
-		initialSync:  &mockSync.Sync{IsSyncing: false},
-		slashingPool: slashings.NewPool(),
-		chain:        chainService,
-		db:           d,
+		ctx:                       ctx,
+		p2p:                       p2p,
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		slashingPool:              slashings.NewPool(),
+		chain:                     chainService,
+		db:                        d,
 		seenAttesterSlashingCache: c,
 	}
 	topic := "/eth2/attester_slashing"
@@ -109,12 +109,12 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	defer db.TeardownDB(t, d)
 	c, _ := lru.New(10)
 	r := Service{
-		ctx:          ctx,
-		p2p:          p2p,
-		initialSync:  &mockSync.Sync{IsSyncing: false},
-		slashingPool: slashings.NewPool(),
-		chain:        chainService,
-		db:           d,
+		ctx:                       ctx,
+		p2p:                       p2p,
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		slashingPool:              slashings.NewPool(),
+		chain:                     chainService,
+		db:                        d,
 		seenProposerSlashingCache: c,
 	}
 	topic := "/eth2/proposer_slashing"

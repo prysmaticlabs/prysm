@@ -25,12 +25,12 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 		// Pretend we are connected to two peers
 		id0, _ := peer.IDB58Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
 		ma0, _ := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
-		m.peers.Add(id0, ma0, network.DirInbound)
+		m.peers.Add(id0, ma0, network.DirInbound, []uint64{})
 		m.peers.SetConnectionState(id0, peers.PeerConnected)
 		m.peers.SetChainState(id0, &pb.Status{FinalizedEpoch: uint64(10)})
 		id1, _ := peer.IDB58Decode("16Uiu2HAm4HgJ9N1o222xK61o7LSgToYWoAy1wNTJRkh9gLZapVAy")
 		ma1, _ := ma.NewMultiaddr("/ip4/52.23.23.253/tcp/30000/ipfs/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK/p2p-circuit")
-		m.peers.Add(id1, ma1, network.DirOutbound)
+		m.peers.Add(id1, ma1, network.DirOutbound, []uint64{})
 		m.peers.SetConnectionState(id1, peers.PeerConnected)
 		m.peers.SetChainState(id1, &pb.Status{FinalizedEpoch: uint64(11)})
 	}
