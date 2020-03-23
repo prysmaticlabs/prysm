@@ -7,6 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// SignedBlockHeader given slot,proposer index this function generates signed block header
+// with random bytes as its signature.
 func SignedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
 	sig, err := genRandomSig()
 	if err != nil {
@@ -31,6 +33,7 @@ func genRandomSig() (blk []byte, err error) {
 	return
 }
 
+// StartSlot returns the first slot of a given epoch.
 func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().SlotsPerEpoch
 }
