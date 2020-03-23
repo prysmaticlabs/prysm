@@ -16,9 +16,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const attestationSubnetCount = 64
-const attSubnetEnrKey = "attnets"
-
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
 type Listener interface {
