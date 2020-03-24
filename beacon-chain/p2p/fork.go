@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"errors"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -25,17 +26,18 @@ type enrForkID struct {
 
 // Adds a fork entry as an ENR record under the eth2EnrKey for
 // the local node. The fork entry is an ssz-encoded enrForkID type
-// which takes into account the current fork version from the beacon
-// state to create a fork digest, the next fork version,
+// which takes into account the current fork version from the current
+// epoch to create a fork digest, the next fork version,
 // and the next fork epoch.
-func addForkEntry(node *enode.LocalNode, st *stateTrie.BeaconState) (*enode.LocalNode, error) {
+func addForkEntry(
+	node *enode.LocalNode,
+	genesisTime time.Time,
+	genesisValidatorsRoot []byte,
+) (*enode.LocalNode, error) {
+	// TODO: Use some config map of forks by epoch instead.
 	fork := st.Fork()
 	if fork == nil {
 		return nil, errors.New("nil fork version in state")
-	}
-	genesisValidatorsRoot := st.GenesisValidatorRoot()
-	if genesisValidatorsRoot == nil {
-		return nil, errors.New("nil genesis validator root in state")
 	}
 	digest, err := helpers.ComputeForkDigest(fork.CurrentVersion, genesisValidatorsRoot)
 	if err != nil {

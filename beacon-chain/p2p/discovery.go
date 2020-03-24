@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -30,7 +31,13 @@ type Listener interface {
 	LocalNode() *enode.LocalNode
 }
 
-func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *discover.UDPv5 {
+func createListener(
+	ipAddr net.IP,
+	privKey *ecdsa.PrivateKey,
+	cfg *Config,
+	genesisTime time.Time,
+	genesisValidatorsRoot []byte,
+) *discover.UDPv5 {
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
 		Port: int(cfg.UDPPort),
@@ -39,7 +46,14 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort))
+	localNode, err := createLocalNode(
+		privKey,
+		ipAddr,
+		int(cfg.UDPPort),
+		int(cfg.TCPPort),
+		genesisTime,
+		genesisValidatorsRoot,
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,6 +89,8 @@ func createLocalNode(
 	ipAddr net.IP,
 	udpPort int,
 	tcpPort int,
+	genesisTime time.Time,
+	genesisValidatorsRoot []byte,
 ) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
@@ -90,19 +106,21 @@ func createLocalNode(
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
-	//headState, err := beaconDB.HeadState(context.Background())
-	//if err != nil {
-	//	return nil, err
-	//}
-	//localNode, err = addForkEntry(localNode, headState)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
-	//}
+	localNode, err = addForkEntry(localNode, genesisTime, genesisValidatorsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
+	}
 	return intializeAttSubnets(localNode), nil
 }
 
-func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
-	listener := createListener(addr, privKey, cfg)
+func startDiscoveryV5(
+	addr net.IP,
+	privKey *ecdsa.PrivateKey,
+	cfg *Config,
+	genesisTime time.Time,
+	genesisValidatorsRoot []byte,
+) (*discover.UDPv5, error) {
+	listener := createListener(addr, privKey, cfg, genesisTime, genesisValidatorsRoot)
 	record := listener.Self()
 	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil
