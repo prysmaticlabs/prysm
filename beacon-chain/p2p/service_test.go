@@ -237,7 +237,7 @@ func TestListenForNewNodes(t *testing.T) {
 	}
 	exitRoutine <- true
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))

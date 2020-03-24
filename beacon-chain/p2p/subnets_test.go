@@ -93,7 +93,6 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 			},
 		})
 	}
-	time.Sleep(100 * time.Millisecond)
 	exitRoutine <- true
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
