@@ -3,9 +3,9 @@ package kv
 import (
 	"context"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

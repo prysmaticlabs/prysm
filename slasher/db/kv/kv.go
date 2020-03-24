@@ -5,9 +5,9 @@ import (
 	"path"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
+	bolt "go.etcd.io/bbolt"
 )
 
 var databaseFileName = "slasher.db"

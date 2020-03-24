@@ -674,6 +674,12 @@ go_repository(
 )
 
 go_repository(
+    name = "io_etcd_go_bbolt",  # v1.3.4
+    commit = "68cc10a767ea1c6b9e8dcb9847317ff192d6d974",
+    importpath = "github.com/etcd-io/bbolt",
+)
+
+go_repository(
     name = "io_opencensus_go",
     importpath = "go.opencensus.io",
     sum = "h1:75k/FF0Q2YM8QYo07VPddOLBslDt1MZOdEslOHvmzAs=",
