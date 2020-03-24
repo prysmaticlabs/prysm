@@ -153,7 +153,7 @@ func (ds *Service) detectSurroundVotes(
 	return nil, errors.New("unexpected false positive in surround vote detection")
 }
 
-// DetectDoubleProposels returns slashable offence if found given a signed beacon block header.
+// DetectDoubleProposals checks if the given signed beacon block is a slashable offense and returns the slashing.
 func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
 	return ds.proposalsDetector.DetectDoublePropose(ctx, incommingBlock)
 }
