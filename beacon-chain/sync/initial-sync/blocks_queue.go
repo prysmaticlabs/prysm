@@ -19,7 +19,7 @@ const (
 	// pollingInterval defines how often state machine needs to check for new events.
 	pollingInterval = 200 * time.Millisecond
 	// staleEpochTimeout is an period after which epoch's state is considered stale.
-	staleEpochTimeout = 3 * pollingInterval
+	staleEpochTimeout = 5 * pollingInterval
 	// lookaheadEpochs is a default limit on how many forward epochs are loaded into queue.
 	lookaheadEpochs = 4
 )
@@ -144,7 +144,6 @@ func (q *blocksQueue) loop() {
 			q.cancel()
 		}
 
-		log.WithField("state", q.state).Debug("tick")
 		select {
 		case <-ticker.C:
 			for _, state := range q.state.epochs {
