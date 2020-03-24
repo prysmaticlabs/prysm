@@ -464,12 +464,18 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
 			continue
 		}
+
+		// Decide whether or not to connect to peer that does not
+		// match the proper fork ENR data with our local node.
+		// TODO(Raul): Add logic...
+
 		indices, err := retrieveAttSubnets(node.Record())
 		if err != nil {
 			log.WithError(err).Error("Could not retrieve attestation subnets")
 			continue
 		}
-		// add peer to peer handler.
+
+		// Add peer to peer handler.
 		s.peers.Add(peerData.ID, multiAddr, network.DirUnknown, indices)
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
