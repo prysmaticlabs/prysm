@@ -300,6 +300,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		MaxPeers:          ctx.Uint(cmd.P2PMaxPeers.Name),
 		WhitelistCIDR:     ctx.String(cmd.P2PWhitelist.Name),
 		EnableUPnP:        ctx.Bool(cmd.EnableUPnPFlag.Name),
+		EnableDiscv5:      ctx.Bool(flags.EnableDiscv5.Name),
 		Encoding:          ctx.String(cmd.P2PEncoding.Name),
 	})
 	if err != nil {
@@ -587,7 +588,8 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 	if gatewayPort > 0 {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.Int(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
-		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
+		allowedOrigins := strings.Split(ctx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/, allowedOrigins))
 	}
 	return nil
 }

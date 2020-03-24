@@ -3,12 +3,14 @@ package sync
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"runtime/debug"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -247,7 +249,29 @@ func (r *Service) subscribeDynamicWithSubnets(
 				}
 				for _, idx := range wantedSubs {
 					if _, exists := subscriptions[idx]; !exists {
-						subscriptions[idx] = r.subscribeWithBase(base, fmt.Sprintf(topicFormat, idx), validate, handle)
+						// do not subscribe if we have no peers in the same
+						// subnet
+						topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+						subnetTopic := fmt.Sprintf(topic, idx)
+						numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic)
+						if len(r.p2p.Peers().SubscribedToSubnet(idx)) == 0 && len(numOfPeers) == 0 {
+							log.Debugf("No peers found subscribed to attestation gossip subnet with "+
+								"committee index %d. Searching network for peers subscribed to the subnet.", idx)
+							go func(idx uint64) {
+								peerExists, err := r.p2p.FindPeersWithSubnet(idx)
+								if err != nil {
+									log.Errorf("Could not search for peers: %v", err)
+									return
+								}
+								// do not subscribe if we couldn't find a connected peer.
+								if !peerExists {
+									return
+								}
+								subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
+							}(idx)
+							continue
+						}
+						subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
 					}
 				}
 			}
