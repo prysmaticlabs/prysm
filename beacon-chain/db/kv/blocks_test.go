@@ -467,32 +467,44 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	db.SaveBlock(ctx, block)
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	block1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	db.SaveBlock(ctx, block1)
+	block2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 10}}
+	db.SaveBlock(ctx, block2)
+	block3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
+	db.SaveBlock(ctx, block3)
+
+	highestAt, err := db.HighestSlotBlocksAt(ctx, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
-		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	if !proto.Equal(block1, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block1, highestAt)
 	}
-	block = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
-	db.SaveBlock(ctx, block)
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestAt, err = db.HighestSlotBlocksAt(ctx, 11)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
-		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	if !proto.Equal(block2, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block2, highestAt)
 	}
-	block = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3}}
-	db.SaveBlock(ctx, block)
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestAt, err = db.HighestSlotBlocksAt(ctx, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
-		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	if !proto.Equal(block3, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block3, highestAt)
+	}
+
+	r3, _ := ssz.HashTreeRoot(block3.Block)
+	db.DeleteBlock(ctx, r3)
+
+	highestAt, err = db.HighestSlotBlocksAt(ctx, 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block2, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block2, highestAt)
 	}
 }
 
