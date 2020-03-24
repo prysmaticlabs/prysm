@@ -176,7 +176,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
 	forkDigest := r.p2p.ForkDigest()
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
-		return errWrongForkVersion
+		return errWrongForkDigestVersion
 	}
 	genesis := r.chain.GenesisTime()
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)

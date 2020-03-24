@@ -48,9 +48,9 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		if code == 0 {
 			t.Error("Expected a non-zero code")
 		}
-		if errMsg != errWrongForkVersion.Error() {
-			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkVersion.Error()))
-			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkVersion.Error())
+		if errMsg != errWrongForkDigestVersion.Error() {
+			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkDigestVersion.Error()))
+			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkDigestVersion.Error())
 		}
 	})
 
@@ -60,8 +60,8 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	}
 
 	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: []byte("fake")}, stream1)
-	if err != errWrongForkVersion {
-		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
+	if err != errWrongForkDigestVersion {
+		t.Errorf("Expected error %v, got %v", errWrongForkDigestVersion, err)
 	}
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {

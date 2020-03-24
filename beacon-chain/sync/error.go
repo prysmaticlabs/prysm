@@ -11,7 +11,7 @@ import (
 const genericError = "internal service error"
 const rateLimitedError = "rate limited"
 
-var errWrongForkVersion = errors.New("wrong fork digest version")
+var errWrongForkDigestVersion = errors.New("wrong fork digest version")
 var errInvalidEpoch = errors.New("invalid epoch")
 
 var responseCodeSuccess = byte(0x00)
