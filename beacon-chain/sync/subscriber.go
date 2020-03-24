@@ -326,7 +326,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 	}()
 }
 
-// add fork digest to topic
+// Add fork digest to topic.
 func (r *Service) addDigestToTopic(topic string) string {
 	if !strings.Contains(topic, "%x") {
 		panic("topic does not have appropriate formatter for digest")
