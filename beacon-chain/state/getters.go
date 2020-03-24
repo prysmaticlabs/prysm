@@ -130,6 +130,7 @@ func (b *BeaconState) GenesisTime() uint64 {
 	return b.state.GenesisTime
 }
 
+// GenesisUnixTime returns the genesis time as time.Time.
 func (b *BeaconState) GenesisUnixTime() time.Time {
 	if !b.HasInnerState() {
 		return time.Unix(0, 0)
