@@ -77,12 +77,13 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 
+	forkDigest := r.p2p.ForkDigest()
 	resp := &pb.Status{
-		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
-		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        headRoot,
-		HeadSlot:        r.chain.HeadSlot(),
+		ForkDigest:     forkDigest[:],
+		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
+		HeadRoot:       headRoot,
+		HeadSlot:       r.chain.HeadSlot(),
 	}
 	stream, err := r.p2p.Send(ctx, resp, id)
 	if err != nil {
@@ -155,12 +156,13 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return err
 	}
 
+	forkDigest := r.p2p.ForkDigest()
 	resp := &pb.Status{
-		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
-		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        headRoot,
-		HeadSlot:        r.chain.HeadSlot(),
+		ForkDigest:     forkDigest[:],
+		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
+		HeadRoot:       headRoot,
+		HeadSlot:       r.chain.HeadSlot(),
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
@@ -172,7 +174,8 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 }
 
 func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
-	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.HeadForkVersion) {
+	forkDigest := r.p2p.ForkDigest()
+	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
 		return errWrongForkVersion
 	}
 	genesis := r.chain.GenesisTime()

@@ -32,7 +32,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		p2p:         p2p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
-	topic := "/eth2/voluntary_exit"
+	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -69,7 +69,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		db:                        d,
 		seenAttesterSlashingCache: c,
 	}
-	topic := "/eth2/attester_slashing"
+	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -117,7 +117,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		db:                        d,
 		seenProposerSlashingCache: c,
 	}
-	topic := "/eth2/proposer_slashing"
+	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -161,7 +161,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
-	topic := "/eth2/beacon_block"
+	topic := "/eth2/%x/beacon_block"
 	r.registerSubscribers()
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,

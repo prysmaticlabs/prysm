@@ -62,7 +62,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// The attestation's committee index (attestation.data.index) is for the correct subnet.
-	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, att.Data.CommitteeIndex)) {
+	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, s.p2p.ForkDigest(), att.Data.CommitteeIndex)) {
 		return false
 	}
 

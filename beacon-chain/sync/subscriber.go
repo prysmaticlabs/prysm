@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -41,67 +42,65 @@ func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Mess
 
 // Register PubSub subscribers
 func (r *Service) registerSubscribers() {
-	go func() {
-		// Wait until chain start.
-		stateChannel := make(chan *feed.Event, 1)
-		stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
-		defer stateSub.Unsubscribe()
-		for r.chainStarted == false {
-			select {
-			case event := <-stateChannel:
-				if event.Type == statefeed.Initialized {
-					data := event.Data.(*statefeed.InitializedData)
-					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-					if data.StartTime.After(roughtime.Now()) {
-						stateSub.Unsubscribe()
-						time.Sleep(roughtime.Until(data.StartTime))
-					}
-					r.chainStarted = true
+	// Wait until chain start.
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for r.chainStarted == false {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Initialized {
+				data := event.Data.(*statefeed.InitializedData)
+				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+				if data.StartTime.After(roughtime.Now()) {
+					stateSub.Unsubscribe()
+					time.Sleep(roughtime.Until(data.StartTime))
 				}
-			case <-r.ctx.Done():
-				log.Debug("Context closed, exiting goroutine")
-				return
-			case err := <-stateSub.Err():
-				log.WithError(err).Error("Subscription to state notifier failed")
-				return
+				r.chainStarted = true
 			}
+		case <-r.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Subscription to state notifier failed")
+			return
 		}
-	}()
+	}
 	r.subscribe(
-		"/eth2/beacon_block",
+		"/eth2/%x/beacon_block",
 		r.validateBeaconBlockPubSub,
 		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
-		"/eth2/beacon_aggregate_and_proof",
+		"/eth2/%x/beacon_aggregate_and_proof",
 		r.validateAggregateAndProof,
 		r.beaconAggregateProofSubscriber,
 	)
 	r.subscribe(
-		"/eth2/voluntary_exit",
+		"/eth2/%x/voluntary_exit",
 		r.validateVoluntaryExit,
 		r.voluntaryExitSubscriber,
 	)
 	r.subscribe(
-		"/eth2/proposer_slashing",
+		"/eth2/%x/proposer_slashing",
 		r.validateProposerSlashing,
 		r.proposerSlashingSubscriber,
 	)
 	r.subscribe(
-		"/eth2/attester_slashing",
+		"/eth2/%x/attester_slashing",
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
 	if featureconfig.Get().EnableDynamicCommitteeSubnets {
 		r.subscribeDynamicWithSubnets(
-			"/eth2/committee_index%d_beacon_attestation",
+			"/eth2/%x/committee_index%d_beacon_attestation",
 			r.committeeIndices,                          /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)
 	} else {
 		r.subscribeDynamic(
-			"/eth2/committee_index%d_beacon_attestation",
+			"/eth2/%x/committee_index%d_beacon_attestation",
 			r.committeesCount,                           /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
@@ -116,7 +115,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
-	return r.subscribeWithBase(base, topic, validator, handle)
+	return r.subscribeWithBase(base, r.addDigestToTopic(topic), validator, handle)
 }
 
 func (r *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.Validator, handle subHandler) *pubsub.Subscription {
@@ -216,6 +215,7 @@ func (r *Service) subscribeDynamicWithSubnets(
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
+	digest := r.p2p.ForkDigest()
 
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 
@@ -253,7 +253,7 @@ func (r *Service) subscribeDynamicWithSubnets(
 						// do not subscribe if we have no peers in the same
 						// subnet
 						topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
-						subnetTopic := fmt.Sprintf(topic, idx)
+						subnetTopic := fmt.Sprintf(topic, digest, idx)
 						numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic)
 						if len(r.p2p.Peers().SubscribedToSubnet(idx)) == 0 && len(numOfPeers) == 0 {
 							log.Debugf("No peers found subscribed to attestation gossip subnet with "+
@@ -290,7 +290,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
-
+	digest := r.p2p.ForkDigest()
 	var subscriptions []*pubsub.Subscription
 
 	stateChannel := make(chan *feed.Event, 1)
@@ -317,11 +317,20 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
 					for i := len(subscriptions); i < wantedSubs; i++ {
-						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, i), validate, handle)
+						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, digest, i), validate, handle)
 						subscriptions = append(subscriptions, sub)
 					}
 				}
 			}
 		}
 	}()
+}
+
+// add fork digest to topic
+func (r *Service) addDigestToTopic(topic string) string {
+	if !strings.Contains(topic, "%x") {
+		panic("topic does not have appropriate formatter for digest")
+	}
+	digest := r.p2p.ForkDigest()
+	return fmt.Sprintf(topic, digest)
 }

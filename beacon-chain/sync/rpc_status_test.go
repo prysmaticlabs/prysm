@@ -59,7 +59,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: []byte("fake")}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: []byte("fake")}, stream1)
 	if err != errWrongForkVersion {
 		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
 	}
@@ -130,11 +130,11 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:        genesisState.Slot(),
-			HeadRoot:        headRoot[:],
-			FinalizedEpoch:  5,
-			FinalizedRoot:   finalizedRoot[:],
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:       genesisState.Slot(),
+			HeadRoot:       headRoot[:],
+			FinalizedEpoch: 5,
+			FinalizedRoot:  finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
@@ -145,7 +145,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: params.BeaconConfig().GenesisForkVersion}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		}
 		log.WithField("status", out).Warn("received status")
 
-		resp := &pb.Status{HeadSlot: 100, HeadForkVersion: params.BeaconConfig().GenesisForkVersion}
+		resp := &pb.Status{HeadSlot: 100, ForkDigest: params.BeaconConfig().GenesisForkVersion}
 
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
@@ -300,11 +300,11 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:        genesisState.Slot(),
-			HeadRoot:        headRoot[:],
-			FinalizedEpoch:  5,
-			FinalizedRoot:   finalizedRoot[:],
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:       genesisState.Slot(),
+			HeadRoot:       headRoot[:],
+			FinalizedEpoch: 5,
+			FinalizedRoot:  finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
@@ -378,11 +378,11 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
-			HeadForkVersion: []byte{1, 1, 1, 1},
-			HeadSlot:        genesisState.Slot(),
-			HeadRoot:        headRoot[:],
-			FinalizedEpoch:  5,
-			FinalizedRoot:   finalizedRoot[:],
+			ForkDigest:     []byte{1, 1, 1, 1},
+			HeadSlot:       genesisState.Slot(),
+			HeadRoot:       headRoot[:],
+			FinalizedEpoch: 5,
+			FinalizedRoot:  finalizedRoot[:],
 		}
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			log.WithError(err).Error("Failed to write to stream")

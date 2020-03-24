@@ -300,6 +300,13 @@ func (s *Service) Peers() *peers.Status {
 	return s.peers
 }
 
+// ForkDigest returns the current fork digest of
+// the node.
+func (s *Service) ForkDigest() [4]byte {
+	//no-op
+	return [4]byte{}
+}
+
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee id's for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee id's.

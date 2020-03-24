@@ -79,7 +79,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		Signature:       sKeys[0].Sign([]byte("foo")).Marshal(),
 	}
 
-	p.ReceivePubSub("/eth2/committee_index0_beacon_attestation", att)
+	p.ReceivePubSub("/eth2/00000000/committee_index0_beacon_attestation", att)
 
 	time.Sleep(time.Second)
 
