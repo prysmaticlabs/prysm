@@ -48,7 +48,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	}
 
 	currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(vs.GenesisTime))
-	if currentEpoch-1 != helpers.SlotToEpoch(req.Slot) && currentEpoch != helpers.SlotToEpoch(req.Slot) {
+	if currentEpoch > 0 && currentEpoch-1 != helpers.SlotToEpoch(req.Slot) && currentEpoch != helpers.SlotToEpoch(req.Slot) {
 		return nil, status.Error(codes.InvalidArgument, msgInvalidAttestationRequest)
 	}
 
