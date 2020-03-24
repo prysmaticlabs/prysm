@@ -156,8 +156,6 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 	}
 	natState := beaconState.InnerStateUnsafe()
 
-	b.ResetTimer()
-	b.ReportAllocs()
 	b.Run("Proto_Marshal", func(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
@@ -196,8 +194,6 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	b.ResetTimer()
-	b.ReportAllocs()
 	b.Run("Proto_Unmarshal", func(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
