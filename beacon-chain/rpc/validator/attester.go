@@ -110,7 +110,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		if headState == nil {
-				return nil, status.Error(codes.Internal, "Failed to lookup parent state from head.")
+			return nil, status.Error(codes.Internal, "Failed to lookup parent state from head.")
 		}
 	}
 
