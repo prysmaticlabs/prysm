@@ -88,7 +88,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	queue.state.addHandler(stateScheduled, eventDataReceived, queue.onDataReceivedEvent(ctx))
 	queue.state.addHandler(stateDataParsed, eventReadyToSend, queue.onReadyToSendEvent(ctx))
 	queue.state.addHandler(stateSkipped, eventExtendWindow, queue.onExtendWindowEvent(ctx))
-	queue.state.addHandler(stateSent, eventCheckStale, queue.onCheckStateEvent(ctx))
+	queue.state.addHandler(stateSent, eventCheckStale, queue.onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -333,9 +333,9 @@ func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
 	}
 }
 
-// onCheckStateEvent is an event that allows to mark stale epochs,
+// onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
-func (q *blocksQueue) onCheckStateEvent(ctx context.Context) eventHandlerFn {
+func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(es *epochState, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return es.state, ctx.Err()
