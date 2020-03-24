@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"math"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -118,12 +119,11 @@ func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRo
 	}
 
 	return k.db.Update(func(tx *bolt.Tx) error {
-		if err := k.setStateSlotBitField(ctx, tx, state.Slot()); err != nil {
+		bucket := tx.Bucket(stateBucket)
+		if err := bucket.Put(blockRoot[:], enc); err != nil {
 			return err
 		}
-
-		bucket := tx.Bucket(stateBucket)
-		return bucket.Put(blockRoot[:], enc)
+		return k.setStateSlotBitField(ctx, tx, state.Slot())
 	})
 }
 
@@ -299,11 +299,14 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 	return protoState, nil
 }
 
-// HighestSlotState returns the state with the highest slot from the db.
-func (k *Store) HighestSlotState(ctx context.Context) (*state.BeaconState, error) {
+// HighestSlotStates returns the states with the highest slot from the db.
+// Ideally there should just be one state per slot, but given validator
+// can double propose, a single slot could have multiple block roots and
+// reuslts states. This returns a list of states.
+func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotState")
 	defer span.End()
-	var s *pb.BeaconState
+	var states []*state.BeaconState
 	err := k.db.View(func(tx *bolt.Tx) error {
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
@@ -312,38 +315,55 @@ func (k *Store) HighestSlotState(ctx context.Context) (*state.BeaconState, error
 			return err
 		}
 		highestSlot := highestIndex - 1
+		highestSlot = int(math.Max(0, float64(highestSlot)))
 		f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
 
 		keys, err := getBlockRootsByFilter(ctx, tx, f)
 		if err != nil {
 			return err
 		}
-		if len(keys) != 1 {
+
+		if len(keys) == 0 {
 			return errors.New("could not get one block root to get state")
 		}
 
 		stateBkt := tx.Bucket(stateBucket)
-		enc := stateBkt.Get(keys[0][:])
-		if enc == nil {
-			return nil
+		for i := range keys {
+			enc := stateBkt.Get(keys[i][:])
+			if enc == nil {
+				continue
+			}
+			pbState, err := createState(enc)
+			if err != nil {
+				return err
+			}
+			s, err := state.InitializeFromProtoUnsafe(pbState)
+			if err != nil {
+				return err
+			}
+			states = append(states, s)
 		}
 
-		s, err = createState(enc)
 		return err
 	})
+
 	if err != nil {
 		return nil, err
 	}
-	if s == nil {
-		return nil, nil
+
+	if len(states) == 0 {
+		return nil, errors.New("could not get one state")
 	}
 
-	return state.InitializeFromProtoUnsafe(s)
+	return states, nil
 }
 
 // setStateSlotBitField sets the state slot bit in DB.
 // This helps to track which slot has a saved state in db.
 func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+	k.stateSlotBitLock.Lock()
+	defer k.stateSlotBitLock.Unlock()
+
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.setStateSlotBitField")
 	defer span.End()
 
@@ -358,6 +378,9 @@ func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 // clearStateSlotBitField clears the state slot bit in DB.
 // This helps to track which slot has a saved state in db.
 func (k *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+	k.stateSlotBitLock.Lock()
+	defer k.stateSlotBitLock.Unlock()
+
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearStateSlotBitField")
 	defer span.End()
 

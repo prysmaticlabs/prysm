@@ -320,11 +320,11 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	highest, err := db.HighestSlotState(context.Background())
+	highest, err := db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(highest.InnerStateUnsafe(), s1) {
+	if !proto.Equal(highest[0].InnerStateUnsafe(), s1) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s1)
 	}
 
@@ -342,29 +342,29 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	highest, err = db.HighestSlotState(context.Background())
+	highest, err = db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(highest.InnerStateUnsafe(), s2) {
+	if !proto.Equal(highest[0].InnerStateUnsafe(), s2) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s2)
 	}
 
 	db.DeleteState(context.Background(), r2)
-	highest, err = db.HighestSlotState(context.Background())
+	highest, err = db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(highest.InnerStateUnsafe(), s1) {
+	if !proto.Equal(highest[0].InnerStateUnsafe(), s1) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s1)
 	}
 
 	db.DeleteState(context.Background(), r1)
-	highest, err = db.HighestSlotState(context.Background())
+	highest, err = db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(highest.InnerStateUnsafe(), s0) {
+	if !proto.Equal(highest[0].InnerStateUnsafe(), s0) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s1)
 	}
 }
