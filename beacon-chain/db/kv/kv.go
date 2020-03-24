@@ -3,6 +3,7 @@ package kv
 import (
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -35,6 +36,7 @@ type Store struct {
 	databasePath        string
 	blockCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
+	stateSlotBitLock    sync.Mutex
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
