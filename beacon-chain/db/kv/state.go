@@ -369,9 +369,7 @@ func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)
-	tmp := make([]byte, len(slotBitfields))
-	copy(tmp, slotBitfields)
-	slotBitfields = bytesutil.SetBit(tmp, int(slot))
+	slotBitfields = bytesutil.SetBit(slotBitfields, int(slot))
 	return bucket.Put(savedStateSlotsKey, slotBitfields)
 }
 
@@ -386,8 +384,6 @@ func (k *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot ui
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)
-	tmp := make([]byte, len(slotBitfields))
-	copy(tmp, slotBitfields)
-	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
+	slotBitfields = bytesutil.ClearBit(slotBitfields, int(slot))
 	return bucket.Put(savedStateSlotsKey, slotBitfields)
 }
