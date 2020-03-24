@@ -467,7 +467,6 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 
 		// Decide whether or not to connect to peer that does not
 		// match the proper fork ENR data with our local node.
-		// TODO(Raul): Add logic...
 
 		indices, err := retrieveAttSubnets(node.Record())
 		if err != nil {
