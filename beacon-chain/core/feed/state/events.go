@@ -31,4 +31,6 @@ type ChainStartedData struct {
 type InitializedData struct {
 	// StartTime is the time at which the chain started.
 	StartTime time.Time
+	// GenesisValidatorsRoot represents ssz.HashTreeRoot(state.validators).
+	GenesisValidatorsRoot []byte
 }

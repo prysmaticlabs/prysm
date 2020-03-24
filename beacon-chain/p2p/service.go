@@ -48,19 +48,21 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	stateNotifier stateFeed.Notifier
-	ctx           context.Context
-	cancel        context.CancelFunc
-	started       bool
-	cfg           *Config
-	startupErr    error
-	dv5Listener   Listener
-	host          host.Host
-	pubsub        *pubsub.PubSub
-	exclusionList *ristretto.Cache
-	privKey       *ecdsa.PrivateKey
-	dht           *kaddht.IpfsDHT
-	peers         *peers.Status
+	stateNotifier         stateFeed.Notifier
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	started               bool
+	cfg                   *Config
+	startupErr            error
+	dv5Listener           Listener
+	host                  host.Host
+	pubsub                *pubsub.PubSub
+	exclusionList         *ristretto.Cache
+	privKey               *ecdsa.PrivateKey
+	dht                   *kaddht.IpfsDHT
+	peers                 *peers.Status
+	genesisTime           time.Time
+	genesisValidatorsRoot []byte
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -167,7 +169,13 @@ func (s *Service) Start() {
 
 	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
 		ipAddr := ipAddr()
-		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
+		listener, err := startDiscoveryV5(
+			ipAddr,
+			s.privKey,
+			s.cfg,
+			s.genesisTime,
+			s.genesisValidatorsRoot,
+		)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
 			s.startupErr = err
@@ -367,6 +375,10 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 	return exists, nil
 }
 
+// Wait until we receive a state initialized event
+// via an event feed, containing important data we need
+// to initialize p2p connections such as genesis time and
+// genesis validator root for peer handshakes.
 func (s *Service) awaitStateInitialized() {
 	stateChannel := make(chan *feed.Event, 0)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -374,8 +386,13 @@ func (s *Service) awaitStateInitialized() {
 	for {
 		select {
 		case event := <-stateChannel:
-			if event.Type == stateFeed.ChainStarted {
-				return
+			if event.Type == stateFeed.Initialized {
+				if data, ok := event.Data.(stateFeed.InitializedData); ok {
+					s.genesisTime = data.StartTime
+					s.genesisValidatorsRoot = data.GenesisValidatorsRoot
+					return
+				}
+				log.Fatal("Did not receive proper data from state initialization feed")
 			}
 		}
 	}
