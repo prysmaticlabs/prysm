@@ -674,12 +674,6 @@ go_repository(
 )
 
 go_repository(
-    name = "io_etcd_go_bbolt",  # v1.3.4
-    commit = "68cc10a767ea1c6b9e8dcb9847317ff192d6d974",
-    importpath = "github.com/etcd-io/bbolt",
-)
-
-go_repository(
     name = "io_opencensus_go",
     importpath = "go.opencensus.io",
     sum = "h1:75k/FF0Q2YM8QYo07VPddOLBslDt1MZOdEslOHvmzAs=",
@@ -910,6 +904,12 @@ go_repository(
     build_extra_args = ["-exclude=vendor"],
     commit = "c1ea390cb7f7ca6d6345b4d3bcfd5546028cee20",  # v12.0.0
     importpath = "k8s.io/client-go",
+)
+
+go_repository(
+    name = "io_etcd_go_bbolt",  # v1.3.4
+    commit = "68cc10a767ea1c6b9e8dcb9847317ff192d6d974",
+    importpath = "go.etcd.io/bbolt",
 )
 
 go_repository(
