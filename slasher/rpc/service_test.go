@@ -1,0 +1,57 @@
+package rpc
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+)
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
+
+func TestLifecycle_OK(t *testing.T) {
+	hook := logTest.NewGlobal()
+	rpcService := NewService(context.Background(), &Config{
+		Port:     "7348",
+		CertFlag: "alice.crt",
+		KeyFlag:  "alice.key",
+	})
+
+	rpcService.Start()
+
+	testutil.AssertLogsContain(t, hook, "listening on port")
+
+	rpcService.Stop()
+
+}
+
+func TestStatus_CredentialError(t *testing.T) {
+	credentialErr := errors.New("credentialError")
+	s := &Service{credentialError: credentialErr}
+
+	if err := s.Status(); err != s.credentialError {
+		t.Errorf("Wanted: %v, got: %v", s.credentialError, s.Status())
+	}
+}
+
+func TestRPC_InsecureEndpoint(t *testing.T) {
+	hook := logTest.NewGlobal()
+	rpcService := NewService(context.Background(), &Config{
+		Port: "7777",
+	})
+
+	rpcService.Start()
+
+	testutil.AssertLogsContain(t, hook, fmt.Sprint("listening on port"))
+	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
+
+	rpcService.Stop()
+}
