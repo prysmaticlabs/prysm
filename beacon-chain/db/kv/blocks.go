@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	log "github.com/sirupsen/logrus"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
@@ -383,7 +383,7 @@ func (k *Store) blockAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index
 // setBlockSlotBitField sets the block slot bit in DB.
 // This helps to track which slot has a saved block in db.
 func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateSavedBlockSlot")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.setBlockSlotBitField")
 	defer span.End()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
@@ -397,7 +397,7 @@ func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 // clearBlockSlotBitField clears the block slot bit in DB.
 // This helps to track which slot has a saved block in db.
 func (k *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateSavedBlockSlot")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearBlockSlotBitField")
 	defer span.End()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
