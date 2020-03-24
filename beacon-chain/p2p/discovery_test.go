@@ -87,18 +87,18 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
-	cfg := &Config{
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		Encoding:            "ssz",
-	}
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
-		cfg.UDPPort = uint(port)
+		cfg := &Config{
+			Discv5BootStrapAddr: []string{bootNode.String()},
+			Encoding:            "ssz",
+			UDPPort:             uint(port),
+		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
-			cfg:                   &Config{UDPPort: uint(port)},
+			cfg:                   cfg,
 			genesisTime:           genesisTime,
 			genesisValidatorsRoot: genesisValidatorsRoot,
 		}

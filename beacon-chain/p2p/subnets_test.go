@@ -27,12 +27,6 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
-	cfg := &Config{
-		BootstrapNodeAddr:   []string{bootNode.String()},
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		Encoding:            "ssz",
-		MaxPeers:            30,
-	}
 	// Use shorter period for testing.
 	currentPeriod := pollingPeriod
 	pollingPeriod = 1 * time.Second
@@ -43,10 +37,16 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 3; i++ {
 		port = 3000 + i
-		cfg.UDPPort = uint(port)
+		cfg := &Config{
+			BootstrapNodeAddr:   []string{bootNode.String()},
+			Discv5BootStrapAddr: []string{bootNode.String()},
+			Encoding:            "ssz",
+			MaxPeers:            30,
+			UDPPort:             uint(port),
+		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
-			cfg:                   &Config{UDPPort: uint(port)},
+			cfg:                   cfg,
 			genesisTime:           genesisTime,
 			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
@@ -64,7 +64,13 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// Make one service on port 3001.
 	port = 4000
-	cfg.UDPPort = uint(port)
+	cfg := &Config{
+		BootstrapNodeAddr:   []string{bootNode.String()},
+		Discv5BootStrapAddr: []string{bootNode.String()},
+		Encoding:            "ssz",
+		MaxPeers:            30,
+		UDPPort:             uint(port),
+	}
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
