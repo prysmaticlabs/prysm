@@ -9,11 +9,64 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+func TestStartDiscv5_EnsurePeersConnectWithForkENR(t *testing.T) {
+	port := 2000
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	s := &Service{
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	bootListener := s.createListener(ipAddr, pkey)
+	defer bootListener.Close()
+
+	bootNode := bootListener.Self()
+
+	var listeners []*discover.UDPv5
+	for i := 1; i <= 5; i++ {
+		port = 3000 + i
+		cfg := &Config{
+			Discv5BootStrapAddr: []string{bootNode.String()},
+			Encoding:            "ssz",
+			UDPPort:             uint(port),
+		}
+		ipAddr, pkey := createAddrAndPrivKey(t)
+		s = &Service{
+			cfg:                   cfg,
+			genesisTime:           genesisTime,
+			genesisValidatorsRoot: genesisValidatorsRoot,
+		}
+		listener, err := s.startDiscoveryV5(ipAddr, pkey)
+		if err != nil {
+			t.Errorf("Could not start discovery for node: %v", err)
+		}
+		listeners = append(listeners, listener)
+	}
+
+	// Wait for the nodes to have their local routing tables to be populated with the other nodes
+	time.Sleep(discoveryWaitTime)
+
+	lastListener := listeners[len(listeners)-1]
+	nodes := lastListener.Lookup(bootNode.ID())
+	if len(nodes) < 4 {
+		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
+			"Expected more than or equal to %d but got %d", 4, len(nodes))
+	}
+
+	// Close all ports
+	for _, listener := range listeners {
+		listener.Close()
+	}
+}
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	c := params.BeaconConfig()
