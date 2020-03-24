@@ -109,7 +109,7 @@ func (s *Service) Start() {
 
 	go func() {
 		if s.listener == nil {
-		        return
+			return
 		}
 		if err := s.grpcServer.Serve(s.listener); err != nil {
 			log.Errorf("Could not serve gRPC: %v", err)
