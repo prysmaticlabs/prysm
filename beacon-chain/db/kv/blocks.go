@@ -303,9 +303,9 @@ func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 	})
 }
 
-// HighestSlotBlock returns the blocks with the highest slot from the db.
+// HighestSlotBlocks returns the blocks with the highest slot from the db.
 func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlock")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocks")
 	defer span.End()
 
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
