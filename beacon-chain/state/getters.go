@@ -3,6 +3,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -129,6 +130,14 @@ func (b *BeaconState) GenesisTime() uint64 {
 	return b.state.GenesisTime
 }
 
+// GenesisUnixTime returns the genesis time as time.Time.
+func (b *BeaconState) GenesisUnixTime() time.Time {
+	if !b.HasInnerState() {
+		return time.Unix(0, 0)
+	}
+	return time.Unix(int64(b.state.GenesisTime), 0)
+}
+
 // Slot of the current beacon chain state.
 func (b *BeaconState) Slot() uint64 {
 	if !b.HasInnerState() {
@@ -190,6 +199,16 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	hdr.BodyRoot = bodyRoot
 	hdr.StateRoot = stateRoot
 	return hdr
+}
+
+// ParentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
+func (b *BeaconState) ParentRoot() [32]byte {
+	if !b.HasInnerState() {
+		return [32]byte{}
+	}
+	parentRoot := [32]byte{}
+	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
+	return parentRoot
 }
 
 // BlockRoots kept track of in the beacon state.
