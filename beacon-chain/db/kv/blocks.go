@@ -302,9 +302,9 @@ func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 	})
 }
 
-// HighestSlotBlock returns the block with the highest slot from the db.
+// HighestSlotState returns the block with the highest slot from the db.
 func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlock")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotState")
 	defer span.End()
 
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
@@ -345,7 +345,7 @@ func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock,
 // setBlockSlotBitField sets the block slot bit in DB.
 // This helps to track which slot has a saved block in db.
 func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateSavedBlockSlot")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.setBlockSlotBitField")
 	defer span.End()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
@@ -359,7 +359,7 @@ func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 // clearBlockSlotBitField clears the block slot bit in DB.
 // This helps to track which slot has a saved block in db.
 func (k *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateSavedBlockSlot")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearBlockSlotBitField")
 	defer span.End()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
