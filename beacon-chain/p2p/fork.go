@@ -61,7 +61,7 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 		log.WithFields(logrus.Fields{
 			"peerNextForkVersion": peerForkENR.NextForkVersion,
 			"nodeNextForkVersion": currentForkENR.NextForkVersion,
-		}).Debug("Peer matches fork digest but has different next fork epoch")
+		}).Debug("Peer matches fork digest but has different next fork version")
 	}
 	return nil
 }

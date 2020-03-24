@@ -59,20 +59,6 @@ func (mockListener) LocalNode() *enode.LocalNode {
 	panic("implement me")
 }
 
-func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
-	h, pkey, ipAddr := createHost(t, port)
-	cfg.UDPPort = uint(port)
-	cfg.TCPPort = uint(port)
-	s := &Service{
-		cfg: cfg,
-	}
-	listener, err := s.startDiscoveryV5(ipAddr, pkey)
-	if err != nil {
-		t.Errorf("Could not start discovery for node: %v", err)
-	}
-	return listener, h
-}
-
 func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr = net.ParseIP("127.0.0.1")
