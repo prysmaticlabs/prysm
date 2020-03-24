@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// Server defines a server implementation of the gRPC Slasher service,
+// Service defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Service struct {
 	ctx             context.Context
@@ -56,7 +56,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
-// Start the gRPC server.
+// Start the gRPC service.
 func (s *Service) Start() {
 	address := fmt.Sprintf("%s:%s", s.host, s.port)
 	lis, err := net.Listen("tcp", address)
