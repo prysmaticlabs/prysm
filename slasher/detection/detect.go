@@ -155,7 +155,7 @@ func (ds *Service) detectSurroundVotes(
 
 // DetectDoubleProposels returns slashable offence if found given a signed beacon block header.
 func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
-	return ds.proposalsDetector.DetectDoublePropose(ctx, incommingBlk)
+	return ds.proposalsDetector.DetectDoublePropose(ctx, incommingBlock)
 }
 
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
