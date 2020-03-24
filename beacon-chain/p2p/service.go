@@ -467,8 +467,13 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 
 		// Decide whether or not to connect to peer that does not
 		// match the proper fork ENR data with our local node.
+		nodeENR := node.Record()
+		if err := s.compareForkENR(nodeENR); err != nil {
+			log.WithError(err).Error("Fork ENR mismatches between peer and local node")
+			continue
+		}
 
-		indices, err := retrieveAttSubnets(node.Record())
+		indices, err := retrieveAttSubnets(nodeENR)
 		if err != nil {
 			log.WithError(err).Error("Could not retrieve attestation subnets")
 			continue
