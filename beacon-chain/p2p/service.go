@@ -25,11 +25,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	stateFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -47,6 +48,7 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
+	stateNotifier stateFeed.Notifier
 	ctx           context.Context
 	cancel        context.CancelFunc
 	started       bool
@@ -74,6 +76,7 @@ func NewService(cfg *Config) (*Service, error) {
 
 	log.Info(cfg.UDPPort)
 	s := &Service{
+		stateNotifier: cfg.StateNotifier,
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,
@@ -145,6 +148,9 @@ func (s *Service) Start() {
 		log.Error("Attempted to start p2p service when it was already started")
 		return
 	}
+
+	// Wait until the beacon state is initialized.
+	s.awaitStateInitialized()
 
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
@@ -359,6 +365,20 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		}
 	}
 	return exists, nil
+}
+
+func (s *Service) awaitStateInitialized() {
+	stateChannel := make(chan *feed.Event, 0)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == stateFeed.ChainStarted {
+				return
+			}
+		}
+	}
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.

@@ -1,8 +1,11 @@
 package p2p
 
+import "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+
 // Config for the p2p service. These parameters are set from application level flags
 // to initialize the p2p service.
 type Config struct {
+	StateNotifier         state.Notifier
 	NoDiscovery           bool
 	StaticPeers           []string
 	BootstrapNodeAddr     []string

@@ -96,6 +96,8 @@ type BeaconChainConfig struct {
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
 	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
+	NextForkVersion           []byte        `yaml:"NEXT_FORK_VERSION"`    // GenesisForkVersion is used to track fork version between state transitions.
+	NextForkEpoch             uint64        `yaml:"NEXT_FORK_EPOCH"`      // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
@@ -193,6 +195,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	RPCSyncCheck:              1,
 	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
 	GenesisForkVersion:        []byte{0, 0, 0, 0},
+	NextForkVersion:           []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
+	NextForkEpoch:             1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
 	MaxPeersToSync:            15,

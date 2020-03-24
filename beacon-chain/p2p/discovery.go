@@ -74,7 +74,12 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	return network
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpPort int) (*enode.LocalNode, error) {
+func createLocalNode(
+	privKey *ecdsa.PrivateKey,
+	ipAddr net.IP,
+	udpPort int,
+	tcpPort int,
+) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open node's peer database")
@@ -89,6 +94,14 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
+	//headState, err := beaconDB.HeadState(context.Background())
+	//if err != nil {
+	//	return nil, err
+	//}
+	//localNode, err = addForkEntry(localNode, headState)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
+	//}
 	return intializeAttSubnets(localNode), nil
 }
 
