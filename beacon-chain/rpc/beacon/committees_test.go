@@ -37,8 +37,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	}
 
 	m := &mock.ChainService{
-		State: headState,
-		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot)))*time.Second),
+		State:   headState,
+		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot))) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -90,8 +90,8 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2)
 
 	m := &mock.ChainService{
-		State: headState,
-		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot)))*time.Second),
+		State:   headState,
+		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot))) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
