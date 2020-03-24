@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -42,7 +43,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{},
+		chain:                &mock.ChainService{Genesis: roughtime.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 	}
 
@@ -64,7 +65,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	r := &Service{
 		p2p:                  p1,
 		db:                   db,
-		chain:                &mock.ChainService{},
+		chain:                &mock.ChainService{Genesis: roughtime.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 	}
