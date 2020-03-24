@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestStartDiscv5_EnsurePeersConnectWithForkENR(t *testing.T) {
+func TestStartDiscv5_EnsurePeersConnect_DifferentForkDigest(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
