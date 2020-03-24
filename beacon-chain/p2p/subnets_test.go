@@ -7,14 +7,21 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	stateFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg: &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	bootListener := s.createListener(ipAddr, pkey)
 	defer bootListener.Close()
@@ -39,7 +46,9 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
-			cfg: &Config{UDPPort: uint(port)},
+			cfg:                   &Config{UDPPort: uint(port)},
+			genesisTime:           genesisTime,
+			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		if err != nil {
@@ -60,8 +69,26 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.Start()
-	defer s.Stop()
+	mockChainService := &mock.ChainService{}
+	s.stateNotifier = mockChainService.StateNotifier()
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
+	}()
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: stateFeed.Initialized,
+			Data: &stateFeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
+	time.Sleep(100 * time.Millisecond)
+	exitRoutine <- true
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(discoveryWaitTime)
@@ -83,7 +110,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		t.Fatal("Peer with subnet doesn't exist")
 	}
 
-	// update ENR of a peer.
+	// Update ENR of a peer.
 	testService := &Service{dv5Listener: listeners[0]}
 	cache.CommitteeIDs.AddIDs([]uint64{10}, 0)
 	testService.RefreshENR(0)
@@ -97,5 +124,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	if !exists {
 		t.Fatal("Peer with subnet doesn't exist")
 	}
-
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
+	}
 }

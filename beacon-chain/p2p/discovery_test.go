@@ -76,8 +76,12 @@ func TestCreateListener(t *testing.T) {
 func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg: &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	bootListener := s.createListener(ipAddr, pkey)
 	defer bootListener.Close()
@@ -94,7 +98,9 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{
-			cfg: &Config{UDPPort: uint(port)},
+			cfg:                   &Config{UDPPort: uint(port)},
+			genesisTime:           genesisTime,
+			genesisValidatorsRoot: genesisValidatorsRoot,
 		}
 		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		if err != nil {
@@ -174,11 +180,11 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.UDPPort = 14000
 	cfg.StaticPeers = staticPeers
 	mockChainService := &mock.ChainService{}
-	cfg.StateNotifier = mockChainService.StateNotifier()
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.stateNotifier = mockChainService.StateNotifier()
 
 	startService(t, s, &feed.Event{
 		Type: stateFeed.Initialized,

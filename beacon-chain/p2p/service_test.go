@@ -14,7 +14,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	stateFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -111,13 +113,34 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	}
 	s, _ := NewService(cfg)
 	s.dv5Listener = &mockListener{}
-	defer s.Stop()
-	s.Start()
+	mockChainService := &mock.ChainService{}
+	s.stateNotifier = mockChainService.StateNotifier()
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
+	}()
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: stateFeed.Initialized,
+			Data: &stateFeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
+	time.Sleep(100 * time.Millisecond)
+	exitRoutine <- true
 	if s.started != true {
 		t.Error("Expected service to be started")
 	}
 	s.Start()
 	testutil.AssertLogsContain(t, hook, "Attempted to start p2p service when it was already started")
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestService_Status_NotRunning(t *testing.T) {
@@ -129,7 +152,7 @@ func TestService_Status_NotRunning(t *testing.T) {
 }
 
 func TestListenForNewNodes(t *testing.T) {
-	// setup bootnode
+	// Setup bootnode.
 	cfg := &Config{}
 	port := 2000
 	cfg.UDPPort = uint(port)
@@ -174,16 +197,35 @@ func TestListenForNewNodes(t *testing.T) {
 
 	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
-
+	mockChainService := &mock.ChainService{}
+	cfg.StateNotifier = mockChainService.StateNotifier()
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.stateNotifier = mockChainService.StateNotifier()
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
+	}()
 
-	s.Start()
-	defer s.Stop()
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: stateFeed.Initialized,
+			Data: &stateFeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
+	time.Sleep(100 * time.Millisecond)
+	exitRoutine <- true
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
+	}
 
-	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
