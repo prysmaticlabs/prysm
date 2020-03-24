@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -9,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 // ENR key used for eth2-related fork data.
@@ -21,6 +23,47 @@ type EnrForkID struct {
 	CurrentForkDigest [4]byte
 	NextForkVersion   [4]byte
 	NextForkEpoch     uint64
+}
+
+// Compares fork ENRs between an incoming peer's record and our node's
+// local record values for current and next fork version/epoch.
+func (s *Service) compareForkENR(record *enr.Record) error {
+	currentRecord := s.dv5Listener.LocalNode().Node().Record()
+	peerForkENR, err := retrieveForkEntry(record)
+	if err != nil {
+		return err
+	}
+	currentForkENR, err := retrieveForkEntry(currentRecord)
+	if err != nil {
+		return err
+	}
+	// Clients SHOULD connect to peers with current_fork_digest, next_fork_version,
+	// and next_fork_epoch that match local values.
+	if peerForkENR.CurrentForkDigest != currentForkENR.CurrentForkDigest {
+		return fmt.Errorf(
+			"fork digest of peer: %v, does not match local value: %v",
+			peerForkENR.CurrentForkDigest,
+			currentForkENR.CurrentForkDigest,
+		)
+	}
+	// Clients MAY connect to peers with the same current_fork_version but a
+	// different next_fork_version/next_fork_epoch. Unless ENRForkID is manually
+	// updated to matching prior to the earlier next_fork_epoch of the two clients,
+	// these type of connecting clients will be unable to successfully interact
+	// starting at the earlier next_fork_epoch.
+	if peerForkENR.NextForkEpoch != currentForkENR.NextForkEpoch {
+		log.WithFields(logrus.Fields{
+			"peerNextForkEpoch": peerForkENR.NextForkEpoch,
+			"nodeNextForkEpoch": currentForkENR.NextForkEpoch,
+		}).Debug("Peer matches fork digest but has different next fork epoch")
+	}
+	if peerForkENR.NextForkVersion != currentForkENR.NextForkVersion {
+		log.WithFields(logrus.Fields{
+			"peerNextForkVersion": peerForkENR.NextForkVersion,
+			"nodeNextForkVersion": currentForkENR.NextForkVersion,
+		}).Debug("Peer matches fork digest but has different next fork epoch")
+	}
+	return nil
 }
 
 // Adds a fork entry as an ENR record under the eth2EnrKey for
