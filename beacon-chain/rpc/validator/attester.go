@@ -210,9 +210,7 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 	defer span.End()
 
 	// Don't need to wait if current slot is greater than requested slot.
-	currentSlot := vs.GenesisTimeFetcher.CurrentSlot()
-	//if slot < vs.GenesisTimeFetcher.CurrentSlot() {
-	if slot < currentSlot {
+	if slot < vs.GenesisTimeFetcher.CurrentSlot() {
 		return
 	}
 
