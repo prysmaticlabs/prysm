@@ -907,9 +907,10 @@ go_repository(
 )
 
 go_repository(
-    name = "io_etcd_go_bbolt",  # v1.3.4
-    commit = "68cc10a767ea1c6b9e8dcb9847317ff192d6d974",
+    name = "io_etcd_go_bbolt",
     importpath = "go.etcd.io/bbolt",
+    sum = "h1:hi1bXHMVrlQh6WwxAy+qZCV/SYIlqo+Ushwdpa4tAKg=",
+    version = "v1.3.4",
 )
 
 go_repository(
