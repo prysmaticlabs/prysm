@@ -219,7 +219,7 @@ func (ms *ChainService) GenesisTime() time.Time {
 
 // CurrentSlot mocks the same method in the chain service.
 func (ms *ChainService) CurrentSlot() uint64 {
-	return ms.HeadSlot()
+	return uint64(time.Now().Unix()-ms.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot
 }
 
 // Participation mocks the same method in the chain service.
