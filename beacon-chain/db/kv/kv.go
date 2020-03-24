@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	bolt "go.etcd.io/bbolt"
 )
@@ -151,5 +151,5 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 
 // createBoltCollector returns a prometheus collector specifically configured for boltdb.
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
-	return prombolt.New("boltDB", db)
+	return prombbolt.New("boltDB", db)
 }
