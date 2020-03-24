@@ -474,21 +474,21 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	block3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
 	db.SaveBlock(ctx, block3)
 
-	highestAt, err := db.HighestSlotBlocksAt(ctx, 2)
+	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(block1, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", block1, highestAt)
 	}
-	highestAt, err = db.HighestSlotBlocksAt(ctx, 11)
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 11)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(block2, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", block2, highestAt)
 	}
-	highestAt, err = db.HighestSlotBlocksAt(ctx, 101)
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +499,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	r3, _ := ssz.HashTreeRoot(block3.Block)
 	db.DeleteBlock(ctx, r3)
 
-	highestAt, err = db.HighestSlotBlocksAt(ctx, 101)
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
