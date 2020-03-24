@@ -462,6 +462,40 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	}
 }
 
+func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	db.SaveBlock(ctx, block)
+	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	}
+	block = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
+	db.SaveBlock(ctx, block)
+	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	}
+	block = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3}}
+	db.SaveBlock(ctx, block)
+	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block, highestSavedBlock) {
+		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	}
+}
+
 func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
