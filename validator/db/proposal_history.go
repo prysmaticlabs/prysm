@@ -3,10 +3,10 @@ package db
 import (
 	"context"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
