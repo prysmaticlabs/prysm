@@ -369,7 +369,12 @@ func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)
-	slotBitfields = bytesutil.SetBit(slotBitfields, int(slot))
+
+	// Copy is needed to avoid unsafe pointer conversions.
+	// See: https://github.com/etcd-io/bbolt/pull/201
+	tmp := make([]byte, len(slotBitfields))
+	copy(tmp, slotBitfields)
+	slotBitfields = bytesutil.SetBit(tmp, int(slot))
 	return bucket.Put(savedStateSlotsKey, slotBitfields)
 }
 
@@ -384,6 +389,11 @@ func (k *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot ui
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)
-	slotBitfields = bytesutil.ClearBit(slotBitfields, int(slot))
+
+	// Copy is needed to avoid unsafe pointer conversions.
+	// See: https://github.com/etcd-io/bbolt/pull/201
+	tmp := make([]byte, len(slotBitfields))
+	copy(tmp, slotBitfields)
+	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
 	return bucket.Put(savedStateSlotsKey, slotBitfields)
 }
