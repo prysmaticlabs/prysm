@@ -210,7 +210,6 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	genesisTime := s.genesisTimeFetcher.GenesisTime()
 	validatorServer := &validator.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
@@ -235,7 +234,6 @@ func (s *Service) Start() {
 		MockEth1Votes:          s.mockEth1Votes,
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
-		GenesisTime:            genesisTime,
 		SlashingsPool:          s.slashingsPool,
 		StateGen:               s.stateGen,
 	}
