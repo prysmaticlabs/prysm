@@ -267,6 +267,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 					}
 				}
 
+				bkt = tx.Bucket(blocksBucket)
 				enc = bkt.Get(blockRoot[:])
 				if enc == nil {
 					return nil
