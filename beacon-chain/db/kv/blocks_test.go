@@ -429,11 +429,11 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
+	if !proto.Equal(block, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
 	}
 
@@ -441,11 +441,11 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
+	if !proto.Equal(block, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
 	}
 
@@ -453,11 +453,11 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
+	if !proto.Equal(block, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
 	}
 }
@@ -514,11 +514,11 @@ func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlocks(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b[len(b)-1], highestSavedBlock) {
+	if !proto.Equal(b[len(b)-1], highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b[len(b)-1], highestSavedBlock)
 	}
 }
@@ -532,11 +532,11 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, b50); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b50, highestSavedBlock) {
+	if !proto.Equal(b50, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b50, highestSavedBlock)
 	}
 
@@ -546,22 +546,22 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b51, highestSavedBlock) {
+	if !proto.Equal(b51, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b51, highestSavedBlock)
 	}
 
 	if err := db.DeleteBlock(ctx, r51); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b50, highestSavedBlock) {
+	if !proto.Equal(b50, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b50, highestSavedBlock)
 	}
 }
@@ -589,11 +589,11 @@ func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 	if err := db.DeleteBlocks(ctx, [][32]byte{r[99], r[98], r[97]}); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b[96], highestSavedBlock) {
+	if !proto.Equal(b[96], highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b[len(b)-1], highestSavedBlock)
 	}
 }

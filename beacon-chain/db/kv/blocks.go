@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -302,12 +303,12 @@ func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 	})
 }
 
-// HighestSlotBlock returns the block with the highest slot from the db.
-func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlock")
+// HighestSlotBlocks returns the blocks with the highest slot from the db.
+func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocks")
 	defer span.End()
 
-	block := &ethpb.SignedBeaconBlock{}
+	blocks := make([]*ethpb.SignedBeaconBlock, 0)
 	err := k.db.View(func(tx *bolt.Tx) error {
 		sBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := sBkt.Get(savedBlockSlotsKey)
@@ -315,22 +316,23 @@ func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock,
 		if err != nil {
 			return err
 		}
-		block, err = k.blockAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
+
+		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
 		if err != nil {
 			return err
 		}
 		return nil
 	})
 
-	return block, err
+	return blocks, err
 }
 
-// HighestSlotBlockAt returns the block with the highest slot at input slot from the db.
-func (k *Store) HighestSlotBlockAt(ctx context.Context, slot uint64) (*ethpb.SignedBeaconBlock, error) {
+// HighestSlotBlocksAt returns the block with the highest slot at input slot from the db.
+func (k *Store) HighestSlotBlocksAt(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlockAt")
 	defer span.End()
 
-	block := &ethpb.SignedBeaconBlock{}
+	blocks := make([]*ethpb.SignedBeaconBlock, 0)
 	err := k.db.View(func(tx *bolt.Tx) error {
 		sBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := sBkt.Get(savedBlockSlotsKey)
@@ -338,23 +340,24 @@ func (k *Store) HighestSlotBlockAt(ctx context.Context, slot uint64) (*ethpb.Sig
 		if err != nil {
 			return err
 		}
-		block, err = k.blockAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
+		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
 		if err != nil {
 			return err
 		}
 		return nil
 	})
 
-	return block, err
+	return blocks, err
 }
 
-// blockAtSlotBitfieldIndex retrieves the block in DB given the input index. The index represents
+// blocksAtSlotBitfieldIndex retrieves the block in DB given the input index. The index represents
 // the position of the slot bitfield the saved block maps to.
-func (k *Store) blockAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) (*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockAtSlotBitfieldIndex")
+func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) ([]*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
 	defer span.End()
 
 	highestSlot := index - 1
+	highestSlot = uint64(math.Max(0, float64(highestSlot)))
 	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)
@@ -373,11 +376,7 @@ func (k *Store) blockAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index
 		blocks = append(blocks, block)
 	}
 
-	if len(blocks) != 1 {
-		return nil, errors.New("no highest slot block saved")
-	}
-
-	return blocks[0], nil
+	return blocks, err
 }
 
 // setBlockSlotBitField sets the block slot bit in DB.
@@ -386,10 +385,17 @@ func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.setBlockSlotBitField")
 	defer span.End()
 
+	k.blockSlotBitLock.Lock()
+	defer k.blockSlotBitLock.Unlock()
+
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedBlockSlotsKey)
+
+	// Copy is needed to avoid unsafe pointer conversions.
+	// See: https://github.com/etcd-io/bbolt/pull/201
 	tmp := make([]byte, len(slotBitfields))
 	copy(tmp, slotBitfields)
+
 	slotBitfields = bytesutil.SetBit(tmp, int(slot))
 	return bucket.Put(savedBlockSlotsKey, slotBitfields)
 }
@@ -400,10 +406,17 @@ func (k *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot ui
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearBlockSlotBitField")
 	defer span.End()
 
+	k.blockSlotBitLock.Lock()
+	defer k.blockSlotBitLock.Unlock()
+
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedBlockSlotsKey)
+
+	// Copy is needed to avoid unsafe pointer conversions.
+	// See: https://github.com/etcd-io/bbolt/pull/201
 	tmp := make([]byte, len(slotBitfields))
 	copy(tmp, slotBitfields)
+
 	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
 	return bucket.Put(savedBlockSlotsKey, slotBitfields)
 }
