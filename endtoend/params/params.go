@@ -55,10 +55,10 @@ func Init(beaconNodeCount int) error {
 		LogPath:               logPath,
 		TestShardIndex:        testIndex,
 		BeaconNodeCount:       beaconNodeCount,
-		Eth1RPCPort:           1000 + testIndex*100, //Multiplying 100 here so the test index doesn't conflict with the other node ports.
-		BeaconNodeRPCPort:     2000 + testIndex*100,
-		BeaconNodeMetricsPort: 3000 + testIndex*100,
-		ValidatorMetricsPort:  4000 + testIndex*100,
+		Eth1RPCPort:           3000 + testIndex*100, //Multiplying 100 here so the test index doesn't conflict with the other node ports.
+		BeaconNodeRPCPort:     4000 + testIndex*100,
+		BeaconNodeMetricsPort: 5000 + testIndex*100,
+		ValidatorMetricsPort:  6000 + testIndex*100,
 	}
 	return nil
 }
