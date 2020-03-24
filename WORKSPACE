@@ -907,9 +907,10 @@ go_repository(
 )
 
 go_repository(
-    name = "io_etcd_go_bbolt",  # v1.3.4
-    commit = "68cc10a767ea1c6b9e8dcb9847317ff192d6d974",
+    name = "io_etcd_go_bbolt",
     importpath = "go.etcd.io/bbolt",
+    sum = "h1:hi1bXHMVrlQh6WwxAy+qZCV/SYIlqo+Ushwdpa4tAKg=",
+    version = "v1.3.4",
 )
 
 go_repository(
@@ -1336,13 +1337,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_mdlayher_prombolt",
-    importpath = "github.com/mdlayher/prombolt",
-    sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
-    version = "v0.0.0-20161005185022-dfcf01d20ee9",
-)
-
-go_repository(
     name = "com_github_minio_highwayhash",
     importpath = "github.com/minio/highwayhash",
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
@@ -1640,3 +1634,14 @@ go_repository(
     sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
     version = "v1.20.0",
 )
+
+go_repository(
+    name = "com_github_prysmaticlabs_prombbolt",
+    importpath = "github.com/prysmaticlabs/prombbolt",
+    sum = "h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=",
+    version = "v0.0.0-20200324184628-09789ef63796",
+)
+
+load("@com_github_prysmaticlabs_prombbolt//:repositories.bzl", "prombbolt_dependencies")
+
+prombbolt_dependencies()
