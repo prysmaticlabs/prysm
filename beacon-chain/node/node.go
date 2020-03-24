@@ -46,7 +46,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -79,10 +79,10 @@ type BeaconNode struct {
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := tracing.Setup(
 		"beacon-chain", // service name
-		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
-		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
-		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
-		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
+		ctx.String(cmd.TracingProcessNameFlag.Name),
+		ctx.String(cmd.TracingEndpointFlag.Name),
+		ctx.Float64(cmd.TraceSampleFractionFlag.Name),
+		ctx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
+	if !ctx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := beacon.registerPrometheusService(ctx); err != nil {
 			return nil, err
 		}
@@ -228,10 +228,10 @@ func (b *BeaconNode) startForkChoice() {
 }
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
-	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	baseDir := ctx.String(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, beaconChainDBName)
-	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
-	forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	clearDB := ctx.Bool(cmd.ClearDB.Name)
+	forceClearDB := ctx.Bool(cmd.ForceClearDB.Name)
 
 	d, err := db.NewDB(dbPath)
 	if err != nil {
@@ -269,7 +269,7 @@ func (b *BeaconNode) startStateGen() {
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeAddrs := strings.Split(ctx.GlobalString(cmd.BootstrapNode.Name), ",")
+	bootnodeAddrs := strings.Split(ctx.String(cmd.BootstrapNode.Name), ",")
 	for i, addr := range bootnodeAddrs {
 		if filepath.Ext(addr) == ".enr" {
 			b, err := ioutil.ReadFile(addr)
@@ -280,22 +280,28 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		}
 	}
 
+	datadir := ctx.String(cmd.DataDirFlag.Name)
+	if datadir == "" {
+		datadir = cmd.DefaultDataDir()
+	}
+
 	svc, err := p2p.NewService(&p2p.Config{
-		NoDiscovery:       ctx.GlobalBool(cmd.NoDiscovery.Name),
-		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.GlobalStringSlice(cmd.StaticPeers.Name)),
+		NoDiscovery:       ctx.Bool(cmd.NoDiscovery.Name),
+		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeAddrs,
-		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
-		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
-		LocalIP:           ctx.GlobalString(cmd.P2PIP.Name),
-		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
-		HostDNS:           ctx.GlobalString(cmd.P2PHostDNS.Name),
-		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
-		TCPPort:           ctx.GlobalUint(cmd.P2PTCPPort.Name),
-		UDPPort:           ctx.GlobalUint(cmd.P2PUDPPort.Name),
-		MaxPeers:          ctx.GlobalUint(cmd.P2PMaxPeers.Name),
-		WhitelistCIDR:     ctx.GlobalString(cmd.P2PWhitelist.Name),
-		EnableUPnP:        ctx.GlobalBool(cmd.EnableUPnPFlag.Name),
-		Encoding:          ctx.GlobalString(cmd.P2PEncoding.Name),
+		RelayNodeAddr:     ctx.String(cmd.RelayNode.Name),
+		DataDir:           datadir,
+		LocalIP:           ctx.String(cmd.P2PIP.Name),
+		HostAddress:       ctx.String(cmd.P2PHost.Name),
+		HostDNS:           ctx.String(cmd.P2PHostDNS.Name),
+		PrivateKey:        ctx.String(cmd.P2PPrivKey.Name),
+		TCPPort:           ctx.Uint(cmd.P2PTCPPort.Name),
+		UDPPort:           ctx.Uint(cmd.P2PUDPPort.Name),
+		MaxPeers:          ctx.Uint(cmd.P2PMaxPeers.Name),
+		WhitelistCIDR:     ctx.String(cmd.P2PWhitelist.Name),
+		EnableUPnP:        ctx.Bool(cmd.EnableUPnPFlag.Name),
+		EnableDiscv5:      ctx.Bool(flags.EnableDiscv5.Name),
+		Encoding:          ctx.String(cmd.P2PEncoding.Name),
 	})
 	if err != nil {
 		return err
@@ -332,7 +338,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		return err
 	}
 
-	maxRoutines := ctx.GlobalInt64(cmd.MaxGoroutines.Name)
+	maxRoutines := ctx.Int64(cmd.MaxGoroutines.Name)
 	blockchainService, err := blockchain.NewService(context.Background(), &blockchain.Config{
 		BeaconDB:          b.db,
 		DepositCache:      b.depositCache,
@@ -354,10 +360,10 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
-	if cliCtx.GlobalBool(testSkipPowFlag) {
+	if cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
+	depAddress := cliCtx.String(flags.DepositContractFlag.Name)
 	if depAddress == "" {
 		log.Fatal(fmt.Sprintf("%s is required", flags.DepositContractFlag.Name))
 	}
@@ -368,8 +374,8 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		ETH1Endpoint:    cliCtx.GlobalString(flags.Web3ProviderFlag.Name),
-		HTTPEndPoint:    cliCtx.GlobalString(flags.HTTPWeb3ProviderFlag.Name),
+		ETH1Endpoint:    cliCtx.String(flags.Web3ProviderFlag.Name),
+		HTTPEndPoint:    cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
@@ -489,8 +495,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		syncService = initSyncTmp
 	}
 
-	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
-	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
+	genesisValidators := ctx.Uint64(flags.InteropNumValidatorsFlag.Name)
+	genesisStatePath := ctx.String(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
 	var chainStartFetcher powchain.ChainStartFetcher
 	if genesisValidators > 0 || genesisStatePath != "" {
@@ -505,14 +511,14 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		chainStartFetcher = web3Service
 	}
 
-	host := ctx.GlobalString(flags.RPCHost.Name)
-	port := ctx.GlobalString(flags.RPCPort.Name)
-	cert := ctx.GlobalString(flags.CertFlag.Name)
-	key := ctx.GlobalString(flags.KeyFlag.Name)
-	slasherCert := ctx.GlobalString(flags.SlasherCertFlag.Name)
-	slasherProvider := ctx.GlobalString(flags.SlasherProviderFlag.Name)
+	host := ctx.String(flags.RPCHost.Name)
+	port := ctx.String(flags.RPCPort.Name)
+	cert := ctx.String(flags.CertFlag.Name)
+	key := ctx.String(flags.KeyFlag.Name)
+	slasherCert := ctx.String(flags.SlasherCertFlag.Name)
+	slasherProvider := ctx.String(flags.SlasherProviderFlag.Name)
 
-	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
+	mockEth1DataVotes := ctx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
 		Host:                  host,
 		Port:                  port,
@@ -568,7 +574,7 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
 	)
@@ -578,9 +584,9 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
-	gatewayPort := ctx.GlobalInt(flags.GRPCGatewayPort.Name)
+	gatewayPort := ctx.Int(flags.GRPCGatewayPort.Name)
 	if gatewayPort > 0 {
-		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.GlobalInt(flags.RPCPort.Name))
+		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.Int(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
 		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
 	}
@@ -588,9 +594,9 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
-	genesisTime := ctx.GlobalUint64(flags.InteropGenesisTimeFlag.Name)
-	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
-	genesisStatePath := ctx.GlobalString(flags.InteropGenesisStateFlag.Name)
+	genesisTime := ctx.Uint64(flags.InteropGenesisTimeFlag.Name)
+	genesisValidators := ctx.Uint64(flags.InteropNumValidatorsFlag.Name)
+	genesisStatePath := ctx.String(flags.InteropGenesisStateFlag.Name)
 
 	if genesisValidators > 0 || genesisStatePath != "" {
 		svc := interopcoldstart.NewColdStartService(context.Background(), &interopcoldstart.Config{

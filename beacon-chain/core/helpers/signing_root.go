@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -98,4 +99,22 @@ func computeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	return r, nil
+}
+
+// ComputeForkDigest returns the fork for the current version and genesis validator root
+//
+// Spec pseudocode definition:
+//	def compute_fork_digest(current_version: Version, genesis_validators_root: Root) -> ForkDigest:
+//    """
+//    Return the 4-byte fork digest for the ``current_version`` and ``genesis_validators_root``.
+//    This is a digest primarily used for domain separation on the p2p layer.
+//    4-bytes suffices for practical separation of forks/chains.
+//    """
+//    return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
+func ComputeForkDigest(version []byte, genesisValidatorsRoot []byte) ([4]byte, error) {
+	dataRoot, err := computeForkDataRoot(version, genesisValidatorsRoot)
+	if err != nil {
+		return [4]byte{}, nil
+	}
+	return bytesutil.ToBytes4(dataRoot[:]), nil
 }

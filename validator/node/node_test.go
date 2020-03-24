@@ -7,12 +7,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 // Test that the sharding node can build with default flag values.
 func TestNode_Builds(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
 	dir := testutil.TempDir() + "/keystore1"
@@ -21,7 +21,7 @@ func TestNode_Builds(t *testing.T) {
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")
 	set.String("verbosity", "debug", "log verbosity")
-	context := cli.NewContext(app, set, nil)
+	context := cli.NewContext(&app, set, nil)
 
 	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
 		t.Fatalf("Could not create validator account: %v", err)

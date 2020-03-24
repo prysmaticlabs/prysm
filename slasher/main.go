@@ -13,14 +13,14 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var log = logrus.WithField("prefix", "main")
 
 func startSlasher(ctx *cli.Context) error {
-	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	verbosity := ctx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
 		return err
@@ -62,14 +62,14 @@ var appFlags = []cli.Flag{
 }
 
 func main() {
-	app := cli.NewApp()
+	app := cli.App{}
 	app.Name = "hash slinging slasher"
 	app.Usage = `launches an Ethereum Serenity slasher server that interacts with a beacon chain.`
 	app.Version = version.GetVersion()
 	app.Flags = appFlags
 	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
-		format := ctx.GlobalString(cmd.LogFormat.Name)
+		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":
 			formatter := new(prefixed.TextFormatter)
@@ -77,7 +77,7 @@ func main() {
 			formatter.FullTimestamp = true
 			// If persistent log files are written - we disable the log messages coloring because
 			// the colors are ANSI codes and seen as Gibberish in the log files.
-			formatter.DisableColors = ctx.GlobalString(cmd.LogFileName.Name) != ""
+			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
@@ -90,7 +90,7 @@ func main() {
 			return fmt.Errorf("unknown log format %s", format)
 		}
 
-		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
+		logFileName := ctx.String(cmd.LogFileName.Name)
 		if logFileName != "" {
 			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
 				log.WithError(err).Error("Failed to configuring logging to disk.")

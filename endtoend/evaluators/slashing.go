@@ -3,10 +3,11 @@ package evaluators
 import (
 	"context"
 
-	"github.com/gogo/protobuf/types"
+	ptypes "github.com/gogo/protobuf/types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -14,7 +15,7 @@ import (
 )
 
 // InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
-var InjectDoubleVote = Evaluator{
+var InjectDoubleVote = types.Evaluator{
 	Name:       "inject_double_vote_%d",
 	Policy:     beforeEpoch(2),
 	Evaluation: insertDoubleAttestationIntoPool,
@@ -35,7 +36,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
-	chainHead, err := beaconClient.GetChainHead(ctx, &types.Empty{})
+	chainHead, err := beaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil {
 		return err
 	}

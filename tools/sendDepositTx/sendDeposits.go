@@ -15,13 +15,14 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var (
@@ -46,74 +47,74 @@ func main() {
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
 
-	app := cli.NewApp()
+	app := cli.App{}
 	app.Name = "sendDepositTx"
 	app.Usage = "this is a util to send deposit transactions"
 	app.Version = version.GetVersion()
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "keystoreUTCPath",
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "prysm-keystore",
 			Usage:       "The path to the existing prysm keystore. This flag is ignored if used with --random-key",
 			Destination: &prysmKeystorePath,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "ipcPath",
 			Usage:       "Filename for IPC socket/pipe within the datadir",
 			Destination: &ipcPath,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "httpPath",
 			Value:       "http://localhost:8545/",
 			Usage:       "HTTP-RPC server listening interface",
 			Destination: &httpPath,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "passwordFile",
 			Value:       "./password.txt",
 			Usage:       "Password file for unlock account",
 			Destination: &passwordFile,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "privKey",
 			Usage:       "Private key to send ETH transaction",
 			Destination: &privKeyString,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "depositContract",
 			Usage:       "Address of the deposit contract",
 			Destination: &depositContractAddr,
 		},
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:        "numberOfDeposits",
 			Value:       1,
 			Usage:       "number of deposits to send to the contract",
 			Destination: &numberOfDeposits,
 		},
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:        "depositAmount",
 			Value:       3200,
 			Usage:       "Maximum deposit value allowed in contract(in gwei)",
 			Destination: &depositAmount,
 		},
-		cli.Int64Flag{
+		&cli.Int64Flag{
 			Name:        "depositDelay",
 			Value:       5,
 			Usage:       "The time delay between sending the deposits to the contract(in seconds)",
 			Destination: &depositDelay,
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:        "random-key",
 			Usage:       "Use a randomly generated keystore key",
 			Destination: &randomKey,
 		},
 	}
 
-	app.Action = func(c *cli.Context) {
+	app.Action = func(c *cli.Context) error {
 		// Set up RPC client
 		var rpcClient *rpc.Client
 		var err error
@@ -126,7 +127,7 @@ func main() {
 			rpcClient, err = rpc.Dial(ipcPath)
 		}
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		client := ethclient.NewClient(rpcClient)
@@ -136,7 +137,7 @@ func main() {
 			// User inputs private key, sign tx with private key
 			privKey, err := crypto.HexToECDSA(privKeyString)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			txOps = bind.NewKeyedTransactor(privKey)
 			txOps.Value = new(big.Int).Mul(big.NewInt(depositAmount), big.NewInt(1e9))
@@ -147,11 +148,11 @@ func main() {
 			// #nosec - Inclusion of file via variable is OK for this tool.
 			keyJSON, err := ioutil.ReadFile(keystoreUTCPath)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			privKey, err := keystore.DecryptKey(keyJSON, password)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
@@ -161,7 +162,7 @@ func main() {
 
 		depositContract, err := contracts.NewDepositContract(common.HexToAddress(depositContractAddr), client)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		validatorKeys := make(map[string]*prysmKeyStore.Key)
@@ -169,7 +170,7 @@ func main() {
 			validatorKey, err := prysmKeyStore.NewKey()
 			validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
 			if err != nil {
-				log.Errorf("Could not generate random key: %v", err)
+				return errors.Wrap(err, "Could not generate random key")
 			}
 		} else {
 			// Load from keystore
@@ -204,6 +205,8 @@ func main() {
 			}
 			keyCounter++
 		}
+
+		return nil
 	}
 
 	err := app.Run(os.Args)

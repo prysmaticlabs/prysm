@@ -15,7 +15,7 @@ var GossipTopicMappings = map[string]proto.Message{
 	"/eth2/voluntary_exit":                       &pb.SignedVoluntaryExit{},
 	"/eth2/proposer_slashing":                    &pb.ProposerSlashing{},
 	"/eth2/attester_slashing":                    &pb.AttesterSlashing{},
-	"/eth2/beacon_aggregate_and_proof":           &pb.AggregateAttestationAndProof{},
+	"/eth2/beacon_aggregate_and_proof":           &pb.SignedAggregateAttestationAndProof{},
 }
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message

@@ -35,7 +35,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound)
+	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound, []uint64{})
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
@@ -129,7 +129,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}

@@ -21,6 +21,8 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return errors.New("nil block")
 	}
 
+	r.setSeenBlockIndexSlot(signed.Block.Slot, signed.Block.ProposerIndex)
+
 	block := signed.Block
 
 	headState, err := r.chain.HeadState(ctx)
@@ -45,7 +47,7 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return nil
 	}
 
-	// Handle block when the parent is unknown
+	// Handle block when the parent is unknown.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
 		r.pendingQueueLock.Lock()
 		r.slotToPendingBlocks[block.Slot] = signed

@@ -53,6 +53,8 @@ type PubSubProvider interface {
 type PeerManager interface {
 	Disconnect(peer.ID) error
 	PeerID() peer.ID
+	RefreshENR(epoch uint64)
+	FindPeersWithSubnet(index uint64) (bool, error)
 }
 
 // Sender abstracts the sending functionality from libp2p.

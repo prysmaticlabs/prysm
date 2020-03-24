@@ -6,33 +6,34 @@ import (
 
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 )
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
-var ValidatorsAreActive = Evaluator{
+var ValidatorsAreActive = types.Evaluator{
 	Name:       "validators_active_epoch_%d",
-	Policy:     afterNthEpoch(1),
+	Policy:     allEpochs,
 	Evaluation: validatorsAreActive,
 }
 
 // ValidatorsParticipating ensures the expected amount of validators are active.
-var ValidatorsParticipating = Evaluator{
+var ValidatorsParticipating = types.Evaluator{
 	Name:       "validators_participating_epoch_%d",
 	Policy:     afterNthEpoch(2),
 	Evaluation: validatorsParticipating,
 }
 
 // ValidatorsSlashed ensures the expected amount of validators are slashed.
-var ValidatorsSlashed = Evaluator{
+var ValidatorsSlashed = types.Evaluator{
 	Name:       "validators_slashed_epoch_%d",
 	Policy:     afterNthEpoch(0),
 	Evaluation: validatorsSlashed,
 }
 
 // SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
-var SlashedValidatorsLoseBalance = Evaluator{
+var SlashedValidatorsLoseBalance = types.Evaluator{
 	Name:       "slashed_validators_lose_valance_epoch_%d",
 	Policy:     afterNthEpoch(0),
 	Evaluation: validatorsLoseBalance,
@@ -43,6 +44,11 @@ func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return currentEpoch > afterEpoch
 	}
+}
+
+// All epochs.
+func allEpochs(currentEpoch uint64) bool {
+	return true
 }
 
 func validatorsAreActive(conns ...*grpc.ClientConn) error {

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -15,6 +16,11 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 	if !ok {
 		return fmt.Errorf("message was not type *eth.AggregateAttestationAndProof, type=%T", msg)
 	}
+
+	if a.Aggregate == nil || a.Aggregate.Data == nil {
+		return errors.New("nil aggregate")
+	}
+	r.setAggregatorIndexSlotSeen(a.Aggregate.Data.Slot, a.AggregatorIndex)
 
 	return r.attPool.SaveAggregatedAttestation(a.Aggregate)
 }

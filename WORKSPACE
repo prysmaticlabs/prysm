@@ -281,7 +281,7 @@ http_archive(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "40beaeef26d5a2a0918dec2b960c2556c71a90a0",
+    commit = "861ae1b1875c17d86a6a5d68118708ab2b099658",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -300,12 +300,6 @@ go_repository(
     patches = [
         "//third_party:com_github_prysmaticlabs_go_ssz.patch",
     ],
-)
-
-go_repository(
-    name = "com_github_urfave_cli",
-    commit = "e6cf83ec39f6e1158ced1927d4ed14578fda8edb",  # v1.21.0
-    importpath = "github.com/urfave/cli",
 )
 
 go_repository(
@@ -1200,7 +1194,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "dbb55b15e92f897ee230360c8d9695e2f224b117",
+    commit = "62c2aee7166951c456888f92237aee4303ba1b9d",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
@@ -1304,7 +1298,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "c0970cf6aa0c0826b73047770e81617bd24a9ffe",
+    commit = "4f04d2df0b0bac4d2558f250fb6c246e4bb2ff79",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
@@ -1381,13 +1375,6 @@ go_repository(
     importpath = "github.com/elastic/gosigar",
     sum = "h1:GzPQ+78RaAb4J63unidA/JavQRKrB6s8IOzN6Ib59jo=",
     version = "v0.10.5",
-)
-
-go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    importpath = "gopkg.in/urfave/cli.v1",
-    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
-    version = "v1.20.0",
 )
 
 go_repository(
@@ -1620,4 +1607,54 @@ go_repository(
     name = "com_github_ferranbt_fastssz",
     commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     importpath = "github.com/ferranbt/fastssz",
+)
+
+go_repository(
+    name = "com_github_burntsushi_toml",
+    importpath = "github.com/BurntSushi/toml",
+    sum = "h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=",
+    version = "v0.3.1",
+)
+
+go_repository(
+    name = "com_github_cpuguy83_go_md2man_v2",
+    importpath = "github.com/cpuguy83/go-md2man/v2",
+    sum = "h1:EoUDS0afbrsXAZ9YQ9jdu/mZ2sXgT1/2yyNng4PGlyM=",
+    version = "v2.0.0",
+)
+
+go_repository(
+    name = "com_github_russross_blackfriday_v2",
+    importpath = "github.com/russross/blackfriday/v2",
+    sum = "h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=",
+    version = "v2.0.1",
+)
+
+go_repository(
+    name = "com_github_shurcool_sanitized_anchor_name",
+    importpath = "github.com/shurcooL/sanitized_anchor_name",
+    sum = "h1:PdmoCO6wvbs+7yrJyMORt4/BmY5IYyJwS/kOiWx8mHo=",
+    version = "v1.0.0",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v2",
+    importpath = "gopkg.in/urfave/cli.v2",
+    sum = "h1:OvXt/p4cdwNl+mwcWMq/AxaKFkhdxcjx+tx+qf4EOvY=",
+    version = "v2.0.0-20190806201727-b62605953717",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v1",
+    importpath = "gopkg.in/urfave/cli.v1",
+    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
+    version = "v1.20.0",
+)
+
+go_repository(
+    name = "com_github_wealdtech_eth2_signer_api",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/wealdtech/eth2-signer-api",
+    sum = "h1:fqJYjKwG/FeUAJYYiZblIP6agiz3WWB+Hxpw85Fnr5I=",
+    version = "v1.0.1",
 )
