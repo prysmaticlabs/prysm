@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -228,4 +229,22 @@ func TestPeer_Disconnect(t *testing.T) {
 	if len(s.host.Network().Conns()) != 0 {
 		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 0)
 	}
+}
+
+func startService(t *testing.T, svc *Service, event *feed.Event) {
+	exitRoutine := make(chan bool)
+	go func() {
+		svc.Start()
+		<-exitRoutine
+	}()
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = svc.stateNotifier.StateFeed().Send(event)
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := svc.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	exitRoutine <- true
 }

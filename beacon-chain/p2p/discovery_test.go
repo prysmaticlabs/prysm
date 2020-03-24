@@ -14,6 +14,9 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p-core/host"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	stateFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -133,7 +136,12 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 func TestMultiAddrConversion_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	s := &Service{}
+	s := &Service{
+		cfg: &Config{
+			TCPPort: 0,
+			UDPPort: 0,
+		},
+	}
 	listener := s.createListener(ipAddr, pkey)
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
@@ -143,7 +151,9 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-	cfg := &Config{Encoding: "ssz", MaxPeers: 30}
+	cfg := &Config{
+		Encoding: "ssz", MaxPeers: 30,
+	}
 	port := 3000
 	var staticPeers []string
 	var hosts []host.Host
@@ -163,16 +173,20 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
 	cfg.StaticPeers = staticPeers
-
+	mockChainService := &mock.ChainService{}
+	cfg.StateNotifier = mockChainService.StateNotifier()
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s.Start()
-	s.dv5Listener = &mockListener{}
-	defer s.Stop()
-	time.Sleep(100 * time.Millisecond)
+	startService(t, s, &feed.Event{
+		Type: stateFeed.Initialized,
+		Data: &stateFeed.InitializedData{
+			StartTime:             time.Now(),
+			GenesisValidatorsRoot: make([]byte, 32),
+		},
+	})
 
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {

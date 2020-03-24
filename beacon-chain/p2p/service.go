@@ -385,7 +385,7 @@ func (s *Service) awaitStateInitialized() {
 		select {
 		case event := <-stateChannel:
 			if event.Type == stateFeed.Initialized {
-				if data, ok := event.Data.(stateFeed.InitializedData); ok {
+				if data, ok := event.Data.(*stateFeed.InitializedData); ok {
 					s.genesisTime = data.StartTime
 					s.genesisValidatorsRoot = data.GenesisValidatorsRoot
 					return
