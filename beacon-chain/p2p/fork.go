@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// ENR key used for eth2-related fork data.
 const eth2EnrKey = "eth2"
 
 // enrForkID represents a special value ssz-encoded into
@@ -41,8 +42,10 @@ func addForkEntry(
 	// since the genesis time.
 	currentForkVersion := params.BeaconConfig().GenesisForkVersion
 	scheduledForks := params.BeaconConfig().ForkVersionSchedule
-	if forkVersion, ok := scheduledForks[currentEpoch]; ok {
-		currentForkVersion = forkVersion
+	for epoch, forkVersion := range scheduledForks {
+		if epoch <= currentEpoch {
+			currentForkVersion = forkVersion
+		}
 	}
 
 	digest, err := helpers.ComputeForkDigest(currentForkVersion, genesisValidatorsRoot)
