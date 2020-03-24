@@ -13,6 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// DetectAttesterSlashings detects double, surround and surrounding attestation offences given an attestation.
 func (ds *Service) DetectAttesterSlashings(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
@@ -152,6 +153,7 @@ func (ds *Service) detectSurroundVotes(
 	return nil, errors.New("unexpected false positive in surround vote detection")
 }
 
+// DetectDoubleProposels returns slashable offence if found given a signed beacon block header.
 func (ds *Service) DetectDoubleProposels(ctx context.Context, incommingBlk *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
 	return ds.proposalsDetector.DetectDoublePropose(ctx, incommingBlk)
 }
