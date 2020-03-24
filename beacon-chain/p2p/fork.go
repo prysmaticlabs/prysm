@@ -1,14 +1,12 @@
 package p2p
 
 import (
-	"errors"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -34,12 +32,20 @@ func addForkEntry(
 	genesisTime time.Time,
 	genesisValidatorsRoot []byte,
 ) (*enode.LocalNode, error) {
-	// TODO: Use some config map of forks by epoch instead.
-	fork := st.Fork()
-	if fork == nil {
-		return nil, errors.New("nil fork version in state")
+	currentSlot := helpers.SlotsSince(genesisTime)
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+
+	// We retrieve a list of scheduled forks by epoch.
+	// We loop through the keys in this map to determine the current
+	// fork version based on the current, time-based epoch number
+	// since the genesis time.
+	currentForkVersion := params.BeaconConfig().GenesisForkVersion
+	scheduledForks := params.BeaconConfig().ForkVersionSchedule
+	if forkVersion, ok := scheduledForks[currentEpoch]; ok {
+		currentForkVersion = forkVersion
 	}
-	digest, err := helpers.ComputeForkDigest(fork.CurrentVersion, genesisValidatorsRoot)
+
+	digest, err := helpers.ComputeForkDigest(currentForkVersion, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}

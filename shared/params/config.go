@@ -95,9 +95,6 @@ type BeaconChainConfig struct {
 	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
 	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
-	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
-	NextForkVersion           []byte        `yaml:"NEXT_FORK_VERSION"`    // GenesisForkVersion is used to track fork version between state transitions.
-	NextForkEpoch             uint64        `yaml:"NEXT_FORK_EPOCH"`      // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
@@ -105,6 +102,12 @@ type BeaconChainConfig struct {
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+
+	// Fork-related values.
+	GenesisForkVersion  []byte            `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
+	NextForkVersion     []byte            `yaml:"NEXT_FORK_VERSION"`    // GenesisForkVersion is used to track fork version between state transitions.
+	NextForkEpoch       uint64            `yaml:"NEXT_FORK_EPOCH"`      // GenesisForkVersion is used to track fork version between state transitions.
+	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
@@ -194,9 +197,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
 	RPCSyncCheck:              1,
 	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
-	GenesisForkVersion:        []byte{0, 0, 0, 0},
-	NextForkVersion:           []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
-	NextForkEpoch:             1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
 	MaxPeersToSync:            15,
@@ -204,6 +204,15 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
 	PruneSlasherStoragePeriod: 10,
+
+	// Fork related values.
+	GenesisForkVersion: []byte{0, 0, 0, 0},
+	NextForkVersion:    []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
+	NextForkEpoch:      1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
+	ForkVersionSchedule: map[uint64][]byte{
+		0: {0, 0, 0, 0}, // The genesis fork version.
+		// Any further forks must be specified here by their epoch.
+	},
 }
 
 var beaconConfig = defaultBeaconConfig

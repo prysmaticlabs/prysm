@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
