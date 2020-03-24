@@ -307,7 +307,7 @@ func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock,
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlock")
 	defer span.End()
 
-	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+	block := &ethpb.SignedBeaconBlock{}
 	err := k.db.View(func(tx *bolt.Tx) error {
 		sBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := sBkt.Get(savedBlockSlotsKey)
@@ -315,31 +315,69 @@ func (k *Store) HighestSlotBlock(ctx context.Context) (*ethpb.SignedBeaconBlock,
 		if err != nil {
 			return err
 		}
-		highestSlot := highestIndex - 1
-		f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
-
-		keys, err := getBlockRootsByFilter(ctx, tx, f)
+		block, err = k.blockAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
 		if err != nil {
 			return err
 		}
+		return nil
+	})
 
-		bBkt := tx.Bucket(blocksBucket)
-		for i := 0; i < len(keys); i++ {
-			encoded := bBkt.Get(keys[i])
-			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(encoded, block); err != nil {
-				return err
-			}
-			blocks = append(blocks, block)
+	return block, err
+}
+
+// HighestSlotBlockAt returns the block with the highest slot at input slot from the db.
+func (k *Store) HighestSlotBlockAt(ctx context.Context, slot uint64) (*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlockAt")
+	defer span.End()
+
+	block := &ethpb.SignedBeaconBlock{}
+	err := k.db.View(func(tx *bolt.Tx) error {
+		sBkt := tx.Bucket(slotsHasObjectBucket)
+		savedSlots := sBkt.Get(savedBlockSlotsKey)
+		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
+		if err != nil {
+			return err
+		}
+		block, err = k.blockAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
+		if err != nil {
+			return err
 		}
 		return nil
 	})
+
+	return block, err
+}
+
+// blockAtSlotBitfieldIndex retrieves the block in DB given the input index. The index represents
+// the position of the slot bitfield the saved block maps to.
+func (k *Store) blockAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) (*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockAtSlotBitfieldIndex")
+	defer span.End()
+
+	highestSlot := index - 1
+	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
+
+	keys, err := getBlockRootsByFilter(ctx, tx, f)
+	if err != nil {
+		return nil, err
+	}
+
+	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+	bBkt := tx.Bucket(blocksBucket)
+	for i := 0; i < len(keys); i++ {
+		encoded := bBkt.Get(keys[i])
+		block := &ethpb.SignedBeaconBlock{}
+		if err := decode(encoded, block); err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
+	}
 
 	if len(blocks) != 1 {
 		return nil, errors.New("no highest slot block saved")
 	}
 
-	return blocks[0], err
+	return blocks[0], nil
 }
 
 // setBlockSlotBitField sets the block slot bit in DB.
