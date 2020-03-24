@@ -47,7 +47,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(vs.GenesisTime))
+	currentEpoch := helpers.SlotToEpoch(vs.GenesisTimeFetcher.CurrentSlot())
 	if currentEpoch > 0 && currentEpoch-1 != helpers.SlotToEpoch(req.Slot) && currentEpoch != helpers.SlotToEpoch(req.Slot) {
 		return nil, status.Error(codes.InvalidArgument, msgInvalidAttestationRequest)
 	}
@@ -210,7 +210,9 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 	defer span.End()
 
 	// Don't need to wait if current slot is greater than requested slot.
-	if slot < helpers.SlotsSince(vs.GenesisTime) {
+	currentSlot := vs.GenesisTimeFetcher.CurrentSlot()
+	//if slot < vs.GenesisTimeFetcher.CurrentSlot() {
+	if slot < currentSlot {
 		return
 	}
 

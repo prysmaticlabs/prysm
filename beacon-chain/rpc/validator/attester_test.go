@@ -168,7 +168,6 @@ func TestGetAttestationData_OK(t *testing.T) {
 		HeadFetcher:         &mock.ChainService{State: s, Root: blockRoot[:]},
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
 		GenesisTimeFetcher:  &mock.ChainService{Genesis:time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
-		GenesisTime:         time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second),
 		StateNotifier:      chainService.StateNotifier(),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
@@ -282,8 +281,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		HeadFetcher:         &mock.ChainService{State: s, Root: blockRoot[:]},
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher:  &mock.ChainService{},
-		GenesisTime:         time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		GenesisTimeFetcher:  &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier: chainService.StateNotifier(),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
@@ -335,9 +333,8 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 		HeadFetcher:        &mock.ChainService{State: state},
 		AttestationCache:   cache.NewAttestationCache(),
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{},
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:      chainService.StateNotifier(),
-		GenesisTime:        time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second),
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -395,7 +392,6 @@ func TestWaitForSlotOneThird_WaitedCorrectly(t *testing.T) {
 		HeadFetcher:        &mock.ChainService{},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
-		GenesisTime:        time.Unix(int64(genesisTime), 0),
 		StateNotifier:      chainService.StateNotifier(),
 	}
 
@@ -410,11 +406,11 @@ func TestWaitForSlotOneThird_WaitedCorrectly(t *testing.T) {
 }
 
 func TestWaitForSlotOneThird_HeadIsHereNoWait(t *testing.T) {
-	currentTime := uint64(time.Now().Unix())
+	currentTime := uint64(roughtime.Now().Unix())
 	numOfSlots := uint64(4)
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 
-	s := &pbp2p.BeaconState{Slot: 100}
+	s := &pbp2p.BeaconState{Slot: 2}
 	state, _ := beaconstate.InitializeFromProto(s)
 	server := &Server{
 		AttestationCache:   cache.NewAttestationCache(),
@@ -436,7 +432,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	attesterServer := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTime: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -519,8 +515,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		AttestationCache:    cache.NewAttestationCache(),
 		HeadFetcher:         &mock.ChainService{State: s, Root: blockRoot[:]},
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
-		GenesisTimeFetcher:  &mock.ChainService{},
-		GenesisTime:         time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second),
+		GenesisTimeFetcher:  &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier: chainService.StateNotifier(),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
@@ -552,6 +547,95 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		Target: &ethpb.Checkpoint{
 			Epoch: 3,
 			Root:  blockRoot2[:],
+		},
+	}
+
+	if !proto.Equal(res, expectedInfo) {
+		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
+	}
+}
+
+func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
+	ctx := context.Background()
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+
+	slot := uint64(5)
+	block := &ethpb.BeaconBlock{
+		Slot: slot,
+	}
+	targetBlock := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	justifiedBlock := &ethpb.BeaconBlock{
+		Slot: 0,
+	}
+	blockRoot, err := ssz.HashTreeRoot(block)
+	if err != nil {
+		t.Fatalf("Could not hash beacon block: %v", err)
+	}
+	justifiedRoot, err := ssz.HashTreeRoot(justifiedBlock)
+	if err != nil {
+		t.Fatalf("Could not get signing root for justified block: %v", err)
+	}
+	targetRoot, err := ssz.HashTreeRoot(targetBlock)
+	if err != nil {
+		t.Fatalf("Could not get signing root for target block: %v", err)
+	}
+	beaconState := &pbp2p.BeaconState{
+		Slot:       slot,
+		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  justifiedRoot[:],
+		},
+	}
+	beaconState.BlockRoots[1] = blockRoot[:]
+	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
+	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	s, _ := beaconstate.InitializeFromProto(beaconState)
+	chainService := &mock.ChainService{
+		Genesis: time.Now(),
+	}
+	attesterServer := &Server{
+		BeaconDB:            db,
+		P2P:                 &mockp2p.MockBroadcaster{},
+		SyncChecker:         &mockSync.Sync{IsSyncing: false},
+		AttestationCache:    cache.NewAttestationCache(),
+		HeadFetcher:         &mock.ChainService{State: s, Root: blockRoot[:]},
+		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
+		GenesisTimeFetcher:  &mock.ChainService{Genesis:roughtime.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
+		StateNotifier:      chainService.StateNotifier(),
+	}
+	if err := db.SaveState(ctx, s, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	req := &ethpb.AttestationDataRequest{
+		CommitteeIndex: 0,
+		Slot:           5,
+	}
+	res, err := attesterServer.GetAttestationData(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get attestation info at slot: %v", err)
+	}
+
+	expectedInfo := &ethpb.AttestationData{
+		Slot:            slot,
+		BeaconBlockRoot: blockRoot[:],
+		Source: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  justifiedRoot[:],
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  blockRoot[:],
 		},
 	}
 
