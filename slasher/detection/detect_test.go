@@ -159,7 +159,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 				}
 			}
 
-			slashings, err := ds.detectAttesterSlashings(ctx, tt.incomingAtt)
+			slashings, err := ds.DetectAttesterSlashings(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -313,7 +313,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				}
 			}
 
-			slashings, err := ds.detectAttesterSlashings(ctx, tt.incomingAtt)
+			slashings, err := ds.DetectAttesterSlashings(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
 			}
