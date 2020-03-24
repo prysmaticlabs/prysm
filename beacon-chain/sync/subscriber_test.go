@@ -162,7 +162,8 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 	}
 
 	topic := "/eth2/%x/beacon_block"
-	r.registerSubscribers()
+	go r.registerSubscribers()
+	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
