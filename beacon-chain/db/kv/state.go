@@ -212,7 +212,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		if err := decode(enc, block); err != nil {
 			return err
 		}
-		if err := k.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+		if err := k.clearStateSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 			return err
 		}
 
@@ -276,7 +276,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 				if err := decode(enc, block); err != nil {
 					return err
 				}
-				if err := k.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+				if err := k.clearStateSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 					return err
 				}
 
