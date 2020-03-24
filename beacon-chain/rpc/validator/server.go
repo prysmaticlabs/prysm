@@ -67,7 +67,6 @@ type Server struct {
 	Eth1BlockFetcher       powchain.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
-	GenesisTime            time.Time
 	StateGen               *stategen.State
 }
 
