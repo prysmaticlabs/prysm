@@ -205,7 +205,6 @@ func (s *SlasherNode) registerDetectionService() error {
 }
 
 func (s *SlasherNode) registerRPCService(ctx *cli.Context) error {
-
 	var detectionService *detection.Service
 	if err := s.services.FetchService(&detectionService); err != nil {
 		return err

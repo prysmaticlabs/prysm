@@ -30,7 +30,6 @@ func TestLifecycle_OK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "listening on port")
 
 	rpcService.Stop()
-
 }
 
 func TestStatus_CredentialError(t *testing.T) {
