@@ -170,12 +170,9 @@ func (s *Service) Start() {
 
 	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
 		ipAddr := ipAddr()
-		listener, err := startDiscoveryV5(
+		listener, err := s.startDiscoveryV5(
 			ipAddr,
 			s.privKey,
-			s.cfg,
-			s.genesisTime,
-			s.genesisValidatorsRoot,
 		)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")

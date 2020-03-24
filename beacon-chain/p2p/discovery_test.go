@@ -48,7 +48,10 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 func TestCreateListener(t *testing.T) {
 	port := 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
+	s := &Service{
+		cfg: &Config{UDPPort: uint(port)},
+	}
+	listener := s.createListener(ipAddr, pkey)
 	defer listener.Close()
 
 	if !listener.Self().IP().Equal(ipAddr) {
@@ -70,7 +73,10 @@ func TestCreateListener(t *testing.T) {
 func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	bootListener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
+	s := &Service{
+		cfg: &Config{UDPPort: uint(port)},
+	}
+	bootListener := s.createListener(ipAddr, pkey)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -84,7 +90,10 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		port = 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
-		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+		s = &Service{
+			cfg: &Config{UDPPort: uint(port)},
+		}
+		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		if err != nil {
 			t.Errorf("Could not start discovery for node: %v", err)
 		}
@@ -110,7 +119,8 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	addr := net.ParseIP("invalidIP")
 	_, pkey := createAddrAndPrivKey(t)
-	node, err := createLocalNode(pkey, addr, 0, 0)
+	s := &Service{}
+	node, err := s.createLocalNode(pkey, addr, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +133,8 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 func TestMultiAddrConversion_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, pkey, &Config{})
+	s := &Service{}
+	listener := s.createListener(ipAddr, pkey)
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
 	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
