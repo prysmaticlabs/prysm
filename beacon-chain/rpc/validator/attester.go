@@ -95,26 +95,22 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	// In the case that we receive an attestation request after a newer state/block has been
 	// processed, we walk up the chain until state.Slot <= req.Slot to prevent producing an
 	// attestation that violates processing constraints.
+	fetchState := vs.BeaconDB.State
+	if featureconfig.Get().NewStateMgmt {
+		fetchState = vs.StateGen.StateByRoot
+	}
 	for headState.Slot() > req.Slot {
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, ctx.Err().Error())
 		}
 		parent := headState.ParentRoot()
 		headRoot = parent[:]
-		headState, err = vs.BeaconDB.State(ctx, parent)
+		headState, err = fetchState(ctx, parent)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		if headState == nil {
-			if featureconfig.Get().NewStateMgmt {
-				headState, err = vs.StateGen.StateByRoot(ctx, parent)
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, fmt.Sprintf("Failed to generate state: %v", err))
-				}
-			}
-			if headState == nil {
 				return nil, status.Error(codes.Internal, "Failed to lookup parent state from head.")
-			}
 		}
 	}
 
