@@ -204,15 +204,11 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 			}
 		}
 
-		enc = bkt.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-		block := &ethpb.SignedBeaconBlock{}
-		if err := decode(enc, block); err != nil {
+		slot, err := slotByBlockRoot(ctx, tx, blockRoot[:])
+		if err != nil {
 			return err
 		}
-		if err := k.clearStateSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+		if err := k.clearStateSlotBitField(ctx, tx, slot); err != nil {
 			return err
 		}
 
@@ -267,16 +263,11 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 					}
 				}
 
-				bkt = tx.Bucket(blocksBucket)
-				enc = bkt.Get(blockRoot[:])
-				if enc == nil {
-					return nil
-				}
-				block := &ethpb.SignedBeaconBlock{}
-				if err := decode(enc, block); err != nil {
+				slot, err := slotByBlockRoot(ctx, tx, blockRoot)
+				if err != nil {
 					return err
 				}
-				if err := k.clearStateSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+				if err := k.clearStateSlotBitField(ctx, tx, slot); err != nil {
 					return err
 				}
 
@@ -297,6 +288,39 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoState, nil
+}
+
+// slotByBlockRoot retrieves the corresponding slot of the input block root.
+func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.slotByBlockRoot")
+	defer span.End()
+
+	if featureconfig.Get().NewStateMgmt {
+		bkt := tx.Bucket(stateSummaryBucket)
+		enc := bkt.Get(blockRoot)
+		if enc == nil {
+			return 0, errors.New("state summary enc can't be nil")
+		}
+		stateSummary := &pb.StateSummary{}
+		if err := decode(enc, stateSummary); err != nil {
+			return 0, err
+		}
+		return stateSummary.Slot, nil
+	}
+
+	bkt := tx.Bucket(blocksBucket)
+	enc := bkt.Get(blockRoot)
+	if enc == nil {
+		return 0, errors.New("block enc can't be nil")
+	}
+	block := &ethpb.SignedBeaconBlock{}
+	if err := decode(enc, block); err != nil {
+		return 0, err
+	}
+	if block.Block == nil {
+		return 0, errors.New("block can't be nil")
+	}
+	return block.Block.Slot, nil
 }
 
 // HighestSlotStates returns the states with the highest slot from the db.
@@ -361,11 +385,11 @@ func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, er
 // setStateSlotBitField sets the state slot bit in DB.
 // This helps to track which slot has a saved state in db.
 func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	k.stateSlotBitLock.Lock()
-	defer k.stateSlotBitLock.Unlock()
-
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.setStateSlotBitField")
 	defer span.End()
+
+	k.stateSlotBitLock.Lock()
+	defer k.stateSlotBitLock.Unlock()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)
@@ -381,11 +405,11 @@ func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 // clearStateSlotBitField clears the state slot bit in DB.
 // This helps to track which slot has a saved state in db.
 func (k *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
-	k.stateSlotBitLock.Lock()
-	defer k.stateSlotBitLock.Unlock()
-
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearStateSlotBitField")
 	defer span.End()
+
+	k.stateSlotBitLock.Lock()
+	defer k.stateSlotBitLock.Unlock()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)
