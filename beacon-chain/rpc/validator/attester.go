@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
