@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -15,12 +14,20 @@ import (
 
 const eth2EnrKey = "eth2"
 
+// enrForkID represents a special value ssz-encoded into
+// the local node's ENR for discovery purposes. Peers should
+// only connect if their enrForkID matches.
 type enrForkID struct {
 	currentForkDigest [4]byte
 	nextForkVersion   [4]byte
 	nextForkEpoch     uint64
 }
 
+// Adds a fork entry as an ENR record under the eth2EnrKey for
+// the local node. The fork entry is an ssz-encoded enrForkID type
+// which takes into account the current fork version from the beacon
+// state to create a fork digest, the next fork version,
+// and the next fork epoch.
 func addForkEntry(node *enode.LocalNode, st *stateTrie.BeaconState) (*enode.LocalNode, error) {
 	fork := st.Fork()
 	if fork == nil {
@@ -34,12 +41,10 @@ func addForkEntry(node *enode.LocalNode, st *stateTrie.BeaconState) (*enode.Loca
 	if err != nil {
 		return nil, err
 	}
-	// TODO(): Update on any required hard fork.
-	nextForkVersion := fork.CurrentVersion
-	nextForkEpoch := params.BeaconConfig().FarFutureEpoch
+	nextForkEpoch := params.BeaconConfig().NextForkEpoch
 	enrForkID := &enrForkID{
 		currentForkDigest: digest,
-		nextForkVersion:   bytesutil.ToBytes4(nextForkVersion),
+		nextForkVersion:   bytesutil.ToBytes4(params.BeaconConfig().NextForkVersion),
 		nextForkEpoch:     nextForkEpoch,
 	}
 	enc, err := ssz.Marshal(enrForkID)
@@ -51,6 +56,8 @@ func addForkEntry(node *enode.LocalNode, st *stateTrie.BeaconState) (*enode.Loca
 	return node, nil
 }
 
+// Retrieves an enrForkID from an ENR record by key lookup
+// under the eth2EnrKey.
 func retrieveForkEntry(record *enr.Record) (*enrForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
 	entry := enr.WithEntry(eth2EnrKey, &sszEncodedForkEntry)

@@ -15,8 +15,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
 const attestationSubnetCount = 64
@@ -45,7 +43,7 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort), cfg.BeaconDB)
+	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,7 +79,6 @@ func createLocalNode(
 	ipAddr net.IP,
 	udpPort int,
 	tcpPort int,
-	beaconDB db.Database,
 ) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
@@ -97,14 +94,14 @@ func createLocalNode(
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
-	headState, err := beaconDB.HeadState(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	localNode, err = addForkEntry(localNode, headState)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
-	}
+	//headState, err := beaconDB.HeadState(context.Background())
+	//if err != nil {
+	//	return nil, err
+	//}
+	//localNode, err = addForkEntry(localNode, headState)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
+	//}
 	return intializeAttSubnets(localNode), nil
 }
 
