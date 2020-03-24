@@ -299,7 +299,7 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 	return protoState, nil
 }
 
-// HighestSlotState returns the block with the highest slot from the db.
+// HighestSlotState returns the state with the highest slot from the db.
 func (k *Store) HighestSlotState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotState")
 	defer span.End()
