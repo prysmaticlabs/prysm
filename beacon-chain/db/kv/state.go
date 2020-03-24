@@ -5,7 +5,6 @@ import (
 	"context"
 	"math"
 
-	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -13,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

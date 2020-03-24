@@ -907,6 +907,12 @@ go_repository(
 )
 
 go_repository(
+    name = "io_etcd_go_bbolt",  # v1.3.4
+    commit = "68cc10a767ea1c6b9e8dcb9847317ff192d6d974",
+    importpath = "go.etcd.io/bbolt",
+)
+
+go_repository(
     name = "io_k8s_apimachinery",
     build_file_proto_mode = "disable_global",
     commit = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b",  # v0.17.2
