@@ -33,7 +33,7 @@ type stateID uint8
 type eventID uint8
 
 // stateMachine is a FSM that allows easy state transitions:
-// State(S) x stateMachineEvent(E) -> Actions (A), State(S').
+// State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
 	epochs []*epochState
 	events map[eventID]*stateMachineEvent
