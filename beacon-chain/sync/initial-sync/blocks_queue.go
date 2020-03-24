@@ -3,55 +3,31 @@ package initialsync
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/fsm"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 const (
-	// queueMaxPendingRequests limits how many concurrent fetch request queue can initiate.
-	queueMaxPendingRequests = 8
 	// queueStopCallTimeout is time allowed for queue to release resources when quitting.
 	queueStopCallTimeout = 1 * time.Second
-
-	fsmPollingInterval = 200 * time.Millisecond
-	lookaheadEpochs    = 4
-	staleEpochTimeout  = 2 * fsmPollingInterval
-)
-
-const (
-	stateNew          = "new"
-	stateScheduled    = "scheduled"
-	stateDataReceived = "dataReceived"
-	stateDataParsed   = "dataParsed"
-	stateSkipped      = "skipped"
-	stateSkippedExt   = "skippedExt"
-	stateSent         = "sent"
-	statePartial      = "partial"
-	stateComplete     = "complete"
-	stateGarbage      = "garbage"
-)
-const (
-	eventSchedule       = "schedule"
-	eventDataReceived   = "dataReceived"
-	eventReadyToSend    = "readyToSend"
-	eventCheckProcessed = "checkProcessed"
-	eventMoveForward    = "moveForward"
-	eventExtendWindow   = "extendWindow"
-	eventUnmarkSkipped  = "unmarkSkipped"
+	// pollingInterval defines how often state machine needs to check for new events.
+	pollingInterval = 200 * time.Millisecond
+	// staleEpochTimeout is an period after which epoch's state is considered stale.
+	staleEpochTimeout = 3 * pollingInterval
+	// lookaheadEpochs is a default limit on how many forward epochs are loaded into queue.
+	lookaheadEpochs = 4
 )
 
 var (
 	errQueueCtxIsDone          = errors.New("queue's context is done, reinitialize")
 	errQueueTakesTooLongToStop = errors.New("queue takes too long to stop")
+	errNoEpochState            = errors.New("epoch state not found")
 )
 
 // blocksProvider exposes enough methods for queue to fetch incoming blocks.
@@ -77,9 +53,7 @@ type blocksQueue struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	highestExpectedSlot uint64
-	epochStates         map[uint64]*fsm.StateMachine
-	epochBlocks         map[uint64][]*eth.SignedBeaconBlock
-	epochStatesKeys     []uint64
+	state               *stateMachine
 	blocksFetcher       blocksProvider
 	headFetcher         blockchain.HeadFetcher
 	fetchedBlocks       chan *eth.SignedBeaconBlock // output channel for ready blocks
@@ -98,18 +72,25 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		})
 	}
 
-	return &blocksQueue{
+	queue := &blocksQueue{
 		ctx:                 ctx,
 		cancel:              cancel,
 		highestExpectedSlot: cfg.highestExpectedSlot,
-		epochStates:         make(map[uint64]*fsm.StateMachine, lookaheadEpochs),
-		epochStatesKeys:     []uint64{},
-		epochBlocks:         make(map[uint64][]*eth.SignedBeaconBlock, lookaheadEpochs),
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
 		fetchedBlocks:       make(chan *eth.SignedBeaconBlock, allowedBlocksPerSecond),
 		quit:                make(chan struct{}),
 	}
+
+	// Configure state machine.
+	queue.state = newStateMachine()
+	queue.state.addHandler(stateNew, eventSchedule, queue.onScheduleEvent(ctx))
+	queue.state.addHandler(stateScheduled, eventDataReceived, queue.onDataReceivedEvent(ctx))
+	queue.state.addHandler(stateDataParsed, eventReadyToSend, queue.onReadyToSendEvent(ctx))
+	queue.state.addHandler(stateSkipped, eventExtendWindow, queue.onExtendWindowEvent(ctx))
+	queue.state.addHandler(stateSent, eventCheckStale, queue.onCheckStateEvent(ctx))
+
+	return queue
 }
 
 // start boots up the queue processing.
@@ -150,52 +131,47 @@ func (q *blocksQueue) loop() {
 	startEpoch := helpers.SlotToEpoch(q.headFetcher.HeadSlot())
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
-	// Define epochStates as finite state machines.
+	// Define epoch states as finite state machines.
 	for i := startEpoch; i < startEpoch+lookaheadEpochs; i++ {
-		q.addEpochStateMachine(q.ctx, i)
+		q.state.addEpochState(i)
 	}
 
-	ticker := time.NewTicker(fsmPollingInterval)
-	tickerEvents := []fsm.EventID{
-		eventSchedule, eventReadyToSend, eventCheckProcessed, eventMoveForward, eventExtendWindow}
-
+	ticker := time.NewTicker(pollingInterval)
+	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventExtendWindow}
 	for {
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
 			log.Debug("Highest expected slot reached")
 			q.cancel()
 		}
 
-		log.WithFields(logrus.Fields{
-			"epochStates": q.epochStates,
-		}).Debug("Tick-tack")
+		log.WithField("state", q.state).Debug("tick")
 		select {
 		case <-ticker.C:
-			for _, epoch := range q.epochStatesKeys {
-				state := q.epochStates[epoch]
+			for _, state := range q.state.epochs {
 				data := &fetchRequestParams{
-					start: helpers.StartSlot(epoch),
+					start: helpers.StartSlot(state.epoch),
 					count: slotsPerEpoch,
 				}
 
-				// Trigger regular events for each epoch's state machine.
+				// Trigger events on each epoch's state machine.
 				for _, event := range tickerEvents {
-					if err := state.Trigger(event, data); err != nil {
+					if err := q.state.trigger(event, state.epoch, data); err != nil {
 						log.WithError(err).Debug("Can not trigger event")
 					}
 				}
 
 				// Do garbage collection, and advance sliding window forward.
-				if state.CurrentState() == stateGarbage {
-					highestEpochState, err := q.highestEpochState()
+				if q.headFetcher.HeadSlot() >= helpers.StartSlot(state.epoch+1) {
+					highestEpochSlot, err := q.state.highestEpochSlot()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
 						continue
 					}
-					if err := q.removeEpochStateMachine(q.ctx, epoch); err != nil {
+					if err := q.state.removeEpochState(state.epoch); err != nil {
 						log.WithError(err).Debug("Can not remove epoch state")
 					}
-					if len(q.epochStates) < lookaheadEpochs {
-						q.addEpochStateMachine(q.ctx, highestEpochState+1)
+					if len(q.state.epochs) < lookaheadEpochs {
+						q.state.addEpochState(highestEpochSlot + 1)
 					}
 				}
 			}
@@ -207,13 +183,14 @@ func (q *blocksQueue) loop() {
 			}
 			// Update state of an epoch for which data is received.
 			epoch := helpers.SlotToEpoch(response.start)
-			if state, ok := q.epochStates[epoch]; ok {
-				if err := state.Trigger(eventDataReceived, response); err != nil {
+			ind := q.state.findEpochState(epoch)
+			if ind < len(q.state.epochs) {
+				state := q.state.epochs[ind]
+				if err := q.state.trigger(eventDataReceived, state.epoch, response); err != nil {
 					log.WithError(err).Debug("Can not trigger event")
-					state.SetCurrentState(stateNew)
+					state.setState(stateNew)
 					continue
 				}
-				state.SetCurrentState(stateDataParsed)
 			}
 		case <-q.ctx.Done():
 			log.Debug("Context closed, exiting goroutine (blocks queue)")
@@ -223,233 +200,152 @@ func (q *blocksQueue) loop() {
 	}
 }
 
-func (q *blocksQueue) addEpochStateMachine(ctx context.Context, epoch uint64) *fsm.StateMachine {
-	state := fsm.NewStateMachine()
-	state.OnEvent(eventSchedule).AddHandler(stateNew, q.scheduleEventHandler(ctx))
-	state.OnEvent(eventDataReceived).AddHandler(stateScheduled, q.dataReceivedEventHandler(ctx))
-	state.OnEvent(
-		eventReadyToSend,
-	).AddHandler(stateDataParsed, q.readyToSendEventHandler(ctx),
-	).AddHandler(stateDataParsed, q.readyToSendEventHandler(ctx))
-	state.OnEvent(
-		eventCheckProcessed,
-	).AddHandler(stateSent, q.checkProcessedEventHandler(ctx),
-	).AddHandler(stateSkipped, q.checkProcessedEventHandler(ctx),
-	).AddHandler(stateSkippedExt, q.checkProcessedEventHandler(ctx))
-	state.OnEvent(eventMoveForward).AddHandler(stateComplete, q.moveForwardEventHandler(ctx))
-	state.OnEvent(eventExtendWindow).AddHandler(stateSkipped, q.extendWindowEventHandler(ctx))
-
-	state.SetCurrentState(stateNew)
-
-	q.epochStates[epoch] = state
-	q.updateEpochStatesKeys()
-	return state
-}
-
-func (q *blocksQueue) scheduleEventHandler(ctx context.Context) fsm.HandlerFn {
-	return func(sm *fsm.StateMachine, in interface{}) (fsm.StateID, error) {
+// onScheduleEvent is an event called on newly arrived epochs. Transforms state to scheduled.
+func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
+	return func(es *epochState, in interface{}) (stateID, error) {
 		data := in.(*fetchRequestParams)
 		start := data.start
 		count := mathutil.Min(data.count, q.highestExpectedSlot-start+1)
 		if count <= 0 {
-			return "", errStartSlotIsTooHigh
+			return es.state, errStartSlotIsTooHigh
 		}
 
 		if err := q.blocksFetcher.scheduleRequest(ctx, start, count); err != nil {
-			return "", err
+			return es.state, err
 		}
 		return stateScheduled, nil
 	}
 }
 
-func (q *blocksQueue) dataReceivedEventHandler(ctx context.Context) fsm.HandlerFn {
-	return func(sm *fsm.StateMachine, in interface{}) (fsm.StateID, error) {
+// onDataReceivedEvent is an event called when data is received from fetcher.
+func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
+	return func(es *epochState, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
-			return "", ctx.Err()
+			return es.state, ctx.Err()
 		}
 
 		response := in.(*fetchRequestResponse)
 		if response.err != nil {
-			return "", response.err
+			return es.state, response.err
 		}
 
 		epoch := helpers.SlotToEpoch(response.start)
-		q.epochBlocks[epoch] = response.blocks
-		log.WithFields(logrus.Fields{
-			"epoch": epoch,
-			"start": response.start,
-		}).Debug("Data cached")
-
-		return stateDataReceived, nil
+		ind := q.state.findEpochState(epoch)
+		if ind >= len(q.state.epochs) {
+			return es.state, errNoEpochState
+		}
+		q.state.epochs[ind].blocks = response.blocks
+		return stateDataParsed, nil
 	}
 }
 
-func (q *blocksQueue) readyToSendEventHandler(ctx context.Context) fsm.HandlerFn {
-	return func(sm *fsm.StateMachine, in interface{}) (fsm.StateID, error) {
+// onReadyToSendEvent is an event called to allow epochs with available blocks to send them downstream.
+func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
+	return func(es *epochState, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
-			return "", ctx.Err()
+			return es.state, ctx.Err()
 		}
 
 		data := in.(*fetchRequestParams)
 		epoch := helpers.SlotToEpoch(data.start)
-		cachedBlocks, ok := q.epochBlocks[epoch]
-		if !ok {
-			return "", errors.New("no cache found")
+		ind := q.state.findEpochState(epoch)
+		if ind >= len(q.state.epochs) {
+			return es.state, errNoEpochState
 		}
-
-		if len(cachedBlocks) == 0 {
+		if len(q.state.epochs[ind].blocks) == 0 {
 			return stateSkipped, nil
 		}
 
-		// Make sure that we send epochs in correct order.
-		readyToSend := false
-		lowestEpochState, err := q.lowestEpochState()
-		if err != nil {
-			return sm.CurrentState(), err
-		}
-		if epoch == lowestEpochState {
-			readyToSend = true
-		} else if sm, ok := q.epochStates[epoch-1]; ok {
-			switch sm.CurrentState() {
-			case stateNew, stateScheduled, stateDataReceived, stateDataParsed:
-			default:
-				readyToSend = true
+		send := func() (stateID, error) {
+			for _, block := range q.state.epochs[ind].blocks {
+				select {
+				case <-ctx.Done():
+					return es.state, ctx.Err()
+				case q.fetchedBlocks <- block:
+				}
 			}
-		}
-		if !readyToSend {
-			return sm.CurrentState(), nil
+			return stateSent, nil
 		}
 
-		for _, block := range cachedBlocks {
-			select {
-			case <-ctx.Done():
-				return "", ctx.Err()
-			case q.fetchedBlocks <- block:
+		// Make sure that we send epochs in a correct order.
+		if q.state.isLowestEpochState(epoch) {
+			return send()
+		}
+
+		// Make sure that previous epoch is already processed.
+		for _, state := range q.state.epochs {
+			// Review only previous slots.
+			if state.epoch < epoch {
+				switch state.state {
+				case stateNew, stateScheduled, stateDataParsed:
+					return es.state, nil
+				default:
+				}
 			}
 		}
 
-		return stateSent, nil
+		return send()
 	}
 }
 
-func (q *blocksQueue) checkProcessedEventHandler(ctx context.Context) fsm.HandlerFn {
-	return func(sm *fsm.StateMachine, in interface{}) (fsm.StateID, error) {
+// onExtendWindowEvent is and event allowing handlers to extend sliding window,
+// in case where progress is not possible otherwise.
+func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
+	return func(es *epochState, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
-			return "", ctx.Err()
-		}
-
-		data := in.(*fetchRequestParams)
-		if q.headFetcher.HeadSlot() >= data.start+data.count {
-			return stateComplete, nil
-		}
-
-		if sm.StateAge() > staleEpochTimeout {
-			return stateSkipped, nil
-		}
-
-		return sm.CurrentState(), nil
-	}
-}
-
-func (q *blocksQueue) moveForwardEventHandler(ctx context.Context) fsm.HandlerFn {
-	return func(sm *fsm.StateMachine, in interface{}) (fsm.StateID, error) {
-		if ctx.Err() != nil {
-			return "", ctx.Err()
+			return es.state, ctx.Err()
 		}
 
 		data := in.(*fetchRequestParams)
 		epoch := helpers.SlotToEpoch(data.start)
-		if _, ok := q.epochStates[epoch]; !ok {
-			return sm.CurrentState(), fmt.Errorf("epoch %v has no cached state", epoch)
+		ind := q.state.findEpochState(epoch)
+		if ind >= len(q.state.epochs) {
+			return es.state, errNoEpochState
 		}
-
-		return stateGarbage, nil
-	}
-}
-
-func (q *blocksQueue) extendWindowEventHandler(ctx context.Context) fsm.HandlerFn {
-	return func(sm *fsm.StateMachine, in interface{}) (fsm.StateID, error) {
-		if ctx.Err() != nil {
-			return "", ctx.Err()
-		}
-
-		data := in.(*fetchRequestParams)
-		epoch := helpers.SlotToEpoch(data.start)
-		if _, ok := q.epochStates[epoch]; !ok {
-			return sm.CurrentState(), fmt.Errorf("epoch %v has no cached state", epoch)
-		}
-		highestEpochState, err := q.highestEpochState()
+		// Only the highest epoch with skipped state can trigger extension.
+		highestEpochSlot, err := q.state.highestEpochSlot()
 		if err != nil {
-			return sm.CurrentState(), err
+			return es.state, err
 		}
-		if highestEpochState != epoch {
-			return sm.CurrentState(), nil
+		if highestEpochSlot != epoch {
+			return es.state, nil
 		}
-		// Make sure that all the previous states are stuck as well.
+
+		// Check if window is expanded recently, if so, time to reset and re-request the same blocks.
 		resetWindow := false
-		for _, epoch := range q.epochStates {
-			curState := epoch.CurrentState()
-			if curState != stateSkipped && curState != stateSkippedExt {
-				return sm.CurrentState(), nil
-			}
-			if curState == stateSkippedExt {
+		for _, state := range q.state.epochs {
+			if state.state == stateSkippedExt {
 				resetWindow = true
+				break
 			}
 		}
-		// We have already expanded, time to reset, and re-request the same blocks.
 		if resetWindow {
-			for _, state := range q.epochStates {
-				state.SetCurrentState(stateNew)
+			for _, state := range q.state.epochs {
+				state.setState(stateNew)
 			}
 			return stateNew, nil
 		}
-		// Extend sliding window, immediately request within extended epoch.
-		q.addEpochStateMachine(ctx, highestEpochState+1)
-		q.addEpochStateMachine(ctx, highestEpochState+2)
 
+		// Extend sliding window.
+		for i := 1; i <= lookaheadEpochs; i++ {
+			q.state.addEpochState(highestEpochSlot + uint64(i))
+		}
 		return stateSkippedExt, nil
 	}
 }
 
-func (q *blocksQueue) updateEpochStatesKeys() {
-	keys := make([]uint64, 0)
-	for key := range q.epochStates {
-		keys = append(keys, key)
-	}
-	q.epochStatesKeys = keys
-}
-
-func (q *blocksQueue) removeEpochStateMachine(ctx context.Context, epoch uint64) error {
-	if _, ok := q.epochStates[epoch]; !ok {
-		return fmt.Errorf("epoch %v has no cached state", epoch)
-	}
-	delete(q.epochStates, epoch)
-	q.updateEpochStatesKeys()
-	return nil
-}
-
-func (q *blocksQueue) highestEpochState() (uint64, error) {
-	if len(q.epochStatesKeys) == 0 {
-		return 0, errors.New("no epoch states exist")
-	}
-	highestEpoch := q.epochStatesKeys[0]
-	for epoch := range q.epochStates {
-		if epoch > highestEpoch {
-			highestEpoch = epoch
+// onCheckStateEvent is an event that allows to mark stale epochs,
+// so that they can be re-processed.
+func (q *blocksQueue) onCheckStateEvent(ctx context.Context) eventHandlerFn {
+	return func(es *epochState, in interface{}) (stateID, error) {
+		if ctx.Err() != nil {
+			return es.state, ctx.Err()
 		}
-	}
-	return highestEpoch, nil
-}
 
-func (q *blocksQueue) lowestEpochState() (uint64, error) {
-	if len(q.epochStatesKeys) == 0 {
-		return 0, errors.New("no epoch states exist")
-	}
-	lowestEpoch := q.epochStatesKeys[0]
-	for epoch := range q.epochStates {
-		if epoch < lowestEpoch {
-			lowestEpoch = epoch
+		if time.Since(es.updated) > staleEpochTimeout {
+			return stateSkipped, nil
 		}
+
+		return es.state, nil
 	}
-	return lowestEpoch, nil
 }

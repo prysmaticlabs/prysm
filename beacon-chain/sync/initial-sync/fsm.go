@@ -11,11 +11,10 @@ import (
 const (
 	stateNew stateID = iota
 	stateScheduled
-	stateDataReceived
 	stateDataParsed
 	stateSkipped
-	stateSkippedExt
 	stateSent
+	stateSkippedExt
 	stateComplete
 )
 
@@ -23,8 +22,7 @@ const (
 	eventSchedule eventID = iota
 	eventDataReceived
 	eventReadyToSend
-	eventCheckProcessed
-	eventMoveForward
+	eventCheckStale
 	eventExtendWindow
 )
 
@@ -193,8 +191,6 @@ func (s stateID) String() (state string) {
 		state = "new"
 	case stateScheduled:
 		state = "scheduled"
-	case stateDataReceived:
-		state = "dataReceived"
 	case stateDataParsed:
 		state = "dataParsed"
 	case stateSkipped:
@@ -227,10 +223,8 @@ func (e eventID) String() (event string) {
 		event = "dataReceived"
 	case eventReadyToSend:
 		event = "readyToSend"
-	case eventCheckProcessed:
-		event = "checkProcessed"
-	case eventMoveForward:
-		event = "moveForward"
+	case eventCheckStale:
+		event = "checkStale"
 	case eventExtendWindow:
 		event = "extendWindow"
 	}

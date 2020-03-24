@@ -20,16 +20,15 @@ func TestStateMachine_Stringify(t *testing.T) {
 		{
 			"newly created state machine",
 			[]*epochState{
-				{epoch: 7, state: stateNew,},
-				{epoch: 8, state: stateScheduled,},
-				{epoch: 9, state: stateDataReceived,},
+				{epoch: 8, state: stateNew,},
+				{epoch: 9, state: stateScheduled,},
 				{epoch: 10, state: stateDataParsed,},
 				{epoch: 11, state: stateSkipped,},
 				{epoch: 12, state: stateSkippedExt,},
 				{epoch: 13, state: stateComplete,},
 				{epoch: 14, state: stateSent,},
 			},
-			"[7:new 8:scheduled 9:dataReceived 10:dataParsed 11:skipped 12:skippedExt 13:complete 14:sent]",
+			"[8:new 9:scheduled 10:dataParsed 11:skipped 12:skippedExt 13:complete 14:sent]",
 		},
 	}
 	for _, tt := range tests {
@@ -63,7 +62,7 @@ func TestStateMachine_addHandler(t *testing.T) {
 
 	// Add second handler to the same event
 	sm.addHandler(stateSent, eventSchedule, func(state *epochState, i interface{}) (id stateID, err error) {
-		return stateDataReceived, nil
+		return stateDataParsed, nil
 	})
 	if len(sm.events[eventSchedule].actions) != 2 {
 		t.Errorf("unexpected size, got: %v, want: %v", len(sm.events[eventSchedule].actions), 2)
@@ -72,7 +71,7 @@ func TestStateMachine_addHandler(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if state != stateDataReceived {
+	if state != stateDataParsed {
 		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
 	}
 }

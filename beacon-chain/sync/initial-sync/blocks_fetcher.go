@@ -26,6 +26,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// maxPendingRequests limits how many concurrent fetch request one can initiate.
+const maxPendingRequests = 8
+
 var (
 	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
 	errFetcherCtxIsDone   = errors.New("fetcher's context is done, reinitialize")
@@ -83,8 +86,8 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		headFetcher:    cfg.headFetcher,
 		p2p:            cfg.p2p,
 		rateLimiter:    rateLimiter,
-		fetchRequests:  make(chan *fetchRequestParams, queueMaxPendingRequests),
-		fetchResponses: make(chan *fetchRequestResponse, queueMaxPendingRequests),
+		fetchRequests:  make(chan *fetchRequestParams, maxPendingRequests),
+		fetchResponses: make(chan *fetchRequestResponse, maxPendingRequests),
 		quit:           make(chan struct{}),
 	}
 }
