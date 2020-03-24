@@ -14,13 +14,13 @@ import (
 // ENR key used for eth2-related fork data.
 const eth2EnrKey = "eth2"
 
-// enrForkID represents a special value ssz-encoded into
+// EnrForkID represents a special value ssz-encoded into
 // the local node's ENR for discovery purposes. Peers should
 // only connect if their enrForkID matches.
-type enrForkID struct {
-	currentForkDigest [4]byte
-	nextForkVersion   [4]byte
-	nextForkEpoch     uint64
+type EnrForkID struct {
+	CurrentForkDigest [4]byte
+	NextForkVersion   [4]byte
+	NextForkEpoch     uint64
 }
 
 // Adds a fork entry as an ENR record under the eth2EnrKey for
@@ -53,10 +53,10 @@ func addForkEntry(
 		return nil, err
 	}
 	nextForkEpoch := params.BeaconConfig().NextForkEpoch
-	enrForkID := &enrForkID{
-		currentForkDigest: digest,
-		nextForkVersion:   bytesutil.ToBytes4(params.BeaconConfig().NextForkVersion),
-		nextForkEpoch:     nextForkEpoch,
+	enrForkID := &EnrForkID{
+		CurrentForkDigest: digest,
+		NextForkVersion:   bytesutil.ToBytes4(params.BeaconConfig().NextForkVersion),
+		NextForkEpoch:     nextForkEpoch,
 	}
 	enc, err := ssz.Marshal(enrForkID)
 	if err != nil {
@@ -69,14 +69,14 @@ func addForkEntry(
 
 // Retrieves an enrForkID from an ENR record by key lookup
 // under the eth2EnrKey.
-func retrieveForkEntry(record *enr.Record) (*enrForkID, error) {
+func retrieveForkEntry(record *enr.Record) (*EnrForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
 	entry := enr.WithEntry(eth2EnrKey, &sszEncodedForkEntry)
 	err := record.Load(entry)
 	if err != nil {
 		return nil, err
 	}
-	forkEntry := &enrForkID{}
+	forkEntry := &EnrForkID{}
 	if err := ssz.Unmarshal(sszEncodedForkEntry, forkEntry); err != nil {
 		return nil, err
 	}

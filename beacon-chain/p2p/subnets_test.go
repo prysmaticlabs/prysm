@@ -13,7 +13,10 @@ import (
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	bootListener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
+	s := &Service{
+		cfg: &Config{UDPPort: uint(port)},
+	}
+	bootListener := s.createListener(ipAddr, pkey)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
@@ -35,7 +38,10 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		port = 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
-		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+		s = &Service{
+			cfg: &Config{UDPPort: uint(port)},
+		}
+		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		if err != nil {
 			t.Errorf("Could not start discovery for node: %v", err)
 		}
