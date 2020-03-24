@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -103,6 +104,17 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		headState, err = vs.BeaconDB.State(ctx, parent)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if headState == nil {
+			if featureconfig.Get().NewStateMgmt {
+				headState, err = vs.StateGen.StateByRoot(ctx, parent)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, fmt.Sprintf("Failed to generate state: %v", err))
+				}
+			}
+			if headState == nil {
+				return nil, status.Error(codes.Internal, "Failed to lookup parent state from head.")
+			}
 		}
 	}
 
