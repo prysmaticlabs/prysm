@@ -56,6 +56,7 @@ func StartValidators(
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
 			fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+n),
+			"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
 			"--force-clear-db",
 		}
 		args = append(args, featureconfig.E2EValidatorFlags...)

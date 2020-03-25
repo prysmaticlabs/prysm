@@ -72,7 +72,6 @@ func NewService(cfg *Config) (*Service, error) {
 		BufferItems: 64,
 	})
 
-	log.Info(cfg.UDPPort)
 	s := &Service{
 		ctx:           ctx,
 		cancel:        cancel,
