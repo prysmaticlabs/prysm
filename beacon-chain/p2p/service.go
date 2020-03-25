@@ -469,7 +469,7 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		// match the proper fork ENR data with our local node.
 		nodeENR := node.Record()
 		if err := s.compareForkENR(nodeENR); err != nil {
-			log.WithError(err).Error("Fork ENR mismatches between peer and local node")
+			log.WithError(err).Debug("Fork ENR mismatches between peer and local node")
 			continue
 		}
 

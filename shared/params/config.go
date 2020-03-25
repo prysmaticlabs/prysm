@@ -105,8 +105,8 @@ type BeaconChainConfig struct {
 
 	// Fork-related values.
 	GenesisForkVersion  []byte            `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
-	NextForkVersion     []byte            `yaml:"NEXT_FORK_VERSION"`    // GenesisForkVersion is used to track fork version between state transitions.
-	NextForkEpoch       uint64            `yaml:"NEXT_FORK_EPOCH"`      // GenesisForkVersion is used to track fork version between state transitions.
+	NextForkVersion     []byte            `yaml:"NEXT_FORK_VERSION"`    // NextForkVersion is used to track the upcoming fork version, if any.
+	NextForkEpoch       uint64            `yaml:"NEXT_FORK_EPOCH"`      // NextForkEpoch is used to track the epoch of the next fork, if any.
 	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
 }
 
