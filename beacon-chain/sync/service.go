@@ -84,7 +84,7 @@ func NewRegularSync(cfg *Config) *Service {
 	}
 
 	r.registerRPCHandlers()
-	r.registerSubscribers()
+	go r.registerSubscribers()
 
 	return r
 }
