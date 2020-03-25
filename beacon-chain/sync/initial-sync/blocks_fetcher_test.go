@@ -218,6 +218,16 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 					finalizedEpoch: 18,
 					headSlot:       640,
 				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
 			},
 			requests: []*fetchRequestParams{
 				{
