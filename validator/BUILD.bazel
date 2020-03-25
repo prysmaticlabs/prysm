@@ -80,6 +80,7 @@ container_bundle(
 go_image_debug(
     name = "image_debug",
     image = ":image",
+    tags = ["manual"],
 )
 
 container_bundle(
@@ -94,6 +95,7 @@ container_bundle(
 go_image_alpine(
     name = "image_alpine",
     image = ":image",
+    tags = ["manual"],
 )
 
 container_bundle(
