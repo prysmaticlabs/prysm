@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"strings"
 
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -16,6 +17,7 @@ import (
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 var log = logrus.WithField("prefix", "validator")
@@ -36,6 +38,7 @@ type ValidatorService struct {
 	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
 	grpcRetries          uint
+	grpcHeaders          []string
 }
 
 // Config for the validator service.
@@ -49,6 +52,7 @@ type Config struct {
 	EmitAccountMetrics         bool
 	GrpcMaxCallRecvMsgSizeFlag int
 	GrpcRetriesFlag            uint
+	GrpcHeadersFlag            string
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -67,6 +71,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
 		grpcRetries:          cfg.GrpcRetriesFlag,
+		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
 	}, nil
 }
 
@@ -94,11 +99,22 @@ func (v *ValidatorService) Start() {
 		maxCallRecvMsgSize = 10 * 5 << 20 // Default 50Mb
 	}
 
+	md := make(metadata.MD)
+	for _, hdr := range v.grpcHeaders {
+		ss := strings.Split(hdr, "=")
+		if len(ss) != 2 {
+			log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+			continue
+		}
+		md.Set(ss[0], ss[1])
+	}
+
 	opts := []grpc.DialOption{
 		dialOpt,
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
 			grpc_retry.WithMax(v.grpcRetries),
+			grpc.Header(&md),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
