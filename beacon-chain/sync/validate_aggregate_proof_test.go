@@ -373,6 +373,17 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
+	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	signedAggregateAndProof.Signature = blockSig[:]
+
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
 	}
@@ -471,6 +482,17 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 		AggregatorIndex: 33,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+
+	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	signedAggregateAndProof.Signature = blockSig[:]
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
