@@ -11,21 +11,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 // ENR key used for eth2-related fork data.
 const eth2ENRKey = "eth2"
-
-// ENRForkID represents a special value ssz-encoded into
-// the local node's ENR for discovery purposes. Peers should
-// only connect if their enrForkID matches.
-type ENRForkID struct {
-	CurrentForkDigest []byte `ssz-size:"4"`
-	NextForkVersion   []byte `ssz-size:"4"`
-	NextForkEpoch     uint64
-}
 
 // Compares fork ENRs between an incoming peer's record and our node's
 // local record values for current and next fork version/epoch.
@@ -104,7 +96,7 @@ func addForkEntry(
 		return nil, err
 	}
 	nextForkEpoch := params.BeaconConfig().NextForkEpoch
-	enrForkID := &ENRForkID{
+	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
 		NextForkVersion:   params.BeaconConfig().NextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
@@ -120,14 +112,14 @@ func addForkEntry(
 
 // Retrieves an enrForkID from an ENR record by key lookup
 // under the eth2EnrKey.
-func retrieveForkEntry(record *enr.Record) (*ENRForkID, error) {
+func retrieveForkEntry(record *enr.Record) (*pb.ENRForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
 	entry := enr.WithEntry(eth2ENRKey, &sszEncodedForkEntry)
 	err := record.Load(entry)
 	if err != nil {
 		return nil, err
 	}
-	forkEntry := &ENRForkID{}
+	forkEntry := &pb.ENRForkID{}
 	if err := ssz.Unmarshal(sszEncodedForkEntry, forkEntry); err != nil {
 		return nil, err
 	}
