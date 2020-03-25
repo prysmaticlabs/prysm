@@ -18,6 +18,7 @@ import (
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.UseMinimalConfig()
+	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
 	customState, err := stateTrie.InitializeFromProto(genesis)
 	if err != nil {
@@ -29,7 +30,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 		t.Fatal("Cloned states did not match")
 	}
 
-	r1, err := customState.HashTreeRoot()
+	r1, err := customState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +48,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	if err := customState.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	r1, err = customState.HashTreeRoot()
+	r1, err = customState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
