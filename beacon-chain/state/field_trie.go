@@ -68,6 +68,9 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	f.Lock()
 	defer f.Unlock()
 	var fieldRoot [32]byte
+	if len(indices) == 0 {
+		return f.TrieRoot()
+	}
 	datType, ok := fieldMap[f.field]
 	if !ok {
 		return [32]byte{}, errors.Errorf("unrecognized field in trie")

@@ -83,6 +83,22 @@ func UnionUint64(s ...[]uint64) []uint64 {
 	return set
 }
 
+// CleanUint64 removes duplicate indices from
+// the slice.
+func CleanUint64(a []uint64) []uint64 {
+	// remove duplicate indexes
+	intMap := map[uint64]bool{}
+	cleanedIndices := make([]uint64, 0, len(a))
+	for _, idx := range a {
+		if intMap[idx] {
+			continue
+		}
+		intMap[idx] = true
+		cleanedIndices = append(cleanedIndices, idx)
+	}
+	return cleanedIndices
+}
+
 // IsUint64Sorted verifies if a uint64 slice is sorted in ascending order.
 func IsUint64Sorted(a []uint64) bool {
 	if len(a) == 0 || len(a) == 1 {
