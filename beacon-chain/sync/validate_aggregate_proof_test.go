@@ -3,11 +3,12 @@ package sync
 import (
 	"bytes"
 	"context"
-	lru "github.com/hashicorp/golang-lru"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -140,7 +141,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		db:                   db,
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		attPool:              attestations.NewPool(),
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
 	}
 
