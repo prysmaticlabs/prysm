@@ -90,7 +90,7 @@ ssz_gen_marshal(
     name = "ssz_generated_files",
     srcs = ["fork.go"],
     objs = [
-        "EnrForkID",
+        "ENRForkID",
     ],
 )
 

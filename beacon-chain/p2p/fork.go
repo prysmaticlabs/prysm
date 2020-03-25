@@ -16,10 +16,10 @@ import (
 // ENR key used for eth2-related fork data.
 const eth2ENRKey = "eth2"
 
-// EnrForkID represents a special value ssz-encoded into
+// ENRForkID represents a special value ssz-encoded into
 // the local node's ENR for discovery purposes. Peers should
 // only connect if their enrForkID matches.
-type EnrForkID struct {
+type ENRForkID struct {
 	CurrentForkDigest [4]byte
 	NextForkVersion   [4]byte
 	NextForkEpoch     uint64
@@ -97,7 +97,7 @@ func addForkEntry(
 		return nil, err
 	}
 	nextForkEpoch := params.BeaconConfig().NextForkEpoch
-	enrForkID := &EnrForkID{
+	enrForkID := &ENRForkID{
 		CurrentForkDigest: digest,
 		NextForkVersion:   bytesutil.ToBytes4(params.BeaconConfig().NextForkVersion),
 		NextForkEpoch:     nextForkEpoch,
@@ -113,14 +113,14 @@ func addForkEntry(
 
 // Retrieves an enrForkID from an ENR record by key lookup
 // under the eth2EnrKey.
-func retrieveForkEntry(record *enr.Record) (*EnrForkID, error) {
+func retrieveForkEntry(record *enr.Record) (*ENRForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
 	entry := enr.WithEntry(eth2ENRKey, &sszEncodedForkEntry)
 	err := record.Load(entry)
 	if err != nil {
 		return nil, err
 	}
-	forkEntry := &EnrForkID{}
+	forkEntry := &ENRForkID{}
 	if err := ssz.Unmarshal(sszEncodedForkEntry, forkEntry); err != nil {
 		return nil, err
 	}
