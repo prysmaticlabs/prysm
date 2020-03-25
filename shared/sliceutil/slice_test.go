@@ -170,7 +170,7 @@ func TestCleanUint64(t *testing.T) {
 		{[]uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
-		result := sliceutil.CleanUint64(tt.in)
+		result := sliceutil.SetUint64(tt.in)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}

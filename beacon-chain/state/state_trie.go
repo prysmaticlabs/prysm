@@ -380,7 +380,7 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 		fTrie = newTrie
 	}
 	// remove duplicate indexes
-	b.dirtyIndices[index] = sliceutil.CleanUint64(b.dirtyIndices[index])
+	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]
