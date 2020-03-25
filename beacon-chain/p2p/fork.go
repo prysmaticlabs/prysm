@@ -1,11 +1,14 @@
 package p2p
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -52,16 +55,21 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	// updated to matching prior to the earlier next_fork_epoch of the two clients,
 	// these type of connecting clients will be unable to successfully interact
 	// starting at the earlier next_fork_epoch.
+	buf := bytes.NewBuffer([]byte{})
+	if err := record.EncodeRLP(buf); err != nil {
+		return errors.Wrap(err, "could not encode ENR record to bytes")
+	}
+	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
 	if peerForkENR.NextForkEpoch != currentForkENR.NextForkEpoch {
 		log.WithFields(logrus.Fields{
 			"peerNextForkEpoch": peerForkENR.NextForkEpoch,
-			"peerENR":           record,
+			"peerENR":           enrString,
 		}).Debug("Peer matches fork digest but has different next fork epoch")
 	}
 	if peerForkENR.NextForkVersion != currentForkENR.NextForkVersion {
 		log.WithFields(logrus.Fields{
 			"peerNextForkVersion": peerForkENR.NextForkVersion,
-			"peerENR":             record,
+			"peerENR":             enrString,
 		}).Debug("Peer matches fork digest but has different next fork version")
 	}
 	return nil
