@@ -350,7 +350,7 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 	return blocks, err
 }
 
-// blocksAtSlotBitfieldIndex retrieves the block in DB given the input index. The index represents
+// blocksAtSlotBitfieldIndex retrieves the blocks in DB given the input index. The index represents
 // the position of the slot bitfield the saved block maps to.
 func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
