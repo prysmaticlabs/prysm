@@ -153,7 +153,7 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumValidators())
-	stateRoot, err := genesisState.HashTreeRoot()
+	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
 		return err
 	}
