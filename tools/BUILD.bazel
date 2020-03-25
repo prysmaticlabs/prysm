@@ -3,6 +3,7 @@ load("@io_bazel_rules_docker//contrib:passwd.bzl", "passwd_entry", "passwd_file"
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_docker//cc:image.bzl", CC_DEFAULT_BASE = "DEFAULT_BASE")
 load("@io_bazel_rules_docker//go:image.bzl", GO_DEFAULT_BASE = "DEFAULT_BASE")
+load("//tools:build_settings.bzl", "base_image")
 
 alias(
     name = "kubesec",
@@ -57,6 +58,29 @@ container_image(
 container_image(
     name = "go_image",
     base = GO_DEFAULT_BASE,
+    tars = [":passwd_tar"],
+    user = "root",
+    visibility = ["//visibility:public"],
+)
+
+base_image(
+    name = "base_image",
+    build_setting_default = "cc_image",
+)
+
+config_setting(
+    name = "base_image_alpine",
+    flag_values = {"//tools:base_image": "alpine"},
+)
+
+config_setting(
+    name = "base_image_cc",
+    flag_values = {"//tools:base_image": "cc_image"},
+)
+
+container_image(
+    name = "alpine_image",
+    base = "@alpine_linux_amd64//image",
     tars = [":passwd_tar"],
     user = "root",
     visibility = ["//visibility:public"],
