@@ -79,8 +79,8 @@ config_setting(
 )
 
 container_image(
-    name = "alpine_image",
-    base = "@alpine_linux_amd64//image",
+    name = "alpine_cc_image",
+    base = "@alpine_cc_linux_amd64//image",
     tars = [":passwd_tar"],
     user = "root",
     visibility = ["//visibility:public"],

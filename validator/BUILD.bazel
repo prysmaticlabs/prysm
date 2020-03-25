@@ -38,7 +38,7 @@ go_image(
         "usage.go",
     ],
     base = select({
-        "//tools:base_image_alpine": "//tools:alpine_image",
+        "//tools:base_image_alpine": "//tools:alpine_cc_image",
         "//tools:base_image_cc": "//tools:cc_image",
         "//conditions:default": "//tools:cc_image",
     }),

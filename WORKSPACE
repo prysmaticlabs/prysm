@@ -123,11 +123,10 @@ load(
 )
 
 container_pull(
-    name = "alpine_linux_amd64",
-    digest = "sha256:954b378c375d852eb3c63ab88978f640b4348b01c1b3456a024a81536dafbbf4",
+    name = "alpine_cc_linux_amd64",
+    digest = "sha256:d5cee45549351be7a03a96c7b319b9c1808979b10888b79acca4435cc068005e",
     registry = "index.docker.io",
-    repository = "library/alpine",
-    tag = "3.8",
+    repository = "frolvlad/alpine-glibc",
 )
 
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
