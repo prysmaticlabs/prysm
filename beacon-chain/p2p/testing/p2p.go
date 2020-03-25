@@ -115,7 +115,11 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	if _, err := p.Encoding().Encode(buf, msg); err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
-	topic = fmt.Sprintf(topic, p.ForkDigest())
+	digest, err := p.ForkDigest()
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	topic = fmt.Sprintf(topic, digest)
 	topic = topic + p.Encoding().ProtocolSuffix()
 
 	if err := ps.Publish(topic, buf.Bytes()); err != nil {
@@ -241,6 +245,6 @@ func (p *TestP2P) RefreshENR(epoch uint64) {
 }
 
 // ForkDigest mocks the p2p func.
-func (p *TestP2P) ForkDigest() [4]byte {
-	return [4]byte{}
+func (p *TestP2P) ForkDigest() ([4]byte, error) {
+	return [4]byte{}, nil
 }

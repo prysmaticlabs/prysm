@@ -213,10 +213,12 @@ func (r *Service) subscribeDynamicWithSubnets(
 ) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
-		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
 	}
-	digest := r.p2p.ForkDigest()
-
+	digest, err := r.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Fatal("Could not compute fork digest")
+	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 
 	stateChannel := make(chan *feed.Event, 1)
@@ -288,9 +290,12 @@ func (r *Service) subscribeDynamicWithSubnets(
 func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.Validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
-		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
 	}
-	digest := r.p2p.ForkDigest()
+	digest, err := r.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Fatal("Could not compute fork digest")
+	}
 	var subscriptions []*pubsub.Subscription
 
 	stateChannel := make(chan *feed.Event, 1)
@@ -329,8 +334,11 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 // Add fork digest to topic.
 func (r *Service) addDigestToTopic(topic string) string {
 	if !strings.Contains(topic, "%x") {
-		panic("topic does not have appropriate formatter for digest")
+		log.Fatal("Topic does not have appropriate formatter for digest")
 	}
-	digest := r.p2p.ForkDigest()
+	digest, err := r.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Fatal("Could not compute fork digest")
+	}
 	return fmt.Sprintf(topic, digest)
 }

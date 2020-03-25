@@ -77,7 +77,10 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 
-	forkDigest := r.p2p.ForkDigest()
+	forkDigest, err := r.p2p.ForkDigest()
+	if err != nil {
+		return err
+	}
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
 		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
@@ -156,7 +159,10 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return err
 	}
 
-	forkDigest := r.p2p.ForkDigest()
+	forkDigest, err := r.p2p.ForkDigest()
+	if err != nil {
+		return err
+	}
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
 		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
@@ -174,7 +180,10 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 }
 
 func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
-	forkDigest := r.p2p.ForkDigest()
+	forkDigest, err := r.p2p.ForkDigest()
+	if err != nil {
+		return err
+	}
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
 		return errWrongForkDigestVersion
 	}
