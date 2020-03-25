@@ -29,7 +29,7 @@ type Server struct {
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
-	//TODO() add signature validation to prevent DOS attack on the endpoint.
+	//TODO(#5189) add signature validation to prevent DOS attack on the endpoint.
 	if err := ss.slasherDB.SaveIndexedAttestation(ctx, req); err != nil {
 		log.WithError(err).Error("Could not save indexed attestation")
 		return nil, status.Errorf(codes.Internal, "Could not save indexed attestation: %v: %v", req, err)
