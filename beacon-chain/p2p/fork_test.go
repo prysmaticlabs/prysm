@@ -238,7 +238,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.CurrentForkDigest != want {
+	if !bytes.Equal(resp.CurrentForkDigest, want[:]) {
 		t.Errorf("Wanted fork digest: %v, received %v", want, resp.CurrentForkDigest)
 	}
 	if !bytes.Equal(resp.NextForkVersion[:], nextForkVersion) {

@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -23,8 +22,8 @@ const eth2ENRKey = "eth2"
 // the local node's ENR for discovery purposes. Peers should
 // only connect if their enrForkID matches.
 type ENRForkID struct {
-	CurrentForkDigest [4]byte
-	NextForkVersion   [4]byte
+	CurrentForkDigest []byte `ssz-size:"4"`
+	NextForkVersion   []byte `ssz-size:"4"`
 	NextForkEpoch     uint64
 }
 
@@ -42,7 +41,7 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	}
 	// Clients SHOULD connect to peers with current_fork_digest, next_fork_version,
 	// and next_fork_epoch that match local values.
-	if peerForkENR.CurrentForkDigest != currentForkENR.CurrentForkDigest {
+	if !bytes.Equal(peerForkENR.CurrentForkDigest, currentForkENR.CurrentForkDigest) {
 		return fmt.Errorf(
 			"fork digest of peer with ENR %v: %v, does not match local value: %v",
 			record,
@@ -66,7 +65,7 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 			"peerENR":           enrString,
 		}).Debug("Peer matches fork digest but has different next fork epoch")
 	}
-	if peerForkENR.NextForkVersion != currentForkENR.NextForkVersion {
+	if !bytes.Equal(peerForkENR.NextForkVersion, currentForkENR.NextForkVersion) {
 		log.WithFields(logrus.Fields{
 			"peerNextForkVersion": peerForkENR.NextForkVersion,
 			"peerENR":             enrString,
@@ -106,8 +105,8 @@ func addForkEntry(
 	}
 	nextForkEpoch := params.BeaconConfig().NextForkEpoch
 	enrForkID := &ENRForkID{
-		CurrentForkDigest: digest,
-		NextForkVersion:   bytesutil.ToBytes4(params.BeaconConfig().NextForkVersion),
+		CurrentForkDigest: digest[:],
+		NextForkVersion:   params.BeaconConfig().NextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
 	enc, err := ssz.Marshal(enrForkID)
