@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
 	filter "github.com/libp2p/go-maddr-filter"
-	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
