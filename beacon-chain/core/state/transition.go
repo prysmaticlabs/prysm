@@ -72,7 +72,7 @@ func ExecuteStateTransition(
 	interop.WriteBlockToDisk(signed, false)
 	interop.WriteStateToDisk(state)
 
-	postStateRoot, err := state.HashTreeRoot()
+	postStateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
-	return state.HashTreeRoot()
+	return state.HashTreeRoot(ctx)
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -205,7 +205,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
 
-	prevStateRoot, err := state.HashTreeRoot()
+	prevStateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
