@@ -69,6 +69,10 @@ func (ds *Service) DetectAttesterSlashings(
 	return slashingList, nil
 }
 
+func (ds *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
+	return ds.minMaxSpanDetector.UpdateSpans(ctx, att)
+}
+
 // detectDoubleVote cross references the passed in attestation with the bloom filter maintained
 // for every epoch for the validator in order to determine if it is a double vote.
 func (ds *Service) detectDoubleVote(
