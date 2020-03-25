@@ -86,7 +86,7 @@ func UnionUint64(s ...[]uint64) []uint64 {
 // CleanUint64 removes duplicate indices from
 // the slice.
 func CleanUint64(a []uint64) []uint64 {
-	// remove duplicate indexes
+	// Remove duplicates indices.
 	intMap := map[uint64]bool{}
 	cleanedIndices := make([]uint64, 0, len(a))
 	for _, idx := range a {
