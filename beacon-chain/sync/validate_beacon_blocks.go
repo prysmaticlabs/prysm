@@ -7,8 +7,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -59,6 +59,9 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if err != nil {
 		return false
 	}
+	if r.db.HasBlock(ctx, blockRoot) {
+		return false
+	}
 
 	r.pendingQueueLock.RLock()
 	if r.seenPendingBlocks[blockRoot] {
@@ -77,7 +80,15 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if _, err = bls.SignatureFromBytes(blk.Signature); err != nil {
+	// We could use parent state here, it's arguably safer but retrieval requires one DB look up and refactor of
+	// subscriber pipeline to move missing parent block handler to validator pipeline (here).
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get head state to verify block header signature")
+		return false
+	}
+	if err := blocks.VerifyBlockHeaderSignature(s, blk); err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
 		return false
 	}
 
