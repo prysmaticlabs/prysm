@@ -365,7 +365,7 @@ func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 		return nil, err
 	}
 
-	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+	blocks := make([]*ethpb.SignedBeaconBlock, 0, len(keys))
 	bBkt := tx.Bucket(blocksBucket)
 	for i := 0; i < len(keys); i++ {
 		encoded := bBkt.Get(keys[i])
