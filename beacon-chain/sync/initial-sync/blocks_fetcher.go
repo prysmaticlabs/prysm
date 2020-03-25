@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -26,8 +27,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// maxPendingRequests limits how many concurrent fetch request one can initiate.
-const maxPendingRequests = 8
+const (
+	// maxPendingRequests limits how many concurrent fetch request one can initiate.
+	maxPendingRequests = 8
+	// peersPercentagePerRequest caps percentage of peers to be used in a request.
+	peersPercentagePerRequest = 0.75
+)
 
 var (
 	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
@@ -232,16 +237,10 @@ func (f *blocksFetcher) collectPeerResponses(
 		return nil, ctx.Err()
 	}
 
+	peers = f.selectPeers(peers)
 	if len(peers) == 0 {
 		return nil, errNoPeersAvailable
 	}
-
-	// Shuffle peers to prevent a bad peer from
-	// stalling sync with invalid blocks.
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
-	randGenerator.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
 
 	p2pRequests := new(sync.WaitGroup)
 	errChan := make(chan error)
@@ -441,4 +440,28 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 			"required": required}).Info("Waiting for enough suitable peers before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
+}
+
+// selectPeers returns transformed list of peers (randomized, constrained if necessary).
+func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
+	if len(peers) == 0 {
+		return peers
+	}
+
+	// Shuffle peers to prevent a bad peer from
+	// stalling sync with invalid blocks.
+	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
+
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
+
+	limit := uint64(math.Round(float64(len(peers)) * peersPercentagePerRequest))
+	limit = mathutil.Max(limit, uint64(required))
+	limit = mathutil.Min(limit, uint64(len(peers)))
+	return peers[:limit]
 }

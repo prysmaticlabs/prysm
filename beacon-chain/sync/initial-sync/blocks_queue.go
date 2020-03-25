@@ -224,11 +224,20 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 		}
 
 		response := in.(*fetchRequestResponse)
+		epoch := helpers.SlotToEpoch(response.start)
 		if response.err != nil {
+			// Current window is already too big, re-request previous epochs.
+			if response.err == errStartSlotIsTooHigh {
+				for _, state := range q.state.epochs {
+					isSkipped := state.state == stateSkipped || state.state == stateSkippedExt
+					if state.epoch < epoch && isSkipped {
+						state.setState(stateNew)
+					}
+				}
+			}
 			return es.state, response.err
 		}
 
-		epoch := helpers.SlotToEpoch(response.start)
 		ind := q.state.findEpochState(epoch)
 		if ind >= len(q.state.epochs) {
 			return es.state, errNoEpochState
