@@ -25,8 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	stateFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -49,7 +48,7 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	stateNotifier         stateFeed.Notifier
+	beaconDB              db.Database
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	started               bool
@@ -79,7 +78,7 @@ func NewService(cfg *Config) (*Service, error) {
 
 	log.Info(cfg.UDPPort)
 	s := &Service{
-		stateNotifier: cfg.StateNotifier,
+		beaconDB:      cfg.BeaconDB,
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,
@@ -152,8 +151,16 @@ func (s *Service) Start() {
 		return
 	}
 
-	// Wait until the beacon state is initialized.
-	s.awaitStateInitialized()
+	// Check if we have a genesis time / genesis state
+	// used for fork-related data when connecting peers.
+	genesisState, err := s.beaconDB.GenesisState(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not read genesis state")
+	}
+	if genesisState != nil {
+		s.genesisTime = time.Unix(int64(genesisState.GenesisTime()), 0)
+		s.genesisValidatorsRoot = genesisState.GenesisValidatorRoot()
+	}
 
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
@@ -373,29 +380,6 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 	return exists, nil
 }
 
-// Wait until we receive a state initialized event
-// via an event feed, containing important data we need
-// to initialize p2p connections such as genesis time and
-// genesis validator root for peer handshakes.
-func (s *Service) awaitStateInitialized() {
-	stateChannel := make(chan *feed.Event, 0)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	for {
-		select {
-		case event := <-stateChannel:
-			if event.Type == stateFeed.Initialized {
-				if data, ok := event.Data.(*stateFeed.InitializedData); ok {
-					s.genesisTime = data.StartTime
-					s.genesisValidatorsRoot = data.GenesisValidatorsRoot
-					return
-				}
-				log.Fatal("Did not receive proper data from state initialization feed")
-			}
-		}
-	}
-}
-
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
@@ -465,12 +449,14 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 			continue
 		}
 
+		nodeENR := node.Record()
 		// Decide whether or not to connect to peer that does not
 		// match the proper fork ENR data with our local node.
-		nodeENR := node.Record()
-		if err := s.compareForkENR(nodeENR); err != nil {
-			log.WithError(err).Debug("Fork ENR mismatches between peer and local node")
-			continue
+		if s.genesisValidatorsRoot != nil {
+			if err := s.compareForkENR(nodeENR); err != nil {
+				log.WithError(err).Debug("Fork ENR mismatches between peer and local node")
+				continue
+			}
 		}
 
 		indices, err := retrieveAttSubnets(nodeENR)

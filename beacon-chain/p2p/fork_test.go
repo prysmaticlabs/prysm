@@ -11,8 +11,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -20,6 +20,8 @@ import (
 )
 
 func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
@@ -76,8 +78,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	mockChainService := &mock.ChainService{}
-	cfg.StateNotifier = mockChainService.StateNotifier()
+	cfg.BeaconDB = db
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -99,6 +100,8 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 }
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	hook := logTest.NewGlobal()
 	logrus.SetLevel(logrus.DebugLevel)
 	port := 2000
@@ -162,8 +165,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	mockChainService := &mock.ChainService{}
-	cfg.StateNotifier = mockChainService.StateNotifier()
+	cfg.BeaconDB = db
 	params.OverrideBeaconConfig(originalBeaconConfig)
 	s, err := NewService(cfg)
 	if err != nil {

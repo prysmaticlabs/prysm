@@ -14,9 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	stateFeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -90,35 +88,24 @@ func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
 		TCPPort:  2000,
 		UDPPort:  2000,
 		Encoding: "ssz",
+		BeaconDB: db,
 	}
-	s, _ := NewService(cfg)
+	s, err := NewService(cfg)
 	s.dv5Listener = &mockListener{}
-	mockChainService := &mock.ChainService{}
-	s.stateNotifier = mockChainService.StateNotifier()
-	exitRoutine := make(chan bool)
-	go func() {
-		s.Start()
-		<-exitRoutine
-	}()
-
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: stateFeed.Initialized,
-			Data: &stateFeed.InitializedData{
-				StartTime:             time.Now(),
-				GenesisValidatorsRoot: make([]byte, 32),
-			},
-		})
+	s.genesisValidatorsRoot = make([]byte, 32)
+	s.genesisTime = time.Now()
+	if err != nil {
+		t.Fatal(err)
 	}
-	time.Sleep(100 * time.Millisecond)
-	exitRoutine <- true
+	s.Start()
 	if s.started != true {
 		t.Error("Expected service to be started")
 	}
@@ -139,6 +126,8 @@ func TestService_Status_NotRunning(t *testing.T) {
 
 func TestListenForNewNodes(t *testing.T) {
 	// Setup bootnode.
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	cfg := &Config{}
 	port := 2000
 	cfg.UDPPort = uint(port)
@@ -198,31 +187,14 @@ func TestListenForNewNodes(t *testing.T) {
 
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	mockChainService := &mock.ChainService{}
-	cfg.StateNotifier = mockChainService.StateNotifier()
+	cfg.BeaconDB = db
 	s, err := NewService(cfg)
+	s.genesisValidatorsRoot = genesisValidatorsRoot
+	s.genesisTime = genesisTime
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.stateNotifier = mockChainService.StateNotifier()
-	exitRoutine := make(chan bool)
-	go func() {
-		s.Start()
-		<-exitRoutine
-	}()
-
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: stateFeed.Initialized,
-			Data: &stateFeed.InitializedData{
-				StartTime:             genesisTime,
-				GenesisValidatorsRoot: genesisValidatorsRoot,
-			},
-		})
-	}
-	exitRoutine <- true
-
+	s.Start()
 	time.Sleep(2 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
@@ -273,22 +245,4 @@ func TestPeer_Disconnect(t *testing.T) {
 	if len(s.host.Network().Conns()) != 0 {
 		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 0)
 	}
-}
-
-func startService(t *testing.T, svc *Service, event *feed.Event) {
-	exitRoutine := make(chan bool)
-	go func() {
-		svc.Start()
-		<-exitRoutine
-	}()
-
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = svc.stateNotifier.StateFeed().Send(event)
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := svc.Stop(); err != nil {
-		t.Fatal(err)
-	}
-	exitRoutine <- true
 }
