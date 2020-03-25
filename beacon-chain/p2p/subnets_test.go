@@ -96,7 +96,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	exitRoutine <- true
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
-	time.Sleep(discoveryWaitTime)
+	time.Sleep(2 * discoveryWaitTime)
 
 	// look up 3 different subnets
 	exists, err := s.FindPeersWithSubnet(1)

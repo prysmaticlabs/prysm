@@ -202,7 +202,8 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 
 	// We simulate being in epoch 1.
 	secondsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
-	durationPerEpoch := time.Duration(secondsPerEpoch) * time.Second
+	additionalBuffer := 2 * time.Second
+	durationPerEpoch := (time.Duration(secondsPerEpoch) * time.Second) + additionalBuffer
 	genesisTime := time.Now().Add(-durationPerEpoch)
 
 	// In epoch 1 of current time, the fork version should be
