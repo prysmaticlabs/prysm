@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
 	filter "github.com/libp2p/go-maddr-filter"
@@ -17,7 +19,7 @@ import (
 
 // buildOptions for the libp2p host.
 func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.TCPPort))
+	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
 		log.Fatalf("Failed to p2p listen: %v", err)
 	}
@@ -42,11 +44,7 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	if cfg.HostAddress != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-			protocol := "ip4"
-			if ip := net.ParseIP(cfg.HostAddress); ip.To4() == nil {
-				protocol = "ip6"
-			}
-			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%d", protocol, cfg.HostAddress, cfg.TCPPort))
+			external, err := multiAddressBuilder(cfg.HostAddress, cfg.TCPPort)
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
@@ -71,13 +69,24 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 			log.Errorf("Invalid local ip provided: %s", cfg.LocalIP)
 			return options
 		}
-		listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.LocalIP, cfg.TCPPort))
+		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
 			log.Fatalf("Failed to p2p listen: %v", err)
 		}
 		options = append(options, libp2p.ListenAddrs(listen))
 	}
 	return options
+}
+
+func multiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
+	parsedIP := net.ParseIP(ipAddr)
+	if parsedIP.To4() == nil && parsedIP.To16() == nil {
+		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
+	}
+	if parsedIP.To4() != nil {
+		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
+	}
+	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
 }
 
 // Adds a private key to the libp2p option if the option was provided.
