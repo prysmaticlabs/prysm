@@ -65,20 +65,21 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, bRoot)
 		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || hasStateSummary) {
 			numberOfBlocksRecoveredFromAtt.Inc()
-			for _, att := range attestations {
+			for _, signedAtt := range attestations {
+				att := signedAtt.Message
 				// The pending attestations can arrive in both aggregated and unaggregated forms,
 				// each from has distinct validation steps.
 				if helpers.IsAggregated(att.Aggregate) {
 					// Save the pending aggregated attestation to the pool if it passes the aggregated
 					// validation steps.
-					if s.validateBlockInAttestation(ctx, att) && s.validateAggregatedAtt(ctx, att) {
+					if s.validateBlockInAttestation(ctx, signedAtt) && s.validateAggregatedAtt(ctx, att) {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							return err
 						}
 						numberOfAttsRecovered.Inc()
 
-						// Broadcasting the attestation again once a node is able to process it.
-						if err := s.p2p.Broadcast(ctx, att); err != nil {
+						// Broadcasting the signed attestation again once a node is able to process it.
+						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
 							log.WithError(err).Error("Failed to broadcast")
 						}
 					}
@@ -93,8 +94,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					}
 					numberOfAttsRecovered.Inc()
 
-					// Broadcasting the attestation again once a node is able to process it.
-					if err := s.p2p.Broadcast(ctx, att); err != nil {
+					// Broadcasting the signed attestation again once a node is able to process it.
+					if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
 						log.WithError(err).Error("Failed to broadcast")
 					}
 				}
@@ -112,7 +113,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
 				"currentSlot": s.chain.CurrentSlot(),
-				"attSlot":     attestations[0].Aggregate.Data.Slot,
+				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
 			}).Debug("Requesting block for pending attestation")
@@ -123,7 +124,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				return nil
 			}
 			pid := pids[rand.Int()%len(pids)]
-			targetSlot := helpers.SlotToEpoch(attestations[0].Aggregate.Data.Target.Epoch)
+			targetSlot := helpers.SlotToEpoch(attestations[0].Message.Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
 				if cs, _ := s.p2p.Peers().ChainState(p); cs != nil && cs.HeadSlot >= targetSlot {
 					pid = p
@@ -144,14 +145,14 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 // This defines how pending attestations is saved in the map. The key is the
 // root of the missing block. The value is the list of pending attestations
 // that voted for that block root.
-func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
-	root := bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)
+func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) {
+	root := bytesutil.ToBytes32(att.Message.Aggregate.Data.BeaconBlockRoot)
 
 	s.pendingAttsLock.Lock()
 	defer s.pendingAttsLock.Unlock()
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
-		s.blkRootToPendingAtts[root] = []*ethpb.AggregateAttestationAndProof{att}
+		s.blkRootToPendingAtts[root] = []*ethpb.SignedAggregateAttestationAndProof{att}
 		return
 	}
 
@@ -171,7 +172,7 @@ func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
 
 	for bRoot, atts := range s.blkRootToPendingAtts {
 		for i := len(atts) - 1; i >= 0; i-- {
-			if slot >= atts[i].Aggregate.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
+			if slot >= atts[i].Message.Aggregate.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
 				// Remove the pending attestation from the list in place.
 				atts = append(atts[:i], atts[i+1:]...)
 				numberOfAttsNotRecovered.Inc()
