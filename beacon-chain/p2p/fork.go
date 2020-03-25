@@ -14,7 +14,7 @@ import (
 )
 
 // ENR key used for eth2-related fork data.
-const eth2EnrKey = "eth2"
+const eth2ENRKey = "eth2"
 
 // EnrForkID represents a special value ssz-encoded into
 // the local node's ENR for discovery purposes. Peers should
@@ -41,7 +41,8 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	// and next_fork_epoch that match local values.
 	if peerForkENR.CurrentForkDigest != currentForkENR.CurrentForkDigest {
 		return fmt.Errorf(
-			"fork digest of peer: %v, does not match local value: %v",
+			"fork digest of peer with ENR %v: %v, does not match local value: %v",
+			record,
 			peerForkENR.CurrentForkDigest,
 			currentForkENR.CurrentForkDigest,
 		)
@@ -54,13 +55,13 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	if peerForkENR.NextForkEpoch != currentForkENR.NextForkEpoch {
 		log.WithFields(logrus.Fields{
 			"peerNextForkEpoch": peerForkENR.NextForkEpoch,
-			"nodeNextForkEpoch": currentForkENR.NextForkEpoch,
+			"peerENR":           record,
 		}).Debug("Peer matches fork digest but has different next fork epoch")
 	}
 	if peerForkENR.NextForkVersion != currentForkENR.NextForkVersion {
 		log.WithFields(logrus.Fields{
 			"peerNextForkVersion": peerForkENR.NextForkVersion,
-			"nodeNextForkVersion": currentForkENR.NextForkVersion,
+			"peerENR":             record,
 		}).Debug("Peer matches fork digest but has different next fork version")
 	}
 	return nil
@@ -105,7 +106,7 @@ func addForkEntry(
 	if err != nil {
 		return nil, err
 	}
-	forkEntry := enr.WithEntry(eth2EnrKey, enc)
+	forkEntry := enr.WithEntry(eth2ENRKey, enc)
 	node.Set(forkEntry)
 	return node, nil
 }
@@ -114,7 +115,7 @@ func addForkEntry(
 // under the eth2EnrKey.
 func retrieveForkEntry(record *enr.Record) (*EnrForkID, error) {
 	sszEncodedForkEntry := make([]byte, 16)
-	entry := enr.WithEntry(eth2EnrKey, &sszEncodedForkEntry)
+	entry := enr.WithEntry(eth2ENRKey, &sszEncodedForkEntry)
 	err := record.Load(entry)
 	if err != nil {
 		return nil, err
