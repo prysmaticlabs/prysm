@@ -14,7 +14,7 @@ import (
 func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.Message) error {
 	a, ok := msg.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
-		return fmt.Errorf("message was not type *eth.AggregateAttestationAndProof, type=%T", msg)
+		return fmt.Errorf("message was not type *eth.SignedAggregateAttestationAndProof, type=%T", msg)
 	}
 
 	if a.Message.Aggregate == nil || a.Message.Aggregate.Data == nil {
