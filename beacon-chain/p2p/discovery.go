@@ -49,7 +49,7 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	}
 	if cfg.HostAddress != "" {
 		hostIP := net.ParseIP(cfg.HostAddress)
-		if hostIP.To4() == nil {
+		if hostIP.To4() == nil && hostIP.To16() == nil {
 			log.Errorf("Invalid host address given: %s", hostIP.String())
 		} else {
 			localNode.SetFallbackIP(hostIP)
