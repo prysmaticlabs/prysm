@@ -66,7 +66,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if seen {
 		return false
 	}
-	if !r.validateBlockInAttestation(ctx, m.Message) {
+	if !r.validateBlockInAttestation(ctx, m) {
 		return false
 	}
 
@@ -131,14 +131,15 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 	return true
 }
 
-func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.AggregateAttestationAndProof) bool {
+func (r *Service) validateBlockInAttestation(ctx context.Context, s *ethpb.SignedAggregateAttestationAndProof) bool {
+	a := s.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
 	hasStateSummary := featureconfig.Get().NewStateMgmt && r.db.HasStateSummary(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot))
 	hasState := r.db.HasState(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)) || hasStateSummary
 	hasBlock := r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot))
 	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		r.savePendingAtt(a)
+		r.savePendingAtt(s)
 		return false
 	}
 	return true
