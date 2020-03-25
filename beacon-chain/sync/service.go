@@ -77,7 +77,7 @@ func NewRegularSync(cfg *Config) *Service {
 		attestationNotifier:  cfg.AttestationNotifier,
 		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:    make(map[[32]byte]bool),
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
 		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
@@ -102,7 +102,7 @@ type Service struct {
 	chain                     blockchainService
 	slotToPendingBlocks       map[uint64]*ethpb.SignedBeaconBlock
 	seenPendingBlocks         map[[32]byte]bool
-	blkRootToPendingAtts      map[[32]byte][]*ethpb.AggregateAttestationAndProof
+	blkRootToPendingAtts      map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	pendingAttsLock           sync.RWMutex
 	pendingQueueLock          sync.RWMutex
 	chainStarted              bool

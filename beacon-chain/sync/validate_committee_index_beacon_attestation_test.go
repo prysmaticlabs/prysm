@@ -38,7 +38,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		p2p:                  p,
 		db:                   db,
 		chain:                chain,
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
 	}
 
