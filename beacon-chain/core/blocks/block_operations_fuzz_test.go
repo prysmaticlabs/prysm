@@ -61,8 +61,8 @@ func TestFuzzverifySigningRoot_10000(t *testing.T) {
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		verifySigningRoot(state, pubkey[:], sig[:], domain[:])
-		verifySigningRoot(state, p, s, d)
+		VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
+		VerifySigningRoot(state, p, s, d)
 
 	}
 }

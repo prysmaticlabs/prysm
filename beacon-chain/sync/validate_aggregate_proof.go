@@ -122,6 +122,11 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 		return false
 	}
 
+	// Verify the aggregator's signature is valid.
+	if err := validateAggregatorSignature(s, a); err != nil {
+		return false
+	}
+
 	// Verify aggregated attestation has a valid signature.
 	if err := blocks.VerifyAttestation(ctx, s, a.Aggregate); err != nil {
 		traceutil.AnnotateError(span, err)
@@ -243,4 +248,21 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 	}
 
 	return nil
+}
+
+// This verifies aggregator signature over the signed aggregate and proof object.
+func validateAggregatorSignature(s *stateTrie.BeaconState, a *ethpb.SignedAggregateAttestationAndProof) error {
+	aggregator, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
+	if err != nil {
+		return err
+	}
+
+	currentEpoch := helpers.SlotToEpoch(a.Message.Aggregate.Data.Slot)
+	domain, err := helpers.Domain(s.Fork(), currentEpoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+
+	return helpers.VerifySigningRoot(a.Message, aggregator.PublicKey, a.Signature, domain)
+
 }
