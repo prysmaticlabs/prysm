@@ -84,7 +84,7 @@ func UnionUint64(s ...[]uint64) []uint64 {
 }
 
 // SetUint64 returns a slice with only unique
-// values from the provided set.
+// values from the provided list of indices.
 func SetUint64(a []uint64) []uint64 {
 	// remove duplicate indexes
 	intMap := map[uint64]bool{}
