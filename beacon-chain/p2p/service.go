@@ -173,7 +173,6 @@ func (s *Service) Start() {
 			return
 		}
 		s.dv5Listener = listener
-
 		go s.listenForNewNodes()
 	}
 
@@ -221,13 +220,13 @@ func (s *Service) Start() {
 	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
 
 	multiAddrs := s.host.Network().ListenAddresses()
-	logIP4Addr(s.host.ID(), multiAddrs...)
+	logIPAddr(s.host.ID(), multiAddrs...)
 
 	p2pHostAddress := s.cfg.HostAddress
 	p2pTCPPort := s.cfg.TCPPort
 
 	if p2pHostAddress != "" {
-		logExternalIP4Addr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
 	}
 
 	p2pHostDNS := s.cfg.HostDNS
@@ -468,10 +467,10 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 	return nil
 }
 
-func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
+func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {
 	var correctAddr ma.Multiaddr
 	for _, addr := range addrs {
-		if strings.Contains(addr.String(), "/ip4/") {
+		if strings.Contains(addr.String(), "/ip4/") || strings.Contains(addr.String(), "/ip6/") {
 			correctAddr = addr
 			break
 		}
@@ -484,13 +483,16 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 	}
 }
 
-func logExternalIP4Addr(id peer.ID, addr string, port uint) {
+func logExternalIPAddr(id peer.ID, addr string, port uint) {
 	if addr != "" {
-		p := strconv.FormatUint(uint64(port), 10)
-
+		multiAddr, err := multiAddressBuilder(addr, port)
+		if err != nil {
+			log.Errorf("Could not create multiaddress: %v", err)
+			return
+		}
 		log.WithField(
 			"multiAddr",
-			"/ip4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
+			multiAddr.String()+"/p2p/"+id.String(),
 		).Info("Node started external p2p server")
 	}
 }
