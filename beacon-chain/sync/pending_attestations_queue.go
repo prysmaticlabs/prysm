@@ -78,8 +78,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						}
 						numberOfAttsRecovered.Inc()
 
-						// Broadcasting the attestation again once a node is able to process it.
-						if err := s.p2p.Broadcast(ctx, att); err != nil {
+						// Broadcasting the signed attestation again once a node is able to process it.
+						if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
 							log.WithError(err).Error("Failed to broadcast")
 						}
 					}
@@ -94,8 +94,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					}
 					numberOfAttsRecovered.Inc()
 
-					// Broadcasting the attestation again once a node is able to process it.
-					if err := s.p2p.Broadcast(ctx, att); err != nil {
+					// Broadcasting the signed attestation again once a node is able to process it.
+					if err := s.p2p.Broadcast(ctx, signedAtt); err != nil {
 						log.WithError(err).Error("Failed to broadcast")
 					}
 				}
