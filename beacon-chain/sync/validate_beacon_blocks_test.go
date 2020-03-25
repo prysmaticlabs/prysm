@@ -12,6 +12,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -116,24 +117,30 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	}
 }
 
-func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
+func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
-	sk, err := bls.SecretKeyFromBytes(b32[:])
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
+	msg := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 0,
+			Slot:          1,
+		},
+	}
+
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       1,
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: sk.Sign([]byte("data")).Marshal(),
+	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
+	if err != nil {
+		t.Error(err)
 	}
+	blockSig := privKeys[0].Sign(signingRoot[:]).Marshal()
+	msg.Signature = blockSig[:]
 
 	c, _ := lru.New(10)
 	r := &Service{
@@ -141,6 +148,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		p2p:         p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+			State: beaconState,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},

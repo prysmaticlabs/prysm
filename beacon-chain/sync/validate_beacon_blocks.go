@@ -59,6 +59,9 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if err != nil {
 		return false
 	}
+	if r.db.HasBlock(ctx, blockRoot) {
+		return false
+	}
 
 	r.pendingQueueLock.RLock()
 	if r.seenPendingBlocks[blockRoot] {
@@ -77,12 +80,11 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	// Using a concrete saved parent state instead of cached head state for safety reason.
-	// Saved parent state will always work, given one block per slot, this is a good
-	// performance trade off to gain safety.
-	s, err := r.db.State(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+	// We could use parent state here, it's arguably safer but retrieval requires one DB look up and refactor of
+	// subscriber pipeline to move missing parent block handler to validator pipeline (here).
+	s, err := r.chain.HeadState(ctx)
 	if err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get pre state to verify block header signature")
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get head state to verify block header signature")
 		return false
 	}
 	if err := blocks.VerifyBlockHeaderSignature(s, blk); err != nil {
