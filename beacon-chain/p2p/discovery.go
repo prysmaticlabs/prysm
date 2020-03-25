@@ -30,21 +30,29 @@ type Listener interface {
 	LocalNode() *enode.LocalNode
 }
 
-func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *discover.UDPv5 {
+func (s *Service) createListener(
+	ipAddr net.IP,
+	privKey *ecdsa.PrivateKey,
+) *discover.UDPv5 {
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
-		Port: int(cfg.UDPPort),
+		Port: int(s.cfg.UDPPort),
 	}
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort))
+	localNode, err := s.createLocalNode(
+		privKey,
+		ipAddr,
+		int(s.cfg.UDPPort),
+		int(s.cfg.TCPPort),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if cfg.HostAddress != "" {
-		hostIP := net.ParseIP(cfg.HostAddress)
+	if s.cfg.HostAddress != "" {
+		hostIP := net.ParseIP(s.cfg.HostAddress)
 		if hostIP.To4() == nil {
 			log.Errorf("Invalid host address given: %s", hostIP.String())
 		} else {
@@ -55,7 +63,7 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 		PrivateKey: privKey,
 	}
 	dv5Cfg.Bootnodes = []*enode.Node{}
-	for _, addr := range cfg.Discv5BootStrapAddr {
+	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			log.Fatal(err)
@@ -70,7 +78,12 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	return network
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpPort int) (*enode.LocalNode, error) {
+func (s *Service) createLocalNode(
+	privKey *ecdsa.PrivateKey,
+	ipAddr net.IP,
+	udpPort int,
+	tcpPort int,
+) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open node's peer database")
@@ -85,11 +98,18 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
+	localNode, err = addForkEntry(localNode, s.genesisTime, s.genesisValidatorsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
+	}
 	return intializeAttSubnets(localNode), nil
 }
 
-func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
-	listener := createListener(addr, privKey, cfg)
+func (s *Service) startDiscoveryV5(
+	addr net.IP,
+	privKey *ecdsa.PrivateKey,
+) (*discover.UDPv5, error) {
+	listener := s.createListener(addr, privKey)
 	record := listener.Self()
 	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil
