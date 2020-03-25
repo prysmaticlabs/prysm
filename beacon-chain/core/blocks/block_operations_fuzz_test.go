@@ -43,30 +43,6 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzverifySigningRoot_10000(t *testing.T) {
-	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	pubkey := [48]byte{}
-	sig := [96]byte{}
-	domain := [4]byte{}
-	p := []byte{}
-	s := []byte{}
-	d := []byte{}
-	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(&pubkey)
-		fuzzer.Fuzz(&sig)
-		fuzzer.Fuzz(&domain)
-		fuzzer.Fuzz(state)
-		fuzzer.Fuzz(&p)
-		fuzzer.Fuzz(&s)
-		fuzzer.Fuzz(&d)
-		VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
-		VerifySigningRoot(state, p, s, d)
-
-	}
-}
-
 func TestFuzzverifyDepositDataSigningRoot_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ba := []byte{}

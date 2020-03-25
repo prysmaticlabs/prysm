@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	fuzz "github.com/google/gofuzz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -53,5 +55,29 @@ func TestComputeForkDigest_OK(t *testing.T) {
 		if digest != tt.result {
 			t.Errorf("wanted domain version: %#x, got: %#x", digest, tt.result)
 		}
+	}
+}
+
+func TestFuzzverifySigningRoot_10000(t *testing.T) {
+	fuzzer := fuzz.NewWithSeed(0)
+	state := &ethereum_beacon_p2p_v1.BeaconState{}
+	pubkey := [48]byte{}
+	sig := [96]byte{}
+	domain := [4]byte{}
+	p := []byte{}
+	s := []byte{}
+	d := []byte{}
+	for i := 0; i < 10000; i++ {
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(&pubkey)
+		fuzzer.Fuzz(&sig)
+		fuzzer.Fuzz(&domain)
+		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(&p)
+		fuzzer.Fuzz(&s)
+		fuzzer.Fuzz(&d)
+		VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
+		VerifySigningRoot(state, p, s, d)
+
 	}
 }
