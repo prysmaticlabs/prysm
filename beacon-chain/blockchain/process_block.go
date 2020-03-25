@@ -210,9 +210,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
-	}
+	s.initSyncBlocks = append(s.initSyncBlocks, signed)
+
 	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
@@ -263,6 +262,11 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 				return errors.Wrap(err, "could not save init sync finalized state")
 			}
 		}
+
+		if err := s.beaconDB.SaveBlocks(ctx, s.initSyncBlocks); err != nil {
+			return err
+		}
+		s.initSyncBlocks = []*ethpb.SignedBeaconBlock{}
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
