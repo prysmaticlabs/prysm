@@ -42,7 +42,11 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	if cfg.HostAddress != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.TCPPort))
+			protocol := "ip4"
+			if ip := net.ParseIP(cfg.HostAddress); ip.To4() == nil {
+				protocol = "ip6"
+			}
+			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/%s/%s/tcp/%d", protocol, cfg.HostAddress, cfg.TCPPort))
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
