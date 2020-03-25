@@ -4,26 +4,9 @@ package ethereum.beacon.rpc.v1;
 
 import "google/protobuf/empty.proto";
 
-// Deprecated: Do not use any service or message in this proto.
+// Deprecated: Do not use any service or message in this proto. All RPC messages
+// should live in ethereumapis.
 option deprecated = true;
-
-service AggregatorService {
-  option deprecated = true;
-  rpc SubmitAggregateAndProof(AggregationRequest) returns (AggregationResponse);
-}
-
-message AggregationRequest {
-  option deprecated = true;
-  uint64 slot = 1;
-  uint64 committee_index = 2;
-  bytes public_key = 3;
-  bytes slot_signature = 4;
-}
-
-message AggregationResponse {
-  option deprecated = true;
-  bytes root = 1;
-}
 
 message ExitedValidatorsRequest {
   option deprecated = true;
