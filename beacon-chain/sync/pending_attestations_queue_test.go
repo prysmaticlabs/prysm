@@ -159,6 +159,15 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		Aggregate:       att,
 		AggregatorIndex: 33,
 	}
+	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(aggregateAndProof, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
@@ -182,7 +191,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
 	r.db.SaveState(context.Background(), s, r32)
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof}}
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
 		t.Fatal(err)
 	}

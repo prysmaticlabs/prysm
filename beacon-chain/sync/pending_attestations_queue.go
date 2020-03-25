@@ -72,7 +72,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				if helpers.IsAggregated(att.Aggregate) {
 					// Save the pending aggregated attestation to the pool if it passes the aggregated
 					// validation steps.
-					if s.validateBlockInAttestation(ctx, signedAtt) && s.validateAggregatedAtt(ctx, att) {
+					if s.validateBlockInAttestation(ctx, signedAtt) && s.validateAggregatedAtt(ctx, signedAtt) {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							return err
 						}
