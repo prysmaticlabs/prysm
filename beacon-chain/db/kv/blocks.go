@@ -329,7 +329,7 @@ func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlo
 
 // HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
 func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlockAt")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)

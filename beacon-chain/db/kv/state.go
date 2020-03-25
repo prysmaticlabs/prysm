@@ -354,7 +354,7 @@ func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, er
 	return states, nil
 }
 
-// HighestSlotStates returns the states with the highest slot below the input slot
+// HighestSlotStatesBelow returns the states with the highest slot below the input slot
 // from the db. Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
 // reuslts states. This returns a list of states.
