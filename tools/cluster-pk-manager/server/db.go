@@ -7,7 +7,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
+	bolt "go.etcd.io/bbolt"
 )
 
 var (

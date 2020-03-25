@@ -3,14 +3,15 @@ package kv
 import (
 	"os"
 	"path"
+	"sync"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/dgraph-io/ristretto"
-	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	bolt "go.etcd.io/bbolt"
 )
 
 var _ = iface.Database(&Store{})
@@ -35,6 +36,8 @@ type Store struct {
 	databasePath        string
 	blockCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
+	stateSlotBitLock    sync.Mutex
+	blockSlotBitLock    sync.Mutex
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory

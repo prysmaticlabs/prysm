@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/boltdb/bolt"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

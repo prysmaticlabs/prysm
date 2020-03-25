@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -47,6 +48,8 @@ func NewSkipSlotCache() *SkipSlotCache {
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
 func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "skipSlotCache.Get")
+	defer span.End()
 	if !featureconfig.Get().EnableSkipSlotsCache {
 		// Return a miss result if cache is not enabled.
 		skipSlotCacheMiss.Inc()
@@ -57,6 +60,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 
 	// Another identical request may be in progress already. Let's wait until
 	// any in progress request resolves or our timeout is exceeded.
+	inProgress := false
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -67,6 +71,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 			c.lock.RUnlock()
 			break
 		}
+		inProgress = true
 		c.lock.RUnlock()
 
 		// This increasing backoff is to decrease the CPU cycles while waiting
@@ -75,14 +80,17 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 		delay *= delayFactor
 		delay = math.Min(delay, maxDelay)
 	}
+	span.AddAttributes(trace.BoolAttribute("inProgress", inProgress))
 
 	item, exists := c.cache.Get(slot)
 
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
+		span.AddAttributes(trace.BoolAttribute("hit", true))
 		return item.(*stateTrie.BeaconState).Copy(), nil
 	}
 	skipSlotCacheMiss.Inc()
+	span.AddAttributes(trace.BoolAttribute("hit", false))
 	return nil, nil
 }
 
