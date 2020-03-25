@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p-core/host"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -48,7 +49,10 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 func TestCreateListener(t *testing.T) {
 	port := 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
+	s := &Service{
+		cfg: &Config{UDPPort: uint(port)},
+	}
+	listener := s.createListener(ipAddr, pkey)
 	defer listener.Close()
 
 	if !listener.Self().IP().Equal(ipAddr) {
@@ -70,21 +74,33 @@ func TestCreateListener(t *testing.T) {
 func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	bootListener := createListener(ipAddr, pkey, &Config{UDPPort: uint(port)})
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	s := &Service{
+		cfg:                   &Config{UDPPort: uint(port)},
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	bootListener := s.createListener(ipAddr, pkey)
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
-	cfg := &Config{
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		Encoding:            "ssz",
-	}
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
-		cfg.UDPPort = uint(port)
+		cfg := &Config{
+			Discv5BootStrapAddr: []string{bootNode.String()},
+			Encoding:            "ssz",
+			UDPPort:             uint(port),
+		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
-		listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
+		s = &Service{
+			cfg:                   cfg,
+			genesisTime:           genesisTime,
+			genesisValidatorsRoot: genesisValidatorsRoot,
+		}
+		listener, err := s.startDiscoveryV5(ipAddr, pkey)
 		if err != nil {
 			t.Errorf("Could not start discovery for node: %v", err)
 		}
@@ -110,7 +126,8 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	addr := net.ParseIP("invalidIP")
 	_, pkey := createAddrAndPrivKey(t)
-	node, err := createLocalNode(pkey, addr, 0, 0)
+	s := &Service{}
+	node, err := s.createLocalNode(pkey, addr, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +140,13 @@ func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 func TestMultiAddrConversion_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ipAddr, pkey := createAddrAndPrivKey(t)
-	listener := createListener(ipAddr, pkey, &Config{})
+	s := &Service{
+		cfg: &Config{
+			TCPPort: 0,
+			UDPPort: 0,
+		},
+	}
+	listener := s.createListener(ipAddr, pkey)
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
 	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
@@ -132,7 +155,11 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
-	cfg := &Config{Encoding: "ssz", MaxPeers: 30}
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	cfg := &Config{
+		Encoding: "ssz", MaxPeers: 30,
+	}
 	port := 3000
 	var staticPeers []string
 	var hosts []host.Host
@@ -152,19 +179,22 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
 	cfg.StaticPeers = staticPeers
-
+	cfg.BeaconDB = db
 	s, err := NewService(cfg)
+	s.genesisValidatorsRoot = make([]byte, 32)
+	s.genesisTime = time.Now()
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	s.Start()
-	s.dv5Listener = &mockListener{}
-	defer s.Stop()
-	time.Sleep(100 * time.Millisecond)
 
+	time.Sleep(2 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
+	}
+
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
 	}
 }
