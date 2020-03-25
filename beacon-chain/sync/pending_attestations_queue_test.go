@@ -44,11 +44,11 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 		p2p:                  p1,
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: roughtime.Now()},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
 
 	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	r.blkRootToPendingAtts[[32]byte{'A'}] = []*ethpb.AggregateAttestationAndProof{a}
+	r.blkRootToPendingAtts[[32]byte{'A'}] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		p2p:                  p1,
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: roughtime.Now()},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 	}
 
@@ -83,7 +83,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	r.db.SaveBlock(context.Background(), b)
 	r.db.SaveState(context.Background(), s, r32)
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.AggregateAttestationAndProof{a}
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 	}
 
@@ -182,7 +182,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
 	r.db.SaveState(context.Background(), s, r32)
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.AggregateAttestationAndProof{aggregateAndProof}
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 
 	s := &Service{
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
 
 	// 100 Attestations per block root.
@@ -214,15 +214,18 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	r3 := [32]byte{'C'}
 
 	for i := 0; i < 100; i++ {
-		s.savePendingAtt(&ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r1[:]}}})
-		s.savePendingAtt(&ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r2[:]}}})
-		s.savePendingAtt(&ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r3[:]}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r1[:]}}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r2[:]}}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r3[:]}}}})
 	}
 
 	if len(s.blkRootToPendingAtts[r1]) != 100 {
