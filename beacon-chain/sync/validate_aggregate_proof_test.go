@@ -381,8 +381,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	blockSig := privKeys[33].Sign(signingRoot[:]).Marshal()
-	signedAggregateAndProof.Signature = blockSig[:]
+	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	signedAggregateAndProof.Signature = aggreSig[:]
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
@@ -491,8 +491,8 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	blockSig := privKeys[33].Sign(signingRoot[:]).Marshal()
-	signedAggregateAndProof.Signature = blockSig[:]
+	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	signedAggregateAndProof.Signature = aggreSig[:]
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
