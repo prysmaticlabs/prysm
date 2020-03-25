@@ -227,22 +227,27 @@ func ProcessBlockHeader(
 		return nil, err
 	}
 
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
-	if err != nil {
-		return nil, err
-	}
-
 	// Verify proposer signature.
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
-	if err != nil {
+	if err := VerifyBlockHeaderSignature(beaconState, block); err != nil {
 		return nil, err
-	}
-	if err := verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
-		return nil, ErrSigFailedToVerify
 	}
 
 	return beaconState, nil
+}
+
+// VerifyBlockHeaderSignature verifies the proposer signature of a beacon block.
+func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) error {
+	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	if err != nil {
+		return err
+	}
+
+	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		return err
+	}
+	return verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain)
 }
 
 // ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
