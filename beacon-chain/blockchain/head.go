@@ -127,17 +127,17 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
 	} else {
-		headState, err = s.beaconDB.State(ctx, r)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head state in DB")
+		s.initSyncStateLock.RLock()
+		cachedHeadState, ok := s.initSyncState[r]
+		if ok {
+			headState = cachedHeadState
 		}
+		s.initSyncStateLock.RUnlock()
 		if headState == nil {
-			s.initSyncStateLock.RLock()
-			cachedHeadState, ok := s.initSyncState[r]
-			if ok {
-				headState = cachedHeadState
+			headState, err = s.beaconDB.State(ctx, r)
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve head state in DB")
 			}
-			s.initSyncStateLock.RUnlock()
 		}
 	}
 	if headState == nil {
