@@ -319,7 +319,7 @@ func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlo
 			return err
 		}
 
-		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
+		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
 		if err != nil {
 			return err
 		}
@@ -331,7 +331,7 @@ func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlo
 
 // HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
 func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlockAt")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
@@ -342,7 +342,7 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 		if err != nil {
 			return err
 		}
-		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
+		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
 		if err != nil {
 			return err
 		}
@@ -352,15 +352,15 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 	return blocks, err
 }
 
-// blocksAtSlotBitfieldIndex retrieves the block in DB given the input index. The index represents
+// blocksAtSlotBitfieldIndex retrieves the blocks in DB given the input index. The index represents
 // the position of the slot bitfield the saved block maps to.
-func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) ([]*ethpb.SignedBeaconBlock, error) {
+func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
 	defer span.End()
 
 	highestSlot := index - 1
-	highestSlot = uint64(math.Max(0, float64(highestSlot)))
-	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
+	highestSlot = int(math.Max(0, float64(highestSlot)))
+	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)
 	if err != nil {
