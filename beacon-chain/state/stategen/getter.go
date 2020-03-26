@@ -16,7 +16,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
-	// Genesis case. If block root is zero hash, short cut and use what's stored in DB.
+	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
