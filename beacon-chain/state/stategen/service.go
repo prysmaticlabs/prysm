@@ -64,7 +64,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 
 	// TODO: Check if this is needed.
 	if err := s.beaconDB.SaveStateSummary(ctx,
-		&pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:], BoundaryRoot: lastArchivedRoot[:]}); err != nil {
+		&pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:]}); err != nil {
 		return nil, err
 	}
 

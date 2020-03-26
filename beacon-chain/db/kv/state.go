@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"math"
 
 	"github.com/pkg/errors"
@@ -366,7 +365,6 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 	err := k.db.View(func(tx *bolt.Tx) error {
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
-		fmt.Println(savedSlots, slot)
 		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
 		if err != nil {
 			return err

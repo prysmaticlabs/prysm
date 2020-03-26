@@ -3,7 +3,6 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -23,11 +22,10 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 		return errSlotNonArchivedPoint
 	}
 
-	archivedPointIndex := state.Slot() / s.slotsPerArchivedPoint
-	if err := s.beaconDB.SaveArchivedPointState(ctx, state, archivedPointIndex); err != nil {
+	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivedPointIndex); err != nil {
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, state.Slot()/s.slotsPerArchivedPoint); err != nil {
 		return err
 	}
 
@@ -71,7 +69,11 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 
 // This loads the cold state for the input archived point.
 func (s *State) loadColdStateByArchivedPoint(ctx context.Context, archivedPoint uint64) (*state.BeaconState, error) {
-	return s.beaconDB.ArchivedPointState(ctx, archivedPoint)
+	states, err := s.beaconDB.HighestSlotStatesBelow(ctx, archivedPoint*s.slotsPerArchivedPoint+1)
+	if err != nil {
+		return nil, err
+	}
+	return states[0], nil
 }
 
 // This loads a cold state by slot and block root combinations.
@@ -150,7 +152,7 @@ func (s *State) archivedPointByIndex(ctx context.Context, archiveIndex uint64) (
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadArchivedPointByIndex")
 	defer span.End()
 	if s.beaconDB.HasArchivedPoint(ctx, archiveIndex) {
-		return s.beaconDB.ArchivedPointState(ctx, archiveIndex)
+		return s.loadColdStateByArchivedPoint(ctx, archiveIndex)
 	}
 
 	// If for certain reasons, archived point does not exist in DB,
@@ -181,9 +183,6 @@ func (s *State) recoverArchivedPointByIndex(ctx context.Context, archiveIndex ui
 	if err := s.beaconDB.SaveArchivedPointRoot(ctx, lastRoot, archiveIndex); err != nil {
 		return nil, err
 	}
-	if err := s.beaconDB.SaveArchivedPointState(ctx, archivedState, archiveIndex); err != nil {
-		return nil, err
-	}
 
 	return archivedState, nil
 }
@@ -207,7 +206,6 @@ func (s *State) blockRootSlot(ctx context.Context, blockRoot [32]byte) (uint64, 
 	}
 
 	// Couldn't find state summary in DB. Retry with block bucket to get block slot.
-	fmt.Println(hex.EncodeToString(blockRoot[:]))
 	b, err := s.beaconDB.Block(ctx, blockRoot)
 	if err != nil {
 		return 0, err
