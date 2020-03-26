@@ -4,6 +4,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -11,7 +15,7 @@ import (
 )
 
 func TestCheckpointStateCacheKeyFn_OK(t *testing.T) {
-	cp := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+	cp := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 64,
 	})
@@ -45,7 +49,7 @@ func TestCheckpointStateCacheKeyFn_InvalidObj(t *testing.T) {
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
 
-	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 64,
 	})
@@ -75,7 +79,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 		t.Error("incorrectly cached state")
 	}
 
-	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
 	st2, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 128,
 	})
