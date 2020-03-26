@@ -69,6 +69,7 @@ func (ds *Service) DetectAttesterSlashings(
 	return slashingList, nil
 }
 
+// UpdateSpans passthrough function that updates span maps given an indexed attestation.
 func (ds *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	return ds.minMaxSpanDetector.UpdateSpans(ctx, att)
 }
