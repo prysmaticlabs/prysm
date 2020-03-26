@@ -89,15 +89,23 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 }
 
 func attestationRoot(att *ethpb.Attestation) ([32]byte, error) {
-	fieldRoots := make([][32]byte, 2)
-	if att.Data != nil {
-		dataRoot, err := attestationDataRoot(att.Data)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		fieldRoots[0] = dataRoot
+	fieldRoots := make([][32]byte, 3)
+
+	// Bitfield.
+	aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
+	if err != nil {
+		return [32]byte{}, err
 	}
-	packedSig, err := pack([][]byte{att.Signature})
+	fieldRoots[0] = aggregationRoot
+
+	dataRoot, err := attestationDataRoot(att.Data)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	fieldRoots[1] = dataRoot
+
+	signatureBuf := bytesutil.ToBytes96(att.Signature)
+	packedSig, err := pack([][]byte{signatureBuf[:]})
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -105,21 +113,21 @@ func attestationRoot(att *ethpb.Attestation) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	fieldRoots[1] = sigRoot
+	fieldRoots[2] = sigRoot
 	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func blockAttestationRoot(atts []*ethpb.Attestation) ([32]byte, error) {
-	roots := make([][32]byte, len(atts))
+	roots := make([][]byte, len(atts))
 	for i := 0; i < len(atts); i++ {
 		pendingRoot, err := attestationRoot(atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
-		roots[i] = pendingRoot
+		roots[i] = pendingRoot[:]
 	}
 
-	attsRootsRoot, err := bitwiseMerkleizeArrays(
+	attsRootsRoot, err := bitwiseMerkleize(
 		roots,
 		uint64(len(roots)),
 		params.BeaconConfig().MaxAttestations,

@@ -137,6 +137,10 @@ var (
 		Name:  "enable-state-field-trie",
 		Usage: "Enables the usage of state field tries to compute the state root",
 	}
+	enableCustomBlockHTR = &cli.BoolFlag{
+		Name:  "enable-custom-block-htr",
+		Usage: "Enables the usage of a custom hashing method for our block",
+	}
 )
 
 // Deprecated flags list.
@@ -318,6 +322,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newStateMgmt,
 	enableInitSyncQueue,
 	enableFieldTrie,
+	enableCustomBlockHTR,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

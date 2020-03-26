@@ -35,6 +35,9 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 }
 
 func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
+	if !featureconfig.Get().EnableBlockHTR {
+		return ssz.HashTreeRoot(blk)
+	}
 	fieldRoots := make([][32]byte, 4)
 	if blk != nil {
 		headerSlotBuf := make([]byte, 8)
@@ -55,9 +58,13 @@ func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 }
 
 func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
+	if !featureconfig.Get().EnableBlockHTR {
+		return ssz.HashTreeRoot(body)
+	}
 	fieldRoots := make([][32]byte, 8)
 	if body != nil {
-		packedRandao, err := pack([][]byte{body.RandaoReveal})
+		rawRandao := bytesutil.ToBytes96(body.RandaoReveal)
+		packedRandao, err := pack([][]byte{rawRandao[:]})
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -66,20 +73,22 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 			return [32]byte{}, err
 		}
 		fieldRoots[0] = randaoRoot
+
 		eth1Root, err := Eth1Root(body.Eth1Data)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		fieldRoots[1] = eth1Root
+
 		graffitiRoot := bytesutil.ToBytes32(body.Graffiti)
 		fieldRoots[2] = graffitiRoot
 
-		proposerSlashingsRoot, err := ssz.HashTreeRoot(body.ProposerSlashings)
+		proposerSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.ProposerSlashings, 16)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		fieldRoots[3] = proposerSlashingsRoot
-		attesterSlashingsRoot, err := ssz.HashTreeRoot(body.AttesterSlashings)
+		attesterSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.AttesterSlashings, 1)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -90,13 +99,13 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 		}
 		fieldRoots[5] = attsRoot
 
-		depositRoot, err := ssz.HashTreeRoot(body.Deposits)
+		depositRoot, err := ssz.HashTreeRootWithCapacity(body.Deposits, 16)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		fieldRoots[6] = depositRoot
 
-		exitRoot, err := ssz.HashTreeRoot(body.VoluntaryExits)
+		exitRoot, err := ssz.HashTreeRootWithCapacity(body.VoluntaryExits, 16)
 		if err != nil {
 			return [32]byte{}, err
 		}
