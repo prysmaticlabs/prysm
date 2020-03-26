@@ -3,7 +3,6 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
@@ -14,7 +13,7 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.New("attestation is aggregated")
 	}
 
-	r, err := ssz.HashTreeRoot(att)
+	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
@@ -56,7 +55,7 @@ func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error 
 		return errors.New("attestation is aggregated")
 	}
 
-	r, err := ssz.HashTreeRoot(att)
+	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
