@@ -153,9 +153,7 @@ func (k *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(archivedIndexRootBucket)
-		sBucket := tx.Bucket(archivedIndexStateBucket)
-		exists = iBucket.Get(uint64ToBytes(index)) != nil &&
-			sBucket.Get(uint64ToBytes(index)) != nil
+		exists = iBucket.Get(uint64ToBytes(index)) != nil
 		return nil
 	})
 	return exists

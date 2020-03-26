@@ -3,7 +3,6 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -38,14 +37,9 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	}
 
 	// On an intermediate slots, save the hot state summary.
-	epochRoot, err := s.loadEpochBoundaryRoot(ctx, blockRoot, state)
-	if err != nil {
-		return errors.Wrap(err, "could not get epoch boundary root to save hot state")
-	}
 	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot:         state.Slot(),
-		Root:         blockRoot[:],
-		BoundaryRoot: epochRoot[:],
+		Slot: state.Slot(),
+		Root: blockRoot[:],
 	}); err != nil {
 		return err
 	}
@@ -77,35 +71,25 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errUnknownStateSummary
 	}
 
-	boundaryState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(summary.BoundaryRoot))
+	startState, err := s.lastSavedState(ctx, helpers.StartSlot(helpers.SlotToEpoch(summary.Slot)))
 	if err != nil {
 		return nil, err
 	}
-	if boundaryState == nil {
-		// Boundary state not available, get the last available state and start from there.
-		// This could happen if users toggle feature flags in between sync.
-		boundaryState, err = s.lastSavedState(ctx, helpers.StartSlot(helpers.SlotToEpoch(summary.Slot)))
-		if err != nil {
-			return nil, err
-		}
-		if boundaryState == nil {
-			return nil, errUnknownBoundaryState
-		}
+	if startState == nil {
+		return nil, errUnknownBoundaryState
 	}
-	fmt.Println("boundary state slot ", boundaryState.Slot())
 
-	// Don't need to replay the blocks if we're already on an epoch boundary,
-	// the target slot is the same as the state slot.
+	// Don't need to replay the blocks if start state is the same state for the block root.
 	var hotState *state.BeaconState
 	targetSlot := summary.Slot
-	if targetSlot == boundaryState.Slot() {
-		hotState = boundaryState
+	if targetSlot == startState.Slot() {
+		hotState = startState
 	} else {
-		blks, err := s.LoadBlocks(ctx, boundaryState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
+		blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 		}
-		hotState, err = s.ReplayBlocks(ctx, boundaryState, blks, targetSlot)
+		hotState, err = s.ReplayBlocks(ctx, startState, blks, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 		}

@@ -45,14 +45,16 @@ func New(db db.NoHeadAccessDatabase) *State {
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.
-func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
-	lastArchivedState, err := s.beaconDB.LastArchivedIndexState(ctx)
+	lastArchivedRoot := s.beaconDB.LastArchivedIndexRoot(ctx)
+	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
 	if err != nil {
 		return nil, err
 	}
+
 	// Resume as genesis state if there's no last archived state.
 	if lastArchivedState == nil {
 		return s.beaconDB.GenesisState(ctx)
@@ -60,6 +62,7 @@ func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.B
 
 	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
 
+	// TODO: Check if this is needed.
 	if err := s.beaconDB.SaveStateSummary(ctx,
 		&pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:], BoundaryRoot: lastArchivedRoot[:]}); err != nil {
 		return nil, err

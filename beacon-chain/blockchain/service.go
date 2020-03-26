@@ -423,7 +423,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	var finalizedState *stateTrie.BeaconState
 	if featureconfig.Get().NewStateMgmt {
 		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
-		finalizedState, err = s.stateGen.Resume(ctx, finalizedRoot)
+		finalizedState, err = s.stateGen.Resume(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}
