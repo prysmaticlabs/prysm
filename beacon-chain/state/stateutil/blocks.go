@@ -34,6 +34,7 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+// BlockRoot returns the block hash tree root of the provided block.
 func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 	if !featureconfig.Get().EnableBlockHTR {
 		return ssz.HashTreeRoot(blk)
@@ -57,6 +58,7 @@ func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+// BlockBodyRoot returns the hash tree root of the block body.
 func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	if !featureconfig.Get().EnableBlockHTR {
 		return ssz.HashTreeRoot(body)
