@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
