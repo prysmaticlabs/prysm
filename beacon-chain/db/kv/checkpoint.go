@@ -109,7 +109,7 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {
 			return err
 		}
-		return nil
-		//return k.updateFinalizedBlockRoots(ctx, tx, checkpoint)
+
+		return k.updateFinalizedBlockRoots(ctx, tx, checkpoint)
 	})
 }
