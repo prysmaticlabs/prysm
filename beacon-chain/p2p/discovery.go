@@ -14,7 +14,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 )
+
+const attestationSubnetCount = 64
+const attSubnetEnrKey = "attnets"
 
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
@@ -27,6 +31,7 @@ type Listener interface {
 	LookupRandom() []*enode.Node
 	Ping(*enode.Node) error
 	RequestENR(*enode.Node) (*enode.Node, error)
+	LocalNode() *enode.LocalNode
 }
 
 func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *discover.UDPv5 {
@@ -34,7 +39,14 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 		IP:   ipAddr,
 		Port: int(cfg.UDPPort),
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	// assume ip is either ipv4 or ipv6
+	networkVersion := ""
+	if ipAddr.To4() != nil {
+		networkVersion = "udp4"
+	} else {
+		networkVersion = "udp6"
+	}
+	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,7 +56,7 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	}
 	if cfg.HostAddress != "" {
 		hostIP := net.ParseIP(cfg.HostAddress)
-		if hostIP.To4() == nil {
+		if hostIP.To4() == nil && hostIP.To16() == nil {
 			log.Errorf("Invalid host address given: %s", hostIP.String())
 		} else {
 			localNode.SetFallbackIP(hostIP)
@@ -84,13 +96,13 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
-	return localNode, nil
+	return intializeAttSubnets(localNode), nil
 }
 
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
 	listener := createListener(addr, privKey, cfg)
-	node := listener.Self()
-	log.WithField("nodeID", node.ID()).Info("Started discovery v5")
+	record := listener.Self()
+	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil
 }
 
@@ -106,6 +118,29 @@ func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 	}
 	err = host.Connect(context.Background(), *peerInfo)
 	return err
+}
+
+func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
+	bitV := bitfield.NewBitvector64()
+	entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
+	node.Set(entry)
+	return node
+}
+
+func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
+	bitV := bitfield.NewBitvector64()
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	err := record.Load(entry)
+	if err != nil {
+		return nil, err
+	}
+	committeeIdxs := []uint64{}
+	for i := uint64(0); i < 64; i++ {
+		if bitV.BitAt(i) {
+			committeeIdxs = append(committeeIdxs, i)
+		}
+	}
+	return committeeIdxs, nil
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {

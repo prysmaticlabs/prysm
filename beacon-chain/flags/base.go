@@ -57,6 +57,12 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
+	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
+	GPRCGatewayCorsDomain = &cli.StringFlag{
+		Name: "grpc-gateway-corsdomain",
+		Usage: "Comma separated list of domains from which to accept cross origin requests " +
+			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
+	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
 	MinSyncPeers = &cli.IntFlag{
@@ -98,5 +104,10 @@ var (
 		Name:  "slots-per-archive-point",
 		Usage: "The slot durations of when an archived state gets saved in the DB.",
 		Value: 128,
+	}
+	// EnableDiscv5 enables running discv5.
+	EnableDiscv5 = &cli.BoolFlag{
+		Name:  "enable-discv5",
+		Usage: "Starts dv5 dht.",
 	}
 )

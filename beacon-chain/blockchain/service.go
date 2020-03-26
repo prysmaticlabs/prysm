@@ -316,7 +316,7 @@ func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.Be
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
-	stateRoot, err := genesisState.HashTreeRoot()
+	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
 		return err
 	}

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/boltdb/bolt"
 	"github.com/ethereum/go-ethereum/common"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

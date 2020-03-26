@@ -22,8 +22,8 @@ func (bs *Service) RequestHistoricalAttestations(
 	var err error
 	for {
 		res, err = bs.beaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
-			QueryFilter: &ethpb.ListIndexedAttestationsRequest_TargetEpoch{
-				TargetEpoch: epoch,
+			QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
+				Epoch: epoch,
 			},
 			PageSize:  int32(params.BeaconConfig().DefaultPageSize),
 			PageToken: res.NextPageToken,

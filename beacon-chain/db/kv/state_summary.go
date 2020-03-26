@@ -3,8 +3,8 @@ package kv
 import (
 	"context"
 
-	"github.com/boltdb/bolt"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

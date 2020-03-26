@@ -9,6 +9,7 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -22,6 +23,8 @@ import (
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -33,6 +36,9 @@ var _ = shared.Service(&Service{})
 
 // Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
+
+// search limit for number of peers in discovery v5.
+const searchLimit = 100
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
@@ -152,7 +158,7 @@ func (s *Service) Start() {
 		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
-	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
+	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
 		ipAddr := ipAddr()
 		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
 		if err != nil {
@@ -167,7 +173,6 @@ func (s *Service) Start() {
 			return
 		}
 		s.dv5Listener = listener
-
 		go s.listenForNewNodes()
 	}
 
@@ -215,13 +220,13 @@ func (s *Service) Start() {
 	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
 
 	multiAddrs := s.host.Network().ListenAddresses()
-	logIP4Addr(s.host.ID(), multiAddrs...)
+	logIPAddr(s.host.ID(), multiAddrs...)
 
 	p2pHostAddress := s.cfg.HostAddress
 	p2pTCPPort := s.cfg.TCPPort
 
 	if p2pHostAddress != "" {
-		logExternalIP4Addr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
 	}
 
 	p2pHostDNS := s.cfg.HostDNS
@@ -293,11 +298,72 @@ func (s *Service) Peers() *peers.Status {
 	return s.peers
 }
 
+// RefreshENR uses an epoch to refresh the enr entry for our node
+// with the tracked committee id's for the epoch, allowing our node
+// to be dynamically discoverable by others given our tracked committee id's.
+func (s *Service) RefreshENR(epoch uint64) {
+	// return early if discv5 isnt running
+	if s.dv5Listener == nil {
+		return
+	}
+	bitV := bitfield.NewBitvector64()
+	committees := cache.CommitteeIDs.GetIDs(epoch)
+	for _, idx := range committees {
+		bitV.SetBitAt(idx, true)
+	}
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	s.dv5Listener.LocalNode().Set(entry)
+}
+
+// FindPeersWithSubnet performs a network search for peers
+// subscribed to a particular subnet. Then we try to connect
+// with those peers.
+func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
+	nodes := make([]*enode.Node, searchLimit)
+	num := s.dv5Listener.ReadRandomNodes(nodes)
+	exists := false
+	for _, node := range nodes[:num] {
+		if node.IP() == nil {
+			continue
+		}
+		subnets, err := retrieveAttSubnets(node.Record())
+		if err != nil {
+			return false, errors.Wrap(err, "could not retrieve subnets")
+		}
+		for _, comIdx := range subnets {
+			if comIdx == index {
+				multiAddr, err := convertToSingleMultiAddr(node)
+				if err != nil {
+					return false, err
+				}
+				info, err := peer.AddrInfoFromP2pAddr(multiAddr)
+				if err != nil {
+					return false, err
+				}
+				if s.peers.IsActive(info.ID) {
+					exists = true
+					continue
+				}
+				if s.host.Network().Connectedness(info.ID) == network.Connected {
+					exists = true
+					continue
+				}
+				s.peers.Add(info.ID, multiAddr, network.DirUnknown, subnets)
+				if err := s.connectWithPeer(*info); err != nil {
+					log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+				}
+				exists = true
+			}
+		}
+	}
+	return exists, nil
+}
+
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
 		nodes := s.dv5Listener.LookupRandom()
-		multiAddresses := convertToMultiAddr(nodes)
+		multiAddresses := s.processPeers(nodes)
 		s.connectWithAllPeers(multiAddresses)
 	})
 }
@@ -311,23 +377,66 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	for _, info := range addrInfos {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
-			if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
-				log.WithFields(logrus.Fields{"peer": info.ID.String(),
-					"reason": "at peer limit"}).Trace("Not dialing peer")
-				return
-			}
-			if info.ID == s.host.ID() {
-				return
-			}
-			if s.Peers().IsBad(info.ID) {
-				return
-			}
-			if err := s.host.Connect(s.ctx, info); err != nil {
+			if err := s.connectWithPeer(info); err != nil {
 				log.Errorf("Could not connect with peer %s: %v", info.String(), err)
-				s.Peers().IncrementBadResponses(info.ID)
 			}
 		}(info)
 	}
+}
+
+func (s *Service) connectWithPeer(info peer.AddrInfo) error {
+	if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
+		log.WithFields(logrus.Fields{"peer": info.ID.String(),
+			"reason": "at peer limit"}).Trace("Not dialing peer")
+		return nil
+	}
+	if info.ID == s.host.ID() {
+		return nil
+	}
+	if s.Peers().IsBad(info.ID) {
+		return nil
+	}
+	if err := s.host.Connect(s.ctx, info); err != nil {
+		s.Peers().IncrementBadResponses(info.ID)
+		return err
+	}
+	return nil
+}
+
+// process new peers that come in from our dht.
+func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
+	var multiAddrs []ma.Multiaddr
+	for _, node := range nodes {
+		// ignore nodes with no ip address stored.
+		if node.IP() == nil {
+			continue
+		}
+		multiAddr, err := convertToSingleMultiAddr(node)
+		if err != nil {
+			log.WithError(err).Error("Could not convert to multiAddr")
+			continue
+		}
+		peerData, err := peer.AddrInfoFromP2pAddr(multiAddr)
+		if err != nil {
+			log.WithError(err).Error("Could not get peer id")
+			continue
+		}
+		if s.peers.IsActive(peerData.ID) {
+			continue
+		}
+		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
+			continue
+		}
+		indices, err := retrieveAttSubnets(node.Record())
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve attestation subnets")
+			continue
+		}
+		// add peer to peer handler.
+		s.peers.Add(peerData.ID, multiAddr, network.DirUnknown, indices)
+		multiAddrs = append(multiAddrs, multiAddr)
+	}
+	return multiAddrs
 }
 
 func (s *Service) connectToBootnodes() error {
@@ -358,10 +467,10 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 	return nil
 }
 
-func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
+func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {
 	var correctAddr ma.Multiaddr
 	for _, addr := range addrs {
-		if strings.Contains(addr.String(), "/ip4/") {
+		if strings.Contains(addr.String(), "/ip4/") || strings.Contains(addr.String(), "/ip6/") {
 			correctAddr = addr
 			break
 		}
@@ -374,13 +483,16 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 	}
 }
 
-func logExternalIP4Addr(id peer.ID, addr string, port uint) {
+func logExternalIPAddr(id peer.ID, addr string, port uint) {
 	if addr != "" {
-		p := strconv.FormatUint(uint64(port), 10)
-
+		multiAddr, err := multiAddressBuilder(addr, port)
+		if err != nil {
+			log.Errorf("Could not create multiaddress: %v", err)
+			return
+		}
 		log.WithField(
 			"multiAddr",
-			"/ip4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
+			multiAddr.String()+"/p2p/"+id.String(),
 		).Info("Node started external p2p server")
 	}
 }

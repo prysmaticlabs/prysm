@@ -21,8 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var (

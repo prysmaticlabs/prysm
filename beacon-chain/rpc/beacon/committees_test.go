@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,6 +16,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -35,7 +37,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	}
 
 	m := &mock.ChainService{
-		State: headState,
+		State:   headState,
+		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot))) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
@@ -87,7 +90,8 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2)
 
 	m := &mock.ChainService{
-		State: headState,
+		State:   headState,
+		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot))) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
