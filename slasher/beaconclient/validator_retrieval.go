@@ -8,8 +8,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// RequestHistoricalAttestations requests all indexed attestations for a
-// given epoch from a beacon node via gRPC.
+// RequestValidator requests validator public key from a beacon node via gRPC.
 func (bs *Service) RequestValidator(
 	ctx context.Context,
 	validatorIdx uint64,
