@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	// epochSpansCacheSize defines the max number of epoch spans the cache can hold.
+	// validatorsCacheSize defines the max number of validators public keys the cache can hold.
 	validatorsCacheSize = 300000
-	// Metrics for the span cache.
+	// Metrics for the validator cache.
 	validatorsCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "validators_cache_hit",
 		Help: "The total number of cache hits on the validators cache.",
@@ -20,12 +20,12 @@ var (
 	})
 )
 
-// ValidatorsCache is used to store the spans needed on a per-epoch basis for slashing detection.
+// ValidatorsCache is used to store the public keys needed for signature verification.
 type ValidatorsCache struct {
 	cache *lru.Cache
 }
 
-// NewEpochSpansCache initializes the map and underlying cache.
+// NewValidatorsCache initializes the cache.
 func NewValidatorsCache(size int, onEvicted func(key interface{}, value interface{})) (*ValidatorsCache, error) {
 	if size != 0 {
 		validatorsCacheSize = size
@@ -65,7 +65,7 @@ func (c *ValidatorsCache) Has(validatorIdx uint64) bool {
 	return c.cache.Contains(validatorIdx)
 }
 
-// Clear removes all keys from the SpanCache.
+// Clear removes all keys from the ValidatorCache.
 func (c *ValidatorsCache) Clear() {
 	c.cache.Purge()
 }
