@@ -358,6 +358,15 @@ func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 
 	highestSlot := index - 1
 	highestSlot = int(math.Max(0, float64(highestSlot)))
+
+	if highestSlot == 0 {
+		gBlock, err := k.GenesisBlock(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return []*ethpb.SignedBeaconBlock{gBlock}, nil
+	}
+
 	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)

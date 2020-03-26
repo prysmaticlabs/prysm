@@ -250,7 +250,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 	}
 
 	if len(lastSaved) != 1 {
-		return [32]byte{}, 0, errors.New("Highest saved state does not equal to one")
+		return [32]byte{}, 0, fmt.Errorf("highest saved block does not equal to 1, it equals to %d", len(lastSaved))
 	}
 
 	r, err := ssz.HashTreeRoot(lastSaved[0].Block)
@@ -279,7 +279,7 @@ func (s *State) lastSavedState(ctx context.Context, slot uint64) (*state.BeaconS
 	}
 
 	if len(lastSaved) != 1 {
-		return nil, errors.New("Highest saved state does not equal to one")
+		return nil, fmt.Errorf("highest saved state does not equal to 1, it equals to %d", len(lastSaved))
 	}
 
 	return lastSaved[0], nil

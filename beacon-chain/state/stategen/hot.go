@@ -3,6 +3,7 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -83,7 +84,7 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	if boundaryState == nil {
 		// Boundary state not available, get the last available state and start from there.
 		// This could happen if users toggle feature flags in between sync.
-		boundaryState, err = s.lastSavedState(ctx, helpers.StartSlot(summary.Slot))
+		boundaryState, err = s.lastSavedState(ctx, helpers.StartSlot(helpers.SlotToEpoch(summary.Slot)))
 		if err != nil {
 			return nil, err
 		}
@@ -91,6 +92,7 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 			return nil, errUnknownBoundaryState
 		}
 	}
+	fmt.Println("boundary state slot ", boundaryState.Slot())
 
 	// Don't need to replay the blocks if we're already on an epoch boundary,
 	// the target slot is the same as the state slot.
