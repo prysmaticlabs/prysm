@@ -248,7 +248,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Rate limit how many blocks we keep in the memory.
-	if len(s.initSyncBlocks) > int(params.BeaconConfig().SlotsPerEpoch) {
+	if len(s.initSyncBlocks) > 2*int(params.BeaconConfig().SlotsPerEpoch) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.initSyncBlocks); err != nil {
 			return err
 		}
@@ -284,9 +284,9 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
+		//if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+		//	return errors.Wrap(err, "could not save new justified")
+		//}
 
 		if featureconfig.Get().NewStateMgmt {
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)

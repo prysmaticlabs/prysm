@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -209,10 +208,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
-			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
-				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
-				continue
-			}
 			s.blockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},

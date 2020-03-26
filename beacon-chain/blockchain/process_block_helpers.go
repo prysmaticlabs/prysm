@@ -263,10 +263,11 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	if cpt.Epoch > s.bestJustifiedCheckpt.Epoch {
 		s.bestJustifiedCheckpt = cpt
 	}
-	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
-	if err != nil {
-		return err
-	}
+	//canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
+	//if err != nil {
+	//	return err
+	//}
+	canUpdate := true
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
@@ -278,6 +279,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
+		var err error
 		if justifiedState == nil {
 			if s.beaconDB.HasState(ctx, justifiedRoot) {
 				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
