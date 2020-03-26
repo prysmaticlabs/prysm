@@ -11,7 +11,7 @@ func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att)
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
@@ -64,7 +64,7 @@ func (p *AttCaches) DeleteBlockAttestation(att *ethpb.Attestation) error {
 	if att == nil {
 		return nil
 	}
-	r, err := hashFn(att)
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
