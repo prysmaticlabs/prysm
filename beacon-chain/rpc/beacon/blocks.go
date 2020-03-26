@@ -4,6 +4,8 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -241,7 +243,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
-	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
+	headBlockRoot, err := stateutil.BlockRoot(headBlock.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}

@@ -88,6 +88,56 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	return enc
 }
 
+func attestationRoot(att *ethpb.Attestation) ([32]byte, error) {
+	fieldRoots := make([][32]byte, 2)
+	if att.Data != nil {
+		dataRoot, err := attestationDataRoot(att.Data)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[0] = dataRoot
+	}
+	packedSig, err := pack([][]byte{att.Signature})
+	if err != nil {
+		return [32]byte{}, err
+	}
+	sigRoot, err := bitwiseMerkleize(packedSig, uint64(len(packedSig)), uint64(len(packedSig)))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	fieldRoots[1] = sigRoot
+	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+}
+
+func blockAttestationRoot(atts []*ethpb.Attestation) ([32]byte, error) {
+	roots := make([][32]byte, len(atts))
+	for i := 0; i < len(atts); i++ {
+		pendingRoot, err := attestationRoot(atts[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
+		}
+		roots[i] = pendingRoot
+	}
+
+	attsRootsRoot, err := bitwiseMerkleizeArrays(
+		roots,
+		uint64(len(roots)),
+		params.BeaconConfig().MaxAttestations,
+	)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute block attestations merkleization")
+	}
+	attsLenBuf := new(bytes.Buffer)
+	if err := binary.Write(attsLenBuf, binary.LittleEndian, uint64(len(atts))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal epoch attestations length")
+	}
+	// We need to mix in the length of the slice.
+	attsLenRoot := make([]byte, 32)
+	copy(attsLenRoot, attsLenBuf.Bytes())
+	res := mixInLength(attsRootsRoot, attsLenRoot)
+	return res, nil
+}
+
 func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 

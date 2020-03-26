@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -30,6 +32,77 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		fieldRoots[3] = bodyRoot[:]
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+}
+
+func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
+	fieldRoots := make([][32]byte, 4)
+	if blk != nil {
+		headerSlotBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(headerSlotBuf, blk.Slot)
+		headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
+		fieldRoots[0] = headerSlotRoot
+		parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
+		fieldRoots[1] = parentRoot
+		stateRoot := bytesutil.ToBytes32(blk.StateRoot)
+		fieldRoots[2] = stateRoot
+		bodyRoot, err := BlockBodyRoot(blk.Body)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[3] = bodyRoot
+	}
+	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+}
+
+func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
+	fieldRoots := make([][32]byte, 8)
+	if body != nil {
+		packedRandao, err := pack([][]byte{body.RandaoReveal})
+		if err != nil {
+			return [32]byte{}, err
+		}
+		randaoRoot, err := bitwiseMerkleize(packedRandao, uint64(len(packedRandao)), uint64(len(packedRandao)))
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[0] = randaoRoot
+		eth1Root, err := Eth1Root(body.Eth1Data)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[1] = eth1Root
+		graffitiRoot := bytesutil.ToBytes32(body.Graffiti)
+		fieldRoots[2] = graffitiRoot
+
+		proposerSlashingsRoot, err := ssz.HashTreeRoot(body.ProposerSlashings)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[3] = proposerSlashingsRoot
+		attesterSlashingsRoot, err := ssz.HashTreeRoot(body.AttesterSlashings)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[4] = attesterSlashingsRoot
+		attsRoot, err := blockAttestationRoot(body.Attestations)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[5] = attsRoot
+
+		depositRoot, err := ssz.HashTreeRoot(body.Deposits)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[6] = depositRoot
+
+		exitRoot, err := ssz.HashTreeRoot(body.VoluntaryExits)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[7] = exitRoot
+	}
+	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // Eth1Root computes the HashTreeRoot Merkleization of

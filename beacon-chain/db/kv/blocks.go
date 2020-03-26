@@ -7,6 +7,8 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -190,7 +192,7 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 func (k *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
 	defer span.End()
-	blockRoot, err := ssz.HashTreeRoot(signed.Block)
+	blockRoot, err := stateutil.BlockRoot(signed.Block)
 	if err != nil {
 		return err
 	}

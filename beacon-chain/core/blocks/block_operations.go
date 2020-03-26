@@ -58,6 +58,25 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uin
 	return nil
 }
 
+func verifyBlockRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte, domain uint64) error {
+	publicKey, err := bls.PublicKeyFromBytes(pub)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to public key")
+	}
+	sig, err := bls.SignatureFromBytes(signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
+	root, err := stateutil.BlockRoot(blk)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root")
+	}
+	if !sig.Verify(root[:], publicKey, domain) {
+		return ErrSigFailedToVerify
+	}
+	return nil
+}
+
 // Deprecated: This method uses deprecated ssz.SigningRoot.
 func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
@@ -223,7 +242,7 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-	if err := verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
+	if err := verifyBlockRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, ErrSigFailedToVerify
 	}
 
@@ -286,7 +305,7 @@ func ProcessBlockHeaderNoVerify(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
-	bodyRoot, err := ssz.HashTreeRoot(block.Body)
+	bodyRoot, err := stateutil.BlockBodyRoot(block.Body)
 	if err != nil {
 		return nil, err
 	}
