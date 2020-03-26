@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -244,6 +245,14 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
+	}
+
+	// Rate limit how many blocks we keep in the memory.
+	if len(s.initSyncBlocks) > int(params.BeaconConfig().SlotsPerEpoch) {
+		if err := s.beaconDB.SaveBlocks(ctx, s.initSyncBlocks); err != nil {
+			return err
+		}
+		s.initSyncBlocks = []*ethpb.SignedBeaconBlock{}
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
