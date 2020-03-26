@@ -39,6 +39,17 @@ build_in_debug_mode = transition(
     outputs = ["//command_line_option:compilation_mode"],
 )
 
+def _alpine_transition_impl(settings, attr):
+    return {
+        "//tools:base_image": "alpine",
+    }
+
+use_alpine = transition(
+    implementation = _alpine_transition_impl,
+    inputs = [],
+    outputs = ["//tools:base_image"],
+)
+
 # Defines a rule implementation that essentially returns all of the providers from the image attr.
 def _go_image_debug_impl(ctx):
     img = ctx.attr.image[0]
@@ -55,6 +66,17 @@ go_image_debug = rule(
     attrs = {
         "image": attr.label(
             cfg = build_in_debug_mode,
+            executable = True,
+        ),
+        # Whitelist is required or bazel complains.
+        "_whitelist_function_transition": attr.label(default = "@bazel_tools//tools/whitelists/function_transition_whitelist"),
+    },
+)
+go_image_alpine = rule(
+    _go_image_debug_impl,
+    attrs = {
+        "image": attr.label(
+            cfg = use_alpine,
             executable = True,
         ),
         # Whitelist is required or bazel complains.
