@@ -339,39 +339,10 @@ func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, er
 		if err != nil {
 			return err
 		}
-		highestSlot := highestIndex - 1
-		highestSlot = int(math.Max(0, float64(highestSlot)))
-		f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
-
-		keys, err := getBlockRootsByFilter(ctx, tx, f)
-		if err != nil {
-			return err
-		}
-
-		if len(keys) == 0 {
-			return errors.New("could not get one block root to get state")
-		}
-
-		stateBkt := tx.Bucket(stateBucket)
-		for i := range keys {
-			enc := stateBkt.Get(keys[i][:])
-			if enc == nil {
-				continue
-			}
-			pbState, err := createState(enc)
-			if err != nil {
-				return err
-			}
-			s, err := state.InitializeFromProtoUnsafe(pbState)
-			if err != nil {
-				return err
-			}
-			states = append(states, s)
-		}
+		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
 
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -381,6 +352,76 @@ func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, er
 	}
 
 	return states, nil
+}
+
+// HighestSlotStatesBelow returns the states with the highest slot below the input slot
+// from the db. Ideally there should just be one state per slot, but given validator
+// can double propose, a single slot could have multiple block roots and
+// reuslts states. This returns a list of states.
+func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotStatesBelow")
+	defer span.End()
+	var states []*state.BeaconState
+	err := k.db.View(func(tx *bolt.Tx) error {
+		slotBkt := tx.Bucket(slotsHasObjectBucket)
+		savedSlots := slotBkt.Get(savedStateSlotsKey)
+		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
+		if err != nil {
+			return err
+		}
+		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
+
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(states) == 0 {
+		return nil, errors.New("could not get one state")
+	}
+
+	return states, nil
+}
+
+// statesAtSlotBitfieldIndex retrieves the states in DB given the input index. The index represents
+// the position of the slot bitfield the saved state maps to.
+func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.statesAtSlotBitfieldIndex")
+	defer span.End()
+
+	highestSlot := index - 1
+	highestSlot = int(math.Max(0, float64(highestSlot)))
+	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
+
+	keys, err := getBlockRootsByFilter(ctx, tx, f)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(keys) == 0 {
+		return nil, errors.New("could not get one block root to get state")
+	}
+
+	stateBkt := tx.Bucket(stateBucket)
+	states := make([]*state.BeaconState, 0, len(keys))
+	for i := range keys {
+		enc := stateBkt.Get(keys[i][:])
+		if enc == nil {
+			continue
+		}
+		pbState, err := createState(enc)
+		if err != nil {
+			return nil, err
+		}
+		s, err := state.InitializeFromProtoUnsafe(pbState)
+		if err != nil {
+			return nil, err
+		}
+		states = append(states, s)
+	}
+
+	return states, err
 }
 
 // setStateSlotBitField sets the state slot bit in DB.

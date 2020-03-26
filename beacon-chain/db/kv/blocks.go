@@ -316,26 +316,65 @@ func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlo
 		if err != nil {
 			return err
 		}
-		highestSlot := highestIndex - 1
-		highestSlot = int(math.Max(0, float64(highestSlot)))
-		f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
 
-		keys, err := getBlockRootsByFilter(ctx, tx, f)
+		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
 		if err != nil {
 			return err
 		}
+		return nil
+	})
 
-		bBkt := tx.Bucket(blocksBucket)
-		for i := 0; i < len(keys); i++ {
-			encoded := bBkt.Get(keys[i])
-			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(encoded, block); err != nil {
-				return err
-			}
-			blocks = append(blocks, block)
+	return blocks, err
+}
+
+// HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
+func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
+	defer span.End()
+
+	blocks := make([]*ethpb.SignedBeaconBlock, 0)
+	err := k.db.View(func(tx *bolt.Tx) error {
+		sBkt := tx.Bucket(slotsHasObjectBucket)
+		savedSlots := sBkt.Get(savedBlockSlotsKey)
+		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
+		if err != nil {
+			return err
+		}
+		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
+		if err != nil {
+			return err
 		}
 		return nil
 	})
+
+	return blocks, err
+}
+
+// blocksAtSlotBitfieldIndex retrieves the blocks in DB given the input index. The index represents
+// the position of the slot bitfield the saved block maps to.
+func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
+	defer span.End()
+
+	highestSlot := index - 1
+	highestSlot = int(math.Max(0, float64(highestSlot)))
+	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
+
+	keys, err := getBlockRootsByFilter(ctx, tx, f)
+	if err != nil {
+		return nil, err
+	}
+
+	blocks := make([]*ethpb.SignedBeaconBlock, 0, len(keys))
+	bBkt := tx.Bucket(blocksBucket)
+	for i := 0; i < len(keys); i++ {
+		encoded := bBkt.Get(keys[i])
+		block := &ethpb.SignedBeaconBlock{}
+		if err := decode(encoded, block); err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
+	}
 
 	return blocks, err
 }
