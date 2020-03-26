@@ -39,7 +39,14 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 		IP:   ipAddr,
 		Port: int(cfg.UDPPort),
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	// assume ip is either ipv4 or ipv6
+	networkVersion := ""
+	if ipAddr.To4() != nil {
+		networkVersion = "udp4"
+	} else {
+		networkVersion = "udp6"
+	}
+	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
