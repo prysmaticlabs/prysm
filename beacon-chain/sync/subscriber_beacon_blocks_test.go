@@ -68,10 +68,11 @@ func TestDeleteAttsInPool(t *testing.T) {
 	r := &Service{
 		attPool: attestations.NewPool(),
 	}
-	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}}
-	att2 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}}
-	att3 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}}
-	att4 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}}
+	data := &ethpb.AttestationData{}
+	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}, Data: data}
+	att2 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}, Data: data}
+	att3 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}, Data: data}
+	att4 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: data}
 	if err := r.attPool.SaveAggregatedAttestation(att1); err != nil {
 		t.Fatal(err)
 	}

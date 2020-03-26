@@ -3,17 +3,19 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
 func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
+	if att == nil || att.Data == nil {
+		return nil
+	}
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
-	r, err := ssz.HashTreeRoot(att.Data)
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
@@ -78,10 +80,13 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeInde
 
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
 func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
+	if att == nil || att.Data == nil {
+		return nil
+	}
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
-	r, err := ssz.HashTreeRoot(att.Data)
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
@@ -110,7 +115,10 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 
 // HasAggregatedAttestation checks if the input attestations has already existed in cache.
 func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, error) {
-	r, err := ssz.HashTreeRoot(att.Data)
+	if att == nil || att.Data == nil {
+		return false, nil
+	}
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return false, errors.Wrap(err, "could not tree hash attestation")
 	}
