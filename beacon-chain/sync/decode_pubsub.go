@@ -16,6 +16,7 @@ func (r *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 	}
 	topic := msg.TopicIDs[0]
 	topic = strings.TrimSuffix(topic, r.p2p.Encoding().ProtocolSuffix())
+	topic = r.replaceForkDigest(topic)
 	base, ok := p2p.GossipTopicMappings[topic]
 	if !ok {
 		return nil, fmt.Errorf("no message mapped for topic %s", topic)
@@ -25,4 +26,11 @@ func (r *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 		return nil, err
 	}
 	return m, nil
+}
+
+// Replaces our fork digest with the formatter.
+func (r *Service) replaceForkDigest(topic string) string {
+	subStrings := strings.Split(topic, "/")
+	subStrings[2] = "%x"
+	return strings.Join(subStrings, "/")
 }

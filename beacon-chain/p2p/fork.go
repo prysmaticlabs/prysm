@@ -19,6 +19,12 @@ import (
 // ENR key used for eth2-related fork data.
 const eth2ENRKey = "eth2"
 
+// ForkDigest returns the current fork digest of
+// the node.
+func (s *Service) ForkDigest() ([4]byte, error) {
+	return createForkDigest(s.genesisTime, s.genesisValidatorsRoot)
+}
+
 // Compares fork ENRs between an incoming peer's record and our node's
 // local record values for current and next fork version/epoch.
 func (s *Service) compareForkENR(record *enr.Record) error {
@@ -66,16 +72,13 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	return nil
 }
 
-// Adds a fork entry as an ENR record under the eth2EnrKey for
-// the local node. The fork entry is an ssz-encoded enrForkID type
-// which takes into account the current fork version from the current
-// epoch to create a fork digest, the next fork version,
-// and the next fork epoch.
-func addForkEntry(
-	node *enode.LocalNode,
+// Creates a fork digest from a genesis time and genesis
+// validators root, utilizing the current slot to determine
+// the active fork version in the node.
+func createForkDigest(
 	genesisTime time.Time,
 	genesisValidatorsRoot []byte,
-) (*enode.LocalNode, error) {
+) ([4]byte, error) {
 	currentSlot := helpers.SlotsSince(genesisTime)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
@@ -92,6 +95,23 @@ func addForkEntry(
 	}
 
 	digest, err := helpers.ComputeForkDigest(currentForkVersion, genesisValidatorsRoot)
+	if err != nil {
+		return [4]byte{}, err
+	}
+	return digest, nil
+}
+
+// Adds a fork entry as an ENR record under the eth2EnrKey for
+// the local node. The fork entry is an ssz-encoded enrForkID type
+// which takes into account the current fork version from the current
+// epoch to create a fork digest, the next fork version,
+// and the next fork epoch.
+func addForkEntry(
+	node *enode.LocalNode,
+	genesisTime time.Time,
+	genesisValidatorsRoot []byte,
+) (*enode.LocalNode, error) {
+	digest, err := createForkDigest(genesisTime, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
