@@ -94,8 +94,8 @@ func (sm *stateMachine) trigger(name eventID, epoch uint64, data interface{}) er
 		return fmt.Errorf("event not found: %v", name)
 	}
 
-	ind := sm.findEpochState(epoch)
-	if ind >= len(sm.epochs) {
+	ind, ok := sm.findEpochState(epoch)
+	if !ok {
 		return fmt.Errorf("state for %v epoch not found", epoch)
 	}
 
@@ -126,8 +126,8 @@ func (sm *stateMachine) addEpochState(epoch uint64) {
 
 // removeEpochState frees memory of processed epoch.
 func (sm *stateMachine) removeEpochState(epoch uint64) error {
-	ind := sm.findEpochState(epoch)
-	if ind >= len(sm.epochs) {
+	ind, ok := sm.findEpochState(epoch)
+	if !ok {
 		return fmt.Errorf("state for %v epoch not found", epoch)
 	}
 	sm.epochs[ind].blocks = nil
@@ -137,18 +137,18 @@ func (sm *stateMachine) removeEpochState(epoch uint64) error {
 }
 
 // findEpochState returns index at which state.epoch = epoch, or len(epochs) if not found.
-func (sm *stateMachine) findEpochState(epoch uint64) int {
+func (sm *stateMachine) findEpochState(epoch uint64) (int, bool) {
 	for i, state := range sm.epochs {
 		if epoch == state.epoch {
-			return i
+			return i, true
 		}
 	}
-	return len(sm.epochs)
+	return len(sm.epochs), false
 }
 
 // isLowestEpochState checks whether a given epoch is the lowest for which we know epoch state.
 func (sm *stateMachine) isLowestEpochState(epoch uint64) bool {
-	if ind := sm.findEpochState(epoch); ind == len(sm.epochs) {
+	if _, ok := sm.findEpochState(epoch); !ok {
 		return false
 	}
 	for _, state := range sm.epochs {

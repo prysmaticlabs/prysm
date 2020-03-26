@@ -182,8 +182,7 @@ func (q *blocksQueue) loop() {
 			}
 			// Update state of an epoch for which data is received.
 			epoch := helpers.SlotToEpoch(response.start)
-			ind := q.state.findEpochState(epoch)
-			if ind < len(q.state.epochs) {
+			if ind, ok := q.state.findEpochState(epoch); ok {
 				state := q.state.epochs[ind]
 				if err := q.state.trigger(eventDataReceived, state.epoch, response); err != nil {
 					log.WithError(err).Debug("Can not trigger event")
@@ -238,8 +237,8 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			return es.state, response.err
 		}
 
-		ind := q.state.findEpochState(epoch)
-		if ind >= len(q.state.epochs) {
+		ind, ok := q.state.findEpochState(epoch)
+		if !ok {
 			return es.state, errNoEpochState
 		}
 		q.state.epochs[ind].blocks = response.blocks
@@ -256,8 +255,8 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 
 		data := in.(*fetchRequestParams)
 		epoch := helpers.SlotToEpoch(data.start)
-		ind := q.state.findEpochState(epoch)
-		if ind >= len(q.state.epochs) {
+		ind, ok := q.state.findEpochState(epoch)
+		if !ok {
 			return es.state, errNoEpochState
 		}
 		if len(q.state.epochs[ind].blocks) == 0 {
@@ -306,10 +305,10 @@ func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
 
 		data := in.(*fetchRequestParams)
 		epoch := helpers.SlotToEpoch(data.start)
-		ind := q.state.findEpochState(epoch)
-		if ind >= len(q.state.epochs) {
+		if _, ok := q.state.findEpochState(epoch); !ok {
 			return es.state, errNoEpochState
 		}
+
 		// Only the highest epoch with skipped state can trigger extension.
 		highestEpochSlot, err := q.state.highestEpochSlot()
 		if err != nil {

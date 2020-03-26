@@ -184,8 +184,8 @@ func TestStateMachine_trigger(t *testing.T) {
 				if err != nil && !expectHandlerError {
 					t.Error(err)
 				}
-				ind := sm.findEpochState(tt.args.epoch)
-				if ind >= len(sm.epochs) {
+				ind, ok := sm.findEpochState(tt.args.epoch)
+				if !ok {
 					t.Errorf("expected epoch not found: %v", tt.args.epoch)
 					return
 				}
@@ -199,20 +199,20 @@ func TestStateMachine_trigger(t *testing.T) {
 
 func TestStateMachine_findEpochState(t *testing.T) {
 	sm := newStateMachine()
-	if ind := sm.findEpochState(12); ind != 0 {
+	if ind, ok := sm.findEpochState(12); ok || ind != 0 {
 		t.Errorf("unexpected index: %v, want: %v", ind, 0)
 	}
 	sm.addEpochState(12)
-	if ind := sm.findEpochState(12); ind != 0 {
+	if ind, ok := sm.findEpochState(12); !ok || ind != 0 {
 		t.Errorf("unexpected index: %v, want: %v", ind, 0)
 	}
 	sm.addEpochState(13)
 	sm.addEpochState(14)
 	sm.addEpochState(15)
-	if ind := sm.findEpochState(14); ind != 2 {
+	if ind, ok := sm.findEpochState(14); !ok || ind != 2 {
 		t.Errorf("unexpected index: %v, want: %v", ind, 2)
 	}
-	if ind := sm.findEpochState(16); ind != len(sm.epochs) {
+	if ind, ok := sm.findEpochState(16); ok || ind != len(sm.epochs) {
 		t.Errorf("unexpected index: %v, want: %v", ind, len(sm.epochs))
 	}
 }
