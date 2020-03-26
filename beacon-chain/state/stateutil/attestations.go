@@ -28,7 +28,7 @@ func PendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 	fieldRoots := [][32]byte{}
 	if att != nil {
 		// Bitfield.
-		aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
+		aggregationRoot, err := bitlistRoot(att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -92,7 +92,7 @@ func attestationRoot(att *ethpb.Attestation) ([32]byte, error) {
 	fieldRoots := make([][32]byte, 3)
 
 	// Bitfield.
-	aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
+	aggregationRoot, err := bitlistRoot(att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
 	if err != nil {
 		return [32]byte{}, err
 	}
