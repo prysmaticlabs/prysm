@@ -187,12 +187,13 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			break
 		}
 
+		c, _ := s.db.PrevFinalizedCheckpoint(ctx)
 		blocks, err := request(
-			s.chain.HeadSlot()+1, // start
-			1,                    // step
-			blockBatchSize,       // count
-			peers,                // peers
-			0,                    // remainder
+			helpers.StartSlot(c.Epoch)+1, // start
+			1,                            // step
+			blockBatchSize,               // count
+			peers,                        // peers
+			0,                            // remainder
 		)
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
