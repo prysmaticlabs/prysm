@@ -136,6 +136,18 @@ load(
 
 container_repositories()
 
+load(
+    "@io_bazel_rules_docker//container:container.bzl",
+    "container_pull",
+)
+
+container_pull(
+    name = "alpine_cc_linux_amd64",
+    digest = "sha256:d5cee45549351be7a03a96c7b319b9c1808979b10888b79acca4435cc068005e",
+    registry = "index.docker.io",
+    repository = "frolvlad/alpine-glibc",
+)
+
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
