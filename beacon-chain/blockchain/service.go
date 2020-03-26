@@ -140,7 +140,7 @@ func (s *Service) Start() {
 		if featureconfig.Get().NewStateMgmt {
 			beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
 			if err != nil {
-				log.Fatalf("Could not fetch beacon state: %v", err)
+				log.Fatalf("Could not fetch beacon state by root: %v", err)
 			}
 		} else {
 			beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))

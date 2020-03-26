@@ -13,7 +13,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -35,13 +34,9 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 		return nil, errors.Wrap(err, "could not get last saved block")
 	}
 
-	lastBlockRootForState, err := s.lastSavedState(ctx, targetSlot)
+	lastState, err := s.lastSavedState(ctx, targetSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get last valid state")
-	}
-	lastState, err := s.beaconDB.State(ctx, lastBlockRootForState)
-	if err != nil {
-		return nil, err
 	}
 	if lastState == nil {
 		return nil, errUnknownState
@@ -249,64 +244,45 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 		return gRoot, 0, nil
 	}
 
-	// Lower bound set as last archived slot is a reasonable assumption given
-	// block is saved at an archived point.
-	filter := filters.NewFilter().SetStartSlot(s.splitInfo.slot).SetEndSlot(slot)
-	rs, err := s.beaconDB.BlockRoots(ctx, filter)
+	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot+1)
 	if err != nil {
-		return [32]byte{}, 0, err
-	}
-	if len(rs) == 0 {
-		// Return zero hash if there hasn't been any block in the DB yet.
-		return params.BeaconChainConfig{}.ZeroHash, 0, nil
-	}
-	lastRoot := rs[len(rs)-1]
-
-	b, err := s.beaconDB.Block(ctx, lastRoot)
-	if err != nil {
-		return [32]byte{}, 0, err
-	}
-	if b == nil || b.Block == nil {
 		return [32]byte{}, 0, errUnknownBlock
 	}
 
-	return lastRoot, b.Block.Slot, nil
+	if len(lastSaved) != 1 {
+		return [32]byte{}, 0, errors.New("Highest saved state does not equal to one")
+	}
+
+	r, err := ssz.HashTreeRoot(lastSaved[0].Block)
+	if err != nil {
+		return [32]byte{}, 0, err
+	}
+
+	return r, lastSaved[0].Block.Slot, nil
 }
 
 // This finds the last saved state in DB from searching backwards from input slot,
 // it returns the block root of the block which was used to produce the state.
 // This is used by both hot and cold state management.
-func (s *State) lastSavedState(ctx context.Context, slot uint64) ([32]byte, error) {
+func (s *State) lastSavedState(ctx context.Context, slot uint64) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedState")
 	defer span.End()
 
 	// Handle the genesis case where the input slot is 0.
 	if slot == 0 {
-		gRoot, err := s.genesisRoot(ctx)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		return gRoot, nil
+		return s.beaconDB.GenesisState(ctx)
 	}
 
-	// Lower bound set as last archived slot is a reasonable assumption given
-	// state is saved at an archived point.
-	filter := filters.NewFilter().SetStartSlot(s.splitInfo.slot).SetEndSlot(slot)
-	rs, err := s.beaconDB.BlockRoots(ctx, filter)
+	lastSaved, err := s.beaconDB.HighestSlotStatesBelow(ctx, slot+1)
 	if err != nil {
-		return [32]byte{}, err
+		return nil, errUnknownState
 	}
-	if len(rs) == 0 {
-		// Return zero hash if there hasn't been any block in the DB yet.
-		return params.BeaconChainConfig{}.ZeroHash, nil
+
+	if len(lastSaved) != 1 {
+		return nil, errors.New("Highest saved state does not equal to one")
 	}
-	for i := len(rs) - 1; i >= 0; i-- {
-		// Stop until a state is saved.
-		if s.beaconDB.HasState(ctx, rs[i]) {
-			return rs[i], nil
-		}
-	}
-	return [32]byte{}, errUnknownState
+
+	return lastSaved[0], nil
 }
 
 // This returns the genesis root.

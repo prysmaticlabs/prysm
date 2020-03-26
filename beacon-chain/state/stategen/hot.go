@@ -83,11 +83,7 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	if boundaryState == nil {
 		// Boundary state not available, get the last available state and start from there.
 		// This could happen if users toggle feature flags in between sync.
-		r, err := s.lastSavedState(ctx, helpers.StartSlot(summary.Slot))
-		if err != nil {
-			return nil, err
-		}
-		boundaryState, err = s.beaconDB.State(ctx, r)
+		boundaryState, err = s.lastSavedState(ctx, helpers.StartSlot(summary.Slot))
 		if err != nil {
 			return nil, err
 		}

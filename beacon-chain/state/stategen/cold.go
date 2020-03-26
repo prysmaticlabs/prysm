@@ -3,6 +3,7 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -206,6 +207,7 @@ func (s *State) blockRootSlot(ctx context.Context, blockRoot [32]byte) (uint64, 
 	}
 
 	// Couldn't find state summary in DB. Retry with block bucket to get block slot.
+	fmt.Println(hex.EncodeToString(blockRoot[:]))
 	b, err := s.beaconDB.Block(ctx, blockRoot)
 	if err != nil {
 		return 0, err
