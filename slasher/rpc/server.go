@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/slasher/db"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
