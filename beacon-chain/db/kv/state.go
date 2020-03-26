@@ -339,7 +339,7 @@ func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, er
 		if err != nil {
 			return err
 		}
-		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
+		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
 
 		return err
 	})
@@ -369,7 +369,7 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 		if err != nil {
 			return err
 		}
-		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, uint64(highestIndex))
+		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
 
 		return err
 	})
@@ -386,13 +386,13 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 
 // statesAtSlotBitfieldIndex retrieves the states in DB given the input index. The index represents
 // the position of the slot bitfield the saved state maps to.
-func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) ([]*state.BeaconState, error) {
+func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.statesAtSlotBitfieldIndex")
 	defer span.End()
 
 	highestSlot := index - 1
-	highestSlot = uint64(math.Max(0, float64(highestSlot)))
-	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
+	highestSlot = int(math.Max(0, float64(highestSlot)))
+	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)
 	if err != nil {
