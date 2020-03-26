@@ -15,7 +15,7 @@ func TestBeaconAggregateProofSubscriber_CanSave(t *testing.T) {
 		attPool: attestations.NewPool(),
 	}
 
-	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x07}}, AggregatorIndex: 100}
+	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x07}, Data: &ethpb.AttestationData{Slot: 4}}, AggregatorIndex: 100}
 	if err := r.beaconAggregateProofSubscriber(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}

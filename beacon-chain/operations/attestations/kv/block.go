@@ -3,13 +3,15 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
 func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
-	r, err := ssz.HashTreeRoot(att.Data)
+	if att == nil {
+		return nil
+	}
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
@@ -59,7 +61,10 @@ func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
 
 // DeleteBlockAttestation deletes a block attestation in cache.
 func (p *AttCaches) DeleteBlockAttestation(att *ethpb.Attestation) error {
-	r, err := ssz.HashTreeRoot(att.Data)
+	if att == nil {
+		return nil
+	}
+	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
