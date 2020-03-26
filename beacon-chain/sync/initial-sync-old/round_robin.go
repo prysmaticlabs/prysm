@@ -208,6 +208,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
+			//if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+			//	log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
+			//	continue
+			//}
 			s.blockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
