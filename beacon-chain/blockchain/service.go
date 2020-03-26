@@ -178,9 +178,11 @@ func (s *Service) Start() {
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		if finalizedCheckpoint.Epoch > 1 {
-			if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
-				log.WithError(err).Warn("Could not prune old states")
+		if !featureconfig.Get().NewStateMgmt {
+			if finalizedCheckpoint.Epoch > 1 {
+				if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
+					log.WithError(err).Warn("Could not prune old states")
+				}
 			}
 		}
 
