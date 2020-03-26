@@ -9,6 +9,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -178,13 +180,16 @@ func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 
-	bs := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
+	bs, err := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
 		BeaconCert:            beaconCert,
 		SlasherDB:             s.db,
 		BeaconProvider:        beaconProvider,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 	})
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize beacon client")
+	}
 	return s.services.RegisterService(bs)
 }
 
