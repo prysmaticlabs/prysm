@@ -175,13 +175,12 @@ func (sm *stateMachine) highestEpochSlot() (uint64, error) {
 
 // String returns human readable representation of a state.
 func (sm *stateMachine) String() string {
-
 	return fmt.Sprintf("%v", sm.epochs)
 }
 
 // String returns human-readable representation of an epoch state.
 func (es *epochState) String() string {
-	return fmt.Sprintf("%v:%v", es.epoch, es.state)
+	return fmt.Sprintf("%d:%s", es.epoch, es.state)
 }
 
 // String returns human-readable representation of a state.
