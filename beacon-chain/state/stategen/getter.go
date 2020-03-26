@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -14,6 +15,11 @@ import (
 func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
+
+	// Genesis case. If block root is zero hash, short cut and use what's stored in DB.
+	if blockRoot == params.BeaconConfig().ZeroHash {
+		return s.beaconDB.State(ctx, blockRoot)
+	}
 
 	slot, err := s.blockRootSlot(ctx, blockRoot)
 	if err != nil {
