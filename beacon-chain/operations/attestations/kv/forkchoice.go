@@ -8,6 +8,9 @@ import (
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
 func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
+	if att == nil {
+		return nil
+	}
 	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
@@ -46,6 +49,9 @@ func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 
 // DeleteForkchoiceAttestation deletes a forkchoice attestation in cache.
 func (p *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
+	if att == nil {
+		return nil
+	}
 	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")

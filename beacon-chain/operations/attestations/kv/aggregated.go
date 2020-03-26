@@ -9,6 +9,9 @@ import (
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
 func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
+	if att == nil || att.Data == nil {
+		return nil
+	}
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
@@ -77,6 +80,9 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeInde
 
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
 func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
+	if att == nil || att.Data == nil {
+		return nil
+	}
 	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
@@ -109,6 +115,9 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 
 // HasAggregatedAttestation checks if the input attestations has already existed in cache.
 func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, error) {
+	if att == nil || att.Data == nil {
+		return false, nil
+	}
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return false, errors.Wrap(err, "could not tree hash attestation")

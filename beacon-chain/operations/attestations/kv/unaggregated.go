@@ -9,6 +9,9 @@ import (
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
 func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
+	if att == nil {
+		return nil
+	}
 	if helpers.IsAggregated(att) {
 		return errors.New("attestation is aggregated")
 	}
@@ -51,6 +54,9 @@ func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
 
 // DeleteUnaggregatedAttestation deletes the unaggregated attestations in cache.
 func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error {
+	if att == nil {
+		return nil
+	}
 	if helpers.IsAggregated(att) {
 		return errors.New("attestation is aggregated")
 	}

@@ -8,6 +8,9 @@ import (
 
 // SaveBlockAttestation saves an block attestation in cache.
 func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
+	if att == nil {
+		return nil
+	}
 	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
@@ -58,6 +61,9 @@ func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
 
 // DeleteBlockAttestation deletes a block attestation in cache.
 func (p *AttCaches) DeleteBlockAttestation(att *ethpb.Attestation) error {
+	if att == nil {
+		return nil
+	}
 	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
