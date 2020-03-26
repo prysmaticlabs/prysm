@@ -55,6 +55,7 @@ func (k *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			return err
 		}
 	}
+	fmt.Println(previousFinalizedCheckpoint.Epoch, checkpoint.Epoch)
 	blockRoots, err := k.BlockRoots(ctx, filters.NewFilter().
 		SetStartEpoch(previousFinalizedCheckpoint.Epoch).
 		SetEndEpoch(checkpoint.Epoch+1),

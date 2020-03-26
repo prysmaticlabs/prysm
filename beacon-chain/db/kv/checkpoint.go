@@ -53,6 +53,26 @@ func (k *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 	return checkpoint, err
 }
 
+// PrevFinalizedCheckpoint returns the previous latest finalized checkpoint in beacon chain.
+func (k *Store) PrevFinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+	ctx, span := trace.StartSpan(ctx, "PrevFinalizedCheckpoint.FinalizedCheckpoint")
+	defer span.End()
+	var checkpoint *ethpb.Checkpoint
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
+		enc := bkt.Get(previousFinalizedCheckpointKey)
+		if enc == nil {
+			blockBucket := tx.Bucket(blocksBucket)
+			genesisRoot := blockBucket.Get(genesisBlockRootKey)
+			checkpoint = &ethpb.Checkpoint{Root: genesisRoot}
+			return nil
+		}
+		checkpoint = &ethpb.Checkpoint{}
+		return decode(enc, checkpoint)
+	})
+	return checkpoint, err
+}
+
 // SaveJustifiedCheckpoint saves justified checkpoint in beacon chain.
 func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
