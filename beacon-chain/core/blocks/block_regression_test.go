@@ -13,6 +13,7 @@ import (
 )
 
 func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
+	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 5500)
 	for _, vv := range beaconState.Validators() {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
