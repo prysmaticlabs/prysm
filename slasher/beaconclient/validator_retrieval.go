@@ -8,36 +8,47 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// RequestValidator requests validator public key from a beacon node via gRPC.
-func (bs *Service) RequestValidator(
+// FindOrGetPublicKeys gets public keys from cache or request validators public
+// keys from a beacon node via gRPC.
+func (bs *Service) FindOrGetPublicKeys(
 	ctx context.Context,
-	validatorIdx uint64,
-) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconclient.RequestValidators")
+	validatorIndices []uint64,
+) (map[uint64][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconclient.FindOrGetPublicKeys")
 	defer span.End()
 
-	pub, exists := bs.validatorCache.Get(validatorIdx)
-	if exists {
-		log.Tracef(
-			"Retrieved validator id: %d from cache, public key: %v",
-			validatorIdx,
-			pub,
-		)
-		return pub, nil
-	}
-	res, err := bs.beaconClient.GetValidator(ctx, &ethpb.GetValidatorRequest{
-		QueryFilter: &ethpb.GetValidatorRequest_Index{
-			Index: validatorIdx,
-		},
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not request validator public key: %d", validatorIdx)
+	validators := make(map[uint64][]byte, len(validatorIndices))
+	notFound := 0
+	for _, validatorIdx := range validatorIndices {
+		pub, exists := bs.publicKeyCache.Get(validatorIdx)
+		if exists {
+			validators[validatorIdx] = pub
+			continue
+		}
+		validatorIndices[notFound] = validatorIdx
+		notFound++
 	}
 	log.Tracef(
-		"Retrieved validator id: %d public key: %v",
-		validatorIdx,
-		res.PublicKey,
+		"Retrieved validators public keys from cache: %v",
+		validators,
 	)
-	bs.validatorCache.Set(validatorIdx, res.PublicKey)
-	return res.PublicKey, nil
+	validatorIndices = validatorIndices[:notFound]
+	if notFound == 0 {
+		return validators, nil
+	}
+	vc, err := bs.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
+		Indices: validatorIndices,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not request validators public key: %d", validatorIndices)
+	}
+	for _, v := range vc.ValidatorList {
+		validators[v.Index] = v.Validator.PublicKey
+		bs.publicKeyCache.Set(v.Index, v.Validator.PublicKey)
+	}
+	log.Tracef(
+		"Retrieved validators id public key map: %v",
+		validators,
+	)
+	return validators, nil
 }

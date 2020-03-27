@@ -57,7 +57,7 @@ type Service struct {
 	proposerSlashingsFeed       *event.Feed
 	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
 	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
-	validatorCache              *cache.ValidatorsCache
+	publicKeyCache              *cache.PublicKeyCache
 }
 
 // Config options for the beaconclient service.
@@ -72,7 +72,7 @@ type Config struct {
 // NewBeaconClientService instantiation.
 func NewBeaconClientService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	validatorCache, err := cache.NewValidatorsCache(0, nil)
+	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new cache")
 	}
@@ -92,7 +92,7 @@ func NewBeaconClientService(ctx context.Context, cfg *Config) (*Service, error) 
 		proposerSlashingsFeed:       cfg.ProposerSlashingsFeed,
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
-		validatorCache:              validatorCache,
+		publicKeyCache:              publicKeyCache,
 	}, nil
 }
 
