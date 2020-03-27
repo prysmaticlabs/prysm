@@ -34,11 +34,11 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	setB := []uint64{1361, 1438, 2383, 2800}
 	expectedSlashedVal := 2800
 
-	root := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '1'}
+	root1 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '1'}
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]},
 		},
 		AttestingIndices: setA,
 	}
@@ -58,11 +58,11 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures(aggSigs)
 	att1.Signature = aggregateSig.Marshal()[:]
 
-	root = [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
+	root2 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: root2[:]},
 		},
 		AttestingIndices: setB,
 	}
