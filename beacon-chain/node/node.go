@@ -286,6 +286,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
+		BeaconDB:          b.db,
 		NoDiscovery:       ctx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeAddrs,
@@ -588,7 +589,8 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 	if gatewayPort > 0 {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.Int(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
-		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/))
+		allowedOrigins := strings.Split(ctx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/, allowedOrigins))
 	}
 	return nil
 }

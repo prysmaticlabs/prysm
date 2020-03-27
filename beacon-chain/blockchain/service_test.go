@@ -291,7 +291,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{
+	if _, err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{
 		DepositRoot: hashTreeRoot[:],
 	}); err != nil {
 		t.Fatal(err)

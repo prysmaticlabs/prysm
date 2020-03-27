@@ -3,12 +3,12 @@ package sync
 import (
 	"bytes"
 	"context"
-	lru "github.com/hashicorp/golang-lru"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -140,7 +140,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		db:                   db,
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		attPool:              attestations.NewPool(),
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
 	}
 
@@ -373,6 +373,17 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
+	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	signedAggregateAndProof.Signature = aggreSig[:]
+
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
 	}
@@ -471,6 +482,17 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 		AggregatorIndex: 33,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
+
+	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	signedAggregateAndProof.Signature = aggreSig[:]
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)

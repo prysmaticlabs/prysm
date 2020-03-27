@@ -42,6 +42,7 @@ type ConnectionHandler interface {
 // EncodingProvider provides p2p network encoding.
 type EncodingProvider interface {
 	Encoding() encoder.NetworkEncoding
+	ForkDigest() ([4]byte, error)
 }
 
 // PubSubProvider provides the p2p pubsub protocol.

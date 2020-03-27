@@ -62,7 +62,13 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// The attestation's committee index (attestation.data.index) is for the correct subnet.
-	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, att.Data.CommitteeIndex)) {
+	digest, err := s.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Error("Failed to compute fork digest")
+		traceutil.AnnotateError(span, err)
+		return false
+	}
+	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, att.Data.CommitteeIndex)) {
 		return false
 	}
 
@@ -83,7 +89,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	hasBlock := s.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		s.savePendingAtt(&eth.AggregateAttestationAndProof{Aggregate: att})
+		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
 		return false
 	}
 

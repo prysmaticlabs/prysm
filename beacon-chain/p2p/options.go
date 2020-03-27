@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
 	filter "github.com/libp2p/go-maddr-filter"
-	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -41,8 +40,8 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		options = append(options, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	}
 	if cfg.HostAddress != "" {
-		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.TCPPort))
+		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
+			external, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.TCPPort))
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
@@ -52,8 +51,8 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		}))
 	}
 	if cfg.HostDNS != "" {
-		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d", cfg.HostDNS, cfg.TCPPort))
+		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
+			external, err := ma.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d", cfg.HostDNS, cfg.TCPPort))
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {

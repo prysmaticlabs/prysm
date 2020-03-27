@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -22,7 +22,7 @@ import (
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() uint64 {
-	return uint64(time.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
+	return uint64(roughtime.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block

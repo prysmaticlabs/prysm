@@ -99,7 +99,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					CommitteeIndex: 0,
 				},
 			},
-			topic: "/eth2/committee_index0_beacon_attestation",
+			topic: "/eth2/00000000/committee_index0_beacon_attestation",
 		},
 		{
 			att: &eth.Attestation{
@@ -107,7 +107,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					CommitteeIndex: 11,
 				},
 			},
-			topic: "/eth2/committee_index11_beacon_attestation",
+			topic: "/eth2/00000000/committee_index11_beacon_attestation",
 		},
 		{
 			att: &eth.Attestation{
@@ -115,7 +115,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					CommitteeIndex: 55,
 				},
 			},
-			topic: "/eth2/committee_index55_beacon_attestation",
+			topic: "/eth2/00000000/committee_index55_beacon_attestation",
 		},
 		{
 			att:   &eth.Attestation{},
@@ -126,7 +126,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		if res := attestationToTopic(tt.att); res != tt.topic {
+		if res := attestationToTopic(tt.att, [4]byte{} /* fork digest */); res != tt.topic {
 			t.Errorf("Wrong topic, got %s wanted %s", res, tt.topic)
 		}
 	}

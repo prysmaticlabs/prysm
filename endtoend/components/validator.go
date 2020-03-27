@@ -54,7 +54,7 @@ func StartValidators(
 			fmt.Sprintf("--log-file=%s", file.Name()),
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
-			fmt.Sprintf("--monitoring-port=%d", 9280+n),
+			fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.ValidatorMetricsPort+n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+n),
 			"--force-clear-db",
 		}
