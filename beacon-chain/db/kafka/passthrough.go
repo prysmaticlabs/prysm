@@ -328,19 +328,9 @@ func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) 
 	return e.db.SavePowchainData(ctx, data)
 }
 
-// SaveArchivedPointState -- passthrough
-func (e Exporter) SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error {
-	return e.db.SaveArchivedPointState(ctx, state, index)
-}
-
 // SaveArchivedPointRoot -- passthrough
 func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
 	return e.db.SaveArchivedPointRoot(ctx, blockRoot, index)
-}
-
-// ArchivedPointState -- passthrough
-func (e Exporter) ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error) {
-	return e.db.ArchivedPointState(ctx, index)
 }
 
 // ArchivedPointRoot -- passthrough
@@ -356,11 +346,6 @@ func (e Exporter) HasArchivedPoint(ctx context.Context, index uint64) bool {
 // LastArchivedIndexRoot -- passthrough
 func (e Exporter) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 	return e.db.LastArchivedIndexRoot(ctx)
-}
-
-// LastArchivedIndexState -- passthrough
-func (e Exporter) LastArchivedIndexState(ctx context.Context) (*state.BeaconState, error) {
-	return e.db.LastArchivedIndexState(ctx)
 }
 
 // SaveLastArchivedIndex -- passthrough
