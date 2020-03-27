@@ -249,6 +249,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 		return [32]byte{}, 0, errUnknownBlock
 	}
 
+	// Given this is used to query canonical block. There should only be one saved canonical block of a given slot.
 	if len(lastSaved) != 1 {
 		return [32]byte{}, 0, fmt.Errorf("highest saved block does not equal to 1, it equals to %d", len(lastSaved))
 	}
@@ -280,6 +281,7 @@ func (s *State) lastSavedState(ctx context.Context, slot uint64) (*state.BeaconS
 		return nil, errUnknownState
 	}
 
+	// Given this is used to query canonical state. There should only be one saved canonical block of a given slot.
 	if len(lastSaved) != 1 {
 		return nil, fmt.Errorf("highest saved state does not equal to 1, it equals to %d", len(lastSaved))
 	}

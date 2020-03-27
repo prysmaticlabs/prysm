@@ -3,7 +3,6 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -36,7 +35,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 	if err != nil {
 		return err
 	}
-	fmt.Println("jr;;p", blockRoots)
+
 	for _, r := range blockRoots {
 		stateSummary, err := s.beaconDB.StateSummary(ctx, r)
 		if err != nil {
