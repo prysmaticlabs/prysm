@@ -100,7 +100,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 			powchainBucket,
 			stateSummaryBucket,
 			archivedIndexRootBucket,
-			archivedIndexStateBucket,
 			slotsHasObjectBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,

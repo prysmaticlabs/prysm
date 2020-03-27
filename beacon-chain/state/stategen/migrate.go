@@ -46,22 +46,13 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		}
 
 		archivedPointIndex := stateSummary.Slot / s.slotsPerArchivedPoint
-		alreadyArchived := s.beaconDB.HasArchivedPoint(ctx, archivedPointIndex)
-		if stateSummary.Slot%s.slotsPerArchivedPoint == 0 && !alreadyArchived {
-			if s.beaconDB.HasState(ctx, r) {
-				hotState, err := s.beaconDB.State(ctx, r)
+		if stateSummary.Slot%s.slotsPerArchivedPoint == 0 {
+			if !s.beaconDB.HasState(ctx, r) {
+				recoveredArchivedState, err := s.ComputeStateUpToSlot(ctx, stateSummary.Slot)
 				if err != nil {
 					return err
 				}
-				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivedPointIndex); err != nil {
-					return err
-				}
-			} else {
-				hotState, err := s.ComputeStateUpToSlot(ctx, stateSummary.Slot)
-				if err != nil {
-					return err
-				}
-				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivedPointIndex); err != nil {
+				if err := s.beaconDB.SaveState(ctx, recoveredArchivedState.Copy(), r); err != nil {
 					return err
 				}
 			}
@@ -76,22 +67,20 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 				"archiveIndex": archivedPointIndex,
 				"root":         hex.EncodeToString(bytesutil.Trunc(r[:])),
 			}).Info("Saved archived point during state migration")
-		}
-
-		// Do not delete the current finalized state in case user wants to
-		// switch back to old state service, deleting the recent finalized state
-		// could cause issue switching back.
-		if s.beaconDB.HasState(ctx, r) && r != finalizedRoot {
-			if err := s.beaconDB.DeleteState(ctx, r); err != nil {
-				return err
+		} else {
+			// Do not delete the current finalized state in case user wants to
+			// switch back to old state service, deleting the recent finalized state
+			// could cause issue switching back.
+			if s.beaconDB.HasState(ctx, r) && r != finalizedRoot {
+				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
+					return err
+				}
+				log.WithFields(logrus.Fields{
+					"slot": stateSummary.Slot,
+					"root": hex.EncodeToString(bytesutil.Trunc(r[:])),
+				}).Info("Deleted state during migration")
 			}
-			log.WithFields(logrus.Fields{
-				"slot": stateSummary.Slot,
-				"root": hex.EncodeToString(bytesutil.Trunc(r[:])),
-			}).Info("Deleted state during migration")
 		}
-
-		s.deleteEpochBoundaryRoot(stateSummary.Slot)
 	}
 
 	// Update the split slot and root.
