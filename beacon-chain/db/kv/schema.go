@@ -46,6 +46,6 @@ var (
 	savedBlockSlotsKey        = []byte("saved-block-slots")
 	savedStateSlotsKey        = []byte("saved-state-slots")
 
-	// Migration bucket.
-	migrationBucket = []byte("migrations")
+	// New state compatible bucket.
+	newStateCompatible = []byte("new-state-compatible")
 )

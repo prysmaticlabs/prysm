@@ -110,10 +110,14 @@ func NewKVStore(dirPath string) (*Store, error) {
 			blockSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
-			// Migration bucket.
-			migrationBucket,
+			// State scheme bucket.
+			newStateCompatible,
 		)
 	}); err != nil {
+		return nil, err
+	}
+
+	if err := kv.ensureNewStateServiceCompatible(); err != nil {
 		return nil, err
 	}
 
