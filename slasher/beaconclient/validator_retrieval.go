@@ -28,10 +28,12 @@ func (bs *Service) FindOrGetPublicKeys(
 		validatorIndices[notFound] = validatorIdx
 		notFound++
 	}
-	log.Tracef(
-		"Retrieved validators public keys from cache: %v",
-		validators,
-	)
+	if len(validators) > 0 {
+		log.Tracef(
+			"Retrieved validators public keys from cache: %v",
+			validators,
+		)
+	}
 	validatorIndices = validatorIndices[:notFound]
 	if notFound == 0 {
 		return validators, nil

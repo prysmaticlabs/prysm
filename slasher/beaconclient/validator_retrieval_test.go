@@ -49,6 +49,7 @@ func TestService_RequestValidator(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(wanted, nil)
+
 	client.EXPECT().ListValidators(
 		gomock.Any(),
 		gomock.Any(),
