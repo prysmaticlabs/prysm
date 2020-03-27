@@ -72,6 +72,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	service := New(db)
+	service.slotsPerArchivedPoint = 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
@@ -88,7 +89,22 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
-	service.slotsPerArchivedPoint = 2 // Ensure we can land on archived point.
+
+	newBeaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	newBeaconState.SetSlot(3)
+	b = &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{Slot: 3},
+	}
+	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	bRoot, _ = ssz.HashTreeRoot(b.Block)
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:], Slot: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, newBeaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := service.MigrateToCold(ctx, beaconState, [32]byte{}); err != nil {
 		t.Fatal(err)
