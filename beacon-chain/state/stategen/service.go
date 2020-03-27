@@ -66,7 +66,6 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	if !helpers.IsEpochStart(slot) {
 		slot = helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
 	}
-	s.setEpochBoundaryRoot(slot, lastArchivedRoot)
 
 	return lastArchivedState, nil
 }

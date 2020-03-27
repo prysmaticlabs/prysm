@@ -252,7 +252,9 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 	if len(lastSaved) != 1 {
 		return [32]byte{}, 0, fmt.Errorf("highest saved block does not equal to 1, it equals to %d", len(lastSaved))
 	}
-
+	if lastSaved[0].Block == nil {
+		return [32]byte{}, 0, errors.New("nil block")
+	}
 	r, err := ssz.HashTreeRoot(lastSaved[0].Block)
 	if err != nil {
 		return [32]byte{}, 0, err
