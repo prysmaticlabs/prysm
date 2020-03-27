@@ -49,6 +49,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//slasher/db/iface:go_default_library",

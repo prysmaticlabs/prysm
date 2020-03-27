@@ -24,6 +24,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -257,8 +258,8 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            1,
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
 	}

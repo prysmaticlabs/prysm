@@ -3,6 +3,7 @@ package hashutil
 import (
 	"errors"
 	"hash"
+	"os"
 	"reflect"
 	"sync"
 
@@ -21,6 +22,13 @@ var ErrNilProto = errors.New("cannot hash a nil protobuf message")
 var sha256Pool = sync.Pool{New: func() interface{} {
 	return sha256.New()
 }}
+
+// UseFastSSZHash will prefer fastssz hashing when possible. This effects database indices so this
+// boolean should only be true when present from the start of a beacondb initialization or when
+// under test conditions. The default value is true when under test, false otherwise, but allows for
+// the database package to set this value on initialization.
+// TODO(todo): Set to true always in or after testnet restart.
+var UseFastSSZHash = len(os.Args[0]) >= 5 && os.Args[0][len(os.Args[0])-5:] == "_test"
 
 // Hash defines a function that returns the sha256 checksum of the data passed in.
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#hash
@@ -114,7 +122,7 @@ func HashProto(msg proto.Message) (result [32]byte, err error) {
 		return [32]byte{}, ErrNilProto
 	}
 	var data []byte
-	if m, ok := msg.(ssz.Marshaler); ok {
+	if m, ok := msg.(ssz.Marshaler); ok && UseFastSSZHash {
 		data, err = m.MarshalSSZ()
 	} else {
 		data, err = proto.Marshal(msg)

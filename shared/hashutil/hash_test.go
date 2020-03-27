@@ -2,6 +2,7 @@ package hashutil_test
 
 import (
 	"encoding/hex"
+	os "os"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -11,6 +12,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
+
+func TestEnsureUseSSZHashTrueForTest(t *testing.T) {
+	if !hashutil.UseFastSSZHash {
+		t.Log(os.Args[0])
+		t.Fatal("hashutil.UseFastSSZHash should be true under test conditions")
+	}
+}
 
 func TestHash(t *testing.T) {
 	hashOf0 := [32]byte{110, 52, 11, 156, 255, 179, 122, 152, 156, 165, 68, 230, 187, 120, 10, 44, 120, 144, 29, 63, 179, 55, 56, 118, 133, 17, 163, 6, 23, 175, 160, 29}
