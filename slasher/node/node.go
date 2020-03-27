@@ -218,10 +218,11 @@ func (s *SlasherNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.String(flags.CertFlag.Name)
 	key := ctx.String(flags.KeyFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
-		Port:     port,
-		CertFlag: cert,
-		KeyFlag:  key,
-		Detector: detectionService,
+		Port:      port,
+		CertFlag:  cert,
+		KeyFlag:   key,
+		Detector:  detectionService,
+		SlasherDB: s.db,
 	})
 
 	return s.services.RegisterService(rpcService)

@@ -13,6 +13,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -88,7 +89,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	defer s.epochParticipationLock.Unlock()
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
-	root, err := ssz.HashTreeRoot(blockCopy.Block)
+	root, err := stateutil.BlockRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
@@ -139,7 +140,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		return err
 	}
 
-	root, err := ssz.HashTreeRoot(blockCopy.Block)
+	root, err := stateutil.BlockRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
@@ -191,7 +192,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		return err
 	}
 
-	root, err := ssz.HashTreeRoot(blockCopy.Block)
+	root, err := stateutil.BlockRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}

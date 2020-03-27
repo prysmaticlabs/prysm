@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"google.golang.org/grpc/codes"
@@ -241,7 +242,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
-	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
+	headBlockRoot, err := stateutil.BlockRoot(headBlock.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
