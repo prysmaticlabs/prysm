@@ -508,6 +508,41 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	}
 }
 
+func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	genesisRoot, _ := ssz.HashTreeRoot(genesisBlock.Block)
+	db.SaveGenesisBlockRoot(ctx, genesisRoot)
+	db.SaveBlock(ctx, genesisBlock)
+	block1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	db.SaveBlock(ctx, block1)
+
+	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block1, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block1, highestAt)
+	}
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(genesisBlock, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", genesisBlock, highestAt)
+	}
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(genesisBlock, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", genesisBlock, highestAt)
+	}
+}
+
 func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
