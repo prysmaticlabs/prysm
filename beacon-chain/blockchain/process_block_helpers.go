@@ -99,7 +99,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 		}
 		return preState, nil // No copy needed from newly hydrated DB object.
 	}
-	return preState.FastCopy(), nil
+	return preState.Copy(), nil
 }
 
 // verifyBlkDescendant validates input block root is a descendant of the
