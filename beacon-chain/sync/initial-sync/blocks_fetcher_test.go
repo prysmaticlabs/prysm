@@ -97,7 +97,7 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 	}{
 		{
 			name:               "Single peer with all blocks",
-			expectedBlockSlots: makeSequence(1, 128), // up to 4th epoch
+			expectedBlockSlots: makeSequence(1, 3*blockBatchSize),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -122,7 +122,7 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 		},
 		{
 			name:               "Single peer with all blocks (many small requests)",
-			expectedBlockSlots: makeSequence(1, 128), // up to 4th epoch
+			expectedBlockSlots: makeSequence(1, 80),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -155,7 +155,7 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with all blocks",
-			expectedBlockSlots: makeSequence(1, 128), // up to 4th epoch
+			expectedBlockSlots: makeSequence(1, 96), // up to 4th epoch
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
@@ -218,6 +218,16 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 					finalizedEpoch: 18,
 					headSlot:       640,
 				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
 			},
 			requests: []*fetchRequestParams{
 				{
@@ -233,8 +243,8 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 					count: blockBatchSize,
 				},
 				{
-					start: 400,
-					count: 150,
+					start: 500,
+					count: 53,
 				},
 				{
 					start: 553,
