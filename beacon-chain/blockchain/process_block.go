@@ -229,7 +229,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	} else {
 		s.initSyncStateLock.Lock()
 		defer s.initSyncStateLock.Unlock()
-		s.initSyncState[root] = postState.FastCopy()
+		s.initSyncState[root] = postState.Copy()
 		s.filterBoundaryCandidates(ctx, root, postState)
 	}
 
