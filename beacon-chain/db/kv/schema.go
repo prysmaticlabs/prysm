@@ -23,7 +23,6 @@ var (
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
 	powchainBucket                       = []byte("powchain")
 	archivedIndexRootBucket              = []byte("archived-index-root")
-	archivedIndexStateBucket             = []byte("archived-index-state")
 	slotsHasObjectBucket                 = []byte("slots-has-objects")
 
 	// Key indices buckets.

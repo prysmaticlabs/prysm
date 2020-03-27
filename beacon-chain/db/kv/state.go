@@ -369,6 +369,7 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 		if err != nil {
 			return err
 		}
+
 		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
 
 		return err
