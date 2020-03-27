@@ -447,3 +447,54 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s2)
 	}
 }
+
+func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	s := &pb.BeaconState{}
+	genesisState, err := state.InitializeFromProto(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisRoot := [32]byte{'a'}
+	db.SaveGenesisBlockRoot(context.Background(), genesisRoot)
+	db.SaveState(context.Background(), genesisState, genesisRoot)
+
+	s0 := &pb.BeaconState{Slot: 1}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	r, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	st, err := state.InitializeFromProto(s0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), st, r); err != nil {
+		t.Fatal(err)
+	}
+
+	highest, err := db.HighestSlotStatesBelow(context.Background(), 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(highest[0].InnerStateUnsafe(), s0) {
+		t.Errorf("Did not retrieve saved state: %v != %v", highest, s0)
+	}
+
+	highest, err = db.HighestSlotStatesBelow(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()) {
+		t.Errorf("Did not retrieve saved state: %v != %v", highest, s0)
+	}
+	highest, err = db.HighestSlotStatesBelow(context.Background(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()) {
+		t.Errorf("Did not retrieve saved state: %v != %v", highest, s0)
+	}
+}

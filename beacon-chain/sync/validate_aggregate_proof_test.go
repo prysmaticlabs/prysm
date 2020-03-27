@@ -276,7 +276,9 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
-			State: beaconState},
+			State: beaconState,
+		},
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 	}
 
 	buf := new(bytes.Buffer)

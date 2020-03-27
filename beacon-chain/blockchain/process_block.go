@@ -7,11 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -67,7 +67,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	}
 	preStateValidatorCount := preState.NumValidators()
 
-	root, err := ssz.HashTreeRoot(b)
+	root, err := stateutil.BlockRoot(b)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
@@ -213,7 +213,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
-	root, err := ssz.HashTreeRoot(b)
+	root, err := stateutil.BlockRoot(b)
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
@@ -229,7 +229,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	} else {
 		s.initSyncStateLock.Lock()
 		defer s.initSyncStateLock.Unlock()
-		s.initSyncState[root] = postState.FastCopy()
+		s.initSyncState[root] = postState.Copy()
 		s.filterBoundaryCandidates(ctx, root, postState)
 	}
 

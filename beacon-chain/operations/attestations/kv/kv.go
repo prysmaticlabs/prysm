@@ -4,7 +4,10 @@ import (
 	"sync"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
+
+var hashFn = hashutil.HashProto
 
 // AttCaches defines the caches used to satisfy attestation pool interface.
 // These caches are KV store for various attestations
