@@ -31,11 +31,13 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	}
 	// Only 2800 is the slashable index.
 	setB := []uint64{1361, 1438, 2383, 2800}
+	expectedSlashedVal := 2800
 
+	root := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '1'}
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 1},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 0},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AttestingIndices: setA,
 	}
@@ -55,10 +57,11 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures(aggSigs)
 	att1.Signature = aggregateSig.Marshal()[:]
 
+	root = [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 		AttestingIndices: setB,
 	}
@@ -95,9 +98,12 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 		t.Fatal(err)
 	}
 	newRegistry := newState.Validators()
+	if !newRegistry[expectedSlashedVal].Slashed {
+		t.Errorf("Validator with index %d was not slashed despite performing a double vote", expectedSlashedVal)
+	}
 
 	for idx, val := range newRegistry {
-		if val.Slashed && idx != 2800 {
+		if val.Slashed && idx != expectedSlashedVal {
 			t.Errorf("validator with index: %d was unintentionally slashed", idx)
 		}
 	}
