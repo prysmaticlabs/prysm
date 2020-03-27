@@ -235,6 +235,26 @@ func TestRoundRobinSync(t *testing.T) {
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
 			},
 		},
 	}
