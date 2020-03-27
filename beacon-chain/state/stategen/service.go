@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -61,12 +60,6 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	}
 
 	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
-
-	// TODO: Check if this is needed.
-	if err := s.beaconDB.SaveStateSummary(ctx,
-		&pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:]}); err != nil {
-		return nil, err
-	}
 
 	// In case the finalized state slot was skipped.
 	slot := lastArchivedState.Slot()

@@ -25,7 +25,8 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, state.Slot()/s.slotsPerArchivedPoint); err != nil {
+	archivedIndex := state.Slot() / s.slotsPerArchivedPoint
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivedIndex); err != nil {
 		return err
 	}
 

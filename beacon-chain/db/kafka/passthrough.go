@@ -348,7 +348,22 @@ func (e Exporter) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 	return e.db.LastArchivedIndexRoot(ctx)
 }
 
-// SaveLastArchivedIndex -- passthrough
-func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	return e.db.SaveLastArchivedIndex(ctx, index)
+// HighestSlotBlocks -- passthrough
+func (e Exporter) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
+	return e.db.HighestSlotBlocks(ctx)
+}
+
+// HighestSlotBlocksBelow -- passthrough
+func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+	return e.db.HighestSlotBlocksBelow(ctx, slot)
+}
+
+// HighestSlotStates -- passthrough
+func (e Exporter) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
+	return e.db.HighestSlotStates(ctx)
+}
+
+// HighestSlotStatesBelow -- passthrough
+func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
+	return e.db.HighestSlotStatesBelow(ctx, slot)
 }
