@@ -580,7 +580,7 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 		return nil
 	}
 	indices1 := slashing.Attestation_1.AttestingIndices
-	indices2 := slashing.Attestation_1.AttestingIndices
+	indices2 := slashing.Attestation_2.AttestingIndices
 	return sliceutil.IntersectionUint64(indices1, indices2)
 }
 
