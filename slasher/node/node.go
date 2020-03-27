@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
