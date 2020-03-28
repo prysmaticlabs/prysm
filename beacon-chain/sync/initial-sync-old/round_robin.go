@@ -218,7 +218,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 			if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 				log.Warnf("Beacon node doesn't have a block in db or cache with root %#x", parentRoot)
-				panic("fuck")
+				continue
 			}
 
 			s.blockNotifier.BlockFeed().Send(&feed.Event{
