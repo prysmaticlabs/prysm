@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	//"github.com/gogo/protobuf/proto"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -37,14 +37,6 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 
 	if service.beaconDB.ArchivedPointRoot(ctx, 1) != r {
 		t.Error("Did not get wanted root")
-	}
-
-	receivedState, err := service.beaconDB.ArchivedPointState(ctx, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(receivedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not get wanted state")
 	}
 
 	testutil.AssertLogsContain(t, hook, "Saved full state on archived point")

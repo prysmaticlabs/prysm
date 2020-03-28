@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cold.go",
-        "epoch_boundary_root.go",
         "errors.go",
         "getter.go",
         "hot.go",
@@ -39,7 +38,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "cold_test.go",
-        "epoch_boundary_root_test.go",
         "getter_test.go",
         "hot_test.go",
         "migrate_test.go",

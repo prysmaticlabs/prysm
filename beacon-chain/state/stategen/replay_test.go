@@ -66,6 +66,9 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
 		t.Fatal(err)
 	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := service.beaconDB.SaveState(ctx, beaconState, gRoot); err != nil {
 		t.Fatal(err)
@@ -424,17 +427,8 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
-	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
-		t.Fatal(err)
-	}
-
-	r, slot, err := s.lastSavedBlock(ctx, s.splitInfo.slot+1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if slot != 0 || r != params.BeaconConfig().ZeroHash {
-		t.Error("Did not get no saved block info")
+	if _, _, err := s.lastSavedBlock(ctx, s.splitInfo.slot+1); err != errUnknownBlock {
+		t.Error("Did not get wanted error")
 	}
 }
 
@@ -498,11 +492,11 @@ func TestLastSavedState_CanGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	savedRoot, err := s.lastSavedState(ctx, s.splitInfo.slot+100)
+	savedState, err := s.lastSavedState(ctx, s.splitInfo.slot+100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if savedRoot != b2Root {
+	if !proto.Equal(st.InnerStateUnsafe(), savedState.InnerStateUnsafe()) {
 		t.Error("Did not save correct root")
 	}
 }
@@ -521,12 +515,9 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := s.lastSavedState(ctx, s.splitInfo.slot+1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r != params.BeaconConfig().ZeroHash {
-		t.Error("Did not get no saved block info")
+	_, err := s.lastSavedState(ctx, s.splitInfo.slot+1)
+	if err != errUnknownState {
+		t.Error("Did not get wanted error")
 	}
 }
 
