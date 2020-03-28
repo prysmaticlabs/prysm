@@ -198,25 +198,13 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			break
 		}
 
-		var blocks []*eth.SignedBeaconBlock
-		var err error
-		if featureconfig.Get().InitSyncBatchSaveBlocks {
-			blocks, err = request(
-				s.chain.HeadSlot()+1, // start
-				1,                    // step
-				blockBatchSize,       // count
-				peers,                // peers
-				0,
-			)
-		} else {
-			blocks, err = request(
-				s.chain.HeadSlot()+1, // start
-				1,                    // step
-				blockBatchSize,       // count
-				peers,                // peers
-				0,
-			)
-		}
+		blocks, err := request(
+			s.chain.HeadSlot()+1, // start
+			1,                    // step
+			blockBatchSize,       // count
+			peers,                // peers
+			0,
+		)
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
 			continue
@@ -233,7 +221,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
 			parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 			if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
-				log.Warnf("Beacon node doesn't have a block in db or cache with root %#x", parentRoot)
+				log.Debugf("Beacon node doesn't have a block in db or cache with root %#x", parentRoot)
 				continue
 			}
 

@@ -237,5 +237,5 @@ func (ms *ChainService) ClearCachedStates() {}
 
 // HasInitSyncBlock mocks the same method in the chain service.
 func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
-	return true
+	return false
 }
