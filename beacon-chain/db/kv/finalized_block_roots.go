@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -53,7 +52,7 @@ func (k *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			return err
 		}
 	}
-	fmt.Println(previousFinalizedCheckpoint.Epoch, checkpoint.Epoch)
+
 	blockRoots, err := k.BlockRoots(ctx, filters.NewFilter().
 		SetStartEpoch(previousFinalizedCheckpoint.Epoch).
 		SetEndEpoch(checkpoint.Epoch+1),

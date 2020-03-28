@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -180,7 +181,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				}
 			}
 		}
-		startBlock := s.chain.HeadSlot() + 1
+		lastFinalizedEpoch := s.chain.FinalizedCheckpt().Epoch
+		lastFinalizedState, err := s.db.HighestSlotStatesBelow(ctx, helpers.StartSlot(lastFinalizedEpoch))
+		if err != nil {
+			return err
+		}
+		startBlock := lastFinalizedState[0].Slot() + 1
 		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
 		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
 			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
@@ -209,10 +215,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
-			//if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
-			//	log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
-			//	continue
-			//}
+			parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+			if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
+				log.Warnf("Beacon node doesn't have a block in db or cache with root %#x", parentRoot)
+				panic("fuck")
+			}
+
 			s.blockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},

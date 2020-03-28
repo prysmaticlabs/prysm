@@ -229,9 +229,16 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	newJustifiedBlockSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	if err != nil {
-		return false, err
+	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
+	justifiedRoot := bytesutil.ToBytes32(newJustifiedCheckpt.Root)
+	var err error
+	if s.hasInitSyncBlock(justifiedRoot) {
+		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
+	} else {
+		newJustifiedBlockSigned, err = s.beaconDB.Block(ctx, justifiedRoot)
+		if err != nil {
+			return false, err
+		}
 	}
 	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
 		return false, errors.New("nil new justified block")
@@ -263,11 +270,11 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	if cpt.Epoch > s.bestJustifiedCheckpt.Epoch {
 		s.bestJustifiedCheckpt = cpt
 	}
-	//canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
-	//if err != nil {
-	//	return err
-	//}
-	canUpdate := true
+	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
+	if err != nil {
+		return err
+	}
+
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
@@ -378,6 +385,11 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
+
+	if s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
+		signed = s.getInitSyncBlock(bytesutil.ToBytes32(root))
+	}
+
 	if signed == nil || signed.Block == nil {
 		return nil, errors.New("nil block")
 	}

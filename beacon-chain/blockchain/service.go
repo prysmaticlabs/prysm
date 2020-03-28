@@ -75,7 +75,8 @@ type Service struct {
 	checkpointStateLock    sync.Mutex
 	stateGen               *stategen.State
 	opsService             *attestations.Service
-	initSyncBlocks         []*ethpb.SignedBeaconBlock
+	initSyncBlocks         map[[32]byte]*ethpb.SignedBeaconBlock
+	initSyncBlocksLock     sync.RWMutex
 }
 
 // Config options for the service.
@@ -118,7 +119,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		checkpointState:    cache.NewCheckpointStateCache(),
 		opsService:         cfg.OpsService,
 		stateGen:           cfg.StateGen,
-		initSyncBlocks:     []*ethpb.SignedBeaconBlock{},
+		initSyncBlocks:     make(map[[32]byte]*ethpb.SignedBeaconBlock),
 	}, nil
 }
 
@@ -142,7 +143,7 @@ func (s *Service) Start() {
 		if featureconfig.Get().NewStateMgmt {
 			beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
 			if err != nil {
-				log.Fatalf("Could not fetch beacon state: %v", err)
+				log.Fatalf("Could not fetch beacon state by root: %v", err)
 			}
 		} else {
 			beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
@@ -180,9 +181,11 @@ func (s *Service) Start() {
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		if finalizedCheckpoint.Epoch > 1 {
-			if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
-				log.WithError(err).Warn("Could not prune old states")
+		if !featureconfig.Get().NewStateMgmt {
+			if finalizedCheckpoint.Epoch > 1 {
+				if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
+					log.WithError(err).Warn("Could not prune old states")
+				}
 			}
 		}
 
@@ -334,9 +337,8 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 			return errors.Wrap(err, "could not save genesis state")
 		}
 		if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-			Slot:         0,
-			Root:         genesisBlkRoot[:],
-			BoundaryRoot: genesisBlkRoot[:],
+			Slot: 0,
+			Root: genesisBlkRoot[:],
 		}); err != nil {
 			return err
 		}
@@ -423,7 +425,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	var finalizedState *stateTrie.BeaconState
 	if featureconfig.Get().NewStateMgmt {
 		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
-		finalizedState, err = s.stateGen.Resume(ctx, finalizedRoot)
+		finalizedState, err = s.stateGen.Resume(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}

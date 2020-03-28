@@ -2,9 +2,11 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -188,4 +190,42 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 		return nil, errors.Wrap(err, "could not replay the blocks to generate the resultant state")
 	}
 	return postState, nil
+}
+
+func (s *Service) saveInitSyncBlock(r [32]byte, b *ethpb.SignedBeaconBlock) {
+	s.initSyncBlocksLock.Lock()
+	defer s.initSyncBlocksLock.Unlock()
+	s.initSyncBlocks[r] = b
+}
+
+func (s *Service) hasInitSyncBlock(r [32]byte) bool {
+	s.initSyncBlocksLock.RLock()
+	defer s.initSyncBlocksLock.RUnlock()
+	_, ok := s.initSyncBlocks[r]
+	return ok
+}
+
+func (s *Service) getInitSyncBlock(r [32]byte) *ethpb.SignedBeaconBlock {
+	s.initSyncBlocksLock.RLock()
+	defer s.initSyncBlocksLock.RUnlock()
+	b := s.initSyncBlocks[r]
+	return b
+}
+
+func (s *Service) getInitSyncBlocks() []*ethpb.SignedBeaconBlock {
+	s.initSyncBlocksLock.RLock()
+	defer s.initSyncBlocksLock.RUnlock()
+
+	blks := make([]*ethpb.SignedBeaconBlock, 0, len(s.initSyncBlocks))
+	for _, b := range s.initSyncBlocks {
+		blks = append(blks, b)
+	}
+	return blks
+}
+
+func (s *Service) clearInitSyncBlocks() {
+	s.initSyncBlocksLock.Lock()
+	defer s.initSyncBlocksLock.Unlock()
+	fmt.Println("Clearing the cache!")
+	s.initSyncBlocks = make(map[[32]byte]*ethpb.SignedBeaconBlock)
 }
