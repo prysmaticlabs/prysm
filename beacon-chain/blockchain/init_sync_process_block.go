@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -172,10 +171,17 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 	if preState == nil {
 		return nil, errors.New("finalized state does not exist in db")
 	}
-	endBlock, err := s.beaconDB.Block(ctx, endRoot)
-	if err != nil {
-		return nil, err
+
+	var endBlock *ethpb.SignedBeaconBlock
+	if s.hasInitSyncBlock(endRoot) {
+		endBlock = s.getInitSyncBlock(endRoot)
+	} else {
+		endBlock, err = s.beaconDB.Block(ctx, endRoot)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	if endBlock == nil {
 		return nil, errors.New("provided block root does not have block saved in the db")
 	}
@@ -226,6 +232,5 @@ func (s *Service) getInitSyncBlocks() []*ethpb.SignedBeaconBlock {
 func (s *Service) clearInitSyncBlocks() {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
-	fmt.Println("Clearing the cache!")
 	s.initSyncBlocks = make(map[[32]byte]*ethpb.SignedBeaconBlock)
 }

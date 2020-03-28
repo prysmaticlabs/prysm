@@ -247,10 +247,17 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
 		return false, nil
 	}
-	justifiedBlockSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-	if err != nil {
-		return false, err
+	var justifiedBlockSigned *ethpb.SignedBeaconBlock
+	cachedJustifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
+	if s.hasInitSyncBlock(cachedJustifiedRoot) {
+		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
+	} else {
+		justifiedBlockSigned, err = s.beaconDB.Block(ctx, cachedJustifiedRoot)
+		if err != nil {
+			return false, err
+		}
 	}
+
 	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
 		return false, errors.New("nil justified block")
 	}

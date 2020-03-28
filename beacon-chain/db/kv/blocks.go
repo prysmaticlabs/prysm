@@ -237,7 +237,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 			}
 
 			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
-				return nil
+				continue
 			}
 			enc, err := encode(block)
 			if err != nil {
