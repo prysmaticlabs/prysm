@@ -49,21 +49,22 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 		Source: &ethpb.Checkpoint{},
 		Target: &ethpb.Checkpoint{},
 	}
+	att := &ethpb.IndexedAttestation{Data: data}
 	tests := []struct {
 		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
 	}{
 		{
 			ss: types.Active,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello"), 96)}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello"), 96)}, Attestation_2: att},
 		},
 		{
 			ss: types.Included,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello2"), 96)}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello2"), 96)}, Attestation_2: att},
 		},
 		{
 			ss: types.Reverted,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello3"), 96)}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello3"), 96)}, Attestation_2: att},
 		},
 	}
 
