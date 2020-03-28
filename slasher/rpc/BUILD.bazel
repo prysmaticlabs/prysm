@@ -62,6 +62,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//slasher/db/testing:go_default_library",
         "//slasher/detection:go_default_library",
