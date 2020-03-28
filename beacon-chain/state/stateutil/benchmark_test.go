@@ -3,9 +3,11 @@ package stateutil_benchmark
 import (
 	"testing"
 
+	"github.com/protolambda/zssz/merkle"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -46,4 +48,43 @@ func BenchmarkBlockHTR(b *testing.B) {
 			}
 		}
 	})
+}
+
+func BenchmarkMerkleize(b *testing.B) {
+	roots := make([][32]byte, 8192)
+	for i := 0; i < 8192; i++ {
+		roots[0] = [32]byte{byte(i)}
+	}
+	oldMerkleize := func(chunks [][32]byte, count uint64, limit uint64) ([32]byte, error) {
+		leafIndexer := func(i uint64) []byte {
+			return chunks[i][:]
+		}
+		return merkle.Merkleize(hashutil.CustomSHA256Hasher(), count, limit, leafIndexer), nil
+	}
+
+	newMerkleize := func(chunks [][32]byte, count uint64, limit uint64) ([32]byte, error) {
+		leafIndexer := func(i uint64) []byte {
+			return chunks[i][:]
+		}
+		return stateutil.Merkleize(stateutil.NewHasherFunc(hashutil.CustomSHA256Hasher()), count, limit, leafIndexer), nil
+	}
+
+	b.Run("Non Buffered Merkleizer", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.N = 1000
+		for i := 0; i < b.N; i++ {
+			_, _ = oldMerkleize(roots, 8192, 8192)
+		}
+	})
+
+	b.Run("Buffered Merkleizer", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.N = 1000
+		for i := 0; i < b.N; i++ {
+			_, _ = newMerkleize(roots, 8192, 8192)
+		}
+	})
+
 }
