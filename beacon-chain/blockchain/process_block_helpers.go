@@ -232,7 +232,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
 	justifiedRoot := bytesutil.ToBytes32(newJustifiedCheckpt.Root)
 	var err error
-	if s.hasInitSyncBlock(justifiedRoot) {
+	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
 	} else {
 		newJustifiedBlockSigned, err = s.beaconDB.Block(ctx, justifiedRoot)
@@ -243,13 +243,14 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
 		return false, errors.New("nil new justified block")
 	}
+
 	newJustifiedBlock := newJustifiedBlockSigned.Block
 	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
 		return false, nil
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
 	cachedJustifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
-	if s.hasInitSyncBlock(cachedJustifiedRoot) {
+	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
 		justifiedBlockSigned, err = s.beaconDB.Block(ctx, cachedJustifiedRoot)
@@ -393,7 +394,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
 
-	if s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
+	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
 		signed = s.getInitSyncBlock(bytesutil.ToBytes32(root))
 	}
 

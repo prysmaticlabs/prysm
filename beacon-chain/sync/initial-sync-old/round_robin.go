@@ -181,26 +181,42 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				}
 			}
 		}
-		lastFinalizedEpoch := s.chain.FinalizedCheckpt().Epoch
-		lastFinalizedState, err := s.db.HighestSlotStatesBelow(ctx, helpers.StartSlot(lastFinalizedEpoch))
-		if err != nil {
-			return err
+		var startBlock uint64
+		if featureconfig.Get().InitSyncBatchSaveBlocks {
+			lastFinalizedEpoch := s.chain.FinalizedCheckpt().Epoch
+			lastFinalizedState, err := s.db.HighestSlotStatesBelow(ctx, helpers.StartSlot(lastFinalizedEpoch))
+			if err != nil {
+				return err
+			}
+			startBlock = lastFinalizedState[0].Slot() + 1
+		} else {
+			startBlock = s.chain.HeadSlot() + 1
 		}
-		startBlock := lastFinalizedState[0].Slot() + 1
 		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
 		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
 			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
 			break
 		}
 
-		//c, _ := s.db.PrevFinalizedCheckpoint(ctx)
-		blocks, err := request(
-			s.chain.HeadSlot(), // start
-			1,                  // step
-			blockBatchSize,     // count
-			peers,              // peers
-			0,                  // remainder
-		)
+		var blocks []*eth.SignedBeaconBlock
+		var err error
+		if featureconfig.Get().InitSyncBatchSaveBlocks {
+			blocks, err = request(
+				s.chain.HeadSlot()+1, // start
+				1,                    // step
+				blockBatchSize,       // count
+				peers,                // peers
+				0,
+			)
+		} else {
+			blocks, err = request(
+				s.chain.HeadSlot()+1, // start
+				1,                    // step
+				blockBatchSize,       // count
+				peers,                // peers
+				0,
+			)
+		}
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
 			continue

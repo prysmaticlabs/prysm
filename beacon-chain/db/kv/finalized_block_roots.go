@@ -3,9 +3,12 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -40,9 +43,9 @@ func (k *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 
 	bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
 
-	//root := checkpoint.Root
-	//var previousRoot []byte
-	//genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
+	root := checkpoint.Root
+	var previousRoot []byte
+	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
@@ -70,60 +73,60 @@ func (k *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
-	//for {
-	//	if bytes.Equal(root, genesisRoot) {
-	//		break
-	//	}
-	//
-	//	signedBlock, err := k.Block(ctx, bytesutil.ToBytes32(root))
-	//	if err != nil {
-	//		traceutil.AnnotateError(span, err)
-	//		return err
-	//	}
-	//	if signedBlock == nil || signedBlock.Block == nil {
-	//		err := fmt.Errorf("missing block in database: block root=%#x", root)
-	//		traceutil.AnnotateError(span, err)
-	//		return err
-	//	}
-	//	block := signedBlock.Block
-	//
-	//	container := &dbpb.FinalizedBlockRootContainer{
-	//		ParentRoot: block.ParentRoot,
-	//		ChildRoot:  previousRoot,
-	//	}
-	//
-	//	enc, err := encode(container)
-	//	if err != nil {
-	//		traceutil.AnnotateError(span, err)
-	//		return err
-	//	}
-	//	if err := bkt.Put(root, enc); err != nil {
-	//		traceutil.AnnotateError(span, err)
-	//		return err
-	//	}
-	//
-	//	// Found parent, loop exit condition.
-	//	if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
-	//		parent := &dbpb.FinalizedBlockRootContainer{}
-	//		if err := decode(parentBytes, parent); err != nil {
-	//			traceutil.AnnotateError(span, err)
-	//			return err
-	//		}
-	//		parent.ChildRoot = root
-	//		enc, err := encode(parent)
-	//		if err != nil {
-	//			traceutil.AnnotateError(span, err)
-	//			return err
-	//		}
-	//		if err := bkt.Put(block.ParentRoot, enc); err != nil {
-	//			traceutil.AnnotateError(span, err)
-	//			return err
-	//		}
-	//		break
-	//	}
-	//	previousRoot = root
-	//	root = block.ParentRoot
-	//}
+	for {
+		if bytes.Equal(root, genesisRoot) {
+			break
+		}
+
+		signedBlock, err := k.Block(ctx, bytesutil.ToBytes32(root))
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		if signedBlock == nil || signedBlock.Block == nil {
+			err := fmt.Errorf("missing block in database: block root=%#x", root)
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		block := signedBlock.Block
+
+		container := &dbpb.FinalizedBlockRootContainer{
+			ParentRoot: block.ParentRoot,
+			ChildRoot:  previousRoot,
+		}
+
+		enc, err := encode(container)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		if err := bkt.Put(root, enc); err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+
+		// Found parent, loop exit condition.
+		if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
+			parent := &dbpb.FinalizedBlockRootContainer{}
+			if err := decode(parentBytes, parent); err != nil {
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+			parent.ChildRoot = root
+			enc, err := encode(parent)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+			if err := bkt.Put(block.ParentRoot, enc); err != nil {
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+			break
+		}
+		previousRoot = root
+		root = block.ParentRoot
+	}
 
 	// Upsert blocks from the current finalized epoch.
 	roots, err := k.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))

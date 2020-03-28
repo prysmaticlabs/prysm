@@ -141,6 +141,11 @@ var (
 		Name:  "enable-custom-block-htr",
 		Usage: "Enables the usage of a custom hashing method for our block",
 	}
+	initSyncBatchSaveBlocks = &cli.BoolFlag{
+		Name: "init-sync-batch-save-blocks",
+		Usage: "Instead of saving one block per slot to the DB during initial syncing, this enables batch saving" +
+			" of epochs worth of blocks to the DB",
+	}
 )
 
 // Deprecated flags list.
@@ -323,6 +328,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,
+	initSyncBatchSaveBlocks,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

@@ -215,7 +215,13 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
-	s.saveInitSyncBlock(root, signed)
+	if featureconfig.Get().InitSyncBatchSaveBlocks {
+		s.saveInitSyncBlock(root, signed)
+	} else {
+		if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
+			return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+		}
+	}
 
 	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
@@ -246,7 +252,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		}
 	}
 
-	// Rate limit how many blocks we keep in the memory.
+	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if len(s.getInitSyncBlocks()) > 2*int(params.BeaconConfig().SlotsPerEpoch) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
@@ -271,10 +277,12 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			}
 		}
 
-		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-			return err
+		if featureconfig.Get().InitSyncBatchSaveBlocks {
+			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+				return err
+			}
+			s.clearInitSyncBlocks()
 		}
-		s.clearInitSyncBlocks()
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -173,7 +174,7 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 	}
 
 	var endBlock *ethpb.SignedBeaconBlock
-	if s.hasInitSyncBlock(endRoot) {
+	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(endRoot) {
 		endBlock = s.getInitSyncBlock(endRoot)
 	} else {
 		endBlock, err = s.beaconDB.Block(ctx, endRoot)
@@ -198,12 +199,15 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 	return postState, nil
 }
 
+// This saves a beacon block to the initial sync blocks cache.
 func (s *Service) saveInitSyncBlock(r [32]byte, b *ethpb.SignedBeaconBlock) {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
 	s.initSyncBlocks[r] = b
 }
 
+// This checks if a beacon block exists in the initial sync blocks cache using the root
+// of the block.
 func (s *Service) hasInitSyncBlock(r [32]byte) bool {
 	s.initSyncBlocksLock.RLock()
 	defer s.initSyncBlocksLock.RUnlock()
@@ -211,6 +215,8 @@ func (s *Service) hasInitSyncBlock(r [32]byte) bool {
 	return ok
 }
 
+// This retrieves a beacon block from the initial sync blocks cache using the root of
+// the block.
 func (s *Service) getInitSyncBlock(r [32]byte) *ethpb.SignedBeaconBlock {
 	s.initSyncBlocksLock.RLock()
 	defer s.initSyncBlocksLock.RUnlock()
@@ -218,6 +224,8 @@ func (s *Service) getInitSyncBlock(r [32]byte) *ethpb.SignedBeaconBlock {
 	return b
 }
 
+// This retrieves all the beacon blocks from the initial sync blocks cache, the returned
+// blocks are unordered.
 func (s *Service) getInitSyncBlocks() []*ethpb.SignedBeaconBlock {
 	s.initSyncBlocksLock.RLock()
 	defer s.initSyncBlocksLock.RUnlock()
@@ -229,6 +237,7 @@ func (s *Service) getInitSyncBlocks() []*ethpb.SignedBeaconBlock {
 	return blks
 }
 
+// This clears out the initial sync blocks cache.
 func (s *Service) clearInitSyncBlocks() {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
