@@ -92,10 +92,13 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
+	ckpt := &ethpb.Checkpoint{}
+	data := &ethpb.AttestationData{Source: ckpt, Target: ckpt}
+	att := &ethpb.IndexedAttestation{Data: data}
 	as := []*ethpb.AttesterSlashing{
-		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("1"), 96)}},
-		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("2"), 96)}},
-		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("3"), 96)}},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("1"), 96), Data: data}, Attestation_2: att},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("2"), 96), Data: data}, Attestation_2: att},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("3"), 96), Data: data}, Attestation_2: att},
 	}
 	err := db.SaveAttesterSlashings(ctx, types.Active, as)
 	if err != nil {
