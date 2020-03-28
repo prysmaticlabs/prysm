@@ -49,6 +49,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//slasher/db/iface:go_default_library",
@@ -57,6 +58,7 @@ go_test(
         "//slasher/flags:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
         "@in_gopkg_urfave_cli_v2//:go_default_library",
     ],
 )
