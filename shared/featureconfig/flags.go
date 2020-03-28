@@ -342,6 +342,7 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--enable-initial-sync-queue",
 	"--enable-state-field-trie",
+	"--init-sync-batch-save-blocks",
 	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.
 	//"--enable-dynamic-committee-subnets",
 }
