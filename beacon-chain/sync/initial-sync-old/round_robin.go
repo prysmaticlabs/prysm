@@ -203,7 +203,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			1,                    // step
 			blockBatchSize,       // count
 			peers,                // peers
-			0,
+			0,                    // reminder
 		)
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
