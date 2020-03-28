@@ -100,7 +100,7 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 
 	filtered := make([]*ethpb.Attestation, 0)
 	for _, a := range attList {
-		if !att.AggregationBits.Contains(a.AggregationBits) {
+		if att.AggregationBits.Len() == a.AggregationBits.Len() && !att.AggregationBits.Contains(a.AggregationBits) {
 			filtered = append(filtered, a)
 		}
 	}
