@@ -9,6 +9,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	"gopkg.in/d4l3k/messagediff.v1"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -44,21 +45,22 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
+	hdr := &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{}}
 	tests := []struct {
 		ss types.SlashingStatus
 		ps *ethpb.ProposerSlashing
 	}{
 		{
 			ss: types.Active,
-			ps: &ethpb.ProposerSlashing{ProposerIndex: 1},
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 1, Header_1: hdr, Header_2: hdr},
 		},
 		{
 			ss: types.Included,
-			ps: &ethpb.ProposerSlashing{ProposerIndex: 2},
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 2, Header_1: hdr, Header_2: hdr},
 		},
 		{
 			ss: types.Reverted,
-			ps: &ethpb.ProposerSlashing{ProposerIndex: 3},
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 3, Header_1: hdr, Header_2: hdr},
 		},
 	}
 
@@ -74,6 +76,8 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		}
 
 		if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
+			diff, _ := messagediff.PrettyDiff(proposerSlashings[0], tt.ps)
+			t.Log(diff)
 			t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", tt.ps, proposerSlashings)
 		}
 	}
@@ -147,10 +151,11 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
+	hdr := &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{}}
 	ps := []*ethpb.ProposerSlashing{
-		{ProposerIndex: 1},
-		{ProposerIndex: 2},
-		{ProposerIndex: 3},
+		{ProposerIndex: 1, Header_1: hdr, Header_2: hdr},
+		{ProposerIndex: 2, Header_1: hdr, Header_2: hdr},
+		{ProposerIndex: 3, Header_1: hdr, Header_2: hdr},
 	}
 	err := db.SaveProposerSlashings(ctx, types.Active, ps)
 	if err != nil {
@@ -164,6 +169,8 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 		return proposerSlashings[i].ProposerIndex < proposerSlashings[j].ProposerIndex
 	})
 	if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings, ps) {
+		diff, _ := messagediff.PrettyDiff(proposerSlashings, ps)
+		t.Log(diff)
 		t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", ps, proposerSlashings)
 	}
 }
