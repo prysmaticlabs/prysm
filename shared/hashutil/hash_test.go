@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -95,5 +97,23 @@ func TestHashProtoFuzz(t *testing.T) {
 		msg := &pb.AddressBook{}
 		f.Fuzz(msg)
 		_, _ = hashutil.HashProto(msg)
+	}
+}
+
+func BenchmarkHashProto(b *testing.B) {
+	att := &ethpb.Attestation{
+		AggregationBits: nil,
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  3,
+			BeaconBlockRoot: []byte{},
+			Source:          nil,
+			Target:          nil,
+		},
+		Signature: bls.NewAggregateSignature().Marshal(),
+	}
+
+	for i := 0; i < b.N; i++ {
+		hashutil.HashProto(att)
 	}
 }
