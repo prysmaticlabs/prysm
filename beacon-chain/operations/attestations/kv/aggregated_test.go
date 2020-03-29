@@ -52,7 +52,8 @@ func TestKV_Aggregated_CanDelete(t *testing.T) {
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
 	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}
 	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}
-	atts := []*ethpb.Attestation{att1, att2, att3}
+	att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b10101}}
+	atts := []*ethpb.Attestation{att1, att2, att3, att4}
 
 	for _, att := range atts {
 		if err := cache.SaveAggregatedAttestation(att); err != nil {

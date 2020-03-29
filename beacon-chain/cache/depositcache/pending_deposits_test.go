@@ -9,6 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 var _ = PendingDepositsFetcher(&DepositCache{})
@@ -33,8 +34,12 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 
 func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := DepositCache{}
-	depToRemove := &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}
-	otherDep := &ethpb.Deposit{Proof: [][]byte{[]byte("B")}}
+	proof1 := make([][]byte, 33)
+	proof1[0] = bytesutil.PadTo([]byte{'A'}, 32)
+	proof2 := make([][]byte, 33)
+	proof2[0] = bytesutil.PadTo([]byte{'A'}, 32)
+	depToRemove := &ethpb.Deposit{Proof: proof1}
+	otherDep := &ethpb.Deposit{Proof: proof2}
 	db.pendingDeposits = []*dbpb.DepositContainer{
 		{Deposit: depToRemove, Index: 1},
 		{Deposit: otherDep, Index: 5},
@@ -57,7 +62,9 @@ func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 
 func TestPendingDeposit_RoundTrip(t *testing.T) {
 	dc := DepositCache{}
-	dep := &ethpb.Deposit{Proof: [][]byte{[]byte("A")}}
+	proof := make([][]byte, 33)
+	proof[0] = bytesutil.PadTo([]byte{'A'}, 32)
+	dep := &ethpb.Deposit{Proof: proof}
 	dc.InsertPendingDeposit(context.Background(), dep, 111, 100, [32]byte{})
 	dc.RemovePendingDeposit(context.Background(), dep)
 	if len(dc.pendingDeposits) != 0 {
