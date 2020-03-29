@@ -27,6 +27,7 @@ type BlockReceiver interface {
 	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error
 	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error
 	HasInitSyncBlock(root [32]byte) bool
+	HasInitSyncStateSummary(root [32]byte) bool
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -241,4 +242,9 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
 func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
+}
+
+// HasInitSyncStateSummary returns true if the state summary of the input root exists in initial sync state summaries cache.
+func (s *Service) HasInitSyncStateSummary(root [32]byte) bool {
+	return s.hasInitStateSummary(root)
 }

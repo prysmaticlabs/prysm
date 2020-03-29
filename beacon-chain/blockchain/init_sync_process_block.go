@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -248,4 +249,42 @@ func (s *Service) clearInitSyncBlocks() {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
 	s.initSyncBlocks = make(map[[32]byte]*ethpb.SignedBeaconBlock)
+}
+
+// This checks if a state summary exists in the initial sync state summaries cache using the root
+// of the block.
+func (s *Service) hasInitSyncStateSummary(r [32]byte) bool {
+	s.initSyncStateSummariesLock.RLock()
+	defer s.initSyncStateSummariesLock.RUnlock()
+	_, ok := s.initSyncStateSummaries[r]
+	return ok
+}
+
+// This retrieves a state summary from the initial sync state summaries cache using the root of
+// the block.
+func (s *Service) getInitSyncStateSummary(r [32]byte) *pb.StateSummary {
+	s.initSyncStateSummariesLock.RLock()
+	defer s.initSyncStateSummariesLock.RUnlock()
+	b := s.initSyncStateSummaries[r]
+	return b
+}
+
+// This retrieves all the beacon state summaries from the initial sync state summaries cache, the returned
+// state summaries are unordered.
+func (s *Service) getInitSyncStateSummaries() []*pb.StateSummary {
+	s.initSyncStateSummariesLock.RLock()
+	defer s.initSyncStateSummariesLock.RUnlock()
+
+	blks := make([]*pb.StateSummary, 0, len(s.initSyncStateSummaries))
+	for _, b := range s.initSyncStateSummaries {
+		blks = append(blks, b)
+	}
+	return blks
+}
+
+// This clears out the initial sync state summaries cache.
+func (s *Service) clearInitSyncStateSummaries() {
+	s.initSyncStateSummariesLock.Lock()
+	defer s.initSyncStateSummariesLock.Unlock()
+	s.initSyncStateSummaries = make(map[[32]byte]*epb.StateSummary)
 }
