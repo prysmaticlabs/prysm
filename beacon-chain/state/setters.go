@@ -93,7 +93,8 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
 		// Copy on write since this is a shared array.
-		r = b.BlockRoots()
+		r = make([][]byte, len(b.state.BlockRoots))
+		copy(r, b.state.BlockRoots)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
@@ -145,7 +146,8 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		r = b.StateRoots()
+		r = make([][]byte, len(b.state.StateRoots))
+		copy(r, b.state.StateRoots)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
@@ -221,7 +223,8 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.lock.RLock()
 	votes := b.state.Eth1DataVotes
 	if b.sharedFieldReferences[eth1DataVotes].refs > 1 {
-		votes = b.Eth1DataVotes()
+		votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+		copy(votes, b.state.Eth1DataVotes)
 		b.sharedFieldReferences[eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	}
@@ -592,7 +595,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.lock.RLock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
-		atts = b.PreviousEpochAttestations()
+		atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
+		copy(atts, b.state.PreviousEpochAttestations)
 		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}

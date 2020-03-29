@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 )
@@ -19,6 +21,17 @@ func decode(data []byte, dst proto.Message) error {
 	return nil
 }
 
+func decodeSSZ(data []byte, dst proto.Message) error {
+	data, err := snappy.Decode(nil, data)
+	if err != nil {
+		return err
+	}
+	if err := ssz.Unmarshal(data, dst); err != nil {
+		return err
+	}
+	return nil
+}
+
 func encode(msg proto.Message) ([]byte, error) {
 	if msg == nil || reflect.ValueOf(msg).IsNil() {
 		return nil, errors.New("cannot encode nil message")
@@ -28,5 +41,16 @@ func encode(msg proto.Message) ([]byte, error) {
 		return nil, err
 	}
 
+	return snappy.Encode(nil, enc), nil
+}
+
+func encodeSSZ(msg proto.Message) ([]byte, error) {
+	if msg == nil || reflect.ValueOf(msg).IsNil() {
+		return nil, errors.New("cannot encode nil message")
+	}
+	enc, err := ssz.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
 	return snappy.Encode(nil, enc), nil
 }

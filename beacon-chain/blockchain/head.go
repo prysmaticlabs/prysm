@@ -159,7 +159,7 @@ func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *
 		slot:  block.Block.Slot,
 		root:  root,
 		block: stateTrie.CopySignedBeaconBlock(block),
-		state: state.Copy(),
+		state: state,
 	}
 }
 

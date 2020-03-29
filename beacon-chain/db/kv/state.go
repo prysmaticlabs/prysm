@@ -113,7 +113,7 @@ func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRo
 	if state == nil {
 		return errors.New("nil state")
 	}
-	enc, err := encode(state.InnerStateUnsafe())
+	enc, err := encodeSSZ(state.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (k *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blo
 	var err error
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		multipleEncs[i], err = encode(st.InnerStateUnsafe())
+		multipleEncs[i], err = encodeSSZ(st.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}
@@ -283,7 +283,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 // creates state from marshaled proto state bytes.
 func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
-	err := decode(enc, protoState)
+	err := decodeSSZ(enc, protoState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
@@ -308,20 +308,21 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 		return stateSummary.Slot, nil
 	}
 
-	bkt := tx.Bucket(stateBucket)
+	bkt := tx.Bucket(blocksBucket)
 	enc := bkt.Get(blockRoot)
 	if enc == nil {
 		return 0, errors.New("state enc can't be nil")
 	}
+	b := &ethpb.SignedBeaconBlock{}
 
-	s, err := createState(enc)
+	err := decode(enc, b)
 	if err != nil {
 		return 0, err
 	}
-	if s == nil {
-		return 0, errors.New("state can't be nil")
+	if b.Block == nil {
+		return 0, errors.New("block can't be nil")
 	}
-	return s.Slot, nil
+	return b.Block.Slot, nil
 }
 
 // HighestSlotStates returns the states with the highest slot from the db.

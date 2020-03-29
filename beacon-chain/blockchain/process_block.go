@@ -229,7 +229,9 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	} else {
 		s.initSyncStateLock.Lock()
 		defer s.initSyncStateLock.Unlock()
-		s.initSyncState[root] = postState.FastCopy()
+		if helpers.IsEpochStart(postState.Slot()) {
+			s.initSyncState[root] = postState.FastCopy()
+		}
 		s.filterBoundaryCandidates(ctx, root, postState)
 	}
 
@@ -324,6 +326,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			}
 		}
 	}
+	s.setHead(root, signed, postState)
 
 	return nil
 }

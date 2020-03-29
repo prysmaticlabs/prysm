@@ -197,18 +197,19 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}
 
-	cachedHeadRoot, err := s.HeadRoot(ctx)
+	_, err = s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
 
-	if !bytes.Equal(root[:], cachedHeadRoot) {
-		if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
-			err := errors.Wrap(err, "could not save head")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-	}
+	/*
+		if !bytes.Equal(root[:], cachedHeadRoot) {
+			if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
+				err := errors.Wrap(err, "could not save head")
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+		} */
 
 	// Send notification of the processed block to the state feed.
 	s.stateNotifier.StateFeed().Send(&feed.Event{

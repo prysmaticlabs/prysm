@@ -81,7 +81,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 				return nil, errors.Wrapf(err, "could not get head root")
 			}
 			if bytes.Equal(headRoot, b.ParentRoot) {
-				return s.HeadState(ctx)
+				return s.head.state, nil
 			}
 		}
 		preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
