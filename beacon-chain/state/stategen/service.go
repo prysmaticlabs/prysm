@@ -23,6 +23,7 @@ type State struct {
 	epochBoundaryLock       sync.RWMutex
 	hotStateCache           *cache.HotStateCache
 	splitInfo               *splitSlotAndRoot
+	initSyncStateSummaries  *cache.StateSummaryCache
 }
 
 // This tracks the split point. The point where slot and the block root of
@@ -40,6 +41,7 @@ func New(db db.NoHeadAccessDatabase) *State {
 		hotStateCache:           cache.NewHotStateCache(),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   archivedInterval,
+		initSyncStateSummaries:  cache.NewStateSummaryCache(),
 	}
 }
 
