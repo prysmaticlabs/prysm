@@ -222,7 +222,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	if b.state.BlockRoots == nil {
 		return nil
 	}
-	roots := make([][]byte, len(b.state.BlockRoots))
+	roots := memorypool.GetDoubleByteSlice(len(b.state.BlockRoots))
 	for i, r := range b.state.BlockRoots {
 		tmpRt := make([]byte, len(r))
 		copy(tmpRt, r)
@@ -264,7 +264,7 @@ func (b *BeaconState) StateRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := make([][]byte, len(b.state.StateRoots))
+	roots := memorypool.GetDoubleByteSlice(len(b.state.StateRoots))
 	for i, r := range b.state.StateRoots {
 		tmpRt := make([]byte, len(r))
 		copy(tmpRt, r)
@@ -285,7 +285,7 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	roots := make([][]byte, len(b.state.HistoricalRoots))
+	roots := memorypool.GetDoubleByteSlice(len(b.state.HistoricalRoots))
 	for i, r := range b.state.HistoricalRoots {
 		tmpRt := make([]byte, len(r))
 		copy(tmpRt, r)
@@ -563,7 +563,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := memorypool.GetDoubleByteSlice(len(b.state.RandaoMixes))
+	mixes := memorypool.GetRandoMixes(len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
 		tmpRt := make([]byte, len(r))
 		copy(tmpRt, r)
