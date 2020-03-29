@@ -28,6 +28,7 @@ const (
 	bit5
 )
 
+// GetDepth retrieves the appropriate depth for the provided trie size.
 func GetDepth(v uint64) (out uint8) {
 	// bitmagic: binary search through a uint32, offset down by 1 to not round powers of 2 up.
 	// Then adding 1 to it to not get the index of the first bit, but the length of the bits (depth of tree)
@@ -155,7 +156,6 @@ func ConstructProof(hasher Hasher, count uint64, limit uint64, leaf func(i uint6
 	merge := func(i uint64) {
 		// merge back up from bottom to top, as far as we can
 		for j = 0; ; j++ {
-			// TODO: better than full tree allocation, but style/efficiency can be improved.
 			// if i is a sibling of index at the given depth,
 			// and i is the last index of the subtree to that depth,
 			// then put h into the branch
