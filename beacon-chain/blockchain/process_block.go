@@ -137,11 +137,12 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		}
 
 		if featureconfig.Get().NewStateMgmt {
-			finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
+			finalizedSummary, err := s.beaconDB.StateSummary(ctx, fRoot)
 			if err != nil {
 				return nil, err
 			}
-			if err := s.stateGen.MigrateToCold(ctx, finalizedState, fRoot); err != nil {
+			if err := s.stateGen.MigrateToCold(ctx, finalizedSummary.Slot, fRoot); err != nil {
 				return nil, err
 			}
 		}
@@ -297,11 +298,11 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 		if featureconfig.Get().NewStateMgmt {
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-			finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
+			fBlock, err := s.beaconDB.Block(ctx, fRoot)
 			if err != nil {
-				return errors.Wrap(err, "could not get state by root for migration")
+				return err
 			}
-			if err := s.stateGen.MigrateToCold(ctx, finalizedState, fRoot); err != nil {
+			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
 				return errors.Wrap(err, "could not migrate with new finalized root")
 
 			}
