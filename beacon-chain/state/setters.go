@@ -3,6 +3,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -266,7 +268,8 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, error)) error {
+func (b *BeaconState) ApplyToEveryValidator(checker func(idx int, val *ethpb.Validator) (bool, error),
+	mutator func(idx int, val *ethpb.Validator) error) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -274,7 +277,8 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.Validators()
+		v = make([]*ethpb.Validator, len(b.state.Validators))
+		copy(v, b.state.Validators)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
@@ -282,13 +286,20 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	b.lock.RUnlock()
 	changedVals := []uint64{}
 	for i, val := range v {
-		changed, err := f(i, val)
+		changed, err := checker(i, val)
 		if err != nil {
 			return err
 		}
-		if changed {
-			changedVals = append(changedVals, uint64(i))
+		if !changed {
+			continue
 		}
+		val = CopyValidator(val)
+		err = mutator(i, val)
+		if err != nil {
+			return err
+		}
+		changedVals = append(changedVals, uint64(i))
+		v[i] = val
 	}
 
 	b.lock.Lock()
@@ -315,7 +326,8 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.Validators()
+		v = make([]*ethpb.Validator, len(b.state.Validators))
+		copy(v, b.state.Validators)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
@@ -422,7 +434,8 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
-		mixes = b.RandaoMixes()
+		mixes = memorypool.GetDoubleByteSlice(len(b.state.RandaoMixes))
+		copy(mixes, b.state.RandaoMixes)
 		b.sharedFieldReferences[randaoMixes].MinusRef()
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
@@ -604,7 +617,8 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.RLock()
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
-		vals = b.Validators()
+		vals = make([]*ethpb.Validator, len(b.state.Validators))
+		copy(vals, b.state.Validators)
 		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
