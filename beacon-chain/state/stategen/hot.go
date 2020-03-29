@@ -56,10 +56,15 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateByRoot")
 	defer span.End()
 
-	// Load the hot state cache.
+	// Load the hot state from cache.
 	cachedState := s.hotStateCache.Get(blockRoot)
 	if cachedState != nil {
 		return cachedState, nil
+	}
+
+	// Load the hot state from DB.
+	if s.beaconDB.HasState(ctx, blockRoot) {
+		return s.beaconDB.State(ctx, blockRoot)
 	}
 
 	summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
@@ -70,13 +75,14 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errUnknownStateSummary
 	}
 
-	startState, err := s.lastSavedState(ctx, helpers.StartSlot(helpers.SlotToEpoch(summary.Slot)))
+	startState, err := s.lastSavedState(ctx, summary.Slot)
 	if err != nil {
 		return nil, err
 	}
 	if startState == nil {
 		return nil, errUnknownBoundaryState
 	}
+	log.Warnf("Replaying for block at slot %d, start slot %d", summary.Slot, startState.Slot())
 
 	// Don't need to replay the blocks if start state is the same state for the block root.
 	var hotState *state.BeaconState
