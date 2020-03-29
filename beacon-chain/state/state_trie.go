@@ -177,6 +177,29 @@ func (b *BeaconState) Copy() *BeaconState {
 	return dst
 }
 
+// FastCopy is used to copy all the field trie contents and
+// empty out the references to it in the source state. This
+// is used when we have a state that we know will most
+// likely not be used anytime in the future.
+func (b *BeaconState) FastCopy() *BeaconState {
+	newState := b.Copy()
+	for fldIdx, fieldTrie := range b.stateFieldLeaves {
+		if fieldTrie.reference != nil {
+			fieldTrie.Lock()
+			fieldTrie.MinusRef()
+			fieldTrie.Unlock()
+			b.rebuildTrie[fldIdx] = true
+			b.dirtyFields[fldIdx] = true
+			b.stateFieldLeaves[fldIdx] = &FieldTrie{
+				field:     fldIdx,
+				reference: &reference{1},
+				Mutex:     new(sync.Mutex),
+			}
+		}
+	}
+	return newState
+}
+
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
