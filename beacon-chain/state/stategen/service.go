@@ -23,7 +23,7 @@ type State struct {
 	epochBoundaryLock       sync.RWMutex
 	hotStateCache           *cache.HotStateCache
 	splitInfo               *splitSlotAndRoot
-	initSyncStateSummaries  *cache.StateSummaryCache
+	stateSummaryCache       *cache.StateSummaryCache
 }
 
 // This tracks the split point. The point where slot and the block root of
@@ -34,14 +34,14 @@ type splitSlotAndRoot struct {
 }
 
 // New returns a new state management object.
-func New(db db.NoHeadAccessDatabase) *State {
+func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
 	return &State{
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		hotStateCache:           cache.NewHotStateCache(),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   archivedInterval,
-		initSyncStateSummaries:  cache.NewStateSummaryCache(),
+		stateSummaryCache:       stateSummaryCache,
 	}
 }
 

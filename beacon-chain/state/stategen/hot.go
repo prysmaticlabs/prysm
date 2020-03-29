@@ -36,12 +36,10 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	}
 
 	// On an intermediate slots, save the hot state summary.
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
 		Slot: state.Slot(),
 		Root: blockRoot[:],
-	}); err != nil {
-		return err
-	}
+	})
 
 	// Store the copied state in the cache.
 	s.hotStateCache.Put(blockRoot, state)
@@ -67,12 +65,9 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
-	summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
+	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
-		return nil, err
-	}
-	if summary == nil {
-		return nil, errUnknownStateSummary
+		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
 	startState, err := s.lastSavedState(ctx, summary.Slot)

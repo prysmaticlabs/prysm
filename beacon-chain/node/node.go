@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -58,20 +59,21 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	ctx             *cli.Context
-	services        *shared.ServiceRegistry
-	lock            sync.RWMutex
-	stop            chan struct{} // Channel to wait for termination notifications.
-	db              db.Database
-	attestationPool attestations.Pool
-	exitPool        *voluntaryexits.Pool
-	slashingsPool   *slashings.Pool
-	depositCache    *depositcache.DepositCache
-	stateFeed       *event.Feed
-	blockFeed       *event.Feed
-	opFeed          *event.Feed
-	forkChoiceStore forkchoice.ForkChoicer
-	stateGen        *stategen.State
+	ctx               *cli.Context
+	services          *shared.ServiceRegistry
+	lock              sync.RWMutex
+	stop              chan struct{} // Channel to wait for termination notifications.
+	db                db.Database
+	stateSummaryCache *cache.StateSummaryCache
+	attestationPool   attestations.Pool
+	exitPool          *voluntaryexits.Pool
+	slashingsPool     *slashings.Pool
+	depositCache      *depositcache.DepositCache
+	stateFeed         *event.Feed
+	blockFeed         *event.Feed
+	opFeed            *event.Feed
+	forkChoiceStore   forkchoice.ForkChoicer
+	stateGen          *stategen.State
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -92,15 +94,16 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		ctx:             ctx,
-		services:        registry,
-		stop:            make(chan struct{}),
-		stateFeed:       new(event.Feed),
-		blockFeed:       new(event.Feed),
-		opFeed:          new(event.Feed),
-		attestationPool: attestations.NewPool(),
-		exitPool:        voluntaryexits.NewPool(),
-		slashingsPool:   slashings.NewPool(),
+		ctx:               ctx,
+		services:          registry,
+		stop:              make(chan struct{}),
+		stateFeed:         new(event.Feed),
+		blockFeed:         new(event.Feed),
+		opFeed:            new(event.Feed),
+		attestationPool:   attestations.NewPool(),
+		exitPool:          voluntaryexits.NewPool(),
+		slashingsPool:     slashings.NewPool(),
+		stateSummaryCache: cache.NewStateSummaryCache(),
 	}
 
 	if err := beacon.startDB(ctx); err != nil {
@@ -233,7 +236,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	clearDB := ctx.Bool(cmd.ClearDB.Name)
 	forceClearDB := ctx.Bool(cmd.ForceClearDB.Name)
 
-	d, err := db.NewDB(dbPath)
+	d, err := db.NewDB(dbPath, b.stateSummaryCache)
 	if err != nil {
 		return err
 	}
@@ -252,7 +255,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return err
 		}
-		d, err = db.NewDB(dbPath)
+		d, err = db.NewDB(dbPath, b.stateSummaryCache)
 		if err != nil {
 			return err
 		}
@@ -264,7 +267,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) startStateGen() {
-	b.stateGen = stategen.New(b.db)
+	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
 }
 
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {

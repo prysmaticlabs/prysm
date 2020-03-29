@@ -29,6 +29,12 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		return nil
 	}
 
+	// Migrate all state summary objects from cache to DB.
+	if err := s.beaconDB.SaveStateSummaries(ctx, s.stateSummaryCache.GetAll()); err != nil {
+		return err
+	}
+	s.stateSummaryCache.Clear()
+
 	// Move the states between split slot to finalized slot from hot section to the cold section.
 	filter := filters.NewFilter().SetStartSlot(currentSplitSlot).SetEndSlot(finalizedState.Slot() - 1)
 	blockRoots, err := s.beaconDB.BlockRoots(ctx, filter)

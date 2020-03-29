@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	bolt "go.etcd.io/bbolt"
 )
@@ -38,12 +39,13 @@ type Store struct {
 	validatorIndexCache *ristretto.Cache
 	stateSlotBitLock    sync.Mutex
 	blockSlotBitLock    sync.Mutex
+	stateSummaryCache   *cache.StateSummaryCache
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string) (*Store, error) {
+func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -79,6 +81,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 		databasePath:        dirPath,
 		blockCache:          blockCache,
 		validatorIndexCache: validatorCache,
+		stateSummaryCache:   stateSummaryCache,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
