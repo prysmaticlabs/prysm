@@ -21,6 +21,15 @@ var (
 func (s *Service) updateMetrics() {
 	for topic := range GossipTopicMappings {
 		topic += s.Encoding().ProtocolSuffix()
+		if !strings.Contains(topic, "%x") {
+			p2pTopicPeerCount.WithLabelValues(topic).Set(float64(len(s.pubsub.ListPeers(topic))))
+			continue
+		}
+		digest, err := s.ForkDigest()
+		if err != nil {
+			log.WithError(err).Errorf("Could not compute fork digest")
+		}
+		topic = fmt.Sprintf(topic, digest)
 		p2pTopicPeerCount.WithLabelValues(topic).Set(float64(len(s.pubsub.ListPeers(topic))))
 	}
 	p2pPeerCount.WithLabelValues("Connected").Set(float64(len(s.peers.Connected())))
