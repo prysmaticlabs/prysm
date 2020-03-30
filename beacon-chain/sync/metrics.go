@@ -1,11 +1,22 @@
 package sync
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
 var (
+	topicPeerCount = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "p2p_topic_peer_count",
+			Help: "The number of peers subscribed to a given topic.",
+		}, []string{"topic"},
+	)
 	messageReceivedCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "p2p_message_received_total",
@@ -58,3 +69,19 @@ var (
 		},
 	)
 )
+
+func (r *Service) updateMetrics() {
+	for topic := range p2p.GossipTopicMappings {
+		topic += r.p2p.Encoding().ProtocolSuffix()
+		if !strings.Contains(topic, "%x") {
+			topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.ListPeers(topic))))
+			continue
+		}
+		digest, err := r.p2p.ForkDigest()
+		if err != nil {
+			log.WithError(err).Errorf("Could not compute fork digest")
+		}
+		topic = fmt.Sprintf(topic, digest)
+		topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.ListPeers(topic))))
+	}
+}
