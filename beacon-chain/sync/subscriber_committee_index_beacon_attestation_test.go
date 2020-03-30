@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -58,6 +59,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		stateNotifier:       (&mock.ChainService{}).StateNotifier(),
 		attestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		initialSync:         &mockSync.Sync{IsSyncing: false},
+		stateSummaryCache:   cache.NewStateSummaryCache(),
 	}
 	r.registerSubscribers()
 	r.stateNotifier.StateFeed().Send(&feed.Event{

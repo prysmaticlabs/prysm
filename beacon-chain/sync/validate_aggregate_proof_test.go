@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -139,6 +140,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		attPool:              attestations.NewPool(),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -199,7 +201,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
-		attPool: attestations.NewPool(),
+		attPool:           attestations.NewPool(),
+		stateSummaryCache: cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -377,7 +380,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
-		attPool: attestations.NewPool(),
+		attPool:           attestations.NewPool(),
+		stateSummaryCache: cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)

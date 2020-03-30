@@ -44,12 +44,9 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateByRoot")
 	defer span.End()
 
-	summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
+	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
-		return nil, err
-	}
-	if summary == nil {
-		return nil, errUnknownStateSummary
+		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
 	// Use the archived point state if the summary slot lies on top of the archived point.
@@ -195,13 +192,10 @@ func (s *State) blockRootSlot(ctx context.Context, blockRoot [32]byte) (uint64, 
 	ctx, span := trace.StartSpan(ctx, "stateGen.blockRootSlot")
 	defer span.End()
 
-	if s.beaconDB.HasStateSummary(ctx, blockRoot) {
-		summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
+	if s.StateSummaryExists(ctx, blockRoot) {
+		summary, err := s.stateSummary(ctx, blockRoot)
 		if err != nil {
-			return 0, nil
-		}
-		if summary == nil {
-			return 0, errUnknownStateSummary
+			return 0, err
 		}
 		return summary.Slot, nil
 	}

@@ -238,6 +238,11 @@ func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary
 	return e.db.SaveStateSummary(ctx, summary)
 }
 
+// SaveStateSummaries -- passthrough.
+func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+	return e.db.SaveStateSummaries(ctx, summaries)
+}
+
 // SaveStates -- passthrough.
 func (e Exporter) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
 	return e.db.SaveStates(ctx, states, blockRoots)
