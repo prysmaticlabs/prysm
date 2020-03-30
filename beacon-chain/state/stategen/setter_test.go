@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	//"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -17,7 +18,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 
@@ -48,7 +49,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
@@ -75,7 +76,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)

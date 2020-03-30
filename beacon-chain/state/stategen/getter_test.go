@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -18,7 +19,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
@@ -53,7 +54,7 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -85,7 +86,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -110,7 +111,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 	service.splitInfo.slot = service.slotsPerArchivedPoint + 1
 
@@ -155,7 +156,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}

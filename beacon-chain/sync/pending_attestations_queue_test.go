@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -46,6 +47,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: roughtime.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
@@ -69,6 +71,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		chain:                &mock.ChainService{Genesis: roughtime.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	a := &ethpb.AggregateAttestationAndProof{
@@ -175,6 +178,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 			}},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	sb = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
