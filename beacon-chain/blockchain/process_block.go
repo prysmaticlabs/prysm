@@ -143,10 +143,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 			fBlock, err := s.beaconDB.Block(ctx, fRoot)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "could not get finalized block to migrate")
 			}
 			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "could not migrate to cold")
 			}
 		}
 	}
@@ -303,11 +303,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 			fBlock, err := s.beaconDB.Block(ctx, fRoot)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "could not get finalized block to migrate")
 			}
 			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
-				return errors.Wrap(err, "could not migrate with new finalized root")
-
+				return errors.Wrap(err, "could not migrate to cold")
 			}
 		}
 	}

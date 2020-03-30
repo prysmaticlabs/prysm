@@ -77,7 +77,6 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	if startState == nil {
 		return nil, errUnknownBoundaryState
 	}
-	log.Warnf("Replaying for block at slot %d, start slot %d", summary.Slot, startState.Slot())
 
 	// Don't need to replay the blocks if start state is the same state for the block root.
 	var hotState *state.BeaconState

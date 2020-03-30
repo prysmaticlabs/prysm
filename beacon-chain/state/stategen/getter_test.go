@@ -178,3 +178,45 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 		t.Error("Did not correctly load state")
 	}
 }
+
+func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db, cache.NewStateSummaryCache())
+
+	r := [32]byte{'a'}
+	summary := &pb.StateSummary{Slot: 100}
+	_, err := service.stateSummary(ctx, r)
+	if err != errUnknownStateSummary {
+		t.Fatal("Did not get wanted error")
+	}
+
+	service.stateSummaryCache.Put(r, summary)
+	got, err := service.stateSummary(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(got, summary) {
+		t.Error("Did not get wanted summary")
+	}
+
+	r = [32]byte{'b'}
+	summary = &pb.StateSummary{Root: r[:], Slot: 101}
+	_, err = service.stateSummary(ctx, r)
+	if err != errUnknownStateSummary {
+		t.Fatal("Did not get wanted error")
+	}
+
+	if err := service.beaconDB.SaveStateSummary(ctx, summary); err != nil {
+		t.Fatal(err)
+	}
+	got, err = service.stateSummary(ctx, r)
+	if err != nil {
+		t.Fatal("Did not get wanted error")
+	}
+	if !proto.Equal(got, summary) {
+		t.Error("Did not get wanted summary")
+	}
+}
