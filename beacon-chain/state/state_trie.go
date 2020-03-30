@@ -165,11 +165,11 @@ func (b *BeaconState) Copy() *BeaconState {
 					memorypool.PutRandaoMixesTrie(b.stateFieldLeaves[randaoMixes].fieldLayers)
 				}
 			}
-			if field == blockRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
-				memorypool.PutBlockRootsTrie(b.stateFieldLeaves[blockRoots].fieldLayers)
+			if (field == blockRoots || field == stateRoots) && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
+				memorypool.PutRootsTrie(b.stateFieldLeaves[field].fieldLayers)
 			}
-			if field == stateRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
-				memorypool.PutStateRootsTrie(b.stateFieldLeaves[stateRoots].fieldLayers)
+			if field == validators && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
+				memorypool.PutValidatorsTrie(b.stateFieldLeaves[validators].fieldLayers)
 			}
 		}
 	})
