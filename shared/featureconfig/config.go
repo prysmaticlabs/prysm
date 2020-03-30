@@ -53,6 +53,7 @@ type Flags struct {
 	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
 	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool   // EnableBlockHTR enables custom hashing of our beacon blocks.
+	InitSyncBatchSaveBlocks                    bool   // InitSyncBatchSaveBlocks enables batch save blocks mode during initial syncing.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -189,6 +190,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableCustomBlockHTR.Name) {
 		log.Warn("Enabling custom block hashing")
 		cfg.EnableBlockHTR = true
+	}
+	if ctx.Bool(initSyncBatchSaveBlocks.Name) {
+		log.Warn("Enabling init sync batch save blocks mode")
+		cfg.InitSyncBatchSaveBlocks = true
 	}
 	Init(cfg)
 }

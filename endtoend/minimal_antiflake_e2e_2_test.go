@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_AntiFlake_MinimalConfig(t *testing.T) {
+func TestEndToEnd_AntiFlake_MinimalConfig_2(t *testing.T) {
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
@@ -29,7 +29,5 @@ func TestEndToEnd_AntiFlake_MinimalConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Running this test twice to test the quickest conditions (3 epochs) twice.
-	runEndToEndTest(t, minimalConfig)
 	runEndToEndTest(t, minimalConfig)
 }

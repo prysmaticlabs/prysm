@@ -6,18 +6,19 @@ go_test(
     testonly = True,
     srcs = [
         "endtoend_test.go",
-        "minimal_antiflake_e2e_test.go",
+        "minimal_antiflake_e2e_1_test.go",
+        "minimal_antiflake_e2e_2_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],
     args = ["-test.v"],
     data = [
         "//beacon-chain",
-        "//validator",
         "//slasher",
+        "//validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
-    shard_count = 3,
+    shard_count = 4,
     tags = [
         "block-network",
         "e2e",
