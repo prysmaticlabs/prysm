@@ -2,11 +2,12 @@ package sync
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-
+	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
@@ -71,17 +72,29 @@ var (
 )
 
 func (r *Service) updateMetrics() {
+	// We update the dynamic subnet topics.
+	digest, err := r.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Errorf("Could not compute fork digest")
+	}
+	indices := r.committeeIndices()
+	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(pb.Attestation{})]
+	attTopic += r.p2p.Encoding().ProtocolSuffix()
+	for _, committeeIdx := range indices {
+		attTopic = fmt.Sprintf(attTopic, digest, committeeIdx)
+		topicPeerCount.WithLabelValues(attTopic).Set(float64(len(r.p2p.PubSub().ListPeers(attTopic))))
+	}
+	// We update all other gossip topics.
 	for topic := range p2p.GossipTopicMappings {
-		topic += r.p2p.Encoding().ProtocolSuffix()
-		if !strings.Contains(topic, "%x") {
-			topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.ListPeers(topic))))
+		if strings.Contains(topic, "committee_index") {
 			continue
 		}
-		digest, err := r.p2p.ForkDigest()
-		if err != nil {
-			log.WithError(err).Errorf("Could not compute fork digest")
+		topic += r.p2p.Encoding().ProtocolSuffix()
+		if !strings.Contains(topic, "%x") {
+			topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.PubSub().ListPeers(topic))))
+			continue
 		}
 		topic = fmt.Sprintf(topic, digest)
-		topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.ListPeers(topic))))
+		topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.PubSub().ListPeers(topic))))
 	}
 }
