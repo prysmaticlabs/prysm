@@ -78,7 +78,7 @@ func (v *ReadOnlyValidator) Slashed() bool {
 	return v.validator.Slashed
 }
 
-// Slashed returns the read only validator is slashed.
+// CopyValidator returns the copy of the read only validator.
 func (v *ReadOnlyValidator) CopyValidator() *ethpb.Validator {
 	return CopyValidator(v.validator)
 }
