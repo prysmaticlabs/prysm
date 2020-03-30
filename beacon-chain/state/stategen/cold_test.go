@@ -222,8 +222,17 @@ func TestArchivedPointByIndex_HasPoint(t *testing.T) {
 
 	service := New(db)
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState.SetSlot(1)
 	index := uint64(999)
-	if err := service.beaconDB.SaveArchivedPointRoot(ctx, [32]byte{'A'}, index); err != nil {
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	blkRoot, _ := ssz.HashTreeRoot(blk.Block)
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, blkRoot, index); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
@@ -249,6 +258,9 @@ func TestArchivedPointByIndex_DoesntHavePoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -280,6 +292,9 @@ func TestRecoverArchivedPointByIndex_CanRecover(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)

@@ -365,6 +365,9 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 	err := k.db.View(func(tx *bolt.Tx) error {
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
+		if len(savedSlots) == 0 {
+			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
+		}
 		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
 		if err != nil {
 			return err
