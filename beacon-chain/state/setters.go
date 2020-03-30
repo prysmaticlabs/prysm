@@ -312,7 +312,10 @@ func (b *BeaconState) ApplyToEveryValidator(checker func(idx int, val *ethpb.Val
 		if !changed {
 			continue
 		}
-		val = CopyValidator(val)
+		if featureconfig.Get().EnableRefCopy {
+			// copy if changing a reference
+			val = CopyValidator(val)
+		}
 		err = mutator(i, val)
 		if err != nil {
 			return err
