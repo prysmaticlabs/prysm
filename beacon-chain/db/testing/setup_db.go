@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -23,7 +24,7 @@ func SetupDB(t testing.TB) db.Database {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("failed to remove directory: %v", err)
 	}
-	s, err := kv.NewKVStore(p)
+	s, err := kv.NewKVStore(p, cache.NewStateSummaryCache())
 	if err != nil {
 		t.Fatal(err)
 	}
