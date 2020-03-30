@@ -18,7 +18,7 @@ var RootsMemoryPool = new(sync.Pool)
 // for randao mixes trie.
 var RandaoMixesMemoryPool = new(sync.Pool)
 
-// RandaoMixesMemoryPool represents the memory pool
+// ValidatorsMemoryPool represents the memory pool
 // for randao mixes trie.
 var ValidatorsMemoryPool = new(sync.Pool)
 
