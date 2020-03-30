@@ -9,48 +9,44 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = shared.Service(&ValidatorService{})
-var validatorKey *keystore.Key
-var validatorPubKey [48]byte
-var keyMap map[[48]byte]*keystore.Key
-var keyMapThreeValidators map[[48]byte]*keystore.Key
+var validatorPubKey *bls.PublicKey
+var secKeyMap map[[48]byte]*bls.SecretKey
+var pubKeyMap map[[48]byte]*bls.PublicKey
+var secKeyMapThreeValidators map[[48]byte]*bls.SecretKey
+var pubKeyMapThreeValidators map[[48]byte]*bls.PublicKey
 var testKeyManager keymanager.KeyManager
 var testKeyManagerThreeValidators keymanager.KeyManager
 
 func keySetup() {
-	keyMap = make(map[[48]byte]*keystore.Key)
-	keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
-
-	validatorKey, _ = keystore.NewKey()
-	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
-	keyMap[validatorPubKey] = validatorKey
+	pubKeyMap = make(map[[48]byte]*bls.PublicKey)
+	secKeyMap = make(map[[48]byte]*bls.SecretKey)
+	pubKeyMapThreeValidators = make(map[[48]byte]*bls.PublicKey)
+	secKeyMapThreeValidators = make(map[[48]byte]*bls.SecretKey)
 
 	sks := make([]*bls.SecretKey, 1)
-	sks[0] = validatorKey.SecretKey
+	sks[0] = bls.RandKey()
 	testKeyManager = keymanager.NewDirect(sks)
+	validatorPubKey = sks[0].PublicKey()
 
 	sks = make([]*bls.SecretKey, 3)
 	for i := 0; i < 3; i++ {
-		vKey, _ := keystore.NewKey()
+		secKey := bls.RandKey()
 		var pubKey [48]byte
-		copy(pubKey[:], vKey.PublicKey.Marshal())
-		keyMapThreeValidators[pubKey] = vKey
-		sks[i] = vKey.SecretKey
+		copy(pubKey[:], secKey.PublicKey().Marshal())
+		secKeyMapThreeValidators[pubKey] = secKey
+		pubKeyMapThreeValidators[pubKey] = secKey.PublicKey()
+		sks[i] = secKey
 	}
 	testKeyManagerThreeValidators = keymanager.NewDirect(sks)
 }
 
 func TestMain(m *testing.M) {
-	dir := testutil.TempDir() + "/keystore1"
-	defer os.RemoveAll(dir)
-	accounts.NewValidatorAccount(dir, "1234")
 	keySetup()
 	os.Exit(m.Run())
 }
