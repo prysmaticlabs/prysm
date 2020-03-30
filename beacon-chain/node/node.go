@@ -440,6 +440,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		AttPool:             b.attestationPool,
 		ExitPool:            b.exitPool,
 		SlashingPool:        b.slashingsPool,
+		StateSummaryCache:   b.stateSummaryCache,
 	})
 
 	return b.services.RegisterService(rs)
