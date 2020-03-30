@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
 // SetGenesisTime for the beacon state.
@@ -91,7 +92,8 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
 		// Copy on write since this is a shared array.
-		r = b.BlockRoots()
+		r = make([][]byte, len(b.state.BlockRoots))
+		copy(r, b.state.BlockRoots)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
@@ -143,7 +145,8 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		r = b.StateRoots()
+		r = make([][]byte, len(b.state.StateRoots))
+		copy(r, b.state.StateRoots)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
@@ -219,7 +222,8 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.lock.RLock()
 	votes := b.state.Eth1DataVotes
 	if b.sharedFieldReferences[eth1DataVotes].refs > 1 {
-		votes = b.Eth1DataVotes()
+		votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+		copy(votes, b.state.Eth1DataVotes)
 		b.sharedFieldReferences[eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	}
@@ -266,7 +270,8 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, error)) error {
+func (b *BeaconState) ApplyToEveryValidator(checker func(idx int, val *ethpb.Validator) (bool, error),
+	mutator func(idx int, val *ethpb.Validator) error) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -274,7 +279,8 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.Validators()
+		v = make([]*ethpb.Validator, len(b.state.Validators))
+		copy(v, b.state.Validators)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
@@ -282,13 +288,20 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	b.lock.RUnlock()
 	changedVals := []uint64{}
 	for i, val := range v {
-		changed, err := f(i, val)
+		changed, err := checker(i, val)
 		if err != nil {
 			return err
 		}
-		if changed {
-			changedVals = append(changedVals, uint64(i))
+		if !changed {
+			continue
 		}
+		val = CopyValidator(val)
+		err = mutator(i, val)
+		if err != nil {
+			return err
+		}
+		changedVals = append(changedVals, uint64(i))
+		v[i] = val
 	}
 
 	b.lock.Lock()
@@ -315,7 +328,8 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.Validators()
+		v = make([]*ethpb.Validator, len(b.state.Validators))
+		copy(v, b.state.Validators)
 
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
@@ -422,7 +436,8 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
-		mixes = b.RandaoMixes()
+		mixes = memorypool.GetDoubleByteSlice(len(b.state.RandaoMixes))
+		copy(mixes, b.state.RandaoMixes)
 		b.sharedFieldReferences[randaoMixes].MinusRef()
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
@@ -579,7 +594,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.lock.RLock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
-		atts = b.PreviousEpochAttestations()
+		atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
+		copy(atts, b.state.PreviousEpochAttestations)
 		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
@@ -604,7 +620,8 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.RLock()
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
-		vals = b.Validators()
+		vals = make([]*ethpb.Validator, len(b.state.Validators))
+		copy(vals, b.state.Validators)
 		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}

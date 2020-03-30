@@ -78,6 +78,11 @@ func (v *ReadOnlyValidator) Slashed() bool {
 	return v.validator.Slashed
 }
 
+// Slashed returns the read only validator is slashed.
+func (v *ReadOnlyValidator) CopyValidator() *ethpb.Validator {
+	return CopyValidator(v.validator)
+}
+
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
