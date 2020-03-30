@@ -11,7 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -227,16 +226,16 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 	defer span.End()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
 		for _, block := range blocks {
 			if err := k.setBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 				return err
 			}
-
-			blockRoot, err := ssz.HashTreeRoot(block.Block)
+			blockRoot, err := stateutil.BlockRoot(block.Block)
 			if err != nil {
 				return err
 			}
-			bkt := tx.Bucket(blocksBucket)
+
 			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 				continue
 			}
@@ -249,6 +248,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			k.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
+
 			if err := bkt.Put(blockRoot[:], enc); err != nil {
 				return err
 			}
