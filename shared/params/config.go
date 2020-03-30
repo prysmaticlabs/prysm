@@ -81,8 +81,8 @@ type BeaconChainConfig struct {
 	DomainBeaconAttester    [4]byte `yaml:"DOMAIN_ATTESTATION"`         // DomainBeaconAttester defines the BLS signature domain for attestation verification.
 	DomainDeposit           [4]byte `yaml:"DOMAIN_DEPOSIT"`             // DomainDeposit defines the BLS signature domain for deposit verification.
 	DomainVoluntaryExit     [4]byte `yaml:"DOMAIN_VOLUNTARY_EXIT"`      // DomainVoluntaryExit defines the BLS signature domain for exit verification.
-	DomainSelectionProof    [4]byte `yaml:"DOMAIN_SELECTION_PROOF"`     // DomainVoluntaryExit defines the BLS signature domain for selection proof.
-	DomainAggregateAndProof [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF"` // DomainVoluntaryExit defines the BLS signature domain for aggregate and proof.
+	DomainSelectionProof    [4]byte `yaml:"DOMAIN_SELECTION_PROOF"`     // DomainSelectionProof defines the BLS signature domain for selection proof.
+	DomainAggregateAndProof [4]byte `yaml:"DOMAIN_AGGREGATE_AND_PROOF"` // DomainAggregateAndProof defines the BLS signature domain for aggregate and proof.
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
