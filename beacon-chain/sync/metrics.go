@@ -78,11 +78,11 @@ func (r *Service) updateMetrics() {
 		log.WithError(err).Errorf("Could not compute fork digest")
 	}
 	indices := r.committeeIndices()
-	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(pb.Attestation{})]
+	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	attTopic += r.p2p.Encoding().ProtocolSuffix()
 	for _, committeeIdx := range indices {
-		attTopic = fmt.Sprintf(attTopic, digest, committeeIdx)
-		topicPeerCount.WithLabelValues(attTopic).Set(float64(len(r.p2p.PubSub().ListPeers(attTopic))))
+		formattedTopic := fmt.Sprintf(attTopic, digest, committeeIdx)
+		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(r.p2p.PubSub().ListPeers(formattedTopic))))
 	}
 	// We update all other gossip topics.
 	for topic := range p2p.GossipTopicMappings {
@@ -95,7 +95,7 @@ func (r *Service) updateMetrics() {
 			topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.PubSub().ListPeers(topic))))
 			continue
 		}
-		topic = fmt.Sprintf(topic, digest)
-		topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.PubSub().ListPeers(topic))))
+		formattedTopic := fmt.Sprintf(topic, digest)
+		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(r.p2p.PubSub().ListPeers(formattedTopic))))
 	}
 }
