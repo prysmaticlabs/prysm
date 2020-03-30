@@ -15,9 +15,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// This defines size of the upper bound for initial sync block cache.
+var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
 //
@@ -210,12 +214,16 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
-	}
 	root, err := stateutil.BlockRoot(b)
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
+	}
+	if featureconfig.Get().InitSyncBatchSaveBlocks {
+		s.saveInitSyncBlock(root, signed)
+	} else {
+		if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
+			return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+		}
 	}
 
 	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
@@ -247,6 +255,14 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		}
 	}
 
+	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
+	if len(s.getInitSyncBlocks()) > int(initialSyncBlockCacheSize) {
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return err
+		}
+		s.clearInitSyncBlocks()
+	}
+
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		if !featureconfig.Get().NewStateMgmt {
@@ -262,6 +278,13 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			if err := s.saveInitState(ctx, postState); err != nil {
 				return errors.Wrap(err, "could not save init sync finalized state")
 			}
+		}
+
+		if featureconfig.Get().InitSyncBatchSaveBlocks {
+			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+				return err
+			}
+			s.clearInitSyncBlocks()
 		}
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
