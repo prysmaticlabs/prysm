@@ -168,9 +168,17 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 		totalSlashing += slashing
 	}
 
+	checker := func(idx int, val *ethpb.Validator) (bool, error) {
+		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
+		if val.Slashed && correctEpoch {
+			return true, nil
+		}
+		return false, nil
+	}
+
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
-	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, error) {
+	err = state.ApplyToEveryValidator(checker, func(idx int, val *ethpb.Validator) error {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
@@ -178,11 +186,11 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
-				return false, err
+				return err
 			}
-			return true, nil
+			return nil
 		}
-		return false, nil
+		return nil
 	})
 	return state, err
 }
@@ -235,8 +243,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	}
 
 	bals := state.Balances()
-	// Update effective balances with hysteresis.
-	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+	checkerFunc := func(idx int, val *ethpb.Validator) (bool, error) {
 		if val == nil {
 			return false, fmt.Errorf("validator %d is nil in state", idx)
 		}
@@ -246,16 +253,25 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		balance := bals[idx]
 		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
 		if balance < val.EffectiveBalance || val.EffectiveBalance+3*halfInc < balance {
-			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-			if val.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
-				val.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
-			}
 			return true, nil
 		}
 		return false, nil
 	}
+	// Update effective balances with hysteresis.
+	validatorFunc := func(idx int, val *ethpb.Validator) error {
+		balance := bals[idx]
+		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
+		if balance < val.EffectiveBalance || val.EffectiveBalance+3*halfInc < balance {
+			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+			if val.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
+				val.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
+			}
+			return nil
+		}
+		return nil
+	}
 
-	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
+	if err := state.ApplyToEveryValidator(checkerFunc, validatorFunc); err != nil {
 		return nil, err
 	}
 
