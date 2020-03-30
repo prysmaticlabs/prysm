@@ -13,7 +13,7 @@ var (
 	// RPCPort defines a slasher node RPC port to open.
 	RPCPort = &cli.IntFlag{
 		Name:  "rpc-port",
-		Usage: "RPC port exposed by a beacon node",
+		Usage: "RPC port exposed by the slasher",
 		Value: 5000,
 	}
 	// KeyFlag defines a flag for the node's TLS key.
