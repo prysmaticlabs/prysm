@@ -117,7 +117,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	case stateRoots:
 		dstFieldTrie = memorypool.GetStateRootsTrie(len(f.fieldLayers))
 	default:
-		dstFieldTrie = memorypool.GetFieldTrie(len(f.fieldLayers))
+		dstFieldTrie = make([][]*[32]byte, len(f.fieldLayers))
 	}
 
 	for i, layer := range f.fieldLayers {

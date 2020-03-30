@@ -22,8 +22,6 @@ var StateRootsMemoryPool = new(sync.Pool)
 // for randao mixes trie.
 var RandaoMixesMemoryPool = new(sync.Pool)
 
-var GenericFieldFieldTriePool = new(sync.Pool)
-
 // GetDoubleByteSlice retrieves the 2d byte slice of
 // the desired size from the memory pool.
 func GetDoubleByteSlice(size int) [][]byte {
@@ -50,29 +48,6 @@ func PutDoubleByteSlice(data [][]byte) {
 	}
 }
 
-func GetRandoMixes(size int) [][]byte {
-	if !featureconfig.Get().EnableByteMempool {
-		return make([][]byte, size)
-	}
-	rawObj := RandaoMixesMemoryPool.Get()
-	if rawObj == nil {
-		return GetDoubleByteSlice(size)
-	}
-
-	byteSlice := rawObj.([][]byte)
-	if len(byteSlice) >= size {
-		return byteSlice[:size]
-	}
-	return append(byteSlice, make([][]byte, size-len(byteSlice))...)
-}
-
-func PutRandaoMixes(data [][]byte) {
-	if !featureconfig.Get().EnableByteMempool {
-		return
-	}
-	RandaoMixesMemoryPool.Put(data)
-}
-
 // GetBlockRootsTrie retrieves the 3d byte trie of
 // the desired size from the memory pool.
 func GetBlockRootsTrie(size int) [][]*[32]byte {
@@ -82,7 +57,7 @@ func GetBlockRootsTrie(size int) [][]*[32]byte {
 
 	rawObj := BlockRootsMemoryPool.Get()
 	if rawObj == nil {
-		return GetFieldTrie(size)
+		return make([][]*[32]byte, size)
 	}
 	byteSlice := rawObj.([][]*[32]byte)
 	if len(byteSlice) >= size {
@@ -108,7 +83,7 @@ func GetStateRootsTrie(size int) [][]*[32]byte {
 
 	rawObj := BlockRootsMemoryPool.Get()
 	if rawObj == nil {
-		return GetFieldTrie(size)
+		return make([][]*[32]byte, size)
 	}
 	byteSlice := rawObj.([][]*[32]byte)
 	if len(byteSlice) >= size {
@@ -134,7 +109,7 @@ func GetRandaoMixesTrie(size int) [][]*[32]byte {
 
 	rawObj := StateRootsMemoryPool.Get()
 	if rawObj == nil {
-		return GetFieldTrie(size)
+		return make([][]*[32]byte, size)
 	}
 	byteSlice := rawObj.([][]*[32]byte)
 	if len(byteSlice) >= size {
@@ -148,27 +123,5 @@ func GetRandaoMixesTrie(size int) [][]*[32]byte {
 func PutRandaoMixesTrie(data [][]*[32]byte) {
 	if featureconfig.Get().EnableByteMempool {
 		StateRootsMemoryPool.Put(data)
-	}
-}
-
-func GetFieldTrie(size int) [][]*[32]byte {
-	if !featureconfig.Get().EnableByteMempool {
-		return make([][]*[32]byte, size)
-	}
-
-	rawObj := GenericFieldFieldTriePool.Get()
-	if rawObj == nil {
-		return make([][]*[32]byte, size)
-	}
-	byteSlice := rawObj.([][]*[32]byte)
-	if len(byteSlice) >= size {
-		return byteSlice[:size]
-	}
-	return append(byteSlice, make([][]*[32]byte, size-len(byteSlice))...)
-}
-
-func PutFieldTrie(data [][]*[32]byte) {
-	if featureconfig.Get().EnableByteMempool {
-		GenericFieldFieldTriePool.Put(data)
 	}
 }

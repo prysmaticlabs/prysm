@@ -158,30 +158,18 @@ func (b *BeaconState) Copy() *BeaconState {
 			v.refs--
 			if b.stateFieldLeaves[field].reference != nil {
 				b.stateFieldLeaves[field].MinusRef()
-				if b.stateFieldLeaves[field].refs == 0 && field != randaoMixes && field != blockRoots && field != stateRoots && field != historicalRoots {
-					memorypool.PutFieldTrie(b.stateFieldLeaves[field].fieldLayers)
-				}
 			}
 			if field == randaoMixes && v.refs == 0 {
-				memorypool.PutRandaoMixes(b.state.RandaoMixes)
+				memorypool.PutDoubleByteSlice(b.state.RandaoMixes)
 				if b.stateFieldLeaves[field].refs == 0 {
 					memorypool.PutRandaoMixesTrie(b.stateFieldLeaves[randaoMixes].fieldLayers)
 				}
 			}
-			if field == blockRoots && v.refs == 0 {
-				memorypool.PutDoubleByteSlice(b.state.BlockRoots)
-				if b.stateFieldLeaves[field].refs == 0 {
-					memorypool.PutBlockRootsTrie(b.stateFieldLeaves[blockRoots].fieldLayers)
-				}
+			if field == blockRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
+				memorypool.PutBlockRootsTrie(b.stateFieldLeaves[blockRoots].fieldLayers)
 			}
-			if field == stateRoots && v.refs == 0 {
-				memorypool.PutDoubleByteSlice(b.state.StateRoots)
-				if b.stateFieldLeaves[field].refs == 0 {
-					memorypool.PutStateRootsTrie(b.stateFieldLeaves[stateRoots].fieldLayers)
-				}
-			}
-			if field == historicalRoots && v.refs == 0 {
-				memorypool.PutDoubleByteSlice(b.state.HistoricalRoots)
+			if field == stateRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
+				memorypool.PutStateRootsTrie(b.stateFieldLeaves[stateRoots].fieldLayers)
 			}
 		}
 	})
