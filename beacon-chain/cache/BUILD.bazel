@@ -14,7 +14,10 @@ go_library(
         "state_summary.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//tools:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
