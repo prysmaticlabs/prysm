@@ -20,6 +20,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// This defines size of the upper bound for initial sync block cache.
+var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
+
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
 //
 // Spec pseudocode definition:
@@ -253,7 +256,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
-	if len(s.getInitSyncBlocks()) > 2*int(params.BeaconConfig().SlotsPerEpoch) {
+	if len(s.getInitSyncBlocks()) > int(initialSyncBlockCacheSize) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}

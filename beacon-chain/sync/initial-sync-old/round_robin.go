@@ -203,7 +203,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			1,                    // step
 			blockBatchSize,       // count
 			peers,                // peers
-			0,                    // reminder
+			0,                    // remainder
 		)
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
@@ -221,7 +221,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
 			parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 			if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
-				log.Debugf("Beacon node doesn't have a block in db or cache with root %#x", parentRoot)
+				log.WithField("parentRoot", parentRoot).Debug("Beacon node doesn't have a block in DB or cache")
 				continue
 			}
 
