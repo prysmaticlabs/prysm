@@ -311,7 +311,20 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 	bkt := tx.Bucket(blocksBucket)
 	enc := bkt.Get(blockRoot)
 	if enc == nil {
-		return 0, errors.New("state enc can't be nil")
+		// fallback and check the state.
+		bkt = tx.Bucket(stateBucket)
+		enc = bkt.Get(blockRoot)
+		if enc == nil {
+			return 0, errors.New("state enc can't be nil")
+		}
+		s, err := createState(enc)
+		if err != nil {
+			return 0, err
+		}
+		if s == nil {
+			return 0, errors.New("state can't be nil")
+		}
+		return s.Slot, nil
 	}
 
 	b := &ethpb.SignedBeaconBlock{}
