@@ -20,6 +20,8 @@ type Params struct {
 	BeaconNodeRPCPort     int
 	BeaconNodeMetricsPort int
 	ValidatorMetricsPort  int
+	SlasherRPCPort        int
+	SlasherMetricsPort    int
 }
 
 // TestParams is the globally accessible var for getting config elements.
@@ -59,6 +61,8 @@ func Init(beaconNodeCount int) error {
 		BeaconNodeRPCPort:     4000 + testIndex*100,
 		BeaconNodeMetricsPort: 5000 + testIndex*100,
 		ValidatorMetricsPort:  6000 + testIndex*100,
+		SlasherRPCPort:        7000 + testIndex*100,
+		SlasherMetricsPort:    8000 + testIndex*100,
 	}
 	return nil
 }
