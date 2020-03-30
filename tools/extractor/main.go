@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -28,7 +27,7 @@ func init() {
 func main() {
 	flag.Parse()
 	fmt.Println("Starting process...")
-	d, err := db.NewDB(*datadir, cache.NewStateSummaryCache())
+	d, err := db.NewDB(*datadir, nil)
 	if err != nil {
 		panic(err)
 	}
