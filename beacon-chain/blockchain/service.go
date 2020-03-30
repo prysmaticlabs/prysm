@@ -75,6 +75,8 @@ type Service struct {
 	checkpointStateLock    sync.Mutex
 	stateGen               *stategen.State
 	opsService             *attestations.Service
+	initSyncBlocks         map[[32]byte]*ethpb.SignedBeaconBlock
+	initSyncBlocksLock     sync.RWMutex
 }
 
 // Config options for the service.
@@ -117,6 +119,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		checkpointState:    cache.NewCheckpointStateCache(),
 		opsService:         cfg.OpsService,
 		stateGen:           cfg.StateGen,
+		initSyncBlocks:     make(map[[32]byte]*ethpb.SignedBeaconBlock),
 	}, nil
 }
 
