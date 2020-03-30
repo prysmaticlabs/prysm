@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,7 +20,7 @@ func TestSaveColdState_NonArchivedPoint(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(1)
@@ -318,7 +319,7 @@ func TestBlockRootSlot_Exists(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	bRoot := [32]byte{'A'}
 	bSlot := uint64(100)
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
@@ -343,7 +344,7 @@ func TestBlockRootSlot_CanRecoverAndSave(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	bSlot := uint64(100)
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: bSlot}}
 	bRoot, _ := ssz.HashTreeRoot(b.Block)

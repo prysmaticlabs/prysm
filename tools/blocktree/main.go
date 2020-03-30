@@ -17,6 +17,7 @@ import (
 
 	"github.com/emicklei/dot"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -43,7 +44,7 @@ func main() {
 	params.UseDemoBeaconConfig()
 
 	flag.Parse()
-	db, err := db.NewDB(*datadir)
+	db, err := db.NewDB(*datadir, cache.NewStateSummaryCache())
 	if err != nil {
 		panic(err)
 	}

@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,11 +20,9 @@ func TestMigrateToCold_NoBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
-	if err := service.MigrateToCold(ctx, beaconState, [32]byte{}); err != nil {
+	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -36,12 +35,9 @@ func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
-
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(1)
-	if err := service.MigrateToCold(ctx, beaconState, [32]byte{}); err != nil {
+	if err := service.MigrateToCold(ctx, 1, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -54,11 +50,8 @@ func TestMigrateToCold_NotEpochStart(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
-
-	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1)
-	if err := service.MigrateToCold(ctx, beaconState, [32]byte{}); err != nil {
+	service := New(db, cache.NewStateSummaryCache())
+	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -71,7 +64,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -106,7 +99,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := service.MigrateToCold(ctx, beaconState, [32]byte{}); err != nil {
+	if err := service.MigrateToCold(ctx, beaconState.Slot(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
