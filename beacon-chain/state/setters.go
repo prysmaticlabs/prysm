@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
