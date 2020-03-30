@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -18,7 +19,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
@@ -53,7 +54,7 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -63,15 +64,15 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 		t.Fatal(err)
 	}
 	targetSlot := uint64(10)
-
+	targetRoot := [32]byte{'a'}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot: targetSlot,
-		Root: blkRoot[:],
+		Root: targetRoot[:],
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	loadedState, err := service.StateByRoot(ctx, blkRoot)
+	loadedState, err := service.StateByRoot(ctx, targetRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +86,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -110,7 +111,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 	service.splitInfo.slot = service.slotsPerArchivedPoint + 1
 
@@ -155,7 +156,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -175,5 +176,47 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	}
 	if loadedState.Slot() != slot {
 		t.Error("Did not correctly load state")
+	}
+}
+
+func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db, cache.NewStateSummaryCache())
+
+	r := [32]byte{'a'}
+	summary := &pb.StateSummary{Slot: 100}
+	_, err := service.stateSummary(ctx, r)
+	if err != errUnknownStateSummary {
+		t.Fatal("Did not get wanted error")
+	}
+
+	service.stateSummaryCache.Put(r, summary)
+	got, err := service.stateSummary(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(got, summary) {
+		t.Error("Did not get wanted summary")
+	}
+
+	r = [32]byte{'b'}
+	summary = &pb.StateSummary{Root: r[:], Slot: 101}
+	_, err = service.stateSummary(ctx, r)
+	if err != errUnknownStateSummary {
+		t.Fatal("Did not get wanted error")
+	}
+
+	if err := service.beaconDB.SaveStateSummary(ctx, summary); err != nil {
+		t.Fatal(err)
+	}
+	got, err = service.stateSummary(ctx, r)
+	if err != nil {
+		t.Fatal("Did not get wanted error")
+	}
+	if !proto.Equal(got, summary) {
+		t.Error("Did not get wanted summary")
 	}
 }
