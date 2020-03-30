@@ -263,7 +263,7 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
+			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil && !k.stateSummaryCache.Has(blockRoot) {
 				return errors.New("no state summary found with head block root")
 			}
 		} else {

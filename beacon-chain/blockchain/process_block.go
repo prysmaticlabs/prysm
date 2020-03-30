@@ -138,11 +138,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 		if featureconfig.Get().NewStateMgmt {
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-			finalizedSummary, err := s.beaconDB.StateSummary(ctx, fRoot)
+			fBlock, err := s.beaconDB.Block(ctx, fRoot)
 			if err != nil {
 				return nil, err
 			}
-			if err := s.stateGen.MigrateToCold(ctx, finalizedSummary.Slot, fRoot); err != nil {
+			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
 				return nil, err
 			}
 		}
