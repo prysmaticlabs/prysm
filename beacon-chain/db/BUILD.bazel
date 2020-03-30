@@ -6,7 +6,6 @@ config_setting(
     values = {"define": "kafka_enabled=false"},
 )
 
-# gazelle:ignore db.go db_kafka_wrapped.go
 go_library(
     name = "go_default_library",
     srcs = [
