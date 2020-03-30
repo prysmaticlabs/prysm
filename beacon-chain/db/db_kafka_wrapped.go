@@ -7,8 +7,8 @@ import (
 )
 
 // NewDB initializes a new DB with kafka wrapper.
-func NewDB(dirPath string) (Database, error) {
-	db, err := kv.NewKVStore(dirPath, cache.NewStateSummaryCache())
+func NewDB(dirPath string, stateSummaryCache *cache.StateSummaryCache) (Database, error) {
+	db, err := kv.NewKVStore(dirPath, stateSummaryCache)
 	if err != nil {
 		return nil, err
 	}
