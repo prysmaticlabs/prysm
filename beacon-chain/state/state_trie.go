@@ -240,6 +240,7 @@ func merkleize(leaves [][]byte) [][][]byte {
 }
 
 func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
 		return stateutil.Uint64Root(b.state.GenesisTime), nil
@@ -282,7 +283,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
-		return stateutil.Eth1Root(b.state.Eth1Data)
+		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if featureconfig.Get().EnableFieldTrie {
 			if b.rebuildTrie[field] {
@@ -360,11 +361,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.PreviousJustifiedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.CurrentJustifiedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
