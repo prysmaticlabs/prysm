@@ -64,7 +64,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	if !service.beaconDB.HasState(ctx, r) {
 		t.Error("Should have saved the state")
 	}
-	if !service.beaconDB.HasStateSummary(ctx, r) {
+	if !service.stateSummaryCache.Has(r) {
 		t.Error("Should have saved the state summary")
 	}
 	testutil.AssertLogsContain(t, hook, "Saved full state on epoch boundary")

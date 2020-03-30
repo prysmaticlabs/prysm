@@ -64,15 +64,15 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 		t.Fatal(err)
 	}
 	targetSlot := uint64(10)
-
+	targetRoot := [32]byte{'a'}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot: targetSlot,
-		Root: blkRoot[:],
+		Root: targetRoot[:],
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	loadedState, err := service.StateByRoot(ctx, blkRoot)
+	loadedState, err := service.StateByRoot(ctx, targetRoot)
 	if err != nil {
 		t.Fatal(err)
 	}

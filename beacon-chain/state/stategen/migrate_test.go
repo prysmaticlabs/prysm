@@ -37,7 +37,7 @@ func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
-	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{}); err != nil {
+	if err := service.MigrateToCold(ctx, 1, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -51,7 +51,7 @@ func TestMigrateToCold_NotEpochStart(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
-	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{}); err != nil {
+	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -99,7 +99,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := service.MigrateToCold(ctx, newBeaconState.Slot(), [32]byte{}); err != nil {
+	if err := service.MigrateToCold(ctx, beaconState.Slot(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
