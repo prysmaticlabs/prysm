@@ -266,6 +266,7 @@ func CopySignedVoluntaryExit(exit *ethpb.SignedVoluntaryExit) *ethpb.SignedVolun
 	}
 }
 
+// CopyValidator copies the provided validator.
 func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
 	pubKey := make([]byte, len(val.PublicKey))
 	copy(pubKey, val.PublicKey)

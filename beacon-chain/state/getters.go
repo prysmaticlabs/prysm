@@ -353,20 +353,7 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 		if val == nil {
 			continue
 		}
-		pubKey := make([]byte, len(val.PublicKey))
-		copy(pubKey, val.PublicKey)
-		withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
-		copy(withdrawalCreds, val.WithdrawalCredentials)
-		res[i] = &ethpb.Validator{
-			PublicKey:                  pubKey[:],
-			WithdrawalCredentials:      withdrawalCreds,
-			EffectiveBalance:           val.EffectiveBalance,
-			Slashed:                    val.Slashed,
-			ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
-			ActivationEpoch:            val.ActivationEpoch,
-			ExitEpoch:                  val.ExitEpoch,
-			WithdrawableEpoch:          val.WithdrawableEpoch,
-		}
+		res[i] = CopyValidator(val)
 	}
 	return res
 }

@@ -141,6 +141,10 @@ var (
 		Name:  "enable-custom-block-htr",
 		Usage: "Enables the usage of a custom hashing method for our block",
 	}
+	enableRefCopy = &cli.BoolFlag{
+		Name:  "enable-ref-copy",
+		Usage: "Enables the usage of a new copying method for our state fields.",
+	}
 )
 
 // Deprecated flags list.
@@ -323,6 +327,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,
+	enableRefCopy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -336,6 +341,7 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--enable-initial-sync-queue",
 	"--enable-state-field-trie",
+	"--enable-ref-copy",
 	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.
 	//"--enable-dynamic-committee-subnets",
 }
