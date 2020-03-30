@@ -193,7 +193,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	}
 	if ctx.Bool(enableRefCopy.Name) {
 		log.Warn("Enabling reference copy")
-		cfg.EnableBlockHTR = true
+		cfg.EnableRefCopy = true
 	}
 	Init(cfg)
 }
