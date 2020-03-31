@@ -46,8 +46,8 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 		fmt.Sprintf("--deposit-contract=%s", e2e.TestParams.ContractAddress.Hex()),
 		fmt.Sprintf("--rpc-port=%d", e2e.TestParams.BeaconNodeRPCPort+index),
-		fmt.Sprintf("--http-web3provider=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
-		fmt.Sprintf("--web3provider=ws://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort+1),
+		fmt.Sprintf("--http-web3provider=http://localhost:%d", e2e.TestParams.Eth1RPCPort),
+		fmt.Sprintf("--web3provider=ws://localhost:%d", e2e.TestParams.Eth1RPCPort+1),
 		fmt.Sprintf("--min-sync-peers=%d", e2e.TestParams.BeaconNodeCount-1),
 		fmt.Sprintf("--p2p-udp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+10),      //12200
 		fmt.Sprintf("--p2p-tcp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+20),      //13200
