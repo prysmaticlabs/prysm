@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
@@ -34,9 +33,6 @@ const seenAttSize = 10000
 const seenExitSize = 100
 const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
-
-// Refresh rate of ENR set at every quarter of an epoch.
-var refreshRate = (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch) / 4
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -140,7 +136,6 @@ func (r *Service) Start() {
 	r.processPendingAttsQueue()
 	r.maintainPeerStatuses()
 	r.resyncIfBehind()
-	r.refreshENR()
 
 	// Update sync metrics.
 	runutil.RunEvery(r.ctx, time.Second*10, r.updateMetrics)
@@ -206,14 +201,4 @@ type Checker interface {
 	Syncing() bool
 	Status() error
 	Resync() error
-}
-
-// This runs every epoch to refresh the current node's ENR.
-func (r *Service) refreshENR() {
-	ctx := context.Background()
-	refreshTime := time.Duration(refreshRate) * time.Second
-	runutil.RunEvery(ctx, refreshTime, func() {
-		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(r.chain.GenesisTime()))
-		r.p2p.RefreshENR(currentEpoch)
-	})
 }

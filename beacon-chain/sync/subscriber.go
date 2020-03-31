@@ -256,7 +256,7 @@ func (r *Service) subscribeDynamicWithSubnets(
 						// subnet
 						topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 						subnetTopic := fmt.Sprintf(topic, digest, idx)
-						numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic)
+						numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic + r.p2p.Encoding().ProtocolSuffix())
 						if len(r.p2p.Peers().SubscribedToSubnet(idx)) == 0 && len(numOfPeers) == 0 {
 							log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 								"committee index %d. Searching network for peers subscribed to the subnet.", idx)
