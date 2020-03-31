@@ -7,14 +7,13 @@ import (
 	"github.com/minio/sha256-simd"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-func bitlistRoot(bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error) {
+func bitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error) {
 	limit := (maxCapacity + 255) / 256
 	if bfield == nil || bfield.Len() == 0 {
 		length := make([]byte, 32)
-		root, err := bitwiseMerkleize([][]byte{}, 0, limit)
+		root, err := bitwiseMerkleize(hasher, [][]byte{}, 0, limit)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -30,7 +29,7 @@ func bitlistRoot(bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error)
 	}
 	output := make([]byte, 32)
 	copy(output, buf.Bytes())
-	root, err := bitwiseMerkleize(chunks, uint64(len(chunks)), limit)
+	root, err := bitwiseMerkleize(hasher, chunks, uint64(len(chunks)), limit)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -41,11 +40,11 @@ func bitlistRoot(bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error)
 // number of chunks is a power of two, Merkleize the chunks, and return the root.
 // Note that merkleize on a single chunk is simply that chunk, i.e. the identity
 // when the number of chunks is one.
-func bitwiseMerkleize(chunks [][]byte, count uint64, limit uint64) ([32]byte, error) {
+func bitwiseMerkleize(hasher HashFn, chunks [][]byte, count uint64, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	hashFn := NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := NewHasherFunc(hasher)
 	leafIndexer := func(i uint64) []byte {
 		return chunks[i]
 	}
@@ -53,11 +52,11 @@ func bitwiseMerkleize(chunks [][]byte, count uint64, limit uint64) ([32]byte, er
 }
 
 // bitwiseMerkleizeArrays is used when a set of 32-byte root chunks are provided.
-func bitwiseMerkleizeArrays(chunks [][32]byte, count uint64, limit uint64) ([32]byte, error) {
+func bitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count uint64, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	hashFn := NewHasherFunc(hashutil.CustomSHA256Hasher())
+	hashFn := NewHasherFunc(hasher)
 	leafIndexer := func(i uint64) []byte {
 		return chunks[i][:]
 	}
