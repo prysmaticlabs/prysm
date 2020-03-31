@@ -47,6 +47,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: roughtime.Now()},
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}

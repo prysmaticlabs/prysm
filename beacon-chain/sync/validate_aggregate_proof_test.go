@@ -517,6 +517,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
