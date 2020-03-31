@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"sync"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -130,6 +132,9 @@ func (r *Service) Start() {
 	r.processPendingAttsQueue()
 	r.maintainPeerStatuses()
 	r.resyncIfBehind()
+
+	// Update sync metrics.
+	runutil.RunEvery(r.ctx, time.Second*10, r.updateMetrics)
 }
 
 // Stop the regular sync service.
