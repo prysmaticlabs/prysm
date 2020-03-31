@@ -61,6 +61,12 @@ var (
 		Usage: "Number of attempts to retry gRPC requests",
 		Value: 5,
 	}
+	// GrpcHeadersFlag defines a list of headers to send with all gRPC requests.
+	GrpcHeadersFlag = &cli.StringFlag{
+		Name: "grpc-headers",
+		Usage: "A comma separated list of key value pairs to pass as gRPC headers for all gRPC " +
+			"calls. Example: --grpc-headers=key=value",
+	}
 	// AccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
 	AccountMetricsFlag = &cli.BoolFlag{
 		Name:  "enable-account-metrics",

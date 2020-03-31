@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"gopkg.in/urfave/cli.v2"
 )
@@ -19,7 +20,7 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}}
+	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("hello"), 96)}}
 	has, _, err := db.HasAttesterSlashing(ctx, as)
 	if err != nil {
 		t.Fatalf("HasAttesterSlashing should not return error: %v", err)
@@ -44,21 +45,26 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
+	data := &ethpb.AttestationData{
+		Source: &ethpb.Checkpoint{},
+		Target: &ethpb.Checkpoint{},
+	}
+	att := &ethpb.IndexedAttestation{Data: data}
 	tests := []struct {
 		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
 	}{
 		{
 			ss: types.Active,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello"), 96)}, Attestation_2: att},
 		},
 		{
 			ss: types.Included,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello2")}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello2"), 96)}, Attestation_2: att},
 		},
 		{
 			ss: types.Reverted,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello3")}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Data: data, Signature: bytesutil.PadTo([]byte("hello3"), 96)}, Attestation_2: att},
 		},
 	}
 
@@ -87,10 +93,13 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
+	ckpt := &ethpb.Checkpoint{}
+	data := &ethpb.AttestationData{Source: ckpt, Target: ckpt}
+	att := &ethpb.IndexedAttestation{Data: data}
 	as := []*ethpb.AttesterSlashing{
-		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("1")}},
-		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("2")}},
-		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("3")}},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("1"), 96), Data: data}, Attestation_2: att},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("2"), 96), Data: data}, Attestation_2: att},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("3"), 96), Data: data}, Attestation_2: att},
 	}
 	err := db.SaveAttesterSlashings(ctx, types.Active, as)
 	if err != nil {
@@ -121,15 +130,15 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	}{
 		{
 			ss: types.Active,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("hello"), 96)}},
 		},
 		{
 			ss: types.Active,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello2")}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("hello2"), 96)}},
 		},
 		{
 			ss: types.Active,
-			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello3")}},
+			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("hello3"), 96)}},
 		},
 	}
 

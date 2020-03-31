@@ -137,14 +137,14 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 	}
 
 	// Hydrate the HashTreeRootState cache.
-	if _, err := beaconState.HashTreeRoot(); err != nil {
+	if _, err := beaconState.HashTreeRoot(ctx); err != nil {
 		b.Fatal(err)
 	}
 
 	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := beaconState.HashTreeRoot(); err != nil {
+		if _, err := beaconState.HashTreeRoot(ctx); err != nil {
 			b.Fatal(err)
 		}
 	}

@@ -38,7 +38,14 @@ func (s *Service) createListener(
 		IP:   ipAddr,
 		Port: int(s.cfg.UDPPort),
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	// assume ip is either ipv4 or ipv6
+	networkVersion := ""
+	if ipAddr.To4() != nil {
+		networkVersion = "udp4"
+	} else {
+		networkVersion = "udp6"
+	}
+	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,7 +60,7 @@ func (s *Service) createListener(
 	}
 	if s.cfg.HostAddress != "" {
 		hostIP := net.ParseIP(s.cfg.HostAddress)
-		if hostIP.To4() == nil {
+		if hostIP.To4() == nil && hostIP.To16() == nil {
 			log.Errorf("Invalid host address given: %s", hostIP.String())
 		} else {
 			localNode.SetFallbackIP(hostIP)

@@ -238,6 +238,11 @@ func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary
 	return e.db.SaveStateSummary(ctx, summary)
 }
 
+// SaveStateSummaries -- passthrough.
+func (e Exporter) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+	return e.db.SaveStateSummaries(ctx, summaries)
+}
+
 // SaveStates -- passthrough.
 func (e Exporter) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
 	return e.db.SaveStates(ctx, states, blockRoots)
@@ -328,19 +333,9 @@ func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) 
 	return e.db.SavePowchainData(ctx, data)
 }
 
-// SaveArchivedPointState -- passthrough
-func (e Exporter) SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error {
-	return e.db.SaveArchivedPointState(ctx, state, index)
-}
-
 // SaveArchivedPointRoot -- passthrough
 func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
 	return e.db.SaveArchivedPointRoot(ctx, blockRoot, index)
-}
-
-// ArchivedPointState -- passthrough
-func (e Exporter) ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error) {
-	return e.db.ArchivedPointState(ctx, index)
 }
 
 // ArchivedPointRoot -- passthrough
@@ -358,9 +353,24 @@ func (e Exporter) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 	return e.db.LastArchivedIndexRoot(ctx)
 }
 
-// LastArchivedIndexState -- passthrough
-func (e Exporter) LastArchivedIndexState(ctx context.Context) (*state.BeaconState, error) {
-	return e.db.LastArchivedIndexState(ctx)
+// HighestSlotBlocks -- passthrough
+func (e Exporter) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
+	return e.db.HighestSlotBlocks(ctx)
+}
+
+// HighestSlotBlocksBelow -- passthrough
+func (e Exporter) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+	return e.db.HighestSlotBlocksBelow(ctx, slot)
+}
+
+// HighestSlotStates -- passthrough
+func (e Exporter) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
+	return e.db.HighestSlotStates(ctx)
+}
+
+// HighestSlotStatesBelow -- passthrough
+func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
+	return e.db.HighestSlotStatesBelow(ctx, slot)
 }
 
 // SaveLastArchivedIndex -- passthrough

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
@@ -27,7 +28,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 9},
 						Target: &ethpb.Checkpoint{Epoch: 13},
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -48,7 +49,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 6},
 						Target: &ethpb.Checkpoint{Epoch: 10},
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -69,7 +70,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 4},
 						Target: &ethpb.Checkpoint{Epoch: 5},
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 				{
 					AttestingIndices: []uint64{4, 8},
@@ -77,7 +78,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 3},
 						Target: &ethpb.Checkpoint{Epoch: 4},
 					},
-					Signature: []byte{1, 3},
+					Signature: bytesutil.PadTo([]byte{1, 3}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -98,7 +99,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 4},
 						Target: &ethpb.Checkpoint{Epoch: 10},
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 				{
 					AttestingIndices: []uint64{4, 8},
@@ -106,7 +107,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 5},
 						Target: &ethpb.Checkpoint{Epoch: 9},
 					},
-					Signature: []byte{1, 3},
+					Signature: bytesutil.PadTo([]byte{1, 3}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -127,7 +128,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 1},
 						Target: &ethpb.Checkpoint{Epoch: 2},
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -159,7 +160,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 				}
 			}
 
-			slashings, err := ds.detectAttesterSlashings(ctx, tt.incomingAtt)
+			slashings, err := ds.DetectAttesterSlashings(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -204,7 +205,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 3},
 						Target: &ethpb.Checkpoint{Epoch: 4},
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -213,7 +214,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 2},
 					Target: &ethpb.Checkpoint{Epoch: 4},
 				},
-				Signature: []byte{1, 2},
+				Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 			},
 			slashingsFound: 1,
 		},
@@ -226,7 +227,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 3},
 						Target: &ethpb.Checkpoint{Epoch: 4},
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 				{
 					AttestingIndices: []uint64{3},
@@ -234,7 +235,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 						Source: &ethpb.Checkpoint{Epoch: 1},
 						Target: &ethpb.Checkpoint{Epoch: 4},
 					},
-					Signature: []byte{1, 3},
+					Signature: bytesutil.PadTo([]byte{1, 3}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -243,7 +244,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 2},
 					Target: &ethpb.Checkpoint{Epoch: 4},
 				},
-				Signature: []byte{1, 4},
+				Signature: bytesutil.PadTo([]byte{1, 4}, 96),
 			},
 			slashingsFound: 2,
 		},
@@ -255,9 +256,9 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Data: &ethpb.AttestationData{
 						Source:          &ethpb.Checkpoint{Epoch: 2},
 						Target:          &ethpb.Checkpoint{Epoch: 4},
-						BeaconBlockRoot: []byte("good block root"),
+						BeaconBlockRoot: bytesutil.PadTo([]byte("good block root"), 32),
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -265,7 +266,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					Source:          &ethpb.Checkpoint{Epoch: 2},
 					Target:          &ethpb.Checkpoint{Epoch: 4},
-					BeaconBlockRoot: []byte("bad block root"),
+					BeaconBlockRoot: bytesutil.PadTo([]byte("bad block root"), 32),
 				},
 			},
 			slashingsFound: 1,
@@ -278,9 +279,9 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Data: &ethpb.AttestationData{
 						Source:          &ethpb.Checkpoint{Epoch: 0},
 						Target:          &ethpb.Checkpoint{Epoch: 2},
-						BeaconBlockRoot: []byte("good block root"),
+						BeaconBlockRoot: bytesutil.PadTo([]byte("good block root"), 32),
 					},
-					Signature: []byte{1, 2},
+					Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
@@ -288,7 +289,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					Source:          &ethpb.Checkpoint{Epoch: 0},
 					Target:          &ethpb.Checkpoint{Epoch: 2},
-					BeaconBlockRoot: []byte("good block root"),
+					BeaconBlockRoot: bytesutil.PadTo([]byte("good block root"), 32),
 				},
 			},
 			slashingsFound: 0,
@@ -313,7 +314,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				}
 			}
 
-			slashings, err := ds.detectAttesterSlashings(ctx, tt.incomingAtt)
+			slashings, err := ds.DetectAttesterSlashings(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
 			}

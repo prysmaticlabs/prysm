@@ -17,6 +17,7 @@ bazel-*
 # Coverage outputs
 coverage.txt
 profile.out
+profile.grind
 
 # Nodejs
 node_modules

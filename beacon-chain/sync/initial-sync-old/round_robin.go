@@ -180,7 +180,17 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				}
 			}
 		}
-		startBlock := s.chain.HeadSlot() + 1
+		var startBlock uint64
+		if featureconfig.Get().InitSyncBatchSaveBlocks {
+			lastFinalizedEpoch := s.chain.FinalizedCheckpt().Epoch
+			lastFinalizedState, err := s.db.HighestSlotStatesBelow(ctx, helpers.StartSlot(lastFinalizedEpoch))
+			if err != nil {
+				return err
+			}
+			startBlock = lastFinalizedState[0].Slot() + 1
+		} else {
+			startBlock = s.chain.HeadSlot() + 1
+		}
 		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
 		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
 			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
@@ -208,10 +218,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
-			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
-				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
+			parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+			if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
+				log.WithField("parentRoot", parentRoot).Debug("Beacon node doesn't have a block in DB or cache")
 				continue
 			}
+
 			s.blockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},

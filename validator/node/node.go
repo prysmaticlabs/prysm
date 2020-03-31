@@ -187,6 +187,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 		GraffitiFlag:               graffiti,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
+		GrpcHeadersFlag:            ctx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")

@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
+	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/urfave/cli.v2"
 )
@@ -75,6 +76,10 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 	}
 
 	if err := slasher.registerDetectionService(); err != nil {
+		return nil, err
+	}
+
+	if err := slasher.registerRPCService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -197,4 +202,24 @@ func (s *SlasherNode) registerDetectionService() error {
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 	})
 	return s.services.RegisterService(ds)
+}
+
+func (s *SlasherNode) registerRPCService(ctx *cli.Context) error {
+	var detectionService *detection.Service
+	if err := s.services.FetchService(&detectionService); err != nil {
+		return err
+	}
+
+	port := ctx.String(flags.RPCPort.Name)
+	cert := ctx.String(flags.CertFlag.Name)
+	key := ctx.String(flags.KeyFlag.Name)
+	rpcService := rpc.NewService(context.Background(), &rpc.Config{
+		Port:      port,
+		CertFlag:  cert,
+		KeyFlag:   key,
+		Detector:  detectionService,
+		SlasherDB: s.db,
+	})
+
+	return s.services.RegisterService(rpcService)
 }

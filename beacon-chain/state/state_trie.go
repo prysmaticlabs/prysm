@@ -1,11 +1,10 @@
 package state
 
 import (
+	"context"
 	"runtime"
 	"sort"
 	"sync"
-
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -18,6 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"go.opencensus.io/trace"
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -179,7 +180,10 @@ func (b *BeaconState) Copy() *BeaconState {
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
-func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
+func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
+	defer span.End()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -379,7 +383,7 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 		fTrie = newTrie
 	}
 	// remove duplicate indexes
-	b.dirtyIndices[index] = sliceutil.UnionUint64(b.dirtyIndices[index], []uint64{})
+	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]

@@ -288,7 +288,7 @@ func ProcessBlockHeaderNoVerify(
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
-	bodyRoot, err := ssz.HashTreeRoot(block.Body)
+	bodyRoot, err := stateutil.BlockBodyRoot(block.Body)
 	if err != nil {
 		return nil, err
 	}

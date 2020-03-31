@@ -23,7 +23,6 @@ var (
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
 	powchainBucket                       = []byte("powchain")
 	archivedIndexRootBucket              = []byte("archived-index-root")
-	archivedIndexStateBucket             = []byte("archived-index-state")
 	slotsHasObjectBucket                 = []byte("slots-has-objects")
 
 	// Key indices buckets.
@@ -47,6 +46,6 @@ var (
 	savedBlockSlotsKey        = []byte("saved-block-slots")
 	savedStateSlotsKey        = []byte("saved-state-slots")
 
-	// Migration bucket.
-	migrationBucket = []byte("migrations")
+	// New state management service compatibility bucket.
+	newStateServiceCompatibleBucket = []byte("new-state-compatible")
 )

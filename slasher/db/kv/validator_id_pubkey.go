@@ -3,9 +3,9 @@ package kv
 import (
 	"context"
 
-	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

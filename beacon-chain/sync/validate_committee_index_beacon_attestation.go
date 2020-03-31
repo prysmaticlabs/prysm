@@ -84,9 +84,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
-	hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
-	hasState := s.db.HasState(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) || hasStateSummary
-	hasBlock := s.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
+	hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
+	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
+	hasBlock := s.db.HasBlock(ctx, blockRoot)
 	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})

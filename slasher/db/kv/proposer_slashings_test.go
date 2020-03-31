@@ -9,6 +9,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	"gopkg.in/d4l3k/messagediff.v1"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -74,6 +75,8 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		}
 
 		if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
+			diff, _ := messagediff.PrettyDiff(proposerSlashings[0], tt.ps)
+			t.Log(diff)
 			t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", tt.ps, proposerSlashings)
 		}
 	}
@@ -164,6 +167,8 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 		return proposerSlashings[i].Header_1.Header.ProposerIndex < proposerSlashings[j].Header_1.Header.ProposerIndex
 	})
 	if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings, ps) {
+		diff, _ := messagediff.PrettyDiff(proposerSlashings, ps)
+		t.Log(diff)
 		t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", ps, proposerSlashings)
 	}
 }
