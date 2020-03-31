@@ -35,7 +35,7 @@ func TestSaveColdState_CanSave(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(1)
@@ -59,7 +59,7 @@ func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	if _, err := service.loadColdStateByRoot(ctx, [32]byte{'a'}); err != errUnknownStateSummary {
 		t.Fatal("Did not get correct error")
 	}
@@ -70,7 +70,7 @@ func TestLoadColdStateByRoot_ByArchivedPoint(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -102,7 +102,7 @@ func TestLoadColdStateByRoot_IntermediatePlayback(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -139,7 +139,7 @@ func TestLoadColdStateBySlotIntermediatePlayback_BeforeCutoff(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -178,7 +178,7 @@ func TestLoadColdStateBySlotIntermediatePlayback_AfterCutoff(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -208,7 +208,7 @@ func TestLoadColdStateByRoot_UnknownArchivedState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	if _, err := service.loadColdIntermediateStateBySlot(ctx, 0); !strings.Contains(err.Error(), errUnknownArchivedState.Error()) {
 		t.Log(err)
@@ -221,7 +221,7 @@ func TestArchivedPointByIndex_HasPoint(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(1)
 	index := uint64(999)
@@ -251,7 +251,7 @@ func TestArchivedPointByIndex_DoesntHavePoint(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
@@ -285,7 +285,7 @@ func TestRecoverArchivedPointByIndex_CanRecover(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
