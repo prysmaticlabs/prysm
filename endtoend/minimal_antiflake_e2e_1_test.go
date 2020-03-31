@@ -11,6 +11,7 @@ import (
 )
 
 func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
+	t.Skip("skipping to prevent E2E flakes")
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
