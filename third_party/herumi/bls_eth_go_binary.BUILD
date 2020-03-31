@@ -1,8 +1,16 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
+config_setting(
+    name = "use_gmp",
+    values = {"define": "BLS_USE_GMP=true"},
+)
+
+config_setting(
+    name = "use_openssl",
+    values = {"define": "BLS_USE_OPENSSL=true"},
+)
+
 OPTS = [
-    "-DMCL_USE_VINT",
-    "-DMCL_DONT_USE_OPENSSL",
     "-DMCL_LLVM_BMI2=0",
     "-DMCL_USE_LLVM=1",
     "-DMCL_VINT_FIXED_BUFFER",
@@ -12,7 +20,19 @@ OPTS = [
     "-DCYBOZU_DONT_USE_STRING",
     "-DBLS_SWAP_G",
     "-DBLS_ETH",
-]
+] + select({
+    ":use_gmp": [],
+    "//conditions:default": [
+        "-DMCL_USE_VINT",
+    ],
+}) + select({
+    ":use_openssl": [],
+    "//conditions:default": [
+      "-DMCL_DONT_USE_OPENSSL",
+    ],
+})
+
+
 
 genrule(
     name = "base64_ll",
@@ -55,6 +75,16 @@ cc_library(
     copts = OPTS + [
         "-std=c++03",
     ],
+    linkopts = select({
+        ":use_gmp": ["-lgmp"],
+        "//conditions:default": [],
+    }) + select({
+        ":use_openssl": [
+            "-lssl",
+            "-lcrypto"
+        ],
+        "//conditions:default": [],
+    })
     visibility = ["//visibility:public"],
 )
 

@@ -74,6 +74,12 @@ test:fuzzit --test_env=PRYSM_BUILD_IMAGE=bionic-swift51
 test:fuzzit --test_timeout=1200
 test:fuzzit --run_under=//tools:fuzzit_wrapper
 
+# Build binary with cgo symbolizer for debugging / profiling.
+build:cgo_symbolizer --config=llvm
+build:cgo_symbolizer --copt=-g
+build:cgo_symbolizer --define=USE_CGO_SYMBOLIZER=true
+build:cgo_symbolizer -c dbg
+
 # multi-arch cross-compiling toolchain configs:
 -----------------------------------------------
 build:cross --crosstool_top=@prysm_toolchains//:multiarch_toolchain
