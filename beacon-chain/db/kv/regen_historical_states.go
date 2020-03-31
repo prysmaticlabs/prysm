@@ -20,51 +20,40 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "db.regenHistoricalStates")
 	defer span.End()
 
-	b, err := kv.HighestSlotBlocks(ctx)
-	if err != nil {
-		return err
-	}
-	if len(b) == 0 {
-		return errors.New("blocks can't be empty")
-	}
-	if b[0] == nil {
-		return errors.New("nil last block")
-	}
-	lastSavedBlockSlot := b[0].Block.Slot
-	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
-	lastSavedBlockArchivedIndex := lastSavedBlockSlot/slotsPerArchivedPoint - 1
-
-	// Start from genesis point.
 	genesisState, err := kv.GenesisState(ctx)
 	if err != nil {
 		return err
 	}
-	if genesisState == nil {
-		return errors.New("nil genesis state")
-	}
 	currentState := genesisState.Copy()
 	startSlot := genesisState.Slot()
+
+	// Restore from last archived point if this process was previously interrupted.
+	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
 	lastArchivedIndex, err := kv.LastArchivedIndex(ctx)
 	if err != nil {
 		return err
 	}
-
-	// Restore from last archived point if this process was previously interrupted.
 	if lastArchivedIndex > 0 {
-		states, err := kv.HighestSlotStatesBelow(ctx, (lastArchivedIndex-1)*slotsPerArchivedPoint+1)
+		archivedIndexStart := lastArchivedIndex - 1
+		wantedSlotBelow := archivedIndexStart*slotsPerArchivedPoint + 1
+		states, err := kv.HighestSlotStatesBelow(ctx, wantedSlotBelow)
 		if err != nil {
 			return err
 		}
-		if len(b) == 0 {
+		if len(states) == 0 {
 			return errors.New("states can't be empty")
 		}
-		if b[0] == nil {
+		if states[0] == nil {
 			return errors.New("nil last state")
 		}
 		currentState = states[0]
 		startSlot = currentState.Slot()
 	}
 
+	lastSavedBlockArchivedIndex, err := kv.lastSavedBlockArchivedIndex(ctx)
+	if err != nil {
+		return err
+	}
 	for i := lastArchivedIndex; i <= lastSavedBlockArchivedIndex; i++ {
 		targetSlot := startSlot + slotsPerArchivedPoint
 		filter := filters.NewFilter().SetStartSlot(startSlot + 1).SetEndSlot(targetSlot)
@@ -76,9 +65,6 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		// Replay blocks and replay slots if necessary.
 		if len(blocks) > 0 {
 			for i := 0; i < len(blocks); i++ {
-				if currentState.Slot() >= targetSlot {
-					break
-				}
 				if blocks[i].Block.Slot == 0 {
 					continue
 				}
@@ -98,28 +84,16 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		if len(blocks) > 0 {
 			// Save the historical root, state and highest index to the DB.
 			if helpers.IsEpochStart(currentState.Slot()) && currentState.Slot()%slotsPerArchivedPoint == 0 && blocks[len(blocks)-1].Block.Slot&slotsPerArchivedPoint == 0 {
-				lastBlocksRoot, err := ssz.HashTreeRoot(blocks[len(blocks)-1].Block)
-				if err != nil {
-					return nil
-				}
-				if err := kv.SaveState(ctx, currentState, lastBlocksRoot); err != nil {
-					return err
-				}
-				if err := kv.SaveArchivedPointRoot(ctx, lastBlocksRoot, i); err != nil {
-					return err
-				}
-				if err := kv.SaveLastArchivedIndex(ctx, i); err != nil {
+				if err := kv.saveArchivedInfo(ctx, currentState, blocks, i); err != nil {
 					return err
 				}
 				log.WithFields(log.Fields{
 					"currentArchivedIndex/totalArchivedIndices": fmt.Sprintf("%d/%d", i, lastSavedBlockArchivedIndex),
-					"archivedStateSlot":                         currentState.Slot(),
-				}).Info("Saved historical state")
+					"archivedStateSlot":                         currentState.Slot()}).Info("Saved historical state")
 			}
 		}
 		startSlot += slotsPerArchivedPoint
 	}
-
 	return nil
 }
 
@@ -177,4 +151,44 @@ func regenHistoricalStateProcessSlots(ctx context.Context, state *stateTrie.Beac
 		state.SetSlot(state.Slot() + 1)
 	}
 	return state, nil
+}
+
+// This retrieves the last saved block's archived index.
+func (kv *Store) lastSavedBlockArchivedIndex(ctx context.Context) (uint64, error) {
+	b, err := kv.HighestSlotBlocks(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(b) == 0 {
+		return 0, errors.New("blocks can't be empty")
+	}
+	if b[0] == nil {
+		return 0, errors.New("nil last block")
+	}
+	lastSavedBlockSlot := b[0].Block.Slot
+	slotsPerArchivedPoint := params.BeaconConfig().SlotsPerArchivedPoint
+	lastSavedBlockArchivedIndex := lastSavedBlockSlot/slotsPerArchivedPoint - 1
+
+	return lastSavedBlockArchivedIndex, nil
+}
+
+// This saved archived info (state, root, index) into the db.
+func (kv *Store) saveArchivedInfo(ctx context.Context,
+	currentState *stateTrie.BeaconState,
+	blocks []*ethpb.SignedBeaconBlock,
+	archivedIndex uint64) error {
+	lastBlocksRoot, err := ssz.HashTreeRoot(blocks[len(blocks)-1].Block)
+	if err != nil {
+		return nil
+	}
+	if err := kv.SaveState(ctx, currentState, lastBlocksRoot); err != nil {
+		return err
+	}
+	if err := kv.SaveArchivedPointRoot(ctx, lastBlocksRoot, archivedIndex); err != nil {
+		return err
+	}
+	if err := kv.SaveLastArchivedIndex(ctx, archivedIndex); err != nil {
+		return err
+	}
+	return nil
 }
