@@ -20,7 +20,6 @@ import (
 )
 
 func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
-	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
