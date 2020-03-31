@@ -308,20 +308,34 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 		return stateSummary.Slot, nil
 	}
 
-	bkt := tx.Bucket(stateBucket)
+	bkt := tx.Bucket(blocksBucket)
 	enc := bkt.Get(blockRoot)
 	if enc == nil {
-		return 0, errors.New("state enc can't be nil")
+		// fallback and check the state.
+		bkt = tx.Bucket(stateBucket)
+		enc = bkt.Get(blockRoot)
+		if enc == nil {
+			return 0, errors.New("state enc can't be nil")
+		}
+		s, err := createState(enc)
+		if err != nil {
+			return 0, err
+		}
+		if s == nil {
+			return 0, errors.New("state can't be nil")
+		}
+		return s.Slot, nil
 	}
 
-	s, err := createState(enc)
+	b := &ethpb.SignedBeaconBlock{}
+	err := decode(enc, b)
 	if err != nil {
 		return 0, err
 	}
-	if s == nil {
-		return 0, errors.New("state can't be nil")
+	if b.Block == nil {
+		return 0, errors.New("block can't be nil")
 	}
-	return s.Slot, nil
+	return b.Block.Slot, nil
 }
 
 // HighestSlotStates returns the states with the highest slot from the db.

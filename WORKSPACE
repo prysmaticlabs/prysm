@@ -1649,3 +1649,10 @@ go_repository(
 load("@com_github_prysmaticlabs_prombbolt//:repositories.bzl", "prombbolt_dependencies")
 
 prombbolt_dependencies()
+
+go_repository(
+    name = "com_github_ianlancetaylor_cgosymbolizer",
+    importpath = "github.com/ianlancetaylor/cgosymbolizer",
+    sum = "h1:GWsU1WjSE2rtvyTYGcndqmPPkQkBNV7pEuZdnGtwtu4=",
+    version = "v0.0.0-20200321040036-d43e30eacb43",
+)
