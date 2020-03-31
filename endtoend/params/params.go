@@ -45,7 +45,7 @@ func Init(beaconNodeCount int) error {
 	}
 	testIndexStr, ok := os.LookupEnv("TEST_SHARD_INDEX")
 	if !ok {
-		testIndexStr = "0"
+		testIndexStr = "8"
 	}
 	testIndex, err := strconv.Atoi(testIndexStr)
 	if err != nil {
@@ -57,7 +57,7 @@ func Init(beaconNodeCount int) error {
 		LogPath:               logPath,
 		TestShardIndex:        testIndex,
 		BeaconNodeCount:       beaconNodeCount,
-		Eth1RPCPort:           3000 + testIndex*100, //Multiplying 100 here so the test index doesn't conflict with the other node ports.
+		Eth1RPCPort:           3000 + testIndex*100, // Multiplying 100 here so the test index doesn't conflict with the other node ports.
 		BeaconNodeRPCPort:     4000 + testIndex*100,
 		BeaconNodeMetricsPort: 5000 + testIndex*100,
 		ValidatorMetricsPort:  6000 + testIndex*100,
