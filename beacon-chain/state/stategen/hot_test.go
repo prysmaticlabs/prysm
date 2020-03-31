@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
@@ -21,7 +22,7 @@ func TestSaveHotState_AlreadyHas(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
@@ -48,7 +49,7 @@ func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
@@ -62,7 +63,7 @@ func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
 	if !service.beaconDB.HasState(ctx, r) {
 		t.Error("Should have saved the state")
 	}
-	if !service.beaconDB.HasStateSummary(ctx, r) {
+	if !service.stateSummaryCache.Has(r) {
 		t.Error("Should have saved the state summary")
 	}
 	testutil.AssertLogsContain(t, hook, "Saved full state on epoch boundary")
@@ -73,7 +74,7 @@ func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1)
@@ -95,7 +96,7 @@ func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
 	if service.beaconDB.HasState(ctx, r) {
 		t.Error("Should not have saved the state")
 	}
-	if !service.beaconDB.HasStateSummary(ctx, r) {
+	if !service.stateSummaryCache.Has(r) {
 		t.Error("Should have saved the state summary")
 	}
 	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
@@ -105,7 +106,7 @@ func TestLoadHoteStateByRoot_Cached(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -126,7 +127,7 @@ func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -136,15 +137,16 @@ func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	targetSlot := uint64(10)
+	targetRoot := [32]byte{'a'}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot: targetSlot,
-		Root: blkRoot[:],
+		Root: targetRoot[:],
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	// This tests where hot state was not cached and needs processing.
-	loadedState, err := service.loadHotStateByRoot(ctx, blkRoot)
+	loadedState, err := service.loadHotStateByRoot(ctx, targetRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +160,7 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -191,7 +193,7 @@ func TestLoadHoteStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
