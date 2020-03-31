@@ -32,7 +32,6 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 	index := len(multiAddrs)
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
-		t.Log(binaryPath)
 		t.Fatal("beacon chain binary not found")
 	}
 
