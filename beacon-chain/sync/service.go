@@ -137,6 +137,9 @@ func (r *Service) Start() {
 	r.maintainPeerStatuses()
 	r.resyncIfBehind()
 	r.refreshENR()
+
+	// Update sync metrics.
+	runutil.RunEvery(r.ctx, time.Second*10, r.updateMetrics)
 }
 
 // Stop the regular sync service.
