@@ -10,6 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -70,13 +71,14 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 			return [32]byte{}, err
 		}
 	}
-	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
+	hasher := hashutil.CustomSHA256Hasher()
 	// There are 21 fields in the beacon state.
 	fieldRoots := make([][]byte, 21)
 
@@ -129,7 +131,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[7] = historicalRootsRt[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot, err := Eth1Root(state.Eth1Data)
+	eth1HashTreeRoot, err := Eth1Root(hasher, state.Eth1Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
 	}
@@ -195,21 +197,21 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[17] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.
-	prevCheckRoot, err := CheckpointRoot(state.PreviousJustifiedCheckpoint)
+	prevCheckRoot, err := CheckpointRoot(hasher, state.PreviousJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute previous justified checkpoint merkleization")
 	}
 	fieldRoots[18] = prevCheckRoot[:]
 
 	// CurrentJustifiedCheckpoint data structure root.
-	currJustRoot, err := CheckpointRoot(state.CurrentJustifiedCheckpoint)
+	currJustRoot, err := CheckpointRoot(hasher, state.CurrentJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute current justified checkpoint merkleization")
 	}
 	fieldRoots[19] = currJustRoot[:]
 
 	// FinalizedCheckpoint data structure root.
-	finalRoot, err := CheckpointRoot(state.FinalizedCheckpoint)
+	finalRoot, err := CheckpointRoot(hasher, state.FinalizedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
@@ -242,13 +244,13 @@ func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 		epochRoot := bytesutil.ToBytes32(forkEpochBuf)
 		fieldRoots[2] = epochRoot[:]
 	}
-	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // CheckpointRoot computes the HashTreeRoot Merkleization of
 // a Checkpoint struct value according to the eth2
 // Simple Serialize specification.
-func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
+func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][]byte, 2)
 	if checkpoint != nil {
 		epochBuf := make([]byte, 8)
@@ -258,14 +260,14 @@ func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 		ckpRoot := bytesutil.ToBytes32(checkpoint.Root)
 		fieldRoots[1] = ckpRoot[:]
 	}
-	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // HistoricalRootsRoot computes the HashTreeRoot Merkleization of
 // a list of [32]byte historical block roots according to the eth2
 // Simple Serialize specification.
 func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
-	result, err := bitwiseMerkleize(historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
+	result, err := bitwiseMerkleize(hashutil.CustomSHA256Hasher(), historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -294,5 +296,5 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack slashings into chunks")
 	}
-	return bitwiseMerkleize(slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
+	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }

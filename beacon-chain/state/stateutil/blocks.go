@@ -34,7 +34,7 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		bodyRoot := bytesutil.ToBytes32(header.BodyRoot)
 		fieldRoots[4] = bodyRoot[:]
 	}
-	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // BlockRoot returns the block hash tree root of the provided block.
@@ -58,7 +58,7 @@ func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 		}
 		fieldRoots[3] = bodyRoot
 	}
-	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleizeArrays(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // BlockBodyRoot returns the hash tree root of the block body.
@@ -66,6 +66,7 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	if !featureconfig.Get().EnableBlockHTR {
 		return ssz.HashTreeRoot(body)
 	}
+	hasher := hashutil.CustomSHA256Hasher()
 	fieldRoots := make([][32]byte, 8)
 	if body != nil {
 		rawRandao := bytesutil.ToBytes96(body.RandaoReveal)
@@ -73,13 +74,13 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 		if err != nil {
 			return [32]byte{}, err
 		}
-		randaoRoot, err := bitwiseMerkleize(packedRandao, uint64(len(packedRandao)), uint64(len(packedRandao)))
+		randaoRoot, err := bitwiseMerkleize(hasher, packedRandao, uint64(len(packedRandao)), uint64(len(packedRandao)))
 		if err != nil {
 			return [32]byte{}, err
 		}
 		fieldRoots[0] = randaoRoot
 
-		eth1Root, err := Eth1Root(body.Eth1Data)
+		eth1Root, err := Eth1Root(hasher, body.Eth1Data)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -116,13 +117,13 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 		}
 		fieldRoots[7] = exitRoot
 	}
-	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // Eth1Root computes the HashTreeRoot Merkleization of
 // a BeaconBlockHeader struct according to the eth2
 // Simple Serialize specification.
-func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+func Eth1Root(hasher HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	enc := make([]byte, 0, 96)
 	fieldRoots := make([][]byte, 3)
 	for i := 0; i < len(fieldRoots); i++ {
@@ -150,7 +151,7 @@ func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 			}
 		}
 	}
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	root, err := bitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -166,8 +167,9 @@ func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	eth1VotesRoots := make([][]byte, 0)
 	enc := make([]byte, len(eth1DataVotes)*32)
+	hasher := hashutil.CustomSHA256Hasher()
 	for i := 0; i < len(eth1DataVotes); i++ {
-		eth1, err := Eth1Root(eth1DataVotes[i])
+		eth1, err := Eth1Root(hasher, eth1DataVotes[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
 		}
@@ -184,7 +186,12 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
 	}
-	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
+	eth1VotesRootsRoot, err := bitwiseMerkleize(
+		hasher,
+		eth1Chunks,
+		uint64(len(eth1Chunks)),
+		params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch,
+	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
