@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -37,6 +40,10 @@ var _ = shared.Service(&Service{})
 
 // Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
+
+// Refresh rate of ENR set at every quarter of an epoch.
+var refreshRate = time.Duration((params.BeaconConfig().SecondsPerSlot*
+	params.BeaconConfig().SlotsPerEpoch)/4) * time.Second
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
@@ -239,6 +246,10 @@ func (s *Service) Start() {
 	})
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+	runutil.RunEvery(s.ctx, refreshRate, func() {
+		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(s.genesisTime))
+		s.RefreshENR(currentEpoch)
+	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
