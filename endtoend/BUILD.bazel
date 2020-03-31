@@ -20,6 +20,7 @@ go_test(
     ],
     shard_count = 4,
     tags = [
+        "batch",
         "block-network",
         "e2e",
         "manual",
