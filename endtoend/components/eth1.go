@@ -62,7 +62,6 @@ func StartEth1Node(t *testing.T) (string, int) {
 	}
 	cmd.Stdout = file
 	cmd.Stderr = file
-
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start eth1 chain: %v", err)
 	}
