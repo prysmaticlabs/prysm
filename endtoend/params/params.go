@@ -2,7 +2,6 @@ package params
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 
@@ -53,7 +52,6 @@ func Init(beaconNodeCount int) error {
 		return err
 	}
 
-	fmt.Printf("SHARD INDEX %d\n", testIndex)
 	TestParams = &Params{
 		TestPath:              testPath,
 		LogPath:               logPath,
