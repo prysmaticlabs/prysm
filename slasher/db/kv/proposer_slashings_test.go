@@ -151,9 +151,18 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 	ctx := context.Background()
 
 	ps := []*ethpb.ProposerSlashing{
-		{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}}},
-		{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}}},
-		{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}}},
+		{
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+		},
+		{
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+		},
+		{
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+		},
 	}
 	err := db.SaveProposerSlashings(ctx, types.Active, ps)
 	if err != nil {
