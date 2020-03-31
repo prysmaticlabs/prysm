@@ -60,7 +60,7 @@ func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
-	if _, err := service.loadColdStateByRoot(ctx, [32]byte{'a'}); err != errUnknownStateSummary {
+	if _, err := service.loadColdStateByRoot(ctx, [32]byte{'a'}); !strings.Contains(err.Error(), errUnknownStateSummary.Error()) {
 		t.Fatal("Did not get correct error")
 	}
 }
