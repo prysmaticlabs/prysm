@@ -26,6 +26,7 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 // a list of validator uint64 balances according to the eth2
 // Simple Serialize specification.
 func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
 	balancesMarshaling := make([][]byte, 0)
 	for i := 0; i < len(balances); i++ {
 		balanceBuf := make([]byte, 8)
@@ -46,7 +47,7 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 			balLimit = uint64(len(balances))
 		}
 	}
-	balancesRootsRoot, err := bitwiseMerkleize(balancesChunks, uint64(len(balancesChunks)), balLimit)
+	balancesRootsRoot, err := bitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
 	}
@@ -61,7 +62,7 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 
 // ValidatorRoot describes a method from which the hash tree root
 // of a validator is returned.
-func ValidatorRoot(validator *ethpb.Validator) ([32]byte, error) {
+func ValidatorRoot(hasher HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	fieldRoots := [][32]byte{}
 	if validator != nil {
 		pubkey := bytesutil.ToBytes48(validator.PublicKey)
@@ -92,23 +93,24 @@ func ValidatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 		if err != nil {
 			return [32]byte{}, err
 		}
-		pubKeyRoot, err := bitwiseMerkleize(pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+		pubKeyRoot, err := bitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
 		if err != nil {
 			return [32]byte{}, err
 		}
 		fieldRoots = [][32]byte{pubKeyRoot, withdrawCreds, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
 			activationBuf, exitBuf, withdrawalBuf}
 	}
-	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][32]byte, len(validators))
 	emptyKey := hashutil.FastSum256(hashKeyElements)
+	hasher := hashutil.CustomSHA256Hasher()
 	bytesProcessed := 0
 	for i := 0; i < len(validators); i++ {
-		val, err := h.validatorRoot(validators[i])
+		val, err := h.validatorRoot(hasher, validators[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
@@ -124,7 +126,7 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 		}
 	}
 
-	validatorsRootsRoot, err := bitwiseMerkleizeArrays(roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
+	validatorsRootsRoot, err := bitwiseMerkleizeArrays(hasher, roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -142,7 +144,7 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	return res, nil
 }
 
-func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
+func (h *stateRootHasher) validatorRoot(hasher HashFn, validator *ethpb.Validator) ([32]byte, error) {
 	// Validator marshaling for caching.
 	enc := make([]byte, 122)
 	fieldRoots := make([][32]byte, 2, 8)
@@ -188,7 +190,7 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 		if err != nil {
 			return [32]byte{}, err
 		}
-		pubKeyRoot, err := bitwiseMerkleize(pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+		pubKeyRoot, err := bitwiseMerkleize(hasher, pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -222,7 +224,7 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 		fieldRoots = append(fieldRoots, withdrawalBuf)
 	}
 
-	valRoot, err := bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	valRoot, err := bitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
