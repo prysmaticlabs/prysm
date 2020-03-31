@@ -31,4 +31,3 @@ func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	}
 	return success(post)
 }
-

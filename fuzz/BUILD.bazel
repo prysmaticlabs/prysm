@@ -34,7 +34,7 @@ FUZZ_DEPS = [
     "@com_github_pkg_errors//:go_default_library",
 ] + SSZ_DEPS
 
-IMPORT_PATH = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/fuzz"
+IMPORT_PATH = "github.com/prysmaticlabs/prysm/fuzz"
 
 SRCS = [
     "common.go",
@@ -88,7 +88,7 @@ go_fuzz_test(
     name = "deposit_fuzz_test",
     srcs = SRCS,
     corpus = "deposit_corpus",
-    corpus_path = "beacon-chain/core/blocks/fuzz/deposit_corpus",
+    corpus_path = "beacon-chain/fuzz/deposit_corpus",
     func = "BeaconFuzzDeposit",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
@@ -108,13 +108,13 @@ go_fuzz_test(
     name = "voluntary_exit_fuzz_test",
     srcs = SRCS,
     corpus = "voluntary_exit_corpus",
-    corpus_path = "beacon-chain/core/blocks/fuzz/voluntary_exit_corpus",
+    corpus_path = "beacon-chain/fuzz/voluntary_exit_corpus",
     func = "BeaconFuzzVoluntaryExit",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
 )
 
-# gazelle:resolve go github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/fuzz //beacon-chain/core/blocks/fuzz:block_header_fuzz_lib_with_fuzzer
+# gazelle:resolve go github.com/prysmaticlabs/prysm/fuzz //beacon-chain/fuzz:block_header_fuzz_lib_with_fuzzer
 
 go_test(
     name = "go_default_test",
@@ -122,7 +122,7 @@ go_test(
     data = glob(["regression_data/*.ssz"]),
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/core/blocks/fuzz:block_header_fuzz_lib_with_fuzzer",
+        "//fuzz:block_header_fuzz_test_lib_with_fuzzer",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
@@ -138,13 +138,14 @@ go_library(
         "inputs.go",
         "shuffle_fuzz.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/fuzz",
+    importpath = IMPORT_PATH,
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/testing:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",

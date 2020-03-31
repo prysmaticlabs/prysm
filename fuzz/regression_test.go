@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/fuzz"
+	"github.com/prysmaticlabs/prysm/fuzz"
 )
 
 // Test any crashed input as needed.
@@ -30,7 +30,7 @@ func TestFuzzRegression(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, ok := fuzz.BeaconFuzz(b); !ok {
+			if _, ok := fuzz.BeaconFuzzBlockHeader(b); !ok {
 				t.Fatal("not ok")
 			}
 		})

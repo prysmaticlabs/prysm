@@ -15,6 +15,9 @@ go_library(
         ":generated_beacon_fuzz_states",  # keep
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/testing",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = ["//proto/beacon/p2p/v1:go_default_library"],
 )

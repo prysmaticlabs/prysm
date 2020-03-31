@@ -84,7 +84,7 @@ cc_library(
             "-lcrypto"
         ],
         "//conditions:default": [],
-    })
+    }),
     visibility = ["//visibility:public"],
 )
 

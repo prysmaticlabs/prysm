@@ -11,6 +11,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
+        "//fuzz:__pkg__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
