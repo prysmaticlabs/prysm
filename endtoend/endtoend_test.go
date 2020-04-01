@@ -42,7 +42,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
-		t.Fatalf("failed to find chain start logs, this could mean the chain did not start: %v", err)
+		t.Fatalf("failed to find chain start logs, this means the chain did not start: %v", err)
 	}
 
 	// Failing early in case chain doesn't start.
@@ -95,7 +95,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		return
 	}
 
-	multiAddr, pID := components.StartNewBeaconNode(t, config, multiAddrs)
+	multiAddr, processID := components.StartNewBeaconNode(t, config, multiAddrs)
 	multiAddrs = append(multiAddrs, multiAddr)
 	index := e2e.TestParams.BeaconNodeCount
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
@@ -115,7 +115,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
-	defer helpers.KillProcesses(t, []int{pID})
+	defer helpers.KillProcesses(t, []int{processID})
 	if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
 		t.Fatalf("Failed to sync: %v", err)
 	}
