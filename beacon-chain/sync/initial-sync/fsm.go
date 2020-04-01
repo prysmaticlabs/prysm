@@ -118,7 +118,7 @@ func (sm *stateMachine) addEpochState(epoch uint64) {
 	state := &epochState{
 		epoch:   epoch,
 		state:   stateNew,
-		blocks:  make([]*eth.SignedBeaconBlock, 0, allowedBlocksPerSecond),
+		blocks:  []*eth.SignedBeaconBlock{},
 		updated: time.Now(),
 	}
 	sm.epochs = append(sm.epochs, state)
@@ -159,18 +159,18 @@ func (sm *stateMachine) isLowestEpochState(epoch uint64) bool {
 	return true
 }
 
-// highestEpochSlot returns slot for the latest known epoch.
-func (sm *stateMachine) highestEpochSlot() (uint64, error) {
+// highestEpoch returns slot for the latest known epoch.
+func (sm *stateMachine) highestEpoch() (uint64, error) {
 	if len(sm.epochs) == 0 {
 		return 0, errors.New("no epoch states exist")
 	}
-	highestEpochSlot := sm.epochs[0].epoch
+	highestEpoch := sm.epochs[0].epoch
 	for _, state := range sm.epochs {
-		if state.epoch > highestEpochSlot {
-			highestEpochSlot = state.epoch
+		if state.epoch > highestEpoch {
+			highestEpoch = state.epoch
 		}
 	}
-	return highestEpochSlot, nil
+	return highestEpoch, nil
 }
 
 // String returns human readable representation of a state.
