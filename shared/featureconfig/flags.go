@@ -173,6 +173,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableSkipSlotsCacheFlag = &cli.BoolFlag{
+		Name:   "enable-skip-slots-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnablePruneBoundaryStateFlag = &cli.BoolFlag{
 		Name:   "prune-states",
 		Usage:  deprecatedUsage,
@@ -262,6 +267,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpochFlag,
 	deprecatedEnableSnappyDBCompressionFlag,
+	deprecatedEnableSkipSlotsCacheFlag,
 	deprecatedEnablePruneBoundaryStateFlag,
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
