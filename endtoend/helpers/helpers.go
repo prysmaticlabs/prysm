@@ -31,7 +31,7 @@ func KillProcesses(t *testing.T, pIDs []int) {
 		if err := process.Kill(); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := process.Wait(); err != nil {
+		if err := process.Release(); err != nil {
 			t.Fatal(err)
 		}
 	}
