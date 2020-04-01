@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -332,6 +334,16 @@ func (s *Service) Disconnect(pid peer.ID) error {
 // Peers returns the peer status interface.
 func (s *Service) Peers() *peers.Status {
 	return s.peers
+}
+
+// Metadata returns a copy of the peer's metadata.
+func (s *Service) Metadata() *pb.MetaData {
+	return proto.Clone(s.metaData).(*pb.MetaData)
+}
+
+// MetadataSeq returns the metadata sequence number
+func (s *Service) MetadataSeq() uint64 {
+	return s.metaData.SeqNumber
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node

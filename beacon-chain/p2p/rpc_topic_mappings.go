@@ -14,6 +14,7 @@ var RPCTopicMappings = map[string]interface{}{
 	"/eth2/beacon_chain/req/goodbye/1":                new(uint64),
 	"/eth2/beacon_chain/req/beacon_blocks_by_range/1": &p2ppb.BeaconBlocksByRangeRequest{},
 	"/eth2/beacon_chain/req/beacon_blocks_by_root/1":  [][32]byte{},
+	"/eth2/beacon_chain/req/ping/1/":                  new(uint64),
 }
 
 // RPCTypeMapping is the inverse of RPCTopicMappings so that an arbitrary protobuf message

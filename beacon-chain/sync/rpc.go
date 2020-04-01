@@ -50,6 +50,11 @@ func (r *Service) registerRPCHandlers() {
 		[][32]byte{},
 		r.beaconBlocksRootRPCHandler,
 	)
+	r.registerRPC(
+		"/eth2/beacon_chain/req/ping/1/",
+		new(uint64),
+		r.pingHandler,
+	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.

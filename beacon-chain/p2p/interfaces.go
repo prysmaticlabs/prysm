@@ -3,6 +3,8 @@ package p2p
 import (
 	"context"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -21,6 +23,7 @@ type P2P interface {
 	Sender
 	ConnectionHandler
 	PeersProvider
+	MetadataProvider
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
@@ -66,4 +69,9 @@ type Sender interface {
 // PeersProvider abstracts obtaining our current list of known peers status.
 type PeersProvider interface {
 	Peers() *peers.Status
+}
+
+type MetadataProvider interface {
+	Metadata() *pb.MetaData
+	MetadataSeq() uint64
 }
