@@ -116,11 +116,6 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
-	enableNoiseHandshake = &cli.BoolFlag{
-		Name: "enable-noise",
-		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
-			"securing transports between peers",
-	}
 	dontPruneStateStartUp = &cli.BoolFlag{
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
@@ -321,7 +316,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
-	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
 	newStateMgmt,
