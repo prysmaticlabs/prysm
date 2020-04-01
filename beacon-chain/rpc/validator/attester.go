@@ -95,7 +95,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	// processed, we walk up the chain until state.Slot <= req.Slot to prevent producing an
 	// attestation that violates processing constraints.
 	fetchState := vs.BeaconDB.State
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().NoNewStateMgmt {
 		fetchState = vs.StateGen.StateByRoot
 	}
 	for headState.Slot() > req.Slot {

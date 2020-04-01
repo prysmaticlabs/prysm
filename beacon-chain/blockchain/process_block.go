@@ -93,7 +93,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().NoNewStateMgmt {
 		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
 			return nil, errors.Wrap(err, "could not save state")
 		}
@@ -116,7 +116,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		if !featureconfig.Get().NewStateMgmt {
+		if featureconfig.Get().NoNewStateMgmt {
 			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 			if endSlot > startSlot {
@@ -139,7 +139,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 			return nil, errors.Wrap(err, "could not save new justified")
 		}
 
-		if featureconfig.Get().NewStateMgmt {
+		if !featureconfig.Get().NoNewStateMgmt {
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 			fBlock, err := s.beaconDB.Block(ctx, fRoot)
 			if err != nil {
@@ -231,7 +231,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().NoNewStateMgmt {
 		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
 			return errors.Wrap(err, "could not save state")
 		}
@@ -266,7 +266,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		if !featureconfig.Get().NewStateMgmt {
+		if featureconfig.Get().NoNewStateMgmt {
 			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 			if endSlot > startSlot {
@@ -299,7 +299,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return errors.Wrap(err, "could not save new justified")
 		}
 
-		if featureconfig.Get().NewStateMgmt {
+		if !featureconfig.Get().NoNewStateMgmt {
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 			fBlock, err := s.beaconDB.Block(ctx, fRoot)
 			if err != nil {
@@ -316,7 +316,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not save new validators")
 	}
 
-	if !featureconfig.Get().NewStateMgmt {
+	if featureconfig.Get().NoNewStateMgmt {
 		numOfStates := len(s.boundaryRoots)
 		if numOfStates > initialSyncCacheSize {
 			if err = s.persistCachedStates(ctx, numOfStates); err != nil {
@@ -341,7 +341,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return err
 		}
 
-		if !featureconfig.Get().NewStateMgmt && helpers.IsEpochStart(postState.Slot()) {
+		if featureconfig.Get().NoNewStateMgmt && helpers.IsEpochStart(postState.Slot()) {
 			if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
 				return errors.Wrap(err, "could not save state")
 			}

@@ -193,7 +193,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		bkt = tx.Bucket(blocksBucket)
 		headBlkRoot := bkt.Get(headBlockRootKey)
 
-		if featureconfig.Get().NewStateMgmt {
+		if !featureconfig.Get().NoNewStateMgmt {
 			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
 				return errors.New("cannot delete state without state summary")
 			}
@@ -252,7 +252,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 
 		for blockRoot, _ := c.First(); blockRoot != nil; blockRoot, _ = c.Next() {
 			if rootMap[bytesutil.ToBytes32(blockRoot)] {
-				if featureconfig.Get().NewStateMgmt {
+				if !featureconfig.Get().NoNewStateMgmt {
 					if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
 						return errors.New("cannot delete state without state summary")
 					}
@@ -295,7 +295,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.slotByBlockRoot")
 	defer span.End()
 
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().NoNewStateMgmt {
 		bkt := tx.Bucket(stateSummaryBucket)
 		enc := bkt.Get(blockRoot)
 		if enc == nil {

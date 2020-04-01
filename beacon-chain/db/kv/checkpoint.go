@@ -65,7 +65,7 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
+		if !featureconfig.Get().NoNewStateMgmt {
 			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil && !k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root)) {
 				return errors.New("missing state summary for finalized root")
 			}
@@ -93,7 +93,7 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
+		if !featureconfig.Get().NoNewStateMgmt {
 			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil && !k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root)) {
 				return errors.New("missing state summary for finalized root")
 			}

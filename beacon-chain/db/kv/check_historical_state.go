@@ -12,7 +12,7 @@ import (
 var historicalStateDeletedKey = []byte("historical-states-deleted")
 
 func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
-	if !featureconfig.Get().NewStateMgmt {
+	if featureconfig.Get().NoNewStateMgmt {
 		return kv.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(newStateServiceCompatibleBucket)
 			return bkt.Put(historicalStateDeletedKey, []byte{0x01})
