@@ -9,9 +9,9 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
+
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 var (
@@ -30,6 +30,7 @@ var (
 type SkipSlotCache struct {
 	cache      *lru.Cache
 	lock       sync.RWMutex
+	disabled   bool // Allow for programmatic toggling of the cache, useful during initial sync.
 	inProgress map[uint64]bool
 }
 
@@ -45,12 +46,22 @@ func NewSkipSlotCache() *SkipSlotCache {
 	}
 }
 
+// Enable the skip slot cache.
+func (c *SkipSlotCache) Enable() {
+	c.disabled = false
+}
+
+// Disable the skip slot cache.
+func (c *SkipSlotCache) Disable() {
+	c.disabled = true
+}
+
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
 func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "skipSlotCache.Get")
 	defer span.End()
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	if c.disabled {
 		// Return a miss result if cache is not enabled.
 		skipSlotCacheMiss.Inc()
 		return nil, nil
@@ -97,7 +108,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
 func (c *SkipSlotCache) MarkInProgress(slot uint64) error {
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	if c.disabled {
 		return nil
 	}
 
@@ -114,7 +125,7 @@ func (c *SkipSlotCache) MarkInProgress(slot uint64) error {
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
 func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	if c.disabled {
 		return nil
 	}
 
@@ -127,7 +138,7 @@ func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
 
 // Put the response in the cache.
 func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.BeaconState) error {
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	if c.disabled {
 		return nil
 	}
 
