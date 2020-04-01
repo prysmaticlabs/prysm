@@ -9,13 +9,11 @@ import (
 	"os"
 	"path"
 
-	"github.com/prysmaticlabs/go-bitfield"
-
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 )
 
