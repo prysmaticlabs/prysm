@@ -42,7 +42,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
-		t.Fatalf("failed to find chain start logs, this means the chain did not start: %v", err)
+		t.Fatalf("failing to find chain start logs, this means the chain did not start: %v", err)
 	}
 
 	// Failing early in case chain doesn't start.
