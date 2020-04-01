@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"context"
 	"os"
 	"path"
 	"sync"
@@ -121,7 +120,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 		return nil, err
 	}
 
-	if err := kv.ensureNewStateServiceCompatible(context.Background()); err != nil {
+	if err := kv.ensureNewStateServiceCompatible(); err != nil {
 		return nil, err
 	}
 

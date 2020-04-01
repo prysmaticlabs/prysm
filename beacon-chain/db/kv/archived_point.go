@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
@@ -28,21 +27,6 @@ func (k *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		return bucket.Put(lastArchivedIndexKey, uint64ToBytes(index))
 	})
-}
-
-// LastArchivedIndex from the db.
-func (k *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndex")
-	defer span.End()
-	var index uint64
-	err := k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
-		b := bucket.Get(lastArchivedIndexKey)
-		index = binary.LittleEndian.Uint64(b)
-		return nil
-	})
-
-	return index, err
 }
 
 // LastArchivedIndexRoot from the db.
