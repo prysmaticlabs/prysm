@@ -12,7 +12,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 // buildOptions for the libp2p host.
