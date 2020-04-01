@@ -126,11 +126,19 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-
+	bRoot := [32]byte{'a'}
+	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 0,
+			ProposerIndex: proposerIdx,
 			Slot:          1,
+			ParentRoot:    bRoot[:],
 		},
 	}
 
@@ -142,7 +150,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	blockSig := privKeys[0].Sign(signingRoot[:]).Marshal()
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
 	c, _ := lru.New(10)
@@ -331,11 +339,20 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	bRoot := [32]byte{'a'}
+	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot:       1,
-			ParentRoot: testutil.Random32Bytes(t),
+			ProposerIndex: proposerIdx,
+			Slot:          1,
+			ParentRoot:    bRoot[:],
 		},
 	}
 
@@ -347,7 +364,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	blockSig := privKeys[0].Sign(signingRoot[:]).Marshal()
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
 	c, _ := lru.New(10)
