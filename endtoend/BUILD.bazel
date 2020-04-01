@@ -11,7 +11,10 @@ go_test(
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],
-    args = ["-test.v"],
+    args = [
+        "-test.v",
+        "--nokeep_state_after_build",
+    ],
     data = [
         "//beacon-chain",
         "//slasher",
@@ -20,7 +23,6 @@ go_test(
     ],
     shard_count = 4,
     tags = [
-        "batch",
         "block-network",
         "e2e",
         "manual",
