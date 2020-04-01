@@ -112,6 +112,12 @@ var (
 		Usage: "The file containing the private key to use in communications with other peers.",
 		Value: "",
 	}
+	// P2PMetadata defines a flag to specify the location of the peer metadata file.
+	P2PMetadata = &cli.StringFlag{
+		Name:  "p2p-metaData",
+		Usage: "The file containing the metadata to communicate with other peers.",
+		Value: "",
+	}
 	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.
 	P2PMaxPeers = &cli.Int64Flag{
 		Name:  "p2p-max-peers",

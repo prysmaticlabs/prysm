@@ -9,6 +9,10 @@ import (
 	"os"
 	"path"
 
+	"github.com/prysmaticlabs/go-bitfield"
+
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
@@ -16,6 +20,7 @@ import (
 )
 
 const keyPath = "network-keys"
+const metaDataPath = "metaData"
 
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
 	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
@@ -81,6 +86,44 @@ func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 	return convertFromInterfacePrivKey(unmarshalledKey), nil
+}
+
+func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
+	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
+	metaDataPath := cfg.MetaDataDir
+
+	_, err := os.Stat(defaultKeyPath)
+	defaultMetadataExist := !os.IsNotExist(err)
+	if err != nil && defaultMetadataExist {
+		return nil, err
+	}
+	if metaDataPath == "" && !defaultMetadataExist {
+		metaData := &pbp2p.MetaData{
+			SeqNumber: 0,
+			Attnets:   bitfield.NewBitvector64(),
+		}
+		dst, err := metaData.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		if err = ioutil.WriteFile(defaultKeyPath, dst, 0600); err != nil {
+			return nil, err
+		}
+		return metaData, nil
+	}
+	if defaultMetadataExist && metaDataPath == "" {
+		metaDataPath = defaultKeyPath
+	}
+	src, err := ioutil.ReadFile(metaDataPath)
+	if err != nil {
+		log.WithError(err).Error("Error reading metadata from file")
+		return nil, err
+	}
+	metaData := &pbp2p.MetaData{}
+	if err := metaData.Unmarshal(src); err != nil {
+		return nil, err
+	}
+	return metaData, nil
 }
 
 func ipAddr() net.IP {
