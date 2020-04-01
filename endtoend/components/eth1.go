@@ -87,13 +87,13 @@ func StartEth1Node(t *testing.T) (string, int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
+	key, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
-	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
+	if err := mineBlocks(web3, key, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		t.Fatalf("Unable to advance chain: %v", err)
 	}
 
@@ -101,7 +101,7 @@ func StartEth1Node(t *testing.T) (string, int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
+	nonce, err := web3.PendingNonceAt(context.Background(), key.Address)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func StartEth1Node(t *testing.T) (string, int) {
 	}
 
 	// Advancing the blocks another eth1follow distance to prevent issues reading the chain.
-	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
+	if err := mineBlocks(web3, key, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		t.Fatalf("Unable to advance chain: %v", err)
 	}
 
