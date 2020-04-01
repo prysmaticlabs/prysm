@@ -189,6 +189,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	c := params.BeaconConfig()
+	originalConfig := c
 	c.ForkVersionSchedule = map[uint64][]byte{
 		0: params.BeaconConfig().GenesisForkVersion,
 		1: {0, 0, 0, 1},
@@ -200,6 +201,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	c.NextForkEpoch = nextForkEpoch
 	c.NextForkVersion = nextForkVersion
 	params.OverrideBeaconConfig(c)
+	defer params.OverrideBeaconConfig(originalConfig)
 
 	// We simulate being in epoch 1.
 	secondsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
