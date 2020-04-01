@@ -147,6 +147,11 @@ var (
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedEnableNoiseHandshake = &cli.BoolFlag{
+		Name:   "enable-noise",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableFinalizedBlockRootIndexFlag = &cli.BoolFlag{
 		Name:   "enable-finalized-block-root-index",
 		Usage:  deprecatedUsage,
@@ -187,7 +192,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
 	deprecatedEnableCustomStateSSZFlag = &cli.BoolFlag{
 		Name:   "enable-custom-state-ssz",
 		Usage:  deprecatedUsage,
@@ -256,6 +260,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedEnableNoiseHandshake,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
