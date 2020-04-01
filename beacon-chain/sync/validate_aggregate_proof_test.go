@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -25,6 +26,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -142,6 +144,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		attPool:              attestations.NewPool(),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -207,6 +210,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			State: beaconState},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -265,8 +269,8 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            1,
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
 	}
@@ -288,6 +292,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
 		seenAttestationCache: c,
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
 
 	buf := new(bytes.Buffer)
@@ -400,6 +405,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -511,6 +517,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 			}},
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)

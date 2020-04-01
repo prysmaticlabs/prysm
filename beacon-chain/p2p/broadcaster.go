@@ -38,6 +38,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 			traceutil.AnnotateError(span, ErrMessageNotMapped)
 			return ErrMessageNotMapped
 		}
+		topic = fmt.Sprintf(topic, forkDigest)
 	}
 
 	span.AddAttributes(trace.StringAttribute("topic", topic))

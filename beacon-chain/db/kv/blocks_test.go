@@ -429,11 +429,11 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
+	if !proto.Equal(block, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
 	}
 
@@ -441,11 +441,11 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
+	if !proto.Equal(block, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
 	}
 
@@ -453,12 +453,93 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block, highestSavedBlock) {
+	if !proto.Equal(block, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", block, highestSavedBlock)
+	}
+}
+
+func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	block1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	db.SaveBlock(ctx, block1)
+	block2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 10}}
+	db.SaveBlock(ctx, block2)
+	block3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
+	db.SaveBlock(ctx, block3)
+
+	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block1, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block1, highestAt)
+	}
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 11)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block2, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block2, highestAt)
+	}
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block3, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block3, highestAt)
+	}
+
+	r3, _ := ssz.HashTreeRoot(block3.Block)
+	db.DeleteBlock(ctx, r3)
+
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block2, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block2, highestAt)
+	}
+}
+
+func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	genesisRoot, _ := ssz.HashTreeRoot(genesisBlock.Block)
+	db.SaveGenesisBlockRoot(ctx, genesisRoot)
+	db.SaveBlock(ctx, genesisBlock)
+	block1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	db.SaveBlock(ctx, block1)
+
+	highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(block1, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", block1, highestAt)
+	}
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(genesisBlock, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", genesisBlock, highestAt)
+	}
+	highestAt, err = db.HighestSlotBlocksBelow(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(genesisBlock, highestAt[0]) {
+		t.Errorf("Wanted %v, received %v", genesisBlock, highestAt)
 	}
 }
 
@@ -480,12 +561,45 @@ func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlocks(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b[len(b)-1], highestSavedBlock) {
+	if !proto.Equal(b[len(b)-1], highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b[len(b)-1], highestSavedBlock)
+	}
+}
+
+func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	b := make([]*ethpb.SignedBeaconBlock, 500)
+	for i := 0; i < 500; i++ {
+		b[i] = &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				ParentRoot: []byte("parent"),
+				Slot:       uint64(i),
+			},
+		}
+	}
+
+	if err := db.SaveBlock(ctx, b[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlocks(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	f := filters.NewFilter().SetStartSlot(0).SetEndSlot(500)
+
+	blks, err := db.Blocks(ctx, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(blks) != 500 {
+		t.Log(len(blks))
+		t.Error("Did not get wanted blocks")
 	}
 }
 
@@ -498,11 +612,11 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlock(ctx, b50); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b50, highestSavedBlock) {
+	if !proto.Equal(b50, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b50, highestSavedBlock)
 	}
 
@@ -512,22 +626,22 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b51, highestSavedBlock) {
+	if !proto.Equal(b51, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b51, highestSavedBlock)
 	}
 
 	if err := db.DeleteBlock(ctx, r51); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err = db.HighestSlotBlock(ctx)
+	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b50, highestSavedBlock) {
+	if !proto.Equal(b50, highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b50, highestSavedBlock)
 	}
 }
@@ -555,11 +669,11 @@ func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 	if err := db.DeleteBlocks(ctx, [][32]byte{r[99], r[98], r[97]}); err != nil {
 		t.Fatal(err)
 	}
-	highestSavedBlock, err := db.HighestSlotBlock(ctx)
+	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b[96], highestSavedBlock) {
+	if !proto.Equal(b[96], highestSavedBlock[0]) {
 		t.Errorf("Wanted %v, received %v", b[len(b)-1], highestSavedBlock)
 	}
 }

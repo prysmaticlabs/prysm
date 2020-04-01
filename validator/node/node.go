@@ -187,6 +187,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 		GraffitiFlag:               graffiti,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
+		GrpcHeadersFlag:            ctx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
@@ -218,37 +219,25 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 			manager = "interop"
 			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.Uint64(flags.InteropStartIndex.Name))
 			log.Warn(fmt.Sprintf("--interop-num-validators and --interop-start-index flags are deprecated.  Please use --keymanager=interop --keymanageropts='%s'", opts))
-		} else if keystorePath := ctx.String(flags.KeystorePathFlag.Name); keystorePath != "" {
-			manager = "keystore"
-			opts = fmt.Sprintf(`{"path":%q,"passphrase":%q}`, keystorePath, ctx.String(flags.PasswordFlag.Name))
-			log.Warn(fmt.Sprintf("--keystore-path flag is deprecated.  Please use --keymanager=keystore --keymanageropts='%s'", opts))
-		} else {
-			// Default if no choice made
-			manager = "keystore"
-			passphrase := ctx.String(flags.PasswordFlag.Name)
-			if passphrase == "" {
-				log.Warn("Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore or select a different keymanager")
-			} else {
-				opts = fmt.Sprintf(`{"passphrase":%q}`, passphrase)
-				log.Warn(`Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore --keymanageropts='{"passphrase":"<password>"}' or select a different keymanager`)
-			}
 		}
+	}
+
+	if manager == "" {
+		return nil, fmt.Errorf("please supply a keymanager with --keymanager")
 	}
 
 	var km keymanager.KeyManager
 	var help string
 	var err error
 	switch manager {
+	case "remote":
+		km, help, err = keymanager.NewRemoteWallet(opts)
+	case "wallet":
+		km, help, err = keymanager.NewWallet(opts)
 	case "interop":
 		km, help, err = keymanager.NewInterop(opts)
 	case "unencrypted":
 		km, help, err = keymanager.NewUnencrypted(opts)
-	case "keystore":
-		km, help, err = keymanager.NewKeystore(opts)
-	case "wallet":
-		km, help, err = keymanager.NewWallet(opts)
-	case "remote":
-		km, help, err = keymanager.NewRemoteWallet(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}

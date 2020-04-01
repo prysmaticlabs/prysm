@@ -3,13 +3,15 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // SaveForkchoiceAttestation saves an forkchoice attestation in cache.
 func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
-	r, err := ssz.HashTreeRoot(att)
+	if att == nil {
+		return nil
+	}
+	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
@@ -47,7 +49,10 @@ func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 
 // DeleteForkchoiceAttestation deletes a forkchoice attestation in cache.
 func (p *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
-	r, err := ssz.HashTreeRoot(att)
+	if att == nil {
+		return nil
+	}
+	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}

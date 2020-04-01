@@ -21,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const blockBatchSize = 64
+const blockBatchSize = 32
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
 
@@ -66,10 +66,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		s.logSyncStatus(genesis, blk.Block, counter)
 		if err := s.processBlock(ctx, blk); err != nil {
 			log.WithError(err).Info("Block is invalid")
-			queue.state.scheduler.incrementCounter(failedBlock, 1)
 			continue
 		}
-		queue.state.scheduler.incrementCounter(validBlock, 1)
 	}
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
@@ -98,7 +96,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			StartSlot: s.chain.HeadSlot() + 1,
-			Count:     mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, blockBatchSize),
+			Count:     mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, allowedBlocksPerSecond),
 			Step:      1,
 		}
 
@@ -108,7 +106,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		resp, err := s.requestBlocks(ctx, req, best)
 		if err != nil {
-			return err
+			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
+			return nil
 		}
 
 		for _, blk := range resp {
@@ -197,7 +196,8 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 }
 
 func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock) error {
-	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 	}
 	s.blockNotifier.BlockFeed().Send(&feed.Event{

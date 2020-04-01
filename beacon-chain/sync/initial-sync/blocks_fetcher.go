@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -15,12 +16,21 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+)
+
+const (
+	// maxPendingRequests limits how many concurrent fetch request one can initiate.
+	maxPendingRequests = 8
+	// peersPercentagePerRequest caps percentage of peers to be used in a request.
+	peersPercentagePerRequest = 0.75
 )
 
 var (
@@ -39,6 +49,7 @@ type blocksFetcherConfig struct {
 // On an incoming requests, requested block range is evenly divided
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
+	sync.Mutex
 	ctx            context.Context
 	cancel         context.CancelFunc
 	headFetcher    blockchain.HeadFetcher
@@ -71,7 +82,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	rateLimiter := leakybucket.NewCollector(
 		allowedBlocksPerSecond, /* rate */
 		allowedBlocksPerSecond, /* capacity */
-		false /* deleteEmptyBuckets */)
+		false                   /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:            ctx,
@@ -79,8 +90,8 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		headFetcher:    cfg.headFetcher,
 		p2p:            cfg.p2p,
 		rateLimiter:    rateLimiter,
-		fetchRequests:  make(chan *fetchRequestParams, queueMaxPendingRequests),
-		fetchResponses: make(chan *fetchRequestResponse, queueMaxPendingRequests),
+		fetchRequests:  make(chan *fetchRequestParams, maxPendingRequests),
+		fetchResponses: make(chan *fetchRequestResponse, maxPendingRequests),
 		quit:           make(chan struct{}),
 	}
 }
@@ -119,6 +130,11 @@ func (f *blocksFetcher) loop() {
 	}()
 
 	for {
+		// Make sure there is are available peers before processing requests.
+		if _, err := f.waitForMinimumPeers(f.ctx); err != nil {
+			log.Error(err)
+		}
+
 		select {
 		case <-f.ctx.Done():
 			log.Debug("Context closed, exiting goroutine (blocks fetcher)")
@@ -220,16 +236,10 @@ func (f *blocksFetcher) collectPeerResponses(
 		return nil, ctx.Err()
 	}
 
+	peers = f.selectPeers(peers)
 	if len(peers) == 0 {
 		return nil, errNoPeersAvailable
 	}
-
-	// Shuffle peers to prevent a bad peer from
-	// stalling sync with invalid blocks.
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
-	randGenerator.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
 
 	p2pRequests := new(sync.WaitGroup)
 	errChan := make(chan error)
@@ -248,7 +258,7 @@ func (f *blocksFetcher) collectPeerResponses(
 	}
 
 	// Spread load evenly among available peers.
-	perPeerCount := count / uint64(len(peers))
+	perPeerCount := mathutil.Min(count/uint64(len(peers)), allowedBlocksPerSecond)
 	remainder := int(count % uint64(len(peers)))
 	for i, pid := range peers {
 		start, step := start+uint64(i)*step, step*uint64(len(peers))
@@ -352,6 +362,7 @@ func (f *blocksFetcher) requestBlocks(
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
 ) ([]*eth.SignedBeaconBlock, error) {
+	f.Lock()
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
 		time.Sleep(f.rateLimiter.TillEmpty(pid.String()))
@@ -363,6 +374,7 @@ func (f *blocksFetcher) requestBlocks(
 		"count": req.Count,
 		"step":  req.Step,
 	}).Debug("Requesting blocks")
+	f.Unlock()
 	stream, err := f.p2p.Send(ctx, req, pid)
 	if err != nil {
 		return nil, err
@@ -403,4 +415,50 @@ func selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
 	})
 
 	return peers[0], nil
+}
+
+// waitForMinimumPeers spins and waits up until enough peers are available.
+func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, error) {
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
+	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		_, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+		if len(peers) >= required {
+			return peers, nil
+		}
+		log.WithFields(logrus.Fields{
+			"suitable": len(peers),
+			"required": required}).Info("Waiting for enough suitable peers before syncing")
+		time.Sleep(handshakePollingInterval)
+	}
+}
+
+// selectPeers returns transformed list of peers (randomized, constrained if necessary).
+func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
+	if len(peers) == 0 {
+		return peers
+	}
+
+	// Shuffle peers to prevent a bad peer from
+	// stalling sync with invalid blocks.
+	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
+
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
+
+	limit := uint64(math.Round(float64(len(peers)) * peersPercentagePerRequest))
+	limit = mathutil.Max(limit, uint64(required))
+	limit = mathutil.Min(limit, uint64(len(peers)))
+	return peers[:limit]
 }

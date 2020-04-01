@@ -31,5 +31,6 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	if err := e2eParams.Init(2); err != nil {
 		t.Fatal(err)
 	}
+
 	runEndToEndTest(t, minimalConfig)
 }

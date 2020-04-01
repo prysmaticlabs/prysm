@@ -20,32 +20,13 @@ var squareRootTable = map[uint64]uint64{
 }
 
 // IntegerSquareRoot defines a function that returns the
-// largest possible integer root of a number using a divide and conquer
-// binary search approach:
-//
-// inspiration: https://www.geeksforgeeks.org/square-root-of-an-integer
+// largest possible integer root of a number using go's standard library.
 func IntegerSquareRoot(n uint64) uint64 {
 	if v, ok := squareRootTable[n]; ok {
 		return v
 	}
 
-	x := uint64(0)
-	y := uint64(1 << 32)
-	for {
-		if y <= 1+x {
-			return x
-		}
-		sqt := x + ((y - x) >> 1)
-		sq := sqt * sqt
-		if sq == n {
-			return sqt
-		}
-		if sq > n {
-			y = sqt
-		} else {
-			x = sqt
-		}
-	}
+	return uint64(math.Sqrt(float64(n)))
 }
 
 // CeilDiv8 divides the input number by 8

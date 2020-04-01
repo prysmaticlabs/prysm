@@ -84,8 +84,6 @@ message StateSummary {
   uint64 slot = 1;
   // The block root of the state.
   bytes root = 2;
-  // The block root at epoch boundary of the state.
-  bytes boundary_root = 3;
 }
 
 message SigningRoot {

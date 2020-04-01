@@ -2,25 +2,45 @@ package stateutil
 
 import "encoding/binary"
 
-// HashFn describes a hash function and its associated bytes buffer
-type HashFn struct {
-	f           func(input []byte) [32]byte
-	bytesBuffer [64]byte
+type HashFn func(input []byte) [32]byte
+
+// Hasher describes an interface through which we can
+// perform hash operations on byte arrays,indices,etc.
+type Hasher interface {
+	Hash(a []byte) [32]byte
+	Combi(a [32]byte, b [32]byte) [32]byte
+	MixIn(a [32]byte, i uint64) [32]byte
 }
 
-// Combi describes a method which merges two 32-byte arrays and hashes
-// them.
-func (h HashFn) Combi(a [32]byte, b [32]byte) [32]byte {
-	copy(h.bytesBuffer[:32], a[:])
-	copy(h.bytesBuffer[32:], b[:])
-	return h.f(h.bytesBuffer[:])
+type HasherFunc struct {
+	b        [64]byte
+	hashFunc HashFn
 }
 
-// MixIn describes a method where we add in the provided
-// integer to the end of the byte array and hash it.
-func (h HashFn) MixIn(a [32]byte, i uint64) [32]byte {
-	copy(h.bytesBuffer[:32], a[:])
-	copy(h.bytesBuffer[32:], make([]byte, 32, 32))
-	binary.LittleEndian.PutUint64(h.bytesBuffer[32:], i)
-	return h.f(h.bytesBuffer[:])
+// NewHasherFunc is the constructor for the object
+// that fulfills the Hasher interface.
+func NewHasherFunc(h HashFn) *HasherFunc {
+	return &HasherFunc{
+		b:        [64]byte{},
+		hashFunc: h,
+	}
+}
+
+// Hash utilizes the provided hash function for
+// the object.
+func (h *HasherFunc) Hash(a []byte) [32]byte {
+	return h.hashFunc(a)
+}
+
+func (h *HasherFunc) Combi(a [32]byte, b [32]byte) [32]byte {
+	copy(h.b[:32], a[:])
+	copy(h.b[32:], b[:])
+	return h.Hash(h.b[:])
+}
+
+func (h *HasherFunc) MixIn(a [32]byte, i uint64) [32]byte {
+	copy(h.b[:32], a[:])
+	copy(h.b[32:], make([]byte, 32, 32))
+	binary.LittleEndian.PutUint64(h.b[32:], i)
+	return h.Hash(h.b[:])
 }

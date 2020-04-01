@@ -46,7 +46,7 @@ func TestGetBlock_OK(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
-	stateRoot, err := beaconState.HashTreeRoot()
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
-	stateRoot, err := beaconState.HashTreeRoot()
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	stateRoot, err := beaconState.HashTreeRoot()
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}

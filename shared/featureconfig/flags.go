@@ -137,6 +137,15 @@ var (
 		Name:  "enable-state-field-trie",
 		Usage: "Enables the usage of state field tries to compute the state root",
 	}
+	enableCustomBlockHTR = &cli.BoolFlag{
+		Name:  "enable-custom-block-htr",
+		Usage: "Enables the usage of a custom hashing method for our block",
+	}
+	initSyncBatchSaveBlocks = &cli.BoolFlag{
+		Name: "init-sync-batch-save-blocks",
+		Usage: "Instead of saving one block per slot to the DB during initial syncing, this enables batch saving" +
+			" of epochs worth of blocks to the DB",
+	}
 )
 
 // Deprecated flags list.
@@ -318,6 +327,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	newStateMgmt,
 	enableInitSyncQueue,
 	enableFieldTrie,
+	enableCustomBlockHTR,
+	initSyncBatchSaveBlocks,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -330,6 +341,8 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-initial-sync-queue",
+	"--enable-state-field-trie",
+	"--init-sync-batch-save-blocks",
 	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.
 	//"--enable-dynamic-committee-subnets",
 }

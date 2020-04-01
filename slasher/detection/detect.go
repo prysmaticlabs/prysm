@@ -13,11 +13,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (ds *Service) detectAttesterSlashings(
+// DetectAttesterSlashings detects double, surround and surrounding attestation offences given an attestation.
+func (ds *Service) DetectAttesterSlashings(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
-	ctx, span := trace.StartSpan(ctx, "detection.detectAttesterSlashings")
+	ctx, span := trace.StartSpan(ctx, "detection.DetectAttesterSlashings")
 	defer span.End()
 	results, err := ds.minMaxSpanDetector.DetectSlashingsForAttestation(ctx, att)
 	if err != nil {
@@ -66,6 +67,11 @@ func (ds *Service) detectAttesterSlashings(
 		return nil, err
 	}
 	return slashingList, nil
+}
+
+// UpdateSpans passthrough function that updates span maps given an indexed attestation.
+func (ds *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
+	return ds.minMaxSpanDetector.UpdateSpans(ctx, att)
 }
 
 // detectDoubleVote cross references the passed in attestation with the bloom filter maintained
@@ -152,8 +158,9 @@ func (ds *Service) detectSurroundVotes(
 	return nil, errors.New("unexpected false positive in surround vote detection")
 }
 
-func (ds *Service) detectDoubleProposels(ctx context.Context, incommingBlk *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
-	return ds.proposalsDetector.DetectDoublePropose(ctx, incommingBlk)
+// DetectDoubleProposals checks if the given signed beacon block is a slashable offense and returns the slashing.
+func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
+	return ds.proposalsDetector.DetectDoublePropose(ctx, incomingBlock)
 }
 
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {

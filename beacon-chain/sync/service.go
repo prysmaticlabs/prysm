@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
@@ -34,9 +34,6 @@ const seenExitSize = 100
 const seenAttesterSlashingSize = 100
 const seenProposerSlashingSize = 100
 
-// Refresh rate of ENR set at every quarter of an epoch.
-var refreshRate = (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch) / 4
-
 // Config to set up the regular sync service.
 type Config struct {
 	P2P                 p2p.P2P
@@ -49,6 +46,7 @@ type Config struct {
 	StateNotifier       statefeed.Notifier
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
+	StateSummaryCache   *cache.StateSummaryCache
 }
 
 // This defines the interface for interacting with block chain service
@@ -80,6 +78,7 @@ func NewRegularSync(cfg *Config) *Service {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
+		stateSummaryCache:    cfg.StateSummaryCache,
 		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
@@ -122,6 +121,7 @@ type Service struct {
 	seenProposerSlashingCache *lru.Cache
 	seenAttesterSlashingLock  sync.RWMutex
 	seenAttesterSlashingCache *lru.Cache
+	stateSummaryCache         *cache.StateSummaryCache
 }
 
 // Start the regular sync service.
@@ -136,7 +136,9 @@ func (r *Service) Start() {
 	r.processPendingAttsQueue()
 	r.maintainPeerStatuses()
 	r.resyncIfBehind()
-	r.refreshENR()
+
+	// Update sync metrics.
+	runutil.RunEvery(r.ctx, time.Second*10, r.updateMetrics)
 }
 
 // Stop the regular sync service.
@@ -199,14 +201,4 @@ type Checker interface {
 	Syncing() bool
 	Status() error
 	Resync() error
-}
-
-// This runs every epoch to refresh the current node's ENR.
-func (r *Service) refreshENR() {
-	ctx := context.Background()
-	refreshTime := time.Duration(refreshRate) * time.Second
-	runutil.RunEvery(ctx, refreshTime, func() {
-		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(r.chain.GenesisTime()))
-		r.p2p.RefreshENR(currentEpoch)
-	})
 }
