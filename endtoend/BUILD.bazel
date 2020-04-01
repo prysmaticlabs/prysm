@@ -13,7 +13,6 @@ go_test(
     ],
     args = [
         "-test.v",
-        "--nokeep_state_after_build",
     ],
     data = [
         "//beacon-chain",
