@@ -80,15 +80,27 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	// We could use parent state here, it's arguably safer but retrieval requires one DB look up and refactor of
-	// subscriber pipeline to move missing parent block handler to validator pipeline (here).
-	s, err := r.chain.HeadState(ctx)
+	parentState, err := r.db.State(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get head state to verify block header signature")
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get parent state")
 		return false
 	}
-	if err := blocks.VerifyBlockHeaderSignature(s, blk); err != nil {
+	if parentState == nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Parent state is nil")
+		return false
+	}
+
+	if err := blocks.VerifyBlockHeaderSignature(parentState, blk); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
+		return false
+	}
+
+	idx, err := helpers.BeaconProposerIndex(parentState)
+	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get proposer index using parent state")
+		return false
+	}
+	if blk.Block.ProposerIndex != idx {
 		return false
 	}
 
