@@ -204,13 +204,15 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	if ctx.Bool(protectProposerFlag.Name) {
-		log.Warn("Enabled validator proposal slashing protection.")
-		cfg.ProtectProposer = true
+	cfg.ProtectProposer = true
+	if ctx.Bool(disableProtectProposerFlag.Name) {
+		log.Warn("Disabled validator proposal slashing protection.")
+		cfg.ProtectProposer = false
 	}
-	if ctx.Bool(protectAttesterFlag.Name) {
-		log.Warn("Enabled validator attestation slashing protection.")
-		cfg.ProtectAttester = true
+	cfg.ProtectAttester = true
+	if ctx.Bool(disableProtectAttesterFlag.Name) {
+		log.Warn("Disabled validator attestation slashing protection.")
+		cfg.ProtectAttester = false
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")
