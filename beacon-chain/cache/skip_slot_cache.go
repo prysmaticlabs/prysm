@@ -9,9 +9,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"go.opencensus.io/trace"
-
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"go.opencensus.io/trace"
 )
 
 var (
