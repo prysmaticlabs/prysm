@@ -11,9 +11,7 @@ go_test(
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],
-    args = [
-        "-test.v",
-    ],
+    args = ["-test.v"],
     data = [
         "//beacon-chain",
         "//slasher",
