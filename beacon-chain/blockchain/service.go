@@ -471,6 +471,10 @@ func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
 		return err
 	}
 
+	if err := s.beaconDB.SaveLastArchivedIndex(ctx, 0); err != nil {
+		return err
+	}
+
 	return nil
 }
 
