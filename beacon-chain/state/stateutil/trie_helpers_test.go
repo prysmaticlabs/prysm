@@ -3,6 +3,8 @@ package stateutil_test
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -34,10 +36,11 @@ func TestReturnTrieLayerVariable_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	hasher := hashutil.CustomSHA256Hasher()
 	validators := newState.Validators()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateutil.ValidatorRoot(val)
+		rt, err := stateutil.ValidatorRoot(hasher, val)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -84,9 +87,10 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	validators := newState.Validators()
+	hasher := hashutil.CustomSHA256Hasher()
 	roots := make([][32]byte, 0, len(validators))
 	for _, val := range validators {
-		rt, err := stateutil.ValidatorRoot(val)
+		rt, err := stateutil.ValidatorRoot(hasher, val)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,7 +123,7 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	}
 	roots = make([][32]byte, 0, len(changedVals))
 	for _, val := range changedVals {
-		rt, err := stateutil.ValidatorRoot(val)
+		rt, err := stateutil.ValidatorRoot(hasher, val)
 		if err != nil {
 			t.Fatal(err)
 		}

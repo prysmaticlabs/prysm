@@ -10,24 +10,22 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
+func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=10"},
 		ValidatorFlags: []string{"--minimal-config"},
-		EpochsToRun:    2,
+		EpochsToRun:    3,
 		TestSync:       false,
-		TestSlasher:    true,
+		TestSlasher:    false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
-			ev.ValidatorsSlashed,
-			ev.SlashedValidatorsLoseBalance,
-			ev.InjectDoubleVote,
+			ev.ValidatorsAreActive,
 		},
 	}
-	if err := e2eParams.Init(2); err != nil {
+	if err := e2eParams.Init(4); err != nil {
 		t.Fatal(err)
 	}
 

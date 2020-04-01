@@ -1,18 +1,5 @@
 package(default_visibility = ["//visibility:public"])
 
-MCL_OPTS = [
-    "-DMCL_USE_VINT",
-    "-DMCL_DONT_USE_OPENSSL",
-    "-DMCL_LLVM_BMI2=0",
-    "-DMCL_USE_LLVM=1",
-    "-DMCL_VINT_FIXED_BUFFER",
-    "-DMCL_SIZEOF_UNIT=8",
-    "-DMCL_MAX_BIT_SIZE=384",
-    "-DCYBOZU_DONT_USE_EXCEPTION",
-    "-DCYBOZU_DONT_USE_STRING",
-    "-std=c++03 ",
-]
-
 cc_library(
     name = "fp",
     srcs = [
@@ -40,7 +27,6 @@ cc_library(
         "src/proto.hpp",
         "src/low_func_llvm.hpp",
     ],
-    copts = MCL_OPTS,
 )
 
 cc_library(
@@ -63,7 +49,6 @@ cc_library(
         "include/mcl/operator.hpp",
     ],
     includes = ["include"],
-    copts = MCL_OPTS,
 )
 
 # src_gen is a tool to generate some llvm assembly language file.

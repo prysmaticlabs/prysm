@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
 )
@@ -19,7 +20,7 @@ func Test_DetectionFlow(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 3},
 			Target: &ethpb.Checkpoint{Epoch: 4},
 		},
-		Signature: []byte{1, 2},
+		Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 	}
 	incomingAtt := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},
@@ -27,7 +28,7 @@ func Test_DetectionFlow(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 2},
 			Target: &ethpb.Checkpoint{Epoch: 4},
 		},
-		Signature: []byte{1, 2},
+		Signature: bytesutil.PadTo([]byte{1, 2}, 96),
 	}
 	cfg := &detection.Config{
 		SlasherDB: db,

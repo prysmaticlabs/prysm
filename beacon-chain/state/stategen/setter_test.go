@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	//"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -17,7 +18,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 
@@ -39,14 +40,6 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 		t.Error("Did not get wanted root")
 	}
 
-	receivedState, err := service.beaconDB.ArchivedPointState(ctx, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(receivedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
-		t.Error("Did not get wanted state")
-	}
-
 	testutil.AssertLogsContain(t, hook, "Saved full state on archived point")
 }
 
@@ -56,7 +49,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
@@ -71,7 +64,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	if !service.beaconDB.HasState(ctx, r) {
 		t.Error("Should have saved the state")
 	}
-	if !service.beaconDB.HasStateSummary(ctx, r) {
+	if !service.stateSummaryCache.Has(r) {
 		t.Error("Should have saved the state summary")
 	}
 	testutil.AssertLogsContain(t, hook, "Saved full state on epoch boundary")
@@ -83,7 +76,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	service := New(db)
+	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
