@@ -78,6 +78,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeyManager,
 			flags.KeyManagerOpts,
 			flags.DisablePenaltyRewardLogFlag,
+			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
 			flags.GrpcMaxCallRecvMsgSizeFlag,
 			flags.GrpcRetriesFlag,
@@ -88,6 +89,13 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name:  "features",
 		Flags: featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+	},
+	{
+		Name: "interop",
+		Flags: []cli.Flag{
+			flags.InteropNumValidators,
+			flags.InteropStartIndex,
+		},
 	},
 }
 

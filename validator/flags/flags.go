@@ -21,6 +21,13 @@ var (
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
+	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys; this should only
+	// be used for test networks.
+	UnencryptedKeysFlag = &cli.StringFlag{
+		Name:  "unencrypted-keys",
+		Usage: "Filepath to a JSON file of unencrypted validator keys for launching the validator client on test networks",
+		Value: "",
+	}
 	// KeyManager specifies the key manager to use.
 	KeyManager = &cli.StringFlag{
 		Name:  "keymanager",
