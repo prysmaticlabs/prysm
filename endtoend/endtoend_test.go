@@ -27,7 +27,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	keystorePath, eth1PID := components.StartEth1Node(t)
 	multiAddrs, bProcessIDs := components.StartBeaconNodes(t, config)
 	valProcessIDs := components.StartValidators(t, config, keystorePath)
-	processIDs := append(bProcessIDs, valProcessIDs...)
+	processIDs := append(valProcessIDs, bProcessIDs...)
 	processIDs = append(processIDs, eth1PID)
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
