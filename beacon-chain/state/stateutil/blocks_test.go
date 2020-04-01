@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
