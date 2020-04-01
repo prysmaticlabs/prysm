@@ -45,6 +45,7 @@ func Init(beaconNodeCount int) error {
 	}
 	testIndexStr, ok := os.LookupEnv("TEST_SHARD_INDEX")
 	if !ok {
+		// Picking a index that won't normally be used.
 		testIndexStr = "8"
 	}
 	testIndex, err := strconv.Atoi(testIndexStr)
@@ -57,12 +58,12 @@ func Init(beaconNodeCount int) error {
 		LogPath:               logPath,
 		TestShardIndex:        testIndex,
 		BeaconNodeCount:       beaconNodeCount,
-		Eth1RPCPort:           3000 + testIndex*100, // Multiplying 100 here so the test index doesn't conflict with the other node ports.
-		BeaconNodeRPCPort:     4000 + testIndex*100,
-		BeaconNodeMetricsPort: 5000 + testIndex*100,
-		ValidatorMetricsPort:  6000 + testIndex*100,
-		SlasherRPCPort:        7000 + testIndex*100,
-		SlasherMetricsPort:    8000 + testIndex*100,
+		Eth1RPCPort:           3100 + testIndex*100, // Multiplying 100 here so the test index doesn't conflict with the other node ports.
+		BeaconNodeRPCPort:     4100 + testIndex*100,
+		BeaconNodeMetricsPort: 5100 + testIndex*100,
+		ValidatorMetricsPort:  6100 + testIndex*100,
+		SlasherRPCPort:        7100 + testIndex*100,
+		SlasherMetricsPort:    8100 + testIndex*100,
 	}
 	return nil
 }
