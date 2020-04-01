@@ -51,15 +51,24 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 	}{
 		{
 			ss: types.Active,
-			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}}},
+			ps: &ethpb.ProposerSlashing{
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+			},
 		},
 		{
 			ss: types.Included,
-			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}}},
+			ps: &ethpb.ProposerSlashing{
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+			},
 		},
 		{
 			ss: types.Reverted,
-			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}}},
+			ps: &ethpb.ProposerSlashing{
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+			},
 		},
 	}
 
