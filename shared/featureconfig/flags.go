@@ -306,8 +306,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
-	"--protect-attester",
-	"--protect-proposer",
 	"--enable-domain-data-cache",
 }
 
