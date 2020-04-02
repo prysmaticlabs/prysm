@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,10 +28,38 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	if _, err := r.p2p.Encoding().EncodeWithLength(stream, r.p2p.MetadataSeq()); err != nil {
+	_, err := r.p2p.Encoding().EncodeWithLength(stream, r.p2p.MetadataSeq())
+	return err
+}
+
+func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	stream, err := r.p2p.Send(ctx, r.p2p.MetadataSeq(), id)
+	if err != nil {
 		return err
 	}
-	return r.p2p.Disconnect(stream.Conn().RemotePeer())
+
+	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
+	if err != nil {
+		return err
+	}
+
+	if code != 0 {
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		return errors.New(errMsg)
+	}
+	msg := new(uint64)
+	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		return err
+	}
+	err = r.validateSequenceNum(*msg, stream.Conn().RemotePeer())
+	if err != nil {
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+	}
+	return err
 }
 
 // validates the peer's sequence number.
