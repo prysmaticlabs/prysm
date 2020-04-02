@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -144,7 +145,7 @@ func TestStore_FinalizedCheckpoint_StateMustExist(t *testing.T) {
 		Root:  []byte{'B'},
 	}
 
-	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != errMissingStateForCheckpoint {
+	if err := db.SaveFinalizedCheckpoint(ctx, cp); !strings.Contains(err.Error(), errMissingStateForCheckpoint.Error()) {
 		t.Fatalf("wanted err %v, got %v", errMissingStateForCheckpoint, err)
 	}
 }
