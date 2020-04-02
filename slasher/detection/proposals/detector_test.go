@@ -63,7 +63,7 @@ func TestProposalsDetector_DetectSlashingsForBlockHeaders(t *testing.T) {
 				slasherDB: db,
 			}
 
-			if err := sd.slasherDB.SaveBlockHeader(ctx, 0, tt.blk); err != nil {
+			if err := sd.slasherDB.SaveBlockHeader(ctx, tt.blk); err != nil {
 				t.Fatal(err)
 			}
 
