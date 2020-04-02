@@ -5,7 +5,10 @@ go_library(
     testonly = True,
     srcs = ["mock.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/feed/block:go_default_library",

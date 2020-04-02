@@ -31,7 +31,10 @@ go_library(
         "validate_voluntary_exit.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache:go_default_library",

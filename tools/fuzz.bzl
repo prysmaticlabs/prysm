@@ -123,6 +123,7 @@ def go_fuzz_test(
     native.cc_test(
         name = name + "_with_libfuzzer",
         linkopts = ["-fsanitize=fuzzer,address"],
+        copts = ["-fsantize=fuzzer,address"],
         linkstatic = 1,
         testonly = 1,
         srcs = [":" + name],
@@ -132,7 +133,7 @@ def go_fuzz_test(
             corpus_path,
             "-print_final_stats=1",
             "-use_value_profile=1",
-            "-max_total_time=3540", # One minute early of 3600.
+            "-max_total_time=3540",  # One minute early of 3600.
         ] + additional_args,
         data = [corpus_name],
         timeout = "eternal",

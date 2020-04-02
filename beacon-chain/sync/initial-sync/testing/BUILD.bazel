@@ -5,5 +5,8 @@ go_library(
     testonly = True,
     srcs = ["mock.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
+    ],
 )
