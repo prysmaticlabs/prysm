@@ -420,7 +420,7 @@ func init() {
 	proto.RegisterType((*MinMaxEpochSpan)(nil), "ethereum.slashing.MinMaxEpochSpan")
 	proto.RegisterType((*EpochSpanMap)(nil), "ethereum.slashing.EpochSpanMap")
 	proto.RegisterMapType((map[uint64]*MinMaxEpochSpan)(nil), "ethereum.slashing.EpochSpanMap.EpochSpanMapEntry")
-	proto.RegisterType((*ProposalHistory)(nil), "ethereum.slashing.ProposalHistory")
+	proto.RegisterType((*ProposalHistory)(nil), "ethereum.slashing.ProposalHistoryForEpoch")
 	proto.RegisterType((*AttestationHistory)(nil), "ethereum.slashing.AttestationHistory")
 	proto.RegisterMapType((map[uint64]uint64)(nil), "ethereum.slashing.AttestationHistory.TargetToSourceEntry")
 	proto.RegisterType((*SlashingStatusRequest)(nil), "ethereum.slashing.SlashingStatusRequest")
@@ -1491,10 +1491,10 @@ func (m *ProposalHistory) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ProposalHistory: wiretype end group for non-group")
+			return fmt.Errorf("proto: ProposalHistoryForEpoch: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ProposalHistory: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ProposalHistoryForEpoch: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

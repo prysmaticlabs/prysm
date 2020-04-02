@@ -1,169 +1,201 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestProposalHistory_InitializesNewPubKeys(t *testing.T) {
+func TestProposalHistoryForEpoch_InitializesNewPubKeys(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := SetupDB(t, pubkeys)
 	defer TeardownDB(t, db)
 
 	for _, pub := range pubkeys {
-		proposalHistory, err := db.ProposalHistory(context.Background(), pub[:])
+		slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pub[:], 0)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		clean := &slashpb.ProposalHistory{
-			EpochBits: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
-		}
-		if !reflect.DeepEqual(proposalHistory, clean) {
-			t.Fatalf("Expected proposal history epoch bits to be empty, received %v", proposalHistory)
+		cleanBits := bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
+		if !bytes.Equal(slotBits.Bytes(), cleanBits.Bytes()) {
+			t.Fatalf("Expected proposal history slot bits to be empty, received %v", slotBits.Bytes())
 		}
 	}
 }
 
-func TestProposalHistory_NilDB(t *testing.T) {
+func TestProposalHistoryForEpoch_NilDB(t *testing.T) {
 	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 
 	valPubkey := []byte{1, 2, 3}
 
-	proposalHistory, err := db.ProposalHistory(context.Background(), valPubkey)
+	slotBits, err := db.ProposalHistoryForEpoch(context.Background(), valPubkey, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if proposalHistory != nil {
-		t.Fatalf("Expected proposal history to be nil, received: %v", proposalHistory)
+	if slotBits != nil {
+		t.Fatalf("Expected slot bits for epoch to be nil, received: %v", slotBits)
 	}
 }
 
-func TestSaveProposalHistory_OK(t *testing.T) {
+func TestSaveProposalHistoryForEpoch_OK(t *testing.T) {
 	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 
 	pubkey := []byte{3}
 	epoch := uint64(2)
-	history := &slashpb.ProposalHistory{
-		EpochBits:          bitfield.Bitlist{0x04, 0x04},
-		LatestEpochWritten: 2,
-	}
+	slot := uint64(2)
+	slotBits := bitfield.Bitlist{0x04, 0x04}
 
-	if err := db.SaveProposalHistory(context.Background(), pubkey, history); err != nil {
+	if err := db.SaveProposalHistoryForEpoch(context.Background(), pubkey, epoch, slotBits); err != nil {
 		t.Fatalf("Saving proposal history failed: %v", err)
 	}
-	savedHistory, err := db.ProposalHistory(context.Background(), pubkey)
+	savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubkey, epoch)
 	if err != nil {
 		t.Fatalf("Failed to get proposal history: %v", err)
 	}
 
-	if savedHistory == nil || !reflect.DeepEqual(history, savedHistory) {
-		t.Fatalf("Expected DB to keep object the same, received: %v", history)
+	if savedBits == nil || !bytes.Equal(slotBits.Bytes(), savedBits.Bytes()) {
+		t.Fatalf("Expected DB to keep object the same, received: %v", savedBits)
 	}
-	if !savedHistory.EpochBits.BitAt(epoch) {
-		t.Fatalf("Expected epoch %d to be marked as proposed", history.EpochBits.Count())
+	if !savedBits.BitAt(slot) {
+		t.Fatalf("Expected slot %d to be marked as proposed", slot)
 	}
-	if savedHistory.EpochBits.BitAt(epoch + 1) {
-		t.Fatalf("Expected epoch %d to not be marked as proposed", epoch+1)
+	if savedBits.BitAt(slot + 1) {
+		t.Fatalf("Expected slot %d to not be marked as proposed", slot+1)
 	}
-	if savedHistory.EpochBits.BitAt(epoch - 1) {
-		t.Fatalf("Expected epoch %d to not be marked as proposed", epoch-1)
+	if savedBits.BitAt(slot - 1) {
+		t.Fatalf("Expected slot %d to not be marked as proposed", slot-1)
 	}
 }
 
-func TestSaveProposalHistory_Overwrites(t *testing.T) {
-	db := SetupDB(t, [][48]byte{})
-	defer TeardownDB(t, db)
+func TestSaveProposalHistoryForEpoch_Overwrites(t *testing.T) {
+	pubkey := [48]byte{0}
 	tests := []struct {
-		pubkey  []byte
-		epoch   uint64
-		history *slashpb.ProposalHistory
+		slot     uint64
+		slotBits bitfield.Bitlist
 	}{
 		{
-			pubkey: []byte{0},
-			epoch:  uint64(1),
-			history: &slashpb.ProposalHistory{
-				EpochBits:          bitfield.Bitlist{0x02, 0x02},
-				LatestEpochWritten: 1,
-			},
+			slot:     uint64(1),
+			slotBits: bitfield.Bitlist{0x02, 0x02},
 		},
 		{
-			pubkey: []byte{0},
-			epoch:  uint64(2),
-			history: &slashpb.ProposalHistory{
-				EpochBits:          bitfield.Bitlist{0x04, 0x04},
-				LatestEpochWritten: 2,
-			},
+			slot:     uint64(2),
+			slotBits: bitfield.Bitlist{0x04, 0x04},
 		},
 		{
-			pubkey: []byte{0},
-			epoch:  uint64(3),
-			history: &slashpb.ProposalHistory{
-				EpochBits:          bitfield.Bitlist{0x08, 0x08},
-				LatestEpochWritten: 3,
-			},
+			slot:     uint64(3),
+			slotBits: bitfield.Bitlist{0x08, 0x08},
 		},
 	}
 
 	for _, tt := range tests {
-		if err := db.SaveProposalHistory(context.Background(), tt.pubkey, tt.history); err != nil {
+		db := SetupDB(t, [][48]byte{pubkey})
+		defer TeardownDB(t, db)
+		if err := db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], 0, tt.slotBits); err != nil {
 			t.Fatalf("Saving proposal history failed: %v", err)
 		}
-		history, err := db.ProposalHistory(context.Background(), tt.pubkey)
+		savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubkey[:], 0)
 		if err != nil {
 			t.Fatalf("Failed to get proposal history: %v", err)
 		}
 
-		if history == nil || !reflect.DeepEqual(history, tt.history) {
-			t.Fatalf("Expected DB to keep object the same, received: %v", history)
+		if savedBits == nil || !reflect.DeepEqual(savedBits.Bytes(), tt.slotBits.Bytes()) {
+			t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", savedBits.Bytes(), tt.slotBits.Bytes())
 		}
-		if !history.EpochBits.BitAt(tt.epoch) {
-			t.Fatalf("Expected epoch %d to be marked as proposed", history.EpochBits.Count())
+		if !savedBits.BitAt(tt.slot) {
+			t.Fatalf("Expected slot %d to be marked as proposed", tt.slot)
 		}
-		if history.EpochBits.BitAt(tt.epoch + 1) {
-			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch+1)
+		if savedBits.BitAt(tt.slot + 1) {
+			t.Fatalf("Expected slot %d to not be marked as proposed", tt.slot+1)
 		}
-		if history.EpochBits.BitAt(tt.epoch - 1) {
-			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch-1)
+		if savedBits.BitAt(tt.slot - 1) {
+			t.Fatalf("Expected slot %d to not be marked as proposed", tt.slot-1)
 		}
 	}
 }
 
-func TestDeleteProposalHistory_OK(t *testing.T) {
+func TestProposalHistoryForEpoch_MultipleEpochs(t *testing.T) {
+	pubKey := [48]byte{0}
+	tests := []struct {
+		slots        []uint64
+		expectedBits []bitfield.Bitlist
+	}{
+		{
+			slots:        []uint64{1, 2, 8},
+			expectedBits: []bitfield.Bitlist{{0x02, 0x14}},
+		},
+		{
+			slots:        []uint64{1, 33, 8},
+			expectedBits: []bitfield.Bitlist{{0x02, 0x10}, {0x02, 0x04}},
+		},
+		{
+			slots:        []uint64{2, 34, 36},
+			expectedBits: []bitfield.Bitlist{{0x02, 0x04}, {0x02, 0x06}},
+		},
+		{
+			slots:        []uint64{32, 33, 34},
+			expectedBits: []bitfield.Bitlist{{0x02, 0x00}, {0x02, 0x05}},
+		},
+	}
+
+	for _, tt := range tests {
+		db := SetupDB(t, [][48]byte{pubKey})
+		defer TeardownDB(t, db)
+		for _, slot := range tt.slots {
+			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
+			if err != nil {
+				t.Fatalf("Failed to get proposal history: %v", err)
+			}
+			slotBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
+			if err := db.SaveProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot), slotBits); err != nil {
+				t.Fatalf("Saving proposal history failed: %v", err)
+			}
+		}
+
+		for i, slotBits := range tt.expectedBits {
+			savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], uint64(i))
+			if err != nil {
+				t.Fatalf("Failed to get proposal history: %v", err)
+			}
+			if !bytes.Equal(savedBits.Bytes(), slotBits.Bytes()) {
+				t.Fatalf("unexpected difference in bytes, expected %#x vs received %#x", savedBits.Bytes(), slotBits.Bytes())
+			}
+		}
+	}
+}
+
+func TestDeleteProposalHistoryForVal_OK(t *testing.T) {
 	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 
 	pubkey := []byte{2}
-	history := &slashpb.ProposalHistory{
-		EpochBits:          bitfield.Bitlist{0x01, 0x02},
-		LatestEpochWritten: 1,
-	}
+	slotBits := bitfield.Bitlist{0x01, 0x02}
 
-	if err := db.SaveProposalHistory(context.Background(), pubkey, history); err != nil {
+	if err := db.SaveProposalHistoryForEpoch(context.Background(), pubkey, 0, slotBits); err != nil {
 		t.Fatalf("Save proposal history failed: %v", err)
 	}
 	// Making sure everything is saved.
-	savedHistory, err := db.ProposalHistory(context.Background(), pubkey)
+	savedHistory, err := db.ProposalHistoryForEpoch(context.Background(), pubkey, 0)
 	if err != nil {
 		t.Fatalf("Failed to get proposal history: %v", err)
 	}
-	if savedHistory == nil || !reflect.DeepEqual(savedHistory, history) {
-		t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", savedHistory, history)
+	if savedHistory == nil || !bytes.Equal(savedHistory.Bytes(), slotBits.Bytes()) {
+		t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", savedHistory, slotBits)
 	}
 	if err := db.DeleteProposalHistory(context.Background(), pubkey); err != nil {
 		t.Fatal(err)
 	}
 
 	// Check after deleting from DB.
-	savedHistory, err = db.ProposalHistory(context.Background(), pubkey)
+	savedHistory, err = db.ProposalHistoryForEpoch(context.Background(), pubkey, 0)
 	if err != nil {
 		t.Fatalf("Failed to get proposal history: %v", err)
 	}

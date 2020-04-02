@@ -2,56 +2,57 @@ package db
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
 )
 
-func unmarshalProposalHistory(enc []byte) (*slashpb.ProposalHistory, error) {
-	history := &slashpb.ProposalHistory{}
-	err := proto.Unmarshal(enc, history)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal encoding")
-	}
-	return history, nil
-}
-
-// ProposalHistory accepts a validator public key and returns the corresponding proposal history.
+// ProposalHistoryForEpoch accepts a validator public key and returns the corresponding proposal history.
 // Returns nil if there is no proposal history for the validator.
-func (db *Store) ProposalHistory(ctx context.Context, publicKey []byte) (*slashpb.ProposalHistory, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistory")
+func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForEpoch")
 	defer span.End()
 
 	var err error
-	var proposalHistory *slashpb.ProposalHistory
+	var slotBitlist bitfield.Bitlist
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		enc := bucket.Get(publicKey)
-		if enc == nil {
+		valBucket := bucket.Bucket(publicKey)
+		slotBits := valBucket.Get(bytesutil.Bytes8(epoch))
+		if slotBits == nil || len(slotBits) == 0 {
+			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
 			return nil
 		}
-		proposalHistory, err = unmarshalProposalHistory(enc)
-		return err
+		slotBitlist = slotBits
+		return nil
 	})
-	return proposalHistory, err
+	return slotBitlist, err
 }
 
-// SaveProposalHistory returns the proposal history for the requested validator public key.
-func (db *Store) SaveProposalHistory(ctx context.Context, pubKey []byte, proposalHistory *slashpb.ProposalHistory) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistory")
+// SaveProposalHistoryForEpoch returns the proposal history for the requested validator public key.
+func (db *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte, epoch uint64, slotBits bitfield.Bitlist) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
-	enc, err := proto.Marshal(proposalHistory)
-	if err != nil {
-		return errors.Wrap(err, "failed to encode proposal history")
-	}
-
-	err = db.update(func(tx *bolt.Tx) error {
+	err := db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		return bucket.Put(pubKey, enc)
+		valBucket := bucket.Bucket(pubKey)
+		if valBucket == nil {
+			return fmt.Errorf("validator history is empty for validator %#x", pubKey)
+		}
+		if err := valBucket.Put(bytesutil.Bytes8(epoch), slotBits); err != nil {
+			return err
+		}
+		//if err := pruneProposalHistory(valBucket, epoch); err != nil {
+		//	return err
+		//}
+		return nil
 	})
 	return err
 }
@@ -65,6 +66,34 @@ func (db *Store) DeleteProposalHistory(ctx context.Context, pubkey []byte) error
 		bucket := tx.Bucket(historicProposalsBucket)
 		if err := bucket.Delete(pubkey); err != nil {
 			return errors.Wrap(err, "failed to delete the proposal history")
+		}
+		return nil
+	})
+}
+
+func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
+	c := valBucket.Cursor()
+	for k, _ := c.First(); k != nil; k, _ = c.Next() {
+		epoch := binary.LittleEndian.Uint64(k)
+		// Only delete epochs that are older than the weak subjectivity period.
+		if epoch+params.BeaconConfig().WeakSubjectivityPeriod < newestEpoch {
+			if err := valBucket.Delete(k); err != nil {
+				return errors.Wrapf(err, "could not prune epoch %d in proposal history", epoch)
+			}
+		} else {
+			return nil
+		}
+	}
+	return nil
+}
+
+func (db *Store) initializeSubBuckets(pubKeys [][48]byte) error {
+	return db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicProposalsBucket)
+		for _, pubKey := range pubKeys {
+			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
+				return errors.Wrap(err, "failed to delete the proposal history")
+			}
 		}
 		return nil
 	})
