@@ -379,7 +379,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s, received) {
+	if s.Slot() != received.Slot() {
 		t.Error("cached state not the same")
 	}
 }
