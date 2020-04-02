@@ -336,6 +336,20 @@ func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
 			for _, state := range q.state.epochs {
 				state.setState(stateNew)
 			}
+			// Fill the gaps between epochs.
+			start, err := q.state.lowestEpoch()
+			if err != nil {
+				return es.state, err
+			}
+			end, err := q.state.highestEpoch()
+			if err != nil {
+				return es.state, err
+			}
+			for i := start; i < end; i++ {
+				if _, ok := q.state.findEpochState(i); !ok {
+					q.state.addEpochState(i)
+				}
+			}
 			return stateNew, nil
 		}
 

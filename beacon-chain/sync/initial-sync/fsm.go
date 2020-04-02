@@ -159,7 +159,21 @@ func (sm *stateMachine) isLowestEpochState(epoch uint64) bool {
 	return true
 }
 
-// highestEpoch returns slot for the latest known epoch.
+// lowestEpoch returns epoch number for the earliest known epoch.
+func (sm *stateMachine) lowestEpoch() (uint64, error) {
+	if len(sm.epochs) == 0 {
+		return 0, errors.New("no epoch states exist")
+	}
+	lowestEpoch := sm.epochs[0].epoch
+	for _, state := range sm.epochs {
+		if state.epoch < lowestEpoch {
+			lowestEpoch = state.epoch
+		}
+	}
+	return lowestEpoch, nil
+}
+
+// highestEpoch returns epoch number for the latest known epoch.
 func (sm *stateMachine) highestEpoch() (uint64, error) {
 	if len(sm.epochs) == 0 {
 		return 0, errors.New("no epoch states exist")
