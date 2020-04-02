@@ -26,6 +26,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func init() {
+	state.SkipSlotCache.Disable()
+}
+
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	base := &pb.BeaconState{
 		Slot: 5,
