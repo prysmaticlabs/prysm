@@ -466,6 +466,7 @@ func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
 	return peers[:limit]
 }
 
+// nonSkippedSlotAfter checks slots after the given one in an attempt to find non-empty future slot.
 func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	root, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
