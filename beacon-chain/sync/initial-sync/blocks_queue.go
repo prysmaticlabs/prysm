@@ -34,6 +34,7 @@ var (
 type blocksProvider interface {
 	requestResponses() <-chan *fetchRequestResponse
 	scheduleRequest(ctx context.Context, start, count uint64) error
+	nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error)
 	start() error
 	stop()
 }
@@ -161,7 +162,7 @@ func (q *blocksQueue) loop() {
 
 				// Do garbage collection, and advance sliding window forward.
 				if q.headFetcher.HeadSlot() >= helpers.StartSlot(state.epoch+1) {
-					highestEpochSlot, err := q.state.highestEpochSlot()
+					highestEpoch, err := q.state.highestEpoch()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
 						continue
@@ -170,7 +171,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove epoch state")
 					}
 					if len(q.state.epochs) < lookaheadEpochs {
-						q.state.addEpochState(highestEpochSlot + 1)
+						q.state.addEpochState(highestEpoch + 1)
 					}
 				}
 			}
@@ -205,7 +206,7 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 		start := data.start
 		count := mathutil.Min(data.count, q.highestExpectedSlot-start+1)
 		if count <= 0 {
-			return es.state, errStartSlotIsTooHigh
+			return es.state, errSlotIsTooHigh
 		}
 
 		if err := q.blocksFetcher.scheduleRequest(ctx, start, count); err != nil {
@@ -226,7 +227,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 		epoch := helpers.SlotToEpoch(response.start)
 		if response.err != nil {
 			// Current window is already too big, re-request previous epochs.
-			if response.err == errStartSlotIsTooHigh {
+			if response.err == errSlotIsTooHigh {
 				for _, state := range q.state.epochs {
 					isSkipped := state.state == stateSkipped || state.state == stateSkippedExt
 					if state.epoch < epoch && isSkipped {
@@ -310,33 +311,57 @@ func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
 		}
 
 		// Only the highest epoch with skipped state can trigger extension.
-		highestEpochSlot, err := q.state.highestEpochSlot()
+		highestEpoch, err := q.state.highestEpoch()
 		if err != nil {
 			return es.state, err
 		}
-		if highestEpochSlot != epoch {
+		if highestEpoch != epoch {
 			return es.state, nil
 		}
 
 		// Check if window is expanded recently, if so, time to reset and re-request the same blocks.
 		resetWindow := false
+		skippedEpochs := 0
 		for _, state := range q.state.epochs {
 			if state.state == stateSkippedExt {
 				resetWindow = true
 				break
 			}
+			if state.state == stateSkipped || state.state == stateSkippedExt {
+				skippedEpochs++
+			}
 		}
-		if resetWindow {
+		// Reset if everything is skipped or extension took place during previous iteration.
+		if resetWindow || (skippedEpochs == len(q.state.epochs)) {
 			for _, state := range q.state.epochs {
 				state.setState(stateNew)
+			}
+			// Fill the gaps between epochs.
+			start, err := q.state.lowestEpoch()
+			if err != nil {
+				return es.state, err
+			}
+			end, err := q.state.highestEpoch()
+			if err != nil {
+				return es.state, err
+			}
+			for i := start; i < end; i++ {
+				if _, ok := q.state.findEpochState(i); !ok {
+					q.state.addEpochState(i)
+				}
 			}
 			return stateNew, nil
 		}
 
 		// Extend sliding window.
-		for i := 1; i <= lookaheadEpochs; i++ {
-			q.state.addEpochState(highestEpochSlot + uint64(i))
+		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, helpers.StartSlot(highestEpoch+1))
+		if err != nil {
+			return es.state, err
 		}
+		if nonSkippedSlot > q.highestExpectedSlot {
+			return es.state, nil
+		}
+		q.state.addEpochState(helpers.SlotToEpoch(nonSkippedSlot))
 		return stateSkippedExt, nil
 	}
 }
