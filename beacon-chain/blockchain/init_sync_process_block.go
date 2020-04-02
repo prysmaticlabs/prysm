@@ -170,16 +170,22 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 		return nil, err
 	}
 	if preState == nil {
-		return nil, errors.New("finalized state does not exist in db")
-	}
-
-	var endBlock *ethpb.SignedBeaconBlock
-	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(endRoot) {
-		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		preState, err = s.stateGen.StateByRoot(ctx, startRoot)
+		if err != nil {
 			return nil, err
 		}
-		s.clearInitSyncBlocks()
+		if preState == nil {
+			return nil, errors.New("finalized state does not exist in db")
+		}
+	}
+
+	if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		return nil, err
+	}
+	var endBlock *ethpb.SignedBeaconBlock
+	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(endRoot) {
 		endBlock = s.getInitSyncBlock(endRoot)
+		s.clearInitSyncBlocks()
 	} else {
 		endBlock, err = s.beaconDB.Block(ctx, endRoot)
 		if err != nil {

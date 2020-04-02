@@ -2,6 +2,7 @@ package detection
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -9,6 +10,8 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
+	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
+	testDetect "github.com/prysmaticlabs/prysm/slasher/detection/testing"
 )
 
 func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
@@ -336,6 +339,83 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 						slashingAtt1.Data.Target.Epoch,
 					)
 				}
+			}
+
+		})
+	}
+}
+
+func TestDetect_detectProposerSlashing(t *testing.T) {
+	type testStruct struct {
+		name        string
+		blk         *ethpb.SignedBeaconBlockHeader
+		incomingBlk *ethpb.SignedBeaconBlockHeader
+		slashing    *ethpb.ProposerSlashing
+	}
+	blk1epoch0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blk2epoch0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0)+1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []testStruct{
+		{
+			name:        "same block sig dont slash",
+			blk:         blk1epoch0,
+			incomingBlk: blk1epoch0,
+			slashing:    nil,
+		},
+		{
+			name:        "block from different epoch dont slash",
+			blk:         blk1epoch0,
+			incomingBlk: blk1epoch1,
+			slashing:    nil,
+		},
+		{
+			name:        "different sig from same epoch slash",
+			blk:         blk1epoch0,
+			incomingBlk: blk2epoch0,
+			slashing:    &ethpb.ProposerSlashing{Header_1: blk2epoch0, Header_2: blk1epoch0},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := testDB.SetupSlasherDB(t, false)
+			defer testDB.TeardownSlasherDB(t, db)
+			ctx := context.Background()
+			ds := Service{
+				ctx:               ctx,
+				slasherDB:         db,
+				proposalsDetector: proposals.NewProposeDetector(db),
+			}
+			if err := db.SaveBlockHeader(ctx, tt.blk); err != nil {
+				t.Fatal(err)
+			}
+
+			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, tt.incomingBlk)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(slashing, tt.slashing) {
+				t.Errorf("Wanted: %v, received %v", tt.slashing, slashing)
+			}
+			savedSlashings, err := db.ProposalSlashingsByStatus(ctx, status.Active)
+			if tt.slashing != nil && len(savedSlashings) != 1 {
+				t.Fatalf("Did not save slashing to db")
+			}
+
+			if slashing != nil && !isDoublePropose(slashing.Header_1, slashing.Header_2) {
+				t.Fatalf(
+					"Expected slashing to be valid, received atts with target epoch %v and %v but not valid",
+					slashing.Header_1,
+					slashing.Header_2,
+				)
 			}
 
 		})
