@@ -49,7 +49,7 @@ type Flags struct {
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	DisableNewStateMgmt                        bool   // NewStateMgmt disables the new state mgmt service.
-	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
+	DisableInitSyncQueue                       bool   // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool   // EnableBlockHTR enables custom hashing of our beacon blocks.
 	InitSyncBatchSaveBlocks                    bool   // InitSyncBatchSaveBlocks enables batch save blocks mode during initial syncing.
@@ -169,9 +169,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling state management service")
 		cfg.DisableNewStateMgmt = true
 	}
-	if ctx.Bool(enableInitSyncQueue.Name) {
-		log.Warn("Enabling initial sync queue")
-		cfg.EnableInitSyncQueue = true
+	if ctx.Bool(disableInitSyncQueue.Name) {
+		log.Warn("Disabled initial sync queue")
+		cfg.DisableInitSyncQueue = true
 	}
 	if ctx.Bool(enableFieldTrie.Name) {
 		log.Warn("Enabling state field trie")
