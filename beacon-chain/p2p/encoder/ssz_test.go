@@ -103,3 +103,12 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 		t.Errorf("error did not contain wanted message. Wanted: %s but Got: %s", wanted, err.Error())
 	}
 }
+
+func TestSszNetworkEncoder_DecodeWithMaxLength_TooLarge(t *testing.T) {
+	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
+	if err := e.DecodeWithMaxLength(nil, nil, encoder.MaxChunkSize+1); err == nil {
+		t.Fatal("Nil error")
+	} else if !strings.Contains(err.Error(), "exceeds max chunk size") {
+		t.Error("Expected error to contain 'exceeds max chunk size'")
+	}
+}
