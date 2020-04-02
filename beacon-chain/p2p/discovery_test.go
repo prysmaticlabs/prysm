@@ -148,6 +148,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 		},
 	}
 	listener := s.createListener(ipAddr, pkey)
+	defer listener.Close()
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
 	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
