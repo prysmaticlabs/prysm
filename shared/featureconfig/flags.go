@@ -51,10 +51,6 @@ var (
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
 	}
-	enableSkipSlotsCacheFlag = &cli.BoolFlag{
-		Name:  "enable-skip-slots-cache",
-		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
-	}
 	kafkaBootstrapServersFlag = &cli.StringFlag{
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
@@ -177,6 +173,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableSkipSlotsCacheFlag = &cli.BoolFlag{
+		Name:   "enable-skip-slots-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnablePruneBoundaryStateFlag = &cli.BoolFlag{
 		Name:   "prune-states",
 		Usage:  deprecatedUsage,
@@ -276,6 +277,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpochFlag,
 	deprecatedEnableSnappyDBCompressionFlag,
+	deprecatedEnableSkipSlotsCacheFlag,
 	deprecatedEnablePruneBoundaryStateFlag,
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
@@ -323,7 +325,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableSkipSlotsCacheFlag,
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
@@ -345,7 +346,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 var E2EBeaconChainFlags = []string{
 	"--enable-ssz-cache",
 	"--cache-filtered-block-tree",
-	"--enable-skip-slots-cache",
 	"--enable-eth1-data-vote-cache",
 	"--enable-byte-mempool",
 	"--enable-state-gen-sig-verify",
