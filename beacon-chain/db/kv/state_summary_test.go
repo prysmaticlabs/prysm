@@ -15,7 +15,7 @@ func TestStateSummary_CanSaveRretrieve(t *testing.T) {
 	ctx := context.Background()
 	r1 := bytesutil.ToBytes32([]byte{'A'})
 	r2 := bytesutil.ToBytes32([]byte{'B'})
-	s1 := &pb.StateSummary{Slot: 1, Root: r1[:], BoundaryRoot: r2[:]}
+	s1 := &pb.StateSummary{Slot: 1, Root: r1[:]}
 
 	// State summary should not exist yet.
 	if db.HasStateSummary(ctx, r1) {
@@ -38,7 +38,7 @@ func TestStateSummary_CanSaveRretrieve(t *testing.T) {
 	}
 
 	// Save a new state summary.
-	s2 := &pb.StateSummary{Slot: 2, Root: r2[:], BoundaryRoot: r1[:]}
+	s2 := &pb.StateSummary{Slot: 2, Root: r2[:]}
 
 	// State summary should not exist yet.
 	if db.HasStateSummary(ctx, r2) {

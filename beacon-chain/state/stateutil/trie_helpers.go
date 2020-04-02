@@ -3,7 +3,6 @@ package stateutil
 import (
 	"bytes"
 
-	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -19,7 +18,7 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 		return [][]*[32]byte{{&leaves[0]}}
 	}
 	hashLayer := leaves
-	layers := make([][][32]byte, merkle.GetDepth(length)+1)
+	layers := make([][][32]byte, GetDepth(length)+1)
 	layers[0] = hashLayer
 	layers, _ = merkleizeTrieLeaves(layers, hashLayer, hasher)
 	refLayers := make([][]*[32]byte, len(layers))
@@ -38,7 +37,7 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 // it.
 func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	hasher := hashutil.CustomSHA256Hasher()
-	depth := merkle.GetDepth(length)
+	depth := GetDepth(length)
 	layers := make([][]*[32]byte, depth+1)
 	// Return zerohash at depth
 	if len(elements) == 0 {

@@ -27,6 +27,8 @@ type ReadOnlyDatabase interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
+	HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error)
+	HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error)
 	// Validator related methods.
 	ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey []byte) bool
@@ -36,6 +38,8 @@ type ReadOnlyDatabase interface {
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
+	HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error)
+	HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error)
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)
@@ -52,11 +56,9 @@ type ReadOnlyDatabase interface {
 	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error)
 	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
 	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error)
-	ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error)
 	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
 	HasArchivedPoint(ctx context.Context, index uint64) bool
 	LastArchivedIndexRoot(ctx context.Context) [32]byte
-	LastArchivedIndexState(ctx context.Context) (*state.BeaconState, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
@@ -88,6 +90,7 @@ type NoHeadAccessDatabase interface {
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethereum_beacon_p2p_v1.StateSummary) error
+	SaveStateSummaries(ctx context.Context, summaries []*ethereum_beacon_p2p_v1.StateSummary) error
 	// Slashing operations.
 	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error
 	SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error
@@ -104,7 +107,6 @@ type NoHeadAccessDatabase interface {
 	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
-	SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error
 	SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error
 	SaveLastArchivedIndex(ctx context.Context, index uint64) error
 	// Deposit contract related handlers.

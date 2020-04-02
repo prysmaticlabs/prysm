@@ -229,21 +229,36 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	newJustifiedBlockSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	if err != nil {
-		return false, err
+	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
+	justifiedRoot := bytesutil.ToBytes32(newJustifiedCheckpt.Root)
+	var err error
+	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
+		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
+	} else {
+		newJustifiedBlockSigned, err = s.beaconDB.Block(ctx, justifiedRoot)
+		if err != nil {
+			return false, err
+		}
 	}
 	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
 		return false, errors.New("nil new justified block")
 	}
+
 	newJustifiedBlock := newJustifiedBlockSigned.Block
 	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
 		return false, nil
 	}
-	justifiedBlockSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-	if err != nil {
-		return false, err
+	var justifiedBlockSigned *ethpb.SignedBeaconBlock
+	cachedJustifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
+	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
+		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
+	} else {
+		justifiedBlockSigned, err = s.beaconDB.Block(ctx, cachedJustifiedRoot)
+		if err != nil {
+			return false, err
+		}
 	}
+
 	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
 		return false, errors.New("nil justified block")
 	}
@@ -267,6 +282,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	if err != nil {
 		return err
 	}
+
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
@@ -278,6 +294,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
+		var err error
 		if justifiedState == nil {
 			if s.beaconDB.HasState(ctx, justifiedRoot) {
 				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
@@ -376,6 +393,11 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
+
+	if featureconfig.Get().InitSyncBatchSaveBlocks && s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
+		signed = s.getInitSyncBlock(bytesutil.ToBytes32(root))
+	}
+
 	if signed == nil || signed.Block == nil {
 		return nil, errors.New("nil block")
 	}
