@@ -27,10 +27,10 @@ func SignedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBloc
 	}, nil
 }
 
-func genRandomSig() (blk []byte, err error) {
-	blk = make([]byte, 96)
-	_, err = rand.Read(blk)
-	return
+func genRandomSig() ([]byte, error) {
+	blk := make([]byte, 96)
+	_, err := rand.Read(blk)
+	return blk, err
 }
 
 // StartSlot returns the first slot of a given epoch.

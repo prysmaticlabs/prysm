@@ -162,16 +162,16 @@ func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*eth
 	}
 }
 
-func (ds *Service) submitProposerSlashing(ctx context.Context, slash *ethpb.ProposerSlashing) {
+func (ds *Service) submitProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) {
 	ctx, span := trace.StartSpan(ctx, "detection.submitProposerSlashing")
 	defer span.End()
-	if slash != nil && slash.Header_1 != nil && slash.Header_2 != nil {
+	if slashing != nil && slashing.Header_1 != nil && slashing.Header_2 != nil {
 		log.WithFields(logrus.Fields{
-			"header1Slot":         slash.Header_1.Header.Slot,
-			"header2Slot":         slash.Header_2.Header.Slot,
-			"proposerIdxHeader1": slash.Header_1.Header.ProposerIndex,
-			"proposerIdxHeader2": slash.Header_2.Header.ProposerIndex,
+			"header1Slot":        slashing.Header_1.Header.Slot,
+			"header2Slot":        slashing.Header_2.Header.Slot,
+			"proposerIdxHeader1": slashing.Header_1.Header.ProposerIndex,
+			"proposerIdxHeader2": slashing.Header_2.Header.ProposerIndex,
 		}).Info("Found a proposer slashing! Submitting to beacon node")
-		ds.proposerSlashingsFeed.Send(slash)
+		ds.proposerSlashingsFeed.Send(slashing)
 	}
 }
