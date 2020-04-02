@@ -171,7 +171,7 @@ func (ds *Service) submitProposerSlashing(ctx context.Context, slash *ethpb.Prop
 			"header2Slot":         slash.Header_2.Header.Slot,
 			"proposerIdxHeader1": slash.Header_1.Header.ProposerIndex,
 			"proposerIdxHeader2": slash.Header_2.Header.ProposerIndex,
-		}).Info("Found an proposer slashing! Submitting to beacon node")
+		}).Info("Found a proposer slashing! Submitting to beacon node")
 		ds.proposerSlashingsFeed.Send(slash)
 	}
 }
