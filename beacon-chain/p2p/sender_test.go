@@ -35,21 +35,20 @@ func TestService_Send(t *testing.T) {
 	// Register external listener which will repeat the message back.
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() {
-		p2.SetStreamHandler("/testing/1/ssz", func(stream network.Stream) {
-			rcvd := &testpb.TestSimpleMessage{}
-			if err := svc.Encoding().DecodeWithLength(stream, rcvd); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := svc.Encoding().EncodeWithLength(stream, rcvd); err != nil {
-				t.Fatal(err)
-			}
-			if err := stream.Close(); err != nil {
-				t.Error(err)
-			}
-			wg.Done()
-		})
-	}()
+
+	p2.SetStreamHandler("/testing/1/ssz", func(stream network.Stream) {
+		rcvd := &testpb.TestSimpleMessage{}
+		if err := svc.Encoding().DecodeWithLength(stream, rcvd); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.Encoding().EncodeWithLength(stream, rcvd); err != nil {
+			t.Fatal(err)
+		}
+		if err := stream.Close(); err != nil {
+			t.Error(err)
+		}
+		wg.Done()
+	})
 
 	stream, err := svc.Send(context.Background(), msg, p2.Host.ID())
 	if err != nil {

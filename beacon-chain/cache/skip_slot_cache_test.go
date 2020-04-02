@@ -8,15 +8,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	c := cache.NewSkipSlotCache()
-	fc := featureconfig.Get()
-	fc.EnableSkipSlotsCache = true
-	featureconfig.Init(fc)
 
 	state, err := c.Get(ctx, 5)
 	if err != nil {

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -15,6 +16,12 @@ func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.SignedVoluntaryExit got: %T", msg)
 	}
+
+	if ve.Exit == nil {
+		return errors.New("exit can't be nil")
+	}
+	r.setExitIndexSeen(ve.Exit.ValidatorIndex)
+
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
 		return err
@@ -30,6 +37,8 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
 	if as != nil && as.Attestation_1 != nil && as.Attestation_1.Data != nil {
+		r.setAttesterSlashingIndicesSeen(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
+
 		s, err := r.db.State(ctx, bytesutil.ToBytes32(as.Attestation_1.Data.BeaconBlockRoot))
 		if err != nil {
 			return err
@@ -49,6 +58,8 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
 	if ps.Header_1 != nil && ps.Header_1.Header != nil {
+		r.setProposerSlashingIndexSeen(ps.Header_1.Header.ProposerIndex)
+
 		root, err := ssz.HashTreeRoot(ps.Header_1.Header)
 		s, err := r.db.State(ctx, root)
 		if err != nil {

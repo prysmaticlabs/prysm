@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"context"
-	"reflect"
+	"github.com/gogo/protobuf/proto"
 	"strings"
 	"testing"
 
@@ -294,7 +294,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(returned, cached) {
+	if !proto.Equal(returned.InnerStateUnsafe(), cached.InnerStateUnsafe()) {
 		t.Error("Incorrectly cached base state")
 	}
 }

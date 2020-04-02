@@ -3,7 +3,6 @@ package initialsync
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -327,10 +326,9 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 	}
 
 	req := &p2ppb.BeaconBlocksByRangeRequest{
-		HeadBlockRoot: root,
-		StartSlot:     start,
-		Count:         count,
-		Step:          step,
+		StartSlot: start,
+		Count:     count,
+		Step:      step,
 	}
 
 	resp, respErr := f.requestBlocks(ctx, req, pid)
@@ -375,7 +373,6 @@ func (f *blocksFetcher) requestBlocks(
 		"start": req.StartSlot,
 		"count": req.Count,
 		"step":  req.Step,
-		"head":  fmt.Sprintf("%#x", req.HeadBlockRoot),
 	}).Debug("Requesting blocks")
 	f.Unlock()
 	stream, err := f.p2p.Send(ctx, req, pid)

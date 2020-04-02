@@ -8,21 +8,15 @@ Herumi's BLS library for go depends on
 """
 
 def bls_dependencies():
-    # TODO(4804): Update herumi_bls_eth_go_binary and herumi_bls to latest supporting v0.10.0.
     _maybe(
         http_archive,
         name = "herumi_bls_eth_go_binary",
-        strip_prefix = "bls-eth-go-binary-147ed25f233ed0b211e711ed8271606540c58064",
+        strip_prefix = "bls-eth-go-binary-da18d415993a059052dfed16711f2b3bd03c34b8",
         urls = [
-            "https://github.com/herumi/bls-eth-go-binary/archive/147ed25f233ed0b211e711ed8271606540c58064.tar.gz",
+            "https://github.com/herumi/bls-eth-go-binary/archive/da18d415993a059052dfed16711f2b3bd03c34b8.tar.gz",
         ],
-        sha256 = "bbd04f3354f12982e4ef32c62eb13ceb183303ada1ee69e2869553ed35134321",
+        sha256 = "69080ca634f8aaeb0950e19db218811f4bb920a054232e147669ea574ba11ef0",
         build_file = "@prysm//third_party/herumi:bls_eth_go_binary.BUILD",
-        # TODO(4804): Delete this patch after updating this archive to commit 381c62473c28af84f424cfb1521c97e48289174a or later.
-        patches = [
-            "@prysm//third_party/herumi:bls_eth_go_binary_serialization_alloc_fix.patch",  # Integrates changes from PR #5.
-        ],
-        patch_args = ["-p1"],
     )
     _maybe(
         http_archive,
@@ -37,11 +31,11 @@ def bls_dependencies():
     _maybe(
         http_archive,
         name = "herumi_bls",
-        strip_prefix = "bls-b0e010004293a7ffd2a626edc2062950abd09938",
+        strip_prefix = "bls-989e28ede489e5f0e50cfc87e3fd8a8767155b9f",
         urls = [
-            "https://github.com/herumi/bls/archive/b0e010004293a7ffd2a626edc2062950abd09938.tar.gz",
+            "https://github.com/herumi/bls/archive/989e28ede489e5f0e50cfc87e3fd8a8767155b9f.tar.gz",
         ],
-        sha256 = "c7300970c8a639cbbe7465d10f412d6c6ab162b15f2e184b191c9763c2241da4",
+        sha256 = "14b441cc66ca7e6c4e0542dcfc6d9f83f4472f0e7a43efaa1d3ea93e2e2b7491",
         build_file = "@prysm//third_party/herumi:bls.BUILD",
     )
 

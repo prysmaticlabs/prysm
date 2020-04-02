@@ -123,7 +123,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	}
 	indexedAtt := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
-		if err == blocks.ErrSigFailedToVerify {
+		if err == helpers.ErrSigFailedToVerify {
 			// When sig fails to verify, check if there's a differences in committees due to
 			// different seeds.
 			var aState *stateTrie.BeaconState

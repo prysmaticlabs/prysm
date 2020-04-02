@@ -17,9 +17,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -35,7 +37,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9})
 
-	lbhsr, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	lbhsr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,22 +49,23 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: proposerIdx,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
 			ParentRoot: lbhsr[:],
 		},
 	}
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
-	if err != nil {
-		t.Fatalf("Failed to get signing root of block: %v", err)
-	}
-	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
-	blockSig := privKeys[proposerIdx+1].Sign(signingRoot[:], dt)
+	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	blockSig := privKeys[proposerIdx+1].Sign(signingRoot[:])
 	block.Signature = blockSig.Marshal()[:]
 
 	_, err = blocks.ProcessBlockHeader(beaconState, block)
@@ -98,12 +101,16 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
 	priv := bls.RandKey()
-	blockSig := priv.Sign([]byte("hello"), dt)
+	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := priv.Sign(root[:])
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -117,7 +124,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "is different then block slot"
+	want := "is different than block slot"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -144,16 +151,21 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	})
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
 	priv := bls.RandKey()
-	blockSig := priv.Sign([]byte("hello"), dt)
+	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := priv.Sign(root[:])
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: 5669,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -189,21 +201,26 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	parentRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
 	priv := bls.RandKey()
-	blockSig := priv.Sign([]byte("hello"), dt)
+	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := priv.Sign(root[:])
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: 5669,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -239,30 +256,32 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
+	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
+
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
 	priv := bls.RandKey()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 0,
+			ProposerIndex: 5669,
+			Slot:          0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
 			ParentRoot: latestBlockSignedRoot[:],
 		},
 	}
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
+	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
 	}
-	blockSig := priv.Sign(signingRoot[:], dt)
+	blockSig := priv.Sign(signingRoot[:])
 	block.Signature = blockSig.Marshal()[:]
 	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
 	if err != nil {
@@ -287,10 +306,11 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	var zeroHash [32]byte
 	nsh := newState.LatestBlockHeader()
 	expected := &ethpb.BeaconBlockHeader{
-		Slot:       block.Block.Slot,
-		ParentRoot: latestBlockSignedRoot[:],
-		BodyRoot:   bodyRoot[:],
-		StateRoot:  zeroHash[:],
+		ProposerIndex: 5669,
+		Slot:          block.Block.Slot,
+		ParentRoot:    latestBlockSignedRoot[:],
+		BodyRoot:      bodyRoot[:],
+		StateRoot:     zeroHash[:],
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %v", expected, nsh)
@@ -307,12 +327,16 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: buf, Domain: domain})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
+	epochSignature := privKeys[proposerIdx-1].Sign(root[:])
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal: epochSignature.Marshal(),
@@ -375,7 +399,8 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		},
 	}
 	var err error
-	for i := uint64(0); i < params.BeaconConfig().SlotsPerEth1VotingPeriod; i++ {
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	for i := uint64(0); i < period; i++ {
 		beaconState, err = blocks.ProcessEth1DataInBlock(beaconState, block)
 		if err != nil {
 			t.Fatal(err)
@@ -399,15 +424,16 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: params.BeaconConfig().SlotsPerEpoch + 1,
+					ProposerIndex: 1,
+					Slot:          params.BeaconConfig().SlotsPerEpoch + 1,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 			},
 		},
@@ -430,15 +456,16 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 1,
+					Slot:          0,
 				},
 			},
 		},
@@ -468,16 +495,17 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 0,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 0,
+					Slot:          0,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
-					Slot: 0,
+					ProposerIndex: 0,
+					Slot:          0,
 				},
 				Signature: []byte("B"),
 			},
@@ -509,39 +537,40 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	proposerIdx := uint64(1)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:      0,
-			StateRoot: []byte("A"),
+			ProposerIndex: proposerIdx,
+			Slot:          0,
+			StateRoot:     []byte("A"),
 		},
 	}
-	signingRoot, err := ssz.HashTreeRoot(header1.Header)
+	signingRoot, err := helpers.ComputeSigningRoot(header1.Header, domain)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()[:]
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:      0,
-			StateRoot: []byte("B"),
+			ProposerIndex: proposerIdx,
+			Slot:          0,
+			StateRoot:     []byte("B"),
 		},
 	}
-	signingRoot, err = ssz.HashTreeRoot(header2.Header)
+	signingRoot, err = helpers.ComputeSigningRoot(header2.Header, domain)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()[:]
 
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerIdx,
-			Header_1:      header1,
-			Header_2:      header2,
+			Header_1: header1,
+			Header_2: header2,
 		},
 	}
 
@@ -672,16 +701,16 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
+	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	sig0 := privKeys[0].Sign(signingRoot[:])
+	sig1 := privKeys[1].Sign(signingRoot[:])
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
@@ -692,12 +721,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
+	signingRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	sig0 = privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 = privKeys[1].Sign(hashTreeRoot[:], domain)
+	sig0 = privKeys[0].Sign(signingRoot[:])
+	sig1 = privKeys[1].Sign(signingRoot[:])
 	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
 	att2.Signature = aggregateSig.Marshal()[:]
 
@@ -947,17 +976,17 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	if err != nil {
+		t.Error(err)
+	}
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -978,7 +1007,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1008,13 +1037,13 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	sigs := make([]*bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att1.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -1036,13 +1065,13 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err = ssz.HashTreeRoot(data)
+	hashTreeRoot, err = helpers.ComputeSigningRoot(data, domain)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	sigs = make([]*bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -1055,7 +1084,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1086,13 +1115,13 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(data)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(data, domain)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	sigs := make([]*bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att1.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -1113,13 +1142,13 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err = ssz.HashTreeRoot(data)
+	hashTreeRoot, err = helpers.ComputeSigningRoot(data, domain)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	sigs = make([]*bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -1308,18 +1337,17 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		domain, err := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+		domain, err := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 		if err != nil {
 			t.Fatal(err)
 		}
-		root, err := ssz.HashTreeRoot(tt.attestation.Data)
+		root, err := helpers.ComputeSigningRoot(tt.attestation.Data, domain)
 		if err != nil {
-			t.Errorf("Could not find the ssz root: %v", err)
-			continue
+			t.Error(err)
 		}
 		var sig []*bls.Signature
 		for _, idx := range tt.attestation.AttestingIndices {
-			validatorSig := keys[idx].Sign(root[:], domain)
+			validatorSig := keys[idx].Sign(root[:])
 			sig = append(sig, validatorSig)
 		}
 		aggSig := bls.AggregateSignatures(sig)
@@ -1483,11 +1511,11 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			Amount:    1000,
 		},
 	}
-	sr, err := ssz.HashTreeRoot(deposit.Data)
+	sr, err := helpers.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 8))
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := sk.Sign(sr[:], 3)
+	sig := sk.Sign(sr[:])
 	deposit.Data.Signature = sig.Marshal()
 	leaf, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
@@ -1759,15 +1787,15 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	val.PublicKey = priv.PublicKey().Marshal()[:]
 	state.UpdateValidatorAtIndex(0, val)
-	signingRoot, err := ssz.HashTreeRoot(exits[0].Exit)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := priv.Sign(signingRoot[:], domain)
+	signingRoot, err := helpers.ComputeSigningRoot(exits[0].Exit, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	sig := priv.Sign(signingRoot[:])
 	exits[0].Signature = sig.Marshal()
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{

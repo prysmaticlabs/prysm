@@ -46,12 +46,12 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 		p2p:                  p1,
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: roughtime.Now()},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	a := &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	r.blkRootToPendingAtts[[32]byte{'A'}] = []*ethpb.AggregateAttestationAndProof{a}
+	r.blkRootToPendingAtts[[32]byte{'A'}] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -69,14 +69,14 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 		p2p:                  p1,
 		db:                   db,
 		chain:                &mock.ChainService{Genesis: roughtime.Now()},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
 
 	a := &ethpb.AggregateAttestationAndProof{
 		Aggregate: &ethpb.Attestation{
-			Signature:       bls.RandKey().Sign([]byte("foo"), 0).Marshal(),
+			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{}}}}
@@ -87,7 +87,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	r.db.SaveBlock(context.Background(), b)
 	r.db.SaveState(context.Background(), s, r32)
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.AggregateAttestationAndProof{a}
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -111,6 +111,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
+	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sb := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -137,32 +138,40 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	if err != nil {
+		t.Error(err)
+	}
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	slotRoot, err := ssz.HashTreeRoot(att.Data.Slot)
+	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, domain)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	sig := privKeys[154].Sign(slotRoot[:], domain)
+	sig := privKeys[33].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 154,
+		AggregatorIndex: 33,
 	}
+	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(aggregateAndProof, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
@@ -176,7 +185,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		attPool:              attestations.NewPool(),
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
@@ -187,13 +196,13 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
 	r.db.SaveState(context.Background(), s, r32)
 
-	r.blkRootToPendingAtts[r32] = []*ethpb.AggregateAttestationAndProof{aggregateAndProof}
+	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
 	if len(r.attPool.AggregatedAttestations()) != 1 {
-		t.Error("Did not save aggregated att")
+		t.Fatal("Did not save aggregated att")
 	}
 	if !reflect.DeepEqual(r.attPool.AggregatedAttestations()[0], att) {
 		t.Error("Incorrect saved att")
@@ -210,7 +219,7 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 
 	s := &Service{
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
 
 	// 100 Attestations per block root.
@@ -219,15 +228,18 @@ func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
 	r3 := [32]byte{'C'}
 
 	for i := 0; i < 100; i++ {
-		s.savePendingAtt(&ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r1[:]}}})
-		s.savePendingAtt(&ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r2[:]}}})
-		s.savePendingAtt(&ethpb.AggregateAttestationAndProof{
-			Aggregate: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r3[:]}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r1[:]}}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r2[:]}}}})
+		s.savePendingAtt(&ethpb.SignedAggregateAttestationAndProof{
+			Message: &ethpb.AggregateAttestationAndProof{
+				Aggregate: &ethpb.Attestation{
+					Data: &ethpb.AttestationData{Slot: uint64(i), BeaconBlockRoot: r3[:]}}}})
 	}
 
 	if len(s.blkRootToPendingAtts[r1]) != 100 {

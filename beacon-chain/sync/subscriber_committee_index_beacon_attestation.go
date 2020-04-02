@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -18,6 +19,11 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	if !ok {
 		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
 	}
+
+	if a.Data == nil {
+		return errors.New("nil attestation")
+	}
+	r.setSeenCommitteeIndicesSlot(a.Data.Slot, a.Data.CommitteeIndex, a.AggregationBits)
 
 	if exists, _ := r.attPool.HasAggregatedAttestation(a); exists {
 		return nil

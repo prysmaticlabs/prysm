@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	e2wallet "github.com/wealdtech/go-eth2-wallet"
 	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
-	e2wtypes "github.com/wealdtech/go-eth2-wallet-types"
+	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 type walletOpts struct {
@@ -122,12 +122,12 @@ func (km *Wallet) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign signs a message for the validator to broadcast.
-func (km *Wallet) Sign(pubKey [48]byte, root [32]byte, domain uint64) (*bls.Signature, error) {
+func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error) {
 	account, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey
 	}
-	sig, err := account.Sign(root[:], domain)
+	sig, err := account.Sign(root[:])
 	if err != nil {
 		return nil, err
 	}

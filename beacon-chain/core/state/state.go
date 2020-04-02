@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -137,10 +138,16 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
+	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Validators())
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
+	}
+
 	state := &pb.BeaconState{
 		// Misc fields.
-		Slot:        0,
-		GenesisTime: genesisTime,
+		Slot:                  0,
+		GenesisTime:           genesisTime,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
 
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,

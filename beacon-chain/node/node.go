@@ -289,6 +289,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
+		BeaconDB:          b.db,
 		NoDiscovery:       ctx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       sliceutil.SplitCommaSeparated(ctx.StringSlice(cmd.StaticPeers.Name)),
 		BootstrapNodeAddr: bootnodeAddrs,
