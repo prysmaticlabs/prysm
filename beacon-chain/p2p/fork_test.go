@@ -11,8 +11,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -193,22 +196,30 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	c.ForkVersionSchedule = map[uint64][]byte{
 		0: params.BeaconConfig().GenesisForkVersion,
 		1: {0, 0, 0, 1},
-		2: {0, 0, 0, 2},
-		3: {0, 0, 0, 3},
 	}
-	nextForkEpoch := uint64(2)
-	nextForkVersion := []byte{0, 0, 0, 2}
+	nextForkEpoch := uint64(1)
+	nextForkVersion := []byte{0, 0, 0, 1}
 	c.NextForkEpoch = nextForkEpoch
 	c.NextForkVersion = nextForkVersion
 	params.OverrideBeaconConfig(c)
 	defer params.OverrideBeaconConfig(originalConfig)
 
-	// We simulate being in epoch 1.
-	secondsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
-	additionalBuffer := 2 * time.Second
-	durationPerEpoch := (time.Duration(secondsPerEpoch) * time.Second) + additionalBuffer
-	genesisTime := time.Now().Add(-durationPerEpoch)
-
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	digest, err := createForkDigest(genesisTime, make([]byte, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	enrForkID := &pb.ENRForkID{
+		CurrentForkDigest: digest[:],
+		NextForkVersion:   nextForkVersion,
+		NextForkEpoch:     nextForkEpoch,
+	}
+	enc, err := ssz.Marshal(enrForkID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forkEntry := enr.WithEntry(eth2ENRKey, enc)
 	// In epoch 1 of current time, the fork version should be
 	// {0, 0, 0, 1} according to the configuration override above.
 	temp := testutil.TempDir()
@@ -226,14 +237,9 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 		t.Fatal(err)
 	}
 	localNode := enode.NewLocalNode(db, pkey)
+	localNode.Set(forkEntry)
 
-	genesisValidatorsRoot := make([]byte, 32)
-	localNode, err = addForkEntry(localNode, genesisTime, genesisValidatorsRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 1}, genesisValidatorsRoot)
+	want, err := helpers.ComputeForkDigest([]byte{0, 0, 0, 0}, genesisValidatorsRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
