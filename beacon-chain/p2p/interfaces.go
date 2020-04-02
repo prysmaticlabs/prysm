@@ -4,7 +4,6 @@ import (
 	"context"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"

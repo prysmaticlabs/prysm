@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
