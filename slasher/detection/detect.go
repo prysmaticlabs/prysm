@@ -1,6 +1,7 @@
 package detection
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/gogo/protobuf/proto"
@@ -161,6 +162,14 @@ func (ds *Service) detectSurroundVotes(
 // DetectDoubleProposals checks if the given signed beacon block is a slashable offense and returns the slashing.
 func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
 	return ds.proposalsDetector.DetectDoublePropose(ctx, incomingBlock)
+}
+
+func isDoublePropose(
+	incomingBlockHeader *ethpb.SignedBeaconBlockHeader,
+	prevBlockHeader *ethpb.SignedBeaconBlockHeader,
+) bool {
+	return incomingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex &&
+		!bytes.Equal(incomingBlockHeader.Signature, prevBlockHeader.Signature)
 }
 
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
