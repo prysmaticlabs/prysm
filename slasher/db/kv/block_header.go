@@ -67,11 +67,11 @@ func (db *Store) HasBlockHeader(ctx context.Context, epoch uint64, validatorID u
 }
 
 // SaveBlockHeader accepts a block header and writes it to disk.
-func (db *Store) SaveBlockHeader(ctx context.Context, validatorID uint64 /*TODO(#5119) remove var and use blockheader proposer index*/, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+func (db *Store) SaveBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveBlockHeader")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
-	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
+	key := encodeEpochValidatorIDSig(epoch, blockHeader.Header.ProposerIndex, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {
 		return errors.Wrap(err, "failed to encode block")
@@ -97,11 +97,11 @@ func (db *Store) SaveBlockHeader(ctx context.Context, validatorID uint64 /*TODO(
 }
 
 // DeleteBlockHeader deletes a block header using the epoch and validator id.
-func (db *Store) DeleteBlockHeader(ctx context.Context, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+func (db *Store) DeleteBlockHeader(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteBlockHeader")
 	defer span.End()
 	epoch := helpers.SlotToEpoch(blockHeader.Header.Slot)
-	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
+	key := encodeEpochValidatorIDSig(epoch, blockHeader.Header.ProposerIndex, blockHeader.Signature)
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		if err := bucket.Delete(key); err != nil {

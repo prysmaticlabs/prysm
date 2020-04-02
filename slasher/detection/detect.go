@@ -1,6 +1,7 @@
 package detection
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/gogo/protobuf/proto"
@@ -164,12 +165,11 @@ func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *eth
 }
 
 func isDoublePropose(incommingBlockHeader *ethpb.SignedBeaconBlockHeader, prevBlockHeader *ethpb.SignedBeaconBlockHeader) bool {
-	//TODO(#5119) remove comment
-	//if incommingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex && !bytes.Equal(incommingBlockHeader.Signature, prevBlockHeader.Signature) {
-	//	return true
-	//}
-	//return false
-	return true
+
+	if incommingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex && !bytes.Equal(incommingBlockHeader.Signature, prevBlockHeader.Signature) {
+		return true
+	}
+	return false
 }
 
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {

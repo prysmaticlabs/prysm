@@ -32,7 +32,7 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 			if err != nil {
 				log.WithError(err)
 			}
-			slashing, err := ds.detectDoubleProposels(ctx, sbh)
+			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, sbh)
 			ds.submitProposerSlashing(ctx, slashing)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
@@ -84,12 +84,11 @@ func extractSignedBeaconBlockHeader(block *ethpb.SignedBeaconBlock) (*ethpb.Sign
 	}
 	return &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot: block.Block.Slot,
-			//TODO(#5119) remove stub and use input from block header.
-			//ProposerIndex: block.Block.ProposerIndex,
-			ParentRoot: block.Block.ParentRoot,
-			StateRoot:  block.Block.StateRoot,
-			BodyRoot:   bodyRoot[:],
+			Slot:          block.Block.Slot,
+			ProposerIndex: block.Block.ProposerIndex,
+			ParentRoot:    block.Block.ParentRoot,
+			StateRoot:     block.Block.StateRoot,
+			BodyRoot:      bodyRoot[:],
 		},
 		Signature: block.Signature,
 	}, nil

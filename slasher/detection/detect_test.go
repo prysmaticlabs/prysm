@@ -381,7 +381,7 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			name:        "different sig from same epoch slash",
 			blk:         blk1epoch0,
 			incomingBlk: blk2epoch0,
-			slashing:    &ethpb.ProposerSlashing{ProposerIndex: 0, Header_1: blk2epoch0, Header_2: blk1epoch0},
+			slashing:    &ethpb.ProposerSlashing{Header_1: blk2epoch0, Header_2: blk1epoch0},
 		},
 	}
 	for _, tt := range tests {
@@ -394,11 +394,11 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 				slasherDB:         db,
 				proposalsDetector: proposals.NewProposeDetector(db),
 			}
-			if err := db.SaveBlockHeader(ctx, 0 /*TODO(#5119) remove stub*/, tt.blk); err != nil {
+			if err := db.SaveBlockHeader(ctx, tt.blk); err != nil {
 				t.Fatal(err)
 			}
 
-			slashing, err := ds.detectDoubleProposels(ctx, tt.incomingBlk)
+			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, tt.incomingBlk)
 			if err != nil {
 				t.Fatal(err)
 			}

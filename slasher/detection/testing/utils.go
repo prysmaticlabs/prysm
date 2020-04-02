@@ -17,12 +17,11 @@ func SignedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBloc
 	root := [32]byte{1, 2, 3}
 	return &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			//TODO(#5119) remove comment
-			//ProposerIndex proposerIndex,
-			Slot:       slot,
-			ParentRoot: root[:],
-			StateRoot:  root[:],
-			BodyRoot:   root[:],
+			ProposerIndex: proposerIdx,
+			Slot:          slot,
+			ParentRoot:    root[:],
+			StateRoot:     root[:],
+			BodyRoot:      root[:],
 		},
 		Signature: sig,
 	}, nil
