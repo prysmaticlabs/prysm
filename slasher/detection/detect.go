@@ -164,12 +164,12 @@ func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *eth
 	return ds.proposalsDetector.DetectDoublePropose(ctx, incomingBlock)
 }
 
-func isDoublePropose(incommingBlockHeader *ethpb.SignedBeaconBlockHeader, prevBlockHeader *ethpb.SignedBeaconBlockHeader) bool {
-
-	if incommingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex && !bytes.Equal(incommingBlockHeader.Signature, prevBlockHeader.Signature) {
-		return true
-	}
-	return false
+func isDoublePropose(
+	incomingBlockHeader *ethpb.SignedBeaconBlockHeader,
+	prevBlockHeader *ethpb.SignedBeaconBlockHeader,
+) bool {
+	return incomingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex &&
+		!bytes.Equal(incomingBlockHeader.Signature, prevBlockHeader.Signature)
 }
 
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
