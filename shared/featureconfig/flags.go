@@ -144,9 +144,9 @@ const deprecatedUsage = "DEPRECATED. DO NOT USE."
 var (
 	deprecatedEnableNoiseHandshake = &cli.BoolFlag{
 		Name:   "enable-noise",
-    Usage:  deprecatedUsage,
+		Usage:  deprecatedUsage,
 		Hidden: true,
-  }
+	}
 	deprecatedEnableInitSyncQueue = &cli.BoolFlag{
 		Name:   "enable-initial-sync-queue",
 		Usage:  deprecatedUsage,

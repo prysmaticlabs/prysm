@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/libp2p/go-libp2p-core/peer"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
