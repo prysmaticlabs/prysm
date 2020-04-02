@@ -71,6 +71,7 @@ type PeersProvider interface {
 	Peers() *peers.Status
 }
 
+// MetadataProvider returns the metadata related information for the local peer.
 type MetadataProvider interface {
 	Metadata() *pb.MetaData
 	MetadataSeq() uint64
