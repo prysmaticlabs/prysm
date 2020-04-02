@@ -466,7 +466,7 @@ func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find non-empty future slot.
 func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	root, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	_, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	if len(peers) == 0 {
 		return 0, errNoPeersAvailable
 	}
@@ -481,10 +481,9 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 
 	for slot <= helpers.StartSlot(epoch+1) {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
-			HeadBlockRoot: root,
-			StartSlot:     slot + 1,
-			Count:         blockBatchSize,
-			Step:          1,
+			StartSlot: slot + 1,
+			Count:     blockBatchSize,
+			Step:      1,
 		}
 
 		blocks, err := f.requestBlocks(ctx, req, nextPID())

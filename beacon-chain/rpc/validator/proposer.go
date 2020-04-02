@@ -232,7 +232,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaconBlock) ([]byte, error) {
 	var beaconState *stateTrie.BeaconState
 	var err error
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		beaconState, err = vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve beacon state")

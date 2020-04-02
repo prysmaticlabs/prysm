@@ -116,13 +116,13 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	newStateMgmt = &cli.BoolFlag{
-		Name:  "new-state-mgmt",
-		Usage: "This enables the usage of experimental state mgmt service across Prysm",
+	disableNewStateMgmt = &cli.BoolFlag{
+		Name:  "disable-new-state-mgmt",
+		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
-	enableInitSyncQueue = &cli.BoolFlag{
-		Name:  "enable-initial-sync-queue",
-		Usage: "Enables concurrent fetching and processing of blocks on initial sync.",
+	disableInitSyncQueue = &cli.BoolFlag{
+		Name:  "disable-init-sync-queue",
+		Usage: "Disables concurrent fetching and processing of blocks on initial sync.",
 	}
 	enableFieldTrie = &cli.BoolFlag{
 		Name:  "enable-state-field-trie",
@@ -145,6 +145,11 @@ const deprecatedUsage = "DEPRECATED. DO NOT USE."
 var (
 	deprecatedEnableNoiseHandshake = &cli.BoolFlag{
 		Name:   "enable-noise",
+    Usage:  deprecatedUsage,
+		Hidden: true,
+  }
+	deprecatedEnableInitSyncQueue = &cli.BoolFlag{
+		Name:   "enable-initial-sync-queue",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -272,6 +277,7 @@ var (
 
 var deprecatedFlags = []cli.Flag{
 	deprecatedEnableNoiseHandshake,
+	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
@@ -334,8 +340,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkHeadState,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
-	newStateMgmt,
-	enableInitSyncQueue,
+	disableNewStateMgmt,
+	disableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,
 	initSyncBatchSaveBlocks,
@@ -349,7 +355,6 @@ var E2EBeaconChainFlags = []string{
 	"--enable-byte-mempool",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
-	"--enable-initial-sync-queue",
 	"--enable-state-field-trie",
 	"--init-sync-batch-save-blocks",
 	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.

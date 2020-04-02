@@ -148,6 +148,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 		},
 	}
 	listener := s.createListener(ipAddr, pkey)
+	defer listener.Close()
 
 	_ = convertToMultiAddr([]*enode.Node{listener.Self()})
 	testutil.AssertLogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
@@ -161,7 +162,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg := &Config{
 		Encoding: "ssz", MaxPeers: 30,
 	}
-	port := 3000
+	port := 6000
 	var staticPeers []string
 	var hosts []host.Host
 	// setup other nodes
@@ -177,8 +178,8 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		}
 	}()
 
-	cfg.TCPPort = 14001
-	cfg.UDPPort = 14000
+	cfg.TCPPort = 14500
+	cfg.UDPPort = 14501
 	cfg.StaticPeers = staticPeers
 	cfg.BeaconDB = db
 	s, err := NewService(cfg)
@@ -194,7 +195,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))

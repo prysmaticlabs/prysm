@@ -417,14 +417,14 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	var initSync prysmsync.Checker
-	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
-		var initSyncTmp *initialsync.Service
+	if cfg := featureconfig.Get(); cfg.DisableInitSyncQueue {
+		var initSyncTmp *initialsyncold.Service
 		if err := b.services.FetchService(&initSyncTmp); err != nil {
 			return err
 		}
 		initSync = initSyncTmp
 	} else {
-		var initSyncTmp *initialsyncold.Service
+		var initSyncTmp *initialsync.Service
 		if err := b.services.FetchService(&initSyncTmp); err != nil {
 			return err
 		}
@@ -454,8 +454,8 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
-		is := initialsync.NewInitialSync(&initialsync.Config{
+	if cfg := featureconfig.Get(); cfg.DisableInitSyncQueue {
+		is := initialsyncold.NewInitialSync(&initialsyncold.Config{
 			DB:            b.db,
 			Chain:         chainService,
 			P2P:           b.fetchP2P(ctx),
@@ -465,7 +465,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return b.services.RegisterService(is)
 	}
 
-	is := initialsyncold.NewInitialSync(&initialsyncold.Config{
+	is := initialsync.NewInitialSync(&initialsync.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(ctx),
@@ -487,14 +487,14 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	}
 
 	var syncService prysmsync.Checker
-	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
-		var initSyncTmp *initialsync.Service
+	if cfg := featureconfig.Get(); cfg.DisableInitSyncQueue {
+		var initSyncTmp *initialsyncold.Service
 		if err := b.services.FetchService(&initSyncTmp); err != nil {
 			return err
 		}
 		syncService = initSyncTmp
 	} else {
-		var initSyncTmp *initialsyncold.Service
+		var initSyncTmp *initialsync.Service
 		if err := b.services.FetchService(&initSyncTmp); err != nil {
 			return err
 		}
