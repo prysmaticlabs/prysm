@@ -3,7 +3,6 @@ package initialsync
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -35,9 +34,9 @@ const (
 )
 
 var (
-	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
-	errFetcherCtxIsDone   = errors.New("fetcher's context is done, reinitialize")
-	errStartSlotIsTooHigh = errors.New("start slot is bigger than highest finalized slot")
+	errNoPeersAvailable = errors.New("no peers available, waiting for reconnect")
+	errFetcherCtxIsDone = errors.New("fetcher's context is done, reinitialize")
+	errSlotIsTooHigh    = errors.New("slot is higher than the finalized slot")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
@@ -201,7 +200,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
 	if start > highestFinalizedSlot {
-		response.err = errStartSlotIsTooHigh
+		response.err = errSlotIsTooHigh
 		return response
 	}
 
@@ -255,7 +254,7 @@ func (f *blocksFetcher) collectPeerResponses(
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
 	if start > highestFinalizedSlot {
-		return nil, errStartSlotIsTooHigh
+		return nil, errSlotIsTooHigh
 	}
 
 	// Spread load evenly among available peers.
@@ -327,17 +326,16 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 	}
 
 	req := &p2ppb.BeaconBlocksByRangeRequest{
-		HeadBlockRoot: root,
-		StartSlot:     start,
-		Count:         count,
-		Step:          step,
+		StartSlot: start,
+		Count:     count,
+		Step:      step,
 	}
 
 	resp, respErr := f.requestBlocks(ctx, req, pid)
 	if respErr != nil {
 		// Fail over to some other, randomly selected, peer.
-		headSlot := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-		root1, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headSlot)
+		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		root1, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		if bytes.Compare(root, root1) != 0 {
 			return nil, errors.Errorf("can not resend, root mismatch: %x:%x", root, root1)
 		}
@@ -375,7 +373,6 @@ func (f *blocksFetcher) requestBlocks(
 		"start": req.StartSlot,
 		"count": req.Count,
 		"step":  req.Step,
-		"head":  fmt.Sprintf("%#x", req.HeadBlockRoot),
 	}).Debug("Requesting blocks")
 	f.Unlock()
 	stream, err := f.p2p.Send(ctx, req, pid)
@@ -464,4 +461,46 @@ func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
 	limit = mathutil.Max(limit, uint64(required))
 	limit = mathutil.Min(limit, uint64(len(peers)))
 	return peers[:limit]
+}
+
+// nonSkippedSlotAfter checks slots after the given one in an attempt to find non-empty future slot.
+func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
+	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+	root, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	if len(peers) == 0 {
+		return 0, errNoPeersAvailable
+	}
+
+	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	nextPID := func() peer.ID {
+		randGenerator.Shuffle(len(peers), func(i, j int) {
+			peers[i], peers[j] = peers[j], peers[i]
+		})
+		return peers[0]
+	}
+
+	for slot <= helpers.StartSlot(epoch+1) {
+		req := &p2ppb.BeaconBlocksByRangeRequest{
+			HeadBlockRoot: root,
+			StartSlot:     slot + 1,
+			Count:         blockBatchSize,
+			Step:          1,
+		}
+
+		blocks, err := f.requestBlocks(ctx, req, nextPID())
+		if err != nil {
+			return slot, err
+		}
+
+		if len(blocks) > 0 {
+			slots := make([]uint64, len(blocks))
+			for i, block := range blocks {
+				slots[i] = block.Block.Slot
+			}
+			return blocks[0].Block.Slot, nil
+		}
+		slot += blockBatchSize
+	}
+
+	return slot, nil
 }

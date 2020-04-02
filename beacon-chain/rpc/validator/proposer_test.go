@@ -354,8 +354,9 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ParentRoot: parentRoot[:],
-			Slot:       1,
+			ProposerIndex: 9,
+			ParentRoot:    parentRoot[:],
+			Slot:          1,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      nil,
 				ProposerSlashings: nil,
@@ -375,16 +376,16 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 	beaconState.SetSlot(beaconState.Slot() - 1)
 	req.Block.Body.RandaoReveal = randaoReveal[:]
-	signingRoot, err := ssz.HashTreeRoot(req.Block)
-	if err != nil {
-		t.Error(err)
-	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
+	signingRoot, err := helpers.ComputeSigningRoot(req.Block, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	req.Signature = blockSig[:]
 
 	_, err = proposerServer.computeStateRoot(context.Background(), req)
@@ -415,7 +416,8 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
-	for i := 0; i <= int(params.BeaconConfig().SlotsPerEth1VotingPeriod/2); i++ {
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
 
@@ -639,7 +641,8 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		BlockHash:    []byte("0x1"),
 		DepositCount: 7,
 	}
-	for i := 0; i <= int(params.BeaconConfig().SlotsPerEth1VotingPeriod/2); i++ {
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	for i := 0; i <= int(period/2); i++ {
 		votes = append(votes, vote)
 	}
 
@@ -1236,7 +1239,8 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantedSlot := 100 % params.BeaconConfig().SlotsPerEth1VotingPeriod
+	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
+	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
 	enc, err := ssz.Marshal(currentEpoch + wantedSlot)
 	if err != nil {
@@ -1266,6 +1270,9 @@ func TestFilterAttestation_OK(t *testing.T) {
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
 	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
+	if err := state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]); err != nil {
+		t.Fatal(err)
+	}
 
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
@@ -1316,7 +1323,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1325,8 +1332,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 		atts[i].Signature = zeroSig[:]
 
 		for i, indice := range attestingIndices {
-			hashTreeRoot, _ := ssz.HashTreeRoot(atts[i].Data)
-			sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+			hashTreeRoot, _ := helpers.ComputeSigningRoot(atts[i].Data, domain)
+			sig := privKeys[indice].Sign(hashTreeRoot[:])
 			sigs[i] = sig
 		}
 		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -1533,7 +1540,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		AttPool: attestations.NewPool(),
 	}
 
-	sig := bls.RandKey().Sign([]byte("foo"), 0).Marshal()
+	sig := bls.RandKey().Sign([]byte("foo")).Marshal()
 	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
 	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
 

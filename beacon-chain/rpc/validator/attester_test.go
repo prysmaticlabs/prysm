@@ -80,7 +80,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	req := &ethpb.Attestation{
 		Signature: sig.Marshal(),
 		Data: &ethpb.AttestationData{

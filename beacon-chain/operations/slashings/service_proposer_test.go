@@ -15,7 +15,12 @@ import (
 
 func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
 	return &ethpb.ProposerSlashing{
-		ProposerIndex: valIdx,
+		Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{ProposerIndex: valIdx},
+		},
+		Header_2: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{ProposerIndex: valIdx},
+		},
 	}
 }
 
@@ -182,12 +187,12 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))
 			}
 			for i := range p.pendingAttesterSlashing {
-				if p.pendingProposerSlashing[i].ProposerIndex != tt.want[i].ProposerIndex {
+				if p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex != tt.want[i].Header_1.Header.ProposerIndex {
 					t.Errorf(
 						"Pending proposer to slash at index %d does not match expected. Got=%v wanted=%v",
 						i,
-						p.pendingProposerSlashing[i].ProposerIndex,
-						tt.want[i].ProposerIndex,
+						p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex,
+						tt.want[i].Header_1.Header.ProposerIndex,
 					)
 				}
 				if !proto.Equal(p.pendingProposerSlashing[i], tt.want[i]) {

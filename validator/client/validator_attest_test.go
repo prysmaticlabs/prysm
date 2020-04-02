@@ -11,13 +11,15 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
@@ -26,7 +28,7 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
@@ -37,7 +39,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	defer finish()
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorPubKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      make([]uint64, 111),
 			ValidatorIndex: 0,
@@ -59,7 +61,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
 }
 
@@ -70,7 +72,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorPubKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -87,7 +89,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: []byte{}}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -97,7 +99,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBitfield.SetBitAt(4, true)
@@ -110,18 +112,20 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		AggregationBits: aggregationBitfield,
 	}
 
-	root, err := ssz.HashTreeRoot(expectedAttestation.Data)
+	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sig, err := validator.keyManager.Sign(validatorPubKey, root, 0)
+	sig, err := validator.keyManager.Sign(bytesutil.ToBytes48(validatorPubKey.Marshal()), root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
+		diff, _ := messagediff.PrettyDiff(expectedAttestation, generatedAttestation)
+		t.Log(diff)
 	}
 }
 
@@ -137,7 +141,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorPubKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -161,8 +165,8 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
 }
 
@@ -178,7 +182,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorPubKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -202,7 +206,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -213,7 +217,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 0},
 	}, nil)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
 }
 
@@ -229,7 +233,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorPubKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -253,7 +257,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -264,7 +268,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 1},
 	}, nil)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
 }
 
@@ -290,7 +294,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */).Times(0)
 
 	timer := time.NewTimer(1 * time.Second)
-	go validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
+	go validator.SubmitAttestation(context.Background(), 0, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	<-timer.C
 }
 
@@ -307,7 +311,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorPubKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -334,7 +338,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(),
 	).Return(&ethpb.AttestResponse{}, nil).Times(1)
 
-	validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 0, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
@@ -344,7 +348,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
+			PublicKey:      validatorPubKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
@@ -370,7 +374,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 
 	if len(generatedAttestation.AggregationBits) != 2 {
 		t.Errorf("Wanted length %d, received %d", 2, len(generatedAttestation.AggregationBits))

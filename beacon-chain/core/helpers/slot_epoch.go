@@ -89,15 +89,17 @@ func SlotsSinceEpochStarts(slot uint64) uint64 {
 	return slot - StartSlot(SlotToEpoch(slot))
 }
 
-// Allow for slots "from the future" within a certain tolerance.
-const timeShiftTolerance = 10 // ms
+// TimeShiftTolerance specifies the tolerance threshold for slots "from the future".
+const TimeShiftTolerance = 500 * time.Millisecond // ms
 
 // VerifySlotTime validates the input slot is not from the future.
-func VerifySlotTime(genesisTime uint64, slot uint64) error {
-	slotTime := genesisTime + slot*params.BeaconConfig().SecondsPerSlot
-	currentTime := uint64(roughtime.Now().Unix())
-	if slotTime > currentTime+timeShiftTolerance {
-		return fmt.Errorf("could not process slot from the future, slot time %d > current time %d", slotTime, currentTime)
+func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration) error {
+	// denominate everything in milliseconds
+	slotTime := 1000 * (genesisTime + slot*params.BeaconConfig().SecondsPerSlot)
+	currentTime := 1000 * uint64(roughtime.Now().Unix())
+	tolerance := uint64(timeTolerance.Milliseconds())
+	if slotTime > currentTime+tolerance {
+		return fmt.Errorf("could not process slot from the future, slot time(ms) %d > current time(ms) %d", slotTime, currentTime)
 	}
 	return nil
 }

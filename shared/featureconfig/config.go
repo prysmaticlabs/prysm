@@ -47,7 +47,6 @@ type Flags struct {
 	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
-	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	DisableNewStateMgmt                        bool   // NewStateMgmt disables the new state mgmt service.
 	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
@@ -65,7 +64,6 @@ type Flags struct {
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 }
@@ -131,10 +129,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
 	}
-	if ctx.Bool(enableSkipSlotsCacheFlag.Name) {
-		log.Warn("Enabled skip slots cache.")
-		cfg.EnableSkipSlotsCache = true
-	}
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
@@ -166,10 +160,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(checkHeadState.Name) {
 		log.Warn("Enabling check head state for chainservice")
 		cfg.CheckHeadState = true
-	}
-	if ctx.Bool(enableNoiseHandshake.Name) {
-		log.Warn("Enabling noise handshake for peer")
-		cfg.EnableNoise = true
 	}
 	if ctx.Bool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
@@ -204,13 +194,15 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	if ctx.Bool(protectProposerFlag.Name) {
-		log.Warn("Enabled validator proposal slashing protection.")
-		cfg.ProtectProposer = true
+	cfg.ProtectProposer = true
+	if ctx.Bool(disableProtectProposerFlag.Name) {
+		log.Warn("Disabled validator proposal slashing protection.")
+		cfg.ProtectProposer = false
 	}
-	if ctx.Bool(protectAttesterFlag.Name) {
-		log.Warn("Enabled validator attestation slashing protection.")
-		cfg.ProtectAttester = true
+	cfg.ProtectAttester = true
+	if ctx.Bool(disableProtectAttesterFlag.Name) {
+		log.Warn("Disabled validator attestation slashing protection.")
+		cfg.ProtectAttester = false
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")

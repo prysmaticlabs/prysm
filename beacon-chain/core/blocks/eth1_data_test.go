@@ -38,7 +38,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
 			},
-			hasSupport:         true,
+			hasSupport:         false,
 			votingPeriodLength: 7,
 		}, {
 			stateVotes: []*ethpb.Eth1Data{
@@ -90,7 +90,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			c := params.BeaconConfig()
-			c.SlotsPerEth1VotingPeriod = tt.votingPeriodLength
+			c.EpochsPerEth1VotingPeriod = tt.votingPeriodLength
 			params.OverrideBeaconConfig(c)
 
 			s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
