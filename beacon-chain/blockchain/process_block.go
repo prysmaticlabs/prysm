@@ -219,7 +219,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
-	if featureconfig.Get().InitSyncBatchSaveBlocks {
+	if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
 		s.saveInitSyncBlock(root, signed)
 	} else {
 		if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
@@ -281,7 +281,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			}
 		}
 
-		if featureconfig.Get().InitSyncBatchSaveBlocks {
+		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
 			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 				return err
 			}
