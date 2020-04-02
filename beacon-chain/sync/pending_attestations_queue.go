@@ -62,7 +62,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		attestations := s.blkRootToPendingAtts[bRoot]
 		s.pendingAttsLock.RUnlock()
 		// Has the pending attestation's missing block arrived and the node processed block yet?
-		hasStateSummary := !featureconfig.Get().NoNewStateMgmt && s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
+		hasStateSummary := !featureconfig.Get().DisableNewStateMgmt && s.db.HasStateSummary(ctx, bRoot) || s.stateSummaryCache.Has(bRoot)
 		if s.db.HasBlock(ctx, bRoot) && (s.db.HasState(ctx, bRoot) || hasStateSummary) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, att := range attestations {

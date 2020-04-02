@@ -125,8 +125,8 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	noNewStateMgmt = &cli.BoolFlag{
-		Name:  "no-new-state-mgmt",
+	DisableNewStateMgmt = &cli.BoolFlag{
+		Name:  "disable-new-state-mgmt",
 		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
 	enableInitSyncQueue = &cli.BoolFlag{
@@ -324,7 +324,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
-	noNewStateMgmt,
+	DisableNewStateMgmt,
 	enableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,

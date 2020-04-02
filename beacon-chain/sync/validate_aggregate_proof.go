@@ -129,7 +129,7 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.AggregateAttestationAndProof) bool {
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
-	hasStateSummary := !featureconfig.Get().NoNewStateMgmt && r.db.HasStateSummary(ctx, blockRoot) || r.stateSummaryCache.Has(blockRoot)
+	hasStateSummary := !featureconfig.Get().DisableNewStateMgmt && r.db.HasStateSummary(ctx, blockRoot) || r.stateSummaryCache.Has(blockRoot)
 	hasState := r.db.HasState(ctx, blockRoot) || hasStateSummary
 	hasBlock := r.db.HasBlock(ctx, blockRoot)
 	if !(hasState && hasBlock) {

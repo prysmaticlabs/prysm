@@ -12,7 +12,7 @@ import (
 var historicalStateDeletedKey = []byte("historical-states-deleted")
 
 func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
-	if featureconfig.Get().NoNewStateMgmt {
+	if featureconfig.Get().DisableNewStateMgmt {
 		return kv.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(newStateServiceCompatibleBucket)
 			return bkt.Put(historicalStateDeletedKey, []byte{0x01})
@@ -30,9 +30,9 @@ func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
 	regenHistoricalStatesConfirmed := false
 	var err error
 	if historicalStateDeleted {
-		actionText := "--no-new-state-mgmt was used. To proceed without the flag, the db will need " +
+		actionText := "--disable-new-state-mgmt was used. To proceed without the flag, the db will need " +
 			"to generate and save historical states. This process may take a while, - do you want to proceed? (Y/N)"
-		deniedText := "Historical states will not be generated. Please continue use --no-new-state-mgmt"
+		deniedText := "Historical states will not be generated. Please continue use --disable-new-state-mgmt"
 
 		regenHistoricalStatesConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
 		if err != nil {
@@ -40,7 +40,7 @@ func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
 		}
 
 		if !regenHistoricalStatesConfirmed {
-			return errors.New("exiting... please use --no-new-state-mgmt")
+			return errors.New("exiting... please use --disable-new-state-mgmt")
 		}
 
 		if err := kv.regenHistoricalStates(ctx); err != nil {

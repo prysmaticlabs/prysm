@@ -59,7 +59,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	if !featureconfig.Get().NoNewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		if !s.stateGen.StateSummaryExists(ctx, headRoot) && !s.beaconDB.HasState(ctx, headRoot) {
 			return nil
 		}
@@ -81,7 +81,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// Get the new head state from cached state or DB.
 	var newHeadState *state.BeaconState
-	if !featureconfig.Get().NoNewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		newHeadState, err = s.stateGen.StateByRoot(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
@@ -121,7 +121,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 
 	var headState *state.BeaconState
 	var err error
-	if !featureconfig.Get().NoNewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		headState, err = s.stateGen.StateByRoot(ctx, r)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
