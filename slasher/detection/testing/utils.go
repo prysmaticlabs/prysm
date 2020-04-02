@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// SignedBlockHeader given slot,proposer index this function generates signed block header
+// SignedBlockHeader given slot, proposer index this function generates signed block header.
 // with random bytes as its signature.
 func SignedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBlockHeader, error) {
 	sig, err := genRandomSig()
