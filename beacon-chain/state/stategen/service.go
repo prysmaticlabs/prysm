@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -24,6 +23,7 @@ type State struct {
 	epochBoundaryLock       sync.RWMutex
 	hotStateCache           *cache.HotStateCache
 	splitInfo               *splitSlotAndRoot
+	stateSummaryCache       *cache.StateSummaryCache
 }
 
 // This tracks the split point. The point where slot and the block root of
@@ -34,25 +34,28 @@ type splitSlotAndRoot struct {
 }
 
 // New returns a new state management object.
-func New(db db.NoHeadAccessDatabase) *State {
+func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
 	return &State{
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		hotStateCache:           cache.NewHotStateCache(),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   archivedInterval,
+		stateSummaryCache:       stateSummaryCache,
 	}
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.
-func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
-	lastArchivedState, err := s.beaconDB.LastArchivedIndexState(ctx)
+	lastArchivedRoot := s.beaconDB.LastArchivedIndexRoot(ctx)
+	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
 	if err != nil {
 		return nil, err
 	}
+
 	// Resume as genesis state if there's no last archived state.
 	if lastArchivedState == nil {
 		return s.beaconDB.GenesisState(ctx)
@@ -60,17 +63,11 @@ func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.B
 
 	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
 
-	if err := s.beaconDB.SaveStateSummary(ctx,
-		&pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:], BoundaryRoot: lastArchivedRoot[:]}); err != nil {
-		return nil, err
-	}
-
 	// In case the finalized state slot was skipped.
 	slot := lastArchivedState.Slot()
 	if !helpers.IsEpochStart(slot) {
 		slot = helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
 	}
-	s.setEpochBoundaryRoot(slot, lastArchivedRoot)
 
 	return lastArchivedState, nil
 }

@@ -3,7 +3,6 @@ package client
 // Validator client proposer functions.
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -11,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -97,7 +97,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		}
 
 		if HasProposedForEpoch(history, epoch) {
-			log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
+			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
 			if v.emitAccountMetrics {
 				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
@@ -175,13 +175,11 @@ func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) 
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
-
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	var buf [32]byte
-	binary.LittleEndian.PutUint64(buf[:], epoch)
-	randaoReveal, err := v.keyManager.Sign(pubKey, buf, domain.SignatureDomain)
+
+	randaoReveal, err := v.signObject(pubKey, epoch, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}
@@ -206,16 +204,16 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 			ParentRoot: b.ParentRoot,
 			BodyRoot:   bodyRoot[:],
 		}
-		sig, err = protectingKeymanager.SignProposal(pubKey, domain.SignatureDomain, blockHeader)
+		sig, err = protectingKeymanager.SignProposal(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), blockHeader)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
 	} else {
-		blockRoot, err := ssz.HashTreeRoot(b)
+		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
 		}
-		sig, err = v.keyManager.Sign(pubKey, blockRoot, domain.SignatureDomain)
+		sig, err = v.keyManager.Sign(pubKey, blockRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}

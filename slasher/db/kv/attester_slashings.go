@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
@@ -109,7 +109,10 @@ func (db *Store) SaveAttesterSlashing(ctx context.Context, status types.Slashing
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
-	root := hashutil.Hash(enc)
+	root, err := hashutil.HashProto(slashing)
+	if err != nil {
+		return err
+	}
 	key := encodeTypeRoot(types.SlashingType(types.Attestation), root)
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
@@ -130,8 +133,11 @@ func (db *Store) SaveAttesterSlashings(ctx context.Context, status types.Slashin
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		encHash := hashutil.Hash(enc[i])
-		key[i] = encodeTypeRoot(types.SlashingType(types.Attestation), encHash)
+		root, err := hashutil.HashProto(slashing)
+		if err != nil {
+			return err
+		}
+		key[i] = encodeTypeRoot(types.SlashingType(types.Attestation), root)
 	}
 
 	return db.update(func(tx *bolt.Tx) error {

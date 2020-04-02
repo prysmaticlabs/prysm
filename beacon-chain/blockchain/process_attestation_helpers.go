@@ -110,7 +110,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 		return fmt.Errorf("beacon block %#x does not exist", bytesutil.Trunc(data.BeaconBlockRoot))
 	}
 	if b.Block.Slot > data.Slot {
-		return fmt.Errorf("could not process attestation for future block, %d > %d", b.Block.Slot, data.Slot)
+		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)
 	}
 	return nil
 }
@@ -121,13 +121,9 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
-	}
-
+	indexedAtt := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
-		if err == blocks.ErrSigFailedToVerify {
+		if err == helpers.ErrSigFailedToVerify {
 			// When sig fails to verify, check if there's a differences in committees due to
 			// different seeds.
 			var aState *stateTrie.BeaconState

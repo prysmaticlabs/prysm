@@ -6,9 +6,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"context"
-	"reflect"
+	"github.com/gogo/protobuf/proto"
 	"strings"
 	"testing"
 
@@ -149,7 +149,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		LatestBlockHeader:   &ethpb.BeaconBlockHeader{},
 		JustificationBits:   []byte{0},
 		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		FinalizedCheckpoint: &ethpb.Checkpoint{},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
 	})
 	r := [32]byte{'g'}
 	if err := service.beaconDB.SaveState(ctx, s, r); err != nil {
@@ -160,7 +160,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 
-	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'}))
 	s1, err := service.getAttPreState(ctx, cp1)
 	if err != nil {
@@ -170,7 +170,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
 	}
 
-	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'}))
 	s2, err := service.getAttPreState(ctx, cp2)
 	if err != nil {
@@ -209,7 +209,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
-	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
+	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'}))
 	s3, err := service.getAttPreState(ctx, cp3)
 	if err != nil {
@@ -271,7 +271,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(returned, cached) {
+	if !proto.Equal(returned.InnerStateUnsafe(), cached.InnerStateUnsafe()) {
 		t.Error("Incorrectly cached base state")
 	}
 }

@@ -157,6 +157,26 @@ func TestUnionInt64(t *testing.T) {
 	}
 }
 
+func TestCleanUint64(t *testing.T) {
+	testCases := []struct {
+		in  []uint64
+		out []uint64
+	}{
+		{[]uint64{2, 4, 4, 6, 6}, []uint64{2, 4, 6}},
+		{[]uint64{3, 5, 5}, []uint64{3, 5}},
+		{[]uint64{2, 2, 2}, []uint64{2}},
+		{[]uint64{1, 4, 5, 9, 9}, []uint64{1, 4, 5, 9}},
+		{[]uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}},
+	}
+	for _, tt := range testCases {
+		result := sliceutil.SetUint64(tt.in)
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+}
+
 func TestNotUint64(t *testing.T) {
 	testCases := []struct {
 		setA []uint64

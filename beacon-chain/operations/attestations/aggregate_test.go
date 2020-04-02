@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestAggregateAttestations_SingleAttestation(t *testing.T) {
@@ -20,7 +21,7 @@ func TestAggregateAttestations_SingleAttestation(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 
 	unaggregatedAtts := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
@@ -46,12 +47,16 @@ func TestAggregateAttestations_MultipleAttestationsSameRoot(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 
+	data := &ethpb.AttestationData{
+		Source: &ethpb.Checkpoint{},
+		Target: &ethpb.Checkpoint{},
+	}
 	attsToBeAggregated := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b110001}, Signature: sig.Marshal()},
-		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
-		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101100}, Signature: sig.Marshal()},
+		{Data: data, AggregationBits: bitfield.Bitlist{0b110001}, Signature: sig.Marshal()},
+		{Data: data, AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
+		{Data: data, AggregationBits: bitfield.Bitlist{0b101100}, Signature: sig.Marshal()},
 	}
 
 	if err := s.aggregateAttestations(context.Background(), attsToBeAggregated); err != nil {
@@ -66,7 +71,10 @@ func TestAggregateAttestations_MultipleAttestationsSameRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(wanted, s.pool.AggregatedAttestations()) {
+	got := s.pool.AggregatedAttestations()
+	if !reflect.DeepEqual(wanted, got) {
+		diff, _ := messagediff.PrettyDiff(got[0], wanted[0])
+		t.Log(diff)
 		t.Error("Did not aggregate attestations")
 	}
 }
@@ -88,7 +96,7 @@ func TestAggregateAttestations_MultipleAttestationsDifferentRoots(t *testing.T) 
 	d2.Slot = 2
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 
 	atts := []*ethpb.Attestation{
 		{Data: d, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},

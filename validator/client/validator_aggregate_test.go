@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -18,7 +19,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
+	validator.SubmitAggregateAndProof(context.Background(), 0, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
@@ -29,7 +30,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
-				PublicKey: validatorKey.PublicKey.Marshal(),
+				PublicKey: validatorPubKey.Marshal(),
 			},
 		},
 	}
@@ -39,12 +40,28 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().SubmitAggregateAndProof(
+	m.validatorClient.EXPECT().SubmitAggregateSelectionProof(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.AggregationRequest{}),
-	).Return(&ethpb.AggregationResponse{}, nil)
+		gomock.AssignableToTypeOf(&ethpb.AggregateSelectionRequest{}),
+	).Return(&ethpb.AggregateSelectionResponse{
+		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
+			AggregatorIndex: 0,
+			Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+			SelectionProof:  nil,
+		},
+	}, nil)
 
-	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().SubmitSignedAggregateSelectionProof(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.SignedAggregateSubmitRequest{}),
+	).Return(&ethpb.SignedAggregateSubmitResponse{}, nil)
+
+	validator.SubmitAggregateAndProof(context.Background(), 0, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 }
 
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {

@@ -42,6 +42,7 @@ type ConnectionHandler interface {
 // EncodingProvider provides p2p network encoding.
 type EncodingProvider interface {
 	Encoding() encoder.NetworkEncoding
+	ForkDigest() ([4]byte, error)
 }
 
 // PubSubProvider provides the p2p pubsub protocol.
@@ -53,6 +54,8 @@ type PubSubProvider interface {
 type PeerManager interface {
 	Disconnect(peer.ID) error
 	PeerID() peer.ID
+	RefreshENR(epoch uint64)
+	FindPeersWithSubnet(index uint64) (bool, error)
 }
 
 // Sender abstracts the sending functionality from libp2p.

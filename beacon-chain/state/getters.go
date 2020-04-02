@@ -3,12 +3,14 @@ package state
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // EffectiveBalance returns the effective balance of the
@@ -93,6 +95,7 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	}
 	return &pbp2p.BeaconState{
 		GenesisTime:                 b.GenesisTime(),
+		GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 		Slot:                        b.Slot(),
 		Fork:                        b.Fork(),
 		LatestBlockHeader:           b.LatestBlockHeader(),
@@ -127,6 +130,29 @@ func (b *BeaconState) GenesisTime() uint64 {
 		return 0
 	}
 	return b.state.GenesisTime
+}
+
+// GenesisValidatorRoot of the beacon state.
+func (b *BeaconState) GenesisValidatorRoot() []byte {
+	if !b.HasInnerState() {
+		return nil
+	}
+
+	if b.state.GenesisValidatorsRoot == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	root := make([]byte, 32)
+	copy(root, b.state.GenesisValidatorsRoot)
+	return root
+}
+
+// GenesisUnixTime returns the genesis time as time.Time.
+func (b *BeaconState) GenesisUnixTime() time.Time {
+	if !b.HasInnerState() {
+		return time.Unix(0, 0)
+	}
+	return time.Unix(int64(b.state.GenesisTime), 0)
 }
 
 // Slot of the current beacon chain state.
@@ -176,7 +202,8 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	defer b.lock.RUnlock()
 
 	hdr := &ethpb.BeaconBlockHeader{
-		Slot: b.state.LatestBlockHeader.Slot,
+		Slot:          b.state.LatestBlockHeader.Slot,
+		ProposerIndex: b.state.LatestBlockHeader.ProposerIndex,
 	}
 
 	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))
@@ -190,6 +217,16 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	hdr.BodyRoot = bodyRoot
 	hdr.StateRoot = stateRoot
 	return hdr
+}
+
+// ParentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
+func (b *BeaconState) ParentRoot() [32]byte {
+	if !b.HasInnerState() {
+		return [32]byte{}
+	}
+	parentRoot := [32]byte{}
+	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
+	return parentRoot
 }
 
 // BlockRoots kept track of in the beacon state.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -54,7 +55,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 		NextPageToken: strconv.Itoa(0),
 	}
 	res, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_SourceEpoch{SourceEpoch: 0},
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,17 +85,21 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 
 	// Should throw an error if no genesis data is found.
 	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_Genesis{
-			Genesis: true,
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+			GenesisEpoch: true,
 		},
 	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
 		t.Fatal(err)
 	}
+	att := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}}
 
 	parentRoot := [32]byte{1, 2, 3}
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
 		Slot:       0,
 		ParentRoot: parentRoot[:],
+		Body: &ethpb.BeaconBlockBody{
+			Attestations: []*ethpb.Attestation{att},
+		},
 	},
 	}
 	root, err := ssz.HashTreeRoot(blk.Block)
@@ -107,16 +112,6 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
 		t.Fatal(err)
 	}
-	att := &ethpb.Attestation{
-		AggregationBits: bitfield.Bitlist{0b11},
-		Data: &ethpb.AttestationData{
-			Slot:            0,
-			BeaconBlockRoot: root[:],
-		},
-	}
-	if err := db.SaveAttestation(ctx, att); err != nil {
-		t.Fatal(err)
-	}
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
 		NextPageToken: "",
@@ -124,8 +119,8 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}
 
 	res, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_Genesis{
-			Genesis: true,
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+			GenesisEpoch: true,
 		},
 	})
 	if err != nil {
@@ -141,8 +136,8 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_Genesis{
-			Genesis: true,
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+			GenesisEpoch: true,
 		},
 	}); err != nil && !strings.Contains(err.Error(), "Found more than 1") {
 		t.Fatal(err)
@@ -154,20 +149,29 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
-	count := uint64(10)
+	count := uint64(8)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Slot: i,
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
+				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		if err := db.SaveAttestation(ctx, attExample); err != nil {
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
 			t.Fatal(err)
 		}
-		atts = append(atts, attExample)
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	bs := &Server{
@@ -175,8 +179,8 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	}
 
 	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
-			HeadBlockRoot: []byte("root"),
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+			GenesisEpoch: true,
 		},
 	})
 	if err != nil {
@@ -184,7 +188,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(atts, received.Attestations) {
-		t.Fatalf("incorrect attestations response: wanted %v, received %v", atts, received.Attestations)
+		t.Fatalf("incorrect attestations response: wanted \n%v, received \n%v", atts, received.Attestations)
 	}
 }
 
@@ -199,56 +203,82 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	targetRoot := []byte{7, 8, 9}
 	targetEpoch := uint64(7)
 
-	unknownRoot := []byte{1, 1, 1}
-	atts := []*ethpb.Attestation{
+	blocks := []*ethpb.SignedBeaconBlock{
 		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: someRoot,
-				Source: &ethpb.Checkpoint{
-					Root:  sourceRoot,
-					Epoch: sourceEpoch,
-				},
-				Target: &ethpb.Checkpoint{
-					Root:  targetRoot,
-					Epoch: targetEpoch,
-				},
-				Slot: 3,
-			},
-			AggregationBits: bitfield.Bitlist{0b11},
-		},
-		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: unknownRoot,
-				Source: &ethpb.Checkpoint{
-					Root:  sourceRoot,
-					Epoch: sourceEpoch,
-				},
-				Target: &ethpb.Checkpoint{
-					Root:  targetRoot,
-					Epoch: targetEpoch,
-				},
+			Block: &ethpb.BeaconBlock{
 				Slot: 4,
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: someRoot,
+								Source: &ethpb.Checkpoint{
+									Root:  sourceRoot,
+									Epoch: sourceEpoch,
+								},
+								Target: &ethpb.Checkpoint{
+									Root:  targetRoot,
+									Epoch: targetEpoch,
+								},
+								Slot: 3,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
+				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		},
 		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: someRoot,
-				Source: &ethpb.Checkpoint{
-					Root:  unknownRoot,
-					Epoch: sourceEpoch,
+			Block: &ethpb.BeaconBlock{
+				Slot: 5 + params.BeaconConfig().SlotsPerEpoch,
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: someRoot,
+								Source: &ethpb.Checkpoint{
+									Root:  sourceRoot,
+									Epoch: sourceEpoch,
+								},
+								Target: &ethpb.Checkpoint{
+									Root:  targetRoot,
+									Epoch: targetEpoch,
+								},
+								Slot: 4 + params.BeaconConfig().SlotsPerEpoch,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
 				},
-				Target: &ethpb.Checkpoint{
-					Root:  unknownRoot,
-					Epoch: targetEpoch,
-				},
-				Slot: 5,
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
+		},
+		{
+			Block: &ethpb.BeaconBlock{
+				Slot: 5,
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: someRoot,
+								Source: &ethpb.Checkpoint{
+									Root:  sourceRoot,
+									Epoch: sourceEpoch,
+								},
+								Target: &ethpb.Checkpoint{
+									Root:  targetRoot,
+									Epoch: targetEpoch,
+								},
+								Slot: 4,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
+				},
+			},
 		},
 	}
 
-	if err := db.SaveAttestations(ctx, atts); err != nil {
+	if err := db.SaveBlocks(ctx, blocks); err != nil {
 		t.Fatal(err)
 	}
 
@@ -257,49 +287,22 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	}
 
 	received, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{HeadBlockRoot: someRoot},
+		QueryFilter: &ethpb.ListAttestationsRequest_Epoch{Epoch: 1},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received.Attestations) != 1 {
+		t.Errorf("Wanted 1 matching attestations for epoch %d, received %d", 1, len(received.Attestations))
+	}
+	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(received.Attestations) != 2 {
-		t.Errorf("Wanted 2 matching attestations with root %#x, received %d", someRoot, len(received.Attestations))
-	}
-	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_SourceEpoch{SourceEpoch: sourceEpoch},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 3 {
-		t.Errorf("Wanted 3 matching attestations with source epoch %d, received %d", sourceEpoch, len(received.Attestations))
-	}
-	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_SourceRoot{SourceRoot: sourceRoot},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 2 {
-		t.Errorf("Wanted 2 matching attestations with source root %#x, received %d", sourceRoot, len(received.Attestations))
-	}
-	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: targetEpoch},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 3 {
-		t.Errorf("Wanted 3 matching attestations with target epoch %d, received %d", targetEpoch, len(received.Attestations))
-	}
-	received, err = bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_TargetRoot{TargetRoot: targetRoot},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(received.Attestations) != 2 {
-		t.Errorf("Wanted 2 matching attestations with target root %#x, received %d", targetRoot, len(received.Attestations))
+		t.Errorf("Wanted 2 matching attestations for epoch %d, received %d", 0, len(received.Attestations))
 	}
 }
 
@@ -308,144 +311,113 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
-	count := uint64(100)
+	count := params.BeaconConfig().SlotsPerEpoch * 4
 	atts := make([]*ethpb.Attestation, 0, count)
-	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
-			},
-			AggregationBits: bitfield.Bitlist{0b11},
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		for s := uint64(0); s < 4; s++ {
+			blockExample := &ethpb.SignedBeaconBlock{
+				Block: &ethpb.BeaconBlock{
+					Slot: i,
+					Body: &ethpb.BeaconBlockBody{
+						Attestations: []*ethpb.Attestation{
+							{
+								Data: &ethpb.AttestationData{
+									CommitteeIndex: s,
+									Slot:           i,
+								},
+								AggregationBits: bitfield.Bitlist{0b11},
+							},
+						},
+					},
+				},
+			}
+			if err := db.SaveBlock(ctx, blockExample); err != nil {
+				t.Fatal(err)
+			}
+			atts = append(atts, blockExample.Block.Body.Attestations...)
 		}
-		if err := db.SaveAttestation(ctx, attExample); err != nil {
-			t.Fatal(err)
-		}
-		atts = append(atts, attExample)
 	}
+	sort.Sort(sortableAttestations(atts))
 
 	bs := &Server{
 		BeaconDB: db,
 	}
 
 	tests := []struct {
-		req *ethpb.ListAttestationsRequest
-		res *ethpb.ListAttestationsResponse
+		name string
+		req  *ethpb.ListAttestationsRequest
+		res  *ethpb.ListAttestationsResponse
 	}{
 		{
+			name: "1st of 3 pages",
 			req: &ethpb.ListAttestationsRequest{
-				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
-					HeadBlockRoot: []byte("root"),
+				QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+					GenesisEpoch: true,
 				},
 				PageToken: strconv.Itoa(1),
 				PageSize:  3,
 			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            3,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            4,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            5,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+					atts[3],
+					atts[4],
+					atts[5],
 				},
 				NextPageToken: strconv.Itoa(2),
-				TotalSize:     int32(count)}},
+				TotalSize:     int32(count),
+			},
+		},
 		{
+			name: "10 of size 1",
 			req: &ethpb.ListAttestationsRequest{
-				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
-					HeadBlockRoot: []byte("root"),
+				QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+					GenesisEpoch: true,
 				},
 				PageToken: strconv.Itoa(10),
-				PageSize:  5,
+				PageSize:  1,
 			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            50,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            51,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            52,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            53,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            54,
-					}, AggregationBits: bitfield.Bitlist{0b11}},
+					atts[10],
 				},
 				NextPageToken: strconv.Itoa(11),
-				TotalSize:     int32(count)}},
+				TotalSize:     int32(count),
+			},
+		},
 		{
+			name: "2 of size 8",
 			req: &ethpb.ListAttestationsRequest{
-				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
-					HeadBlockRoot: []byte("root"),
+				QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+					GenesisEpoch: true,
 				},
-				PageToken: strconv.Itoa(33),
-				PageSize:  3,
+				PageToken: strconv.Itoa(2),
+				PageSize:  8,
 			},
 			res: &ethpb.ListAttestationsResponse{
 				Attestations: []*ethpb.Attestation{
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            99,
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+					atts[16],
+					atts[17],
+					atts[18],
+					atts[19],
+					atts[20],
+					atts[21],
+					atts[22],
+					atts[23],
 				},
-				NextPageToken: "",
-				TotalSize:     int32(count)}},
-		{
-			req: &ethpb.ListAttestationsRequest{
-				QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
-					HeadBlockRoot: []byte("root"),
-				},
-				PageSize: 2,
-			},
-			res: &ethpb.ListAttestationsResponse{
-				Attestations: []*ethpb.Attestation{
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-					},
-						AggregationBits: bitfield.Bitlist{0b11}},
-					{Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("root"),
-						Slot:            1,
-					},
-						AggregationBits: bitfield.Bitlist{0b11},
-					},
-				},
-				NextPageToken: strconv.Itoa(1),
-				TotalSize:     int32(count)}},
+				NextPageToken: strconv.Itoa(3),
+				TotalSize:     int32(count)},
+		},
 	}
 	for _, test := range tests {
-		res, err := bs.ListAttestations(ctx, test.req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !proto.Equal(res, test.res) {
-			t.Errorf("Incorrect attestations response, wanted %v, received %v", test.res, res)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			res, err := bs.ListAttestations(ctx, test.req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !proto.Equal(res, test.res) {
+				t.Errorf("Incorrect attestations response, wanted \n%v, received \n%v", test.res, res)
+			}
+		})
 	}
 }
 
@@ -457,17 +429,25 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	count := uint64(1)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
+				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		if err := db.SaveAttestation(ctx, attExample); err != nil {
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
 			t.Fatal(err)
 		}
-		atts = append(atts, attExample)
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	bs := &Server{
@@ -475,8 +455,8 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	}
 
 	req := &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
-			HeadBlockRoot: []byte("root"),
+		QueryFilter: &ethpb.ListAttestationsRequest_Epoch{
+			Epoch: 0,
 		},
 		PageToken: strconv.Itoa(1),
 		PageSize:  100,
@@ -507,17 +487,25 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	count := uint64(params.BeaconConfig().DefaultPageSize)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
+				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		if err := db.SaveAttestation(ctx, attExample); err != nil {
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
 			t.Fatal(err)
 		}
-		atts = append(atts, attExample)
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	bs := &Server{
@@ -525,8 +513,8 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	}
 
 	req := &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_HeadBlockRoot{
-			HeadBlockRoot: []byte("root"),
+		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{
+			GenesisEpoch: true,
 		},
 	}
 	res, err := bs.ListAttestations(ctx, req)
@@ -551,22 +539,26 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
-				CommitteeIndex:  0,
-				Target: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  make([]byte, 32),
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+								CommitteeIndex:  0,
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
 				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		atts = append(atts, attExample)
-	}
-	if err := db.SaveAttestations(ctx, atts); err != nil {
-		t.Fatal(err)
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	// We setup 128 validators.
@@ -600,7 +592,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
@@ -646,22 +638,30 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	startSlot := helpers.StartSlot(50)
 	epoch := uint64(50)
 	for i := startSlot; i < count; i++ {
-		attExample := &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("root"),
-				Slot:            i,
-				CommitteeIndex:  0,
-				Target: &ethpb.Checkpoint{
-					Epoch: epoch,
-					Root:  make([]byte, 32),
+		blockExample := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Body: &ethpb.BeaconBlockBody{
+					Attestations: []*ethpb.Attestation{
+						{
+							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: []byte("root"),
+								Slot:            i,
+								CommitteeIndex:  0,
+								Target: &ethpb.Checkpoint{
+									Epoch: epoch,
+									Root:  make([]byte, 32),
+								},
+							},
+							AggregationBits: bitfield.Bitlist{0b11},
+						},
+					},
 				},
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		}
-		atts = append(atts, attExample)
-	}
-	if err := db.SaveAttestations(ctx, atts); err != nil {
-		t.Fatal(err)
+		if err := db.SaveBlock(ctx, blockExample); err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
 	// We setup 128 validators.
@@ -697,7 +697,7 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
@@ -715,8 +715,8 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	}
 
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
-		QueryFilter: &ethpb.ListIndexedAttestationsRequest_TargetEpoch{
-			TargetEpoch: epoch,
+		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
+			Epoch: epoch,
 		},
 	})
 	if err != nil {
@@ -946,11 +946,11 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 					},
 				},
 			}
-			encoded, err := ssz.Marshal(attExample.Data)
+			encoded, err := helpers.ComputeSigningRoot(attExample.Data, []byte{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			sig := privKeys[j].Sign(encoded, 0 /*domain*/)
+			sig := privKeys[j].Sign(encoded[:])
 			attExample.Signature = sig.Marshal()
 
 			var indexInCommittee uint64
@@ -989,7 +989,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	for i := 0; i < len(indexedAtts); i++ {
 		att := aggAtts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}

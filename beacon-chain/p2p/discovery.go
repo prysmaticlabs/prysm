@@ -27,24 +27,40 @@ type Listener interface {
 	LookupRandom() []*enode.Node
 	Ping(*enode.Node) error
 	RequestENR(*enode.Node) (*enode.Node, error)
+	LocalNode() *enode.LocalNode
 }
 
-func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *discover.UDPv5 {
+func (s *Service) createListener(
+	ipAddr net.IP,
+	privKey *ecdsa.PrivateKey,
+) *discover.UDPv5 {
 	udpAddr := &net.UDPAddr{
 		IP:   ipAddr,
-		Port: int(cfg.UDPPort),
+		Port: int(s.cfg.UDPPort),
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	// assume ip is either ipv4 or ipv6
+	networkVersion := ""
+	if ipAddr.To4() != nil {
+		networkVersion = "udp4"
+	} else {
+		networkVersion = "udp6"
+	}
+	conn, err := net.ListenUDP(networkVersion, udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(privKey, ipAddr, int(cfg.UDPPort), int(cfg.TCPPort))
+	localNode, err := s.createLocalNode(
+		privKey,
+		ipAddr,
+		int(s.cfg.UDPPort),
+		int(s.cfg.TCPPort),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if cfg.HostAddress != "" {
-		hostIP := net.ParseIP(cfg.HostAddress)
-		if hostIP.To4() == nil {
+	if s.cfg.HostAddress != "" {
+		hostIP := net.ParseIP(s.cfg.HostAddress)
+		if hostIP.To4() == nil && hostIP.To16() == nil {
 			log.Errorf("Invalid host address given: %s", hostIP.String())
 		} else {
 			localNode.SetFallbackIP(hostIP)
@@ -54,7 +70,7 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 		PrivateKey: privKey,
 	}
 	dv5Cfg.Bootnodes = []*enode.Node{}
-	for _, addr := range cfg.Discv5BootStrapAddr {
+	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			log.Fatal(err)
@@ -69,7 +85,12 @@ func createListener(ipAddr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) *disc
 	return network
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpPort int) (*enode.LocalNode, error) {
+func (s *Service) createLocalNode(
+	privKey *ecdsa.PrivateKey,
+	ipAddr net.IP,
+	udpPort int,
+	tcpPort int,
+) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open node's peer database")
@@ -84,13 +105,20 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
 
-	return localNode, nil
+	localNode, err = addForkEntry(localNode, s.genesisTime, s.genesisValidatorsRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not add eth2 fork version entry to enr")
+	}
+	return intializeAttSubnets(localNode), nil
 }
 
-func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
-	listener := createListener(addr, privKey, cfg)
-	node := listener.Self()
-	log.WithField("nodeID", node.ID()).Info("Started discovery v5")
+func (s *Service) startDiscoveryV5(
+	addr net.IP,
+	privKey *ecdsa.PrivateKey,
+) (*discover.UDPv5, error) {
+	listener := s.createListener(addr, privKey)
+	record := listener.Self()
+	log.WithField("ENR", record.String()).Info("Started discovery v5")
 	return listener, nil
 }
 

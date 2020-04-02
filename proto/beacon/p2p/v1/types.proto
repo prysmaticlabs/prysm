@@ -9,8 +9,9 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 message BeaconState {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
-  uint64 slot = 1002;
-  Fork fork = 1003;
+  bytes genesis_validators_root = 1002 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 slot = 1003;
+  Fork fork = 1004;
 
   // History [2001-3000]
   ethereum.eth.v1alpha1.BeaconBlockHeader latest_block_header = 2001;
@@ -83,6 +84,25 @@ message StateSummary {
   uint64 slot = 1;
   // The block root of the state.
   bytes root = 2;
-  // The block root at epoch boundary of the state.
-  bytes boundary_root = 3;
+}
+
+message SigningRoot {
+  // The root of the object being signed.
+  bytes object_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  // The domain for the particular object being signed.
+  bytes domain = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+}
+
+message ForkData {
+  // The current version of the fork.
+  bytes current_version = 4 [(gogoproto.moretags) = "ssz-size:\"4\""];
+  // The genesis validators root of the fork.
+  bytes genesis_validators_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+}
+
+message SignedAggregateAndProof {
+  // The aggregated and proof from the aggregator.
+  ethereum.eth.v1alpha1.AggregateAttestationAndProof message = 1;
+  // The signature of the aggregator signing the aggregated and proof object.
+  bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }

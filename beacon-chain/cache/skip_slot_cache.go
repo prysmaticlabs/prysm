@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -29,6 +29,7 @@ var (
 type SkipSlotCache struct {
 	cache      *lru.Cache
 	lock       sync.RWMutex
+	disabled   bool // Allow for programmatic toggling of the cache, useful during initial sync.
 	inProgress map[uint64]bool
 }
 
@@ -44,10 +45,22 @@ func NewSkipSlotCache() *SkipSlotCache {
 	}
 }
 
+// Enable the skip slot cache.
+func (c *SkipSlotCache) Enable() {
+	c.disabled = false
+}
+
+// Disable the skip slot cache.
+func (c *SkipSlotCache) Disable() {
+	c.disabled = true
+}
+
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
 func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.BeaconState, error) {
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	ctx, span := trace.StartSpan(ctx, "skipSlotCache.Get")
+	defer span.End()
+	if c.disabled {
 		// Return a miss result if cache is not enabled.
 		skipSlotCacheMiss.Inc()
 		return nil, nil
@@ -57,6 +70,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 
 	// Another identical request may be in progress already. Let's wait until
 	// any in progress request resolves or our timeout is exceeded.
+	inProgress := false
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -67,6 +81,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 			c.lock.RUnlock()
 			break
 		}
+		inProgress = true
 		c.lock.RUnlock()
 
 		// This increasing backoff is to decrease the CPU cycles while waiting
@@ -75,21 +90,24 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 		delay *= delayFactor
 		delay = math.Min(delay, maxDelay)
 	}
+	span.AddAttributes(trace.BoolAttribute("inProgress", inProgress))
 
 	item, exists := c.cache.Get(slot)
 
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
+		span.AddAttributes(trace.BoolAttribute("hit", true))
 		return item.(*stateTrie.BeaconState).Copy(), nil
 	}
 	skipSlotCacheMiss.Inc()
+	span.AddAttributes(trace.BoolAttribute("hit", false))
 	return nil, nil
 }
 
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
 func (c *SkipSlotCache) MarkInProgress(slot uint64) error {
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	if c.disabled {
 		return nil
 	}
 
@@ -106,7 +124,7 @@ func (c *SkipSlotCache) MarkInProgress(slot uint64) error {
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
 func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	if c.disabled {
 		return nil
 	}
 
@@ -119,7 +137,7 @@ func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
 
 // Put the response in the cache.
 func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.BeaconState) error {
-	if !featureconfig.Get().EnableSkipSlotsCache {
+	if c.disabled {
 		return nil
 	}
 

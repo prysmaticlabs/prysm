@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -210,7 +211,7 @@ func TestPruneNonBoundary_CanPrune(t *testing.T) {
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())}
 	service, err := NewService(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)

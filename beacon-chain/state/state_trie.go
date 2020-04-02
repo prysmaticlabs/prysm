@@ -1,15 +1,13 @@
 package state
 
 import (
+	"context"
 	"runtime"
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/protolambda/zssz/merkle"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"go.opencensus.io/trace"
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -30,15 +30,15 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
+		dirtyFields:           make(map[fieldIndex]interface{}, 21),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		rebuildTrie:           make(map[fieldIndex]bool, 20),
+		rebuildTrie:           make(map[fieldIndex]bool, 21),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 21; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
 		b.rebuildTrie[fieldIndex(i)] = true
 		b.dirtyIndices[fieldIndex(i)] = []uint64{}
@@ -101,12 +101,13 @@ func (b *BeaconState) Copy() *BeaconState {
 			PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+			GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 		},
-		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
-		rebuildTrie:           make(map[fieldIndex]bool, 20),
+		dirtyFields:           make(map[fieldIndex]interface{}, 21),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+		rebuildTrie:           make(map[fieldIndex]bool, 21),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
+		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
 
 		// Copy on write validator index map.
 		valIdxMap: b.valIdxMap,
@@ -178,7 +179,10 @@ func (b *BeaconState) Copy() *BeaconState {
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
-func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
+func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
+	defer span.End()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -189,7 +193,7 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{})
+		b.dirtyFields = make(map[fieldIndex]interface{}, 21)
 	}
 
 	for field := range b.dirtyFields {
@@ -209,7 +213,7 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 // pads the leaves to a power-of-two length.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
+	layers := make([][][]byte, stateutil.GetDepth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}
@@ -236,9 +240,12 @@ func merkleize(leaves [][]byte) [][][]byte {
 }
 
 func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
 		return stateutil.Uint64Root(b.state.GenesisTime), nil
+	case genesisValidatorRoot:
+		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return stateutil.Uint64Root(b.state.Slot), nil
 	case eth1DepositIndex:
@@ -278,11 +285,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
-		return stateutil.Eth1Root(b.state.Eth1Data)
+		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if featureconfig.Get().EnableFieldTrie {
 			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().SlotsPerEth1VotingPeriod)
+				err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
 				if err != nil {
 					return [32]byte{}, err
 				}
@@ -356,11 +363,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.PreviousJustifiedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.CurrentJustifiedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
@@ -376,7 +383,7 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 		fTrie = newTrie
 	}
 	// remove duplicate indexes
-	b.dirtyIndices[index] = sliceutil.UnionUint64(b.dirtyIndices[index], []uint64{})
+	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]

@@ -7,10 +7,10 @@ import (
 	"reflect"
 	"testing"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -51,17 +51,17 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 	); err != nil {
 		t.Fatal(err)
 	}
-	signingRoot, err := ssz.HashTreeRoot(exit.Exit)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
+	signingRoot, err := helpers.ComputeSigningRoot(exit.Exit, domain)
+	if err != nil {
+		t.Error(err)
+	}
 	priv := bls.RandKey()
 
-	sig := priv.Sign(signingRoot[:], domain)
+	sig := priv.Sign(signingRoot[:])
 	exit.Signature = sig.Marshal()
 
 	val, err := state.ValidatorAtIndex(0)
@@ -87,12 +87,14 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
+	c, _ := lru.New(10)
 	r := &Service{
 		p2p: p,
 		chain: &mock.ChainService{
 			State: s,
 		},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync:   &mockSync.Sync{IsSyncing: false},
+		seenExitCache: c,
 	}
 
 	buf := new(bytes.Buffer)

@@ -3,8 +3,8 @@ package initialsync
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -16,18 +16,27 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
+const (
+	// maxPendingRequests limits how many concurrent fetch request one can initiate.
+	maxPendingRequests = 8
+	// peersPercentagePerRequest caps percentage of peers to be used in a request.
+	peersPercentagePerRequest = 0.75
+)
+
 var (
-	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
-	errFetcherCtxIsDone   = errors.New("fetcher's context is done, reinitialize")
-	errStartSlotIsTooHigh = errors.New("start slot is bigger than highest finalized slot")
+	errNoPeersAvailable = errors.New("no peers available, waiting for reconnect")
+	errFetcherCtxIsDone = errors.New("fetcher's context is done, reinitialize")
+	errSlotIsTooHigh    = errors.New("slot is higher than the finalized slot")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
@@ -40,6 +49,7 @@ type blocksFetcherConfig struct {
 // On an incoming requests, requested block range is evenly divided
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
+	sync.Mutex
 	ctx            context.Context
 	cancel         context.CancelFunc
 	headFetcher    blockchain.HeadFetcher
@@ -80,8 +90,8 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		headFetcher:    cfg.headFetcher,
 		p2p:            cfg.p2p,
 		rateLimiter:    rateLimiter,
-		fetchRequests:  make(chan *fetchRequestParams, queueMaxPendingRequests),
-		fetchResponses: make(chan *fetchRequestResponse, queueMaxPendingRequests),
+		fetchRequests:  make(chan *fetchRequestParams, maxPendingRequests),
+		fetchResponses: make(chan *fetchRequestResponse, maxPendingRequests),
 		quit:           make(chan struct{}),
 	}
 }
@@ -120,6 +130,11 @@ func (f *blocksFetcher) loop() {
 	}()
 
 	for {
+		// Make sure there is are available peers before processing requests.
+		if _, err := f.waitForMinimumPeers(f.ctx); err != nil {
+			log.Error(err)
+		}
+
 		select {
 		case <-f.ctx.Done():
 			log.Debug("Context closed, exiting goroutine (blocks fetcher)")
@@ -185,7 +200,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
 	if start > highestFinalizedSlot {
-		response.err = errStartSlotIsTooHigh
+		response.err = errSlotIsTooHigh
 		return response
 	}
 
@@ -221,16 +236,10 @@ func (f *blocksFetcher) collectPeerResponses(
 		return nil, ctx.Err()
 	}
 
+	peers = f.selectPeers(peers)
 	if len(peers) == 0 {
 		return nil, errNoPeersAvailable
 	}
-
-	// Shuffle peers to prevent a bad peer from
-	// stalling sync with invalid blocks.
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
-	randGenerator.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
 
 	p2pRequests := new(sync.WaitGroup)
 	errChan := make(chan error)
@@ -245,11 +254,11 @@ func (f *blocksFetcher) collectPeerResponses(
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
 	if start > highestFinalizedSlot {
-		return nil, errStartSlotIsTooHigh
+		return nil, errSlotIsTooHigh
 	}
 
 	// Spread load evenly among available peers.
-	perPeerCount := count / uint64(len(peers))
+	perPeerCount := mathutil.Min(count/uint64(len(peers)), allowedBlocksPerSecond)
 	remainder := int(count % uint64(len(peers)))
 	for i, pid := range peers {
 		start, step := start+uint64(i)*step, step*uint64(len(peers))
@@ -317,17 +326,16 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 	}
 
 	req := &p2ppb.BeaconBlocksByRangeRequest{
-		HeadBlockRoot: root,
-		StartSlot:     start,
-		Count:         count,
-		Step:          step,
+		StartSlot: start,
+		Count:     count,
+		Step:      step,
 	}
 
 	resp, respErr := f.requestBlocks(ctx, req, pid)
 	if respErr != nil {
 		// Fail over to some other, randomly selected, peer.
-		headSlot := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-		root1, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headSlot)
+		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		root1, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		if bytes.Compare(root, root1) != 0 {
 			return nil, errors.Errorf("can not resend, root mismatch: %x:%x", root, root1)
 		}
@@ -354,6 +362,7 @@ func (f *blocksFetcher) requestBlocks(
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
 ) ([]*eth.SignedBeaconBlock, error) {
+	f.Lock()
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
 		time.Sleep(f.rateLimiter.TillEmpty(pid.String()))
@@ -364,8 +373,8 @@ func (f *blocksFetcher) requestBlocks(
 		"start": req.StartSlot,
 		"count": req.Count,
 		"step":  req.Step,
-		"head":  fmt.Sprintf("%#x", req.HeadBlockRoot),
 	}).Debug("Requesting blocks")
+	f.Unlock()
 	stream, err := f.p2p.Send(ctx, req, pid)
 	if err != nil {
 		return nil, err
@@ -406,4 +415,92 @@ func selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
 	})
 
 	return peers[0], nil
+}
+
+// waitForMinimumPeers spins and waits up until enough peers are available.
+func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, error) {
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
+	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+		_, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+		if len(peers) >= required {
+			return peers, nil
+		}
+		log.WithFields(logrus.Fields{
+			"suitable": len(peers),
+			"required": required}).Info("Waiting for enough suitable peers before syncing")
+		time.Sleep(handshakePollingInterval)
+	}
+}
+
+// selectPeers returns transformed list of peers (randomized, constrained if necessary).
+func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
+	if len(peers) == 0 {
+		return peers
+	}
+
+	// Shuffle peers to prevent a bad peer from
+	// stalling sync with invalid blocks.
+	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
+
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
+
+	limit := uint64(math.Round(float64(len(peers)) * peersPercentagePerRequest))
+	limit = mathutil.Max(limit, uint64(required))
+	limit = mathutil.Min(limit, uint64(len(peers)))
+	return peers[:limit]
+}
+
+// nonSkippedSlotAfter checks slots after the given one in an attempt to find non-empty future slot.
+func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
+	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+	root, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	if len(peers) == 0 {
+		return 0, errNoPeersAvailable
+	}
+
+	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	nextPID := func() peer.ID {
+		randGenerator.Shuffle(len(peers), func(i, j int) {
+			peers[i], peers[j] = peers[j], peers[i]
+		})
+		return peers[0]
+	}
+
+	for slot <= helpers.StartSlot(epoch+1) {
+		req := &p2ppb.BeaconBlocksByRangeRequest{
+			HeadBlockRoot: root,
+			StartSlot:     slot + 1,
+			Count:         blockBatchSize,
+			Step:          1,
+		}
+
+		blocks, err := f.requestBlocks(ctx, req, nextPID())
+		if err != nil {
+			return slot, err
+		}
+
+		if len(blocks) > 0 {
+			slots := make([]uint64, len(blocks))
+			for i, block := range blocks {
+				slots[i] = block.Block.Slot
+			}
+			return blocks[0].Block.Slot, nil
+		}
+		slot += blockBatchSize
+	}
+
+	return slot, nil
 }

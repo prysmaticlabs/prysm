@@ -129,7 +129,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		)
 
 		for _, att := range indexedAtts {
-			slashings, err := ds.detectAttesterSlashings(ctx, att)
+			slashings, err := ds.DetectAttesterSlashings(ctx, att)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
