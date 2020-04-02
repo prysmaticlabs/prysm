@@ -62,7 +62,11 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	defer span.End()
 
 	if !featureconfig.Get().NoNewStateMgmt {
-		preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
+		if !s.stateGen.StateSummaryExists(ctx, parentRoot) {
+			return nil, errors.New("provided block root does not have block saved in the db")
+		}
+		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 		}

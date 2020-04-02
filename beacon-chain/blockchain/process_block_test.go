@@ -9,12 +9,14 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,7 +28,10 @@ func TestStore_OnBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{
+		BeaconDB: db,
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -60,10 +65,16 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), randomParentRoot); err != nil {
 		t.Fatal(err)
 	}
 	randomParentRoot2 := roots[1]
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2[:]}); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), bytesutil.ToBytes32(randomParentRoot2)); err != nil {
 		t.Fatal(err)
 	}
@@ -307,12 +318,15 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	}
 }
 
-func TestCachedPreState_CanGetFromCache(t *testing.T) {
+func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{
+		BeaconDB: db,
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -321,7 +335,8 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
-	service.initSyncState[r] = s
+	service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r[:]})
+	service.stateGen.SaveState(ctx, r, s)
 
 	received, err := service.verifyBlkPreState(ctx, b)
 	if err != nil {
@@ -337,7 +352,10 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{
+		BeaconDB: db,
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -348,13 +366,14 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	_, err = service.verifyBlkPreState(ctx, b)
-	wanted := "pre state of slot 1 does not exist"
+	wanted := "provided block root does not have block saved in the db"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
 	}
 
 	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	service.beaconDB.SaveState(ctx, s, r)
+	service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 1, Root: r[:]})
+	service.stateGen.SaveState(ctx, r, s)
 
 	received, err := service.verifyBlkPreState(ctx, b)
 	if err != nil {
