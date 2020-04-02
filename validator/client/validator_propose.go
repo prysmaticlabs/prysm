@@ -97,7 +97,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		}
 
 		if HasProposedForEpoch(history, epoch) {
-			log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
+			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
 			if v.emitAccountMetrics {
 				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
