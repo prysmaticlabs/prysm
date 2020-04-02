@@ -48,7 +48,7 @@ type Flags struct {
 	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
+	DisableNewStateMgmt                        bool   // NewStateMgmt disables the new state mgmt service.
 	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
 	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool   // EnableBlockHTR enables custom hashing of our beacon blocks.
@@ -165,9 +165,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(newStateMgmt.Name) {
-		log.Warn("Enabling experimental state management service")
-		cfg.NewStateMgmt = true
+	if ctx.Bool(disableNewStateMgmt.Name) {
+		log.Warn("Disabling state management service")
+		cfg.DisableNewStateMgmt = true
 	}
 	if ctx.Bool(enableInitSyncQueue.Name) {
 		log.Warn("Enabling initial sync queue")

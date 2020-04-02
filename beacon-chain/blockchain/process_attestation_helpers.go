@@ -32,7 +32,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	}
 
 	var baseState *stateTrie.BeaconState
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		baseState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
@@ -128,7 +128,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			// different seeds.
 			var aState *stateTrie.BeaconState
 			var err error
-			if featureconfig.Get().NewStateMgmt {
+			if !featureconfig.Get().DisableNewStateMgmt {
 				aState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				return nil, err
 			}
