@@ -29,6 +29,7 @@ var TopicMappings = map[reflect.Type]string{
 	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/goodbye/1",
 	reflect.TypeOf(&pb.BeaconBlocksByRangeRequest{}): "/eth2/beacon_chain/req/beacon_blocks_by_range/1",
 	reflect.TypeOf([][32]byte{}):                     "/eth2/beacon_chain/req/beacon_blocks_by_root/1",
+	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/ping/1/",
 }
 
 // TestP2P represents a p2p implementation that can be used for testing.
@@ -39,6 +40,7 @@ type TestP2P struct {
 	BroadcastCalled bool
 	DelaySend       bool
 	peers           *peers.Status
+	LocalMetadata   *pb.MetaData
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -247,4 +249,14 @@ func (p *TestP2P) RefreshENR(epoch uint64) {
 // ForkDigest mocks the p2p func.
 func (p *TestP2P) ForkDigest() ([4]byte, error) {
 	return [4]byte{}, nil
+}
+
+// Metadata mocks the peer's metadata.
+func (p *TestP2P) Metadata() *pb.MetaData {
+	return proto.Clone(p.LocalMetadata).(*pb.MetaData)
+}
+
+// MetadataSeq mocks metadata sequence number.
+func (p *TestP2P) MetadataSeq() uint64 {
+	return p.LocalMetadata.SeqNumber
 }

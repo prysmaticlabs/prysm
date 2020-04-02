@@ -94,6 +94,7 @@ go_test(
         "rpc_beacon_blocks_by_range_test.go",
         "rpc_beacon_blocks_by_root_test.go",
         "rpc_goodbye_test.go",
+        "rpc_ping_test.go",
         "rpc_status_test.go",
         "rpc_test.go",
         "subscriber_beacon_aggregate_proof_test.go",
