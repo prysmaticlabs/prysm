@@ -148,6 +148,11 @@ var (
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedEnableInitSyncQueue = &cli.BoolFlag{
+		Name:   "enable-initial-sync-queue",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableFinalizedBlockRootIndexFlag = &cli.BoolFlag{
 		Name:   "enable-finalized-block-root-index",
 		Usage:  deprecatedUsage,
@@ -272,6 +277,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
