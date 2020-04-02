@@ -25,16 +25,20 @@ func (bs *Service) FindOrGetPublicKeys(
 			validators[validatorIdx] = pub
 			continue
 		}
+		// inline removal of cached elements from slice
 		validatorIndices[notFound] = validatorIdx
 		notFound++
 	}
+	// trim the slice to its new size
+	validatorIndices = validatorIndices[:notFound]
+
 	if len(validators) > 0 {
 		log.Tracef(
 			"Retrieved validators public keys from cache: %v",
 			validators,
 		)
 	}
-	validatorIndices = validatorIndices[:notFound]
+
 	if notFound == 0 {
 		return validators, nil
 	}
