@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -31,27 +33,27 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 // registerRPCHandlers for p2p RPC.
 func (r *Service) registerRPCHandlers() {
 	r.registerRPC(
-		"/eth2/beacon_chain/req/status/1",
+		p2p.RPCStatusTopic,
 		&pb.Status{},
 		r.statusRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/goodbye/1",
+		p2p.RPCGoodByeTopic,
 		new(uint64),
 		r.goodbyeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/beacon_blocks_by_range/1",
+		p2p.RPCBlocksByRangeTopic,
 		&pb.BeaconBlocksByRangeRequest{},
 		r.beaconBlocksByRangeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/beacon_blocks_by_root/1",
+		p2p.RPCBlocksByRootTopic,
 		[][32]byte{},
 		r.beaconBlocksRootRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/ping/1/",
+		p2p.RPCPingTopic,
 		new(uint64),
 		r.pingHandler,
 	)

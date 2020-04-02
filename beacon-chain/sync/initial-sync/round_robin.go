@@ -6,6 +6,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
@@ -131,7 +133,7 @@ func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRa
 		"count": req.Count,
 		"step":  req.Step,
 	}).Debug("Requesting blocks")
-	stream, err := s.p2p.Send(ctx, req, pid)
+	stream, err := s.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request to peer")
 	}

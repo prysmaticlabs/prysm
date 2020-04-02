@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
@@ -36,7 +38,8 @@ func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	stream, err := r.p2p.Send(ctx, r.p2p.MetadataSeq(), id)
+	metadataSeq := r.p2p.MetadataSeq()
+	stream, err := r.p2p.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -88,7 +90,7 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       r.chain.HeadSlot(),
 	}
-	stream, err := r.p2p.Send(ctx, resp, id)
+	stream, err := r.p2p.Send(ctx, resp, p2p.RPCStatusTopic, id)
 	if err != nil {
 		return err
 	}

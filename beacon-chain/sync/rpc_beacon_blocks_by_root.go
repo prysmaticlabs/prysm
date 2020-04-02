@@ -5,6 +5,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
@@ -17,7 +19,7 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	stream, err := r.p2p.Send(ctx, blockRoots, id)
+	stream, err := r.p2p.Send(ctx, blockRoots, p2p.RPCBlocksByRootTopic, id)
 	if err != nil {
 		return err
 	}
