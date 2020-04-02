@@ -10,6 +10,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/endtoend/components"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
@@ -19,6 +20,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+func init() {
+	state.SkipSlotCache.Disable()
+}
+
 func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
@@ -27,7 +32,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	keystorePath, eth1PID := components.StartEth1Node(t)
 	multiAddrs, bProcessIDs := components.StartBeaconNodes(t, config)
 	valProcessIDs := components.StartValidators(t, config, keystorePath)
-	processIDs := append(bProcessIDs, valProcessIDs...)
+	processIDs := append(valProcessIDs, bProcessIDs...)
 	processIDs = append(processIDs, eth1PID)
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
@@ -95,7 +100,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		return
 	}
 
-	multiAddr, pID := components.StartNewBeaconNode(t, config, multiAddrs)
+	multiAddr, processID := components.StartNewBeaconNode(t, config, multiAddrs)
 	multiAddrs = append(multiAddrs, multiAddr)
 	index := e2e.TestParams.BeaconNodeCount
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
@@ -115,7 +120,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
-	defer helpers.KillProcesses(t, []int{pID})
+	defer helpers.KillProcesses(t, []int{processID})
 	if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
 		t.Fatalf("Failed to sync: %v", err)
 	}

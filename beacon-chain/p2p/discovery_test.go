@@ -106,6 +106,12 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		}
 		listeners = append(listeners, listener)
 	}
+	defer func() {
+		// Close down all peers.
+		for _, listener := range listeners {
+			listener.Close()
+		}
+	}()
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(discoveryWaitTime)
@@ -115,11 +121,6 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	if len(nodes) < 4 {
 		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
 			"Expected more than or equal to %d but got %d", 4, len(nodes))
-	}
-
-	// Close all ports
-	for _, listener := range listeners {
-		listener.Close()
 	}
 }
 
@@ -187,14 +188,15 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Start()
+	defer func() {
+		if err := s.Stop(); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(10 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
-	}
-
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
 	}
 }

@@ -242,29 +242,56 @@ func TestStateMachine_isLowestEpochState(t *testing.T) {
 	}
 }
 
-func TestStateMachine_highestEpochSlot(t *testing.T) {
+func TestStateMachine_highestEpoch(t *testing.T) {
 	sm := newStateMachine()
-	if _, err := sm.highestEpochSlot(); err == nil {
+	if _, err := sm.highestEpoch(); err == nil {
 		t.Error("expected error")
 	}
 	sm.addEpochState(12)
 	sm.addEpochState(13)
 	sm.addEpochState(14)
-	slot, err := sm.highestEpochSlot()
+	epoch, err := sm.highestEpoch()
 	if err != nil {
 		t.Error(err)
 	}
-	if slot != 14 {
-		t.Errorf("incorrect highest slot: %v, want: %v", slot, 14)
+	if epoch != 14 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 14)
 	}
 	if err := sm.removeEpochState(14); err != nil {
 		t.Error(err)
 	}
-	slot, err = sm.highestEpochSlot()
+	epoch, err = sm.highestEpoch()
 	if err != nil {
 		t.Error(err)
 	}
-	if slot != 13 {
-		t.Errorf("incorrect highest slot: %v, want: %v", slot, 13)
+	if epoch != 13 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
+	}
+}
+
+func TestStateMachine_lowestEpoch(t *testing.T) {
+	sm := newStateMachine()
+	if _, err := sm.highestEpoch(); err == nil {
+		t.Error("expected error")
+	}
+	sm.addEpochState(12)
+	sm.addEpochState(13)
+	sm.addEpochState(14)
+	epoch, err := sm.lowestEpoch()
+	if err != nil {
+		t.Error(err)
+	}
+	if epoch != 12 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 12)
+	}
+	if err := sm.removeEpochState(12); err != nil {
+		t.Error(err)
+	}
+	epoch, err = sm.lowestEpoch()
+	if err != nil {
+		t.Error(err)
+	}
+	if epoch != 13 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
 	}
 }

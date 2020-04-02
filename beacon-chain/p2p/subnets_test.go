@@ -61,6 +61,12 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		listener.LocalNode().Set(entry)
 		listeners = append(listeners, listener)
 	}
+	defer func() {
+		// Close down all peers.
+		for _, listener := range listeners {
+			listener.Close()
+		}
+	}()
 
 	// Make one service on port 3001.
 	port = 4000
@@ -79,6 +85,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Start()
+	defer s.Stop()
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(2 * discoveryWaitTime)
