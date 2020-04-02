@@ -173,6 +173,6 @@ func (ds *Service) submitProposerSlashing(ctx context.Context, slash *ethpb.Prop
 			"validatorIdxHeader1": slash.Header_1.Header.ProposerIndex,
 			"validatorIdxHeader2": slash.Header_2.Header.ProposerIndex,
 		}).Info("Found an proposer slashing! Submitting to beacon node")
-		ds.attesterSlashingsFeed.Send(slash)
+		ds.proposerSlashingsFeed.Send(slash)
 	}
 }
