@@ -94,12 +94,11 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/ping/1/")
+	pcl := protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		expectSuccess(t, r, stream)
 		out := new(uint64)
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
