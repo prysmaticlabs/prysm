@@ -185,7 +185,6 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 	var endBlock *ethpb.SignedBeaconBlock
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(endRoot) {
 		endBlock = s.getInitSyncBlock(endRoot)
-		s.clearInitSyncBlocks()
 	} else {
 		endBlock, err = s.beaconDB.Block(ctx, endRoot)
 		if err != nil {
