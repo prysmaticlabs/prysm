@@ -52,9 +52,9 @@ func (db *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte,
 		if err := valBucket.Put(bytesutil.Bytes8(epoch), slotBits); err != nil {
 			return err
 		}
-		//if err := pruneProposalHistory(valBucket, epoch); err != nil {
-		//	return err
-		//}
+		if err := pruneProposalHistory(valBucket, epoch); err != nil {
+			return err
+		}
 		return nil
 	})
 	return err
@@ -84,6 +84,7 @@ func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 				return errors.Wrapf(err, "could not prune epoch %d in proposal history", epoch)
 			}
 		} else {
+			// If starting from the oldest, we stop finding anything prunable, stop pruning.
 			return nil
 		}
 	}

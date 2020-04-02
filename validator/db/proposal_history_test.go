@@ -172,6 +172,47 @@ func TestProposalHistoryForEpoch_MultipleEpochs(t *testing.T) {
 	}
 }
 
+func TestPruneProposalHistory_OK(t *testing.T) {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	pubKey := [48]byte{0}
+	tests := []struct {
+		slots         []uint64
+		removedEpochs []uint64
+	}{
+		{
+			// Go 2 epochs past pruning point, should remove epochs 0 and 1.
+			slots:         []uint64{1, slotsPerEpoch + 5, slotsPerEpoch * 5, (wsPeriod + 3) * slotsPerEpoch},
+			removedEpochs: []uint64{0, 1},
+		},
+	}
+
+	for _, tt := range tests {
+		db := SetupDB(t, [][48]byte{pubKey})
+		defer TeardownDB(t, db)
+		for _, slot := range tt.slots {
+			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
+			if err != nil {
+				t.Fatalf("Failed to get proposal history: %v", err)
+			}
+			slotBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
+			if err := db.SaveProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot), slotBits); err != nil {
+				t.Fatalf("Saving proposal history failed: %v", err)
+			}
+		}
+
+		for _, epoch := range tt.removedEpochs {
+			savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], epoch)
+			if err != nil {
+				t.Fatalf("Failed to get proposal history: %v", err)
+			}
+			if !bytes.Equal(savedBits, bitfield.NewBitlist(slotsPerEpoch)) {
+				t.Fatalf("unexpected difference in bytes, expected %#x vs received %#x", savedBits, bitfield.NewBitlist(slotsPerEpoch))
+			}
+		}
+	}
+}
+
 func TestDeleteProposalHistory_OK(t *testing.T) {
 	pubkey := [48]byte{2}
 	db := SetupDB(t, [][48]byte{pubkey})
