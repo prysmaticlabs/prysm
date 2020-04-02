@@ -174,7 +174,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			}
 		}
 		var startBlock uint64
-		if featureconfig.Get().InitSyncBatchSaveBlocks {
+		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
 			lastFinalizedEpoch := s.chain.FinalizedCheckpt().Epoch
 			lastFinalizedState, err := s.db.HighestSlotStatesBelow(ctx, helpers.StartSlot(lastFinalizedEpoch))
 			if err != nil {
