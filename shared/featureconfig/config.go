@@ -47,7 +47,6 @@ type Flags struct {
 	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
-	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
 	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
@@ -161,10 +160,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(checkHeadState.Name) {
 		log.Warn("Enabling check head state for chainservice")
 		cfg.CheckHeadState = true
-	}
-	if ctx.Bool(enableNoiseHandshake.Name) {
-		log.Warn("Enabling noise handshake for peer")
-		cfg.EnableNoise = true
 	}
 	if ctx.Bool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
