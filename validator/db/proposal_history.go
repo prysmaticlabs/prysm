@@ -24,6 +24,9 @@ func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, 
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(publicKey)
+		if valBucket == nil {
+			return fmt.Errorf("validator history empty for public key %#x", publicKey)
+		}
 		slotBits := valBucket.Get(bytesutil.Bytes8(epoch))
 		if slotBits == nil || len(slotBits) == 0 {
 			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
@@ -64,7 +67,7 @@ func (db *Store) DeleteProposalHistory(ctx context.Context, pubkey []byte) error
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		if err := bucket.Delete(pubkey); err != nil {
+		if err := bucket.DeleteBucket(pubkey); err != nil {
 			return errors.Wrap(err, "failed to delete the proposal history")
 		}
 		return nil
