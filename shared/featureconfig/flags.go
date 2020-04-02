@@ -76,15 +76,15 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-	protectProposerFlag = &cli.BoolFlag{
-		Name: "protect-proposer",
-		Usage: "Prevent the validator client from signing and broadcasting 2 different block " +
-			"proposals in the same epoch. Protects from slashing.",
+	disableProtectProposerFlag = &cli.BoolFlag{
+		Name: "disable-protect-proposer",
+		Usage: "Disables functionality to prevent the validator client from signing and " +
+			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
 	}
-	protectAttesterFlag = &cli.BoolFlag{
-		Name: "protect-attester",
-		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
-			"Protects from slashing.",
+	disableProtectAttesterFlag = &cli.BoolFlag{
+		Name: "disable-protect-attester",
+		Usage: "Disables functionality to prevent the validator client from signing and " +
+			"broadcasting 2 any slashable attestations.",
 	}
 	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
 		Name:  "disable-strict-attestation-pubsub-verification",
@@ -259,6 +259,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedProtectProposerFlag = &cli.BoolFlag{
+		Name:   "protect-proposer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedProtectAttesterFlag = &cli.BoolFlag{
+		Name:   "protect-attester",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -284,20 +294,20 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedForkchoiceAggregateAttestations,
 	deprecatedEnableAttestationCacheFlag,
 	deprecatedInitSyncCacheStateFlag,
+	deprecatedProtectAttesterFlag,
+	deprecatedProtectProposerFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
-	protectAttesterFlag,
-	protectProposerFlag,
+	disableProtectAttesterFlag,
+	disableProtectProposerFlag,
 	enableDomainDataCacheFlag,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
-	"--protect-attester",
-	"--protect-proposer",
 	"--enable-domain-data-cache",
 }
 
