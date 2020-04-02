@@ -210,8 +210,10 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 		return nil, err
 	}
 
-	if _, err := p.Encoding().EncodeWithLength(stream, msg); err != nil {
-		return nil, err
+	if topic != "/eth2/beacon_chain/req/metadata/1/" {
+		if _, err := p.Encoding().EncodeWithLength(stream, msg); err != nil {
+			return nil, err
+		}
 	}
 
 	// Close stream for writing.

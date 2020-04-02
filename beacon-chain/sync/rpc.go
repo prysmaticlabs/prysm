@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -57,6 +58,11 @@ func (r *Service) registerRPCHandlers() {
 		new(uint64),
 		r.pingHandler,
 	)
+	r.registerRPC(
+		p2p.RPCMetaDataTopic,
+		new(interface{}),
+		r.metaDataHandler,
+	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
@@ -80,6 +86,19 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 
 		// Increment message received counter.
 		messageReceivedCounter.WithLabelValues(topic).Inc()
+
+		// since metadata requests do not have any data in the payload, we
+		// do not decode anything.
+		if strings.Contains(topic, p2p.RPCMetaDataTopic) {
+			if err := handle(ctx, new(interface{}), stream); err != nil {
+				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
+				if err != errWrongForkDigestVersion {
+					log.WithError(err).Warn("Failed to handle p2p RPC")
+				}
+				traceutil.AnnotateError(span, err)
+			}
+			return
+		}
 
 		// Given we have an input argument that can be pointer or [][32]byte, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode

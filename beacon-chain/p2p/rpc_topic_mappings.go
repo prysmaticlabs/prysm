@@ -10,6 +10,7 @@ const (
 	RPCBlocksByRangeTopic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1"
 	RPCBlocksByRootTopic  = "/eth2/beacon_chain/req/beacon_blocks_by_root/1"
 	RPCPingTopic          = "/eth2/beacon_chain/req/ping/1/"
+	RPCMetaDataTopic      = "/eth2/beacon_chain/req/metadata/1/"
 )
 
 // RPCTopicMappings represent the protocol ID to protobuf message type map for easy
@@ -21,4 +22,5 @@ var RPCTopicMappings = map[string]interface{}{
 	RPCBlocksByRangeTopic: &p2ppb.BeaconBlocksByRangeRequest{},
 	RPCBlocksByRootTopic:  [][32]byte{},
 	RPCPingTopic:          new(uint64),
+	RPCMetaDataTopic:      new(interface{}),
 }

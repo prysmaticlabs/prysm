@@ -13,7 +13,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 )
 
-// pingHandler reads the incoming goodbye rpc message from the peer.
+// pingHandler reads the incoming ping rpc message from the peer.
 func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
