@@ -7,7 +7,6 @@ import (
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
