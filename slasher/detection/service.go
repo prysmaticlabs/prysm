@@ -166,7 +166,6 @@ func (ds *Service) submitProposerSlashing(ctx context.Context, slash *ethpb.Prop
 	ctx, span := trace.StartSpan(ctx, "detection.submitProposerSlashing")
 	defer span.End()
 	if slash != nil && slash.Header_1 != nil && slash.Header_2 != nil {
-
 		log.WithFields(logrus.Fields{
 			"header1Slot":         slash.Header_1.Header.Slot,
 			"header2Slot":         slash.Header_2.Header.Slot,
