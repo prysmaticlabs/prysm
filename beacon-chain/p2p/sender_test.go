@@ -64,5 +64,4 @@ func TestService_Send(t *testing.T) {
 	if !proto.Equal(rcvd, msg) {
 		t.Errorf("Expected identical message to be received. got %v want %v", rcvd, msg)
 	}
-
 }
