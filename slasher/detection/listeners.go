@@ -28,7 +28,7 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 		select {
 		case sblk := <-ch:
 			log.Debug("Running detection on block...")
-			sbh, err := extractSignedBeaconBlockHeader(sblk)
+			sbh, err := signedBeaconBlockHeaderFromBlock(sblk)
 			if err != nil {
 				log.WithError(err)
 			}
@@ -77,7 +77,7 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 	}
 }
 
-func extractSignedBeaconBlockHeader(block *ethpb.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+func signedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
 	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get signing root of block")
