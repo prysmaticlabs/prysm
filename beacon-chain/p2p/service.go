@@ -7,11 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"

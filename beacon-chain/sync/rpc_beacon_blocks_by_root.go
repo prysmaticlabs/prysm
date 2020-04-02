@@ -5,12 +5,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
