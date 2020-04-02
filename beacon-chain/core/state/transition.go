@@ -274,7 +274,7 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	key := state.Slot()
 
 	// Restart from cached value, if one exists.
-	cachedState, err := skipSlotCache.Get(ctx, key)
+	cachedState, err := SkipSlotCache.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -283,8 +283,8 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 		highestSlot = cachedState.Slot()
 		state = cachedState
 	}
-	if err := skipSlotCache.MarkInProgress(key); err == cache.ErrAlreadyInProgress {
-		cachedState, err = skipSlotCache.Get(ctx, key)
+	if err := SkipSlotCache.MarkInProgress(key); err == cache.ErrAlreadyInProgress {
+		cachedState, err = SkipSlotCache.Get(ctx, key)
 		if err != nil {
 			return nil, err
 		}
@@ -295,14 +295,14 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	} else if err != nil {
 		return nil, err
 	}
-	defer skipSlotCache.MarkNotInProgress(key)
+	defer SkipSlotCache.MarkNotInProgress(key)
 
 	for state.Slot() < slot {
 		if ctx.Err() != nil {
 			traceutil.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
-				skipSlotCache.Put(ctx, key, state)
+				SkipSlotCache.Put(ctx, key, state)
 			}
 			return nil, ctx.Err()
 		}
@@ -322,7 +322,7 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	}
 
 	if highestSlot < state.Slot() {
-		skipSlotCache.Put(ctx, key, state)
+		SkipSlotCache.Put(ctx, key, state)
 	}
 
 	return state, nil

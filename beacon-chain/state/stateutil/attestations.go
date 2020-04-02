@@ -9,6 +9,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -24,16 +25,16 @@ func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 
 // PendingAttestationRoot describes a method from which the hash tree root
 // of a pending attestation is returned.
-func PendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
+func PendingAttestationRoot(hasher HashFn, att *pb.PendingAttestation) ([32]byte, error) {
 	fieldRoots := [][32]byte{}
 	if att != nil {
 		// Bitfield.
-		aggregationRoot, err := bitlistRoot(att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
+		aggregationRoot, err := bitlistRoot(hasher, att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		// Attestation data.
-		attDataRoot, err := attestationDataRoot(att.Data)
+		attDataRoot, err := attestationDataRoot(hasher, att.Data)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -49,7 +50,7 @@ func PendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 
 		fieldRoots = [][32]byte{aggregationRoot, attDataRoot, inclusionRoot, proposerRoot}
 	}
-	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func marshalAttestationData(data *ethpb.AttestationData) []byte {
@@ -88,17 +89,17 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	return enc
 }
 
-func attestationRoot(att *ethpb.Attestation) ([32]byte, error) {
+func attestationRoot(hasher HashFn, att *ethpb.Attestation) ([32]byte, error) {
 	fieldRoots := make([][32]byte, 3)
 
 	// Bitfield.
-	aggregationRoot, err := bitlistRoot(att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
+	aggregationRoot, err := bitlistRoot(hasher, att.AggregationBits, params.BeaconConfig().MaxValidatorsPerCommittee)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	fieldRoots[0] = aggregationRoot
 
-	dataRoot, err := attestationDataRoot(att.Data)
+	dataRoot, err := attestationDataRoot(hasher, att.Data)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -109,18 +110,19 @@ func attestationRoot(att *ethpb.Attestation) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	sigRoot, err := bitwiseMerkleize(packedSig, uint64(len(packedSig)), uint64(len(packedSig)))
+	sigRoot, err := bitwiseMerkleize(hasher, packedSig, uint64(len(packedSig)), uint64(len(packedSig)))
 	if err != nil {
 		return [32]byte{}, err
 	}
 	fieldRoots[2] = sigRoot
-	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func blockAttestationRoot(atts []*ethpb.Attestation) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
 	roots := make([][]byte, len(atts))
 	for i := 0; i < len(atts); i++ {
-		pendingRoot, err := attestationRoot(atts[i])
+		pendingRoot, err := attestationRoot(hasher, atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
@@ -128,6 +130,7 @@ func blockAttestationRoot(atts []*ethpb.Attestation) ([32]byte, error) {
 	}
 
 	attsRootsRoot, err := bitwiseMerkleize(
+		hasher,
 		roots,
 		uint64(len(roots)),
 		params.BeaconConfig().MaxAttestations,
@@ -146,7 +149,7 @@ func blockAttestationRoot(atts []*ethpb.Attestation) ([32]byte, error) {
 	return res, nil
 }
 
-func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
+func attestationDataRoot(hasher HashFn, data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 
 	if data != nil {
@@ -167,24 +170,24 @@ func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 		fieldRoots[2] = blockRoot[:]
 
 		// Source
-		sourceRoot, err := CheckpointRoot(data.Source)
+		sourceRoot, err := CheckpointRoot(hasher, data.Source)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
 		}
 		fieldRoots[3] = sourceRoot[:]
 
 		// Target
-		targetRoot, err := CheckpointRoot(data.Target)
+		targetRoot, err := CheckpointRoot(hasher, data.Target)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
 		}
 		fieldRoots[4] = targetRoot[:]
 	}
 
-	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return bitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) pendingAttestationRoot(hasher HashFn, att *pb.PendingAttestation) ([32]byte, error) {
 	// Marshal attestation to determine if it exists in the cache.
 	enc := make([]byte, 2192)
 	fieldRoots := make([][]byte, 4)
@@ -211,14 +214,14 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 		}
 
 		// Bitfield.
-		aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
+		aggregationRoot, err := bitlistRoot(hasher, att.AggregationBits, 2048)
 		if err != nil {
 			return [32]byte{}, err
 		}
 		fieldRoots[0] = aggregationRoot[:]
 
 		// Attestation data.
-		attDataRoot, err := attestationDataRoot(att.Data)
+		attDataRoot, err := attestationDataRoot(hasher, att.Data)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -232,7 +235,7 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 		proposerRoot := bytesutil.ToBytes32(proposerBuf)
 		fieldRoots[3] = proposerRoot[:]
 	}
-	res, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	res, err := bitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -243,9 +246,10 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 }
 
 func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
 	roots := make([][]byte, len(atts))
 	for i := 0; i < len(atts); i++ {
-		pendingRoot, err := h.pendingAttestationRoot(atts[i])
+		pendingRoot, err := h.pendingAttestationRoot(hasher, atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
@@ -253,6 +257,7 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) (
 	}
 
 	attsRootsRoot, err := bitwiseMerkleize(
+		hasher,
 		roots,
 		uint64(len(roots)),
 		params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch,

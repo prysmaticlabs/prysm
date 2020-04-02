@@ -17,6 +17,7 @@ go_library(
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/genesis-state-gen:__pkg__",
         "//fuzz:__pkg__",
+        "//endtoend:__pkg__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
@@ -60,7 +61,6 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
-        "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

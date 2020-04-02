@@ -661,6 +661,56 @@ func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
 	}
 }
 
+func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
+	chainConfig := struct {
+		expectedBlockSlots []uint64
+		peers              []*peerData
+	}{
+		expectedBlockSlots: makeSequence(1, 320),
+		peers: []*peerData{
+			{
+				blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+				finalizedEpoch: 18,
+				headSlot:       320,
+			},
+			{
+				blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+				finalizedEpoch: 18,
+				headSlot:       320,
+			},
+		},
+	}
+
+	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	defer dbtest.TeardownDB(t, beaconDB)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			headFetcher: mc,
+			p2p:         p2p,
+		})
+
+	seekSlots := map[uint64]uint64{
+		0:  1,
+		10: 11,
+		32: 33,
+		63: 64,
+		64: 500,
+	}
+	for seekSlot, expectedSlot := range seekSlots {
+		slot, err := fetcher.nonSkippedSlotAfter(ctx, seekSlot)
+		if err != nil {
+			t.Error(err)
+		}
+		if slot != expectedSlot {
+			t.Errorf("unexpected slot, want: %v, got: %v", expectedSlot, slot)
+		}
+	}
+}
+
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
 	cache.initializeRootCache(blocks, t)
 	beaconDB := dbtest.SetupDB(t)
