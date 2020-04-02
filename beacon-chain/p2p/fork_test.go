@@ -66,6 +66,12 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 		}
 		listeners = append(listeners, listener)
 	}
+	defer func() {
+		// Close down all peers.
+		for _, listener := range listeners {
+			listener.Close()
+		}
+	}()
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(discoveryWaitTime)
@@ -86,6 +92,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer s.Stop()
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
@@ -94,11 +101,6 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	// We should not have valid peers if the fork digest mismatched.
 	if len(multiAddrs) != 0 {
 		t.Errorf("Expected 0 valid peers, got %d", len(multiAddrs))
-	}
-
-	// Close down all peers.
-	for _, listener := range listeners {
-		listener.Close()
 	}
 }
 
@@ -153,6 +155,12 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		}
 		listeners = append(listeners, listener)
 	}
+	defer func() {
+		// Close down all peers.
+		for _, listener := range listeners {
+			listener.Close()
+		}
+	}()
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(discoveryWaitTime)
@@ -174,17 +182,14 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer s.Stop()
+
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
 	multiAddrs := s.processPeers(nodes)
 	if len(multiAddrs) == 0 {
 		t.Error("Expected to have valid peers, got 0")
-	}
-
-	// Close down all peers.
-	for _, listener := range listeners {
-		listener.Close()
 	}
 
 	testutil.AssertLogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
