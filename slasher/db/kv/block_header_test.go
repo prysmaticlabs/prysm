@@ -151,7 +151,7 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd"), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
 		},
 		{
-			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd"), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 4th"), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
 		},
 	}
 	for _, tt := range tests {
