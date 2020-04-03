@@ -3,7 +3,6 @@ package db
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -200,12 +199,12 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 		{
 			// Go 10 epochs past pruning point.
 			slots:         []uint64{slotsPerEpoch + 4, slotsPerEpoch * 2, slotsPerEpoch * 3, slotsPerEpoch * 4, slotsPerEpoch * 5, (wsPeriod+10)*slotsPerEpoch + 8},
-			storedEpochs:  []uint64{540010},
+			storedEpochs:  []uint64{54010},
 			removedEpochs: []uint64{1, 2, 3, 4},
 		},
 		{
 			// Prune none.
-			slots:        []uint64{slotsPerEpoch + 4, slotsPerEpoch * 2, slotsPerEpoch * 3, slotsPerEpoch * 4, slotsPerEpoch * 5},
+			slots:        []uint64{slotsPerEpoch + 4, slotsPerEpoch*2 + 3, slotsPerEpoch*3 + 4, slotsPerEpoch*4 + 3, slotsPerEpoch*5 + 3},
 			storedEpochs: []uint64{1, 2, 3, 4, 5},
 		},
 	}
@@ -214,7 +213,6 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 		db := SetupDB(t, [][48]byte{pubKey})
 		defer TeardownDB(t, db)
 		for _, slot := range tt.slots {
-			fmt.Printf("saved epoch %d\n", helpers.SlotToEpoch(slot))
 			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
 			if err != nil {
 				t.Fatalf("Failed to get proposal history: %v", err)
@@ -240,7 +238,7 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 				t.Fatalf("Failed to get proposal history: %v", err)
 			}
 			if bytes.Equal(bitfield.NewBitlist(slotsPerEpoch), savedBits) {
-				t.Fatalf("unexpected difference in bytes, expected %#x vs received %v", bitfield.NewBitlist(slotsPerEpoch), savedBits)
+				t.Fatalf("unexpected difference in bytes for epoch %d, expected %v vs received %v", epoch, bitfield.NewBitlist(slotsPerEpoch), savedBits)
 			}
 		}
 	}

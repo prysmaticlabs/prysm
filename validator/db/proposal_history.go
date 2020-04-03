@@ -77,11 +77,10 @@ func (db *Store) DeleteProposalHistory(ctx context.Context, pubkey []byte) error
 
 func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 	c := valBucket.Cursor()
-	for k, _ := c.First(); k != nil; k, _ = c.Next() {
+	for k, _ := c.First(); k != nil; k, _ = c.First() {
 		epoch := binary.LittleEndian.Uint64(k)
 		// Only delete epochs that are older than the weak subjectivity period.
 		if epoch+params.BeaconConfig().WeakSubjectivityPeriod <= newestEpoch {
-			fmt.Printf("deleted %d\n", epoch)
 			if err := c.Delete(); err != nil {
 				return errors.Wrapf(err, "could not prune epoch %d in proposal history", epoch)
 			}
