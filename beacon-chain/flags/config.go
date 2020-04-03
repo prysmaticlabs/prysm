@@ -13,11 +13,11 @@ type GlobalFlags struct {
 	EnableArchivedValidatorSetChanges bool
 	EnableArchivedBlocks              bool
 	EnableArchivedAttestations        bool
+	UnsafeSync                        bool
+	EnableDiscv5                      bool
 	MinimumSyncPeers                  int
 	MaxPageSize                       int
 	DeploymentBlock                   int
-	UnsafeSync                        bool
-	EnableDiscv5                      bool
 }
 
 var globalConfig *GlobalFlags

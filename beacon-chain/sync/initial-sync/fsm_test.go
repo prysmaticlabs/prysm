@@ -85,9 +85,9 @@ func TestStateMachine_trigger(t *testing.T) {
 	}
 	type args struct {
 		name        eventID
+		returnState stateID
 		epoch       uint64
 		data        interface{}
-		returnState stateID
 	}
 	tests := []struct {
 		name   string
@@ -100,7 +100,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			name:   "event not found",
 			events: []event{},
 			epochs: []uint64{},
-			args:   args{eventSchedule, 12, nil, stateNew},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateNew},
 			err:    fmt.Errorf("event not found: %v", eventSchedule),
 		},
 		{
@@ -109,7 +109,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateNew, eventSchedule, stateScheduled, false},
 			},
 			epochs: []uint64{},
-			args:   args{eventSchedule, 12, nil, stateScheduled},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    fmt.Errorf("state for %v epoch not found", 12),
 		},
 		{
@@ -118,7 +118,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateNew, eventSchedule, stateScheduled, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateScheduled},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
@@ -129,7 +129,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateSent, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateScheduled},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
@@ -140,7 +140,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateSent, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateComplete},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateComplete},
 			err:    nil,
 		},
 		{
@@ -151,7 +151,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateNew, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateSent},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateSent},
 			err:    nil,
 		},
 	}
