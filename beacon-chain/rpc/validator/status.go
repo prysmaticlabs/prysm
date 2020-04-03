@@ -93,6 +93,10 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		resp.ActivationEpoch = int64(val.ActivationEpoch)
 	}
 
+	if resp.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+		return resp
+	}
+
 	// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")

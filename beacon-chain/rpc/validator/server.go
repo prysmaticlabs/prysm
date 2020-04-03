@@ -90,6 +90,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 	for {
 		select {
+		// Why is this a hard-coded 6?
 		case <-time.After(6 * time.Second):
 			activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
