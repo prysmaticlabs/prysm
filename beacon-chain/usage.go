@@ -103,6 +103,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PHostDNS,
 			cmd.P2PMaxPeers,
 			cmd.P2PPrivKey,
+			cmd.P2PMetadata,
 			cmd.P2PWhitelist,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,

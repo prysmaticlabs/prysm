@@ -13,6 +13,7 @@ import (
 	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	noise "github.com/libp2p/go-libp2p-noise"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -64,7 +65,13 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	if err != nil {
 		t.Fatalf("Failed to p2p listen: %v", err)
 	}
-	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen)}...)
+	h, err := libp2p.New(
+		context.Background(),
+		[]libp2p.Option{
+			privKeyOption(pkey),
+			libp2p.ListenAddrs(listen),
+			libp2p.Security(noise.ID, noise.New),
+		}...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,6 +184,12 @@ func TestListenForNewNodes(t *testing.T) {
 		listeners = append(listeners, listener)
 		hosts = append(hosts, h)
 	}
+	defer func() {
+		// Close down all peers.
+		for _, listener := range listeners {
+			listener.Close()
+		}
+	}()
 
 	// close peers upon exit of test
 	defer func() {
@@ -195,19 +208,16 @@ func TestListenForNewNodes(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Start()
+	defer func() {
+		if err := s.Stop(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
 	time.Sleep(2 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
-	}
-
-	// close down all peers
-	for _, listener := range listeners {
-		listener.Close()
-	}
-
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
 	}
 }
 

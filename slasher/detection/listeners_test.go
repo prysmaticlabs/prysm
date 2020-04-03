@@ -8,7 +8,9 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
+	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -34,8 +36,11 @@ func (m *mockNotifier) ClientReadyFeed() *event.Feed {
 
 func TestService_DetectIncomingBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
+	db := testDB.SetupSlasherDB(t, false)
+	defer testDB.TeardownSlasherDB(t, db)
 	ds := Service{
-		notifier: &mockNotifier{},
+		notifier:          &mockNotifier{},
+		proposalsDetector: proposals.NewProposeDetector(db),
 	}
 	blk := &ethpb.SignedBeaconBlock{
 		Block:     &ethpb.BeaconBlock{Slot: 1},

@@ -375,7 +375,7 @@ func (f *blocksFetcher) requestBlocks(
 		"step":  req.Step,
 	}).Debug("Requesting blocks")
 	f.Unlock()
-	stream, err := f.p2p.Send(ctx, req, pid)
+	stream, err := f.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
 	if err != nil {
 		return nil, err
 	}

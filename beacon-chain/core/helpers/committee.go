@@ -407,7 +407,6 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
-
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil
