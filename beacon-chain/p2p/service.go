@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
@@ -72,6 +74,7 @@ type Service struct {
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
 	metaData              *pb.MetaData
+	stateNotifier         statefeed.Notifier
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -88,6 +91,7 @@ func NewService(cfg *Config) (*Service, error) {
 	s := &Service{
 		beaconDB:      cfg.BeaconDB,
 		ctx:           ctx,
+		stateNotifier: cfg.StateNotifier,
 		cancel:        cancel,
 		cfg:           cfg,
 		exclusionList: cache,
@@ -164,16 +168,8 @@ func (s *Service) Start() {
 		return
 	}
 
-	// Check if we have a genesis time / genesis state
-	// used for fork-related data when connecting peers.
-	genesisState, err := s.beaconDB.GenesisState(s.ctx)
-	if err != nil {
-		log.WithError(err).Error("Could not read genesis state")
-	}
-	if genesisState != nil {
-		s.genesisTime = time.Unix(int64(genesisState.GenesisTime()), 0)
-		s.genesisValidatorsRoot = genesisState.GenesisValidatorRoot()
-	}
+	// Waits until the state is initialized via an event feed.
+	s.awaitStateInitialized()
 
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
@@ -404,6 +400,28 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		}
 	}
 	return exists, nil
+}
+
+// Waits for the beacon state to be initialized, important
+// for initializing the p2p service as p2p needs to be aware
+// of genesis information for peering.
+func (s *Service) awaitStateInitialized() {
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.ChainStarted {
+				data, ok := event.Data.(*statefeed.InitializedData)
+				if !ok {
+					log.Fatal("Received wrong data over state initialized feed: %v", data)
+				}
+				s.genesisTime = data.StartTime
+				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
+			}
+		}
+	}
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.

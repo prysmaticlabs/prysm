@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
@@ -27,4 +28,5 @@ type Config struct {
 	MaxPeers              uint
 	WhitelistCIDR         string
 	Encoding              string
+	StateNotifier         statefeed.Notifier
 }
