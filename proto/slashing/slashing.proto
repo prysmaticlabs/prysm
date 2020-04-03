@@ -45,15 +45,6 @@ message EpochSpanMap {
     map<uint64, MinMaxEpochSpan> epoch_span_map = 1;
 }
 
-// ProposalHistory defines the structure for recording a validator's historical proposals.
-// Using a bitlist to represent the epochs and an uint64 to mark the latest marked
-// epoch of the bitlist, we can easily store which epochs a validator has proposed
-// a block for while pruning the older data.
-message ProposalHistory {
-    bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    uint64 latest_epoch_written = 2;
-}
-
 // AttestationHistory defines the structure for recording a validator's historical attestation.
 // Using a map[uint64]uint64 to map its target epoch to its source epoch, in order to detect if a
 // vote being created is not a double vote and surrounded by, or surrounding any other votes.
