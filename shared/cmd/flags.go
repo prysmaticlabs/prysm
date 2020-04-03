@@ -114,7 +114,7 @@ var (
 	}
 	// P2PMetadata defines a flag to specify the location of the peer metadata file.
 	P2PMetadata = &cli.StringFlag{
-		Name:  "p2p-metaData",
+		Name:  "p2p-metadata",
 		Usage: "The file containing the metadata to communicate with other peers.",
 		Value: "",
 	}
