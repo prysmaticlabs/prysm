@@ -171,7 +171,7 @@ func (q *blocksQueue) loop() {
 						log.WithFields(logrus.Fields{
 							"event": event,
 							"epoch": state.epoch,
-							"error": err,
+							"error": err.Error(),
 						}).Debug("Can not trigger event")
 					}
 				}
@@ -205,7 +205,7 @@ func (q *blocksQueue) loop() {
 					log.WithFields(logrus.Fields{
 						"event": eventDataReceived,
 						"epoch": state.epoch,
-						"error": err,
+						"error": err.Error(),
 					}).Debug("Can not trigger event")
 					state.setState(stateNew)
 					continue
