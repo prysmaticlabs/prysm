@@ -26,7 +26,7 @@ func newCommitteeIDs() *committeeIDs {
 }
 
 // AddID adds committee ID for subscribing subnet for the attester and/or aggregator of a given slot.
-func (t *committeeIDs) AddID(committeeID uint64, slot uint64) {
+func (t *committeeIDs) AddID(slot uint64, committeeID uint64) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 

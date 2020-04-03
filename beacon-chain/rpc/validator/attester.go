@@ -228,9 +228,9 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 // SubscribeCommitteeSubnet subscribes to the committee ID subnet given subscribe request.
 func (vs *Server) SubscribeCommitteeSubnet(ctx context.Context, req *ethpb.CommitteeSubnetSubscribeRequest) (*ptypes.Empty, error) {
 	if req.IsAggregator {
-		cache.CommitteeIDs.AddID(req.CommitteeId, req.Slot)
+		cache.CommitteeIDs.AddID(req.Slot, req.CommitteeId)
 	} else {
-		// What should we do here as an attester?
+		// What should be done for an attester?
 	}
 	return &ptypes.Empty{}, nil
 }
