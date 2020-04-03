@@ -19,15 +19,15 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	epoch := uint64(1)
+	slot := uint64(1)
 	validatorID := uint64(1)
 
-	hasBlockHeader := db.HasBlockHeader(ctx, epoch, validatorID)
+	hasBlockHeader := db.HasBlockHeader(ctx, slot, validatorID)
 	if hasBlockHeader {
 		t.Fatal("HasBlockHeader should return false")
 	}
 
-	bPrime, err := db.BlockHeaders(ctx, epoch, validatorID)
+	bPrime, err := db.BlockHeaders(ctx, slot, validatorID)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -52,8 +52,10 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 2nd"), Header: &ethpb.BeaconBlockHeader{Slot: 0, ProposerIndex: 1}},
 		},
 		{
-
 			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd"), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
+		},
+		{
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd"), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
 		},
 	}
 
@@ -63,7 +65,7 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 			t.Fatalf("save block failed: %v", err)
 		}
 
-		bha, err := db.BlockHeaders(ctx, helpers.SlotToEpoch(tt.bh.Header.Slot), tt.bh.Header.ProposerIndex)
+		bha, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
@@ -104,7 +106,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeaders(ctx, helpers.SlotToEpoch(tt.bh.Header.Slot), tt.bh.Header.ProposerIndex)
+		bha, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
@@ -116,7 +118,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
-		bh, err := db.BlockHeaders(ctx, helpers.SlotToEpoch(tt.bh.Header.Slot), tt.bh.Header.ProposerIndex)
+		bh, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 
 		if err != nil {
 			t.Fatal(err)
@@ -148,10 +150,13 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 		{
 			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd"), Header: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch + 1, ProposerIndex: 0}},
 		},
+		{
+			bh: &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd"), Header: &ethpb.BeaconBlockHeader{Slot: 1, ProposerIndex: 0}},
+		},
 	}
 	for _, tt := range tests {
 
-		found := db.HasBlockHeader(ctx, helpers.SlotToEpoch(tt.bh.Header.Slot), tt.bh.Header.ProposerIndex)
+		found := db.HasBlockHeader(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		if found {
 			t.Fatal("has block header should return false for block headers that are not in db")
 		}
@@ -166,7 +171,7 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 			t.Fatalf("save block failed: %v", err)
 		}
 
-		found := db.HasBlockHeader(ctx, helpers.SlotToEpoch(tt.bh.Header.Slot), tt.bh.Header.ProposerIndex)
+		found := db.HasBlockHeader(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 
 		if !found {
 			t.Fatal("has block header should return true")
@@ -207,7 +212,7 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 			t.Fatalf("save block header failed: %v", err)
 		}
 
-		bha, err := db.BlockHeaders(ctx, helpers.SlotToEpoch(tt.bh.Header.Slot), tt.bh.Header.ProposerIndex)
+		bha, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		if err != nil {
 			t.Fatalf("failed to get block header: %v", err)
 		}
@@ -224,11 +229,11 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeaders(ctx, helpers.SlotToEpoch(tt.bh.Header.Slot), tt.bh.Header.ProposerIndex)
+		bha, err := db.BlockHeaders(ctx, tt.bh.Header.Slot, tt.bh.Header.ProposerIndex)
 		if err != nil {
 			t.Fatalf("failed to get block header: %v", err)
 		}
-		if helpers.SlotToEpoch(tt.bh.Header.Slot) > currentEpoch-historyToKeep {
+		if helpers.SlotToEpoch(tt.bh.Header.Slot) >= currentEpoch-historyToKeep {
 			if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
 				t.Fatalf("get should return bh: %v", bha)
 			}
