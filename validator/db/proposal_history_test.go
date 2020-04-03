@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -129,20 +130,29 @@ func TestProposalHistoryForEpoch_MultipleEpochs(t *testing.T) {
 		expectedBits []bitfield.Bitlist
 	}{
 		{
-			slots:        []uint64{1, 2, 8},
-			expectedBits: []bitfield.Bitlist{{0x02, 0x14}},
+			slots:        []uint64{1, 2, 8, 31},
+			expectedBits: []bitfield.Bitlist{{0b00000110, 0b00000001, 0b00000000, 0b10000000, 0b00000001}},
 		},
 		{
-			slots:        []uint64{1, 33, 8},
-			expectedBits: []bitfield.Bitlist{{0x02, 0x10}, {0x02, 0x04}},
+			slots: []uint64{1, 33, 8},
+			expectedBits: []bitfield.Bitlist{
+				{0b00000010, 0b00000001, 0b00000000, 0b00000000, 0b00000001},
+				{0b00000010, 0b00000000, 0b00000000, 0b00000000, 0b00000001},
+			},
 		},
 		{
-			slots:        []uint64{2, 34, 36},
-			expectedBits: []bitfield.Bitlist{{0x02, 0x04}, {0x02, 0x06}},
+			slots: []uint64{2, 34, 36},
+			expectedBits: []bitfield.Bitlist{
+				{0b00000100, 0b00000000, 0b00000000, 0b00000000, 0b00000001},
+				{0b00010100, 0b00000000, 0b00000000, 0b00000000, 0b00000001},
+			},
 		},
 		{
-			slots:        []uint64{32, 33, 34},
-			expectedBits: []bitfield.Bitlist{{0x02, 0x00}, {0x02, 0x05}},
+			slots: []uint64{32, 33, 34},
+			expectedBits: []bitfield.Bitlist{
+				{0, 0, 0, 0, 1},
+				{0b00000111, 0b00000000, 0b00000000, 0b00000000, 0b00000001},
+			},
 		},
 	}
 
@@ -165,8 +175,8 @@ func TestProposalHistoryForEpoch_MultipleEpochs(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to get proposal history: %v", err)
 			}
-			if !bytes.Equal(savedBits.Bytes(), slotBits.Bytes()) {
-				t.Fatalf("unexpected difference in bytes, expected %#x vs received %#x", savedBits.Bytes(), slotBits.Bytes())
+			if !bytes.Equal(slotBits, savedBits) {
+				t.Fatalf("unexpected difference in bytes for slots %v, expected %v vs received %v", tt.slots, slotBits, savedBits)
 			}
 		}
 	}
@@ -178,12 +188,25 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 	pubKey := [48]byte{0}
 	tests := []struct {
 		slots         []uint64
+		storedEpochs  []uint64
 		removedEpochs []uint64
 	}{
 		{
-			// Go 2 epochs past pruning point, should remove epochs 0 and 1.
-			slots:         []uint64{1, slotsPerEpoch + 5, slotsPerEpoch * 5, (wsPeriod + 3) * slotsPerEpoch},
-			removedEpochs: []uint64{0, 1},
+			// Go 2 epochs past pruning point.
+			slots:         []uint64{slotsPerEpoch / 2, slotsPerEpoch*5 + 6, (wsPeriod+3)*slotsPerEpoch + 8},
+			storedEpochs:  []uint64{5, 54003},
+			removedEpochs: []uint64{0},
+		},
+		{
+			// Go 10 epochs past pruning point.
+			slots:         []uint64{slotsPerEpoch + 4, slotsPerEpoch * 2, slotsPerEpoch * 3, slotsPerEpoch * 4, slotsPerEpoch * 5, (wsPeriod+10)*slotsPerEpoch + 8},
+			storedEpochs:  []uint64{540010},
+			removedEpochs: []uint64{1, 2, 3, 4},
+		},
+		{
+			// Prune none.
+			slots:        []uint64{slotsPerEpoch + 4, slotsPerEpoch * 2, slotsPerEpoch * 3, slotsPerEpoch * 4, slotsPerEpoch * 5},
+			storedEpochs: []uint64{1, 2, 3, 4, 5},
 		},
 	}
 
@@ -191,6 +214,7 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 		db := SetupDB(t, [][48]byte{pubKey})
 		defer TeardownDB(t, db)
 		for _, slot := range tt.slots {
+			fmt.Printf("saved epoch %d\n", helpers.SlotToEpoch(slot))
 			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
 			if err != nil {
 				t.Fatalf("Failed to get proposal history: %v", err)
@@ -206,8 +230,17 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to get proposal history: %v", err)
 			}
-			if !bytes.Equal(savedBits, bitfield.NewBitlist(slotsPerEpoch)) {
-				t.Fatalf("unexpected difference in bytes, expected %#x vs received %#x", savedBits, bitfield.NewBitlist(slotsPerEpoch))
+			if !bytes.Equal(bitfield.NewBitlist(slotsPerEpoch), savedBits) {
+				t.Fatalf("unexpected difference in bytes for epoch %d, expected %#x vs received %v", epoch, bitfield.NewBitlist(slotsPerEpoch), savedBits)
+			}
+		}
+		for _, epoch := range tt.storedEpochs {
+			savedBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], epoch)
+			if err != nil {
+				t.Fatalf("Failed to get proposal history: %v", err)
+			}
+			if bytes.Equal(bitfield.NewBitlist(slotsPerEpoch), savedBits) {
+				t.Fatalf("unexpected difference in bytes, expected %#x vs received %v", bitfield.NewBitlist(slotsPerEpoch), savedBits)
 			}
 		}
 	}

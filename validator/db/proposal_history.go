@@ -20,7 +20,8 @@ func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, 
 	defer span.End()
 
 	var err error
-	var slotBitlist bitfield.Bitlist
+	// Using 5 here since a bitfield length of 32 is always 5 bytes long.
+	slotBitlist := make(bitfield.Bitlist, 5)
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(publicKey)
@@ -32,7 +33,7 @@ func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, 
 			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
 			return nil
 		}
-		slotBitlist = slotBits
+		copy(slotBitlist, slotBits)
 		return nil
 	})
 	return slotBitlist, err
@@ -79,13 +80,14 @@ func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 	for k, _ := c.First(); k != nil; k, _ = c.Next() {
 		epoch := binary.LittleEndian.Uint64(k)
 		// Only delete epochs that are older than the weak subjectivity period.
-		if epoch+params.BeaconConfig().WeakSubjectivityPeriod < newestEpoch {
-			if err := valBucket.Delete(k); err != nil {
+		if epoch+params.BeaconConfig().WeakSubjectivityPeriod <= newestEpoch {
+			fmt.Printf("deleted %d\n", epoch)
+			if err := c.Delete(); err != nil {
 				return errors.Wrapf(err, "could not prune epoch %d in proposal history", epoch)
 			}
 		} else {
 			// If starting from the oldest, we stop finding anything prunable, stop pruning.
-			return nil
+			break
 		}
 	}
 	return nil
