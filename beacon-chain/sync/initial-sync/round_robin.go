@@ -44,11 +44,9 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	defer state.SkipSlotCache.Disable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
-	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
-		p2p:                 s.p2p,
-		headFetcher:         s.chain,
-		highestExpectedSlot: highestFinalizedSlot,
+		p2p:         s.p2p,
+		headFetcher: s.chain,
 	})
 	if err := queue.start(); err != nil {
 		return err

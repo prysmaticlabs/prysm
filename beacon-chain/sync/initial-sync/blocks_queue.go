@@ -35,6 +35,7 @@ type blocksProvider interface {
 	requestResponses() <-chan *fetchRequestResponse
 	scheduleRequest(ctx context.Context, start, count uint64) error
 	nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error)
+	bestFinalizedSlot() uint64
 	start() error
 	stop()
 }
@@ -72,11 +73,15 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 			p2p:         cfg.p2p,
 		})
 	}
+	highestExpectedSlot := cfg.highestExpectedSlot
+	if highestExpectedSlot <= cfg.startSlot {
+		highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
+	}
 
 	queue := &blocksQueue{
 		ctx:                 ctx,
 		cancel:              cancel,
-		highestExpectedSlot: cfg.highestExpectedSlot,
+		highestExpectedSlot: highestExpectedSlot,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
 		fetchedBlocks:       make(chan *eth.SignedBeaconBlock, allowedBlocksPerSecond),
@@ -90,6 +95,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	queue.state.addHandler(stateDataParsed, eventReadyToSend, queue.onReadyToSendEvent(ctx))
 	queue.state.addHandler(stateSkipped, eventExtendWindow, queue.onExtendWindowEvent(ctx))
 	queue.state.addHandler(stateSent, eventCheckStale, queue.onCheckStaleEvent(ctx))
+	queue.state.addHandler(stateBeyondHead, eventCheckStale, queue.onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -141,6 +147,11 @@ func (q *blocksQueue) loop() {
 	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventExtendWindow}
 	for {
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
+			// By the time initial sync is complete, highest slot may increase, re-check.
+			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
+				continue
+			}
 			log.Debug("Highest expected slot reached")
 			q.cancel()
 		}
@@ -206,6 +217,7 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 		start := data.start
 		count := mathutil.Min(data.count, q.highestExpectedSlot-start+1)
 		if count <= 0 {
+			es.setState(stateBeyondHead)
 			return es.state, errSlotIsTooHigh
 		}
 
@@ -372,6 +384,16 @@ func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(es *epochState, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return es.state, ctx.Err()
+		}
+
+		if es.state == stateBeyondHead {
+			for _, state := range q.state.epochs {
+				isSkipped := state.state == stateSkipped || state.state == stateSkippedExt
+				if state.epoch < es.epoch && isSkipped {
+					state.setState(stateNew)
+				}
+			}
+			return stateNew, nil
 		}
 
 		if time.Since(es.updated) > staleEpochTimeout {
