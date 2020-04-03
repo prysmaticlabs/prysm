@@ -89,7 +89,7 @@ func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error 
 	return nil
 }
 
-// DeleteUnaggregatedAttestation deletes the unaggregated attestations in cache.
+// DeleteUnaggregatedAttestations deletes the unaggregated attestations in cache.
 func (p *AttCaches) DeleteUnaggregatedAttestations(atts []*ethpb.Attestation) error {
 	p.unAggregateAttLock.Lock()
 	defer p.unAggregateAttLock.Unlock()
