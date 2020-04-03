@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -35,12 +36,6 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
-
-	// If attestation committee subnets are enabled, we track the committee
-	// index into a cache.
-	if featureconfig.Get().EnableDynamicCommitteeSubnets {
-		cache.CommitteeIDs.AddIDs([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
-	}
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
@@ -159,12 +154,6 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
 
-	// If attestation committee subnets are enabled, we track the committee
-	// index into a cache.
-	if featureconfig.Get().EnableDynamicCommitteeSubnets {
-		cache.CommitteeIDs.AddIDs([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
-	}
-
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
@@ -234,4 +223,14 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 			return
 		}
 	}
+}
+
+// SubscribeCommitteeSubnet subscribes to the committee ID subnet given subscribe request.
+func (vs *Server) SubscribeCommitteeSubnet(ctx context.Context, req *ethpb.CommitteeSubnetSubscribeRequest) (*ptypes.Empty, error) {
+	if req.IsAggregator {
+		cache.CommitteeIDs.AddID(req.CommitteeId, req.Slot)
+	} else {
+		// What should we do here as an attester?
+	}
+	return &ptypes.Empty{}, nil
 }

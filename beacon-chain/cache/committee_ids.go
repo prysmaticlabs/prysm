@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
@@ -16,27 +17,30 @@ type committeeIDs struct {
 var CommitteeIDs = newCommitteeIDs()
 
 func newCommitteeIDs() *committeeIDs {
-	cache, err := lru.New(8)
+	maxCommitteesPerEpoch := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch)
+	cache, err := lru.New(maxCommitteesPerEpoch)
 	if err != nil {
 		panic(err)
 	}
 	return &committeeIDs{cache: cache}
 }
 
-// AddIDs to the cache for attestation committees by epoch.
-func (t *committeeIDs) AddIDs(indices []uint64, epoch uint64) {
+// AddID adds committee ID for subscribing subnet for the attester and/or aggregator of a given slot.
+func (t *committeeIDs) AddID(committeeID uint64, slot uint64) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	val, exists := t.cache.Get(epoch)
+
+	committeeIDs := []uint64{committeeID}
+	val, exists := t.cache.Get(slot)
 	if exists {
-		indices = sliceutil.UnionUint64(append(indices, val.([]uint64)...))
+		committeeIDs = sliceutil.UnionUint64(append(val.([]uint64), committeeIDs...))
 	}
-	t.cache.Add(epoch, indices)
+	t.cache.Add(slot, committeeIDs)
 }
 
-// GetIDs from the cache for attestation committees by epoch.
-func (t *committeeIDs) GetIDs(epoch uint64) []uint64 {
-	val, exists := t.cache.Get(epoch)
+// GetIDs gets the committee ID for subscribing subnet for attester and/or aggregator of the slot.
+func (t *committeeIDs) GetIDs(slot uint64) []uint64 {
+	val, exists := t.cache.Get(slot)
 	if !exists {
 		return []uint64{}
 	}
