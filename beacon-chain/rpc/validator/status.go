@@ -93,6 +93,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		resp.ActivationEpoch = int64(val.ActivationEpoch)
 	}
 
+	// If the status can be retrieved from the beacon state, don't continue further.
 	if resp.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
 		return resp
 	}
