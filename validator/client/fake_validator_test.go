@@ -14,22 +14,22 @@ type fakeValidator struct {
 	WaitForActivationCalled          bool
 	WaitForChainStartCalled          bool
 	WaitForSyncCalled                bool
-	NextSlotRet                      <-chan uint64
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
 	UpdateDutiesCalled               bool
-	UpdateDutiesArg1                 uint64
-	UpdateDutiesRet                  error
 	RoleAtCalled                     bool
-	RoleAtArg1                       uint64
-	RolesAtRet                       []pb.ValidatorRole
 	AttestToBlockHeadCalled          bool
-	AttestToBlockHeadArg1            uint64
 	ProposeBlockCalled               bool
-	ProposeBlockArg1                 uint64
 	LogValidatorGainsAndLossesCalled bool
 	SlotDeadlineCalled               bool
+	ProposeBlockArg1                 uint64
+	AttestToBlockHeadArg1            uint64
+	RoleAtArg1                       uint64
+	UpdateDutiesArg1                 uint64
+	NextSlotRet                      <-chan uint64
 	PublicKey                        string
+	UpdateDutiesRet                  error
+	RolesAtRet                       []pb.ValidatorRole
 }
 
 func (fv *fakeValidator) Done() {
