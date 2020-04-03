@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -44,16 +45,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer s.chain.ClearCachedStates()
-
-	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
-		cfg.EnableSkipSlotsCache = false
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableSkipSlotsCache = true
-			featureconfig.Init(cfg)
-		}()
-	}
+	state.SkipSlotCache.Disable()
+	defer state.SkipSlotCache.Enable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
@@ -181,7 +174,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			}
 		}
 		var startBlock uint64
-		if featureconfig.Get().InitSyncBatchSaveBlocks {
+		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
 			lastFinalizedEpoch := s.chain.FinalizedCheckpt().Epoch
 			lastFinalizedState, err := s.db.HighestSlotStatesBelow(ctx, helpers.StartSlot(lastFinalizedEpoch))
 			if err != nil {

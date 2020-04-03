@@ -50,10 +50,10 @@ type Flags struct {
 	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
-	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
+	DisableInitSyncQueue                       bool   // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool   // EnableBlockHTR enables custom hashing of our beacon blocks.
-	InitSyncBatchSaveBlocks                    bool   // InitSyncBatchSaveBlocks enables batch save blocks mode during initial syncing.
+	NoInitSyncBatchSaveBlocks                  bool   // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -65,7 +65,6 @@ type Flags struct {
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 }
@@ -131,10 +130,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
 	}
-	if ctx.Bool(enableSkipSlotsCacheFlag.Name) {
-		log.Warn("Enabled skip slots cache.")
-		cfg.EnableSkipSlotsCache = true
-	}
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.String(kafkaBootstrapServersFlag.Name)
@@ -179,9 +174,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.Bool(enableInitSyncQueue.Name) {
-		log.Warn("Enabling initial sync queue")
-		cfg.EnableInitSyncQueue = true
+	if ctx.Bool(disableInitSyncQueue.Name) {
+		log.Warn("Disabled initial sync queue")
+		cfg.DisableInitSyncQueue = true
 	}
 	if ctx.Bool(enableFieldTrie.Name) {
 		log.Warn("Enabling state field trie")
@@ -191,9 +186,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling custom block hashing")
 		cfg.EnableBlockHTR = true
 	}
-	if ctx.Bool(initSyncBatchSaveBlocks.Name) {
-		log.Warn("Enabling init sync batch save blocks mode")
-		cfg.InitSyncBatchSaveBlocks = true
+	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
+		log.Warn("Disabling init sync batch save blocks mode")
+		cfg.NoInitSyncBatchSaveBlocks = true
 	}
 	Init(cfg)
 }
@@ -204,13 +199,15 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	if ctx.Bool(protectProposerFlag.Name) {
-		log.Warn("Enabled validator proposal slashing protection.")
-		cfg.ProtectProposer = true
+	cfg.ProtectProposer = true
+	if ctx.Bool(disableProtectProposerFlag.Name) {
+		log.Warn("Disabled validator proposal slashing protection.")
+		cfg.ProtectProposer = false
 	}
-	if ctx.Bool(protectAttesterFlag.Name) {
-		log.Warn("Enabled validator attestation slashing protection.")
-		cfg.ProtectAttester = true
+	cfg.ProtectAttester = true
+	if ctx.Bool(disableProtectAttesterFlag.Name) {
+		log.Warn("Disabled validator attestation slashing protection.")
+		cfg.ProtectAttester = false
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")
