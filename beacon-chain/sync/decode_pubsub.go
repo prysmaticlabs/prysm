@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsub "github.com/rairyx/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 

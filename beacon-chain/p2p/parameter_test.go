@@ -3,7 +3,7 @@ package p2p
 import (
 	"testing"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsub "github.com/rairyx/go-libp2p-pubsub"
 )
 
 const (

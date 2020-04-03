@@ -1598,3 +1598,11 @@ go_repository(
     sum = "h1:oUQredbOIzWIMmeGR9dTLzSi4DqRVwxrPzSDiLJBp4Q=",
     version = "v0.0.0-20200310214500-3283b9706406",
 )
+
+go_repository(
+    name = "com_github_rairyx_go_libp2p_pubsub",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/rairyx/go-libp2p-pubsub",
+    sum = "h1:h0jQhkbUlkoi78nwhnjPMYThYcQAyAU/ULx48a1RZzI=",
+    version = "v0.1.3",
+)

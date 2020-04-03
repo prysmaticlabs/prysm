@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	pubsub "github.com/rairyx/go-libp2p-pubsub"
+	pubsubpb "github.com/rairyx/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
