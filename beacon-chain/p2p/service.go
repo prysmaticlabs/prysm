@@ -7,11 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -27,10 +26,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/sirupsen/logrus"
 )
@@ -69,6 +71,7 @@ type Service struct {
 	peers                 *peers.Status
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
+	metaData              *pb.MetaData
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -99,6 +102,11 @@ func NewService(cfg *Config) (*Service, error) {
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
+		return nil, err
+	}
+	s.metaData, err = metaDataFromConfig(s.cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create peer metadata")
 		return nil, err
 	}
 
@@ -325,6 +333,16 @@ func (s *Service) Disconnect(pid peer.ID) error {
 // Peers returns the peer status interface.
 func (s *Service) Peers() *peers.Status {
 	return s.peers
+}
+
+// Metadata returns a copy of the peer's metadata.
+func (s *Service) Metadata() *pb.MetaData {
+	return proto.Clone(s.metaData).(*pb.MetaData)
+}
+
+// MetadataSeq returns the metadata sequence number.
+func (s *Service) MetadataSeq() uint64 {
+	return s.metaData.SeqNumber
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node

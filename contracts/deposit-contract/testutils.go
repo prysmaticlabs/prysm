@@ -22,8 +22,8 @@ var (
 // through which we can perform actions on the eth1.0 chain.
 type TestAccount struct {
 	Addr         common.Address
-	Contract     *DepositContract
 	ContractAddr common.Address
+	Contract     *DepositContract
 	Backend      *backends.SimulatedBackend
 	TxOpts       *bind.TransactOpts
 }
@@ -54,7 +54,7 @@ func Setup() (*TestAccount, error) {
 	}
 	backend.Commit()
 
-	return &TestAccount{addr, contract, contractAddr, backend, txOpts}, nil
+	return &TestAccount{addr, contractAddr, contract, backend, txOpts}, nil
 }
 
 // Amount32Eth returns 32Eth(in wei) in terms of the big.Int type.

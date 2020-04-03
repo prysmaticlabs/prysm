@@ -29,7 +29,6 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	NoCustomConfig                             bool   // NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	CustomGenesisDelay                         uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 	MinimalConfig                              bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions                   bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -38,7 +37,6 @@ type Flags struct {
 	EnableBackupWebhook                        bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool   // EnableSnappyDBCompression in the database.
-	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
@@ -47,9 +45,8 @@ type Flags struct {
 	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
-	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
+	DisableNewStateMgmt                        bool   // NewStateMgmt disables the new state mgmt service.
 	DisableInitSyncQueue                       bool   // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool   // EnableBlockHTR enables custom hashing of our beacon blocks.
@@ -67,6 +64,9 @@ type Flags struct {
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
+
+	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 }
 
 var featureConfig *Flags
@@ -162,17 +162,13 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling check head state for chainservice")
 		cfg.CheckHeadState = true
 	}
-	if ctx.Bool(enableNoiseHandshake.Name) {
-		log.Warn("Enabling noise handshake for peer")
-		cfg.EnableNoise = true
-	}
 	if ctx.Bool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(newStateMgmt.Name) {
-		log.Warn("Enabling experimental state management service")
-		cfg.NewStateMgmt = true
+	if ctx.Bool(disableNewStateMgmt.Name) {
+		log.Warn("Disabling state management service")
+		cfg.DisableNewStateMgmt = true
 	}
 	if ctx.Bool(disableInitSyncQueue.Name) {
 		log.Warn("Disabled initial sync queue")

@@ -9,6 +9,8 @@ import (
 type Config struct {
 	BeaconDB              db.Database
 	NoDiscovery           bool
+	EnableUPnP            bool
+	EnableDiscv5          bool
 	StaticPeers           []string
 	BootstrapNodeAddr     []string
 	KademliaBootStrapAddr []string
@@ -19,11 +21,10 @@ type Config struct {
 	HostDNS               string
 	PrivateKey            string
 	DataDir               string
+	MetaDataDir           string
 	TCPPort               uint
 	UDPPort               uint
 	MaxPeers              uint
 	WhitelistCIDR         string
-	EnableUPnP            bool
-	EnableDiscv5          bool
 	Encoding              string
 }

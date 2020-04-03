@@ -243,6 +243,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	}
 	wantedErr := "cannot delete genesis, finalized, or head state"
 	if err := db.DeleteState(ctx, finalizedBlockRoot); err.Error() != wantedErr {
+		t.Log(err.Error())
 		t.Error("Did not receive wanted error")
 	}
 }
