@@ -252,11 +252,12 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
+	pubKey := bytesutil.ToBytes48(validatorPubKey.Marshal())
 	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
-	validator.ProposeBlock(context.Background(), farAhead, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farAhead, pubKey)
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
-	validator.ProposeBlock(context.Background(), farAhead-4, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farAhead-4, pubKey)
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 }
 
