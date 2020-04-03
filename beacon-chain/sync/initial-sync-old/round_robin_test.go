@@ -251,22 +251,27 @@ func TestRoundRobinSync(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
+			gBlock := &eth.SignedBeaconBlock{
 				Block: &eth.BeaconBlock{
 					Slot: 0,
-				}})
+				}}
+			err := beaconDB.SaveBlock(context.Background(), gBlock)
 			if err != nil {
 				t.Fatal(err)
 			}
-
+			gRoot, _ := ssz.HashTreeRoot(gBlock.Block)
+			beaconDB.SaveGenesisBlockRoot(context.Background(), gRoot)
 			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
 			if err != nil {
 				t.Fatal(err)
 			}
+			beaconDB.SaveState(context.Background(), st, gRoot)
+
 			mc := &mock.ChainService{
-				State: st,
-				Root:  genesisRoot[:],
-				DB:    beaconDB,
+				State:               st,
+				Root:                genesisRoot[:],
+				DB:                  beaconDB,
+				FinalizedCheckPoint: &eth.Checkpoint{Epoch: helpers.SlotToEpoch(st.Slot())},
 			} // no-op mock
 			s := &Service{
 				chain:             mc,
@@ -370,14 +375,14 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 
 		peer.Connect(host)
 
-		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound)
+		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound, []uint64{})
 		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
 		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			FinalizedRoot:   []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
-			FinalizedEpoch:  datum.finalizedEpoch,
-			HeadRoot:        []byte("head_root"),
-			HeadSlot:        datum.headSlot,
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
+			FinalizedEpoch: datum.finalizedEpoch,
+			HeadRoot:       []byte("head_root"),
+			HeadSlot:       datum.headSlot,
 		})
 	}
 }

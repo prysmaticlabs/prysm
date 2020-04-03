@@ -117,6 +117,18 @@ load(
 
 container_repositories()
 
+load(
+    "@io_bazel_rules_docker//container:container.bzl",
+    "container_pull",
+)
+
+container_pull(
+    name = "alpine_cc_linux_amd64",
+    digest = "sha256:d5cee45549351be7a03a96c7b319b9c1808979b10888b79acca4435cc068005e",
+    registry = "index.docker.io",
+    repository = "frolvlad/alpine-glibc",
+)
+
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
@@ -185,7 +197,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.0/general.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.1/general.tar.gz",
 )
 
 http_archive(
@@ -200,7 +212,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.0/minimal.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.1/minimal.tar.gz",
 )
 
 http_archive(
@@ -215,7 +227,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.0/mainnet.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.11.1/mainnet.tar.gz",
 )
 
 http_archive(
@@ -281,7 +293,7 @@ http_archive(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "40beaeef26d5a2a0918dec2b960c2556c71a90a0",
+    commit = "861ae1b1875c17d86a6a5d68118708ab2b099658",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -300,12 +312,6 @@ go_repository(
     patches = [
         "//third_party:com_github_prysmaticlabs_go_ssz.patch",
     ],
-)
-
-go_repository(
-    name = "com_github_urfave_cli",
-    commit = "e6cf83ec39f6e1158ced1927d4ed14578fda8edb",  # v1.21.0
-    importpath = "github.com/urfave/cli",
 )
 
 go_repository(
@@ -764,14 +770,6 @@ go_repository(
     importpath = "github.com/matttproud/golang_protobuf_extensions",
 )
 
-http_archive(
-    name = "com_github_boltdb_bolt",  # v1.3.1
-    build_file = "//third_party:boltdb/bolt.BUILD",
-    sha256 = "95dc5842dab55f7519b7002bbec648321277b5d6f0ad59aab509ee59313b6386",
-    strip_prefix = "bolt-2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",
-    urls = ["https://github.com/boltdb/bolt/archive/2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8.tar.gz"],
-)
-
 go_repository(
     name = "com_github_pborman_uuid",
     commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",  # v1.2.0
@@ -914,6 +912,13 @@ go_repository(
     build_extra_args = ["-exclude=vendor"],
     commit = "c1ea390cb7f7ca6d6345b4d3bcfd5546028cee20",  # v12.0.0
     importpath = "k8s.io/client-go",
+)
+
+go_repository(
+    name = "io_etcd_go_bbolt",
+    importpath = "go.etcd.io/bbolt",
+    sum = "h1:hi1bXHMVrlQh6WwxAy+qZCV/SYIlqo+Ushwdpa4tAKg=",
+    version = "v1.3.4",
 )
 
 go_repository(
@@ -1200,7 +1205,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "dbb55b15e92f897ee230360c8d9695e2f224b117",
+    commit = "62c2aee7166951c456888f92237aee4303ba1b9d",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
@@ -1304,7 +1309,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "c0970cf6aa0c0826b73047770e81617bd24a9ffe",
+    commit = "90224d88dd65813ba2f35197bb1bb8915b2d0c6b",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
@@ -1337,13 +1342,6 @@ go_repository(
     importpath = "github.com/mattn/go-runewidth",
     sum = "h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/p7Y=",
     version = "v0.0.4",
-)
-
-go_repository(
-    name = "com_github_mdlayher_prombolt",
-    importpath = "github.com/mdlayher/prombolt",
-    sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
-    version = "v0.0.0-20161005185022-dfcf01d20ee9",
 )
 
 go_repository(
@@ -1381,13 +1379,6 @@ go_repository(
     importpath = "github.com/elastic/gosigar",
     sum = "h1:GzPQ+78RaAb4J63unidA/JavQRKrB6s8IOzN6Ib59jo=",
     version = "v0.10.5",
-)
-
-go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    importpath = "gopkg.in/urfave/cli.v1",
-    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
-    version = "v1.20.0",
 )
 
 go_repository(
@@ -1620,4 +1611,72 @@ go_repository(
     name = "com_github_ferranbt_fastssz",
     commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     importpath = "github.com/ferranbt/fastssz",
+)
+
+go_repository(
+    name = "com_github_burntsushi_toml",
+    importpath = "github.com/BurntSushi/toml",
+    sum = "h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=",
+    version = "v0.3.1",
+)
+
+go_repository(
+    name = "com_github_cpuguy83_go_md2man_v2",
+    importpath = "github.com/cpuguy83/go-md2man/v2",
+    sum = "h1:EoUDS0afbrsXAZ9YQ9jdu/mZ2sXgT1/2yyNng4PGlyM=",
+    version = "v2.0.0",
+)
+
+go_repository(
+    name = "com_github_russross_blackfriday_v2",
+    importpath = "github.com/russross/blackfriday/v2",
+    sum = "h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=",
+    version = "v2.0.1",
+)
+
+go_repository(
+    name = "com_github_shurcool_sanitized_anchor_name",
+    importpath = "github.com/shurcooL/sanitized_anchor_name",
+    sum = "h1:PdmoCO6wvbs+7yrJyMORt4/BmY5IYyJwS/kOiWx8mHo=",
+    version = "v1.0.0",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v2",
+    importpath = "gopkg.in/urfave/cli.v2",
+    sum = "h1:OvXt/p4cdwNl+mwcWMq/AxaKFkhdxcjx+tx+qf4EOvY=",
+    version = "v2.0.0-20190806201727-b62605953717",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v1",
+    importpath = "gopkg.in/urfave/cli.v1",
+    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
+    version = "v1.20.0",
+)
+
+go_repository(
+    name = "com_github_wealdtech_eth2_signer_api",
+    build_file_proto_mode = "disable_global",
+    importpath = "github.com/wealdtech/eth2-signer-api",
+    sum = "h1:AL4bRJDW6lyRc0ROPruVTEHt7Xs+EV2lRBPen2plOr8=",
+    version = "v1.2.0",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_prombbolt",
+    importpath = "github.com/prysmaticlabs/prombbolt",
+    sum = "h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=",
+    version = "v0.0.0-20200324184628-09789ef63796",
+)
+
+load("@com_github_prysmaticlabs_prombbolt//:repositories.bzl", "prombbolt_dependencies")
+
+prombbolt_dependencies()
+
+go_repository(
+    name = "com_github_ianlancetaylor_cgosymbolizer",
+    importpath = "github.com/ianlancetaylor/cgosymbolizer",
+    sum = "h1:GWsU1WjSE2rtvyTYGcndqmPPkQkBNV7pEuZdnGtwtu4=",
+    version = "v0.0.0-20200321040036-d43e30eacb43",
 )

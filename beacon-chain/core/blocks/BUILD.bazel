@@ -42,6 +42,7 @@ go_test(
     srcs = [
         "block_operations_fuzz_test.go",
         "block_operations_test.go",
+        "block_regression_test.go",
         "block_test.go",
         "eth1_data_test.go",
     ],

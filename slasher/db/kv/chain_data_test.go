@@ -7,11 +7,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func TestChainHead(t *testing.T) {
-	app := cli.NewApp()
+	app := &cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(app, set, nil))
 	ctx := context.Background()

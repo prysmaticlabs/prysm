@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
+	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
+	proposerIface "github.com/prysmaticlabs/prysm/slasher/detection/proposals/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -29,6 +31,7 @@ type Service struct {
 	attesterSlashingsFeed *event.Feed
 	proposerSlashingsFeed *event.Feed
 	minMaxSpanDetector    iface.SpanDetector
+	proposalsDetector     proposerIface.ProposalsDetector
 }
 
 // Config options for the detection service.
@@ -56,6 +59,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
 		minMaxSpanDetector:    attestations.NewSpanDetector(cfg.SlasherDB),
+		proposalsDetector:     proposals.NewProposeDetector(cfg.SlasherDB),
 	}
 }
 
@@ -125,7 +129,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		)
 
 		for _, att := range indexedAtts {
-			slashings, err := ds.detectAttesterSlashings(ctx, att)
+			slashings, err := ds.DetectAttesterSlashings(ctx, att)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
@@ -155,5 +159,19 @@ func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*eth
 			}).Info("Found an attester slashing! Submitting to beacon node")
 			ds.attesterSlashingsFeed.Send(slashings[i])
 		}
+	}
+}
+
+func (ds *Service) submitProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) {
+	ctx, span := trace.StartSpan(ctx, "detection.submitProposerSlashing")
+	defer span.End()
+	if slashing != nil && slashing.Header_1 != nil && slashing.Header_2 != nil {
+		log.WithFields(logrus.Fields{
+			"header1Slot":        slashing.Header_1.Header.Slot,
+			"header2Slot":        slashing.Header_2.Header.Slot,
+			"proposerIdxHeader1": slashing.Header_1.Header.ProposerIndex,
+			"proposerIdxHeader2": slashing.Header_2.Header.ProposerIndex,
+		}).Info("Found a proposer slashing! Submitting to beacon node")
+		ds.proposerSlashingsFeed.Send(slashing)
 	}
 }

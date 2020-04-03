@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -22,7 +22,7 @@ import (
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() uint64 {
-	return uint64(time.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
+	return uint64(roughtime.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
@@ -61,8 +61,12 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
 	defer span.End()
 
-	if featureconfig.Get().NewStateMgmt {
-		preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if !featureconfig.Get().DisableNewStateMgmt {
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
+		if !s.stateGen.StateSummaryExists(ctx, parentRoot) {
+			return nil, errors.New("provided block root does not have block saved in the db")
+		}
+		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 		}
@@ -229,21 +233,36 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	newJustifiedBlockSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	if err != nil {
-		return false, err
+	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
+	justifiedRoot := bytesutil.ToBytes32(newJustifiedCheckpt.Root)
+	var err error
+	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
+		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
+	} else {
+		newJustifiedBlockSigned, err = s.beaconDB.Block(ctx, justifiedRoot)
+		if err != nil {
+			return false, err
+		}
 	}
 	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
 		return false, errors.New("nil new justified block")
 	}
+
 	newJustifiedBlock := newJustifiedBlockSigned.Block
 	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
 		return false, nil
 	}
-	justifiedBlockSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-	if err != nil {
-		return false, err
+	var justifiedBlockSigned *ethpb.SignedBeaconBlock
+	cachedJustifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
+	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
+		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
+	} else {
+		justifiedBlockSigned, err = s.beaconDB.Block(ctx, cachedJustifiedRoot)
+		if err != nil {
+			return false, err
+		}
 	}
+
 	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
 		return false, errors.New("nil justified block")
 	}
@@ -267,17 +286,19 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	if err != nil {
 		return err
 	}
+
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
 	}
 
-	if !featureconfig.Get().NewStateMgmt {
+	if featureconfig.Get().DisableNewStateMgmt {
 		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
+		var err error
 		if justifiedState == nil {
 			if s.beaconDB.HasState(ctx, justifiedRoot) {
 				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
@@ -376,6 +397,11 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
+
+	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
+		signed = s.getInitSyncBlock(bytesutil.ToBytes32(root))
+	}
+
 	if signed == nil || signed.Block == nil {
 		return nil, errors.New("nil block")
 	}

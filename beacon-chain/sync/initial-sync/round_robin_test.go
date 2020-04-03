@@ -235,6 +235,26 @@ func TestRoundRobinSync(t *testing.T) {
 					finalizedEpoch: 4,
 					headSlot:       160,
 				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
+				{
+					blocks:         makeSequence(1, 160),
+					finalizedEpoch: 4,
+					headSlot:       160,
+				},
 			},
 		},
 	}
@@ -370,14 +390,14 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 
 		peer.Connect(host)
 
-		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound)
+		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound, []uint64{})
 		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
 		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			FinalizedRoot:   []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
-			FinalizedEpoch:  datum.finalizedEpoch,
-			HeadRoot:        []byte("head_root"),
-			HeadSlot:        datum.headSlot,
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
+			FinalizedEpoch: datum.finalizedEpoch,
+			HeadRoot:       []byte("head_root"),
+			HeadSlot:       datum.headSlot,
 		})
 	}
 }

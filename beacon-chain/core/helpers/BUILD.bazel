@@ -23,6 +23,7 @@ go_library(
         "//slasher:__subpackages__",
         "//tools:__subpackages__",
         "//validator:__subpackages__",
+        "//endtoend/evaluators:__pkg__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
@@ -68,6 +69,7 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",

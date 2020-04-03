@@ -9,7 +9,9 @@ package detection
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"go.opencensus.io/trace"
 )
 
@@ -24,9 +26,14 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-ch:
+		case sblk := <-ch:
 			log.Debug("Running detection on block...")
-			// TODO(#4836): Run detection function for proposer slashings.
+			sbh, err := signedBeaconBlockHeaderFromBlock(sblk)
+			if err != nil {
+				log.WithError(err)
+			}
+			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, sbh)
+			ds.submitProposerSlashing(ctx, slashing)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
@@ -49,7 +56,7 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 	for {
 		select {
 		case indexedAtt := <-ch:
-			slashings, err := ds.detectAttesterSlashings(ctx, indexedAtt)
+			slashings, err := ds.DetectAttesterSlashings(ctx, indexedAtt)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
@@ -68,4 +75,21 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 			return
 		}
 	}
+}
+
+func signedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
+	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to get signing root of block")
+	}
+	return &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:          block.Block.Slot,
+			ProposerIndex: block.Block.ProposerIndex,
+			ParentRoot:    block.Block.ParentRoot,
+			StateRoot:     block.Block.StateRoot,
+			BodyRoot:      bodyRoot[:],
+		},
+		Signature: block.Signature,
+	}, nil
 }

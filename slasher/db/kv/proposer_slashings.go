@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
@@ -109,7 +109,10 @@ func (db *Store) SaveProposerSlashing(ctx context.Context, status types.Slashing
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
-	root := hashutil.Hash(enc)
+	root, err := hashutil.HashProto(slashing)
+	if err != nil {
+		return err
+	}
 	key := encodeTypeRoot(types.SlashingType(types.Proposal), root)
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
@@ -130,7 +133,10 @@ func (db *Store) SaveProposerSlashings(ctx context.Context, status types.Slashin
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		root := hashutil.Hash(encSlashings[i])
+		root, err := hashutil.HashProto(slashing)
+		if err != nil {
+			return err
+		}
 		keys[i] = encodeTypeRoot(types.SlashingType(types.Proposal), root)
 	}
 

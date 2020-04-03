@@ -7,13 +7,14 @@ package beaconclient
 
 import (
 	"context"
-	"errors"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -56,6 +57,7 @@ type Service struct {
 	proposerSlashingsFeed       *event.Feed
 	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
 	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
+	publicKeyCache              *cache.PublicKeyCache
 }
 
 // Config options for the beaconclient service.
@@ -68,8 +70,13 @@ type Config struct {
 }
 
 // NewBeaconClientService instantiation.
-func NewBeaconClientService(ctx context.Context, cfg *Config) *Service {
+func NewBeaconClientService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create new cache")
+	}
+
 	return &Service{
 		cert:                        cfg.BeaconCert,
 		ctx:                         ctx,
@@ -85,7 +92,8 @@ func NewBeaconClientService(ctx context.Context, cfg *Config) *Service {
 		proposerSlashingsFeed:       cfg.ProposerSlashingsFeed,
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
-	}
+		publicKeyCache:              publicKeyCache,
+	}, nil
 }
 
 // BlockFeed returns a feed other services in slasher can subscribe to

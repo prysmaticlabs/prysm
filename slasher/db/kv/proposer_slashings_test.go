@@ -9,13 +9,14 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
-	"github.com/urfave/cli"
+	"gopkg.in/d4l3k/messagediff.v1"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -38,9 +39,9 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 }
 
 func TestStore_SaveProposerSlashing(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -50,15 +51,24 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 	}{
 		{
 			ss: types.Active,
-			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}}},
+			ps: &ethpb.ProposerSlashing{
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+			},
 		},
 		{
 			ss: types.Included,
-			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}}},
+			ps: &ethpb.ProposerSlashing{
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+			},
 		},
 		{
 			ss: types.Reverted,
-			ps: &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}}},
+			ps: &ethpb.ProposerSlashing{
+				Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+				Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+			},
 		},
 	}
 
@@ -74,6 +84,8 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 		}
 
 		if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
+			diff, _ := messagediff.PrettyDiff(proposerSlashings[0], tt.ps)
+			t.Log(diff)
 			t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", tt.ps, proposerSlashings)
 		}
 	}
@@ -81,9 +93,9 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 }
 
 func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -141,16 +153,25 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 }
 
 func TestStore_SaveProposerSlashings(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	ps := []*ethpb.ProposerSlashing{
-		{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}}},
-		{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}}},
-		{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}}},
+		{
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}},
+		},
+		{
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 2}},
+		},
+		{
+			Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+			Header_2: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 3}},
+		},
 	}
 	err := db.SaveProposerSlashings(ctx, types.Active, ps)
 	if err != nil {
@@ -164,6 +185,8 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 		return proposerSlashings[i].Header_1.Header.ProposerIndex < proposerSlashings[j].Header_1.Header.ProposerIndex
 	})
 	if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings, ps) {
+		diff, _ := messagediff.PrettyDiff(proposerSlashings, ps)
+		t.Log(diff)
 		t.Fatalf("Proposer slashing: %v should be part of proposer slashings response: %v", ps, proposerSlashings)
 	}
 }

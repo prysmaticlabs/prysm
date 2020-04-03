@@ -1,15 +1,13 @@
 package state
 
 import (
+	"context"
 	"runtime"
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/protolambda/zssz/merkle"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -18,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"go.opencensus.io/trace"
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
@@ -179,7 +179,10 @@ func (b *BeaconState) Copy() *BeaconState {
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
-func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
+func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
+	_, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
+	defer span.End()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -210,7 +213,7 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 // pads the leaves to a power-of-two length.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
+	layers := make([][][]byte, stateutil.GetDepth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}
@@ -237,6 +240,7 @@ func merkleize(leaves [][]byte) [][][]byte {
 }
 
 func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
 		return stateutil.Uint64Root(b.state.GenesisTime), nil
@@ -281,7 +285,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case historicalRoots:
 		return stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
-		return stateutil.Eth1Root(b.state.Eth1Data)
+		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
 		if featureconfig.Get().EnableFieldTrie {
 			if b.rebuildTrie[field] {
@@ -359,11 +363,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.PreviousJustifiedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.CurrentJustifiedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
-		return stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
+		return stateutil.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
@@ -379,7 +383,7 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 		fTrie = newTrie
 	}
 	// remove duplicate indexes
-	b.dirtyIndices[index] = sliceutil.UnionUint64(b.dirtyIndices[index], []uint64{})
+	b.dirtyIndices[index] = sliceutil.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
 	sort.Slice(b.dirtyIndices[index], func(i int, j int) bool {
 		return b.dirtyIndices[index][i] < b.dirtyIndices[index][j]

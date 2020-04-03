@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
@@ -68,6 +69,9 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	f.Lock()
 	defer f.Unlock()
 	var fieldRoot [32]byte
+	if len(indices) == 0 {
+		return f.TrieRoot()
+	}
 	datType, ok := fieldMap[f.field]
 	if !ok {
 		return [32]byte{}, errors.Errorf("unrecognized field in trie")
@@ -206,8 +210,9 @@ func handleByteArrays(val [][]byte, indices []uint64, convertAll bool) ([][32]by
 
 func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll bool) ([][32]byte, error) {
 	roots := [][32]byte{}
+	hasher := hashutil.CustomSHA256Hasher()
 	rootCreater := func(input *ethpb.Eth1Data) error {
-		newRoot, err := stateutil.Eth1Root(input)
+		newRoot, err := stateutil.Eth1Root(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -234,8 +239,9 @@ func handleEth1DataSlice(val []*ethpb.Eth1Data, indices []uint64, convertAll boo
 
 func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
 	roots := [][32]byte{}
+	hasher := hashutil.CustomSHA256Hasher()
 	rootCreater := func(input *ethpb.Validator) error {
-		newRoot, err := stateutil.ValidatorRoot(input)
+		newRoot, err := stateutil.ValidatorRoot(hasher, input)
 		if err != nil {
 			return err
 		}
@@ -262,8 +268,9 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 
 func handlePendingAttestation(val []*pb.PendingAttestation, indices []uint64, convertAll bool) ([][32]byte, error) {
 	roots := [][32]byte{}
+	hasher := hashutil.CustomSHA256Hasher()
 	rootCreator := func(input *pb.PendingAttestation) error {
-		newRoot, err := stateutil.PendingAttestationRoot(input)
+		newRoot, err := stateutil.PendingAttestationRoot(hasher, input)
 		if err != nil {
 			return err
 		}

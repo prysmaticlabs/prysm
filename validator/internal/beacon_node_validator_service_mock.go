@@ -238,24 +238,44 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) ProposeAttestation(ctx, in 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestation", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).ProposeAttestation), varargs...)
 }
 
-// SubmitAggregateAndProof mocks base method
-func (m *MockBeaconNodeValidatorClient) SubmitAggregateAndProof(ctx context.Context, in *ethpb.AggregationRequest, opts ...grpc.CallOption) (*ethpb.AggregationResponse, error) {
+// SubmitAggregateSelectionProof mocks base method
+func (m *MockBeaconNodeValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context, arg1 *ethpb.AggregateSelectionRequest, arg2 ...grpc.CallOption) (*ethpb.AggregateSelectionResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, in}
-	for _, a := range opts {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "SubmitAggregateAndProof", varargs...)
-	ret0, _ := ret[0].(*ethpb.AggregationResponse)
+	ret := m.ctrl.Call(m, "SubmitAggregateSelectionProof", varargs...)
+	ret0, _ := ret[0].(*ethpb.AggregateSelectionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// SubmitAggregateAndProof indicates an expected call of SubmitAggregateAndProof
-func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitAggregateAndProof(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+// SubmitAggregateSelectionProof indicates an expected call of SubmitAggregateSelectionProof
+func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitAggregateSelectionProof(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, in}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateAndProof", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitAggregateAndProof), varargs...)
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateSelectionProof", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitAggregateSelectionProof), varargs...)
+}
+
+// SubmitSignedAggregateSelectionProof mocks base method
+func (m *MockBeaconNodeValidatorClient) SubmitSignedAggregateSelectionProof(arg0 context.Context, arg1 *ethpb.SignedAggregateSubmitRequest, arg2 ...grpc.CallOption) (*ethpb.SignedAggregateSubmitResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitSignedAggregateSelectionProof", varargs...)
+	ret0, _ := ret[0].(*ethpb.SignedAggregateSubmitResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitSignedAggregateSelectionProof indicates an expected call of SubmitSignedAggregateSelectionProof
+func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitSignedAggregateSelectionProof(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedAggregateSelectionProof", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitSignedAggregateSelectionProof), varargs...)
 }
 
 // ProposeExit mocks base method
@@ -693,21 +713,6 @@ func (m *MockBeaconNodeValidatorServer) ProposeAttestation(arg0 context.Context,
 func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeAttestation(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeAttestation", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).ProposeAttestation), arg0, arg1)
-}
-
-// SubmitAggregateAndProof mocks base method
-func (m *MockBeaconNodeValidatorServer) SubmitAggregateAndProof(arg0 context.Context, arg1 *ethpb.AggregationRequest) (*ethpb.AggregationResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubmitAggregateAndProof", arg0, arg1)
-	ret0, _ := ret[0].(*ethpb.AggregationResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SubmitAggregateAndProof indicates an expected call of SubmitAggregateAndProof
-func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitAggregateAndProof(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAggregateAndProof", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).SubmitAggregateAndProof), arg0, arg1)
 }
 
 // ProposeExit mocks base method

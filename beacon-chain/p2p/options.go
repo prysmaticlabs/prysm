@@ -9,15 +9,14 @@ import (
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
 	filter "github.com/libp2p/go-maddr-filter"
-	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 // buildOptions for the libp2p host.
 func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, cfg.TCPPort))
+	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
 		log.Fatalf("Failed to p2p listen: %v", err)
 	}
@@ -29,10 +28,9 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		// Add one for the boot node and another for the relay, otherwise when we are close to maxPeers we will be above the high
 		// water mark and continually trigger pruning.
 		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers+2), int(cfg.MaxPeers+2), 1*time.Second)),
-	}
-	if featureconfig.Get().EnableNoise {
-		// Enable NOISE for the beacon node
-		options = append(options, libp2p.Security(noise.ID, noise.New))
+		// Enable NOISE handshakes by default in the beacon node.
+		libp2p.Security(noise.ID, noise.New),
+		libp2p.DefaultSecurity,
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
@@ -41,8 +39,8 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		options = append(options, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
 	}
 	if cfg.HostAddress != "" {
-		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.TCPPort))
+		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
+			external, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.HostAddress, cfg.TCPPort))
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
@@ -52,8 +50,8 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		}))
 	}
 	if cfg.HostDNS != "" {
-		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
-			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d", cfg.HostDNS, cfg.TCPPort))
+		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
+			external, err := ma.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d", cfg.HostDNS, cfg.TCPPort))
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
@@ -67,13 +65,24 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 			log.Errorf("Invalid local ip provided: %s", cfg.LocalIP)
 			return options
 		}
-		listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.LocalIP, cfg.TCPPort))
+		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
 			log.Fatalf("Failed to p2p listen: %v", err)
 		}
 		options = append(options, libp2p.ListenAddrs(listen))
 	}
 	return options
+}
+
+func multiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
+	parsedIP := net.ParseIP(ipAddr)
+	if parsedIP.To4() == nil && parsedIP.To16() == nil {
+		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
+	}
+	if parsedIP.To4() != nil {
+		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
+	}
+	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
 }
 
 // Adds a private key to the libp2p option if the option was provided.

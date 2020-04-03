@@ -24,6 +24,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const msgInvalidAttestationRequest = "Attestation request must be within current or previous epoch"
+
 // GetAttestationData requests that the beacon node produce an attestation data object,
 // which the validator acting as an attester will then sign.
 func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
@@ -42,6 +44,11 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	currentEpoch := helpers.SlotToEpoch(vs.GenesisTimeFetcher.CurrentSlot())
+	if currentEpoch > 0 && currentEpoch-1 != helpers.SlotToEpoch(req.Slot) && currentEpoch != helpers.SlotToEpoch(req.Slot) {
+		return nil, status.Error(codes.InvalidArgument, msgInvalidAttestationRequest)
 	}
 
 	// Attester will either wait until there's a valid block from the expected block proposer of for the assigned input slot
@@ -82,6 +89,28 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+	}
+
+	// In the case that we receive an attestation request after a newer state/block has been
+	// processed, we walk up the chain until state.Slot <= req.Slot to prevent producing an
+	// attestation that violates processing constraints.
+	fetchState := vs.BeaconDB.State
+	if !featureconfig.Get().DisableNewStateMgmt {
+		fetchState = vs.StateGen.StateByRoot
+	}
+	for headState.Slot() > req.Slot {
+		if ctx.Err() != nil {
+			return nil, status.Errorf(codes.Aborted, ctx.Err().Error())
+		}
+		parent := headState.ParentRoot()
+		headRoot = parent[:]
+		headState, err = fetchState(ctx, parent)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if headState == nil {
+			return nil, status.Error(codes.Internal, "Failed to lookup parent state from head.")
+		}
 	}
 
 	if helpers.CurrentEpoch(headState) < helpers.SlotToEpoch(req.Slot) {
@@ -175,8 +204,8 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
 	defer span.End()
 
-	// Don't need to wait if head slot is already the same as requested slot.
-	if slot == vs.HeadFetcher.HeadSlot() {
+	// Don't need to wait if current slot is greater than requested slot.
+	if slot < vs.GenesisTimeFetcher.CurrentSlot() {
 		return
 	}
 

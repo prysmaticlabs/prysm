@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 
-	"github.com/boltdb/bolt"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
-var errMissingStateForCheckpoint = errors.New("no state exists with checkpoint root")
+var errMissingStateForCheckpoint = errors.New("missing state summary for finalized root")
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
@@ -64,8 +65,11 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil {
+		if !featureconfig.Get().DisableNewStateMgmt {
+			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
+			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
 				return errors.New("missing state summary for finalized root")
 			}
 		} else {
@@ -92,8 +96,11 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil {
+		if !featureconfig.Get().DisableNewStateMgmt {
+			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
+			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
 				return errors.New("missing state summary for finalized root")
 			}
 		} else {
@@ -109,6 +116,7 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {
 			return err
 		}
+
 		return k.updateFinalizedBlockRoots(ctx, tx, checkpoint)
 	})
 }

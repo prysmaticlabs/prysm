@@ -87,6 +87,7 @@ go_test(
         "//beacon-chain/powchain/testing:go_default_library",
         "//beacon-chain/rpc/testing:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
@@ -96,6 +97,7 @@ go_test(
         "//shared/event:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
@@ -105,5 +107,6 @@ go_test(
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
     ],
 )

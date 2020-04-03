@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = [
+        "epochTimer.go",
+        "helpers.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/endtoend/helpers",
+    visibility = ["//endtoend:__subpackages__"],
+    deps = [
+        "//endtoend/params:go_default_library",
+        "//endtoend/types:go_default_library",
+        "//shared/roughtime:go_default_library",
+    ],
+)

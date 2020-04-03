@@ -45,52 +45,25 @@ func (bs *Server) ListAttestations(
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
 			req.PageSize, flags.Get().MaxPageSize)
 	}
-	var atts []*ethpb.Attestation
+	var blocks []*ethpb.SignedBeaconBlock
 	var err error
 	switch q := req.QueryFilter.(type) {
-	case *ethpb.ListAttestationsRequest_Genesis:
-		genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not genesis block: %v", err)
-		}
-		if genBlk == nil {
-			return nil, status.Error(codes.Internal, "Could not find genesis block")
-		}
-		genesisRoot, err := ssz.HashTreeRoot(genBlk.Block)
-		if err != nil {
-			return nil, err
-		}
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(genesisRoot[:]))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch genesis attestations: %v", err)
-		}
-	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
+	case *ethpb.ListAttestationsRequest_GenesisEpoch:
+		blocks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
-	case *ethpb.ListAttestationsRequest_SourceEpoch:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetSourceEpoch(q.SourceEpoch))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
-		}
-	case *ethpb.ListAttestationsRequest_SourceRoot:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetSourceRoot(q.SourceRoot))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
-		}
-	case *ethpb.ListAttestationsRequest_TargetEpoch:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
-		}
-	case *ethpb.ListAttestationsRequest_TargetRoot:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetRoot(q.TargetRoot))
+	case *ethpb.ListAttestationsRequest_Epoch:
+		blocks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
+	}
+	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	for _, block := range blocks {
+		atts = append(atts, block.Block.Body.Attestations...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -127,24 +100,26 @@ func (bs *Server) ListAttestations(
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
-	atts := make([]*ethpb.Attestation, 0)
+	blocks := make([]*ethpb.SignedBeaconBlock, 0)
 	var err error
 	epoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	switch q := req.QueryFilter.(type) {
-	case *ethpb.ListIndexedAttestationsRequest_TargetEpoch:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
-		}
-		epoch = q.TargetEpoch
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(0))
+		blocks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
-		epoch = 0
+	case *ethpb.ListIndexedAttestationsRequest_Epoch:
+		blocks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		}
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
+	}
+	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	for _, block := range blocks {
+		atts = append(atts, block.Block.Body.Attestations...)
 	}
 	// We sort attestations according to the Sortable interface.
 	sort.Sort(sortableAttestations(atts))
@@ -185,15 +160,7 @@ func (bs *Server) ListIndexedAttestations(
 			continue
 		}
 		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not convert attestation with slot %d to indexed form: %v",
-				att.Data.Slot,
-				err,
-			)
-		}
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		indexedAtts[i] = idxAtt
 	}
 
@@ -311,15 +278,7 @@ func (bs *Server) StreamIndexedAttestations(
 					continue
 				}
 				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
-				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
-				if err != nil {
-					return status.Errorf(
-						codes.Internal,
-						"Could not convert attestation with slot %d to indexed form: %v",
-						att.Data.Slot,
-						err,
-					)
-				}
+				idxAtt := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
 				if err := stream.Send(idxAtt); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}

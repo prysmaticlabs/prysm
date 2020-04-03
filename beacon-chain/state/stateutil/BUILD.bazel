@@ -8,6 +8,7 @@ go_library(
         "blocks.go",
         "hash_function.go",
         "helpers.go",
+        "merkleize.go",
         "state_root.go",
         "trie_helpers.go",
         "validators.go",
@@ -28,15 +29,16 @@ go_library(
         "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_minio_sha256_simd//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_protolambda_zssz//merkle:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = [
+        "blocks_test.go",
         "state_root_cache_fuzz_test.go",
         "state_root_test.go",
         "trie_helpers_test.go",
@@ -46,10 +48,36 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_benchmark_test",
+    size = "medium",
+    srcs = ["benchmark_test.go"],
+    args = [
+        "-test.bench=.",
+        "-test.benchmem",
+        "-test.v",
+    ],
+    local = True,
+    tags = [
+        "benchmark",
+        "manual",
+        "no-cache",
+    ],
+    deps = [
+        "//beacon-chain/state/stateutil:go_default_library",
+        "//shared/hashutil:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_protolambda_zssz//merkle:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],

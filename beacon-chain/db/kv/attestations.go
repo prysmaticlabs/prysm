@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -12,6 +11,7 @@ import (
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

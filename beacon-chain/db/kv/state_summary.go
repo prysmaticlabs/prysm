@@ -3,8 +3,8 @@ package kv
 import (
 	"context"
 
-	"github.com/boltdb/bolt"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
@@ -20,6 +20,26 @@ func (k *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		return bucket.Put(summary.Root, enc)
+	})
+}
+
+// SaveStateSummaries saves state summary objects to the DB.
+func (k *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
+	defer span.End()
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateSummaryBucket)
+		for _, summary := range summaries {
+			enc, err := encode(summary)
+			if err != nil {
+				return err
+			}
+			if err := bucket.Put(summary.Root, enc); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 

@@ -49,6 +49,7 @@ func GenerateFullBlock(
 	conf *BlockGenConfig,
 	slot uint64,
 ) (*ethpb.SignedBeaconBlock, error) {
+	ctx := context.Background()
 	currentSlot := bState.Slot()
 	if currentSlot > slot {
 		return nil, fmt.Errorf("current slot in state is larger than given slot. %d > %d", currentSlot, slot)
@@ -106,7 +107,7 @@ func GenerateFullBlock(
 	}
 
 	newHeader := bState.LatestBlockHeader()
-	prevStateRoot, err := bState.HashTreeRoot()
+	prevStateRoot, err := bState.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, err
 	}

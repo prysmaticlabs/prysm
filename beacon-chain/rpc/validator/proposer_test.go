@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -22,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -46,7 +48,7 @@ func TestGetBlock_OK(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
-	stateRoot, err := beaconState.HashTreeRoot()
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}
@@ -79,6 +81,7 @@ func TestGetBlock_OK(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
+		StateGen:          stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
@@ -151,7 +154,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
-	stateRoot, err := beaconState.HashTreeRoot()
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}
@@ -184,6 +187,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		SlashingsPool:     slashings.NewPool(),
 		AttPool:           attestations.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
+		StateGen:          stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	// Generate a bunch of random attestations at slot. These would be considered double votes, but
@@ -319,7 +323,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	stateRoot, err := beaconState.HashTreeRoot()
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}
@@ -345,6 +349,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		StateGen:          stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.SignedBeaconBlock{
@@ -1314,7 +1319,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		attestingIndices, err := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
+		attestingIndices := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
 		if err != nil {
 			t.Error(err)
 		}

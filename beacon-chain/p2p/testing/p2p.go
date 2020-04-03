@@ -29,6 +29,7 @@ var TopicMappings = map[reflect.Type]string{
 	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/goodbye/1",
 	reflect.TypeOf(&pb.BeaconBlocksByRangeRequest{}): "/eth2/beacon_chain/req/beacon_blocks_by_range/1",
 	reflect.TypeOf([][32]byte{}):                     "/eth2/beacon_chain/req/beacon_blocks_by_root/1",
+	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/ping/1/",
 }
 
 // TestP2P represents a p2p implementation that can be used for testing.
@@ -39,6 +40,7 @@ type TestP2P struct {
 	BroadcastCalled bool
 	DelaySend       bool
 	peers           *peers.Status
+	LocalMetadata   *pb.MetaData
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -115,8 +117,14 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	if _, err := p.Encoding().Encode(buf, msg); err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
+	digest, err := p.ForkDigest()
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	topic = fmt.Sprintf(topic, digest)
+	topic = topic + p.Encoding().ProtocolSuffix()
 
-	if err := ps.Publish(topic+p.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
+	if err := ps.Publish(topic, buf.Bytes()); err != nil {
 		p.t.Fatalf("Failed to publish message; %v", err)
 	}
 }
@@ -159,7 +167,7 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
-				p.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
+				p.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction, []uint64{})
 				ctx := context.Background()
 
 				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
@@ -192,8 +200,8 @@ func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID
 }
 
 // Send a message to a specific peer.
-func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (network.Stream, error) {
-	protocol := TopicMappings[reflect.TypeOf(msg)]
+func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid peer.ID) (network.Stream, error) {
+	protocol := topic
 	if protocol == "" {
 		return nil, fmt.Errorf("protocol doesnt exist for proto message: %v", msg)
 	}
@@ -202,8 +210,10 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (netwo
 		return nil, err
 	}
 
-	if _, err := p.Encoding().EncodeWithLength(stream, msg); err != nil {
-		return nil, err
+	if topic != "/eth2/beacon_chain/req/metadata/1" {
+		if _, err := p.Encoding().EncodeWithLength(stream, msg); err != nil {
+			return nil, err
+		}
 	}
 
 	// Close stream for writing.
@@ -226,4 +236,29 @@ func (p *TestP2P) Started() bool {
 // Peers returns the peer status.
 func (p *TestP2P) Peers() *peers.Status {
 	return p.peers
+}
+
+// FindPeersWithSubnet mocks the p2p func.
+func (p *TestP2P) FindPeersWithSubnet(index uint64) (bool, error) {
+	return false, nil
+}
+
+// RefreshENR mocks the p2p func.
+func (p *TestP2P) RefreshENR(epoch uint64) {
+	return
+}
+
+// ForkDigest mocks the p2p func.
+func (p *TestP2P) ForkDigest() ([4]byte, error) {
+	return [4]byte{}, nil
+}
+
+// Metadata mocks the peer's metadata.
+func (p *TestP2P) Metadata() *pb.MetaData {
+	return proto.Clone(p.LocalMetadata).(*pb.MetaData)
+}
+
+// MetadataSeq mocks metadata sequence number.
+func (p *TestP2P) MetadataSeq() uint64 {
+	return p.LocalMetadata.SeqNumber
 }

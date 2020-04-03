@@ -39,6 +39,12 @@ build:release --compilation_mode=opt
 build:llvm --crosstool_top=@llvm_toolchain//:toolchain
 build:llvm --define compiler=llvm
 
+# Build binary with cgo symbolizer for debugging / profiling.
+build:cgo_symbolizer --config=llvm
+build:cgo_symbolizer --copt=-g
+build:cgo_symbolizer --define=USE_CGO_SYMBOLIZER=true
+build:cgo_symbolizer -c dbg
+
 # multi-arch cross-compiling toolchain configs:
 -----------------------------------------------
 build:cross --crosstool_top=@prysm_toolchains//:multiarch_toolchain

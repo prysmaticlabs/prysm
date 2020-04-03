@@ -6,10 +6,12 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/wealdtech/go-bytesutil"
+	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 

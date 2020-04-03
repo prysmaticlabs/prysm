@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,7 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const blockBatchSize = 64
+const blockBatchSize = 32
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
 
@@ -39,16 +41,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer s.chain.ClearCachedStates()
-
-	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
-		cfg.EnableSkipSlotsCache = false
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableSkipSlotsCache = true
-			featureconfig.Init(cfg)
-		}()
-	}
+	state.SkipSlotCache.Enable()
+	defer state.SkipSlotCache.Disable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
@@ -66,10 +60,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		s.logSyncStatus(genesis, blk.Block, counter)
 		if err := s.processBlock(ctx, blk); err != nil {
 			log.WithError(err).Info("Block is invalid")
-			queue.state.scheduler.incrementCounter(failedBlock, 1)
 			continue
 		}
-		queue.state.scheduler.incrementCounter(validBlock, 1)
 	}
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
@@ -87,20 +79,19 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// mitigation. We are already convinced that we are on the correct finalized chain. Any blocks
 	// we receive there after must build on the finalized chain or be considered invalid during
 	// fork choice resolution / block processing.
-	root, _, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
+	_, _, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	for len(pids) == 0 {
 		log.Info("Waiting for a suitable peer before syncing to the head of the chain")
 		time.Sleep(refreshTime)
-		root, _, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
+		_, _, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	}
 	best := pids[0]
 
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
-			HeadBlockRoot: root,
-			StartSlot:     s.chain.HeadSlot() + 1,
-			Count:         mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, blockBatchSize),
-			Step:          1,
+			StartSlot: s.chain.HeadSlot() + 1,
+			Count:     mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, allowedBlocksPerSecond),
+			Step:      1,
 		}
 
 		log.WithField("req", req).WithField("peer", best.Pretty()).Debug(
@@ -109,7 +100,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		resp, err := s.requestBlocks(ctx, req, best)
 		if err != nil {
-			return err
+			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
+			return nil
 		}
 
 		for _, blk := range resp {
@@ -139,9 +131,8 @@ func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRa
 		"start": req.StartSlot,
 		"count": req.Count,
 		"step":  req.Step,
-		"head":  fmt.Sprintf("%#x", req.HeadBlockRoot),
 	}).Debug("Requesting blocks")
-	stream, err := s.p2p.Send(ctx, req, pid)
+	stream, err := s.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request to peer")
 	}
@@ -199,7 +190,8 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 }
 
 func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock) error {
-	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 	}
 	s.blockNotifier.BlockFeed().Send(&feed.Event{

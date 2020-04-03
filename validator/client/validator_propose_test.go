@@ -20,7 +20,7 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
-	valDB := db.SetupDB(t, [][48]byte{validatorPubKey})
+	valDB := db.SetupDB(t, [][48]byte{bytesutil.ToBytes48(validatorPubKey.Marshal())})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: internal.NewMockBeaconNodeValidatorClient(ctrl),
@@ -40,7 +40,7 @@ func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
 	defer finish()
-	validator.ProposeBlock(context.Background(), 0, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 0, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 
 	testutil.AssertLogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
 }
@@ -55,7 +55,7 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Failed to sign randao reveal")
 }
 
@@ -74,7 +74,7 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 		gomock.Any(), // block request
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Failed to request block from beacon node")
 }
 
@@ -103,7 +103,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Failed to propose block")
 }
 
@@ -137,10 +137,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
-	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
-	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
 }
 
@@ -175,10 +175,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
 	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
-	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farFuture, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
-	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farFuture, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
 }
 
@@ -213,11 +213,11 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
 	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
-	validator.ProposeBlock(context.Background(), farAhead, validatorPubKey)
+	validator.ProposeBlock(context.Background(), farAhead, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
 	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
-	validator.ProposeBlock(context.Background(), past, validatorPubKey)
+	validator.ProposeBlock(context.Background(), past, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 }
 
@@ -283,7 +283,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 }
 
 func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
@@ -317,7 +317,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		return &ethpb.ProposeResponse{}, nil
 	})
 
-	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	validator.ProposeBlock(context.Background(), 1, bytesutil.ToBytes48(validatorPubKey.Marshal()))
 
 	if string(sentBlock.Block.Body.Graffiti) != string(validator.graffiti) {
 		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))

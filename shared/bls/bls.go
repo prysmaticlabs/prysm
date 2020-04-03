@@ -149,8 +149,7 @@ func (s *SecretKey) Marshal() []byte {
 
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
-	rawBytes := p.p.Serialize()
-	return rawBytes
+	return p.p.Serialize()
 }
 
 // Copy the public key to a new pointer reference.
@@ -257,15 +256,13 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return sigs[0]
 	}
-	marshalled := sigs[0].s.Serialize()
-	signature := &bls12.Sign{}
-	//#nosec G104
-	signature.Deserialize(marshalled)
 
+	// Copy signature
+	signature := *sigs[0].s
 	for i := 1; i < len(sigs); i++ {
 		signature.Add(sigs[i].s)
 	}
-	return &Signature{s: signature}
+	return &Signature{s: &signature}
 }
 
 // Marshal a signature into a LittleEndian byte slice.
@@ -274,8 +271,7 @@ func (s *Signature) Marshal() []byte {
 		return make([]byte, params.BeaconConfig().BLSSignatureLength)
 	}
 
-	rawBytes := s.s.Serialize()
-	return rawBytes
+	return s.s.Serialize()
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element

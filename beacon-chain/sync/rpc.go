@@ -3,10 +3,12 @@ package sync
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -31,24 +33,34 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 // registerRPCHandlers for p2p RPC.
 func (r *Service) registerRPCHandlers() {
 	r.registerRPC(
-		"/eth2/beacon_chain/req/status/1",
+		p2p.RPCStatusTopic,
 		&pb.Status{},
 		r.statusRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/goodbye/1",
+		p2p.RPCGoodByeTopic,
 		new(uint64),
 		r.goodbyeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/beacon_blocks_by_range/1",
+		p2p.RPCBlocksByRangeTopic,
 		&pb.BeaconBlocksByRangeRequest{},
 		r.beaconBlocksByRangeRPCHandler,
 	)
 	r.registerRPC(
-		"/eth2/beacon_chain/req/beacon_blocks_by_root/1",
+		p2p.RPCBlocksByRootTopic,
 		[][32]byte{},
 		r.beaconBlocksRootRPCHandler,
+	)
+	r.registerRPC(
+		p2p.RPCPingTopic,
+		new(uint64),
+		r.pingHandler,
+	)
+	r.registerRPC(
+		p2p.RPCMetaDataTopic,
+		new(interface{}),
+		r.metaDataHandler,
 	)
 }
 
@@ -74,6 +86,19 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		// Increment message received counter.
 		messageReceivedCounter.WithLabelValues(topic).Inc()
 
+		// since metadata requests do not have any data in the payload, we
+		// do not decode anything.
+		if strings.Contains(topic, p2p.RPCMetaDataTopic) {
+			if err := handle(ctx, new(interface{}), stream); err != nil {
+				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
+				if err != errWrongForkDigestVersion {
+					log.WithError(err).Warn("Failed to handle p2p RPC")
+				}
+				traceutil.AnnotateError(span, err)
+			}
+			return
+		}
+
 		// Given we have an input argument that can be pointer or [][32]byte, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
@@ -87,7 +112,7 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 			}
 			if err := handle(ctx, msg.Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != errWrongForkVersion {
+				if err != errWrongForkDigestVersion {
 					log.WithError(err).Warn("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)
@@ -101,7 +126,7 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 			}
 			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				if err != errWrongForkVersion {
+				if err != errWrongForkDigestVersion {
 					log.WithError(err).Warn("Failed to handle p2p RPC")
 				}
 				traceutil.AnnotateError(span, err)

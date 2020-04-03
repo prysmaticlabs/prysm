@@ -21,19 +21,9 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return errors.New("nil block")
 	}
 
-	block := signed.Block
+	r.setSeenBlockIndexSlot(signed.Block.Slot, signed.Block.ProposerIndex)
 
-	headState, err := r.chain.HeadState(ctx)
-	if err != nil {
-		log.Errorf("Head state is not available: %v", err)
-		return nil
-	}
-	// Ignore block older than last finalized checkpoint.
-	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpointEpoch()) {
-		log.Debugf("Received a block older than finalized checkpoint, %d < %d",
-			block.Slot, helpers.StartSlot(headState.FinalizedCheckpointEpoch()))
-		return nil
-	}
+	block := signed.Block
 
 	blockRoot, err := ssz.HashTreeRoot(block)
 	if err != nil {
@@ -41,11 +31,7 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return nil
 	}
 
-	if r.db.HasBlock(ctx, blockRoot) {
-		return nil
-	}
-
-	// Handle block when the parent is unknown
+	// Handle block when the parent is unknown.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(block.ParentRoot)) {
 		r.pendingQueueLock.Lock()
 		r.slotToPendingBlocks[block.Slot] = signed
