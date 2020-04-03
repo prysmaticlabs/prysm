@@ -120,13 +120,17 @@ type RPCClient interface {
 // Validator Registration Contract on the ETH1.0 chain to kick off the beacon
 // chain's validator registration process.
 type Service struct {
+	requestingOldLogs       bool
+	connectedETH1           bool
+	isRunning               bool
+	depositContractAddress  common.Address
+	processingLock          sync.RWMutex
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	client                  Client
 	headerChan              chan *gethTypes.Header
 	eth1Endpoint            string
 	httpEndpoint            string
-	depositContractAddress  common.Address
 	stateNotifier           statefeed.Notifier
 	reader                  Reader
 	logger                  bind.ContractFilterer
@@ -142,12 +146,8 @@ type Service struct {
 	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
-	isRunning               bool
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
-	processingLock          sync.RWMutex
-	requestingOldLogs       bool
-	connectedETH1           bool
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.

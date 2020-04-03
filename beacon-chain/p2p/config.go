@@ -4,6 +4,8 @@ package p2p
 // to initialize the p2p service.
 type Config struct {
 	NoDiscovery           bool
+	EnableUPnP            bool
+	EnableDiscv5          bool
 	StaticPeers           []string
 	BootstrapNodeAddr     []string
 	KademliaBootStrapAddr []string
@@ -18,7 +20,5 @@ type Config struct {
 	UDPPort               uint
 	MaxPeers              uint
 	WhitelistCIDR         string
-	EnableUPnP            bool
-	EnableDiscv5          bool
 	Encoding              string
 }
