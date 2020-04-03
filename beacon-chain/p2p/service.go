@@ -340,7 +340,7 @@ func (s *Service) Metadata() *pb.MetaData {
 	return proto.Clone(s.metaData).(*pb.MetaData)
 }
 
-// MetadataSeq returns the metadata sequence number
+// MetadataSeq returns the metadata sequence number.
 func (s *Service) MetadataSeq() uint64 {
 	return s.metaData.SeqNumber
 }
