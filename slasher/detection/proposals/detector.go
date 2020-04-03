@@ -5,7 +5,6 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"go.opencensus.io/trace"
@@ -31,8 +30,7 @@ func (dd *ProposeDetector) DetectDoublePropose(
 ) (*ethpb.ProposerSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoublePropose")
 	defer span.End()
-	epoch := helpers.SlotToEpoch(incomingBlk.Header.Slot)
-	bha, err := dd.slasherDB.BlockHeaders(ctx, epoch, incomingBlk.Header.ProposerIndex)
+	bha, err := dd.slasherDB.BlockHeaders(ctx, incomingBlk.Header.Slot, incomingBlk.Header.ProposerIndex)
 	if err != nil {
 		return nil, err
 	}

@@ -169,7 +169,8 @@ func isDoublePropose(
 	prevBlockHeader *ethpb.SignedBeaconBlockHeader,
 ) bool {
 	return incomingBlockHeader.Header.ProposerIndex == prevBlockHeader.Header.ProposerIndex &&
-		!bytes.Equal(incomingBlockHeader.Signature, prevBlockHeader.Signature)
+		!bytes.Equal(incomingBlockHeader.Signature, prevBlockHeader.Signature) &&
+		incomingBlockHeader.Header.Slot == prevBlockHeader.Header.Slot
 }
 
 func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
