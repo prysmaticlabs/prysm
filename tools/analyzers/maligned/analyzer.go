@@ -9,8 +9,10 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
+// Doc explaining the tool.
 const Doc = "Tool to detect Go structs that would take less memory if their fields were sorted."
 
+// Analyzer runs static analysis.
 var Analyzer = &analysis.Analyzer{
 	Name:     "maligned",
 	Doc:      Doc,
