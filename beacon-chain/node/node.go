@@ -299,6 +299,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		HostAddress:       ctx.String(cmd.P2PHost.Name),
 		HostDNS:           ctx.String(cmd.P2PHostDNS.Name),
 		PrivateKey:        ctx.String(cmd.P2PPrivKey.Name),
+		MetaDataDir:       ctx.String(cmd.P2PMetadata.Name),
 		TCPPort:           ctx.Uint(cmd.P2PTCPPort.Name),
 		UDPPort:           ctx.Uint(cmd.P2PUDPPort.Name),
 		MaxPeers:          ctx.Uint(cmd.P2PMaxPeers.Name),
