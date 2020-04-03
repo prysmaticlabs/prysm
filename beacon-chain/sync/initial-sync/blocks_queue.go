@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -167,7 +168,11 @@ func (q *blocksQueue) loop() {
 				// Trigger events on each epoch's state machine.
 				for _, event := range tickerEvents {
 					if err := q.state.trigger(event, state.epoch, data); err != nil {
-						log.WithError(err).Debug("Can not trigger event")
+						log.WithFields(logrus.Fields{
+							"event": event,
+							"epoch": state.epoch,
+							"error": err,
+						}).Debug("Can not trigger event")
 					}
 				}
 
@@ -197,7 +202,11 @@ func (q *blocksQueue) loop() {
 			if ind, ok := q.state.findEpochState(epoch); ok {
 				state := q.state.epochs[ind]
 				if err := q.state.trigger(eventDataReceived, state.epoch, response); err != nil {
-					log.WithError(err).Debug("Can not trigger event")
+					log.WithFields(logrus.Fields{
+						"event": eventDataReceived,
+						"epoch": state.epoch,
+						"error": err,
+					}).Debug("Can not trigger event")
 					state.setState(stateNew)
 					continue
 				}
