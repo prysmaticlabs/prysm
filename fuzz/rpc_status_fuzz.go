@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
@@ -17,12 +18,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var p *p2p.Service
 var s network.Stream
+var h host.Host
 
 func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 
-	p, err := p2p.NewService(&p2p.Config{
+	var err error
+	p, err = p2p.NewService(&p2p.Config{
 		NoDiscovery: true,
 		Encoding:    "ssz",
 	})
@@ -30,7 +34,7 @@ func init() {
 		panic(errors.Wrap(err, "could not create new p2p service"))
 	}
 
-	h, err := libp2p.New(context.Background())
+	h, err = libp2p.New(context.Background())
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new libp2p host"))
 	}
@@ -59,18 +63,16 @@ func init() {
 		StateSummaryCache:   cache.NewStateSummaryCache(),
 		BlockNotifier:       nil,
 	})
+}
 
-	s, err = h.NewStream(context.Background(), p.PeerID(), "/eth2/beacon_chain/req/status/1/ssz")
+func FuzzP2PRPCStatus(b []byte) {
+	s, err := h.NewStream(context.Background(), p.PeerID(), "/eth2/beacon_chain/req/status/1/ssz")
 	if err != nil {
 		panic(errors.Wrap(err, "could not open stream"))
 	}
 	if s == nil {
 		panic("nil stream")
 	}
-}
-
-func FuzzP2PRPCStatus(b []byte) {
-	if _, err := s.Write(b); err != nil {
-		panic(err)
-	}
+	defer s.Close()
+	s.Write(b)
 }
