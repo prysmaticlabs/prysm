@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
@@ -18,40 +17,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Set up servers
-var p *p2p.Service
-var h host.Host
 var s network.Stream
 
 func init() {
 	logrus.SetLevel(logrus.PanicLevel)
 
-	var err error
-	p, err = p2p.NewService(&p2p.Config{
-		NoDiscovery:           true,
-		StaticPeers:           nil,
-		BootstrapNodeAddr:     nil,
-		KademliaBootStrapAddr: nil,
-		Discv5BootStrapAddr:   nil,
-		RelayNodeAddr:         "",
-		LocalIP:               "",
-		HostAddress:           "",
-		HostDNS:               "",
-		PrivateKey:            "",
-		DataDir:               "",
-		TCPPort:               0,
-		UDPPort:               0,
-		MaxPeers:              0,
-		WhitelistCIDR:         "",
-		EnableUPnP:            false,
-		EnableDiscv5:          false,
-		Encoding:              "ssz",
+	p, err := p2p.NewService(&p2p.Config{
+		NoDiscovery: true,
+		Encoding:    "ssz",
 	})
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new p2p service"))
 	}
 
-	h, err = libp2p.New(context.Background())
+	h, err := libp2p.New(context.Background())
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new libp2p host"))
 	}
@@ -91,5 +70,7 @@ func init() {
 }
 
 func FuzzP2PRPCStatus(b []byte) {
-	s.Write(b)
+	if _, err := s.Write(b); err != nil {
+		panic(err)
+	}
 }
