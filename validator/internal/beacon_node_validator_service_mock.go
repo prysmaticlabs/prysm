@@ -12,7 +12,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_golang_protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 )
@@ -971,14 +970,14 @@ func (mr *MockBeaconNodeValidator_WaitForChainStartServerMockRecorder) RecvMsg(m
 }
 
 // SubscribeCommitteeSubnet mocks base method
-func (m *MockBeaconNodeValidatorClient) SubscribeCommitteeSubnet(arg0 context.Context, arg1 *eth.CommitteeSubnetSubscribeRequest, arg2 ...grpc.CallOption) (*empty.Empty, error) {
+func (m *MockBeaconNodeValidatorClient) SubscribeCommitteeSubnet(arg0 context.Context, arg1 *eth.CommitteeSubnetSubscribeRequest, arg2 ...grpc.CallOption) (*ptypes.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "SubscribeCommitteeSubnet", varargs...)
-	ret0, _ := ret[0].(*empty.Empty)
+	ret0, _ := ret[0].(*ptypes.Empty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
