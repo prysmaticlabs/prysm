@@ -2,6 +2,7 @@ package fuzz
 
 import (
 	"context"
+	"strings"
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -68,7 +69,11 @@ func init() {
 func FuzzP2PRPCStatus(b []byte) {
 	s, err := h.NewStream(context.Background(), p.PeerID(), "/eth2/beacon_chain/req/status/1/ssz")
 	if err != nil {
-		panic(errors.Wrap(err, "could not open stream"))
+		// libp2p ¯\_(ツ)_/¯
+		if strings.Contains(err.Error(), "stream reset") || strings.Contains(err.Error(), "connection reset by peer") || strings.Contains(err.Error(), "max dial attempts exceeded") {
+			return
+		}
+		panic(errors.Wrap(err, "failed to open stream"))
 	}
 	if s == nil {
 		panic("nil stream")
