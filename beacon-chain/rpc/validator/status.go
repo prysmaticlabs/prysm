@@ -129,6 +129,8 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		if lastActivatedValidatorIdx < idx {
 			resp.PositionInActivationQueue = int64(idx - lastActivatedValidatorIdx)
 		}
+	default:
+		return resp
 	}
 	return resp
 }
