@@ -507,3 +507,10 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 
 	return slot, nil
 }
+
+// bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
+func (f *blocksFetcher) bestFinalizedSlot() uint64 {
+	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
+	_, finalizedEpoch, _ := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	return helpers.StartSlot(finalizedEpoch)
+}
