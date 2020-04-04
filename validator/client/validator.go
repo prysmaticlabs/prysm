@@ -34,10 +34,10 @@ import (
 type validatorRole int32
 
 const (
-	validatorRole_UNKNOWN    validatorRole = 0
-	validatorRole_ATTESTER   validatorRole = 1
-	validatorRole_PROPOSER   validatorRole = 2
-	validatorRole_AGGREGATOR validatorRole = 3
+	validatorRoleUNKNOWN    validatorRole = 0
+	validatorRoleATTESTER   validatorRole = 1
+	validatorRolePROPOSER   validatorRole = 2
+	validatorRoleAGGREGATOR validatorRole = 3
 )
 
 type validator struct {
@@ -332,22 +332,22 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 			continue
 		}
 		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
-			roles = append(roles, validatorRole_PROPOSER)
+			roles = append(roles, validatorRolePROPOSER)
 		}
 		if duty.AttesterSlot == slot {
-			roles = append(roles, validatorRole_ATTESTER)
+			roles = append(roles, validatorRoleATTESTER)
 
 			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
 			if aggregator {
-				roles = append(roles, validatorRole_AGGREGATOR)
+				roles = append(roles, validatorRoleAGGREGATOR)
 			}
 
 		}
 		if len(roles) == 0 {
-			roles = append(roles, validatorRole_UNKNOWN)
+			roles = append(roles, validatorRoleUNKNOWN)
 		}
 
 		var pubKey [48]byte
