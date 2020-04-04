@@ -19,12 +19,14 @@ type committeeIDs struct {
 var CommitteeIDs = newCommitteeIDs()
 
 func newCommitteeIDs() *committeeIDs {
-	maxCommitteesPerEpoch := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch)
-	attesterCache, err := lru.New(maxCommitteesPerEpoch)
+	// Given a node can calculate committee assignments of current epoch and next epoch.
+	// Max size is set to 2 epoch length.
+	cacheSize := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch * 2)
+	attesterCache, err := lru.New(cacheSize)
 	if err != nil {
 		panic(err)
 	}
-	aggregatorCache, err := lru.New(maxCommitteesPerEpoch)
+	aggregatorCache, err := lru.New(cacheSize)
 	if err != nil {
 		panic(err)
 	}
