@@ -48,8 +48,8 @@ func (c *committeeIDs) AddAttesterCommiteeID(slot uint64, committeeID uint64) {
 
 // GetAttesterCommitteeIDs gets the committee ID for subscribing subnet for attester of the slot.
 func (c *committeeIDs) GetAttesterCommitteeIDs(slot uint64) []uint64 {
-	c.attesterLock.Lock()
-	defer c.attesterLock.Unlock()
+	c.attesterLock.RLock()
+	defer c.attesterLock.RUnlock()
 
 	val, exists := c.attester.Get(slot)
 	if !exists {
@@ -73,8 +73,8 @@ func (c *committeeIDs) AddAggregatorCommiteeID(slot uint64, committeeID uint64) 
 
 // GetAggregatorCommitteeIDs gets the committee ID for subscribing subnet for aggregator of the slot.
 func (c *committeeIDs) GetAggregatorCommitteeIDs(slot uint64) []uint64 {
-	c.aggregatorLock.Lock()
-	defer c.aggregatorLock.Unlock()
+	c.aggregatorLock.RLock()
+	defer c.aggregatorLock.RUnlock()
 
 	val, exists := c.aggregator.Get(slot)
 	if !exists {
