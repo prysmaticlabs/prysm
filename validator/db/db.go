@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db/iface"
@@ -68,7 +67,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
+func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -93,21 +92,11 @@ func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
 		return nil, err
 	}
 
-	// Initialize the required pubkeys into the DB to ensure they're not empty.
-	for _, pubkey := range pubkeys {
-		proHistory, err := kv.ProposalHistory(context.Background(), pubkey[:])
-		if err != nil {
-			return nil, err
-		}
-		if proHistory == nil {
-			cleanHistory := &slashpb.ProposalHistory{
-				EpochBits: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
-			}
-			if err := kv.SaveProposalHistory(context.Background(), pubkey[:], cleanHistory); err != nil {
-				return nil, err
-			}
-		}
-
+	// Initialize the required pubKeys into the DB to ensure they're not empty.
+	if err := kv.initializeSubBuckets(pubKeys); err != nil {
+		return nil, err
+	}
+	for _, pubkey := range pubKeys {
 		attHistory, err := kv.AttestationHistory(context.Background(), pubkey[:])
 		if err != nil {
 			return nil, err
