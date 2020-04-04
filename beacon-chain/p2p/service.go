@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -354,7 +355,8 @@ func (s *Service) RefreshENR(slot uint64) {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	committees := cache.CommitteeIDs.GetAttesterCommitteeIDs(slot)
+	committees := sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(slot),
+		cache.CommitteeIDs.GetAggregatorCommitteeIDs(slot))
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
