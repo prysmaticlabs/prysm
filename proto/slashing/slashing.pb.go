@@ -30,37 +30,6 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type SlashingStatusRequest_SlashingStatus int32
-
-const (
-	SlashingStatusRequest_Unknown  SlashingStatusRequest_SlashingStatus = 0
-	SlashingStatusRequest_Active   SlashingStatusRequest_SlashingStatus = 1
-	SlashingStatusRequest_Included SlashingStatusRequest_SlashingStatus = 2
-	SlashingStatusRequest_Reverted SlashingStatusRequest_SlashingStatus = 3
-)
-
-var SlashingStatusRequest_SlashingStatus_name = map[int32]string{
-	0: "Unknown",
-	1: "Active",
-	2: "Included",
-	3: "Reverted",
-}
-
-var SlashingStatusRequest_SlashingStatus_value = map[string]int32{
-	"Unknown":  0,
-	"Active":   1,
-	"Included": 2,
-	"Reverted": 3,
-}
-
-func (x SlashingStatusRequest_SlashingStatus) String() string {
-	return proto.EnumName(SlashingStatusRequest_SlashingStatus_name, int32(x))
-}
-
-func (SlashingStatusRequest_SlashingStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{6, 0}
-}
-
 type ProposerSlashingResponse struct {
 	ProposerSlashing     []*v1alpha1.ProposerSlashing `protobuf:"bytes,1,rep,name=proposer_slashing,json=proposerSlashing,proto3" json:"proposer_slashing,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                     `json:"-"`
@@ -155,108 +124,6 @@ func (m *AttesterSlashingResponse) GetAttesterSlashing() []*v1alpha1.AttesterSla
 	return nil
 }
 
-type MinMaxEpochSpan struct {
-	MinEpochSpan         uint32   `protobuf:"varint,1,opt,name=min_epoch_span,json=minEpochSpan,proto3" json:"min_epoch_span,omitempty"`
-	MaxEpochSpan         uint32   `protobuf:"varint,2,opt,name=max_epoch_span,json=maxEpochSpan,proto3" json:"max_epoch_span,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *MinMaxEpochSpan) Reset()         { *m = MinMaxEpochSpan{} }
-func (m *MinMaxEpochSpan) String() string { return proto.CompactTextString(m) }
-func (*MinMaxEpochSpan) ProtoMessage()    {}
-func (*MinMaxEpochSpan) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{2}
-}
-func (m *MinMaxEpochSpan) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *MinMaxEpochSpan) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_MinMaxEpochSpan.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *MinMaxEpochSpan) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MinMaxEpochSpan.Merge(m, src)
-}
-func (m *MinMaxEpochSpan) XXX_Size() int {
-	return m.Size()
-}
-func (m *MinMaxEpochSpan) XXX_DiscardUnknown() {
-	xxx_messageInfo_MinMaxEpochSpan.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_MinMaxEpochSpan proto.InternalMessageInfo
-
-func (m *MinMaxEpochSpan) GetMinEpochSpan() uint32 {
-	if m != nil {
-		return m.MinEpochSpan
-	}
-	return 0
-}
-
-func (m *MinMaxEpochSpan) GetMaxEpochSpan() uint32 {
-	if m != nil {
-		return m.MaxEpochSpan
-	}
-	return 0
-}
-
-type EpochSpanMap struct {
-	EpochSpanMap         map[uint64]*MinMaxEpochSpan `protobuf:"bytes,1,rep,name=epoch_span_map,json=epochSpanMap,proto3" json:"epoch_span_map,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
-	XXX_unrecognized     []byte                      `json:"-"`
-	XXX_sizecache        int32                       `json:"-"`
-}
-
-func (m *EpochSpanMap) Reset()         { *m = EpochSpanMap{} }
-func (m *EpochSpanMap) String() string { return proto.CompactTextString(m) }
-func (*EpochSpanMap) ProtoMessage()    {}
-func (*EpochSpanMap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{3}
-}
-func (m *EpochSpanMap) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *EpochSpanMap) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_EpochSpanMap.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *EpochSpanMap) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_EpochSpanMap.Merge(m, src)
-}
-func (m *EpochSpanMap) XXX_Size() int {
-	return m.Size()
-}
-func (m *EpochSpanMap) XXX_DiscardUnknown() {
-	xxx_messageInfo_EpochSpanMap.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_EpochSpanMap proto.InternalMessageInfo
-
-func (m *EpochSpanMap) GetEpochSpanMap() map[uint64]*MinMaxEpochSpan {
-	if m != nil {
-		return m.EpochSpanMap
-	}
-	return nil
-}
-
 type ProposalHistory struct {
 	EpochBits            github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytes,1,opt,name=epoch_bits,json=epochBits,proto3,casttype=github.com/prysmaticlabs/go-bitfield.Bitlist" json:"epoch_bits,omitempty"`
 	LatestEpochWritten   uint64                                       `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty"`
@@ -269,7 +136,7 @@ func (m *ProposalHistory) Reset()         { *m = ProposalHistory{} }
 func (m *ProposalHistory) String() string { return proto.CompactTextString(m) }
 func (*ProposalHistory) ProtoMessage()    {}
 func (*ProposalHistory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{4}
+	return fileDescriptor_da7e95107d0081b4, []int{2}
 }
 func (m *ProposalHistory) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -324,7 +191,7 @@ func (m *AttestationHistory) Reset()         { *m = AttestationHistory{} }
 func (m *AttestationHistory) String() string { return proto.CompactTextString(m) }
 func (*AttestationHistory) ProtoMessage()    {}
 func (*AttestationHistory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{5}
+	return fileDescriptor_da7e95107d0081b4, []int{3}
 }
 func (m *AttestationHistory) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -367,112 +234,49 @@ func (m *AttestationHistory) GetLatestEpochWritten() uint64 {
 	return 0
 }
 
-type SlashingStatusRequest struct {
-	Status               SlashingStatusRequest_SlashingStatus `protobuf:"varint,1,opt,name=status,proto3,enum=ethereum.slashing.SlashingStatusRequest_SlashingStatus" json:"status,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                             `json:"-"`
-	XXX_unrecognized     []byte                               `json:"-"`
-	XXX_sizecache        int32                                `json:"-"`
-}
-
-func (m *SlashingStatusRequest) Reset()         { *m = SlashingStatusRequest{} }
-func (m *SlashingStatusRequest) String() string { return proto.CompactTextString(m) }
-func (*SlashingStatusRequest) ProtoMessage()    {}
-func (*SlashingStatusRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_da7e95107d0081b4, []int{6}
-}
-func (m *SlashingStatusRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *SlashingStatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_SlashingStatusRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *SlashingStatusRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SlashingStatusRequest.Merge(m, src)
-}
-func (m *SlashingStatusRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *SlashingStatusRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_SlashingStatusRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_SlashingStatusRequest proto.InternalMessageInfo
-
-func (m *SlashingStatusRequest) GetStatus() SlashingStatusRequest_SlashingStatus {
-	if m != nil {
-		return m.Status
-	}
-	return SlashingStatusRequest_Unknown
-}
-
 func init() {
-	proto.RegisterEnum("ethereum.slashing.SlashingStatusRequest_SlashingStatus", SlashingStatusRequest_SlashingStatus_name, SlashingStatusRequest_SlashingStatus_value)
 	proto.RegisterType((*ProposerSlashingResponse)(nil), "ethereum.slashing.ProposerSlashingResponse")
 	proto.RegisterType((*AttesterSlashingResponse)(nil), "ethereum.slashing.AttesterSlashingResponse")
-	proto.RegisterType((*MinMaxEpochSpan)(nil), "ethereum.slashing.MinMaxEpochSpan")
-	proto.RegisterType((*EpochSpanMap)(nil), "ethereum.slashing.EpochSpanMap")
-	proto.RegisterMapType((map[uint64]*MinMaxEpochSpan)(nil), "ethereum.slashing.EpochSpanMap.EpochSpanMapEntry")
 	proto.RegisterType((*ProposalHistory)(nil), "ethereum.slashing.ProposalHistory")
 	proto.RegisterType((*AttestationHistory)(nil), "ethereum.slashing.AttestationHistory")
 	proto.RegisterMapType((map[uint64]uint64)(nil), "ethereum.slashing.AttestationHistory.TargetToSourceEntry")
-	proto.RegisterType((*SlashingStatusRequest)(nil), "ethereum.slashing.SlashingStatusRequest")
 }
 
 func init() { proto.RegisterFile("proto/slashing/slashing.proto", fileDescriptor_da7e95107d0081b4) }
 
 var fileDescriptor_da7e95107d0081b4 = []byte{
-	// 661 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xcd, 0x6e, 0xd3, 0x40,
-	0x10, 0xc6, 0x6d, 0x69, 0x61, 0x1b, 0x52, 0x77, 0x29, 0xa8, 0x8a, 0x44, 0x5b, 0x45, 0x48, 0x14,
-	0x41, 0x9d, 0x36, 0x1c, 0x28, 0xdc, 0x1a, 0xa9, 0x52, 0x7b, 0xa8, 0x8a, 0x9c, 0xa2, 0x9e, 0x50,
-	0xb4, 0xb6, 0xa7, 0xf6, 0xaa, 0xce, 0xee, 0xe2, 0x1d, 0xa7, 0xcd, 0x7b, 0xf0, 0x1e, 0xbc, 0x06,
-	0x07, 0x0e, 0x3c, 0x01, 0x42, 0x3d, 0x23, 0x1e, 0x80, 0x13, 0xf2, 0xda, 0x29, 0x4e, 0xe2, 0x48,
-	0x70, 0xdb, 0xf9, 0x66, 0xe6, 0xfb, 0xe6, 0xc7, 0x1e, 0xf2, 0x44, 0x25, 0x12, 0x65, 0x4b, 0xc7,
-	0x4c, 0x47, 0x5c, 0x84, 0xb7, 0x0f, 0xc7, 0xe0, 0x74, 0x15, 0x30, 0x82, 0x04, 0xd2, 0xbe, 0x33,
-	0x72, 0x34, 0x36, 0x01, 0xa3, 0xd6, 0x60, 0x8f, 0xc5, 0x2a, 0x62, 0x7b, 0x2d, 0x0f, 0x98, 0x2f,
-	0x45, 0xcf, 0x8b, 0xa5, 0x7f, 0x99, 0xe7, 0x34, 0x76, 0x42, 0x8e, 0x51, 0xea, 0x39, 0xbe, 0xec,
-	0xb7, 0x42, 0x19, 0xca, 0x96, 0x81, 0xbd, 0xf4, 0xc2, 0x58, 0xb9, 0x5e, 0xf6, 0xca, 0xc3, 0x9b,
-	0x8a, 0xac, 0xbf, 0x4b, 0xa4, 0x92, 0x1a, 0x92, 0x6e, 0xa1, 0xe1, 0x82, 0x56, 0x52, 0x68, 0xa0,
-	0x67, 0x64, 0x55, 0x15, 0xbe, 0xde, 0xa8, 0x80, 0x75, 0x6b, 0x6b, 0x7e, 0x7b, 0xb9, 0xfd, 0xcc,
-	0xb9, 0x2d, 0x0d, 0x30, 0x72, 0x46, 0x05, 0x39, 0x53, 0x5c, 0xb6, 0x9a, 0x40, 0x32, 0xc5, 0x03,
-	0x44, 0xd0, 0x58, 0xad, 0xc8, 0x0a, 0xdf, 0xbf, 0x2a, 0x4e, 0x71, 0xd9, 0x6c, 0x02, 0x69, 0x7e,
-	0x20, 0x2b, 0x27, 0x5c, 0x9c, 0xb0, 0xeb, 0x43, 0x25, 0xfd, 0xa8, 0xab, 0x98, 0xa0, 0x4f, 0x49,
-	0xbd, 0xcf, 0x45, 0x0f, 0x32, 0xa0, 0xa7, 0x15, 0x13, 0xeb, 0xd6, 0x96, 0xb5, 0xfd, 0xc0, 0xad,
-	0xf5, 0xb9, 0x18, 0x8f, 0x62, 0xd7, 0xe5, 0xa8, 0xb9, 0x22, 0xaa, 0xc4, 0xd5, 0xfc, 0x6a, 0x91,
-	0xda, 0xad, 0x75, 0xc2, 0x14, 0x3d, 0x27, 0xf5, 0xbf, 0x29, 0xbd, 0x3e, 0x53, 0x45, 0x0b, 0x7b,
-	0xce, 0xd4, 0x3e, 0x9d, 0x72, 0xe2, 0x98, 0x71, 0x28, 0x30, 0x19, 0xba, 0x35, 0x28, 0x41, 0x0d,
-	0x9f, 0xac, 0x4e, 0x85, 0x50, 0x9b, 0xcc, 0x5f, 0xc2, 0xd0, 0xd4, 0xbf, 0xe0, 0x66, 0x4f, 0xba,
-	0x4f, 0xee, 0x0e, 0x58, 0x9c, 0x82, 0xa9, 0x76, 0xb9, 0xdd, 0xac, 0x90, 0x9d, 0x98, 0x87, 0x9b,
-	0x27, 0xbc, 0x9d, 0xdb, 0xb7, 0x9a, 0x9f, 0x2c, 0xb2, 0x92, 0xaf, 0x91, 0xc5, 0x47, 0x5c, 0xa3,
-	0x4c, 0x86, 0xf4, 0x94, 0x90, 0xbc, 0x23, 0x8f, 0xa3, 0x36, 0x52, 0xb5, 0xce, 0xee, 0xef, 0xef,
-	0x9b, 0x2f, 0x4b, 0x1f, 0x9b, 0x4a, 0x86, 0xba, 0xcf, 0x90, 0xfb, 0x31, 0xf3, 0x74, 0x2b, 0x94,
-	0x3b, 0x1e, 0xc7, 0x0b, 0x0e, 0x71, 0xe0, 0x74, 0x38, 0xc6, 0x5c, 0xa3, 0x7b, 0xdf, 0x70, 0x74,
-	0x38, 0x6a, 0xba, 0x4b, 0xd6, 0x62, 0x96, 0xad, 0xa9, 0x18, 0xee, 0x55, 0xc2, 0x11, 0x21, 0x9f,
-	0xef, 0x82, 0x4b, 0x73, 0x9f, 0x29, 0xef, 0x3c, 0xf7, 0x34, 0x7f, 0x59, 0x84, 0xe6, 0xbb, 0x66,
-	0xc8, 0xa5, 0x18, 0x55, 0xe6, 0x13, 0x1b, 0x59, 0x12, 0x02, 0xf6, 0x50, 0xf6, 0xb4, 0x4c, 0x13,
-	0x1f, 0x8a, 0x69, 0xbf, 0xa9, 0x68, 0x7b, 0x9a, 0xc0, 0x39, 0x33, 0xd9, 0x67, 0xb2, 0x6b, 0x72,
-	0xf3, 0xa9, 0xd7, 0x71, 0x0c, 0xfc, 0xff, 0x6a, 0x1b, 0x07, 0xe4, 0x61, 0x05, 0x71, 0xc5, 0xae,
-	0xd6, 0xca, 0xbb, 0x5a, 0x28, 0xef, 0xe1, 0xb3, 0x45, 0x1e, 0x8d, 0x3e, 0xe1, 0x2e, 0x32, 0x4c,
-	0xb5, 0x0b, 0x1f, 0x53, 0xd0, 0x48, 0x4f, 0xc9, 0xa2, 0x36, 0x80, 0x21, 0xaa, 0xb7, 0x5f, 0x57,
-	0x74, 0x5a, 0x99, 0x39, 0x89, 0x16, 0x34, 0xcd, 0x43, 0x52, 0x1f, 0xf7, 0xd0, 0x65, 0xb2, 0xf4,
-	0x5e, 0x5c, 0x0a, 0x79, 0x25, 0xec, 0x3b, 0x94, 0x90, 0xc5, 0x03, 0x1f, 0xf9, 0x00, 0x6c, 0x8b,
-	0xd6, 0xc8, 0xbd, 0x63, 0xe1, 0xc7, 0x69, 0x00, 0x81, 0x3d, 0x97, 0x59, 0x2e, 0x0c, 0x20, 0x41,
-	0x08, 0xec, 0xf9, 0xf6, 0x4f, 0x8b, 0x2c, 0x19, 0x1e, 0x48, 0xa8, 0x22, 0x8f, 0x8f, 0xb5, 0x31,
-	0x98, 0x17, 0x43, 0x69, 0xee, 0xf4, 0xf9, 0x8c, 0x1f, 0xf9, 0x58, 0x04, 0x70, 0x0d, 0x41, 0x29,
-	0xb4, 0xf1, 0x62, 0xe6, 0x0a, 0x2b, 0x6e, 0x87, 0x24, 0x76, 0x49, 0xb1, 0x93, 0x9d, 0x44, 0xea,
-	0xcc, 0xd0, 0xea, 0xf2, 0x50, 0x40, 0xd0, 0x31, 0xd7, 0xd3, 0x44, 0x1e, 0x01, 0x0b, 0x20, 0xa9,
-	0x14, 0x9c, 0x75, 0x1e, 0x3b, 0xb5, 0x2f, 0x37, 0x1b, 0xd6, 0xb7, 0x9b, 0x0d, 0xeb, 0xc7, 0xcd,
-	0x86, 0xe5, 0x2d, 0x9a, 0x7b, 0xfa, 0xea, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf5, 0x35, 0xb6,
-	0xef, 0xd3, 0x05, 0x00, 0x00,
+	// 483 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x53, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0xd5, 0xb6, 0x05, 0xc4, 0x52, 0x41, 0xba, 0x54, 0x28, 0x8a, 0x44, 0x1a, 0xe5, 0x42, 0x10,
+	0x74, 0xdd, 0x96, 0x0b, 0x70, 0xab, 0xa5, 0x4a, 0xed, 0x09, 0xe4, 0x44, 0xe2, 0x68, 0xad, 0xed,
+	0xa9, 0xbd, 0xea, 0xc6, 0xbb, 0xda, 0x1d, 0x17, 0xf2, 0x1f, 0x7c, 0x14, 0x47, 0xbe, 0x00, 0xa1,
+	0x9c, 0x11, 0x1f, 0xc0, 0x09, 0x79, 0xed, 0x54, 0xa1, 0x49, 0x24, 0x7a, 0x9b, 0x99, 0x37, 0xf3,
+	0xde, 0xf3, 0x78, 0x87, 0x3e, 0x37, 0x56, 0xa3, 0x0e, 0x9c, 0x12, 0xae, 0x90, 0x65, 0x7e, 0x13,
+	0x70, 0x5f, 0x67, 0x7b, 0x80, 0x05, 0x58, 0xa8, 0xa6, 0x7c, 0x01, 0xf4, 0x0e, 0x00, 0x8b, 0xe0,
+	0xfa, 0x58, 0x28, 0x53, 0x88, 0xe3, 0x20, 0x01, 0x91, 0xea, 0x32, 0x4e, 0x94, 0x4e, 0xaf, 0x9a,
+	0x99, 0xde, 0x61, 0x2e, 0xb1, 0xa8, 0x12, 0x9e, 0xea, 0x69, 0x90, 0xeb, 0x5c, 0x07, 0xbe, 0x9c,
+	0x54, 0x97, 0x3e, 0x6b, 0xf4, 0xea, 0xa8, 0x69, 0x1f, 0x1a, 0xda, 0xfd, 0x68, 0xb5, 0xd1, 0x0e,
+	0xec, 0xb8, 0xd5, 0x88, 0xc0, 0x19, 0x5d, 0x3a, 0x60, 0x13, 0xba, 0x67, 0x5a, 0x2c, 0x5e, 0x18,
+	0xe8, 0x92, 0xc1, 0xf6, 0xe8, 0xd1, 0xc9, 0x0b, 0x7e, 0x63, 0x0d, 0xb0, 0xe0, 0x0b, 0x43, 0x7c,
+	0x85, 0xab, 0x63, 0x6e, 0x55, 0x6a, 0xc5, 0x53, 0x44, 0x70, 0xb8, 0x5e, 0x51, 0xb4, 0xd8, 0xff,
+	0x2a, 0xae, 0x70, 0x75, 0xc4, 0xad, 0xca, 0xf0, 0x2b, 0xa1, 0x4f, 0x1a, 0x63, 0x42, 0x9d, 0x4b,
+	0x87, 0xda, 0xce, 0xd8, 0x07, 0x4a, 0xc1, 0xe8, 0xb4, 0x88, 0x13, 0x89, 0xae, 0x4b, 0x06, 0x64,
+	0xb4, 0x1b, 0x1e, 0xfd, 0xf9, 0x71, 0xf0, 0x7a, 0x69, 0x7d, 0xc6, 0xce, 0xdc, 0x54, 0xa0, 0x4c,
+	0x95, 0x48, 0x5c, 0x90, 0xeb, 0xc3, 0x44, 0xe2, 0xa5, 0x04, 0x95, 0xf1, 0x50, 0xa2, 0x92, 0x0e,
+	0xa3, 0x87, 0x9e, 0x23, 0x94, 0xe8, 0xd8, 0x11, 0xdd, 0x57, 0xa2, 0x16, 0x8e, 0x1b, 0xde, 0xcf,
+	0x56, 0x22, 0x42, 0xd9, 0xdd, 0x1a, 0x90, 0xd1, 0x4e, 0xc4, 0x1a, 0xec, 0xac, 0x86, 0x3e, 0x35,
+	0xc8, 0xf0, 0x37, 0xa1, 0xac, 0x71, 0x2f, 0x50, 0xea, 0x72, 0xe1, 0x2c, 0xa5, 0x1d, 0x14, 0x36,
+	0x07, 0x8c, 0x51, 0xc7, 0x4e, 0x57, 0x36, 0x85, 0x76, 0x05, 0xef, 0xf8, 0xca, 0x7b, 0xe0, 0xab,
+	0x04, 0x7c, 0xe2, 0xa7, 0x27, 0x7a, 0xec, 0x67, 0xcf, 0x4a, 0xb4, 0xb3, 0xe8, 0x31, 0xfe, 0x53,
+	0xbc, 0xbb, 0xdb, 0xde, 0x29, 0x7d, 0xba, 0x86, 0x98, 0x75, 0xe8, 0xf6, 0x15, 0xcc, 0xfc, 0x02,
+	0x77, 0xa2, 0x3a, 0x64, 0xfb, 0xf4, 0xde, 0xb5, 0x50, 0x15, 0xb4, 0x5c, 0x4d, 0xf2, 0x7e, 0xeb,
+	0x2d, 0x39, 0xf9, 0x45, 0xe8, 0x03, 0xff, 0x53, 0xc0, 0x32, 0x43, 0x9f, 0x5d, 0x38, 0x9f, 0x88,
+	0x44, 0xc1, 0xd2, 0x57, 0xb0, 0x97, 0x1b, 0x7e, 0xf4, 0x45, 0x99, 0xc1, 0x17, 0xc8, 0x96, 0x5a,
+	0x7b, 0xaf, 0x36, 0x2e, 0x64, 0xcd, 0xdb, 0xd2, 0xb4, 0xb3, 0xa4, 0x18, 0xd6, 0x27, 0xc3, 0xf8,
+	0x06, 0xad, 0xb1, 0xcc, 0x4b, 0xc8, 0x42, 0x7f, 0x5d, 0xbe, 0xf3, 0x1c, 0x44, 0x06, 0x76, 0xad,
+	0xe0, 0xa6, 0xf3, 0x09, 0x77, 0xbf, 0xcd, 0xfb, 0xe4, 0xfb, 0xbc, 0x4f, 0x7e, 0xce, 0xfb, 0x24,
+	0xb9, 0xef, 0xef, 0xed, 0xcd, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x11, 0xe3, 0x4b, 0x92, 0xf3,
+	0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -673,94 +477,6 @@ func (m *AttesterSlashingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
-func (m *MinMaxEpochSpan) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *MinMaxEpochSpan) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *MinMaxEpochSpan) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.MaxEpochSpan != 0 {
-		i = encodeVarintSlashing(dAtA, i, uint64(m.MaxEpochSpan))
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.MinEpochSpan != 0 {
-		i = encodeVarintSlashing(dAtA, i, uint64(m.MinEpochSpan))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *EpochSpanMap) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *EpochSpanMap) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *EpochSpanMap) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.EpochSpanMap) > 0 {
-		for k := range m.EpochSpanMap {
-			v := m.EpochSpanMap[k]
-			baseI := i
-			if v != nil {
-				{
-					size, err := v.MarshalToSizedBuffer(dAtA[:i])
-					if err != nil {
-						return 0, err
-					}
-					i -= size
-					i = encodeVarintSlashing(dAtA, i, uint64(size))
-				}
-				i--
-				dAtA[i] = 0x12
-			}
-			i = encodeVarintSlashing(dAtA, i, uint64(k))
-			i--
-			dAtA[i] = 0x8
-			i = encodeVarintSlashing(dAtA, i, uint64(baseI-i))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *ProposalHistory) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -847,38 +563,6 @@ func (m *AttestationHistory) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SlashingStatusRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *SlashingStatusRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *SlashingStatusRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.Status != 0 {
-		i = encodeVarintSlashing(dAtA, i, uint64(m.Status))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
 func encodeVarintSlashing(dAtA []byte, offset int, v uint64) int {
 	offset -= sovSlashing(v)
 	base := offset
@@ -926,49 +610,6 @@ func (m *AttesterSlashingResponse) Size() (n int) {
 	return n
 }
 
-func (m *MinMaxEpochSpan) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.MinEpochSpan != 0 {
-		n += 1 + sovSlashing(uint64(m.MinEpochSpan))
-	}
-	if m.MaxEpochSpan != 0 {
-		n += 1 + sovSlashing(uint64(m.MaxEpochSpan))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *EpochSpanMap) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.EpochSpanMap) > 0 {
-		for k, v := range m.EpochSpanMap {
-			_ = k
-			_ = v
-			l = 0
-			if v != nil {
-				l = v.Size()
-				l += 1 + sovSlashing(uint64(l))
-			}
-			mapEntrySize := 1 + sovSlashing(uint64(k)) + l
-			n += mapEntrySize + 1 + sovSlashing(uint64(mapEntrySize))
-		}
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
 func (m *ProposalHistory) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1004,21 +645,6 @@ func (m *AttestationHistory) Size() (n int) {
 	}
 	if m.LatestEpochWritten != 0 {
 		n += 1 + sovSlashing(uint64(m.LatestEpochWritten))
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *SlashingStatusRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Status != 0 {
-		n += 1 + sovSlashing(uint64(m.Status))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1182,267 +808,6 @@ func (m *AttesterSlashingResponse) Unmarshal(dAtA []byte) error {
 			if err := m.AttesterSlashing[len(m.AttesterSlashing)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSlashing(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *MinMaxEpochSpan) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSlashing
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: MinMaxEpochSpan: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MinMaxEpochSpan: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MinEpochSpan", wireType)
-			}
-			m.MinEpochSpan = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSlashing
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.MinEpochSpan |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MaxEpochSpan", wireType)
-			}
-			m.MaxEpochSpan = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSlashing
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.MaxEpochSpan |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSlashing(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *EpochSpanMap) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSlashing
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: EpochSpanMap: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: EpochSpanMap: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EpochSpanMap", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSlashing
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.EpochSpanMap == nil {
-				m.EpochSpanMap = make(map[uint64]*MinMaxEpochSpan)
-			}
-			var mapkey uint64
-			var mapvalue *MinMaxEpochSpan
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowSlashing
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowSlashing
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						mapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-				} else if fieldNum == 2 {
-					var mapmsglen int
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowSlashing
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						mapmsglen |= int(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					if mapmsglen < 0 {
-						return ErrInvalidLengthSlashing
-					}
-					postmsgIndex := iNdEx + mapmsglen
-					if postmsgIndex < 0 {
-						return ErrInvalidLengthSlashing
-					}
-					if postmsgIndex > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = &MinMaxEpochSpan{}
-					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
-						return err
-					}
-					iNdEx = postmsgIndex
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipSlashing(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthSlashing
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
-			}
-			m.EpochSpanMap[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1719,79 +1084,6 @@ func (m *AttestationHistory) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.LatestEpochWritten |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSlashing(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthSlashing
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *SlashingStatusRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSlashing
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: SlashingStatusRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: SlashingStatusRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
-			}
-			m.Status = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSlashing
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Status |= SlashingStatusRequest_SlashingStatus(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
