@@ -16,7 +16,6 @@ const (
 	stateSent
 	stateSkippedExt
 	stateComplete
-	stateBeyondHead
 )
 
 const (
@@ -215,8 +214,6 @@ func (s stateID) String() (state string) {
 		state = "sent"
 	case stateComplete:
 		state = "complete"
-	case stateBeyondHead:
-		state = "beyondHead"
 	}
 	return
 }

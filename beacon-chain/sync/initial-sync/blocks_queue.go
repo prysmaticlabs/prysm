@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -96,7 +95,6 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	queue.state.addHandler(stateDataParsed, eventReadyToSend, queue.onReadyToSendEvent(ctx))
 	queue.state.addHandler(stateSkipped, eventExtendWindow, queue.onExtendWindowEvent(ctx))
 	queue.state.addHandler(stateSent, eventCheckStale, queue.onCheckStaleEvent(ctx))
-	queue.state.addHandler(stateBeyondHead, eventCheckStale, queue.onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -147,6 +145,7 @@ func (q *blocksQueue) loop() {
 	ticker := time.NewTicker(pollingInterval)
 	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventExtendWindow}
 	for {
+
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
 			// By the time initial sync is complete, highest slot may increase, re-check.
 			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
@@ -223,14 +222,7 @@ func (q *blocksQueue) loop() {
 func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 	return func(es *epochState, in interface{}) (stateID, error) {
 		data := in.(*fetchRequestParams)
-		start := data.start
-		count := mathutil.Min(data.count, q.highestExpectedSlot-start+1)
-		if count <= 0 {
-			es.setState(stateBeyondHead)
-			return es.state, errSlotIsTooHigh
-		}
-
-		if err := q.blocksFetcher.scheduleRequest(ctx, start, count); err != nil {
+		if err := q.blocksFetcher.scheduleRequest(ctx, data.start, data.count); err != nil {
 			return es.state, err
 		}
 		return stateScheduled, nil
@@ -393,16 +385,6 @@ func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 	return func(es *epochState, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
 			return es.state, ctx.Err()
-		}
-
-		if es.state == stateBeyondHead {
-			for _, state := range q.state.epochs {
-				isSkipped := state.state == stateSkipped || state.state == stateSkippedExt
-				if state.epoch < es.epoch && isSkipped {
-					state.setState(stateNew)
-				}
-			}
-			return stateNew, nil
 		}
 
 		if time.Since(es.updated) > staleEpochTimeout {
