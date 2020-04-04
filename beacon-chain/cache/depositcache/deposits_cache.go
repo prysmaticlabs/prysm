@@ -35,12 +35,11 @@ type DepositFetcher interface {
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*dbpb.DepositContainer
-	deposits              []*dbpb.DepositContainer
-	depositsLock          sync.RWMutex
-	chainStartDeposits    []*ethpb.Deposit
-	chainstartPubkeys     map[string]bool
-	chainstartPubkeysLock sync.RWMutex
+	pendingDeposits    []*dbpb.DepositContainer
+	deposits           []*dbpb.DepositContainer
+	depositsLock       sync.RWMutex
+	chainStartDeposits []*ethpb.Deposit
+	chainstartPubkeys  map[string]bool
 }
 
 // NewDepositCache instantiates a new deposit cache
@@ -102,8 +101,6 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.Deposi
 func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.MarkPubkeyForChainstart")
 	defer span.End()
-	dc.chainstartPubkeysLock.Lock()
-	defer dc.chainstartPubkeysLock.Unlock()
 	dc.chainstartPubkeys[pubkey] = true
 }
 
@@ -111,13 +108,7 @@ func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey stri
 func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) bool {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PubkeyInChainstart")
 	defer span.End()
-	dc.chainstartPubkeysLock.Lock()
-	defer dc.chainstartPubkeysLock.Unlock()
-	if dc.chainstartPubkeys != nil {
-		return dc.chainstartPubkeys[pubkey]
-	}
-	dc.chainstartPubkeys = make(map[string]bool)
-	return false
+	return dc.chainstartPubkeys[pubkey]
 }
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number
@@ -163,11 +154,13 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
-	// This is rather slow, anyway we can speed it up?
-	for _, ctnr := range dc.deposits {
-		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
-			deposit = ctnr.Deposit
-			blockNum = big.NewInt(int64(ctnr.Eth1BlockHeight))
+	// Searching backwards here since we will only query a deposit by public key for when a validator is not in the beacon state.
+	// Therefore we can expect it to be at the end of the list as it has not been processed yet.
+	for i := len(dc.deposits); i > 0; i-- {
+		container := dc.deposits[i]
+		if bytes.Equal(container.Deposit.Data.PublicKey, pubKey) {
+			deposit = container.Deposit
+			blockNum = big.NewInt(int64(container.Eth1BlockHeight))
 			break
 		}
 	}
