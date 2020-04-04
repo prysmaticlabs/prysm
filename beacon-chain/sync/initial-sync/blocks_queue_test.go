@@ -157,8 +157,8 @@ func TestBlocksQueueLoop(t *testing.T) {
 	}{
 		{
 			name:                "Single peer with all blocks",
-			highestExpectedSlot: 251,
-			expectedBlockSlots:  makeSequence(1, 251),
+			highestExpectedSlot: 251, // will be auto-fixed to 256 (to 8th epoch), by queue
+			expectedBlockSlots:  makeSequence(1, 256),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -169,8 +169,8 @@ func TestBlocksQueueLoop(t *testing.T) {
 		},
 		{
 			name:                "Multiple peers with all blocks",
-			highestExpectedSlot: 251,
-			expectedBlockSlots:  makeSequence(1, 251),
+			highestExpectedSlot: 256,
+			expectedBlockSlots:  makeSequence(1, 256),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -224,7 +224,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 		{
 			name:                "Multiple peers with failures",
 			highestExpectedSlot: 128,
-			expectedBlockSlots:  makeSequence(1, 128),
+			expectedBlockSlots:  makeSequence(1, 256),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -301,7 +301,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 				t.Error(err)
 			}
 
-			if queue.headFetcher.HeadSlot() < uint64(len(tt.expectedBlockSlots)) {
+			if queue.headFetcher.HeadSlot() < tt.highestExpectedSlot {
 				t.Errorf("Not enough slots synced, want: %v, got: %v",
 					len(tt.expectedBlockSlots), queue.headFetcher.HeadSlot())
 			}
