@@ -349,14 +349,18 @@ func (s *Service) MetadataSeq() uint64 {
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee id's for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee id's.
-func (s *Service) RefreshENR(slot uint64) {
+func (s *Service) RefreshENR(epoch uint64) {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	committees := sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(slot),
-		cache.CommitteeIDs.GetAggregatorCommitteeIDs(slot))
+
+	var committees []uint64
+	epochStartSlot := helpers.StartSlot(epoch)
+	for i := epochStartSlot; i < epochStartSlot+2*params.BeaconConfig().SlotsPerEpoch; i++ {
+		committees = sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(i), cache.CommitteeIDs.GetAggregatorCommitteeIDs(i))
+	}
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
