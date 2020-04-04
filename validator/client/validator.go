@@ -31,7 +31,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type validatorRole int32
+type validatorRole int8
 
 const (
 	validatorRoleUNKNOWN    validatorRole = 0
