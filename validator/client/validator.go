@@ -337,6 +337,13 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 				roles = append(roles, pb.ValidatorRole_AGGREGATOR)
 			}
 
+			if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
+				Slot:         slot,
+				CommitteeId:  duty.CommitteeIndex,
+				IsAggregator: aggregator,
+			}); err != nil {
+				return nil, err
+			}
 		}
 		if len(roles) == 0 {
 			roles = append(roles, pb.ValidatorRole_UNKNOWN)

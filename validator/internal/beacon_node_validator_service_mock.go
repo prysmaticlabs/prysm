@@ -10,6 +10,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
@@ -966,4 +967,24 @@ func (m_2 *MockBeaconNodeValidator_WaitForChainStartServer) RecvMsg(m interface{
 func (mr *MockBeaconNodeValidator_WaitForChainStartServerMockRecorder) RecvMsg(m interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconNodeValidator_WaitForChainStartServer)(nil).RecvMsg), m)
+}
+
+// SubscribeCommitteeSubnet mocks base method
+func (m *MockBeaconNodeValidatorClient) SubscribeCommitteeSubnet(arg0 context.Context, arg1 *eth.CommitteeSubnetSubscribeRequest, arg2 ...grpc.CallOption) (*ptypes.Empty, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubscribeCommitteeSubnet", varargs...)
+	ret0, _ := ret[0].(*ptypes.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubscribeCommitteeSubnet indicates an expected call of SubscribeCommitteeSubnet
+func (mr *MockBeaconNodeValidatorClientMockRecorder) SubscribeCommitteeSubnet(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeCommitteeSubnet", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubscribeCommitteeSubnet), varargs...)
 }
