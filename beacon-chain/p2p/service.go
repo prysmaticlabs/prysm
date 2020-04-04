@@ -359,7 +359,8 @@ func (s *Service) RefreshENR(epoch uint64) {
 	var committees []uint64
 	epochStartSlot := helpers.StartSlot(epoch)
 	for i := epochStartSlot; i < epochStartSlot+2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		committees = sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(i), cache.CommitteeIDs.GetAggregatorCommitteeIDs(i))
+		committees = append(committees, sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(i),
+			cache.CommitteeIDs.GetAggregatorCommitteeIDs(i))...)
 	}
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
