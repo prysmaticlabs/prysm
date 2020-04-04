@@ -105,13 +105,13 @@ func run(ctx context.Context, v Validator) {
 				go func(roles []validatorRole, id [48]byte) {
 					for _, role := range roles {
 						switch role {
-						case validatorRoleATTESTER:
+						case roleAttester:
 							go v.SubmitAttestation(slotCtx, slot, id)
-						case validatorRolePROPOSER:
+						case roleProposer:
 							go v.ProposeBlock(slotCtx, slot, id)
-						case validatorRoleAGGREGATOR:
+						case roleAggregator:
 							go v.SubmitAggregateAndProof(slotCtx, slot, id)
-						case validatorRoleUNKNOWN:
+						case roleUnknown:
 							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)

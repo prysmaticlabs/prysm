@@ -612,23 +612,23 @@ func TestRolesAt_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != validatorRoleATTESTER {
-		t.Errorf("Unexpected validator role. want: validatorRolePROPOSER")
+	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != roleAttester {
+		t.Errorf("Unexpected validator role. want: roleProposer")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != validatorRolePROPOSER {
-		t.Errorf("Unexpected validator role. want: validatorRoleATTESTER")
+	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != roleProposer {
+		t.Errorf("Unexpected validator role. want: roleAttester")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != validatorRoleUNKNOWN {
+	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != roleUnknown {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0] != validatorRolePROPOSER {
-		t.Errorf("Unexpected validator role. want: validatorRolePROPOSER")
+	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0] != roleProposer {
+		t.Errorf("Unexpected validator role. want: roleProposer")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1] != validatorRoleATTESTER {
-		t.Errorf("Unexpected validator role. want: validatorRoleATTESTER")
+	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1] != roleAttester {
+		t.Errorf("Unexpected validator role. want: roleAttester")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2] != validatorRoleAGGREGATOR {
-		t.Errorf("Unexpected validator role. want: validatorRoleAGGREGATOR")
+	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2] != roleAggregator {
+		t.Errorf("Unexpected validator role. want: roleAggregator")
 	}
 }
 
@@ -674,13 +674,13 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != validatorRoleATTESTER {
-		t.Errorf("Unexpected validator role. want: validatorRolePROPOSER")
+	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != roleAttester {
+		t.Errorf("Unexpected validator role. want: roleProposer")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != validatorRoleUNKNOWN {
-		t.Errorf("Unexpected validator role. want: validatorRoleATTESTER")
+	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != roleUnknown {
+		t.Errorf("Unexpected validator role. want: roleAttester")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != validatorRoleUNKNOWN {
+	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != roleUnknown {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
 }
