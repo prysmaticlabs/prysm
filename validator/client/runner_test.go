@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -114,7 +113,7 @@ func TestAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []pb.ValidatorRole{pb.ValidatorRole_ATTESTER}
+	v.RolesAtRet = []ValidatorRole{ValidatorRole_ATTESTER}
 	go func() {
 		ticker <- slot
 
@@ -138,7 +137,7 @@ func TestProposes_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []pb.ValidatorRole{pb.ValidatorRole_PROPOSER}
+	v.RolesAtRet = []ValidatorRole{ValidatorRole_PROPOSER}
 	go func() {
 		ticker <- slot
 
@@ -162,7 +161,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RolesAtRet = []pb.ValidatorRole{pb.ValidatorRole_ATTESTER, pb.ValidatorRole_PROPOSER}
+	v.RolesAtRet = []ValidatorRole{ValidatorRole_ATTESTER, ValidatorRole_PROPOSER}
 	go func() {
 		ticker <- slot
 
