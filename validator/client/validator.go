@@ -31,13 +31,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type ValidatorRole int32
+type validatorRole int32
 
 const (
-	ValidatorRole_UNKNOWN    ValidatorRole = 0
-	ValidatorRole_ATTESTER   ValidatorRole = 1
-	ValidatorRole_PROPOSER   ValidatorRole = 2
-	ValidatorRole_AGGREGATOR ValidatorRole = 3
+	validatorRole_UNKNOWN    validatorRole = 0
+	validatorRole_ATTESTER   validatorRole = 1
+	validatorRole_PROPOSER   validatorRole = 2
+	validatorRole_AGGREGATOR validatorRole = 3
 )
 
 type validator struct {
@@ -322,32 +322,32 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
-	rolesAt := make(map[[48]byte][]ValidatorRole)
+// validator assignments are unknown. Otherwise returns a valid validatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
+	rolesAt := make(map[[48]byte][]validatorRole)
 	for _, duty := range v.duties.Duties {
-		var roles []ValidatorRole
+		var roles []validatorRole
 
 		if duty == nil {
 			continue
 		}
 		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
-			roles = append(roles, ValidatorRole_PROPOSER)
+			roles = append(roles, validatorRole_PROPOSER)
 		}
 		if duty.AttesterSlot == slot {
-			roles = append(roles, ValidatorRole_ATTESTER)
+			roles = append(roles, validatorRole_ATTESTER)
 
 			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
 			if aggregator {
-				roles = append(roles, ValidatorRole_AGGREGATOR)
+				roles = append(roles, validatorRole_AGGREGATOR)
 			}
 
 		}
 		if len(roles) == 0 {
-			roles = append(roles, ValidatorRole_UNKNOWN)
+			roles = append(roles, validatorRole_UNKNOWN)
 		}
 
 		var pubKey [48]byte

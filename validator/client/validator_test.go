@@ -11,7 +11,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -613,23 +612,23 @@ func TestRolesAt_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != ValidatorRole_ATTESTER {
-		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
+	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != validatorRole_ATTESTER {
+		t.Errorf("Unexpected validator role. want: validatorRole_PROPOSER")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != ValidatorRole_PROPOSER {
-		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
+	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != validatorRole_PROPOSER {
+		t.Errorf("Unexpected validator role. want: validatorRole_ATTESTER")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != ValidatorRole_UNKNOWN {
+	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != validatorRole_UNKNOWN {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0] != ValidatorRole_PROPOSER {
-		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
+	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][0] != validatorRole_PROPOSER {
+		t.Errorf("Unexpected validator role. want: validatorRole_PROPOSER")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1] != ValidatorRole_ATTESTER {
-		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
+	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][1] != validatorRole_ATTESTER {
+		t.Errorf("Unexpected validator role. want: validatorRole_ATTESTER")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2] != ValidatorRole_AGGREGATOR {
-		t.Errorf("Unexpected validator role. want: ValidatorRole_AGGREGATOR")
+	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2] != validatorRole_AGGREGATOR {
+		t.Errorf("Unexpected validator role. want: validatorRole_AGGREGATOR")
 	}
 }
 
@@ -675,13 +674,13 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != ValidatorRole_ATTESTER {
-		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
+	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != validatorRole_ATTESTER {
+		t.Errorf("Unexpected validator role. want: validatorRole_PROPOSER")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != ValidatorRole_UNKNOWN {
-		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
+	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != validatorRole_UNKNOWN {
+		t.Errorf("Unexpected validator role. want: validatorRole_ATTESTER")
 	}
-	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != ValidatorRole_UNKNOWN {
+	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != validatorRole_UNKNOWN {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
 }

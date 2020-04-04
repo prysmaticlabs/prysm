@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"time"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
 var _ = Validator(&fakeValidator{})
@@ -29,7 +27,7 @@ type fakeValidator struct {
 	NextSlotRet                      <-chan uint64
 	PublicKey                        string
 	UpdateDutiesRet                  error
-	RolesAtRet                       []ValidatorRole
+	RolesAtRet                       []validatorRole
 }
 
 func (fv *fakeValidator) Done() {
@@ -77,10 +75,10 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) {
+func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[[48]byte][]ValidatorRole)
+	vr := make(map[[48]byte][]validatorRole)
 	vr[[48]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }

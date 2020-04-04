@@ -25,7 +25,7 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
-	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]ValidatorRole, error) // validator pubKey -> roles
+	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
@@ -102,16 +102,16 @@ func run(ctx context.Context, v Validator) {
 			}
 			for id, roles := range allRoles {
 				wg.Add(1)
-				go func(roles []ValidatorRole, id [48]byte) {
+				go func(roles []validatorRole, id [48]byte) {
 					for _, role := range roles {
 						switch role {
-						case ValidatorRole_ATTESTER:
+						case validatorRole_ATTESTER:
 							go v.SubmitAttestation(slotCtx, slot, id)
-						case ValidatorRole_PROPOSER:
+						case validatorRole_PROPOSER:
 							go v.ProposeBlock(slotCtx, slot, id)
-						case ValidatorRole_AGGREGATOR:
+						case validatorRole_AGGREGATOR:
 							go v.SubmitAggregateAndProof(slotCtx, slot, id)
-						case ValidatorRole_UNKNOWN:
+						case validatorRole_UNKNOWN:
 							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)
