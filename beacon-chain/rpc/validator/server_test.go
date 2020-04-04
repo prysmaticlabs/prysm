@@ -201,9 +201,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			Statuses: []*ethpb.ValidatorActivationResponse_Status{
 				{PublicKey: pubKey1,
 					Status: &ethpb.ValidatorStatusResponse{
-						Status:                 ethpb.ValidatorStatus_ACTIVE,
-						Eth1DepositBlockNumber: 10,
-						DepositInclusionSlot:   2218,
+						Status: ethpb.ValidatorStatus_ACTIVE,
 					},
 				},
 				{PublicKey: pubKey2,

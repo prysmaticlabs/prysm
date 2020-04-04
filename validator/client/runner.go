@@ -103,6 +103,7 @@ func run(ctx context.Context, v Validator) {
 			}
 			for id, roles := range allRoles {
 				wg.Add(1)
+				// This type is marked as deprecated. Why do we still use it?
 				go func(roles []pb.ValidatorRole, id [48]byte) {
 					for _, role := range roles {
 						switch role {

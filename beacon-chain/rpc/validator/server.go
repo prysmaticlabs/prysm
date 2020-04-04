@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -90,8 +91,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 	for {
 		select {
-		// Why is this a hard-coded 6?
-		case <-time.After(6 * time.Second):
+		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second):
 			activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)

@@ -93,59 +93,43 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		resp.ActivationEpoch = int64(val.ActivationEpoch)
 	}
 
-	// If the status can be retrieved from the beacon state, don't continue further.
-	if resp.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
-		return resp
-	}
+	switch resp.Status {
+	case ethpb.ValidatorStatus_UNKNOWN_STATUS, ethpb.ValidatorStatus_DEPOSITED:
+		// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
+		if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
+			return resp
+		}
 
-	// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
-	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
-		log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
-		return resp
-	}
-
-	_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
-	if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
-		return resp
-	}
-
-	if resp.Status == ethpb.ValidatorStatus_UNKNOWN_STATUS {
+		_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
+			return resp
+		}
+		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 		resp.Status = ethpb.ValidatorStatus_DEPOSITED
-	}
 
-	resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
-
-	depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, headState)
-	if err != nil {
-		return resp
-	}
-	resp.DepositInclusionSlot = int64(depositBlockSlot)
-
-	// If validator has been activated at any point, they are not in the queue so we can return
-	// the request early. Also if the validator has exited,slashed or initiated its exit
-	//  we return the request early too. We only proceed if its status is pending active
-	//  Additionally, if idx is zero (default return value) then we know this
-	// validator cannot be in the queue either.
-	if resp.Status != ethpb.ValidatorStatus_PENDING || idx == 0 {
-		return resp
-	}
-
-	var lastActivatedValidatorIdx uint64
-	for j := headState.NumValidators() - 1; j >= 0; j-- {
-		val, err := headState.ValidatorAtIndex(uint64(j))
+		depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, headState)
 		if err != nil {
 			return resp
 		}
-		if helpers.IsActiveValidator(val, helpers.CurrentEpoch(headState)) {
-			lastActivatedValidatorIdx = uint64(j)
-			break
+		resp.DepositInclusionSlot = int64(depositBlockSlot)
+	case ethpb.ValidatorStatus_PENDING:
+		var lastActivatedValidatorIdx uint64
+		for j := headState.NumValidators() - 1; j >= 0; j-- {
+			val, err := headState.ValidatorAtIndex(uint64(j))
+			if err != nil {
+				return resp
+			}
+			if helpers.IsActiveValidator(val, helpers.CurrentEpoch(headState)) {
+				lastActivatedValidatorIdx = uint64(j)
+				break
+			}
+		}
+		// Our position in the activation queue is the above index - our validator index.
+		if lastActivatedValidatorIdx < idx {
+			resp.PositionInActivationQueue = int64(idx - lastActivatedValidatorIdx)
 		}
 	}
-	// Our position in the activation queue is the above index - our validator index.
-	if lastActivatedValidatorIdx < idx {
-		resp.PositionInActivationQueue = int64(idx - lastActivatedValidatorIdx)
-	}
-
 	return resp
 }
 

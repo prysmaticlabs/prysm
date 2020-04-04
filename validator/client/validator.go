@@ -273,7 +273,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	// If duties is nil it means we have had no prior duties and just started up.
-	firstDutiesReceived := v.duties == nil
+	firstDutiesReceived := v.duties != nil
 	resp, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
 		v.duties = nil // Clear assignments so we know to retry the request.
@@ -284,7 +284,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	v.duties = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	// Also log out on first launch so the user doesn't have to wait a whole epoch to see their assignments.
-	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || !firstDutiesReceived {
 		for _, duty := range v.duties.Duties {
 			lFields := logrus.Fields{
 				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
@@ -337,7 +337,6 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 			if aggregator {
 				roles = append(roles, pb.ValidatorRole_AGGREGATOR)
 			}
-
 		}
 		if len(roles) == 0 {
 			roles = append(roles, pb.ValidatorRole_UNKNOWN)
