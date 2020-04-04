@@ -137,7 +137,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
 			{
-				ActivationEpoch: 0,
+				ActivationEpoch: 1,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				PublicKey:       pubKey1,
 			},
@@ -201,7 +201,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			Statuses: []*ethpb.ValidatorActivationResponse_Status{
 				{PublicKey: pubKey1,
 					Status: &ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
+						Status:          ethpb.ValidatorStatus_ACTIVE,
+						ActivationEpoch: 1,
 					},
 				},
 				{PublicKey: pubKey2,
