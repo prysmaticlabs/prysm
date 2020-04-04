@@ -9,38 +9,72 @@ import (
 )
 
 type committeeIDs struct {
-	cache *lru.Cache
-	lock  sync.RWMutex
+	attester       *lru.Cache
+	attesterLock   sync.RWMutex
+	aggregator     *lru.Cache
+	aggregatorLock sync.RWMutex
 }
 
-// CommitteeIDs for attestations.
+// CommitteeIDs for attester and aggregator.
 var CommitteeIDs = newCommitteeIDs()
 
 func newCommitteeIDs() *committeeIDs {
 	maxCommitteesPerEpoch := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch)
-	cache, err := lru.New(maxCommitteesPerEpoch)
+	attesterCache, err := lru.New(maxCommitteesPerEpoch)
 	if err != nil {
 		panic(err)
 	}
-	return &committeeIDs{cache: cache}
-}
-
-// AddID adds committee ID for subscribing subnet for the attester and/or aggregator of a given slot.
-func (t *committeeIDs) AddID(slot uint64, committeeID uint64) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	committeeIDs := []uint64{committeeID}
-	val, exists := t.cache.Get(slot)
-	if exists {
-		committeeIDs = sliceutil.UnionUint64(append(val.([]uint64), committeeIDs...))
+	aggregatorCache, err := lru.New(maxCommitteesPerEpoch)
+	if err != nil {
+		panic(err)
 	}
-	t.cache.Add(slot, committeeIDs)
+	return &committeeIDs{attester: attesterCache, aggregator: aggregatorCache}
 }
 
-// GetIDs gets the committee ID for subscribing subnet for attester and/or aggregator of the slot.
-func (t *committeeIDs) GetIDs(slot uint64) []uint64 {
-	val, exists := t.cache.Get(slot)
+// AddAttesterCommiteeID adds committee ID for subscribing subnet for the attester of a given slot.
+func (c *committeeIDs) AddAttesterCommiteeID(slot uint64, committeeID uint64) {
+	c.attesterLock.Lock()
+	defer c.attesterLock.Unlock()
+
+	ids := []uint64{committeeID}
+	val, exists := c.attester.Get(slot)
+	if exists {
+		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
+	}
+	c.attester.Add(slot, ids)
+}
+
+// GetAttesterCommitteeIDs gets the committee ID for subscribing subnet for attester of the slot.
+func (c *committeeIDs) GetAttesterCommitteeIDs(slot uint64) []uint64 {
+	c.attesterLock.Lock()
+	defer c.attesterLock.Unlock()
+
+	val, exists := c.attester.Get(slot)
+	if !exists {
+		return []uint64{}
+	}
+	return val.([]uint64)
+}
+
+// AddAggregatorCommiteeID adds committee ID for subscribing subnet for the aggregator of a given slot.
+func (c *committeeIDs) AddAggregatorCommiteeID(slot uint64, committeeID uint64) {
+	c.aggregatorLock.Lock()
+	defer c.aggregatorLock.Unlock()
+
+	ids := []uint64{committeeID}
+	val, exists := c.aggregator.Get(slot)
+	if exists {
+		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
+	}
+	c.aggregator.Add(slot, ids)
+}
+
+// GetAggregatorCommitteeIDs gets the committee ID for subscribing subnet for aggregator of the slot.
+func (c *committeeIDs) GetAggregatorCommitteeIDs(slot uint64) []uint64 {
+	c.aggregatorLock.Lock()
+	defer c.aggregatorLock.Unlock()
+
+	val, exists := c.aggregator.Get(slot)
 	if !exists {
 		return []uint64{}
 	}
