@@ -303,9 +303,48 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 					lFields["proposerSlot"] = duty.ProposerSlot
 				}
 				lFields["attesterSlot"] = duty.AttesterSlot
+
+				aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					return errors.Wrap(err, "could not check if a validator is an aggregator")
+				}
+				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
+					Slot:         duty.AttesterSlot,
+					CommitteeId:  duty.CommitteeIndex,
+					IsAggregator: aggregator,
+				}); err != nil {
+					return err
+				}
 			}
 
 			log.WithFields(lFields).Info("New assignment")
+		}
+	}
+
+	// Notify beacon node to subscribe subnet for the next epoch.
+	req.Epoch++
+	resp, err = v.validatorClient.GetDuties(ctx, req)
+	if err != nil {
+		v.duties = nil // Clear assignments so we know to retry the request.
+		log.Error(err)
+		return err
+	}
+	v.duties = resp
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
+		for _, duty := range v.duties.Duties {
+			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
+				aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					return errors.Wrap(err, "could not check if a validator is an aggregator")
+				}
+				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
+					Slot:         duty.AttesterSlot,
+					CommitteeId:  duty.CommitteeIndex,
+					IsAggregator: aggregator,
+				}); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -335,14 +374,6 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 			}
 			if aggregator {
 				roles = append(roles, pb.ValidatorRole_AGGREGATOR)
-			}
-
-			if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
-				Slot:         slot,
-				CommitteeId:  duty.CommitteeIndex,
-				IsAggregator: aggregator,
-			}); err != nil {
-				return nil, err
 			}
 		}
 		if len(roles) == 0 {
