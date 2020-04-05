@@ -174,7 +174,7 @@ Each validator represents 3.2 Goerli ETH being staked in the system, and it is p
 
 ### Activating your validator: depositing 3.2 Göerli ETH
 
-To begin setting up a validator, follow the instructions found on [prylabs.net](https://prylabs.net) to use the Göerli ETH faucet and make a deposit. For step-by-step assistance with the deposit page, see the [Activating a Validator ](https://docs.prylabs.network/docs/activating-a-validator)section of this documentation.
+To begin setting up a validator, follow the instructions found on [prylabs.net](https://prylabs.net) to use the Göerli ETH faucet and make a deposit. For step-by-step assistance with the deposit page, see the [Activating a Validator ](https://docs.prylabs.network/docs/prysm-usage/activating-a-validator)section of this documentation.
 
 It will take a while for the nodes in the network to process a deposit. Once the node is active, the validator will immediately begin performing its responsibilities.
 
