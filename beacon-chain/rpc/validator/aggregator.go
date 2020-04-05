@@ -68,7 +68,7 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not save aggregated attestations: %v", err)
 	}
 	if err := as.AttPool.DeleteUnaggregatedAttestations(unaggregatedAtts); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save delete unaggregated attestations: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not delete unaggregated attestations: %v", err)
 	}
 
 	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
