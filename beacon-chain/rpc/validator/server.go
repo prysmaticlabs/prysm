@@ -91,8 +91,8 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 	for {
 		select {
-		// No need to ping every slot for activation, mainly a UX choice.
-		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot*2) * time.Second):
+		// Pinging every slot for activation.
+		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second):
 			activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
