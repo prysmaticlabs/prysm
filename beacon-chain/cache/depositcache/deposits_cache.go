@@ -154,9 +154,9 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
-	// Searching backwards here since we will only query a deposit by public key for when a validator is not in the beacon state.
+	// Searching backwards here since we will only query a deposit by public key when a validator is not active.
 	// Therefore we can expect it to be closer to the end of the list as it has not been processed yet.
-	for i := len(dc.deposits); i > 0; i-- {
+	for i := len(dc.deposits) - 1; i > 0; i-- {
 		container := dc.deposits[i]
 		if bytes.Equal(container.Deposit.Data.PublicKey, pubKey) {
 			deposit = container.Deposit
