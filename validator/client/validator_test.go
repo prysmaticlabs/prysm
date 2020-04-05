@@ -531,6 +531,11 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
 	if err := v.UpdateDuties(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
@@ -610,16 +615,6 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().SubscribeCommitteeSubnet(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(nil, nil /*err*/)
-
-	m.validatorClient.EXPECT().SubscribeCommitteeSubnet(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(nil, nil /*err*/)
-
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	if err != nil {
 		t.Fatal(err)
@@ -681,11 +676,6 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
-
-	m.validatorClient.EXPECT().SubscribeCommitteeSubnet(
-		gomock.Any(), // ctx
-		gomock.Any(), // epoch
-	).Return(nil, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 0)
 	if err != nil {
