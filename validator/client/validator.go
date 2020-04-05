@@ -321,7 +321,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		}
 	}
 
-	// Notify beacon node to subscribe attster and aggregator subnet for the next epoch.
+	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
 	req.Epoch++
 	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
