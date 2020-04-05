@@ -154,13 +154,9 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
-	// Searching backwards here since we will only query a deposit by public key when a validator is not active.
-	// Therefore we can expect it to be closer to the end of the list as it has not been processed yet.
-	for i := len(dc.deposits) - 1; i > 0; i-- {
-		container := dc.deposits[i]
-		if bytes.Equal(container.Deposit.Data.PublicKey, pubKey) {
-			deposit = container.Deposit
-			blockNum = big.NewInt(int64(container.Eth1BlockHeight))
+	for _, ctnr := range dc.deposits {
+		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
+			blockNum = big.NewInt(int64(ctnr.Eth1BlockHeight))
 			break
 		}
 	}
