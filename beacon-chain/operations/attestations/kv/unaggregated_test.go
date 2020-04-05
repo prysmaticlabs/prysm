@@ -40,6 +40,7 @@ func TestKV_Unaggregated_CanDelete(t *testing.T) {
 	if err := cache.DeleteUnaggregatedAttestation(att2); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := cache.DeleteUnaggregatedAttestation(att3); err != nil {
 		t.Fatal(err)
 	}
