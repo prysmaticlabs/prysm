@@ -104,6 +104,37 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	return nil
 }
 
+// WaitForSync checks whether the beacon node has sync to the latest head
+func (v *validator) WaitForSync(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
+	defer span.End()
+
+	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "could not get sync status")
+	}
+	if !s.Syncing {
+		return nil
+	}
+
+	for {
+		select {
+		// Poll every slot to check if the node has synced.
+		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Second):
+			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+			if err != nil {
+				return errors.Wrap(err, "could not get sync status")
+			}
+			if !s.Syncing {
+				return nil
+			}
+			log.Info("Waiting for beacon node to sync to latest chain head")
+		case <-ctx.Done():
+			return errors.New("context has been canceled, exiting goroutine")
+		}
+	}
+}
+
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
@@ -150,37 +181,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	return nil
 }
 
-// WaitForSync checks whether the beacon node has sync to the latest head
-func (v *validator) WaitForSync(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
-	defer span.End()
-
-	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "could not get sync status")
-	}
-	if !s.Syncing {
-		return nil
-	}
-
-	for {
-		select {
-		// Poll every slot to check if the node has synced.
-		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Second):
-			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
-			if err != nil {
-				return errors.Wrap(err, "could not get sync status")
-			}
-			if !s.Syncing {
-				return nil
-			}
-			log.Info("Waiting for beacon node to sync to latest chain head")
-		case <-ctx.Done():
-			return errors.New("context has been canceled, exiting goroutine")
-		}
-	}
-}
-
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
@@ -194,31 +194,27 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		}
 
 		switch status.Status.Status {
+		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
+			if status.Status.DepositInclusionSlot != 0 {
+				log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
+					"Waiting for deposit to be seen",
+				)
+			} else {
+				log.Info("Waiting for deposit to be seen")
+			}
+		case ethpb.ValidatorStatus_DEPOSITED:
+			log.WithField("depositInclusionSlot", status.Status.DepositInclusionSlot).Info(
+				"Deposit for validator processed, entering activation queue after finalization",
+			)
+		case ethpb.ValidatorStatus_PENDING:
+			log.WithFields(logrus.Fields{
+				"activationEpoch":           status.Status.ActivationEpoch,
+				"positionInActivationQueue": status.Status.PositionInActivationQueue,
+			}).Info("Waiting to be activated")
 		case ethpb.ValidatorStatus_ACTIVE:
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
-		case ethpb.ValidatorStatus_DEPOSITED:
-			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
-				"Deposit for validator received but not processed into state")
-		default:
-			if status.Status.DepositInclusionSlot == 0 && status.Status.PositionInActivationQueue == 0 {
-				log.Info("Waiting for deposit to be seen")
-				continue
-			}
-			if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
-				log.WithFields(logrus.Fields{
-					"depositInclusionSlot":      status.Status.DepositInclusionSlot,
-					"positionInActivationQueue": status.Status.PositionInActivationQueue,
-				}).Info("Waiting to be activated")
-				continue
-			}
-
-			log.WithFields(logrus.Fields{
-				"depositInclusionSlot":      status.Status.DepositInclusionSlot,
-				"activationEpoch":           status.Status.ActivationEpoch,
-				"positionInActivationQueue": status.Status.PositionInActivationQueue,
-			}).Info("Validator status")
 		}
 	}
 	return activatedKeys
