@@ -183,7 +183,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return errors.Wrap(err, "could save finalized checkpoint")
 	}
 
-	pubKeys := make([][48]byte, 0)
+	pubKeys := make([][48]byte, 0,genesisState.NumValidators())
 	indices := make([]uint64, 0)
 	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
