@@ -6,21 +6,35 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestLifecycle(t *testing.T) {
-	hook := logTest.NewGlobal()
 	prometheusService := NewPrometheusService(":2112", nil)
-
 	prometheusService.Start()
+	// Give service time to start.
+	time.Sleep(time.Second)
 
-	testutil.AssertLogsContain(t, hook, "Collecting metrics")
+	// Query the service to ensure it really started.
+	resp, err := http.Get("http://localhost:2112/metrics")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if resp.ContentLength == 0 {
+		t.Error("Unexpected content length 0")
+	}
 
 	prometheusService.Stop()
+	// Give service time to stop.
+	time.Sleep(time.Second)
+
+	// Query the service to ensure it really stopped.
+	_, err = http.Get("http://localhost:2112/metrics")
+	if err == nil {
+		t.Fatal("Service still running after Stop()")
+	}
 }
 
 type mockService struct {
