@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
