@@ -301,6 +301,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 	}()
 }
 
+// revalidate that our currently connected subnets are valid.
 func (r *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subscription,
 	wantedSubs []uint64, topicFormat string) {
 	for k, v := range subscriptions {
@@ -319,6 +320,7 @@ func (r *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 	}
 }
 
+// subscribe missing subnets for our aggregators.
 func (r *Service) subscribeMissingSubnet(subscriptions map[uint64]*pubsub.Subscription, idx uint64,
 	base proto.Message, digest [4]byte, validate pubsub.Validator, handle subHandler) {
 	// do not subscribe if we have no peers in the same
@@ -345,6 +347,7 @@ func (r *Service) subscribeMissingSubnet(subscriptions map[uint64]*pubsub.Subscr
 	subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
 }
 
+// lookup peers for attester specific subnets.
 func (r *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
@@ -362,6 +365,7 @@ func (r *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	}
 }
 
+// find if we have peers who are subscribed to the same subnet
 func (r *Service) validPeersExist(subnetTopic string, idx uint64) bool {
 	numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic + r.p2p.Encoding().ProtocolSuffix())
 	return len(r.p2p.Peers().SubscribedToSubnet(idx)) > 0 || len(numOfPeers) > 0
