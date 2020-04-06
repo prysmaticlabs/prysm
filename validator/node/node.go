@@ -80,7 +80,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		if len(pubKeys) == 0 {
 			log.Warn("No keys found; nothing to validate")
 		} else {
-			log.WithField("validators", len(pubKeys)).Info("Found validator keys")
+			log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
 			for _, key := range pubKeys {
 				log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
 			}

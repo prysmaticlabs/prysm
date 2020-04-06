@@ -84,7 +84,6 @@ go_image(
     visibility = ["//visibility:private"],
     deps = [
         "//contracts/deposit-contract:go_default_library",
-        "//proto/beacon/rpc/v1:go_default_library",
         "//proto/cluster:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
