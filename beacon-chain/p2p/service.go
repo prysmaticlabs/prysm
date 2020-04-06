@@ -10,6 +10,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -25,10 +26,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,6 +42,10 @@ var _ = shared.Service(&Service{})
 
 // Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
+
+// Refresh rate of ENR set at every quarter of an epoch.
+var refreshRate = time.Duration((params.BeaconConfig().SecondsPerSlot*
+	params.BeaconConfig().SlotsPerEpoch)/4) * time.Second
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
@@ -47,18 +57,22 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	started       bool
-	cfg           *Config
-	startupErr    error
-	dv5Listener   Listener
-	host          host.Host
-	pubsub        *pubsub.PubSub
-	exclusionList *ristretto.Cache
-	privKey       *ecdsa.PrivateKey
-	dht           *kaddht.IpfsDHT
-	peers         *peers.Status
+	beaconDB              db.Database
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	started               bool
+	cfg                   *Config
+	startupErr            error
+	dv5Listener           Listener
+	host                  host.Host
+	pubsub                *pubsub.PubSub
+	exclusionList         *ristretto.Cache
+	privKey               *ecdsa.PrivateKey
+	dht                   *kaddht.IpfsDHT
+	peers                 *peers.Status
+	genesisTime           time.Time
+	genesisValidatorsRoot []byte
+	metaData              *pb.MetaData
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -73,6 +87,7 @@ func NewService(cfg *Config) (*Service, error) {
 	})
 
 	s := &Service{
+		beaconDB:      cfg.BeaconDB,
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,
@@ -88,6 +103,11 @@ func NewService(cfg *Config) (*Service, error) {
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
+		return nil, err
+	}
+	s.metaData, err = metaDataFromConfig(s.cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create peer metadata")
 		return nil, err
 	}
 
@@ -145,6 +165,17 @@ func (s *Service) Start() {
 		return
 	}
 
+	// Check if we have a genesis time / genesis state
+	// used for fork-related data when connecting peers.
+	genesisState, err := s.beaconDB.GenesisState(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not read genesis state")
+	}
+	if genesisState != nil {
+		s.genesisTime = time.Unix(int64(genesisState.GenesisTime()), 0)
+		s.genesisValidatorsRoot = genesisState.GenesisValidatorRoot()
+	}
+
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
 		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
@@ -160,7 +191,10 @@ func (s *Service) Start() {
 
 	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
 		ipAddr := ipAddr()
-		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
+		listener, err := s.startDiscoveryV5(
+			ipAddr,
+			s.privKey,
+		)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
 			s.startupErr = err
@@ -218,6 +252,10 @@ func (s *Service) Start() {
 	})
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+	runutil.RunEvery(s.ctx, refreshRate, func() {
+		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(s.genesisTime))
+		s.RefreshENR(currentEpoch)
+	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIPAddr(s.host.ID(), multiAddrs...)
@@ -298,6 +336,16 @@ func (s *Service) Peers() *peers.Status {
 	return s.peers
 }
 
+// Metadata returns a copy of the peer's metadata.
+func (s *Service) Metadata() *pb.MetaData {
+	return proto.Clone(s.metaData).(*pb.MetaData)
+}
+
+// MetadataSeq returns the metadata sequence number.
+func (s *Service) MetadataSeq() uint64 {
+	return s.metaData.SeqNumber
+}
+
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee id's for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee id's.
@@ -307,7 +355,13 @@ func (s *Service) RefreshENR(epoch uint64) {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	committees := cache.CommitteeIDs.GetIDs(epoch)
+
+	var committees []uint64
+	epochStartSlot := helpers.StartSlot(epoch)
+	for i := epochStartSlot; i < epochStartSlot+2*params.BeaconConfig().SlotsPerEpoch; i++ {
+		committees = append(committees, sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(i),
+			cache.CommitteeIDs.GetAggregatorCommitteeIDs(i))...)
+	}
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
@@ -427,12 +481,24 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
 			continue
 		}
-		indices, err := retrieveAttSubnets(node.Record())
+
+		nodeENR := node.Record()
+		// Decide whether or not to connect to peer that does not
+		// match the proper fork ENR data with our local node.
+		if s.genesisValidatorsRoot != nil {
+			if err := s.compareForkENR(nodeENR); err != nil {
+				log.WithError(err).Debug("Fork ENR mismatches between peer and local node")
+				continue
+			}
+		}
+
+		indices, err := retrieveAttSubnets(nodeENR)
 		if err != nil {
 			log.WithError(err).Error("Could not retrieve attestation subnets")
 			continue
 		}
-		// add peer to peer handler.
+
+		// Add peer to peer handler.
 		s.peers.Add(peerData.ID, multiAddr, network.DirUnknown, indices)
 		multiAddrs = append(multiAddrs, multiAddr)
 	}

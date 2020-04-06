@@ -378,11 +378,11 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound, []uint64{})
 		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
 		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			FinalizedRoot:   []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
-			FinalizedEpoch:  datum.finalizedEpoch,
-			HeadRoot:        []byte("head_root"),
-			HeadSlot:        datum.headSlot,
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
+			FinalizedEpoch: datum.finalizedEpoch,
+			HeadRoot:       []byte("head_root"),
+			HeadSlot:       datum.headSlot,
 		})
 	}
 }

@@ -11,9 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -39,12 +37,7 @@ var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
-	flags.KeystorePathFlag,
-	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
-	flags.UnencryptedKeysFlag,
-	flags.InteropStartIndex,
-	flags.InteropNumValidators,
 	flags.GrpcMaxCallRecvMsgSizeFlag,
 	flags.GrpcRetriesFlag,
 	flags.GrpcHeadersFlag,
@@ -82,68 +75,6 @@ func main() {
 				 starts proposer services, shardp2p connections, and more`
 	app.Version = version.GetVersion()
 	app.Action = startNode
-	app.Commands = []*cli.Command{
-		{
-			Name:     "accounts",
-			Category: "accounts",
-			Usage:    "defines useful functions for interacting with the validator client's account",
-			Subcommands: []*cli.Command{
-				{
-					Name: "create",
-					Description: `creates a new validator account keystore containing private keys for Ethereum Serenity -
-this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
-contract in order to activate the validator client`,
-					Flags: []cli.Flag{
-						flags.KeystorePathFlag,
-						flags.PasswordFlag,
-					},
-					Action: func(ctx *cli.Context) error {
-						featureconfig.ConfigureValidator(ctx)
-						// Use custom config values if the --no-custom-config flag is set.
-						if !ctx.Bool(flags.NoCustomConfigFlag.Name) {
-							log.Info("Using custom parameter configuration")
-							if featureconfig.Get().MinimalConfig {
-								log.Warn("Using Minimal Config")
-								params.UseMinimalConfig()
-							} else {
-								log.Warn("Using Demo Config")
-								params.UseDemoBeaconConfig()
-							}
-						}
-
-						if keystoreDir, _, err := accounts.CreateValidatorAccount(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name)); err != nil {
-							log.WithError(err).Fatalf("Could not create validator at path: %s", keystoreDir)
-						}
-						return nil
-					},
-				},
-				{
-					Name:        "keys",
-					Description: `lists the private keys for 'keystore' keymanager keys`,
-					Flags: []cli.Flag{
-						flags.KeystorePathFlag,
-						flags.PasswordFlag,
-					},
-					Action: func(ctx *cli.Context) error {
-						if ctx.String(flags.KeystorePathFlag.Name) == "" {
-							log.Fatalf("%s is required", flags.KeystorePathFlag.Name)
-						}
-						if ctx.String(flags.PasswordFlag.Name) == "" {
-							log.Fatalf("%s is required", flags.PasswordFlag.Name)
-						}
-						keystores, err := accounts.DecryptKeysFromKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
-						if err != nil {
-							log.WithError(err).Fatalf("Failed to decrypt keystore keys at path %s", ctx.String(flags.KeystorePathFlag.Name))
-						}
-						for _, v := range keystores {
-							fmt.Printf("Public key: %#x private key: %#x\n", v.PublicKey.Marshal(), v.SecretKey.Marshal())
-						}
-						return nil
-					},
-				},
-			},
-		},
-	}
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {

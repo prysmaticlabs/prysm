@@ -54,7 +54,7 @@ func TestSignNoSuchKey(t *testing.T) {
 	//	sks = append(sks, bls.RandKey())
 	direct := keymanager.NewDirect(sks)
 
-	sig, err := direct.Sign([48]byte{}, [32]byte{}, 0)
+	sig, err := direct.Sign([48]byte{}, [32]byte{})
 	if err != keymanager.ErrNoSuchKey {
 		t.Fatalf("Incorrect error: expected %v, received %v", keymanager.ErrNoSuchKey, err)
 	}
@@ -68,11 +68,11 @@ func TestSign(t *testing.T) {
 
 	pubKey := bytesutil.ToBytes48(sks[0].PublicKey().Marshal())
 	msg := [32]byte{}
-	sig, err := direct.Sign(pubKey, msg, 0)
+	sig, err := direct.Sign(pubKey, msg)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !sig.Verify(bytesutil.FromBytes32(msg), sks[0].PublicKey(), 0) {
+	if !sig.Verify(bytesutil.FromBytes32(msg), sks[0].PublicKey()) {
 		t.Fatal("Failed to verify generated signature")
 	}
 }

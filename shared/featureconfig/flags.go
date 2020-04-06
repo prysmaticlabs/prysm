@@ -112,18 +112,13 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
-	enableNoiseHandshake = &cli.BoolFlag{
-		Name: "enable-noise",
-		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
-			"securing transports between peers",
-	}
 	dontPruneStateStartUp = &cli.BoolFlag{
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	newStateMgmt = &cli.BoolFlag{
-		Name:  "new-state-mgmt",
-		Usage: "This enables the usage of experimental state mgmt service across Prysm",
+	disableNewStateMgmt = &cli.BoolFlag{
+		Name:  "disable-new-state-mgmt",
+		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
 	disableInitSyncQueue = &cli.BoolFlag{
 		Name:  "disable-init-sync-queue",
@@ -147,6 +142,11 @@ var (
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedEnableNoiseHandshake = &cli.BoolFlag{
+		Name:   "enable-noise",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableInitSyncQueue = &cli.BoolFlag{
 		Name:   "enable-initial-sync-queue",
 		Usage:  deprecatedUsage,
@@ -197,7 +197,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
 	deprecatedEnableCustomStateSSZFlag = &cli.BoolFlag{
 		Name:   "enable-custom-state-ssz",
 		Usage:  deprecatedUsage,
@@ -276,6 +275,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedEnableNoiseHandshake,
 	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
@@ -337,10 +337,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
-	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
-	newStateMgmt,
+	disableNewStateMgmt,
 	disableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,

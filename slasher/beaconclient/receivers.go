@@ -35,6 +35,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		}
 		if err != nil {
 			log.WithError(err).Error("Could not receive block from beacon node")
+			break
 		}
 		if res == nil {
 			continue

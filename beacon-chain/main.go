@@ -59,6 +59,7 @@ var appFlags = []cli.Flag{
 	cmd.P2PHostDNS,
 	cmd.P2PMaxPeers,
 	cmd.P2PPrivKey,
+	cmd.P2PMetadata,
 	cmd.P2PWhitelist,
 	cmd.P2PEncoding,
 	cmd.DataDirFlag,

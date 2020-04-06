@@ -1,8 +1,13 @@
 package p2p
 
+import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+)
+
 // Config for the p2p service. These parameters are set from application level flags
 // to initialize the p2p service.
 type Config struct {
+	BeaconDB              db.Database
 	NoDiscovery           bool
 	EnableUPnP            bool
 	EnableDiscv5          bool
@@ -16,6 +21,7 @@ type Config struct {
 	HostDNS               string
 	PrivateKey            string
 	DataDir               string
+	MetaDataDir           string
 	TCPPort               uint
 	UDPPort               uint
 	MaxPeers              uint

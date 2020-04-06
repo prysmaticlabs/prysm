@@ -91,7 +91,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	slashableIndice := block.Block.Body.ProposerSlashings[0].ProposerIndex
+	slashableIndice := block.Block.Body.ProposerSlashings[0].Header_1.Header.ProposerIndex
 	if val, err := beaconState.ValidatorAtIndexReadOnly(slashableIndice); err != nil || !val.Slashed() {
 		if err != nil {
 			t.Fatal(err)

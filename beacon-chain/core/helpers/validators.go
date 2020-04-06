@@ -231,18 +231,16 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 // Domain returns the domain version for BLS private key to sign and verify.
 //
 // Spec pseudocode definition:
-//  def get_domain(state: BeaconState,
-//               domain_type: int,
-//               message_epoch: Epoch=None) -> int:
+//  def get_domain(state: BeaconState, domain_type: DomainType, epoch: Epoch=None) -> Domain:
 //    """
 //    Return the signature domain (fork version concatenated with domain type) of a message.
 //    """
-//    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
+//    epoch = get_current_epoch(state) if epoch is None else epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
-//    return bls_domain(domain_type, fork_version)
-func Domain(fork *pb.Fork, epoch uint64, domainType [bls.DomainByteLength]byte) (uint64, error) {
+//    return compute_domain(domain_type, fork_version, state.genesis_validators_root)
+func Domain(fork *pb.Fork, epoch uint64, domainType [bls.DomainByteLength]byte, genesisRoot []byte) ([]byte, error) {
 	if fork == nil {
-		return 0, errors.New("nil fork or domain type")
+		return []byte{}, errors.New("nil fork or domain type")
 	}
 	var forkVersion []byte
 	if epoch < fork.Epoch {
@@ -251,11 +249,11 @@ func Domain(fork *pb.Fork, epoch uint64, domainType [bls.DomainByteLength]byte) 
 		forkVersion = fork.CurrentVersion
 	}
 	if len(forkVersion) != 4 {
-		return 0, errors.New("fork version length is not 4 byte")
+		return []byte{}, errors.New("fork version length is not 4 byte")
 	}
 	var forkVersionArray [4]byte
 	copy(forkVersionArray[:], forkVersion[:4])
-	return bls.Domain(domainType, forkVersionArray), nil
+	return ComputeDomain(domainType, forkVersionArray[:], genesisRoot)
 }
 
 // IsEligibleForActivationQueue checks if the validator is eligible to

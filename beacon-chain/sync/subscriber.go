@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -18,11 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
 const pubsubMessageTimeout = 30 * time.Second
+const maximumGossipClockDisparity = 500 * time.Millisecond
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
@@ -40,67 +43,64 @@ func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Mess
 
 // Register PubSub subscribers
 func (r *Service) registerSubscribers() {
-	go func() {
-		// Wait until chain start.
-		stateChannel := make(chan *feed.Event, 1)
-		stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
-		defer stateSub.Unsubscribe()
-		for r.chainStarted == false {
-			select {
-			case event := <-stateChannel:
-				if event.Type == statefeed.Initialized {
-					data := event.Data.(*statefeed.InitializedData)
-					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-					if data.StartTime.After(roughtime.Now()) {
-						stateSub.Unsubscribe()
-						time.Sleep(roughtime.Until(data.StartTime))
-					}
-					r.chainStarted = true
+	// Wait until chain start.
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for r.chainStarted == false {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Initialized {
+				data := event.Data.(*statefeed.InitializedData)
+				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+				if data.StartTime.After(roughtime.Now()) {
+					stateSub.Unsubscribe()
+					time.Sleep(roughtime.Until(data.StartTime))
 				}
-			case <-r.ctx.Done():
-				log.Debug("Context closed, exiting goroutine")
-				return
-			case err := <-stateSub.Err():
-				log.WithError(err).Error("Subscription to state notifier failed")
-				return
+				r.chainStarted = true
 			}
+		case <-r.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Subscription to state notifier failed")
+			return
 		}
-	}()
+	}
 	r.subscribe(
-		"/eth2/beacon_block",
+		"/eth2/%x/beacon_block",
 		r.validateBeaconBlockPubSub,
 		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
-		"/eth2/beacon_aggregate_and_proof",
+		"/eth2/%x/beacon_aggregate_and_proof",
 		r.validateAggregateAndProof,
 		r.beaconAggregateProofSubscriber,
 	)
 	r.subscribe(
-		"/eth2/voluntary_exit",
+		"/eth2/%x/voluntary_exit",
 		r.validateVoluntaryExit,
 		r.voluntaryExitSubscriber,
 	)
 	r.subscribe(
-		"/eth2/proposer_slashing",
+		"/eth2/%x/proposer_slashing",
 		r.validateProposerSlashing,
 		r.proposerSlashingSubscriber,
 	)
 	r.subscribe(
-		"/eth2/attester_slashing",
+		"/eth2/%x/attester_slashing",
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
 	if featureconfig.Get().EnableDynamicCommitteeSubnets {
 		r.subscribeDynamicWithSubnets(
-			"/eth2/committee_index%d_beacon_attestation",
-			r.committeeIndices,                          /* determineSubsLen */
+			"/eth2/%x/committee_index%d_beacon_attestation",
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)
 	} else {
 		r.subscribeDynamic(
-			"/eth2/committee_index%d_beacon_attestation",
+			"/eth2/%x/committee_index%d_beacon_attestation",
 			r.committeesCount,                           /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
@@ -115,7 +115,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
-	return r.subscribeWithBase(base, topic, validator, handle)
+	return r.subscribeWithBase(base, r.addDigestToTopic(topic), validator, handle)
 }
 
 func (r *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.Validator, handle subHandler) *pubsub.Subscription {
@@ -207,72 +207,45 @@ func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.V
 // maintained.
 func (r *Service) subscribeDynamicWithSubnets(
 	topicFormat string,
-	determineSubIndices func() []uint64,
 	validate pubsub.Validator,
 	handle subHandler,
 ) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
-		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
 	}
-
+	digest, err := r.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Fatal("Could not compute fork digest")
+	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
+	genesis := r.chain.GenesisTime()
+	ticker := slotutil.GetSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
 	go func() {
 		for {
 			select {
 			case <-r.ctx.Done():
-				stateSub.Unsubscribe()
+				ticker.Done()
 				return
-			case <-stateChannel:
+			case currentSlot := <-ticker.C():
 				if r.chainStarted && r.initialSync.Syncing() {
 					continue
 				}
-				// Update desired topic indices.
-				wantedSubs := determineSubIndices()
+				// Update desired topic indices for aggregator
+				wantedSubs := r.aggregatorCommitteeIndices(currentSlot)
 				// Resize as appropriate.
-				for k, v := range subscriptions {
-					var wanted bool
-					for _, idx := range wantedSubs {
-						if k == idx {
-							wanted = true
-							break
-						}
-					}
-					if !wanted && v != nil {
-						v.Cancel()
-						r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, k))
-						delete(subscriptions, k)
-					}
-				}
+				r.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat)
+
 				for _, idx := range wantedSubs {
 					if _, exists := subscriptions[idx]; !exists {
-						// do not subscribe if we have no peers in the same
-						// subnet
-						topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
-						subnetTopic := fmt.Sprintf(topic, idx)
-						numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic)
-						if len(r.p2p.Peers().SubscribedToSubnet(idx)) == 0 && len(numOfPeers) == 0 {
-							log.Debugf("No peers found subscribed to attestation gossip subnet with "+
-								"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-							go func(idx uint64) {
-								peerExists, err := r.p2p.FindPeersWithSubnet(idx)
-								if err != nil {
-									log.Errorf("Could not search for peers: %v", err)
-									return
-								}
-								// do not subscribe if we couldn't find a connected peer.
-								if !peerExists {
-									return
-								}
-								subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
-							}(idx)
-							continue
-						}
-						subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
+						r.subscribeMissingSubnet(subscriptions, idx, base, digest, validate, handle)
 					}
+				}
+				// find desired subs for attesters
+				attesterSubs := r.attesterCommitteeIndices(currentSlot)
+				for _, idx := range attesterSubs {
+					r.lookupAttesterSubnets(digest, idx)
 				}
 			}
 		}
@@ -287,9 +260,12 @@ func (r *Service) subscribeDynamicWithSubnets(
 func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.Validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
-		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
 	}
-
+	digest, err := r.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Fatal("Could not compute fork digest")
+	}
 	var subscriptions []*pubsub.Subscription
 
 	stateChannel := make(chan *feed.Event, 1)
@@ -316,11 +292,93 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
 					for i := len(subscriptions); i < wantedSubs; i++ {
-						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, i), validate, handle)
+						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, digest, i), validate, handle)
 						subscriptions = append(subscriptions, sub)
 					}
 				}
 			}
 		}
 	}()
+}
+
+// revalidate that our currently connected subnets are valid.
+func (r *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subscription,
+	wantedSubs []uint64, topicFormat string) {
+	for k, v := range subscriptions {
+		var wanted bool
+		for _, idx := range wantedSubs {
+			if k == idx {
+				wanted = true
+				break
+			}
+		}
+		if !wanted && v != nil {
+			v.Cancel()
+			r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, k))
+			delete(subscriptions, k)
+		}
+	}
+}
+
+// subscribe missing subnets for our aggregators.
+func (r *Service) subscribeMissingSubnet(subscriptions map[uint64]*pubsub.Subscription, idx uint64,
+	base proto.Message, digest [4]byte, validate pubsub.Validator, handle subHandler) {
+	// do not subscribe if we have no peers in the same
+	// subnet
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+	subnetTopic := fmt.Sprintf(topic, digest, idx)
+	if !r.validPeersExist(subnetTopic, idx) {
+		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
+			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
+		go func(idx uint64) {
+			peerExists, err := r.p2p.FindPeersWithSubnet(idx)
+			if err != nil {
+				log.Errorf("Could not search for peers: %v", err)
+				return
+			}
+			// do not subscribe if we couldn't find a connected peer.
+			if !peerExists {
+				return
+			}
+			subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
+		}(idx)
+		return
+	}
+	subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
+}
+
+// lookup peers for attester specific subnets.
+func (r *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+	subnetTopic := fmt.Sprintf(topic, digest, idx)
+	if !r.validPeersExist(subnetTopic, idx) {
+		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
+			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
+		go func(idx uint64) {
+			// perform a search for peers with the desired committee index.
+			_, err := r.p2p.FindPeersWithSubnet(idx)
+			if err != nil {
+				log.Errorf("Could not search for peers: %v", err)
+				return
+			}
+		}(idx)
+	}
+}
+
+// find if we have peers who are subscribed to the same subnet
+func (r *Service) validPeersExist(subnetTopic string, idx uint64) bool {
+	numOfPeers := r.p2p.PubSub().ListPeers(subnetTopic + r.p2p.Encoding().ProtocolSuffix())
+	return len(r.p2p.Peers().SubscribedToSubnet(idx)) > 0 || len(numOfPeers) > 0
+}
+
+// Add fork digest to topic.
+func (r *Service) addDigestToTopic(topic string) string {
+	if !strings.Contains(topic, "%x") {
+		log.Fatal("Topic does not have appropriate formatter for digest")
+	}
+	digest, err := r.p2p.ForkDigest()
+	if err != nil {
+		log.WithError(err).Fatal("Could not compute fork digest")
+	}
+	return fmt.Sprintf(topic, digest)
 }

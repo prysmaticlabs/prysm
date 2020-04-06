@@ -83,7 +83,9 @@ func attestationDelta(state *stateTrie.BeaconState, bp *Balance, v *Validator) (
 
 	// Process source reward / penalty
 	if v.IsPrevEpochAttester && !v.IsSlashed {
-		r += br * bp.PrevEpochAttesters / bp.CurrentEpoch
+		inc := params.BeaconConfig().EffectiveBalanceIncrement
+		rewardNumerator := br * bp.PrevEpochAttesters / inc
+		r += rewardNumerator / (bp.CurrentEpoch / inc)
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAtteserReward := br - proposerReward
 		r += maxAtteserReward / v.InclusionDistance
@@ -93,14 +95,18 @@ func attestationDelta(state *stateTrie.BeaconState, bp *Balance, v *Validator) (
 
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
-		r += br * bp.PrevEpochTargetAttesters / bp.CurrentEpoch
+		inc := params.BeaconConfig().EffectiveBalanceIncrement
+		rewardNumerator := br * bp.PrevEpochAttesters / inc
+		r += rewardNumerator / (bp.CurrentEpoch / inc)
 	} else {
 		p += br
 	}
 
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
-		r += br * bp.PrevEpochHeadAttesters / bp.CurrentEpoch
+		inc := params.BeaconConfig().EffectiveBalanceIncrement
+		rewardNumerator := br * bp.PrevEpochAttesters / inc
+		r += rewardNumerator / (bp.CurrentEpoch / inc)
 	} else {
 		p += br
 	}

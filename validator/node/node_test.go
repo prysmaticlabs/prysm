@@ -3,10 +3,10 @@ package node
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -14,18 +14,14 @@ import (
 func TestNode_Builds(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
-	dir := testutil.TempDir() + "/keystore1"
-	defer os.RemoveAll(dir)
-	defer os.RemoveAll(testutil.TempDir() + "/datadir")
-	set.String("keystore-path", dir, "path to keystore")
-	set.String("password", "1234", "validator account password")
+	tmpDir := testutil.TempDir()
+	defer os.RemoveAll(tmpDir)
+	set.String("datadir", filepath.Join(tmpDir, "datadir"), "the node data directory")
+	set.String("keymanager", "interop", "key manager")
+	set.String("keymanageropts", `{"keys":16,"offset":0}`, `key manager options`)
 	set.String("verbosity", "debug", "log verbosity")
 	context := cli.NewContext(&app, set, nil)
 
-	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
-		t.Fatalf("Could not create validator account: %v", err)
-	}
 	_, err := NewValidatorClient(context)
 	if err != nil {
 		t.Fatalf("Failed to create ValidatorClient: %v", err)

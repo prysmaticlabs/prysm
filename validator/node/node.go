@@ -198,6 +198,9 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 // selectKeyManager selects the key manager depending on the options provided by the user.
 func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
+	if manager == "" {
+		return nil, fmt.Errorf("please supply a keymanager with --keymanager")
+	}
 	opts := ctx.String(flags.KeyManagerOpts.Name)
 	if opts == "" {
 		opts = "{}"
@@ -209,45 +212,18 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 		opts = string(fileopts)
 	}
 
-	if manager == "" {
-		// Attempt to work out keymanager from deprecated vars.
-		if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
-			manager = "unencrypted"
-			opts = fmt.Sprintf(`{"path":%q}`, unencryptedKeys)
-			log.Warn(fmt.Sprintf("--unencrypted-keys flag is deprecated.  Please use --keymanager=unencrypted --keymanageropts='%s'", opts))
-		} else if numValidatorKeys := ctx.Uint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
-			manager = "interop"
-			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.Uint64(flags.InteropStartIndex.Name))
-			log.Warn(fmt.Sprintf("--interop-num-validators and --interop-start-index flags are deprecated.  Please use --keymanager=interop --keymanageropts='%s'", opts))
-		} else if keystorePath := ctx.String(flags.KeystorePathFlag.Name); keystorePath != "" {
-			manager = "keystore"
-			opts = fmt.Sprintf(`{"path":%q,"passphrase":%q}`, keystorePath, ctx.String(flags.PasswordFlag.Name))
-			log.Warn(fmt.Sprintf("--keystore-path flag is deprecated.  Please use --keymanager=keystore --keymanageropts='%s'", opts))
-		} else {
-			// Default if no choice made
-			manager = "keystore"
-			passphrase := ctx.String(flags.PasswordFlag.Name)
-			if passphrase == "" {
-				log.Warn("Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore or select a different keymanager")
-			} else {
-				opts = fmt.Sprintf(`{"passphrase":%q}`, passphrase)
-				log.Warn(`Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore --keymanageropts='{"passphrase":"<password>"}' or select a different keymanager`)
-			}
-		}
-	}
-
 	var km keymanager.KeyManager
 	var help string
 	var err error
 	switch manager {
+	case "remote":
+		km, help, err = keymanager.NewRemoteWallet(opts)
+	case "wallet":
+		km, help, err = keymanager.NewWallet(opts)
 	case "interop":
 		km, help, err = keymanager.NewInterop(opts)
 	case "unencrypted":
 		km, help, err = keymanager.NewUnencrypted(opts)
-	case "keystore":
-		km, help, err = keymanager.NewKeystore(opts)
-	case "wallet":
-		km, help, err = keymanager.NewWallet(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}

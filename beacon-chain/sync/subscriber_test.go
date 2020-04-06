@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	lru "github.com/hashicorp/golang-lru"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -31,7 +32,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		p2p:         p2p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
-	topic := "/eth2/voluntary_exit"
+	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -58,15 +59,17 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{}
+	c, _ := lru.New(10)
 	r := Service{
-		ctx:          ctx,
-		p2p:          p2p,
-		initialSync:  &mockSync.Sync{IsSyncing: false},
-		slashingPool: slashings.NewPool(),
-		chain:        chainService,
-		db:           d,
+		ctx:                       ctx,
+		p2p:                       p2p,
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		slashingPool:              slashings.NewPool(),
+		chain:                     chainService,
+		db:                        d,
+		seenAttesterSlashingCache: c,
 	}
-	topic := "/eth2/attester_slashing"
+	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -104,15 +107,17 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
+	c, _ := lru.New(10)
 	r := Service{
-		ctx:          ctx,
-		p2p:          p2p,
-		initialSync:  &mockSync.Sync{IsSyncing: false},
-		slashingPool: slashings.NewPool(),
-		chain:        chainService,
-		db:           d,
+		ctx:                       ctx,
+		p2p:                       p2p,
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		slashingPool:              slashings.NewPool(),
+		chain:                     chainService,
+		db:                        d,
+		seenProposerSlashingCache: c,
 	}
-	topic := "/eth2/proposer_slashing"
+	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -156,8 +161,9 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
-	topic := "/eth2/beacon_block"
-	r.registerSubscribers()
+	topic := "/eth2/%x/beacon_block"
+	go r.registerSubscribers()
+	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
@@ -178,7 +184,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		Block: &pb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
 		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent

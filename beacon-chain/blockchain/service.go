@@ -140,7 +140,7 @@ func (s *Service) Start() {
 	}
 
 	if beaconState == nil {
-		if featureconfig.Get().NewStateMgmt {
+		if !featureconfig.Get().DisableNewStateMgmt {
 			beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
 			if err != nil {
 				log.Fatalf("Could not fetch beacon state by root: %v", err)
@@ -181,7 +181,7 @@ func (s *Service) Start() {
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		if !featureconfig.Get().NewStateMgmt {
+		if featureconfig.Get().DisableNewStateMgmt {
 			if finalizedCheckpoint.Epoch > 1 {
 				if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
 					log.WithError(err).Warn("Could not prune old states")
@@ -192,7 +192,8 @@ func (s *Service) Start() {
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
-				StartTime: s.genesisTime,
+				StartTime:             s.genesisTime,
+				GenesisValidatorsRoot: beaconState.GenesisValidatorRoot(),
 			},
 		})
 	} else {
@@ -233,13 +234,15 @@ func (s *Service) Start() {
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time) {
 	preGenesisState := s.chainStartFetcher.PreGenesisState()
-	if err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
+	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.chainStartFetcher.ChainStartEth1Data())
+	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
-			StartTime: genesisTime,
+			StartTime:             genesisTime,
+			GenesisValidatorsRoot: initializedState.GenesisValidatorRoot(),
 		},
 	})
 }
@@ -251,7 +254,7 @@ func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
 	preGenesisState *stateTrie.BeaconState,
-	eth1data *ethpb.Eth1Data) error {
+	eth1data *ethpb.Eth1Data) (*stateTrie.BeaconState, error) {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
 	s.genesisTime = genesisTime
@@ -259,11 +262,11 @@ func (s *Service) initializeBeaconChain(
 
 	genesisState, err := state.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize genesis state")
+		return nil, errors.Wrap(err, "could not initialize genesis state")
 	}
 
 	if err := s.saveGenesisData(ctx, genesisState); err != nil {
-		return errors.Wrap(err, "could not save genesis data")
+		return nil, errors.Wrap(err, "could not save genesis data")
 	}
 
 	log.Info("Initialized beacon chain genesis state")
@@ -273,15 +276,15 @@ func (s *Service) initializeBeaconChain(
 
 	// Update committee shuffled indices for genesis epoch.
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
-		return err
+		return nil, err
 	}
 	if err := helpers.UpdateProposerIndicesInCache(genesisState, 0 /* genesis epoch */); err != nil {
-		return err
+		return nil, err
 	}
 
 	s.opsService.SetGenesisTime(genesisState.GenesisTime())
 
-	return nil
+	return genesisState, nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -332,7 +335,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
 			return errors.Wrap(err, "could not save genesis state")
 		}
@@ -423,7 +426,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	var finalizedState *stateTrie.BeaconState
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
 		finalizedState, err = s.stateGen.Resume(ctx)
 		if err != nil {

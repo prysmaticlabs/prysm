@@ -15,7 +15,7 @@ var (
 	// DataDirFlag defines a path on disk.
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases and keystore",
+		Usage: "Data directory for the databases",
 		Value: DefaultDataDir(),
 	}
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
@@ -110,6 +110,12 @@ var (
 	P2PPrivKey = &cli.StringFlag{
 		Name:  "p2p-priv-key",
 		Usage: "The file containing the private key to use in communications with other peers.",
+		Value: "",
+	}
+	// P2PMetadata defines a flag to specify the location of the peer metadata file.
+	P2PMetadata = &cli.StringFlag{
+		Name:  "p2p-metadata",
+		Usage: "The file containing the metadata to communicate with other peers.",
 		Value: "",
 	}
 	// P2PMaxPeers defines a flag to specify the max number of peers in libp2p.

@@ -342,6 +342,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
+
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -529,6 +530,11 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
 	if err := v.UpdateDuties(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
@@ -602,6 +608,7 @@ func TestRolesAt_OK(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch

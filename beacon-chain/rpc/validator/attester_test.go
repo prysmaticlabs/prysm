@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -79,7 +80,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	req := &ethpb.Attestation{
 		Signature: sig.Marshal(),
 		Data: &ethpb.AttestationData{
@@ -379,53 +380,6 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	wg.Wait()
 }
 
-func TestWaitForSlotOneThird_WaitedCorrectly(t *testing.T) {
-	currentTime := uint64(roughtime.Now().Unix())
-	numOfSlots := uint64(4)
-	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
-
-	chainService := &mock.ChainService{
-		Genesis: time.Now(),
-	}
-	server := &Server{
-		AttestationCache:   cache.NewAttestationCache(),
-		HeadFetcher:        &mock.ChainService{},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
-		StateNotifier:      chainService.StateNotifier(),
-	}
-
-	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
-	oneThird := currentTime + timeToSleep
-	server.waitToOneThird(context.Background(), numOfSlots)
-
-	currentTime = uint64(roughtime.Now().Unix())
-	if currentTime != oneThird {
-		t.Errorf("Wanted %d time for slot one third but got %d", oneThird, currentTime)
-	}
-}
-
-func TestWaitForSlotOneThird_HeadIsHereNoWait(t *testing.T) {
-	currentTime := uint64(roughtime.Now().Unix())
-	numOfSlots := uint64(4)
-	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
-
-	s := &pbp2p.BeaconState{Slot: 2}
-	state, _ := beaconstate.InitializeFromProto(s)
-	server := &Server{
-		AttestationCache:   cache.NewAttestationCache(),
-		HeadFetcher:        &mock.ChainService{State: state},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
-	}
-
-	server.waitToOneThird(context.Background(), s.Slot)
-
-	if currentTime != uint64(time.Now().Unix()) {
-		t.Errorf("Wanted %d time for slot one third but got %d", uint64(time.Now().Unix()), currentTime)
-	}
-}
-
 func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	ctx := context.Background()
 
@@ -517,6 +471,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
 		GenesisTimeFetcher:  &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
+		StateGen:            stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)

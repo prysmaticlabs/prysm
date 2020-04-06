@@ -2,14 +2,13 @@ package validator
 
 import (
 	"context"
-	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -17,8 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -36,12 +33,6 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 
-	// If attestation committee subnets are enabled, we track the committee
-	// index into a cache.
-	if featureconfig.Get().EnableDynamicCommitteeSubnets {
-		cache.CommitteeIDs.AddIDs([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
-	}
-
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
@@ -50,10 +41,6 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	if currentEpoch > 0 && currentEpoch-1 != helpers.SlotToEpoch(req.Slot) && currentEpoch != helpers.SlotToEpoch(req.Slot) {
 		return nil, status.Error(codes.InvalidArgument, msgInvalidAttestationRequest)
 	}
-
-	// Attester will either wait until there's a valid block from the expected block proposer of for the assigned input slot
-	// or one third of the slot has transpired. Whichever comes first.
-	vs.waitToOneThird(ctx, req.Slot)
 
 	res, err := vs.AttestationCache.Get(ctx, req)
 	if err != nil {
@@ -95,7 +82,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	// processed, we walk up the chain until state.Slot <= req.Slot to prevent producing an
 	// attestation that violates processing constraints.
 	fetchState := vs.BeaconDB.State
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		fetchState = vs.StateGen.StateByRoot
 	}
 	for headState.Slot() > req.Slot {
@@ -159,12 +146,6 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
 
-	// If attestation committee subnets are enabled, we track the committee
-	// index into a cache.
-	if featureconfig.Get().EnableDynamicCommitteeSubnets {
-		cache.CommitteeIDs.AddIDs([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
-	}
-
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
@@ -198,40 +179,13 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	}, nil
 }
 
-// waitToOneThird waits until one-third of the way through the slot
-// or the head slot equals to the input slot.
-func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
-	defer span.End()
+// SubscribeCommitteeSubnet subscribes to the committee ID subnet given subscribe request.
+func (vs *Server) SubscribeCommitteeSubnet(ctx context.Context, req *ethpb.CommitteeSubnetSubscribeRequest) (*ptypes.Empty, error) {
+	cache.CommitteeIDs.AddAttesterCommiteeID(req.Slot, req.CommitteeId)
 
-	// Don't need to wait if current slot is greater than requested slot.
-	if slot < vs.GenesisTimeFetcher.CurrentSlot() {
-		return
+	if req.IsAggregator {
+		cache.CommitteeIDs.AddAggregatorCommiteeID(req.Slot, req.CommitteeId)
 	}
 
-	// Set time out to be at start slot time + one-third of slot duration.
-	slotStartTime := slotutil.SlotStartTime(uint64(vs.GenesisTimeFetcher.GenesisTime().Unix()), slot)
-	slotOneThirdTime := slotStartTime.Unix() + int64(params.BeaconConfig().SecondsPerSlot/3)
-	waitDuration := slotOneThirdTime - roughtime.Now().Unix()
-	timeOut := time.After(time.Duration(waitDuration) * time.Second)
-
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-
-	for {
-		select {
-		case event := <-stateChannel:
-			// Node processed a block, check if the processed block is the same as input slot.
-			if event.Type == statefeed.BlockProcessed {
-				d := event.Data.(*statefeed.BlockProcessedData)
-				if slot == d.Slot {
-					return
-				}
-			}
-
-		case <-timeOut:
-			return
-		}
-	}
+	return &ptypes.Empty{}, nil
 }
