@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestAttestationHistory_InitializesNewPubKeys(t *testing.T) {
+func TestAttestationHistory_EmptyVal(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := SetupDB(t, pubkeys)
 	defer TeardownDB(t, db)
@@ -28,22 +28,6 @@ func TestAttestationHistory_InitializesNewPubKeys(t *testing.T) {
 		if !reflect.DeepEqual(attestationHistory, clean) {
 			t.Fatalf("Expected attestation history epoch bits to be empty, received %v", attestationHistory)
 		}
-	}
-}
-
-func TestAttestationHistory_NilDB(t *testing.T) {
-	db := SetupDB(t, [][48]byte{})
-	defer TeardownDB(t, db)
-
-	valPubkey := []byte{1, 2, 3}
-
-	attestationHistory, err := db.AttestationHistory(context.Background(), valPubkey)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if attestationHistory != nil {
-		t.Fatalf("Expected attestation history to be nil, received: %v", attestationHistory)
 	}
 }
 
@@ -187,7 +171,12 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get attestation history: %v", err)
 	}
-	if savedHistory != nil {
-		t.Fatalf("Expected attestation history to be nil, received %v", savedHistory)
+	cleanMap := make(map[uint64]uint64)
+	cleanMap[0] = params.BeaconConfig().FarFutureEpoch
+	clean := &slashpb.AttestationHistory{
+		TargetToSource: newMap,
+	}
+	if !reflect.DeepEqual(savedHistory, clean) {
+		t.Fatalf("Expected attestation history to be clean, received %v", savedHistory)
 	}
 }
