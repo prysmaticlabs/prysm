@@ -141,16 +141,7 @@ func (bs *Server) ListIndexedAttestations(
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		epoch := helpers.SlotToEpoch(att.Data.Slot)
-		startSlot := helpers.StartSlot(epoch)
-		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-		// Out of range check, the attestation slot cannot be greater
-		// the last slot of the requested epoch or smaller than its start slot
-		// given committees are accessed as a map of slot -> commitees list, where there are
-		// SLOTS_PER_EPOCH keys in the map.
-		if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
-			continue
-		}
-		attstate, err := bs.BeaconDB.State(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+		attState, err := bs.BeaconDB.State(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -159,7 +150,7 @@ func (bs *Server) ListIndexedAttestations(
 				err,
 			)
 		}
-		activeIndices, err := helpers.ActiveValidatorIndices(attstate, epoch)
+		activeIndices, err := helpers.ActiveValidatorIndices(attState, epoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -168,7 +159,7 @@ func (bs *Server) ListIndexedAttestations(
 				err,
 			)
 		}
-		seed, err := helpers.Seed(attstate, epoch, params.BeaconConfig().DomainBeaconAttester)
+		seed, err := helpers.Seed(attState, epoch, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
