@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime/debug"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -96,12 +98,22 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 
 // Start the prometheus service.
 func (s *Service) Start() {
-	log.WithField("endpoint", s.server.Addr).Info("Collecting metrics at endpoint")
 	go func() {
-		err := s.server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			log.Errorf("Could not listen to host:port :%s: %v", s.server.Addr, err)
-			s.failStatus = err
+		// See if the port is already used.
+		addrParts := strings.Split(s.server.Addr, ":")
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%s", addrParts[1]), time.Second)
+		if err == nil {
+			conn.Close()
+			// Something on the port; we cannot use it.
+			log.WithField("address", s.server.Addr).Warn("Port already in use; cannot start prometheus service")
+		} else {
+			// Nothing on that port; we can use it.
+			log.WithField("address", s.server.Addr).Debug("Starting prometheus service")
+			err := s.server.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
+				log.Errorf("Could not listen to host:port :%s: %v", s.server.Addr, err)
+				s.failStatus = err
+			}
 		}
 	}()
 }

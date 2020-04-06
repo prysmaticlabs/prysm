@@ -199,7 +199,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			0,                    // remainder
 		)
 		if err != nil {
-			log.WithError(err).Error("Round robing sync request failed")
+			log.WithError(err).Error("Round robin sync request failed")
 			continue
 		}
 
