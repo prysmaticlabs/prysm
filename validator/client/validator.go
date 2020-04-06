@@ -312,17 +312,17 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				}
 				lFields["attesterSlot"] = duty.AttesterSlot
 
-				//aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
-				//if err != nil {
-				//	return errors.Wrap(err, "could not check if a validator is an aggregator")
-				//}
-				//if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
-				//	Slot:         duty.AttesterSlot,
-				//	CommitteeId:  duty.CommitteeIndex,
-				//	IsAggregator: aggregator,
-				//}); err != nil {
-				//	return err
-				//}
+				aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					return errors.Wrap(err, "could not check if a validator is an aggregator")
+				}
+				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
+					Slot:         duty.AttesterSlot,
+					CommitteeId:  duty.CommitteeIndex,
+					IsAggregator: aggregator,
+				}); err != nil {
+					return err
+				}
 			}
 
 			log.WithFields(lFields).Info("New assignment")
@@ -330,29 +330,29 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
-	//req.Epoch++
-	//dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
-	//if err != nil {
-	//	log.Error(err)
-	//	return err
-	//}
-	//if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
-	//	for _, duty := range dutiesNextEpoch.Duties {
-	//		if duty.Status == ethpb.ValidatorStatus_ACTIVE {
-	//			aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
-	//			if err != nil {
-	//				return errors.Wrap(err, "could not check if a validator is an aggregator")
-	//			}
-	//			if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
-	//				Slot:         duty.AttesterSlot,
-	//				CommitteeId:  duty.CommitteeIndex,
-	//				IsAggregator: aggregator,
-	//			}); err != nil {
-	//				return err
-	//			}
-	//		}
-	//	}
-	//}
+	req.Epoch++
+	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
+		for _, duty := range dutiesNextEpoch.Duties {
+			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
+				aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					return errors.Wrap(err, "could not check if a validator is an aggregator")
+				}
+				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
+					Slot:         duty.AttesterSlot,
+					CommitteeId:  duty.CommitteeIndex,
+					IsAggregator: aggregator,
+				}); err != nil {
+					return err
+				}
+			}
+		}
+	}
 
 	return nil
 }

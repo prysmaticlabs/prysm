@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -65,7 +64,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	if !featureconfig.Get().DisableNewStateMgmt {
 		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
 		if !s.stateGen.StateSummaryExists(ctx, parentRoot) {
-			fmt.Println("Missing state summary root  ", hex.EncodeToString(parentRoot[:]))
 			return nil, errors.New("provided block root does not have block saved in the db")
 		}
 		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)

@@ -3,7 +3,6 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -35,7 +34,7 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 			"slot":      state.Slot(),
 			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on epoch boundary")
 	}
-	fmt.Println("Putting   ", state.Slot(), hex.EncodeToString(blockRoot[:]))
+
 	// On an intermediate slots, save the hot state summary.
 	s.stateSummaryCache.Put(blockRoot, &pb.StateSummary{
 		Slot: state.Slot(),

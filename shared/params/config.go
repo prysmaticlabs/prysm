@@ -144,7 +144,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
-	SecondsPerSlot:                   6,
+	SecondsPerSlot:                   12,
 	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
 	MaxSeedLookahead:                 4,

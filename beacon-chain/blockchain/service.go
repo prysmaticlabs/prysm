@@ -5,7 +5,6 @@ package blockchain
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"runtime"
 	"sync"
@@ -203,7 +202,6 @@ func (s *Service) Start() {
 			log.Fatal("Not configured web3Service for POW chain")
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
 		}
-		log.Error("HELLO1")
 		go func() {
 			stateChannel := make(chan *feed.Event, 1)
 			stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -347,7 +345,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		}); err != nil {
 			return err
 		}
-		fmt.Println("Saving genesis block root ", hex.EncodeToString(genesisBlkRoot[:]))
 	} else {
 		if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 			return errors.Wrap(err, "could not save genesis state")
