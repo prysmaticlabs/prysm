@@ -399,7 +399,7 @@ func (s *Service) waitForConnection() {
 				ticker.Stop()
 				return
 			}
-			log.WithError(err).Error("Could not connect to powchain endpoint")
+			//log.WithError(err).Error("Could not connect to powchain endpoint")
 		case <-s.ctx.Done():
 			ticker.Stop()
 			log.Debug("Received cancelled context,closing existing powchain service")

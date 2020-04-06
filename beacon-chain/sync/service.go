@@ -135,7 +135,7 @@ func (r *Service) Start() {
 	r.processPendingBlocksQueue()
 	r.processPendingAttsQueue()
 	r.maintainPeerStatuses()
-	r.resyncIfBehind()
+	//r.resyncIfBehind()
 
 	// Update sync metrics.
 	runutil.RunEvery(r.ctx, time.Second*10, r.updateMetrics)

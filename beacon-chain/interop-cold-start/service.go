@@ -183,16 +183,20 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return errors.Wrap(err, "could save finalized checkpoint")
 	}
 
+	pubKeys := make([][48]byte, 0)
+	indices := make([]uint64, 0)
 	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
-		if err := s.beaconDB.SaveValidatorIndex(ctx, pk[:], i); err != nil {
-			return errors.Wrapf(err, "could not save validator index: %d", i)
-		}
+		pubKeys = append(pubKeys, pk)
+		indices = append(indices, i)
 		s.chainStartDeposits[i] = &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{
 				PublicKey: pk[:],
 			},
 		}
+	}
+	if err := s.beaconDB.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		return errors.Wrap(err, "could not save validator index")
 	}
 	return nil
 }
