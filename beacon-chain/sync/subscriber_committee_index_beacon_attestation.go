@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context, msg proto.Message) error {
@@ -49,8 +49,21 @@ func (r *Service) committeesCount() int {
 	return int(helpers.SlotCommitteeCount(uint64(len(activeValidatorIndices))))
 }
 
-func (r *Service) committeeIndices() []uint64 {
-	currentSlot := r.chain.CurrentSlot()
-	return sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(currentSlot),
-		cache.CommitteeIDs.GetAggregatorCommitteeIDs(currentSlot))
+func (r *Service) aggregatorCommitteeIndices(currentSlot uint64) []uint64 {
+	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
+	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
+	commIds := []uint64{}
+	for i := currentSlot; i <= endSlot; i++ {
+		commIds = append(commIds, cache.CommitteeIDs.GetAggregatorCommitteeIDs(i)...)
+	}
+	return commIds
+}
+
+func (r *Service) attesterCommitteeIndices(currentSlot uint64) []uint64 {
+	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
+	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
+	commIds := []uint64{}
+	for i := currentSlot; i <= endSlot; i++ {
+		commIds = append(commIds, cache.CommitteeIDs.GetAttesterCommitteeIDs(i)...)
+	}
 }
