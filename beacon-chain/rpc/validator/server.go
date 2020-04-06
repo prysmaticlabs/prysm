@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -125,32 +124,6 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 	}
 
 	return &ethpb.ValidatorIndexResponse{Index: index}, nil
-}
-
-// ExitedValidators queries validator statuses for a give list of validators
-// and returns a filtered list of validator keys that are exited.
-func (vs *Server) ExitedValidators(
-	ctx context.Context,
-	req *pb.ExitedValidatorsRequest) (*pb.ExitedValidatorsResponse, error) {
-
-	_, statuses, err := vs.multipleValidatorStatus(ctx, req.PublicKeys)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve validator statuses: %v", err)
-	}
-
-	exitedKeys := make([][]byte, 0)
-	for _, st := range statuses {
-		s := st.Status.Status
-		if s == ethpb.ValidatorStatus_EXITED {
-			exitedKeys = append(exitedKeys, st.PublicKey)
-		}
-	}
-
-	resp := &pb.ExitedValidatorsResponse{
-		PublicKeys: exitedKeys,
-	}
-
-	return resp, nil
 }
 
 // DomainData fetches the current domain version information from the beacon state.
