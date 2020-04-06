@@ -563,22 +563,22 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	// We setup 128 validators.
 	numValidators := 128
-	headState := setupActiveValidators(t, db, numValidators)
+	state := setupActiveValidators(t, db, numValidators)
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
 	}
-	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
+	if err := state.SetRandaoMixes(randaoMixes); err != nil {
 		t.Fatal(err)
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	epoch := uint64(0)
-	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	attesterSeed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -586,7 +586,6 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Next up we convert the test attestations to indexed form:
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
 	for i := 0; i < len(indexedAtts); i++ {
@@ -601,14 +600,11 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
 	}
-
+	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -666,24 +662,24 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 
 	// We setup 128 validators.
 	numValidators := 128
-	headState := setupActiveValidators(t, db, numValidators)
+	state := setupActiveValidators(t, db, numValidators)
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
 	}
-	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
+	if err := state.SetRandaoMixes(randaoMixes); err != nil {
 		t.Fatal(err)
 	}
-	if err := headState.SetSlot(startSlot); err != nil {
+	if err := state.SetSlot(startSlot); err != nil {
 		t.Fatal(err)
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, epoch)
+	activeIndices, err := helpers.ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
-	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	attesterSeed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -706,14 +702,11 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
 	}
-
+	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,

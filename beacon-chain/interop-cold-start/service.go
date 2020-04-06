@@ -189,8 +189,8 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return errors.Wrap(err, "could save finalized checkpoint")
 	}
 
-	pubKeys := make([][48]byte, 0)
-	indices := make([]uint64, 0)
+	pubKeys := make([][48]byte, 0, genesisState.NumValidators())
+	indices := make([]uint64, 0, genesisState.NumValidators())
 	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
 		pubKeys = append(pubKeys, pk)
@@ -202,7 +202,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		}
 	}
 	if err := s.beaconDB.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
-		return errors.Wrap(err, "could not save validator index")
+		return errors.Wrap(err, "could not save validator indices")
 	}
 	return nil
 }
