@@ -184,7 +184,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 	}
 
 	pubKeys := make([][48]byte, 0,genesisState.NumValidators())
-	indices := make([]uint64, 0)
+	indices := make([]uint64, 0,genesisState.NumValidators())
 	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
 		pubKeys = append(pubKeys, pk)
