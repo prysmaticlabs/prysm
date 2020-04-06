@@ -575,9 +575,6 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, stat := range response {
-		fmt.Println(stat.PublicKey)
-	}
 	if !activeExists {
 		t.Fatal("No activated validator exists when there was supposed to be 2")
 	}
