@@ -174,9 +174,9 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	cleanMap := make(map[uint64]uint64)
 	cleanMap[0] = params.BeaconConfig().FarFutureEpoch
 	clean := &slashpb.AttestationHistory{
-		TargetToSource: newMap,
+		TargetToSource: cleanMap,
 	}
 	if !reflect.DeepEqual(savedHistory, clean) {
-		t.Fatalf("Expected attestation history to be clean, received %v", savedHistory)
+		t.Fatalf("Expected attestation history to be %v, received %v", clean, savedHistory)
 	}
 }
