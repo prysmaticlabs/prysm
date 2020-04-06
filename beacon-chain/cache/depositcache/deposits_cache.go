@@ -156,6 +156,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 	var blockNum *big.Int
 	for _, ctnr := range dc.deposits {
 		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
+			deposit = ctnr.Deposit
 			blockNum = big.NewInt(int64(ctnr.Eth1BlockHeight))
 			break
 		}
