@@ -45,9 +45,9 @@ rbe_toolchains_config()
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
-    strip_prefix = "bazel-skylib-0.8.0",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
+    sha256 = "e5d90f0ec952883d56747b7604e2a15ee36e288bb556c3d0ed33e818a4d971f2",
+    strip_prefix = "bazel-skylib-1.0.2",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/1.0.2.tar.gz",
 )
 
 http_archive(
@@ -84,8 +84,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "0942d188f4d0de6ddb743b9f6642a26ce1ad89f09c0035a9a5ca5ba9615c96aa",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.38.1/rules_nodejs-0.38.1.tar.gz"],
+    sha256 = "d0c4bb8b902c1658f42eb5563809c70a06e46015d64057d25560b0eb4bdc9007",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/1.5.0/rules_nodejs-1.5.0.tar.gz"],
 )
 
 git_repository(
@@ -246,7 +246,7 @@ buildifier_dependencies()
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "d74b93584564161b2de771089ee697f07d8bd5b5",  # v1.3.1
+    commit = "3a35fb6e3e18b9dbfee291262260dee7372d2a92",  # v1.4.3
     importpath = "github.com/golang/mock",
 )
 
@@ -312,7 +312,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
+    commit = "53403b58ad1b561927d19068c655246f2db79d48",  # v2.2.8
     importpath = "github.com/go-yaml/yaml",
 )
 
@@ -361,7 +361,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "91b837264c0f35dd4e2be341d711316b91d3573d",  # v0.0.1
+    commit = "a850a7a8f7277cd4b41ef47acb99a6f287364731",  # v2.0.4
     importpath = "github.com/ipfs/go-log",
 )
 
@@ -463,7 +463,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "d504ab2e22d97cb9f10b1d146a1e6a063f4a5f43",  # v1.1.2
+    commit = "b1dd383fd2c02d7933db93f157e339f1899b5163",  # v1.1.3
     importpath = "github.com/mr-tron/base58",
 )
 
@@ -596,7 +596,7 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    commit = "839c75faf7f98a33d445d181f3018b5c3409a45e",  # v1.4.2
+    commit = "d417be0fe654de640a82370515129985b407c7e3",  # v1.5.0
     importpath = "github.com/sirupsen/logrus",
 )
 
@@ -620,7 +620,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    commit = "cbcf4e3f3baee7952fc386c8b2534af4d267c875",  # v1.0.5
+    commit = "5ceb358a720efa82a5692470f37874b1f48035ad",  # v1.0.6
     importpath = "github.com/jackpal/gateway",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
+    commit = "059203efa1edd7130293a583541b8308e7c640c4",  # v1.0.2
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gorilla_websocket",
-    commit = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b",  # v1.4.1
+    commit = "b65e62901fc1c0d968042419e74789f6af455eb9",  # v1.4.2
     importpath = "github.com/gorilla/websocket",
 )
 
@@ -732,7 +732,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "4ab88e80c249ed361d3299e2930427d9ac43ef8d",  # v1.0.0
+    commit = "aa9238db679fc02bf22cf4f2c27a980edcb5ada0",  # v1.5.1
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -952,7 +952,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_yaml_v2",
-    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
+    commit = "53403b58ad1b561927d19068c655246f2db79d48",  # v2.2.8
     importpath = "gopkg.in/yaml.v2",
 )
 
@@ -990,7 +990,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",  # v1.0.0
+    commit = "2004d9dba6b07a5b8d133209244f376680f9d472",  # v1.1.0
     importpath = "github.com/hashicorp/go-multierror",
 )
 
@@ -1080,7 +1080,7 @@ go_repository(
 
 go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_middleware",
-    commit = "dd15ed025b6054e5253963e355991f3070d4e593",  # v1.1.0
+    commit = "3c51f7f332123e8be5a157c0802a228ac85bf9db",  # v1.2.0
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
 )
 
@@ -1110,7 +1110,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "da7a886035e25b2f274f89b6f3c64bf70a9f6780",
+    commit = "5ec11588db26960526dccc39cf40367a54d76e16",  # v1.14.3
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
@@ -1122,7 +1122,7 @@ go_repository(
 
 go_repository(
     name = "org_uber_go_automaxprocs",
-    commit = "946a8391268aea0a60a86403988ff3ab4b604a83",  # v1.2.0
+    commit = "e393bb0ea0644204c502247d647e428742196ebe",  # v1.3.0
     importpath = "go.uber.org/automaxprocs",
 )
 
@@ -1171,7 +1171,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_yamux",
-    commit = "663972181d409e7263040f0b668462f87c85e1bd",  # v1.2.3
+    commit = "9a36404e46e1ba6e9c3af13e3251e55b1f1bad79",  # v1.3.5
     importpath = "github.com/libp2p/go-yamux",
 )
 
@@ -1261,7 +1261,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_sigs_yaml",
-    commit = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480",  # v1.1.0
+    commit = "9fc95527decd95bb9d28cc2eab08179b2d0f6971",  # v1.2.0
     importpath = "sigs.k8s.io/yaml",
 )
 
@@ -1279,7 +1279,7 @@ go_repository(
 
 go_repository(
     name = "com_github_json_iterator_go",
-    commit = "4f2e55fcf87ba29ab80379002316db67620ff622",
+    commit = "0ff49de124c6f76f8494e194af75bde0f1a49a29",  # v1.1.6
     importpath = "github.com/json-iterator/go",
     remote = "https://github.com/prestonvanloon/go",
     vcs = "git",
@@ -1299,7 +1299,7 @@ go_repository(
 
 go_repository(
     name = "com_github_patrickmn_go_cache",
-    commit = "46f407853014144407b6c2ec7ccc76bf67958d93",
+    commit = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0",  # v2.1.0
     importpath = "github.com/patrickmn/go-cache",
 )
 
@@ -1488,7 +1488,7 @@ go_repository(
 
 go_repository(
     name = "com_github_cespare_xxhash",
-    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",  # v2.1.1
     importpath = "github.com/cespare/xxhash",
 )
 
@@ -1508,73 +1508,73 @@ go_repository(
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet",
-    commit = "6970d62e60d86fdae3c3e510e800e8a60d755a7d",
+    commit = "b631c8424c0827155adb8286ce6624f4c4a7968b",  # v1.9.2
     importpath = "github.com/wealdtech/go-eth2-wallet",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_hd",
-    commit = "ce0a252a01c621687e9786a64899cfbfe802ba73",
+    commit = "c9f618887c1395c625a59b0c45bfb7af9c137c7b",  # v2.0.0
     importpath = "github.com/wealdtech/go-eth2-wallet-hd",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_nd",
-    commit = "12c8c41cdbd16797ff292e27f58e126bb89e9706",
+    commit = "8febbe2fb63c484a37e154232e1521d2a9b20523",  # v2.0.0
     importpath = "github.com/wealdtech/go-eth2-wallet-nd",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_store_filesystem",
-    commit = "1eea6a48d75380047d2ebe7c8c4bd8985bcfdeca",
+    commit = "72fb8906f8aeeee98e536c285653fa4f1a5a7bd7",  # v1.7.1
     importpath = "github.com/wealdtech/go-eth2-wallet-store-filesystem",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_store_s3",
-    commit = "1c821b5161f7bb0b3efa2030eff687eea5e70e53",
+    commit = "c8504cb6518db591571e9446e21ec9fc2db0da4b",  # v1.6.1
     importpath = "github.com/wealdtech/go-eth2-wallet-store-s3",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",
-    commit = "0c11c07b9544eb662210fadded94f40f309d8c8f",
+    commit = "e80bb6de751a1afe353aee9c0aadd61d001d0bd5",  # v1.0.0
     importpath = "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_types",
-    commit = "af67d8101be61e7c4dd8126d2b3eba20cff5dab2",
+    commit = "43457900c44194447a4373cac228fcd7c9ed02c0",  # v2.0.0
     importpath = "github.com/wealdtech/go-eth2-wallet-types",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_types",
-    commit = "f9c31ddf180537dd5712d5998a3d56c45864d71f",
+    commit = "b10b11161040ac0a1749d998df7c130db86af472",  # v2.0.2
     importpath = "github.com/wealdtech/go-eth2-types",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_util",
-    commit = "326ebb1755651131bb8f4506ea9a23be6d9ad1dd",
+    commit = "4f789f9e56b194817b1de1008076840849cf5603",  # v1.1.2
     importpath = "github.com/wealdtech/go-eth2-util",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_ecodec",
-    commit = "7473d835445a3490e61a5fcf48fe4e9755a37957",
+    commit = "7473d835445a3490e61a5fcf48fe4e9755a37957",  # v1.1.0
     importpath = "github.com/wealdtech/go-ecodec",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_bytesutil",
-    commit = "e564d0ade555b9f97494f0f669196ddcc6bc531d",
+    commit = "58ea0e07ee362f7bd94d3df8f92616d51759f182",  # v1.1.1
     importpath = "github.com/wealdtech/go-bytesutil",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_indexer",
-    commit = "334862c32b1e3a5c6738a2618f5c0a8ebeb8cd51",
+    commit = "a387900232398ee3feb4504491d67c3fb1f9bde5",  # v1.0.0
     importpath = "github.com/wealdtech/go-indexer",
 )
 
