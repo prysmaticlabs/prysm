@@ -92,26 +92,9 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 		return nil, err
 	}
 
-	// Initialize the required pubKeys into the DB to ensure they're not empty.
+	// Initialize the required public keys into the DB to ensure they're not empty.
 	if err := kv.initializeSubBuckets(pubKeys); err != nil {
 		return nil, err
-	}
-	for _, pubkey := range pubKeys {
-		attHistory, err := kv.AttestationHistory(context.Background(), pubkey[:])
-		if err != nil {
-			return nil, err
-		}
-		if attHistory == nil {
-			newMap := make(map[uint64]uint64)
-			newMap[0] = params.BeaconConfig().FarFutureEpoch
-			cleanHistory := &slashpb.AttestationHistory{
-				TargetToSource: newMap,
-			}
-			if err := kv.SaveAttestationHistory(context.Background(), pubkey[:], cleanHistory); err != nil {
-				return nil, err
-			}
-		}
-
 	}
 
 	return kv, err
