@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -68,8 +69,11 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != ethpb.ValidatorStatus_DEPOSITED {
-		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_DEPOSITED, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_UNKNOWN_STATUS, resp.Status)
+	}
+	if resp.DepositInclusionSlot != 56 {
+		t.Errorf("Wanted %v, got %v", 56, resp.DepositInclusionSlot)
 	}
 }
 
@@ -571,6 +575,9 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, stat := range response {
+		fmt.Println(stat.PublicKey)
+	}
 	if !activeExists {
 		t.Fatal("No activated validator exists when there was supposed to be 2")
 	}
@@ -584,9 +591,13 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 			response[1].PublicKey)
 	}
 
-	if response[2].Status.Status != ethpb.ValidatorStatus_DEPOSITED {
-		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
+	if response[2].Status.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+		t.Errorf("Validator with pubkey %#x is not in the beacon state yet and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
+	}
+	if response[2].Status.DepositInclusionSlot != 53 {
+		t.Errorf("Expected to find deposit for validator with pubkey %#x, deposit inclusion slot was %d, expected %d",
+			response[2].PublicKey, response[2].Status.DepositInclusionSlot, 53)
 	}
 }
 
