@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -17,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -64,6 +67,8 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		}
 		return
 	}
+
+	v.waitToSlotOneThird(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -306,4 +311,18 @@ func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64)
 		return params.BeaconConfig().FarFutureEpoch
 	}
 	return history.TargetToSource[targetEpoch%wsPeriod]
+}
+
+// waitToSlotOneThird waits until one third through the current slot period
+// such that head block for beacon node can get updated.
+func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
+	defer span.End()
+
+	twoThird := params.BeaconConfig().SecondsPerSlot * 1 / 3
+	delay := time.Duration(twoThird) * time.Second
+
+	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
+	finalTime := startTime.Add(delay)
+	time.Sleep(roughtime.Until(finalTime))
 }
