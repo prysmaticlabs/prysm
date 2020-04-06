@@ -68,7 +68,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	v.waitToSlotOneThirds(ctx, slot)
+	v.waitToSlotOneThird(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -313,10 +313,10 @@ func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64)
 	return history.TargetToSource[targetEpoch%wsPeriod]
 }
 
-// waitToSlotOneThirds waits until one third through the current slot period
+// waitToSlotOneThird waits until one third through the current slot period
 // such that head block for beacon node can get updated.
-func (v *validator) waitToSlotOneThirds(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThirds")
+func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
 
 	twoThird := params.BeaconConfig().SecondsPerSlot * 1 / 3
