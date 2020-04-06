@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"strconv"
@@ -365,8 +366,16 @@ func (s *Service) RefreshENR(epoch uint64) {
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	s.dv5Listener.LocalNode().Set(entry)
+	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+	if err != nil {
+		log.Errorf("Could not retrieve bitfield: %v", err)
+		return
+	}
+	if bytes.Equal(bitV, currentBitV) {
+		// return early if bitfield hasn't changed
+		return
+	}
+	s.updateBitfield(bitV)
 }
 
 // FindPeersWithSubnet performs a network search for peers
@@ -531,6 +540,15 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 	// bootnode is never dialled, so ttl is tentatively 1 year
 	s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	return nil
+}
+
+func (s *Service) updateBitfield(bitV bitfield.Bitvector64) {
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	s.dv5Listener.LocalNode().Set(entry)
+	s.metaData = &pb.MetaData{
+		SeqNumber: s.metaData.SeqNumber + 1,
+		Attnets:   bitV,
+	}
 }
 
 func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {

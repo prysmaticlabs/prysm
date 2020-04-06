@@ -17,9 +17,7 @@ func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 }
 
 func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
-	bitV := bitfield.NewBitvector64()
-	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	err := record.Load(entry)
+	bitV, err := retrieveBitvector(record)
 	if err != nil {
 		return nil, err
 	}
@@ -30,4 +28,14 @@ func retrieveAttSubnets(record *enr.Record) ([]uint64, error) {
 		}
 	}
 	return committeeIdxs, nil
+}
+
+func retrieveBitvector(record *enr.Record) (bitfield.Bitvector64, error) {
+	bitV := bitfield.NewBitvector64()
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	err := record.Load(entry)
+	if err != nil {
+		return nil, err
+	}
+	return bitV, nil
 }
