@@ -66,4 +66,5 @@ func (r *Service) attesterCommitteeIndices(currentSlot uint64) []uint64 {
 	for i := currentSlot; i <= endSlot; i++ {
 		commIds = append(commIds, cache.CommitteeIDs.GetAttesterCommitteeIDs(i)...)
 	}
+	return commIds
 }
