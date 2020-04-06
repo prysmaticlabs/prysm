@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -26,7 +25,7 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
-	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) // validator pubKey -> roles
+	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
@@ -103,16 +102,16 @@ func run(ctx context.Context, v Validator) {
 			}
 			for id, roles := range allRoles {
 				wg.Add(1)
-				go func(roles []pb.ValidatorRole, id [48]byte) {
+				go func(roles []validatorRole, id [48]byte) {
 					for _, role := range roles {
 						switch role {
-						case pb.ValidatorRole_ATTESTER:
+						case roleAttester:
 							go v.SubmitAttestation(slotCtx, slot, id)
-						case pb.ValidatorRole_PROPOSER:
+						case roleProposer:
 							go v.ProposeBlock(slotCtx, slot, id)
-						case pb.ValidatorRole_AGGREGATOR:
+						case roleAggregator:
 							go v.SubmitAggregateAndProof(slotCtx, slot, id)
-						case pb.ValidatorRole_UNKNOWN:
+						case roleUnknown:
 							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)

@@ -105,12 +105,14 @@ func (v *ValidatorService) Start() {
 
 	md := make(metadata.MD)
 	for _, hdr := range v.grpcHeaders {
-		ss := strings.Split(hdr, "=")
-		if len(ss) != 2 {
-			log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
-			continue
+		if hdr != "" {
+			ss := strings.Split(hdr, "=")
+			if len(ss) != 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+				continue
+			}
+			md.Set(ss[0], ss[1])
 		}
-		md.Set(ss[0], ss[1])
 	}
 
 	opts := []grpc.DialOption{
@@ -138,7 +140,7 @@ func (v *ValidatorService) Start() {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return
 	}
-	log.Info("Successfully started gRPC connection")
+	log.Debug("Successfully started gRPC connection")
 
 	pubkeys, err := v.keyManager.FetchValidatingKeys()
 	if err != nil {

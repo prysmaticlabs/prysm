@@ -27,22 +27,13 @@ message AttesterSlashingResponse {
     repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 
-// In order to detect surrounded attestation we need to compare
-// each attestation source to those spans
-// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-// for further details.
-message MinMaxEpochSpan {
-    uint32 min_epoch_span = 1;
-    uint32 max_epoch_span = 2;
-}
-
-// Every validator will have their own spans map containing min distance from each epoch
-// to the closest target epoch of another attestation (surrounded) and max distance to
-// a target attestation (surrounding), in order to detect slashable attestation as quickly
-// as possible.
-message EpochSpanMap {
-    // uint64 is for storing the epoch
-    map<uint64, MinMaxEpochSpan> epoch_span_map = 1;
+// ProposalHistory defines the structure for recording a validator's historical proposals.
+// Using a bitlist to represent the epochs and an uint64 to mark the latest marked
+// epoch of the bitlist, we can easily store which epochs a validator has proposed
+// a block for while pruning the older data.
+message ProposalHistory {
+    bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    uint64 latest_epoch_written = 2;
 }
 
 // AttestationHistory defines the structure for recording a validator's historical attestation.
@@ -53,18 +44,4 @@ message EpochSpanMap {
 message AttestationHistory {
     map<uint64, uint64> target_to_source = 1;
     uint64 latest_epoch_written = 2;
-}
-
-message SlashingStatusRequest {
-    enum SlashingStatus {
-        // Unknown default status in case it is not set
-        Unknown = 0;
-        // Active slashing proof hasn't been included yet.
-        Active = 1;
-        // Included slashing proof that has been included in a block.
-        Included = 2;
-        // Reverted slashing proof that has been reverted and therefore is relevant again.
-        Reverted = 3;
-    }
-    SlashingStatus status = 1;
 }
