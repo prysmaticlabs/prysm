@@ -30,7 +30,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.Host().Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 
@@ -39,7 +39,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.Host().SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		code, errMsg, err := ReadStatusCode(stream, p1.Encoding())
 		if err != nil {
@@ -54,7 +54,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		}
 	})
 
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.Host().NewStream(context.Background(), p2.Host().ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	if len(p1.Host.Network().Peers()) != 0 {
+	if len(p1.Host().Network().Peers()) != 0 {
 		t.Error("handler did not disconnect peer")
 	}
 }
@@ -77,7 +77,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.Host().Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 
@@ -122,7 +122,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	pcl := protocol.ID("/testing")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.Host().SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Status{}
@@ -140,7 +140,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
 		}
 	})
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.Host().NewStream(context.Background(), p2.Host().ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.Host().SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
@@ -293,7 +293,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.Host().SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
@@ -318,7 +318,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.Host().Network().Peers()) != 1 {
 		t.Error("Expected peers to continue being connected")
 	}
 }
@@ -371,7 +371,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.Host().SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {

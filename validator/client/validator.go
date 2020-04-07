@@ -163,11 +163,11 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
 
-	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+	nodeInfo, err := v.node.GetNodeInfo(ctx, &ptypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not get sync status")
 	}
-	if !s.Syncing {
+	if nodeInfo.SyncState == ethpb.SyncState_SYNC_FULL {
 		return nil
 	}
 
@@ -175,11 +175,11 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		select {
 		// Poll every half slot
 		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch/2) * time.Second):
-			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+			nodeInfo, err := v.node.GetNodeInfo(ctx, &ptypes.Empty{})
 			if err != nil {
 				return errors.Wrap(err, "could not get sync status")
 			}
-			if !s.Syncing {
+			if nodeInfo.SyncState == ethpb.SyncState_SYNC_FULL {
 				return nil
 			}
 			log.Info("Waiting for beacon node to sync to latest chain head")

@@ -35,7 +35,7 @@ var TopicMappings = map[reflect.Type]string{
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
 	t               *testing.T
-	Host            host.Host
+	host            host.Host
 	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
 	DelaySend       bool
@@ -57,15 +57,20 @@ func NewTestP2P(t *testing.T) *TestP2P {
 
 	return &TestP2P{
 		t:      t,
-		Host:   h,
+		host:   h,
 		pubsub: ps,
 		peers:  peers.NewStatus(5 /* maxBadResponses */),
 	}
 }
 
+// Host obtains the host for this p2p service.
+func (p *TestP2P) Host() host.Host {
+	return p.host
+}
+
 // Connect two test peers together.
 func (p *TestP2P) Connect(b *TestP2P) {
-	if err := connect(p.Host, b.Host); err != nil {
+	if err := connect(p.host, b.host); err != nil {
 		p.t.Fatal(err)
 	}
 }
@@ -78,10 +83,10 @@ func connect(a, b host.Host) error {
 // ReceiveRPC simulates an incoming RPC.
 func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	h := bhost.NewBlankHost(swarmt.GenSwarm(p.t, context.Background()))
-	if err := connect(h, p.Host); err != nil {
+	if err := connect(h, p.host); err != nil {
 		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
 	}
-	s, err := h.NewStream(context.Background(), p.Host.ID(), protocol.ID(topic+p.Encoding().ProtocolSuffix()))
+	s, err := h.NewStream(context.Background(), p.host.ID(), protocol.ID(topic+p.Encoding().ProtocolSuffix()))
 	if err != nil {
 		p.t.Fatalf("Failed to open stream %v", err)
 	}
@@ -105,7 +110,7 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	if err != nil {
 		p.t.Fatalf("Failed to create flood sub: %v", err)
 	}
-	if err := connect(h, p.Host); err != nil {
+	if err := connect(h, p.host); err != nil {
 		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
 	}
 
@@ -137,7 +142,7 @@ func (p *TestP2P) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // SetStreamHandler for RPC.
 func (p *TestP2P) SetStreamHandler(topic string, handler network.StreamHandler) {
-	p.Host.SetStreamHandler(protocol.ID(topic), handler)
+	p.host.SetStreamHandler(protocol.ID(topic), handler)
 }
 
 // Encoding returns ssz encoding.
@@ -153,17 +158,17 @@ func (p *TestP2P) PubSub() *pubsub.PubSub {
 
 // Disconnect from a peer.
 func (p *TestP2P) Disconnect(pid peer.ID) error {
-	return p.Host.Network().ClosePeer(pid)
+	return p.host.Network().ClosePeer(pid)
 }
 
 // PeerID returns the Peer ID of the local peer.
 func (p *TestP2P) PeerID() peer.ID {
-	return p.Host.ID()
+	return p.host.ID()
 }
 
 // AddConnectionHandler handles the connection with a newly connected peer.
 func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error) {
-	p.Host.Network().Notify(&network.NotifyBundle{
+	p.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
@@ -187,7 +192,7 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 
 // AddDisconnectionHandler --
 func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error) {
-	p.Host.Network().Notify(&network.NotifyBundle{
+	p.host.Network().Notify(&network.NotifyBundle{
 		DisconnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
@@ -205,7 +210,7 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 	if protocol == "" {
 		return nil, fmt.Errorf("protocol doesnt exist for proto message: %v", msg)
 	}
-	stream, err := p.Host.NewStream(ctx, pid, core.ProtocolID(protocol+p.Encoding().ProtocolSuffix()))
+	stream, err := p.host.NewStream(ctx, pid, core.ProtocolID(protocol+p.Encoding().ProtocolSuffix()))
 	if err != nil {
 		return nil, err
 	}

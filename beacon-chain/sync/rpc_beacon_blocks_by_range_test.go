@@ -20,7 +20,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.Host().Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
@@ -44,7 +44,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.Host().SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		for i := req.StartSlot; i < req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
@@ -58,7 +58,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		}
 	})
 
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.Host().NewStream(context.Background(), p2.Host().ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}

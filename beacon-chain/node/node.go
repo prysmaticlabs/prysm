@@ -534,6 +534,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BeaconDB:              b.db,
 		Broadcaster:           b.fetchP2P(ctx),
 		PeersFetcher:          b.fetchP2P(ctx),
+		HostFetcher:           b.fetchP2P(ctx),
 		HeadFetcher:           chainService,
 		ForkFetcher:           chainService,
 		FinalizationFetcher:   chainService,

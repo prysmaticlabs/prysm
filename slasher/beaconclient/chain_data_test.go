@@ -46,11 +46,11 @@ func TestService_QuerySyncStatus(t *testing.T) {
 		nodeClient: client,
 	}
 	syncStatusPollingInterval = time.Millisecond
-	client.EXPECT().GetSyncStatus(gomock.Any(), gomock.Any()).Return(&ethpb.SyncStatus{
-		Syncing: true,
+	client.EXPECT().GetNodeInfo(gomock.Any(), gomock.Any()).Return(&ethpb.NodeInfo{
+		SyncState: ethpb.SyncState_SYNC_CATCHUP,
 	}, nil)
-	client.EXPECT().GetSyncStatus(gomock.Any(), gomock.Any()).Return(&ethpb.SyncStatus{
-		Syncing: false,
+	client.EXPECT().GetNodeInfo(gomock.Any(), gomock.Any()).Return(&ethpb.NodeInfo{
+		SyncState: ethpb.SyncState_SYNC_FULL,
 	}, nil)
 	bs.querySyncStatus(context.Background())
 	testutil.AssertLogsContain(t, hook, "Waiting for beacon node to be fully synced...")

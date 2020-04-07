@@ -78,6 +78,26 @@ func (mr *MockBeaconChainClientMockRecorder) GetBeaconConfig(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconConfig", reflect.TypeOf((*MockBeaconChainClient)(nil).GetBeaconConfig), varargs...)
 }
 
+// GetChainInfo mocks base method
+func (m *MockBeaconChainClient) GetChainInfo(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v1alpha1.ChainInfo, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetChainInfo", varargs...)
+	ret0, _ := ret[0].(*v1alpha1.ChainInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChainInfo indicates an expected call of GetChainInfo
+func (mr *MockBeaconChainClientMockRecorder) GetChainInfo(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChainInfo", reflect.TypeOf((*MockBeaconChainClient)(nil).GetChainInfo), varargs...)
+}
+
 // GetChainHead mocks base method
 func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v1alpha1.ChainHead, error) {
 	m.ctrl.T.Helper()

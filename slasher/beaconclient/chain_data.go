@@ -30,11 +30,11 @@ func (bs *Service) ChainHead(
 // Poll the beacon node every syncStatusPollingInterval until the node
 // is no longer syncing.
 func (bs *Service) querySyncStatus(ctx context.Context) {
-	status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+	nodeInfo, err := bs.nodeClient.GetNodeInfo(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not fetch sync status")
 	}
-	if !status.Syncing {
+	if nodeInfo.SyncState == ethpb.SyncState_SYNC_FULL {
 		log.Info("Beacon node is fully synced, starting slashing detection")
 		return
 	}
@@ -43,11 +43,11 @@ func (bs *Service) querySyncStatus(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+			nodeInfo, err := bs.nodeClient.GetNodeInfo(ctx, &ptypes.Empty{})
 			if err != nil {
 				log.WithError(err).Error("Could not fetch sync status")
 			}
-			if !status.Syncing {
+			if nodeInfo.SyncState == ethpb.SyncState_SYNC_FULL {
 				log.Info("Beacon node is fully synced, starting slashing detection")
 				return
 			}

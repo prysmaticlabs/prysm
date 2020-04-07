@@ -385,13 +385,16 @@ func TestWaitSync_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().GetNodeInfo(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
+	).Return(&ethpb.NodeInfo{SyncState: ethpb.SyncState_SYNC_CATCHUP}, nil)
 
 	err := v.WaitForSync(ctx)
 	want := cancelledCtx
+	if err == nil {
+		t.Fatal("Expected error, received nil")
+	}
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -406,10 +409,10 @@ func TestWaitSync_NotSyncing(t *testing.T) {
 		node: n,
 	}
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().GetNodeInfo(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
+	).Return(&ethpb.NodeInfo{SyncState: ethpb.SyncState_SYNC_FULL}, nil)
 
 	err := v.WaitForSync(context.Background())
 	if err != nil {
@@ -426,15 +429,15 @@ func TestWaitSync_Syncing(t *testing.T) {
 		node: n,
 	}
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().GetNodeInfo(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&ethpb.SyncStatus{Syncing: true}, nil)
+	).Return(&ethpb.NodeInfo{SyncState: ethpb.SyncState_SYNC_CATCHUP}, nil)
 
-	n.EXPECT().GetSyncStatus(
+	n.EXPECT().GetNodeInfo(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&ethpb.SyncStatus{Syncing: false}, nil)
+	).Return(&ethpb.NodeInfo{SyncState: ethpb.SyncState_SYNC_FULL}, nil)
 
 	err := v.WaitForSync(context.Background())
 	if err != nil {

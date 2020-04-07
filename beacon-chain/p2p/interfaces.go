@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -23,6 +24,7 @@ type P2P interface {
 	ConnectionHandler
 	PeersProvider
 	MetadataProvider
+	HostProvider
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
@@ -74,4 +76,9 @@ type PeersProvider interface {
 type MetadataProvider interface {
 	Metadata() *pb.MetaData
 	MetadataSeq() uint64
+}
+
+// HostProvider provides the host for this instance.
+type HostProvider interface {
+	Host() host.Host
 }

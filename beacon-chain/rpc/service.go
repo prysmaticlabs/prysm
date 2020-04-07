@@ -79,6 +79,7 @@ type Service struct {
 	credentialError        error
 	p2p                    p2p.Broadcaster
 	peersFetcher           p2p.PeersProvider
+	hostFetcher            p2p.HostProvider
 	depositFetcher         depositcache.DepositFetcher
 	pendingDepositFetcher  depositcache.PendingDepositsFetcher
 	stateNotifier          statefeed.Notifier
@@ -115,6 +116,7 @@ type Config struct {
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
 	PeersFetcher          p2p.PeersProvider
+	HostFetcher           p2p.HostProvider
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
 	SlasherProvider       string
@@ -142,6 +144,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		blockReceiver:         cfg.BlockReceiver,
 		p2p:                   cfg.Broadcaster,
 		peersFetcher:          cfg.PeersFetcher,
+		hostFetcher:           cfg.HostFetcher,
 		powChainService:       cfg.POWChainService,
 		chainStartFetcher:     cfg.ChainStartFetcher,
 		mockEth1Votes:         cfg.MockEth1Votes,
@@ -236,11 +239,14 @@ func (s *Service) Start() {
 		StateGen:               s.stateGen,
 	}
 	nodeServer := &node.Server{
-		BeaconDB:           s.beaconDB,
-		Server:             s.grpcServer,
-		SyncChecker:        s.syncService,
-		GenesisTimeFetcher: s.genesisTimeFetcher,
-		PeersFetcher:       s.peersFetcher,
+		BeaconDB:            s.beaconDB,
+		Server:              s.grpcServer,
+		SyncChecker:         s.syncService,
+		GenesisTimeFetcher:  s.genesisTimeFetcher,
+		PeersFetcher:        s.peersFetcher,
+		HostFetcher:         s.hostFetcher,
+		HeadFetcher:         s.headFetcher,
+		FinalizationFetcher: s.finalizationFetcher,
 	}
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,

@@ -573,3 +573,8 @@ func logExternalDNSAddr(id peer.ID, addr string, port uint) {
 		).Info("Node started external p2p server")
 	}
 }
+
+// Host returns the host on which this p2p instance is running.
+func (s *Service) Host() host.Host {
+	return s.host
+}
