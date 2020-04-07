@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -174,6 +175,94 @@ func TestErrUnknownPeer(t *testing.T) {
 	_, err = p.BadResponses(id)
 	if err != peers.ErrPeerUnknown {
 		t.Errorf("Unexpected error: expected %v, received %v", peers.ErrPeerUnknown, err)
+	}
+}
+
+func TestPeerCommitteeIndices(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	id, err := peer.IDB58Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	if err != nil {
+		t.Fatalf("Failed to create ID: %v", err)
+	}
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	if err != nil {
+		t.Fatalf("Failed to create address: %v", err)
+	}
+	direction := network.DirInbound
+	record := new(enr.Record)
+	record.Set(enr.WithEntry("test", []byte{'a'}))
+	p.Add(record, id, address, direction)
+	bitV := bitfield.NewBitvector64()
+	for i := 0; i < 64; i++ {
+		if i == 2 || i == 8 || i == 9 {
+			bitV.SetBitAt(uint64(i), true)
+		}
+	}
+	p.SetMetadata(id, &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   bitV,
+	})
+
+	wantedIndices := []uint64{2, 8, 9}
+
+	indices, err := p.CommitteeIndices(id)
+	if err != nil {
+		t.Fatalf("Could not retrieve committee indices: %v", err)
+	}
+
+	if !reflect.DeepEqual(indices, wantedIndices) {
+		t.Errorf("Wanted indices of %v but got %v", wantedIndices, indices)
+	}
+}
+
+func TestPeerSubscribedToSubnet(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	// Add some peers with different states
+	numPeers := 2
+	for i := 0; i < numPeers; i++ {
+		addPeer(t, p, peers.PeerConnected)
+	}
+	expectedPeer := p.All()[1]
+	bitV := bitfield.NewBitvector64()
+	for i := 0; i < 64; i++ {
+		if i == 2 || i == 8 || i == 9 {
+			bitV.SetBitAt(uint64(i), true)
+		}
+	}
+	p.SetMetadata(expectedPeer, &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   bitV,
+	})
+	numPeers = 3
+	for i := 0; i < numPeers; i++ {
+		addPeer(t, p, peers.PeerDisconnected)
+	}
+	peers := p.SubscribedToSubnet(2)
+	if len(peers) != 1 {
+		t.Errorf("Expected num of peers to be %d but got %d", 1, len(peers))
+	}
+	if peers[0] != expectedPeer {
+		t.Errorf("Expected peer of %s but got %s", expectedPeer, peers[0])
+	}
+
+	peers = p.SubscribedToSubnet(8)
+	if len(peers) != 1 {
+		t.Errorf("Expected num of peers to be %d but got %d", 1, len(peers))
+	}
+	if peers[0] != expectedPeer {
+		t.Errorf("Expected peer of %s but got %s", expectedPeer, peers[0])
+	}
+
+	peers = p.SubscribedToSubnet(9)
+	if len(peers) != 1 {
+		t.Errorf("Expected num of peers to be %d but got %d", 1, len(peers))
+	}
+	if peers[0] != expectedPeer {
+		t.Errorf("Expected peer of %s but got %s", expectedPeer, peers[0])
 	}
 }
 
@@ -590,5 +679,9 @@ func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) pee
 	}
 	p.Add(new(enr.Record), id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
+	p.SetMetadata(id, &pb.MetaData{
+		SeqNumber: 0,
+		Attnets:   bitfield.NewBitvector64(),
+	})
 	return id
 }

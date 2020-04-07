@@ -232,6 +232,7 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)
+					break
 				}
 			}
 		}
