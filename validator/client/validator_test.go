@@ -535,6 +535,11 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
+
 	if err := v.UpdateDuties(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
