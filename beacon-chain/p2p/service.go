@@ -375,7 +375,7 @@ func (s *Service) RefreshENR(epoch uint64) {
 		// return early if bitfield hasn't changed
 		return
 	}
-	s.updateBitfield(bitV)
+	s.updateSubnetRecordWithMetadata(bitV)
 }
 
 // FindPeersWithSubnet performs a network search for peers
@@ -536,7 +536,11 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 	return nil
 }
 
-func (s *Service) updateBitfield(bitV bitfield.Bitvector64) {
+// Updates the service's discv5 listener record's attestation subnet
+// with a new value for a bitfield of subnets tracked. It also updates
+// the node's metadata by increasing the sequence number and the
+// subnets tracked by the node.
+func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	s.dv5Listener.LocalNode().Set(entry)
 	s.metaData = &pb.MetaData{
