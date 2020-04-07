@@ -447,7 +447,7 @@ index 8ee263b..60607de 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index 3455de7..f4fab59 100644
+index 3bc824b..53cd49b 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -553,8 +553,8 @@ index 3455de7..f4fab59 100644
 +    bytes attestation_data_root = 1  [(gogoproto.moretags) = "ssz-size:\"32\""];
  }
  
- message CommitteeSubnetSubscribeRequest {
-@@ -381,10 +383,10 @@ message CommitteeSubnetSubscribeRequest {
+ message CommitteeSubnetsSubscribeRequest {
+@@ -382,10 +384,10 @@ message CommitteeSubnetsSubscribeRequest {
  // An Ethereum 2.0 validator.
  message Validator {
      // 48 byte BLS public key used for the validator's activities.
