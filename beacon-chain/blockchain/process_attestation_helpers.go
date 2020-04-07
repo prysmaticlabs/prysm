@@ -140,7 +140,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 				}
 			}
 			if aState == nil {
-				return nil, fmt.Errorf("nil state for block root %#x\n", a.Data.BeaconBlockRoot)
+				return nil, fmt.Errorf("nil state for block root %#x", a.Data.BeaconBlockRoot)
 			}
 			epoch := helpers.SlotToEpoch(a.Data.Slot)
 			origSeed, err := helpers.Seed(baseState, epoch, params.BeaconConfig().DomainBeaconAttester)
