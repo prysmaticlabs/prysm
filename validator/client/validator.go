@@ -112,7 +112,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	return nil
 }
 
-// WaitForSync checks whether the beacon node has sync to the latest head
+// WaitForSync checks whether the beacon node has synced to the latest head.
 func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()

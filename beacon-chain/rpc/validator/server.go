@@ -90,7 +90,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 	for {
 		select {
-		// Pinging every slot for activation.
+		// Pinging every half slot for activation.
 		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second):
 			activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
