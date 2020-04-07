@@ -411,7 +411,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 					exists = true
 					continue
 				}
-				s.peers.Add(info.ID, multiAddr, network.DirUnknown, subnets)
+				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(*info); err != nil {
 					log.Errorf("Could not connect with peer %s: %v", info.String(), err)
 				}
@@ -501,14 +501,8 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 			}
 		}
 
-		indices, err := retrieveAttSubnets(nodeENR)
-		if err != nil {
-			log.WithError(err).Error("Could not retrieve attestation subnets")
-			continue
-		}
-
 		// Add peer to peer handler.
-		s.peers.Add(peerData.ID, multiAddr, network.DirUnknown, indices)
+		s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs

@@ -98,17 +98,21 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 		// Peer already exists, just update its address info.
 		status.address = address
 		status.direction = direction
-		status.enr = record
+		if record != nil {
+			status.enr = record
+		}
 		return
 	}
-
-	p.status[pid] = &peerStatus{
+	status := &peerStatus{
 		address:   address,
 		direction: direction,
 		// Peers start disconnected; state will be updated when the handshake process begins.
 		peerState: PeerDisconnected,
-		enr:       record,
 	}
+	if record != nil {
+		status.enr = record
+	}
+	p.status[pid] = status
 }
 
 // Address returns the multiaddress of the given remote peer.
