@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
@@ -47,6 +48,7 @@ type Config struct {
 	BlockNotifier       blockfeed.Notifier
 	AttestationNotifier operation.Notifier
 	StateSummaryCache   *cache.StateSummaryCache
+	StateGen            *stategen.State
 }
 
 // This defines the interface for interacting with block chain service
@@ -79,6 +81,7 @@ func NewRegularSync(cfg *Config) *Service {
 		stateNotifier:        cfg.StateNotifier,
 		blockNotifier:        cfg.BlockNotifier,
 		stateSummaryCache:    cfg.StateSummaryCache,
+		stateGen:             cfg.StateGen,
 		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
@@ -122,6 +125,7 @@ type Service struct {
 	seenAttesterSlashingLock  sync.RWMutex
 	seenAttesterSlashingCache *lru.Cache
 	stateSummaryCache         *cache.StateSummaryCache
+	stateGen                  *stategen.State
 }
 
 // Start the regular sync service.

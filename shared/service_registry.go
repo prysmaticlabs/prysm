@@ -38,7 +38,7 @@ func NewServiceRegistry() *ServiceRegistry {
 
 // StartAll initialized each service in order of registration.
 func (s *ServiceRegistry) StartAll() {
-	log.Infof("Starting %d services: %v", len(s.serviceTypes), s.serviceTypes)
+	log.Debugf("Starting %d services: %v", len(s.serviceTypes), s.serviceTypes)
 	for _, kind := range s.serviceTypes {
 		log.Debugf("Starting service type %v", kind)
 		go s.services[kind].Start()

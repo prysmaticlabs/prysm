@@ -20,7 +20,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -30,6 +29,15 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+)
+
+type validatorRole int8
+
+const (
+	roleUnknown = iota
+	roleAttester
+	roleProposer
+	roleAggregator
 )
 
 type validator struct {
@@ -303,9 +311,46 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 					lFields["proposerSlot"] = duty.ProposerSlot
 				}
 				lFields["attesterSlot"] = duty.AttesterSlot
+
+				aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					return errors.Wrap(err, "could not check if a validator is an aggregator")
+				}
+				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
+					Slot:         duty.AttesterSlot,
+					CommitteeId:  duty.CommitteeIndex,
+					IsAggregator: aggregator,
+				}); err != nil {
+					return err
+				}
 			}
 
 			log.WithFields(lFields).Info("New assignment")
+		}
+	}
+
+	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
+	req.Epoch++
+	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
+		for _, duty := range dutiesNextEpoch.Duties {
+			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
+				aggregator, err := v.isAggregator(ctx, duty.Committee, duty.AttesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					return errors.Wrap(err, "could not check if a validator is an aggregator")
+				}
+				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
+					Slot:         duty.AttesterSlot,
+					CommitteeId:  duty.CommitteeIndex,
+					IsAggregator: aggregator,
+				}); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -314,39 +359,31 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) {
-	rolesAt := make(map[[48]byte][]pb.ValidatorRole)
+// validator assignments are unknown. Otherwise returns a valid validatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
+	rolesAt := make(map[[48]byte][]validatorRole)
 	for _, duty := range v.duties.Duties {
-		var roles []pb.ValidatorRole
+		var roles []validatorRole
 
 		if duty == nil {
 			continue
 		}
 		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
-			roles = append(roles, pb.ValidatorRole_PROPOSER)
+			roles = append(roles, roleProposer)
 		}
 		if duty.AttesterSlot == slot {
-			roles = append(roles, pb.ValidatorRole_ATTESTER)
+			roles = append(roles, roleAttester)
 
 			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
 			if aggregator {
-				roles = append(roles, pb.ValidatorRole_AGGREGATOR)
-			}
-
-			if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
-				Slot:         slot,
-				CommitteeId:  duty.CommitteeIndex,
-				IsAggregator: aggregator,
-			}); err != nil {
-				return nil, err
+				roles = append(roles, roleAggregator)
 			}
 		}
 		if len(roles) == 0 {
-			roles = append(roles, pb.ValidatorRole_UNKNOWN)
+			roles = append(roles, roleUnknown)
 		}
 
 		var pubKey [48]byte

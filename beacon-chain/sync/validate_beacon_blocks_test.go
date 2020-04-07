@@ -13,12 +13,15 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -93,11 +96,12 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 
 	c, _ := lru.New(10)
 	r := &Service{
-		db:             db,
-		p2p:            p,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
-		chain:          &mock.ChainService{Genesis: time.Now()},
-		seenBlockCache: c,
+		db:                db,
+		p2p:               p,
+		initialSync:       &mockSync.Sync{IsSyncing: false},
+		chain:             &mock.ChainService{Genesis: time.Now()},
+		seenBlockCache:    c,
+		stateSummaryCache: cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -114,7 +118,6 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		},
 	}
 	result := r.validateBeaconBlockPubSub(ctx, "", m)
-
 	if result {
 		t.Error("Expected false result, got true")
 	}
@@ -126,8 +129,22 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	bRoot := [32]byte{'a'}
+	parentBlock := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 0,
+			Slot:          0,
+		},
+	}
+	if err := db.SaveBlock(ctx, parentBlock); err != nil {
+		t.Fatal(err)
+	}
+	bRoot, err := ssz.HashTreeRoot(parentBlock.Block)
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: bRoot[:],
+	}); err != nil {
 		t.Fatal(err)
 	}
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
@@ -154,6 +171,8 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	msg.Signature = blockSig[:]
 
 	c, _ := lru.New(10)
+	stateSummaryCache := cache.NewStateSummaryCache()
+	stateGen := stategen.New(db, stateSummaryCache)
 	r := &Service{
 		db:          db,
 		p2p:         p,
@@ -163,7 +182,11 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
-		seenBlockCache: c,
+		seenBlockCache:      c,
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		stateSummaryCache:   stateSummaryCache,
+		stateGen:            stateGen,
 	}
 
 	buf := new(bytes.Buffer)
@@ -256,11 +279,13 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 
 	c, _ := lru.New(10)
 	r := &Service{
-		p2p:            p,
-		db:             db,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
-		chain:          &mock.ChainService{Genesis: time.Now()},
-		seenBlockCache: c,
+		p2p:                 p,
+		db:                  db,
+		initialSync:         &mockSync.Sync{IsSyncing: false},
+		chain:               &mock.ChainService{Genesis: time.Now()},
+		seenBlockCache:      c,
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
 	buf := new(bytes.Buffer)
@@ -339,8 +364,20 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	bRoot := [32]byte{'a'}
+	parentBlock := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 0,
+			Slot:          0,
+		},
+	}
+	if err := db.SaveBlock(ctx, parentBlock); err != nil {
+		t.Fatal(err)
+	}
+	bRoot, err := ssz.HashTreeRoot(parentBlock.Block)
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err != nil {
 		t.Fatal(err)
 	}
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
@@ -377,7 +414,10 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
-		seenBlockCache: c,
+		seenBlockCache:      c,
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		stateSummaryCache:   cache.NewStateSummaryCache(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -392,13 +432,9 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			},
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
-	if !result {
-		t.Error("Expected true result, got false")
-	}
 	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
-	result = r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m)
 	if result {
 		t.Error("Expected false result, got true")
 	}
