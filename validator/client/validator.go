@@ -319,7 +319,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				}
 				lFields["attesterSlot"] = attesterSlot
 
-				alreadySubscribedKey := bytesutil.ToBytes64(append(bytesutil.Bytes32(attesterSlot), bytesutil.Bytes32(committeeIndex)...))
+				alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
 				if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
 					continue
 				}
@@ -353,7 +353,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				attesterSlot := duty.AttesterSlot
 				committeeIndex := duty.CommitteeIndex
 
-				alreadySubscribedKey := bytesutil.ToBytes64(append(bytesutil.Bytes32(attesterSlot), bytesutil.Bytes32(committeeIndex)...))
+				alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
 				if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
 					continue
 				}
@@ -484,4 +484,10 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 	}
 
 	return res, nil
+}
+
+// This constructs a validator subscribed key, it's used to track
+// which subnet has already been pending requested.
+func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
+	return bytesutil.ToBytes64(append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...))
 }
