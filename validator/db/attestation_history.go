@@ -6,6 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -31,6 +32,11 @@ func (db *Store) AttestationHistory(ctx context.Context, publicKey []byte) (*sla
 		bucket := tx.Bucket(historicAttestationsBucket)
 		enc := bucket.Get(publicKey)
 		if enc == nil {
+			newMap := make(map[uint64]uint64)
+			newMap[0] = params.BeaconConfig().FarFutureEpoch
+			attestationHistory = &slashpb.AttestationHistory{
+				TargetToSource: newMap,
+			}
 			return nil
 		}
 		attestationHistory, err = unmarshalAttestationHistory(enc)

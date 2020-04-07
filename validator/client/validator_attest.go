@@ -83,8 +83,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	var history *slashpb.AttestationHistory
 	if featureconfig.Get().ProtectAttester {
-		history, err := v.db.AttestationHistory(ctx, pubKey[:])
+		history, err = v.db.AttestationHistory(ctx, pubKey[:])
 		if err != nil {
 			log.Errorf("Could not get attestation history from DB: %v", err)
 			if v.emitAccountMetrics {
@@ -148,14 +149,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 
 	if featureconfig.Get().ProtectAttester {
-		history, err := v.db.AttestationHistory(ctx, pubKey[:])
-		if err != nil {
-			log.Errorf("Could not get attestation history from DB: %v", err)
-			if v.emitAccountMetrics {
-				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
 		history = markAttestationForTargetEpoch(history, data.Source.Epoch, data.Target.Epoch)
 		if err := v.db.SaveAttestationHistory(ctx, pubKey[:], history); err != nil {
 			log.Errorf("Could not save attestation history to DB: %v", err)
