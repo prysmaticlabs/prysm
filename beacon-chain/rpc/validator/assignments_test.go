@@ -299,7 +299,6 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 func BenchmarkCommitteeAssignment(b *testing.B) {
 	db := dbutil.SetupDB(b)
 	defer dbutil.TeardownDB(b, db)
-	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(8192 * 2)
