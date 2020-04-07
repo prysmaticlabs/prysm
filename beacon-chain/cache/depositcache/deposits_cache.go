@@ -154,6 +154,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
+	// This is rather slow, anyway we can speed it up?
 	for _, ctnr := range dc.deposits {
 		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
 			deposit = ctnr.Deposit
