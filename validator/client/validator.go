@@ -205,14 +205,14 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 			if status.Status.DepositInclusionSlot != 0 {
 				log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
-					"Waiting for deposit to be seen",
+					"Waiting for deposit to be processed",
 				)
 			} else {
 				log.Info("Waiting for deposit to be seen")
 			}
 		case ethpb.ValidatorStatus_DEPOSITED:
 			log.WithField("depositInclusionSlot", status.Status.DepositInclusionSlot).Info(
-				"Deposit for validator processed, entering activation queue after finalization",
+				"Deposit processed, entering activation queue after finalization",
 			)
 		case ethpb.ValidatorStatus_PENDING:
 			log.WithFields(logrus.Fields{
@@ -223,6 +223,8 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
+		default:
+			log.Info("Validator status")
 		}
 	}
 	return activatedKeys
