@@ -125,6 +125,16 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		}
 	}
 
+	if indexedAtt.AttestingIndices == nil {
+		return nil, errors.New("nil attesting indices")
+	}
+	if a.Data == nil {
+		return nil, errors.New("nil att data")
+	}
+	if a.Data.Target == nil {
+		return nil, errors.New("nil att target")
+	}
+
 	// Update forkchoice store with the new attestation for updating weight.
 	s.forkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 

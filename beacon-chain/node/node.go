@@ -443,6 +443,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		ExitPool:            b.exitPool,
 		SlashingPool:        b.slashingsPool,
 		StateSummaryCache:   b.stateSummaryCache,
+		StateGen:            b.stateGen,
 	})
 
 	return b.services.RegisterService(rs)
