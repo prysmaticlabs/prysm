@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -26,6 +27,11 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		Attnets:   []byte{'A', 'B'},
 	}
 
+	p2.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'C', 'D'},
+	}
+
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
@@ -34,6 +40,9 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		db:  d,
 		p2p: p1,
 	}
+
+	p1.Peers().Add(new(enr.Record), p2.Host.ID(), p2.Host.Addrs()[0], network.DirUnknown)
+	p1.Peers().SetMetadata(p2.Host.ID(), p2.LocalMetadata)
 
 	// Setup streams
 	pcl := protocol.ID("/testing")
@@ -83,6 +92,11 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 		Attnets:   []byte{'A', 'B'},
 	}
 
+	p2.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'C', 'D'},
+	}
+
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
@@ -92,6 +106,16 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 		p2p: p1,
 	}
 
+	p1.Peers().Add(new(enr.Record), p2.Host.ID(), p2.Host.Addrs()[0], network.DirUnknown)
+	p1.Peers().SetMetadata(p2.Host.ID(), p2.LocalMetadata)
+
+	p2.Peers().Add(new(enr.Record), p1.Host.ID(), p1.Host.Addrs()[0], network.DirUnknown)
+	p2.Peers().SetMetadata(p1.Host.ID(), p1.LocalMetadata)
+
+	r2 := &Service{
+		db:  d,
+		p2p: p2,
+	}
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
 	var wg sync.WaitGroup
@@ -99,13 +123,13 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r2.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != 2 {
 			t.Fatalf("Wanted 2 but got %d as our sequence number", *out)
 		}
-		err := r.pingHandler(context.Background(), out, stream)
+		err := r2.pingHandler(context.Background(), out, stream)
 		if err != nil {
 			t.Fatal(err)
 		}

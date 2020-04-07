@@ -22,13 +22,26 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	if !ok {
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
-	if err := r.validateSequenceNum(*m, stream.Conn().RemotePeer()); err != nil {
+	changed, err := r.validateSequenceNum(*m, stream.Conn().RemotePeer())
+	if err != nil {
 		return err
+	}
+	if changed {
+		// send metadata request in a new routine and stream.
+		go func() {
+			md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+			if err != nil {
+				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Error("Failed to send metadata request")
+				return
+			}
+			// update metadata if there is no error
+			r.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+		}()
 	}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, r.p2p.MetadataSeq())
+	_, err = r.p2p.Encoding().EncodeWithLength(stream, r.p2p.MetadataSeq())
 	return err
 }
 
@@ -56,15 +69,35 @@ func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return err
 	}
-	err = r.validateSequenceNum(*msg, stream.Conn().RemotePeer())
+	changed, err := r.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		return err
 	}
-	return err
+	if !changed {
+		return nil
+	}
+	md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+	if err != nil {
+		// do not increment bad responses, as its
+		// already done in the request method.
+		return err
+	}
+	r.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+	return nil
 }
 
 // validates the peer's sequence number.
-func (r *Service) validateSequenceNum(seq uint64, id peer.ID) error {
-	// no-op
-	return nil
+func (r *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
+	md, err := r.p2p.Peers().Metadata(id)
+	if err != nil {
+		return false, err
+	}
+	if md == nil {
+		return false, nil
+	}
+	if md.SeqNumber != seq {
+		return true, nil
+	}
+	return false, nil
 }
