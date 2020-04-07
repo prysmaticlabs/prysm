@@ -170,7 +170,18 @@ func (s *Service) Start() {
 	}
 
 	// Waits until the state is initialized via an event feed.
-	s.awaitStateInitialized()
+	// Check if we have a genesis time / genesis state
+	// used for fork-related data when connecting peers.
+	genesisState, err := s.beaconDB.GenesisState(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not read genesis state")
+	}
+	if genesisState != nil {
+		s.genesisTime = time.Unix(int64(genesisState.GenesisTime()), 0)
+		s.genesisValidatorsRoot = genesisState.GenesisValidatorRoot()
+	} else {
+		s.awaitStateInitialized()
+	}
 
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
@@ -419,13 +430,14 @@ func (s *Service) awaitStateInitialized() {
 	for {
 		select {
 		case event := <-stateChannel:
-			if event.Type == statefeed.ChainStarted {
+			if event.Type == statefeed.Initialized {
 				data, ok := event.Data.(*statefeed.InitializedData)
 				if !ok {
-					log.Fatal("Received wrong data over state initialized feed: %v", data)
+					log.Fatalf("Received wrong data over state initialized feed: %v", data)
 				}
 				s.genesisTime = data.StartTime
 				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
+				return
 			}
 		}
 	}
