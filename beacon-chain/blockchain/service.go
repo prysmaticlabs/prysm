@@ -157,8 +157,7 @@ func (s *Service) Start() {
 	attestationProcessorSubscribed := make(chan struct{}, 1)
 
 	// If the chain has already been initialized, simply start the block processing routine.
-	// A node should still initialize rest of the chain service if the finalized state's slot is 0.
-	if beaconState != nil && beaconState.Slot() != 0 {
+	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		s.opsService.SetGenesisTime(beaconState.GenesisTime())

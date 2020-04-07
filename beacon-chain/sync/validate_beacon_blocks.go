@@ -80,13 +80,24 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	parentState, err := r.db.State(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
-	if err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get parent state")
+	// Handle block when the parent is unknown.
+	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+		r.pendingQueueLock.Lock()
+		r.slotToPendingBlocks[blk.Block.Slot] = blk
+		r.seenPendingBlocks[blockRoot] = true
+		r.pendingQueueLock.Unlock()
 		return false
 	}
-	if parentState == nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Parent state is nil")
+
+	hasStateSummaryDB := r.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+	hasStateSummaryCache := r.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
+	if !hasStateSummaryDB && !hasStateSummaryCache {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("No access to parent state")
+		return false
+	}
+	parentState, err := r.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get parent state")
 		return false
 	}
 
