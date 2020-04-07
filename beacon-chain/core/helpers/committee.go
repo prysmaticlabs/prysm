@@ -18,6 +18,8 @@ import (
 
 var committeeCache = cache.NewCommitteesCache()
 
+type proposerIndexToSlots map[uint64][]uint64
+
 // SlotCommitteeCount returns the number of crosslink committees of a slot. The
 // active validator count is provided as an argument rather than a direct implementation
 // from the spec definition. Having the active validator count as an argument allows for
@@ -181,7 +183,10 @@ type CommitteeAssignmentContainer struct {
 // 2. Compute all committees.
 // 3. Determine the attesting slot for each committee.
 // 4. Construct a map of validator indices pointing to the respective committees.
-func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
+func CommitteeAssignments(
+	state *stateTrie.BeaconState,
+	epoch uint64,
+) (map[uint64]*CommitteeAssignmentContainer, proposerIndexToSlots, error) {
 	nextEpoch := NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, nil, fmt.Errorf(
