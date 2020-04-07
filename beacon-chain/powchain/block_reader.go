@@ -2,6 +2,7 @@ package powchain
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -63,7 +64,7 @@ func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint6
 	defer span.End()
 	block, err := s.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
-		return 0, errors.Wrap(err, "could not query block with given height")
+		return 0, errors.Wrap(err, fmt.Sprintf("could not query block with height %d", height.Uint64()))
 	}
 	return block.Time(), nil
 }
