@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -39,19 +40,24 @@ func init() {
 func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
-	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
-		t.Fatal(err)
+	//ctx := context.Background()
+	pubKey := pubKey(1)
+	validators := make([]*ethpb.Validator, 101, 101)
+	validators[100] = &ethpb.Validator{
+		PublicKey:             pubKey,
+		WithdrawalCredentials: make([]byte, 32),
 	}
 
-	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  validators,
+	})
 
 	Server := &Server{
 		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
 	}
 
 	req := &ethpb.ValidatorIndexRequest{
@@ -127,13 +133,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
-	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, pubKey2, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -172,12 +171,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, pubKey2, 1); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
+
 	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
 	if err != nil {
 		t.Fatal(err)

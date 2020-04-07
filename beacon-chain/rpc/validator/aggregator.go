@@ -3,6 +3,8 @@ package validator
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/sirupsen/logrus"
@@ -22,11 +24,11 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	if as.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-
-	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, req.PublicKey)
+	headstate, err := as.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+	validatorIndex, exists := headstate.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !exists {
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
