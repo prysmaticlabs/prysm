@@ -36,6 +36,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -350,7 +351,13 @@ func (s *Service) RefreshENR(epoch uint64) {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	committees := cache.CommitteeIDs.GetIDs(epoch)
+
+	var committees []uint64
+	epochStartSlot := helpers.StartSlot(epoch)
+	for i := epochStartSlot; i < epochStartSlot+2*params.BeaconConfig().SlotsPerEpoch; i++ {
+		committees = append(committees, sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(i),
+			cache.CommitteeIDs.GetAggregatorCommitteeIDs(i))...)
+	}
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}

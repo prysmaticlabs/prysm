@@ -97,7 +97,7 @@ func (db *Store) initializeSubBuckets(pubKeys [][48]byte) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKey := range pubKeys {
 			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
-				return errors.Wrap(err, "failed to delete the proposal history")
+				return errors.Wrap(err, "failed to create proposal history bucket")
 			}
 		}
 		return nil

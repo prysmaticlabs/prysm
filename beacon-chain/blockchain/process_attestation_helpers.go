@@ -130,14 +130,18 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			var err error
 			if !featureconfig.Get().DisableNewStateMgmt {
 				aState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				return nil, err
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				if err != nil {
+					return nil, err
+				}
 			}
-
-			aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-			if err != nil {
-				return nil, err
+			if aState == nil {
+				return nil, fmt.Errorf("nil state for block root %#x", a.Data.BeaconBlockRoot)
 			}
-
 			epoch := helpers.SlotToEpoch(a.Data.Slot)
 			origSeed, err := helpers.Seed(baseState, epoch, params.BeaconConfig().DomainBeaconAttester)
 			if err != nil {

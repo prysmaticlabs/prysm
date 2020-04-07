@@ -447,7 +447,7 @@ index 8ee263b..60607de 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index 068a04c..80f73b8 100644
+index 3bc824b..53cd49b 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -458,7 +458,7 @@ index 068a04c..80f73b8 100644
  import "google/api/annotations.proto";
  import "google/protobuf/empty.proto";
  import "eth/v1alpha1/beacon_block.proto";
-@@ -197,7 +198,7 @@ message DomainResponse {
+@@ -208,7 +209,7 @@ message DomainResponse {
  
  message ValidatorActivationRequest {
      // A list of 48 byte validator public keys.
@@ -467,7 +467,7 @@ index 068a04c..80f73b8 100644
  }
  
  message ValidatorActivationResponse {
-@@ -223,7 +224,7 @@ message ChainStartResponse {
+@@ -234,7 +235,7 @@ message ChainStartResponse {
  
  message ValidatorIndexRequest {
      // A 48 byte validator public key.
@@ -476,7 +476,7 @@ index 068a04c..80f73b8 100644
  }
  
  message ValidatorIndexResponse {
-@@ -233,7 +234,7 @@ message ValidatorIndexResponse {
+@@ -244,7 +245,7 @@ message ValidatorIndexResponse {
  
  message ValidatorStatusRequest {
      // A 48 byte validator public key.
@@ -485,7 +485,7 @@ index 068a04c..80f73b8 100644
  }
  
  enum ValidatorStatus {
-@@ -271,7 +272,7 @@ message DutiesRequest {
+@@ -282,7 +283,7 @@ message DutiesRequest {
      uint64 epoch = 1;
  
      // Array of byte encoded BLS public keys.
@@ -494,7 +494,7 @@ index 068a04c..80f73b8 100644
  }
  
  message DutiesResponse {
-@@ -290,7 +291,7 @@ message DutiesResponse {
+@@ -301,7 +302,7 @@ message DutiesResponse {
          uint64 proposer_slot = 4;
  
          // 48 byte BLS public key for the validator who's assigned to perform a duty.
@@ -503,7 +503,7 @@ index 068a04c..80f73b8 100644
  
          // The current status of the validator assigned to perform the duty.
          ValidatorStatus status = 6;
-@@ -305,15 +306,16 @@ message BlockRequest {
+@@ -316,15 +317,16 @@ message BlockRequest {
      uint64 slot = 1;
  
      // Validator's 32 byte randao reveal secret of the current epoch.
@@ -523,7 +523,7 @@ index 068a04c..80f73b8 100644
  }
  
  message AttestationDataRequest {
-@@ -326,7 +328,7 @@ message AttestationDataRequest {
+@@ -337,7 +339,7 @@ message AttestationDataRequest {
  
  message AttestResponse {
      // The root of the attestation data successfully submitted to the beacon node.
@@ -532,7 +532,7 @@ index 068a04c..80f73b8 100644
  }
  
  message AggregateSelectionRequest {
-@@ -335,10 +337,10 @@ message AggregateSelectionRequest {
+@@ -346,10 +348,10 @@ message AggregateSelectionRequest {
      // Committee index of the validator at the given slot.
      uint64 committee_index = 2;
      // 48 byte public key of the validator.
@@ -545,7 +545,7 @@ index 068a04c..80f73b8 100644
  }
  
  message AggregateSelectionResponse {
-@@ -353,16 +355,16 @@ message SignedAggregateSubmitRequest {
+@@ -364,7 +366,7 @@ message SignedAggregateSubmitRequest {
  
  message SignedAggregateSubmitResponse {
      // The 32 byte hash tree root of the aggregated attestation data.
@@ -553,6 +553,8 @@ index 068a04c..80f73b8 100644
 +    bytes attestation_data_root = 1  [(gogoproto.moretags) = "ssz-size:\"32\""];
  }
  
+ message CommitteeSubnetsSubscribeRequest {
+@@ -382,10 +384,10 @@ message CommitteeSubnetsSubscribeRequest {
  // An Ethereum 2.0 validator.
  message Validator {
      // 48 byte BLS public key used for the validator's activities.

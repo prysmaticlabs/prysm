@@ -80,7 +80,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		if len(pubKeys) == 0 {
 			log.Warn("No keys found; nothing to validate")
 		} else {
-			log.WithField("validators", len(pubKeys)).Info("Found validator keys")
+			log.WithField("validators", len(pubKeys)).Debug("Found validator keys")
 			for _, key := range pubKeys {
 				log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
 			}
@@ -198,6 +198,9 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 // selectKeyManager selects the key manager depending on the options provided by the user.
 func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
+	if manager == "" {
+		return nil, fmt.Errorf("please supply a keymanager with --keymanager")
+	}
 	opts := ctx.String(flags.KeyManagerOpts.Name)
 	if opts == "" {
 		opts = "{}"
@@ -207,23 +210,6 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 			return nil, errors.Wrap(err, "Failed to read keymanager options file")
 		}
 		opts = string(fileopts)
-	}
-
-	if manager == "" {
-		// Attempt to work out keymanager from deprecated vars.
-		if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
-			manager = "unencrypted"
-			opts = fmt.Sprintf(`{"path":%q}`, unencryptedKeys)
-			log.Warn(fmt.Sprintf("--unencrypted-keys flag is deprecated.  Please use --keymanager=unencrypted --keymanageropts='%s'", opts))
-		} else if numValidatorKeys := ctx.Uint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
-			manager = "interop"
-			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.Uint64(flags.InteropStartIndex.Name))
-			log.Warn(fmt.Sprintf("--interop-num-validators and --interop-start-index flags are deprecated.  Please use --keymanager=interop --keymanageropts='%s'", opts))
-		}
-	}
-
-	if manager == "" {
-		return nil, fmt.Errorf("please supply a keymanager with --keymanager")
 	}
 
 	var km keymanager.KeyManager

@@ -166,6 +166,12 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: 0,
+		Root: genesisBlkRoot[:],
+	}); err != nil {
+		return err
+	}
 	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
@@ -183,16 +189,20 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return errors.Wrap(err, "could save finalized checkpoint")
 	}
 
+	pubKeys := make([][48]byte, 0, genesisState.NumValidators())
+	indices := make([]uint64, 0, genesisState.NumValidators())
 	for i := uint64(0); i < uint64(genesisState.NumValidators()); i++ {
 		pk := genesisState.PubkeyAtIndex(i)
-		if err := s.beaconDB.SaveValidatorIndex(ctx, pk[:], i); err != nil {
-			return errors.Wrapf(err, "could not save validator index: %d", i)
-		}
+		pubKeys = append(pubKeys, pk)
+		indices = append(indices, i)
 		s.chainStartDeposits[i] = &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{
 				PublicKey: pk[:],
 			},
 		}
+	}
+	if err := s.beaconDB.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		return errors.Wrap(err, "could not save validator indices")
 	}
 	return nil
 }

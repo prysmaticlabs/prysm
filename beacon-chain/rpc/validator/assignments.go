@@ -4,10 +4,8 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -85,11 +83,6 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
 
-	}
-
-	if featureconfig.Get().EnableDynamicCommitteeSubnets {
-		cache.CommitteeIDs.AddIDs(committeeIDs, req.Epoch)
-		cache.CommitteeIDs.AddIDs(nextCommitteeIDs, req.Epoch+1)
 	}
 
 	return &ethpb.DutiesResponse{

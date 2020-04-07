@@ -109,7 +109,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 
 	// Update ENR of a peer.
 	testService := &Service{dv5Listener: listeners[0]}
-	cache.CommitteeIDs.AddIDs([]uint64{10}, 0)
+	cache.CommitteeIDs.AddAttesterCommiteeID(0, 10)
 	testService.RefreshENR(0)
 	time.Sleep(2 * time.Second)
 

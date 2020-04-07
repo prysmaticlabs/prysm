@@ -11,6 +11,7 @@ import (
 )
 
 func TestEndToEnd_AntiFlake_MinimalConfig_2(t *testing.T) {
+	t.Skip("Temp skip for #5127, need proper network implementations")
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
