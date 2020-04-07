@@ -101,9 +101,10 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 			for id, roles := range allRoles {
-				wg.Add(1)
-				go func(roles []validatorRole, id [48]byte) {
-					for _, role := range roles {
+				wg.Add(len(roles))
+				for _, role := range roles {
+					go func(role validatorRole, id [48]byte) {
+						defer wg.Done()
 						switch role {
 						case roleAttester:
 							v.SubmitAttestation(slotCtx, slot, id)
@@ -116,9 +117,8 @@ func run(ctx context.Context, v Validator) {
 						default:
 							log.Warnf("Unhandled role %v", role)
 						}
-					}
-					wg.Done()
-				}(roles, id)
+					}(role, id)
+				}
 			}
 			// Wait for all processes to complete, then report span complete.
 			go func() {
