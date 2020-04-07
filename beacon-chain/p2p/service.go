@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"strconv"
@@ -372,8 +373,16 @@ func (s *Service) RefreshENR(epoch uint64) {
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	s.dv5Listener.LocalNode().Set(entry)
+	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+	if err != nil {
+		log.Errorf("Could not retrieve bitfield: %v", err)
+		return
+	}
+	if bytes.Equal(bitV, currentBitV) {
+		// return early if bitfield hasn't changed
+		return
+	}
+	s.updateSubnetRecordWithMetadata(bitV)
 }
 
 // FindPeersWithSubnet performs a network search for peers
@@ -409,7 +418,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 					exists = true
 					continue
 				}
-				s.peers.Add(info.ID, multiAddr, network.DirUnknown, subnets)
+				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(*info); err != nil {
 					log.Errorf("Could not connect with peer %s: %v", info.String(), err)
 				}
@@ -522,14 +531,8 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 			}
 		}
 
-		indices, err := retrieveAttSubnets(nodeENR)
-		if err != nil {
-			log.WithError(err).Error("Could not retrieve attestation subnets")
-			continue
-		}
-
 		// Add peer to peer handler.
-		s.peers.Add(peerData.ID, multiAddr, network.DirUnknown, indices)
+		s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
@@ -561,6 +564,19 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 	// bootnode is never dialled, so ttl is tentatively 1 year
 	s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	return nil
+}
+
+// Updates the service's discv5 listener record's attestation subnet
+// with a new value for a bitfield of subnets tracked. It also updates
+// the node's metadata by increasing the sequence number and the
+// subnets tracked by the node.
+func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	s.dv5Listener.LocalNode().Set(entry)
+	s.metaData = &pb.MetaData{
+		SeqNumber: s.metaData.SeqNumber + 1,
+		Attnets:   bitV,
+	}
 }
 
 func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {

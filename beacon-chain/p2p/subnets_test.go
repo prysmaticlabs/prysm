@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
@@ -123,7 +124,10 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	}
 
 	// Update ENR of a peer.
-	testService := &Service{dv5Listener: listeners[0]}
+	testService := &Service{
+		dv5Listener: listeners[0],
+		metaData:    &pb.MetaData{},
+	}
 	cache.CommitteeIDs.AddAttesterCommiteeID(0, 10)
 	testService.RefreshENR(0)
 	time.Sleep(2 * time.Second)

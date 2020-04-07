@@ -33,8 +33,8 @@ func (r *Service) maintainPeerStatuses() {
 					return
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
-					if err := r.sendRPCStatusRequest(r.ctx, id); err != nil {
-						log.WithField("peer", id).WithError(err).Error("Failed to request peer status")
+					if err := r.reValidatePeer(r.ctx, id); err != nil {
+						log.WithField("peer", id).WithError(err).Error("Failed to reValidate peer")
 					}
 				}
 			}(pid)
@@ -115,6 +115,16 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 	}
 	return err
+}
+
+func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
+	if err := r.sendRPCStatusRequest(ctx, id); err != nil {
+		return err
+	}
+	if err := r.sendPingRequest(ctx, id); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
