@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/ethereum/go-ethereum/p2p/enr"
 
 	"github.com/libp2p/go-libp2p-core/network"
@@ -80,6 +82,58 @@ func TestPeerExplicitAdd(t *testing.T) {
 	}
 	if resDirection2 != direction2 {
 		t.Errorf("Unexpected direction: expected %v, received %v", direction2, resDirection2)
+	}
+}
+
+func TestPeerNoENR(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	id, err := peer.IDB58Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	if err != nil {
+		t.Fatalf("Failed to create ID: %v", err)
+	}
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	if err != nil {
+		t.Fatalf("Failed to create address: %v", err)
+	}
+	direction := network.DirInbound
+	p.Add(nil, id, address, direction)
+
+	retrievedENR, err := p.ENR(id)
+	if err != nil {
+		t.Fatalf("Could not retrieve chainstate: %v", err)
+	}
+	if retrievedENR != nil {
+		t.Error("Wanted a nil enr to be saved")
+	}
+}
+
+func TestPeerNoOverwriteENR(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	id, err := peer.IDB58Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	if err != nil {
+		t.Fatalf("Failed to create ID: %v", err)
+	}
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	if err != nil {
+		t.Fatalf("Failed to create address: %v", err)
+	}
+	direction := network.DirInbound
+	record := new(enr.Record)
+	record.Set(enr.WithEntry("test", []byte{'a'}))
+	p.Add(record, id, address, direction)
+	// try to overwrite
+	p.Add(nil, id, address, direction)
+
+	retrievedENR, err := p.ENR(id)
+	if err != nil {
+		t.Fatalf("Could not retrieve chainstate: %v", err)
+	}
+	if retrievedENR == nil {
+		t.Error("Wanted a non-nil enr")
 	}
 }
 
@@ -254,6 +308,32 @@ func TestPeerBadResponses(t *testing.T) {
 	}
 	if !p.IsBad(id) {
 		t.Error("Peer not marked as bad when it should be")
+	}
+}
+
+func TestAddMetaData(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	// Add some peers with different states
+	numPeers := 5
+	for i := 0; i < numPeers; i++ {
+		addPeer(t, p, peers.PeerConnected)
+	}
+	newPeer := p.All()[2]
+
+	newMetaData := &pb.MetaData{
+		SeqNumber: 8,
+		Attnets:   bitfield.NewBitvector64(),
+	}
+	p.SetMetadata(newPeer, newMetaData)
+
+	md, err := p.Metadata(newPeer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if md.SeqNumber != newMetaData.SeqNumber {
+		t.Errorf("Wanted sequence number of %d but got %d", newMetaData.SeqNumber, md.SeqNumber)
 	}
 }
 

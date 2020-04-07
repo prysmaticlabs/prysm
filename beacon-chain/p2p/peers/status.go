@@ -139,6 +139,17 @@ func (p *Status) Direction(pid peer.ID) (network.Direction, error) {
 	return network.DirUnknown, ErrPeerUnknown
 }
 
+// ENR returns the enr for the corresponding peer id.
+func (p *Status) ENR(pid peer.ID) (*enr.Record, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	if status, ok := p.status[pid]; ok {
+		return status.enr, nil
+	}
+	return nil, ErrPeerUnknown
+}
+
 // SetChainState sets the chain state of the given remote peer.
 func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
 	p.lock.Lock()
