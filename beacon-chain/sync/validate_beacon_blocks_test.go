@@ -147,7 +147,9 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	copied := beaconState.Copy()
+	copied.SetSlot(1)
+	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	if err != nil {
 		t.Fatal(err)
 	}
