@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -129,7 +131,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
-	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound, []uint64{})
+	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
@@ -224,7 +226,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
-	p1.Peers().Add(p1.PeerID(), nil, network.DirOutbound, []uint64{})
+	p1.Peers().Add(new(enr.Record), p1.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p1.PeerID(), &pb.Status{})
 

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
+
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -390,7 +392,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 
 		peer.Connect(host)
 
-		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound, []uint64{})
+		peerStatus.Add(new(enr.Record), peer.PeerID(), nil, network.DirOutbound)
 		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
 		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
 			ForkDigest:     params.BeaconConfig().GenesisForkVersion,

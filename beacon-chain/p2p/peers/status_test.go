@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -38,7 +40,7 @@ func TestPeerExplicitAdd(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction := network.DirInbound
-	p.Add(id, address, direction, []uint64{})
+	p.Add(new(enr.Record), id, address, direction)
 
 	resAddress, err := p.Address(id)
 	if err != nil {
@@ -62,7 +64,7 @@ func TestPeerExplicitAdd(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction2 := network.DirOutbound
-	p.Add(id, address2, direction2, []uint64{})
+	p.Add(new(enr.Record), id, address2, direction2)
 
 	resAddress2, err := p.Address(id)
 	if err != nil {
@@ -156,7 +158,7 @@ func TestPeerChainState(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction := network.DirInbound
-	p.Add(id, address, direction, []uint64{})
+	p.Add(new(enr.Record), id, address, direction)
 
 	oldChainStartLastUpdated, err := p.ChainStateLastUpdated(id)
 	if err != nil {
@@ -205,7 +207,7 @@ func TestPeerBadResponses(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction := network.DirInbound
-	p.Add(id, address, direction, []uint64{})
+	p.Add(new(enr.Record), id, address, direction)
 
 	resBadResponses, err := p.BadResponses(id)
 	if err != nil {
@@ -458,7 +460,7 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	p := peers.NewStatus(maxBadResponses)
 
 	for i := 0; i <= maxPeers+100; i++ {
-		p.Add(peer.ID(i), nil, network.DirOutbound, []uint64{})
+		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
 		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
 		p.SetChainState(peer.ID(i), &pb.Status{
 			FinalizedEpoch: 10,
@@ -506,7 +508,7 @@ func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) pee
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	p.Add(id, nil, network.DirUnknown, []uint64{})
+	p.Add(new(enr.Record), id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
 	return id
 }

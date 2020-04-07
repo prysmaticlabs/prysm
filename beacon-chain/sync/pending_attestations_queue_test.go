@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -38,7 +40,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound, []uint64{})
+	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
