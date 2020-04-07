@@ -179,8 +179,8 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	}, nil
 }
 
-// SubscribeCommitteeSubnet subscribes to the committee ID subnet given subscribe request.
-func (vs *Server) SubscribeCommitteeSubnet(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+// SubscribeCommitteeSubnets subscribes to the committee ID subnet given subscribe request.
+func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
 	if len(req.Slots) != len(req.CommitteeIds) && len(req.CommitteeIds) != len(req.IsAggregator) {
 		return nil, status.Error(codes.InvalidArgument, "request fields are not the same length")
 	}
