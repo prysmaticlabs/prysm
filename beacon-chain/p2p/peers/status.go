@@ -197,7 +197,7 @@ func (p *Status) Metadata(pid peer.ID) (*pb.MetaData, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	if status, ok := p.status[pid]; !ok {
+	if status, ok := p.status[pid]; ok {
 		return proto.Clone(status.metaData).(*pb.MetaData), nil
 	}
 	return nil, ErrPeerUnknown
