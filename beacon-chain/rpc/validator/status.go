@@ -184,7 +184,6 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *stateTrie.B
 func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *stateTrie.BeaconState) (uint64, error) {
 	var depositBlockSlot uint64
 	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
-	// This is the main expensive RPC call, how can this be improved?
 	if err != nil {
 		return 0, err
 	}
