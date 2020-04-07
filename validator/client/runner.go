@@ -106,11 +106,11 @@ func run(ctx context.Context, v Validator) {
 					for _, role := range roles {
 						switch role {
 						case roleAttester:
-							go v.SubmitAttestation(slotCtx, slot, id)
+							v.SubmitAttestation(slotCtx, slot, id)
 						case roleProposer:
-							go v.ProposeBlock(slotCtx, slot, id)
+							v.ProposeBlock(slotCtx, slot, id)
 						case roleAggregator:
-							go v.SubmitAggregateAndProof(slotCtx, slot, id)
+							v.SubmitAggregateAndProof(slotCtx, slot, id)
 						case roleUnknown:
 							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
 						default:
