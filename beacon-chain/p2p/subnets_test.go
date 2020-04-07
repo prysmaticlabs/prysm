@@ -7,7 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -79,14 +82,26 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		MaxPeers:            30,
 		UDPPort:             uint(port),
 	}
+	cfg.StateNotifier = &mock.MockStateNotifier{}
 	s, err := NewService(cfg)
-	s.genesisValidatorsRoot = make([]byte, 32)
-	s.genesisTime = time.Now()
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.Start()
-	defer s.Stop()
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
+	}()
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(2 * discoveryWaitTime)
@@ -128,4 +143,5 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	if err := s.Stop(); err != nil {
 		t.Fatal(err)
 	}
+	exitRoutine <- true
 }

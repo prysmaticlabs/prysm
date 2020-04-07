@@ -14,10 +14,13 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p-core/host"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var discoveryWaitTime = 1 * time.Second
@@ -182,22 +185,33 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.UDPPort = 14501
 	cfg.StaticPeers = staticPeers
 	cfg.BeaconDB = db
+	cfg.StateNotifier = &mock.MockStateNotifier{}
 	s, err := NewService(cfg)
-	s.genesisValidatorsRoot = make([]byte, 32)
-	s.genesisTime = time.Now()
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.Start()
-	defer func() {
-		if err := s.Stop(); err != nil {
-			t.Fatal(err)
-		}
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
 	}()
-
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
 	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
 	}
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	exitRoutine <- true
 }
