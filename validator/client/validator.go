@@ -127,8 +127,8 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	for {
 		select {
-		// Poll every slot to check if the node has synced.
-		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Second):
+		// Poll every half slot to check if the node has synced.
+		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch/2) * time.Second):
 			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
 				return errors.Wrap(err, "could not get sync status")
