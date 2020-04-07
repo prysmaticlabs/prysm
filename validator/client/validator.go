@@ -366,8 +366,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 					alreadySubscribed[alreadySubscribedKey] = true
 				}
 
-				subscribeSlots = append(subscribeSlots, duty.AttesterSlot)
-				subscribeCommitteeIDs = append(subscribeCommitteeIDs, duty.CommitteeIndex)
+				subscribeSlots = append(subscribeSlots, attesterSlot)
+				subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
 				subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 			}
 		}
