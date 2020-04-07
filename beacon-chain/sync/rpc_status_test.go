@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -161,6 +162,16 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 
+	p1.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'A', 'B'},
+	}
+
+	p2.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'C', 'D'},
+	}
+
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 5,
 	})
@@ -178,6 +189,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			},
 		},
 		ctx: context.Background(),
+	}
+	r2 := &Service{
+		p2p: p2,
 	}
 
 	r.Start()
@@ -207,12 +221,40 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		stream.Close()
 	})
 
+	pcl = protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
+	var wg2 sync.WaitGroup
+	wg2.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg2.Done()
+		out := new(uint64)
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+			t.Fatal(err)
+		}
+		if *out != 2 {
+			t.Fatalf("Wanted 2 but got %d as our sequence number", *out)
+		}
+		err := r2.pingHandler(context.Background(), out, stream)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stream.Close()
+	})
+
 	numInactive1 := len(p1.Peers().Inactive())
 	numActive1 := len(p1.Peers().Active())
 
 	p1.Connect(p2)
 
+	p1.Peers().Add(new(enr.Record), p2.Host.ID(), p2.Host.Addrs()[0], network.DirUnknown)
+	p1.Peers().SetMetadata(p2.Host.ID(), p2.LocalMetadata)
+
+	p2.Peers().Add(new(enr.Record), p1.Host.ID(), p1.Host.Addrs()[0], network.DirUnknown)
+	p2.Peers().SetMetadata(p1.Host.ID(), p1.LocalMetadata)
+
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+	if testutil.WaitTimeout(&wg2, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

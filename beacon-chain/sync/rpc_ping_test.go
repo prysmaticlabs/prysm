@@ -27,6 +27,11 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		Attnets:   []byte{'A', 'B'},
 	}
 
+	p2.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'C', 'D'},
+	}
+
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
@@ -35,6 +40,9 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		db:  d,
 		p2p: p1,
 	}
+
+	p1.Peers().Add(new(enr.Record), p2.Host.ID(), p2.Host.Addrs()[0], network.DirUnknown)
+	p1.Peers().SetMetadata(p2.Host.ID(), p2.LocalMetadata)
 
 	// Setup streams
 	pcl := protocol.ID("/testing")
