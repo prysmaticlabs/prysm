@@ -16,7 +16,6 @@ import (
 	noise "github.com/libp2p/go-libp2p-noise"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
