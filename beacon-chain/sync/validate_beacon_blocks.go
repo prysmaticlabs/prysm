@@ -95,12 +95,18 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
+	err = parentState.SetSlot(blk.Block.Slot)
+	if err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not set parent state slot")
+		return false
+	}
 	idx, err := helpers.BeaconProposerIndex(parentState)
 	if err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get proposer index using parent state")
 		return false
 	}
 	if blk.Block.ProposerIndex != idx {
+		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Incorrect proposer index")
 		return false
 	}
 
