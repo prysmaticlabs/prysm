@@ -47,13 +47,13 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	for _, conn := range conns {
 		nodeClient := eth.NewNodeClient(conn)
-		peersResp, err := nodeClient.ListPeers(ctx, &ptypes.Empty{})
+		nodeInfo, err := nodeClient.GetNodeInfo(ctx, &ptypes.Empty{})
 		if err != nil {
 			return err
 		}
 		expectedPeers := len(conns) - 1
-		if expectedPeers != len(peersResp.Peers) {
-			return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, len(peersResp.Peers))
+		if expectedPeers != len(nodeInfo.Peers) {
+			return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, len(nodeInfo.Peers))
 		}
 	}
 	return nil
@@ -62,11 +62,11 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 func finishedSyncing(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	syncNodeClient := eth.NewNodeClient(conn)
-	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	nodeInfo, err := syncNodeClient.GetNodeInfo(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		return err
 	}
-	if syncStatus.Syncing {
+	if nodeInfo.SyncState != eth.SyncState_SYNC_FULL {
 		return errors.New("expected node to have completed sync")
 	}
 	return nil

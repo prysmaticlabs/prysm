@@ -64,14 +64,14 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		conns[i] = conn
 		defer conn.Close()
 	}
-	nodeClient := eth.NewNodeClient(conns[0])
-	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
+	chainClient := eth.NewBeaconChainClient(conns[0])
+	chainInfo, err := chainClient.GetChainInfo(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Small offset so evaluators perform in the middle of an epoch.
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
+	genesisTime := time.Unix(chainInfo.GenesisTime.Seconds+int64(epochSeconds/2), 0)
 
 	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
