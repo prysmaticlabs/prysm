@@ -289,6 +289,9 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	v.duties = resp
+	subscribeSlots := make([]uint64, 0, len(validatingKeys))
+	subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
+	subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
 	// Only log the full assignments output on epoch start to be less verbose.
 	// Also log out on first launch so the user doesn't have to wait a whole epoch to see their assignments.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
@@ -316,13 +319,9 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				if err != nil {
 					return errors.Wrap(err, "could not check if a validator is an aggregator")
 				}
-				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
-					Slot:         duty.AttesterSlot,
-					CommitteeId:  duty.CommitteeIndex,
-					IsAggregator: aggregator,
-				}); err != nil {
-					return err
-				}
+				subscribeSlots = append(subscribeSlots, duty.AttesterSlot)
+				subscribeCommitteeIDs = append(subscribeCommitteeIDs, duty.CommitteeIndex)
+				subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 			}
 
 			log.WithFields(lFields).Info("New assignment")
@@ -343,18 +342,20 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				if err != nil {
 					return errors.Wrap(err, "could not check if a validator is an aggregator")
 				}
-				if _, err := v.validatorClient.SubscribeCommitteeSubnet(ctx, &ethpb.CommitteeSubnetSubscribeRequest{
-					Slot:         duty.AttesterSlot,
-					CommitteeId:  duty.CommitteeIndex,
-					IsAggregator: aggregator,
-				}); err != nil {
-					return err
-				}
+				subscribeSlots = append(subscribeSlots, duty.AttesterSlot)
+				subscribeCommitteeIDs = append(subscribeCommitteeIDs, duty.CommitteeIndex)
+				subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 			}
 		}
 	}
 
-	return nil
+	_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
+		Slots:        subscribeSlots,
+		CommitteeIds: subscribeCommitteeIDs,
+		IsAggregator: subscribeIsAggregator,
+	})
+
+	return err
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
