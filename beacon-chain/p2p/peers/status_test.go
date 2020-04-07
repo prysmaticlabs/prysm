@@ -8,9 +8,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"

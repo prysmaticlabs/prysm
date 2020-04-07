@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
