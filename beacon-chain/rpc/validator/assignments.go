@@ -67,7 +67,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.ValidatorIndex = idx
 				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
-				assignment.ProposerSlot = proposerIndexToSlot[idx]
+				assignment.ProposerSlots = []uint64{proposerIndexToSlot[idx]}
 				assignment.CommitteeIndex = ca.CommitteeIndex
 				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}

@@ -150,7 +150,7 @@ func (bs *Server) ListValidatorAssignments(
 			BeaconCommittees: comAssignment.Committee,
 			CommitteeIndex:   comAssignment.CommitteeIndex,
 			AttesterSlot:     comAssignment.AttesterSlot,
-			ProposerSlot:     proposerIndexToSlot[index],
+			ProposerSlots:    []uint64{proposerIndexToSlot[index]},
 			PublicKey:        pubkey[:],
 		}
 		res = append(res, assign)
@@ -211,7 +211,7 @@ func archivedValidatorCommittee(
 					BeaconCommittees: committee,
 					CommitteeIndex:   i,
 					AttesterSlot:     slot,
-					ProposerSlot:     proposerIndexToSlot[index],
+					ProposerSlots:    []uint64{proposerIndexToSlot[index]},
 				}
 			}
 		}
