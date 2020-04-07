@@ -349,15 +349,13 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		}
 	}
 
-	if _, err := v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
+	_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
 		Slots:        subscribeSlots,
 		CommitteeIds: subscribeCommitteeIDs,
 		IsAggregator: subscribeIsAggregator,
-	}); err != nil {
-		return err
-	}
+	})
 
-	return nil
+	return err
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
