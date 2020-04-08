@@ -98,21 +98,24 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[0], aggregatedAtts[0], blockAtts[0]})
+	wanted, err := helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[0], blockAtts[0]})
 	if err != nil {
 		t.Fatal(err)
 	}
-	aggregated, err := helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[1], aggregatedAtts[1], blockAtts[1]})
+	aggregated, err := helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[1], blockAtts[1]})
 	if err != nil {
 		t.Fatal(err)
 	}
 	wanted = append(wanted, aggregated...)
-	aggregated, err = helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[2], aggregatedAtts[2], blockAtts[2]})
+	aggregated, err = helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[2], blockAtts[2]})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	wanted = append(wanted, aggregated...)
+	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
+		return
+	}
 	received := s.pool.ForkchoiceAttestations()
 
 	sort.Slice(received, func(i, j int) bool {

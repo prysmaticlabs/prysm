@@ -46,8 +46,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
 
-	atts := append(s.pool.UnaggregatedAttestations(), s.pool.AggregatedAttestations()...)
-	atts = append(atts, s.pool.BlockAttestations()...)
+	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
+		return err
+	}
+	atts := append(s.pool.AggregatedAttestations(), s.pool.BlockAttestations()...)
 	atts = append(atts, s.pool.ForkchoiceAttestations()...)
 
 	// Consolidate attestations by aggregating them by similar data root.
