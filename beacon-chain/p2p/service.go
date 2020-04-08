@@ -304,6 +304,9 @@ func (s *Service) Status() error {
 	if !s.started {
 		return errors.New("not running")
 	}
+	if s.startupErr != nil {
+		return s.startupErr
+	}
 	return nil
 }
 
