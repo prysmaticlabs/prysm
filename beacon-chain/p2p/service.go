@@ -60,24 +60,25 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	beaconDB              db.Database
-	ctx                   context.Context
-	cancel                context.CancelFunc
 	started               bool
+	isPreGenesis          bool
+	pingMethod            func(ctx context.Context, id peer.ID) error
+	cancel                context.CancelFunc
 	cfg                   *Config
-	startupErr            error
-	dv5Listener           Listener
-	host                  host.Host
-	pubsub                *pubsub.PubSub
-	exclusionList         *ristretto.Cache
-	privKey               *ecdsa.PrivateKey
-	dht                   *kaddht.IpfsDHT
 	peers                 *peers.Status
+	dht                   *kaddht.IpfsDHT
+	privKey               *ecdsa.PrivateKey
+	exclusionList         *ristretto.Cache
+	metaData              *pb.MetaData
+	pubsub                *pubsub.PubSub
+	beaconDB              db.Database
+	dv5Listener           Listener
+	startupErr            error
+	stateNotifier         statefeed.Notifier
+	ctx                   context.Context
+	host                  host.Host
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
-	metaData              *pb.MetaData
-	stateNotifier         statefeed.Notifier
-	pingMethod            func(ctx context.Context, id peer.ID) error
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -98,6 +99,7 @@ func NewService(cfg *Config) (*Service, error) {
 		cancel:        cancel,
 		cfg:           cfg,
 		exclusionList: cache,
+		isPreGenesis:  true,
 	}
 
 	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -184,6 +186,7 @@ func (s *Service) Start() {
 	} else {
 		s.awaitStateInitialized()
 	}
+	s.isPreGenesis = false
 
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
@@ -295,8 +298,14 @@ func (s *Service) Stop() error {
 // Status of the p2p service. Will return an error if the service is considered unhealthy to
 // indicate that this node should not serve traffic until the issue has been resolved.
 func (s *Service) Status() error {
+	if s.isPreGenesis {
+		return nil
+	}
 	if !s.started {
 		return errors.New("not running")
+	}
+	if s.startupErr != nil {
+		return s.startupErr
 	}
 	return nil
 }
