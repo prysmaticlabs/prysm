@@ -7,6 +7,7 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func decode(data []byte, dst proto.Message) error {
@@ -17,6 +18,11 @@ func decode(data []byte, dst proto.Message) error {
 	if mm, ok := dst.(fastssz.Unmarshaler); ok {
 		return mm.UnmarshalSSZ(data)
 	}
+	switch dst.(type) {
+	case *pb.BeaconState:
+	case fastssz.Unmarshaler:
+		return dst.(fastssz.Unmarshaler).UnmarshalSSZ(data)
+	}
 	return proto.Unmarshal(data, dst)
 }
 
@@ -26,12 +32,14 @@ func encode(msg proto.Message) ([]byte, error) {
 	}
 	var enc []byte
 	var err error
-	if mm, ok := msg.(fastssz.Marshaler); ok {
-		enc, err = mm.MarshalSSZ()
+	switch msg.(type) {
+	case *pb.BeaconState:
+	case fastssz.Marshaler:
+		enc, err = msg.(fastssz.Marshaler).MarshalSSZ()
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	default:
 		enc, err = proto.Marshal(msg)
 		if err != nil {
 			return nil, err
