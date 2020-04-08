@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -191,148 +191,6 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 	}
 }
 
-func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
-	ClearCache()
-	// Initialize test with 128 validators, each slot and each index gets 2 validators.
-	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
-		Validators:  validators,
-		Slot:        params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-
-	tests := []struct {
-		index          uint64
-		slot           uint64
-		committee      []uint64
-		committeeIndex uint64
-		isProposer     bool
-		proposerSlot   uint64
-	}{
-		{
-			index:          0,
-			slot:           78,
-			committee:      []uint64{0, 38},
-			committeeIndex: 0,
-			isProposer:     false,
-		},
-		{
-			index:          1,
-			slot:           71,
-			committee:      []uint64{1, 4},
-			committeeIndex: 0,
-			isProposer:     true,
-			proposerSlot:   79,
-		},
-		{
-			index:          11,
-			slot:           90,
-			committee:      []uint64{31, 11},
-			committeeIndex: 0,
-			isProposer:     false,
-		},
-	}
-
-	for i, tt := range tests {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			committee, committeeIndex, slot, proposerSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
-			if err != nil {
-				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
-			}
-			if committeeIndex != tt.committeeIndex {
-				t.Errorf("wanted committeeIndex %d, got committeeIndex %d for validator index %d",
-					tt.committeeIndex, committeeIndex, tt.index)
-			}
-			if slot != tt.slot {
-				t.Errorf("wanted slot %d, got slot %d for validator index %d",
-					tt.slot, slot, tt.index)
-			}
-			if proposerSlot != tt.proposerSlot {
-				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
-					tt.proposerSlot, proposerSlot, tt.index)
-			}
-			if !reflect.DeepEqual(committee, tt.committee) {
-				t.Errorf("wanted committee %v, got committee %v for validator index %d",
-					tt.committee, committee, tt.index)
-			}
-			if proposerSlot != tt.proposerSlot {
-				t.Errorf("wanted proposer slot slot %d, got slot %d for validator index %d",
-					tt.slot, slot, tt.index)
-			}
-		})
-	}
-}
-
-func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
-	ClearCache()
-	validators := make([]*ethpb.Validator, 1)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
-		Validators:  validators,
-		Slot:        params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-
-	index := uint64(10000)
-	_, _, _, _, err := CommitteeAssignment(state, 1, index)
-	if err != nil && !strings.Contains(err.Error(), "not found in assignments") {
-		t.Errorf("Wanted 'not found in assignments', received %v", err)
-	}
-}
-
-// Test helpers.CommitteeAssignments against the results of helpers.CommitteeAssignment by validator
-// index. Warning: this test is a bit slow!
-func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
-	ClearCache()
-	// Initialize test with 256 validators, each slot and each index gets 4 validators.
-	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
-		Validators:  validators,
-		Slot:        params.BeaconConfig().SlotsPerEpoch,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	// Test for 2 epochs.
-	for epoch := uint64(0); epoch < 2; epoch++ {
-		state, _ := beaconstate.InitializeFromProto(state.CloneInnerState())
-		assignments, proposers, err := CommitteeAssignments(state, epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for i := uint64(0); int(i) < len(validators); i++ {
-			committee, committeeIndex, slot, proposerSlot, err := CommitteeAssignment(state, epoch, i)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(committee, assignments[i].Committee) {
-				t.Errorf("Computed different committees for validator %d", i)
-			}
-			if committeeIndex != assignments[i].CommitteeIndex {
-				t.Errorf("Computed different committee index for validator %d", i)
-			}
-			if slot != assignments[i].AttesterSlot {
-				t.Errorf("Computed different attesting slot for validator %d", i)
-			}
-			if proposerSlot != proposers[i] {
-				t.Errorf("Computed different proposing slot for validator %d", i)
-			}
-		}
-	}
-}
-
 func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
@@ -408,7 +266,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 				t.Errorf("wanted slot %d, got slot %d for validator index %d",
 					tt.slot, cac.AttesterSlot, tt.index)
 			}
-			if proposerIndexToSlot[tt.index] != tt.proposerSlot {
+			if proposerIndexToSlot[tt.index][0] != tt.proposerSlot {
 				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
 					tt.proposerSlot, proposerIndexToSlot[tt.index], tt.index)
 			}
