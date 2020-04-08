@@ -183,11 +183,10 @@ func (s *Service) Start() {
 	if genesisState != nil {
 		s.genesisTime = time.Unix(int64(genesisState.GenesisTime()), 0)
 		s.genesisValidatorsRoot = genesisState.GenesisValidatorRoot()
-		s.isPreGenesis = false
 	} else {
 		s.awaitStateInitialized()
-		s.isPreGenesis = false
 	}
+	s.isPreGenesis = false
 
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
