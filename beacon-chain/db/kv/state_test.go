@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestState_CanSaveRetrieve(t *testing.T) {
@@ -293,7 +294,7 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	s0 := &pb.BeaconState{Slot: 1}
+	s0 := initializeBeaconState(0)
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, _ := ssz.HashTreeRoot(b.Block)
 	if err := db.SaveBlock(context.Background(), b); err != nil {
@@ -307,7 +308,7 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s1 := &pb.BeaconState{Slot: 999}
+	s1 := initializeBeaconState(999)
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 999}}
 	r1, _ := ssz.HashTreeRoot(b.Block)
 	if err := db.SaveBlock(context.Background(), b); err != nil {
@@ -329,7 +330,7 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s1)
 	}
 
-	s2 := &pb.BeaconState{Slot: 1000}
+	s2 := initializeBeaconState(1000)
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
 	r2, _ := ssz.HashTreeRoot(b.Block)
 	if err := db.SaveBlock(context.Background(), b); err != nil {
@@ -497,5 +498,18 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	}
 	if !proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s0)
+	}
+}
+
+func initializeBeaconState(slot uint64) *pb.BeaconState {
+	return &pb.BeaconState{
+		Slot:                      slot,
+		GenesisValidatorsRoot:     make([]byte, 32),
+		BlockRoots:                make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		StateRoots:                make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Slashings:                 make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		PreviousEpochAttestations: make([]*pb.PendingAttestation, 0, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch),
+		CurrentEpochAttestations:  make([]*pb.PendingAttestation, 0, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch),
 	}
 }

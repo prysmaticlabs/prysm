@@ -15,12 +15,7 @@ func decode(data []byte, dst proto.Message) error {
 	if err != nil {
 		return err
 	}
-	if mm, ok := dst.(fastssz.Unmarshaler); ok {
-		return mm.UnmarshalSSZ(data)
-	}
-	switch dst.(type) {
-	case *pb.BeaconState:
-	case fastssz.Unmarshaler:
+	if isWhitelisted(dst) {
 		return dst.(fastssz.Unmarshaler).UnmarshalSSZ(data)
 	}
 	return proto.Unmarshal(data, dst)
@@ -32,18 +27,25 @@ func encode(msg proto.Message) ([]byte, error) {
 	}
 	var enc []byte
 	var err error
-	switch msg.(type) {
-	case *pb.BeaconState:
-	case fastssz.Marshaler:
+	if isWhitelisted(msg) {
 		enc, err = msg.(fastssz.Marshaler).MarshalSSZ()
 		if err != nil {
 			return nil, err
 		}
-	default:
+	} else {
 		enc, err = proto.Marshal(msg)
 		if err != nil {
 			return nil, err
 		}
 	}
 	return snappy.Encode(nil, enc), nil
+}
+
+func isWhitelisted(obj interface{}) bool {
+	switch obj.(type) {
+	case *pb.BeaconState:
+		return true
+	default:
+		return false
+	}
 }
