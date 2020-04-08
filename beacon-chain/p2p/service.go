@@ -78,6 +78,7 @@ type Service struct {
 	metaData              *pb.MetaData
 	stateNotifier         statefeed.Notifier
 	pingMethod            func(ctx context.Context, id peer.ID) error
+	isPreGenesis          bool // Variable determining if the chain is pre-genesis.
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -98,6 +99,7 @@ func NewService(cfg *Config) (*Service, error) {
 		cancel:        cancel,
 		cfg:           cfg,
 		exclusionList: cache,
+		isPreGenesis:  true,
 	}
 
 	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -181,8 +183,10 @@ func (s *Service) Start() {
 	if genesisState != nil {
 		s.genesisTime = time.Unix(int64(genesisState.GenesisTime()), 0)
 		s.genesisValidatorsRoot = genesisState.GenesisValidatorRoot()
+		s.isPreGenesis = false
 	} else {
 		s.awaitStateInitialized()
+		s.isPreGenesis = false
 	}
 
 	var peersToWatch []string
@@ -295,6 +299,9 @@ func (s *Service) Stop() error {
 // Status of the p2p service. Will return an error if the service is considered unhealthy to
 // indicate that this node should not serve traffic until the issue has been resolved.
 func (s *Service) Status() error {
+	if s.isPreGenesis {
+		return nil
+	}
 	if !s.started {
 		return errors.New("not running")
 	}
