@@ -58,6 +58,7 @@ type PeerManager interface {
 	PeerID() peer.ID
 	RefreshENR(epoch uint64)
 	FindPeersWithSubnet(index uint64) (bool, error)
+	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
 }
 
 // Sender abstracts the sending functionality from libp2p.

@@ -33,6 +33,10 @@ func (r *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	if err != nil {
 		return nil, err
 	}
+	// we close the stream outside of `send` because
+	// metadata requests send no payload, so closing the
+	// stream early leads it to a reset.
+	defer stream.Close()
 	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
 	if err != nil {
 		return nil, err

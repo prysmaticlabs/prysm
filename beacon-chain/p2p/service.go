@@ -77,6 +77,7 @@ type Service struct {
 	genesisValidatorsRoot []byte
 	metaData              *pb.MetaData
 	stateNotifier         statefeed.Notifier
+	pingMethod            func(ctx context.Context, id peer.ID) error
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -383,6 +384,8 @@ func (s *Service) RefreshENR(epoch uint64) {
 		return
 	}
 	s.updateSubnetRecordWithMetadata(bitV)
+	// ping all peers to inform them of new metadata
+	s.pingPeers()
 }
 
 // FindPeersWithSubnet performs a network search for peers
@@ -427,6 +430,25 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		}
 	}
 	return exists, nil
+}
+
+// AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can
+// be used to refresh ENR.
+func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+	s.pingMethod = reqFunc
+}
+
+func (s *Service) pingPeers() {
+	if s.pingMethod == nil {
+		return
+	}
+	for _, pid := range s.peers.Connected() {
+		go func(id peer.ID) {
+			if err := s.pingMethod(s.ctx, id); err != nil {
+				log.WithField("peer", id).WithError(err).Error("Failed to ping peer")
+			}
+		}(pid)
+	}
 }
 
 // Waits for the beacon state to be initialized, important
