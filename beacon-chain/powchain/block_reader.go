@@ -78,14 +78,14 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	if exists, blkInfo, err := s.blockCache.BlockInfoByHeight(height); exists || err != nil {
-		if err != nil {
-			return 0, err
-		}
-		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
-		return blkInfo.Number.Uint64(), nil
-	}
-	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
+	//if exists, blkInfo, err := s.blockCache.BlockInfoByHeight(height); exists || err != nil {
+	//	if err != nil {
+	//		return 0, err
+	//	}
+	//	span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+	//	return blkInfo.Number.Uint64(), nil
+	//}
+	//span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := s.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not query block with given height")
@@ -97,7 +97,6 @@ func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint6
 // This is a naive implementation that will use O(ETH1_FOLLOW_DISTANCE) calls to cache
 // or ETH1. This is called for multiple times but only changes every
 // SlotsPerEth1VotingPeriod (1024 slots) so the whole method should be cached.
-// How should caching the whole method be done?
 func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockNumberByTimestamp")
 	defer span.End()
@@ -122,9 +121,6 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 			if !exists {
 				blk, err := s.blockFetcher.BlockByNumber(ctx, bn)
 				if err != nil {
-					return nil, err
-				}
-				if err := s.blockCache.AddBlock(blk); err != nil {
 					return nil, err
 				}
 				info = blockToBlockInfo(blk)
