@@ -385,7 +385,7 @@ func (s *Service) waitForConnection() {
 		}).Info("Connected to eth1 proof-of-work chain")
 		return
 	}
-	log.WithError(err).Error("Could not connect to powchain endpoint")
+	//log.WithError(err).Error("Could not connect to powchain endpoint")
 	ticker := time.NewTicker(backOffPeriod)
 	for {
 		select {
@@ -399,7 +399,7 @@ func (s *Service) waitForConnection() {
 				ticker.Stop()
 				return
 			}
-			log.WithError(err).Error("Could not connect to powchain endpoint")
+			//log.WithError(err).Error("Could not connect to powchain endpoint")
 		case <-s.ctx.Done():
 			ticker.Stop()
 			log.Debug("Received cancelled context,closing existing powchain service")
