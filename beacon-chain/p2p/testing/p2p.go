@@ -263,3 +263,8 @@ func (p *TestP2P) Metadata() *pb.MetaData {
 func (p *TestP2P) MetadataSeq() uint64 {
 	return p.LocalMetadata.SeqNumber
 }
+
+// // AddPingMethod mocks the p2p func.
+func (p *TestP2P) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+	// no-op
+}
