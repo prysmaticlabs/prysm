@@ -94,7 +94,7 @@ func (r *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
 		return false, err
 	}
 	if md == nil {
-		return false, nil
+		return true, nil
 	}
 	if md.SeqNumber != seq {
 		return true, nil
