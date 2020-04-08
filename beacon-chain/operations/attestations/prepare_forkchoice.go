@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -68,10 +67,6 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 			return err
 		}
 		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
-	}
-
-	for _, attestations := range attsByDataRoot {
-		fmt.Println(attestations[0].Data.Slot, attestations[0].Data.CommitteeIndex, len(attestations), attestations[0].AggregationBits.Count())
 	}
 
 	for _, atts := range attsByDataRoot {
