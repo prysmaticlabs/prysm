@@ -22,11 +22,11 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	if !ok {
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
-	changed, err := r.validateSequenceNum(*m, stream.Conn().RemotePeer())
+	valid, err := r.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		return err
 	}
-	if changed {
+	if !valid {
 		// send metadata request in a new routine and stream.
 		go func() {
 			md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
@@ -69,12 +69,12 @@ func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return err
 	}
-	changed, err := r.validateSequenceNum(*msg, stream.Conn().RemotePeer())
+	valid, err := r.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return err
 	}
-	if !changed {
+	if valid {
 		return nil
 	}
 	md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
@@ -94,10 +94,10 @@ func (r *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
 		return false, err
 	}
 	if md == nil {
-		return true, nil
+		return false, nil
 	}
 	if md.SeqNumber != seq {
-		return true, nil
+		return false, nil
 	}
-	return false, nil
+	return true, nil
 }
