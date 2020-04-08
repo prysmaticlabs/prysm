@@ -67,6 +67,7 @@ type Service struct {
 	cfg                   *Config
 	startupErr            error
 	dv5Listener           Listener
+	isPreGenesis          bool // Variable determining if the chain is pre-genesis.
 	host                  host.Host
 	pubsub                *pubsub.PubSub
 	exclusionList         *ristretto.Cache
@@ -78,7 +79,6 @@ type Service struct {
 	metaData              *pb.MetaData
 	stateNotifier         statefeed.Notifier
 	pingMethod            func(ctx context.Context, id peer.ID) error
-	isPreGenesis          bool // Variable determining if the chain is pre-genesis.
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
