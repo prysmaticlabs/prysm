@@ -60,25 +60,25 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	beaconDB              db.Database
-	ctx                   context.Context
-	cancel                context.CancelFunc
 	started               bool
-	cfg                   *Config
-	startupErr            error
-	dv5Listener           Listener
 	isPreGenesis          bool // Variable determining if the chain is pre-genesis.
-	host                  host.Host
-	pubsub                *pubsub.PubSub
-	exclusionList         *ristretto.Cache
-	privKey               *ecdsa.PrivateKey
-	dht                   *kaddht.IpfsDHT
+	pingMethod            func(ctx context.Context, id peer.ID) error
+	cancel                context.CancelFunc
+	cfg                   *Config
 	peers                 *peers.Status
+	dht                   *kaddht.IpfsDHT
+	privKey               *ecdsa.PrivateKey
+	exclusionList         *ristretto.Cache
+	metaData              *pb.MetaData
+	pubsub                *pubsub.PubSub
+	beaconDB              db.Database
+	dv5Listener           Listener
+	startupErr            error
+	stateNotifier         statefeed.Notifier
+	ctx                   context.Context
+	host                  host.Host
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
-	metaData              *pb.MetaData
-	stateNotifier         statefeed.Notifier
-	pingMethod            func(ctx context.Context, id peer.ID) error
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
