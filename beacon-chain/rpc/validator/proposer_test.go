@@ -1196,6 +1196,8 @@ func TestEth1Data(t *testing.T) {
 }
 
 func TestEth1Data_Caches(t *testing.T) {
+	cachedEth1Data = nil
+	cachedEth1VotingStartTime = 0
 	slot := uint64(10000)
 	slot2 := uint64(12000)
 
@@ -1217,10 +1219,6 @@ func TestEth1Data_Caches(t *testing.T) {
 		Eth1InfoFetcher:   p,
 		Eth1BlockFetcher:  p,
 		DepositFetcher:    depositcache.NewDepositCache(),
-	}
-
-	if cachedEth1Data != nil {
-		t.Fatal("Expected cached eth1data to be nil")
 	}
 
 	ctx := context.Background()
