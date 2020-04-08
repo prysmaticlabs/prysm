@@ -78,14 +78,14 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	//if exists, blkInfo, err := s.blockCache.BlockInfoByHeight(height); exists || err != nil {
-	//	if err != nil {
-	//		return 0, err
-	//	}
-	//	span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
-	//	return blkInfo.Number.Uint64(), nil
-	//}
-	//span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
+	if exists, blkInfo, err := s.blockCache.BlockInfoByHeight(height); exists || err != nil {
+		if err != nil {
+			return 0, err
+		}
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return blkInfo.Time, nil
+	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := s.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not query block with given height")
