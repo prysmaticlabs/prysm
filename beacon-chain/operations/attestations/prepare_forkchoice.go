@@ -47,8 +47,10 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
 
-	atts := append(s.pool.UnaggregatedAttestations(), s.pool.AggregatedAttestations()...)
-	atts = append(atts, s.pool.BlockAttestations()...)
+	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
+		return err
+	}
+	atts := append(s.pool.AggregatedAttestations(), s.pool.BlockAttestations()...)
 	atts = append(atts, s.pool.ForkchoiceAttestations()...)
 
 	// Consolidate attestations by aggregating them by similar data root.
@@ -69,17 +71,13 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	}
 
 	for _, attestations := range attsByDataRoot {
-		fmt.Println(attestations[0].Data.Slot, attestations[0].Data.CommitteeIndex, len(attestations))
+		fmt.Println(attestations[0].Data.Slot, attestations[0].Data.CommitteeIndex, len(attestations), attestations[0].AggregationBits.Count())
 	}
 
 	for _, atts := range attsByDataRoot {
 		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
 		}
-	}
-
-	if err := s.pool.DeleteUnaggregatedAttestations(s.pool.UnaggregatedAttestations()); err != nil {
-		return err
 	}
 
 	for _, a := range s.pool.BlockAttestations() {
