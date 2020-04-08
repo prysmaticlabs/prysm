@@ -61,6 +61,8 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 	// Avoid sending beacon node duplicated aggregation requests.
 	k := validatorSubscribeKey(slot, duty.CommitteeIndex)
+	v.aggregatedSlotCommitteeIDCacheLock.Lock()
+	defer v.aggregatedSlotCommitteeIDCacheLock.Unlock()
 	if v.aggregatedSlotCommitteeIDCache.Contains(k) {
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -26,12 +27,19 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	m := &mocks{
 		validatorClient: internal.NewMockBeaconNodeValidatorClient(ctrl),
 	}
+
+	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	validator := &validator{
-		db:              valDB,
-		validatorClient: m.validatorClient,
-		keyManager:      testKeyManager,
-		graffiti:        []byte{},
-		attLogs:         make(map[[32]byte]*attSubmitted),
+		db:                             valDB,
+		validatorClient:                m.validatorClient,
+		keyManager:                     testKeyManager,
+		graffiti:                       []byte{},
+		attLogs:                        make(map[[32]byte]*attSubmitted),
+		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 	}
 
 	return validator, m, ctrl.Finish

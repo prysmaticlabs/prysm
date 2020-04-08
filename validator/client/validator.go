@@ -42,23 +42,24 @@ const (
 )
 
 type validator struct {
-	genesisTime                    uint64
-	ticker                         *slotutil.SlotTicker
-	db                             *db.Store
-	duties                         *ethpb.DutiesResponse
-	validatorClient                ethpb.BeaconNodeValidatorClient
-	beaconClient                   ethpb.BeaconChainClient
-	graffiti                       []byte
-	node                           ethpb.NodeClient
-	keyManager                     keymanager.KeyManager
-	prevBalance                    map[[48]byte]uint64
-	logValidatorBalances           bool
-	emitAccountMetrics             bool
-	attLogs                        map[[32]byte]*attSubmitted
-	attLogsLock                    sync.Mutex
-	domainDataLock                 sync.Mutex
-	domainDataCache                *ristretto.Cache
-	aggregatedSlotCommitteeIDCache *lru.Cache
+	genesisTime                        uint64
+	ticker                             *slotutil.SlotTicker
+	db                                 *db.Store
+	duties                             *ethpb.DutiesResponse
+	validatorClient                    ethpb.BeaconNodeValidatorClient
+	beaconClient                       ethpb.BeaconChainClient
+	graffiti                           []byte
+	node                               ethpb.NodeClient
+	keyManager                         keymanager.KeyManager
+	prevBalance                        map[[48]byte]uint64
+	logValidatorBalances               bool
+	emitAccountMetrics                 bool
+	attLogs                            map[[32]byte]*attSubmitted
+	attLogsLock                        sync.Mutex
+	domainDataLock                     sync.Mutex
+	domainDataCache                    *ristretto.Cache
+	aggregatedSlotCommitteeIDCache     *lru.Cache
+	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(
