@@ -9,6 +9,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var cachedEth1VotingStartTime uint64
+var cachedEth1DataBlockHeight *big.Int
+
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
@@ -85,34 +88,38 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockNumberByTimestamp")
 	defer span.End()
 
-	head, err := s.blockFetcher.BlockByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	for bn := head.Number(); ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		exists, info, err := s.blockCache.BlockInfoByHeight(bn)
+	if time != cachedEth1VotingStartTime || cachedEth1DataBlockHeight == nil {
+		head, err := s.blockFetcher.BlockByNumber(ctx, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		if !exists {
-			blk, err := s.blockFetcher.BlockByNumber(ctx, bn)
+		for bn := head.Number(); ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+
+			exists, info, err := s.blockCache.BlockInfoByHeight(bn)
 			if err != nil {
 				return nil, err
 			}
-			if err := s.blockCache.AddBlock(blk); err != nil {
-				return nil, err
-			}
-			info = blockToBlockInfo(blk)
-		}
 
-		if info.Time <= time {
-			return info.Number, nil
+			if !exists {
+				blk, err := s.blockFetcher.BlockByNumber(ctx, bn)
+				if err != nil {
+					return nil, err
+				}
+				if err := s.blockCache.AddBlock(blk); err != nil {
+					return nil, err
+				}
+				info = blockToBlockInfo(blk)
+			}
+
+			if info.Time <= time {
+				cachedEth1VotingStartTime = time
+				cachedEth1DataBlockHeight = info.Number
+			}
 		}
 	}
+	return cachedEth1DataBlockHeight, nil
 }

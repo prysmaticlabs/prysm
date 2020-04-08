@@ -1195,45 +1195,6 @@ func TestEth1Data(t *testing.T) {
 	}
 }
 
-func TestEth1Data_Caches(t *testing.T) {
-	cachedEth1Data = nil
-	cachedEth1VotingStartTime = 0
-	slot := uint64(10000)
-	slot2 := uint64(12000)
-
-	p := &mockPOW.POWChain{
-		BlockNumberByHeight: map[uint64]*big.Int{
-			slot * params.BeaconConfig().SecondsPerSlot:  big.NewInt(4096),
-			slot2 * params.BeaconConfig().SecondsPerSlot: big.NewInt(10046),
-		},
-		HashesByHeight: map[int][]byte{
-			4080:  []byte("4080"),
-			10030: []byte("10030"),
-		},
-		Eth1Data: &ethpb.Eth1Data{
-			DepositCount: 55,
-		},
-	}
-	ps := &Server{
-		ChainStartFetcher: p,
-		Eth1InfoFetcher:   p,
-		Eth1BlockFetcher:  p,
-		DepositFetcher:    depositcache.NewDepositCache(),
-	}
-
-	ctx := context.Background()
-	eth1Data, err := ps.eth1Data(ctx, slot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(cachedEth1Data, eth1Data) {
-		t.Error("Expected cache to update")
-	}
-	if eth1Data.DepositCount != 55 {
-		t.Error("Expected deposit count to be 55")
-	}
-}
-
 func TestEth1Data_MockEnabled(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)

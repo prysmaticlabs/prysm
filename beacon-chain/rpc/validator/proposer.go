@@ -29,8 +29,6 @@ import (
 
 // eth1DataNotification is a latch to stop flooding logs with the same warning.
 var eth1DataNotification bool
-var cachedEth1VotingStartTime uint64
-var cachedEth1Data *ethpb.Eth1Data
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
@@ -158,20 +156,17 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	eth1VotingPeriodStartTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
 
-	if eth1VotingPeriodStartTime != cachedEth1VotingStartTime || cachedEth1Data == nil {
-		cachedEth1VotingStartTime = eth1VotingPeriodStartTime
-		// Look up most recent block up to timestamp
-		blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get block number from timestamp")
-		}
-		cachedEth1Data, err = vs.defaultEth1DataResponse(ctx, blockNumber)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get eth1 data from block number")
-		}
+	// Look up most recent block up to timestamp
+	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block number from timestamp")
+	}
+	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get eth1 data from block number")
 	}
 
-	return cachedEth1Data, nil
+	return eth1Data, nil
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
