@@ -15,6 +15,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -41,22 +42,23 @@ const (
 )
 
 type validator struct {
-	genesisTime          uint64
-	ticker               *slotutil.SlotTicker
-	db                   *db.Store
-	duties               *ethpb.DutiesResponse
-	validatorClient      ethpb.BeaconNodeValidatorClient
-	beaconClient         ethpb.BeaconChainClient
-	graffiti             []byte
-	node                 ethpb.NodeClient
-	keyManager           keymanager.KeyManager
-	prevBalance          map[[48]byte]uint64
-	logValidatorBalances bool
-	emitAccountMetrics   bool
-	attLogs              map[[32]byte]*attSubmitted
-	attLogsLock          sync.Mutex
-	domainDataLock       sync.Mutex
-	domainDataCache      *ristretto.Cache
+	genesisTime                    uint64
+	ticker                         *slotutil.SlotTicker
+	db                             *db.Store
+	duties                         *ethpb.DutiesResponse
+	validatorClient                ethpb.BeaconNodeValidatorClient
+	beaconClient                   ethpb.BeaconChainClient
+	graffiti                       []byte
+	node                           ethpb.NodeClient
+	keyManager                     keymanager.KeyManager
+	prevBalance                    map[[48]byte]uint64
+	logValidatorBalances           bool
+	emitAccountMetrics             bool
+	attLogs                        map[[32]byte]*attSubmitted
+	attLogsLock                    sync.Mutex
+	domainDataLock                 sync.Mutex
+	domainDataCache                *ristretto.Cache
+	aggregatedSlotCommitteeIDCache *lru.Cache
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(
