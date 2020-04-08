@@ -61,7 +61,7 @@ const maxBadResponses = 3
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
 	started               bool
-	isPreGenesis          bool // Variable determining if the chain is pre-genesis.
+	isPreGenesis          bool
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
 	cfg                   *Config
