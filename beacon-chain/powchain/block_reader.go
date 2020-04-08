@@ -6,11 +6,25 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.opencensus.io/trace"
 )
 
 var cachedEth1VotingStartTime uint64
 var cachedEth1DataBlockHeight *big.Int
+
+var (
+	// Metrics
+	votingBlockHeightCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_voting_height_cache_miss",
+		Help: "The number of voting block height requests that aren't present in the cache.",
+	})
+	votingBlockHeightCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_voting_height_cache_hit",
+		Help: "The number of voting block height requests that are present in the cache.",
+	})
+)
 
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
@@ -89,6 +103,7 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	defer span.End()
 
 	if time != cachedEth1VotingStartTime || cachedEth1DataBlockHeight == nil {
+		votingBlockHeightCacheMiss.Inc()
 		head, err := s.blockFetcher.BlockByNumber(ctx, nil)
 		if err != nil {
 			return nil, err
@@ -118,8 +133,11 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 			if info.Time <= time {
 				cachedEth1VotingStartTime = time
 				cachedEth1DataBlockHeight = info.Number
+				return cachedEth1DataBlockHeight, nil
 			}
 		}
+	} else {
+		votingBlockHeightCacheHit.Inc()
 	}
 	return cachedEth1DataBlockHeight, nil
 }
