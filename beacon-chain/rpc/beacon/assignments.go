@@ -104,21 +104,13 @@ func (bs *Server) ListValidatorAssignments(
 	// initialize all committee related data.
 	committeeAssignments := map[uint64]*helpers.CommitteeAssignmentContainer{}
 	proposerIndexToSlots := make(map[uint64][]uint64)
-	archivedInfo := &pb.ArchivedCommitteeInfo{}
-	archivedBalances := make([]uint64, 0)
-	archivedAssignments := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
 
 	if shouldFetchFromArchive {
-		archivedInfo, archivedBalances, err = bs.archivedCommitteeData(ctx, requestedEpoch)
+		historicalState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
 		}
-		archivedAssignments, err = archivedValidatorCommittee(
-			requestedEpoch,
-			archivedInfo,
-			activeIndices,
-			archivedBalances,
-		)
+		committeeAssignments, proposerIndexToSlots, err = helpers.CommitteeAssignments(historicalState, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve archived assignment for epoch %d: %v", requestedEpoch, err)
 		}
@@ -133,16 +125,6 @@ func (bs *Server) ListValidatorAssignments(
 		if int(index) >= headState.NumValidators() {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, headState.NumValidators())
-		}
-		if shouldFetchFromArchive {
-			assignment, ok := archivedAssignments[index]
-			if !ok {
-				return nil, status.Errorf(codes.Internal, "Could not get archived committee assignment for index %d", index)
-			}
-			pubkey := headState.PubkeyAtIndex(index)
-			assignment.PublicKey = pubkey[:]
-			res = append(res, assignment)
-			continue
 		}
 		comAssignment := committeeAssignments[index]
 		pubkey := headState.PubkeyAtIndex(index)
