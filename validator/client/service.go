@@ -9,12 +9,14 @@ import (
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
@@ -164,18 +166,24 @@ func (v *ValidatorService) Start() {
 		panic(err)
 	}
 
+	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
+	if err != nil {
+		log.Errorf("Could not initialize cache: %v", err)
+		return
+	}
 	v.validator = &validator{
-		db:                   valDB,
-		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
-		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
-		node:                 ethpb.NewNodeClient(v.conn),
-		keyManager:           v.keyManager,
-		graffiti:             v.graffiti,
-		logValidatorBalances: v.logValidatorBalances,
-		emitAccountMetrics:   v.emitAccountMetrics,
-		prevBalance:          make(map[[48]byte]uint64),
-		attLogs:              make(map[[32]byte]*attSubmitted),
-		domainDataCache:      cache,
+		db:                             valDB,
+		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
+		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
+		node:                           ethpb.NewNodeClient(v.conn),
+		keyManager:                     v.keyManager,
+		graffiti:                       v.graffiti,
+		logValidatorBalances:           v.logValidatorBalances,
+		emitAccountMetrics:             v.emitAccountMetrics,
+		prevBalance:                    make(map[[48]byte]uint64),
+		attLogs:                        make(map[[32]byte]*attSubmitted),
+		domainDataCache:                cache,
+		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 	}
 	go run(v.ctx, v.validator)
 }
