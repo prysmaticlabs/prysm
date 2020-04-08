@@ -1234,20 +1234,6 @@ func TestEth1Data_Caches(t *testing.T) {
 	if eth1Data.DepositCount != 55 {
 		t.Error("Expected deposit count to be 55")
 	}
-
-	eth1Data2, err := ps.eth1Data(ctx, slot2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if proto.Equal(eth1Data, eth1Data2) {
-		t.Error("Expected eth1data to be different")
-	}
-	if !proto.Equal(cachedEth1Data, eth1Data2) {
-		t.Error("Expected cache to update")
-	}
-	if eth1Data2.DepositCount != 55 {
-		t.Error("Expected deposit count to be 55")
-	}
 }
 
 func TestEth1Data_MockEnabled(t *testing.T) {
