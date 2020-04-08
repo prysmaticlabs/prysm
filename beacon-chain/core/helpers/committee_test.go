@@ -253,7 +253,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearCache()
-			validatorIndexToCommittee, proposerIndexToSlot, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
+			validatorIndexToCommittee, proposerIndexToSlots, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
 			if err != nil {
 				t.Fatalf("failed to determine CommitteeAssignments: %v", err)
 			}
@@ -266,9 +266,9 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 				t.Errorf("wanted slot %d, got slot %d for validator index %d",
 					tt.slot, cac.AttesterSlot, tt.index)
 			}
-			if proposerIndexToSlot[tt.index][0] != tt.proposerSlot {
+			if len(proposerIndexToSlots[tt.index]) > 0 && proposerIndexToSlots[tt.index][0] != tt.proposerSlot {
 				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
-					tt.proposerSlot, proposerIndexToSlot[tt.index], tt.index)
+					tt.proposerSlot, proposerIndexToSlots[tt.index][0], tt.index)
 			}
 			if !reflect.DeepEqual(cac.Committee, tt.committee) {
 				t.Errorf("wanted committee %v, got committee %v for validator index %d",
