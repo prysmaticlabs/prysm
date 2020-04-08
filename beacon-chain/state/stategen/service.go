@@ -12,8 +12,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const archivedInterval = 256
-
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
@@ -40,7 +38,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		hotStateCache:           cache.NewHotStateCache(),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
-		slotsPerArchivedPoint:   archivedInterval,
+		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
 	}
 }
