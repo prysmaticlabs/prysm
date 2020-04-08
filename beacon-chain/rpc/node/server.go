@@ -160,7 +160,7 @@ func (ns *Server) calculateSyncState(ctx context.Context) ethpb.SyncState {
 	if err == nil {
 		currentEpoch := uint64(roughtime.Now().Unix()-ns.GenesisTimeFetcher.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 		syncedEpoch := helpers.CurrentEpoch(headState)
-		if syncedEpoch < currentEpoch-1 {
+		if currentEpoch > 0 && syncedEpoch < currentEpoch-1 {
 			return ethpb.SyncState_SYNC_INACTIVE
 		}
 		return ethpb.SyncState_SYNC_FULL

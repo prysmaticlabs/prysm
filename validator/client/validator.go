@@ -182,7 +182,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 			if nodeInfo.SyncState == ethpb.SyncState_SYNC_FULL {
 				return nil
 			}
-			log.Info("Waiting for beacon node to sync to latest chain head")
+			log.WithField("syncstate", nodeInfo.SyncState).Info("Waiting for beacon node to sync to latest chain head")
 		case <-ctx.Done():
 			return errors.New("context has been canceled, exiting goroutine")
 		}
