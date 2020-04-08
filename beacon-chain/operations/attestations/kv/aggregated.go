@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // AggregateUnaggregatedAttestations aggregates the unaggregated attestations and save the
@@ -37,7 +36,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 			if helpers.IsAggregated(att) {
 				aggregatedAtts = append(aggregatedAtts, att)
 			} else {
-				h, err := hashutil.HashProto(att)
+				h, err := ssz.HashTreeRoot(att)
 				if err != nil {
 					return err
 				}
@@ -51,7 +50,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 
 	// Remove the unaggregated attestations from the pool that were successfully aggregated.
 	for _, att := range unaggregatedAtts {
-		h, err := hashutil.HashProto(att)
+		h, err := ssz.HashTreeRoot(att)
 		if err != nil {
 			return err
 		}
