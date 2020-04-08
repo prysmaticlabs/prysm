@@ -307,7 +307,7 @@ index ece6613..f396a77 100644
 +    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
-index 8ee263b..60607de 100644
+index 51ffa20..29e1f89 100644
 --- a/eth/v1alpha1/beacon_chain.proto
 +++ b/eth/v1alpha1/beacon_chain.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -438,7 +438,7 @@ index 8ee263b..60607de 100644
      // Validator indicies to filter assignments for the given epoch.
      repeated uint64 indices = 4;
 @@ -710,7 +710,7 @@ message ValidatorAssignments {
-         uint64 proposer_slot = 4;
+         repeated uint64 proposer_slots = 4;
  
          // 48 byte BLS public key.
 -        bytes public_key = 5;
@@ -447,7 +447,7 @@ index 8ee263b..60607de 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index 3bc824b..53cd49b 100644
+index 4a64f89..e55e6c8 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -495,7 +495,7 @@ index 3bc824b..53cd49b 100644
  
  message DutiesResponse {
 @@ -301,7 +302,7 @@ message DutiesResponse {
-         uint64 proposer_slot = 4;
+         repeated uint64 proposer_slots = 4;
  
          // 48 byte BLS public key for the validator who's assigned to perform a duty.
 -        bytes public_key = 5;

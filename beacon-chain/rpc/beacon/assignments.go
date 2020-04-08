@@ -103,9 +103,9 @@ func (bs *Server) ListValidatorAssignments(
 
 	// initialize all committee related data.
 	committeeAssignments := map[uint64]*helpers.CommitteeAssignmentContainer{}
-	proposerIndexToSlot := map[uint64]uint64{}
+	proposerIndexToSlots := make(map[uint64][]uint64)
 	archivedInfo := &pb.ArchivedCommitteeInfo{}
-	archivedBalances := []uint64{}
+	archivedBalances := make([]uint64, 0)
 	archivedAssignments := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
 
 	if shouldFetchFromArchive {
@@ -123,7 +123,7 @@ func (bs *Server) ListValidatorAssignments(
 			return nil, status.Errorf(codes.Internal, "Could not retrieve archived assignment for epoch %d: %v", requestedEpoch, err)
 		}
 	} else {
-		committeeAssignments, proposerIndexToSlot, err = helpers.CommitteeAssignments(headState, requestedEpoch)
+		committeeAssignments, proposerIndexToSlots, err = helpers.CommitteeAssignments(headState, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 		}
@@ -150,7 +150,7 @@ func (bs *Server) ListValidatorAssignments(
 			BeaconCommittees: comAssignment.Committee,
 			CommitteeIndex:   comAssignment.CommitteeIndex,
 			AttesterSlot:     comAssignment.AttesterSlot,
-			ProposerSlot:     proposerIndexToSlot[index],
+			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        pubkey[:],
 		}
 		res = append(res, assign)
@@ -176,7 +176,7 @@ func archivedValidatorCommittee(
 	attesterSeed := bytesutil.ToBytes32(archivedInfo.AttesterSeed)
 
 	startSlot := helpers.StartSlot(epoch)
-	proposerIndexToSlot := make(map[uint64]uint64)
+	proposerIndexToSlots := make(map[uint64][]uint64)
 	activeVals := make([]*ethpb.Validator, len(archivedBalances))
 	for i, bal := range archivedBalances {
 		activeVals[i] = &ethpb.Validator{EffectiveBalance: bal}
@@ -189,7 +189,7 @@ func archivedValidatorCommittee(
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not check proposer at slot %d", slot)
 		}
-		proposerIndexToSlot[i] = slot
+		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
 	}
 
 	assignmentMap := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
@@ -211,7 +211,7 @@ func archivedValidatorCommittee(
 					BeaconCommittees: committee,
 					CommitteeIndex:   i,
 					AttesterSlot:     slot,
-					ProposerSlot:     proposerIndexToSlot[index],
+					ProposerSlots:    proposerIndexToSlots[index],
 				}
 			}
 		}

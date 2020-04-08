@@ -317,8 +317,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				attesterSlot := duty.AttesterSlot
 				committeeIndex := duty.CommitteeIndex
 
-				if duty.ProposerSlot > 0 {
-					lFields["proposerSlot"] = duty.ProposerSlot
+				if len(duty.ProposerSlots) > 0 {
+					lFields["proposerSlots"] = duty.ProposerSlots
 				}
 				lFields["attesterSlot"] = attesterSlot
 
@@ -396,8 +396,13 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 		if duty == nil {
 			continue
 		}
-		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
-			roles = append(roles, roleProposer)
+		if len(duty.ProposerSlots) > 0 {
+			for _, proposerSlot := range duty.ProposerSlots {
+				if proposerSlot != 0 && proposerSlot == slot {
+					roles = append(roles, roleProposer)
+					break
+				}
+			}
 		}
 		if duty.AttesterSlot == slot {
 			roles = append(roles, roleAttester)

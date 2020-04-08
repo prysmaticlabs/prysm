@@ -33,7 +33,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
-	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -67,7 +67,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.ValidatorIndex = idx
 				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
-				assignment.ProposerSlot = proposerIndexToSlot[idx]
+				assignment.ProposerSlots = proposerIndexToSlots[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
 				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
