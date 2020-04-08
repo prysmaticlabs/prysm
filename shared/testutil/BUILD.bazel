@@ -9,6 +9,7 @@ go_library(
         "helpers.go",
         "log.go",
         "spectest.go",
+        "state.go",
         "tempdir.go",
         "wait_timeout.go",
     ],
@@ -45,6 +46,7 @@ go_test(
         "block_test.go",
         "deposits_test.go",
         "helpers_test.go",
+        "state_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
