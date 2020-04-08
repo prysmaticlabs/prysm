@@ -517,7 +517,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 				CommitteeIndex: 100,
 				Committee:      []uint64{0, 1, 2, 3},
 				PublicKey:      []byte("testPubKey_1"),
-				ProposerSlot:   params.BeaconConfig().SlotsPerEpoch + 1,
+				ProposerSlots:  []uint64{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
 		},
 	}
@@ -543,11 +543,11 @@ func TestUpdateDuties_OK(t *testing.T) {
 	if err := v.UpdateDuties(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
-	if v.duties.Duties[0].ProposerSlot != params.BeaconConfig().SlotsPerEpoch+1 {
+	if v.duties.Duties[0].ProposerSlots[0] != params.BeaconConfig().SlotsPerEpoch+1 {
 		t.Errorf(
 			"Unexpected validator assignments. want=%v got=%v",
 			params.BeaconConfig().SlotsPerEpoch+1,
-			v.duties.Duties[0].ProposerSlot,
+			v.duties.Duties[0].ProposerSlots[0],
 		)
 	}
 	if v.duties.Duties[0].AttesterSlot != params.BeaconConfig().SlotsPerEpoch {
@@ -592,7 +592,7 @@ func TestRolesAt_OK(t *testing.T) {
 			},
 			{
 				CommitteeIndex: 2,
-				ProposerSlot:   1,
+				ProposerSlots:  []uint64{1},
 				PublicKey:      sks[1].PublicKey().Marshal(),
 			},
 			{
@@ -603,7 +603,7 @@ func TestRolesAt_OK(t *testing.T) {
 			{
 				CommitteeIndex: 2,
 				AttesterSlot:   1,
-				ProposerSlot:   1,
+				ProposerSlots:  []uint64{1, 5},
 				PublicKey:      sks[3].PublicKey().Marshal(),
 			},
 		},
@@ -658,19 +658,19 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
-				ProposerSlot:   0,
+				ProposerSlots:  []uint64{0},
 				PublicKey:      sks[0].PublicKey().Marshal(),
 			},
 			{
 				CommitteeIndex: 2,
 				AttesterSlot:   4,
-				ProposerSlot:   0,
+				ProposerSlots:  nil,
 				PublicKey:      sks[1].PublicKey().Marshal(),
 			},
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   3,
-				ProposerSlot:   0,
+				ProposerSlots:  nil,
 				PublicKey:      sks[2].PublicKey().Marshal(),
 			},
 		},

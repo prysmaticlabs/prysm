@@ -395,7 +395,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 		}
 		if len(duty.ProposerSlots) > 0 {
 			for _, proposerSlot := range duty.ProposerSlots {
-				if proposerSlot == slot {
+				if proposerSlot != 0 && proposerSlot == slot {
 					roles = append(roles, roleProposer)
 					break
 				}
