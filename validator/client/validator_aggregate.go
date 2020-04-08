@@ -59,6 +59,15 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		return
 	}
 
+	// Avoid sending beacon node duplicated aggregation requests.
+	k := validatorSubscribeKey(slot, duty.CommitteeIndex)
+	v.aggregatedSlotCommitteeIDCacheLock.Lock()
+	defer v.aggregatedSlotCommitteeIDCacheLock.Unlock()
+	if v.aggregatedSlotCommitteeIDCache.Contains(k) {
+		return
+	}
+	v.aggregatedSlotCommitteeIDCache.Add(k, true)
+
 	slotSig, err := v.signSlot(ctx, pubKey, slot)
 	if err != nil {
 		log.Errorf("Could not sign slot: %v", err)
