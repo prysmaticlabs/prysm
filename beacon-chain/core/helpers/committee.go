@@ -18,8 +18,6 @@ import (
 
 var committeeCache = cache.NewCommitteesCache()
 
-type proposerIndexToSlots map[uint64][]uint64
-
 // SlotCommitteeCount returns the number of crosslink committees of a slot. The
 // active validator count is provided as an argument rather than a direct implementation
 // from the spec definition. Having the active validator count as an argument allows for
