@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
