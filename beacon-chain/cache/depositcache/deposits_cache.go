@@ -35,12 +35,11 @@ type DepositFetcher interface {
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*dbpb.DepositContainer
-	deposits              []*dbpb.DepositContainer
-	depositsLock          sync.RWMutex
-	chainStartDeposits    []*ethpb.Deposit
-	chainstartPubkeys     map[string]bool
-	chainstartPubkeysLock sync.RWMutex
+	pendingDeposits    []*dbpb.DepositContainer
+	deposits           []*dbpb.DepositContainer
+	depositsLock       sync.RWMutex
+	chainStartDeposits []*ethpb.Deposit
+	chainstartPubkeys  map[string]bool
 }
 
 // NewDepositCache instantiates a new deposit cache
@@ -102,8 +101,6 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.Deposi
 func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.MarkPubkeyForChainstart")
 	defer span.End()
-	dc.chainstartPubkeysLock.Lock()
-	defer dc.chainstartPubkeysLock.Unlock()
 	dc.chainstartPubkeys[pubkey] = true
 }
 
@@ -111,13 +108,7 @@ func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey stri
 func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) bool {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PubkeyInChainstart")
 	defer span.End()
-	dc.chainstartPubkeysLock.Lock()
-	defer dc.chainstartPubkeysLock.Unlock()
-	if dc.chainstartPubkeys != nil {
-		return dc.chainstartPubkeys[pubkey]
-	}
-	dc.chainstartPubkeys = make(map[string]bool)
-	return false
+	return dc.chainstartPubkeys[pubkey]
 }
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number
