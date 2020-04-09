@@ -1,4 +1,4 @@
-package initialsync
+ackage initialsync
 
 import (
 	"bytes"
