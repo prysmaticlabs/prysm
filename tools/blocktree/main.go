@@ -41,8 +41,6 @@ type node struct {
 }
 
 func main() {
-	params.UseDemoBeaconConfig()
-
 	flag.Parse()
 	db, err := db.NewDB(*datadir, cache.NewStateSummaryCache())
 	if err != nil {

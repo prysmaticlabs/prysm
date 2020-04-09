@@ -9,10 +9,6 @@ var (
 		Name:  "broadcast-slashing",
 		Usage: "Broadcast slashings from slashing pool.",
 	}
-	noCustomConfigFlag = &cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
 	minimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
@@ -142,6 +138,11 @@ var (
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedNoCustomConfigFlag = &cli.BoolFlag{
+		Name:   "no-custom-config",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableNoiseHandshake = &cli.BoolFlag{
 		Name:   "enable-noise",
 		Usage:  deprecatedUsage,
@@ -280,6 +281,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedNoCustomConfigFlag,
 	deprecatedEnableNoiseHandshake,
 	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
@@ -324,7 +326,6 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
-	noCustomConfigFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
