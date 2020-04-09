@@ -1313,7 +1313,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 	}
 
 	for i := 0; i < len(atts); i++ {
-		aggBits := bitfield.NewBitlist(4)
+		aggBits := bitfield.NewBitlist(2)
 		aggBits.SetBitAt(0, true)
 		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
 			CommitteeIndex: uint64(i),
