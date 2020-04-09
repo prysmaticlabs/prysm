@@ -160,8 +160,8 @@ func (r *Service) Status() error {
 		}
 		// If our head slot is on a previous epoch and our peers are reporting their head block are
 		// in the most recent epoch, then we might be out of sync.
-		if headEpoch := helpers.SlotToEpoch(r.chain.HeadSlot()); headEpoch < helpers.SlotToEpoch(r.chain.CurrentSlot())-1 &&
-			headEpoch < r.p2p.Peers().CurrentEpoch()-1 {
+		if headEpoch := helpers.SlotToEpoch(r.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(r.chain.CurrentSlot()) &&
+			headEpoch+1 < r.p2p.Peers().CurrentEpoch() {
 			return errors.New("out of sync")
 		}
 	}
