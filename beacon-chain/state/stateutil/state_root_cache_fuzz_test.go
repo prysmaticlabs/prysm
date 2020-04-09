@@ -2,10 +2,12 @@ package stateutil
 
 import (
 	"strconv"
+	"sync"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -27,49 +29,62 @@ func TestStateRootCacheFuzz_1000(t *testing.T) {
 
 func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 	fuzzer := fuzz.NewWithSeed(seed)
-	state := &ethereum_beacon_p2p_v1.BeaconState{}
 
 	hasher := &stateRootHasher{}
 	hasherWithCache := cachedHasher
 
 	mismatch := 0
 	mismatchedIndices := make([]uint64, 0)
-	for i := uint64(0); i < iterations; i++ {
-		fuzzer.Fuzz(state)
-		var a, b [32]byte
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					t.Errorf("Non-cached HTR panicked on iteration %d", i)
-					panic(r)
+
+	// Use scatter to run tests in parallel.
+	if _, err := mputil.Scatter(int(iterations), func(start int, length int, _ *sync.RWMutex) (i interface{}, err error) {
+		state := &ethereum_beacon_p2p_v1.BeaconState{}
+		for i := start; i < start+length; i++ {
+			func() {
+				defer func() {
+					recover() // Ignore fuzzing panics for out of range values
+				}()
+				fuzzer.Fuzz(state)
+			}()
+			var a, b [32]byte
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("Non-cached HTR panicked on iteration %d", i)
+						panic(r)
+					}
+				}()
+				var err error
+				a, err = hasher.hashTreeRootState(state)
+				if err != nil {
+					t.Fatal(err)
 				}
 			}()
-			var err error
-			a, err = hasher.hashTreeRootState(state)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}()
 
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					t.Errorf("Cached HTR panicked on iteration %d", i)
-					panic(r)
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("Cached HTR panicked on iteration %d", i)
+						panic(r)
+					}
+				}()
+				var err error
+				b, err = hasherWithCache.hashTreeRootState(state)
+				if err != nil {
+					t.Fatal(err)
 				}
 			}()
-			var err error
-			b, err = hasherWithCache.hashTreeRootState(state)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}()
 
-		if a != b {
-			mismatch++
-			mismatchedIndices = append(mismatchedIndices, i)
+			if a != b {
+				mismatch++
+				mismatchedIndices = append(mismatchedIndices, uint64(i))
+			}
 		}
+		return nil, nil
+	}); err != nil {
+		t.Error(err)
 	}
+
 	if mismatch > 0 {
 		t.Errorf("Mismatched indices: %v", mismatchedIndices)
 		t.Fatalf("%d of %d random states had different roots", mismatch, iterations)
