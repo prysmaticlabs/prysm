@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func init() {
@@ -1956,14 +1957,9 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Validators:  validators,
-		Balances:    balances,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := testutil.NewBeaconState()
+	s.SetValidators(validators)
+	s.SetBalances(balances)
 	if err := db.SaveState(
 		context.Background(),
 		s,

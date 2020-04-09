@@ -565,14 +565,6 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	numValidators := 128
 	state := setupActiveValidators(t, db, numValidators)
 
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	if err := state.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
-
 	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
 	if err != nil {
 		t.Fatal(err)

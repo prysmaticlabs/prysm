@@ -23,6 +23,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+
 	"google.golang.org/grpc/status"
 )
 
@@ -437,26 +439,25 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
-	beaconState := &pbp2p.BeaconState{
-		Slot:        slot,
-		GenesisTime: uint64(time.Now().Unix() - int64((slot * params.BeaconConfig().SecondsPerSlot))),
-		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		LatestBlockHeader: &ethpb.BeaconBlockHeader{
-			ParentRoot: blockRoot2[:],
-		},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 2,
-			Root:  justifiedRoot[:],
-		},
-	}
-	beaconState.BlockRoots[1] = blockRoot[:]
-	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	s, _ := beaconstate.InitializeFromProto(beaconState)
-	beaconState2 := s.CloneInnerState()
-	beaconState2.Slot--
-	s2, _ := beaconstate.InitializeFromProto(beaconState2)
-	if err := db.SaveState(ctx, s2, blockRoot2); err != nil {
+	beaconState := testutil.NewBeaconState()
+	beaconState.SetSlot(slot)
+	beaconState.SetGenesisTime(uint64(time.Now().Unix() - int64((slot * params.BeaconConfig().SecondsPerSlot))))
+	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		ParentRoot: blockRoot2[:],
+	})
+	beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  justifiedRoot[:],
+	})
+	blockRoots := beaconState.BlockRoots()
+	blockRoots[1] = blockRoot[:]
+	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
+	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	beaconState.SetBlockRoots(blockRoots)
+
+	beaconState2 := beaconState.Copy()
+	beaconState2.SetSlot(beaconState2.Slot() - 1)
+	if err := db.SaveState(ctx, beaconState2, blockRoot2); err != nil {
 		t.Fatal(err)
 	}
 	chainService := &mock.ChainService{
@@ -467,13 +468,13 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		P2P:                 &mockp2p.MockBroadcaster{},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
 		AttestationCache:    cache.NewAttestationCache(),
-		HeadFetcher:         &mock.ChainService{State: s, Root: blockRoot[:]},
-		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
+		HeadFetcher:         &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
 		GenesisTimeFetcher:  &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
 		StateGen:            stategen.New(db, cache.NewStateSummaryCache()),
 	}
-	if err := db.SaveState(ctx, s, blockRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
