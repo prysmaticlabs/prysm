@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	"github.com/sirupsen/logrus"
 )
 
@@ -56,7 +55,7 @@ func TestConstants(t *testing.T) {
 }
 
 func TestRoundRobinSync(t *testing.T) {
-
+	t.Skip("Test is filled with races and is part of legacy code, pending deletion")
 	tests := []struct {
 		name               string
 		currentSlot        uint64
@@ -152,38 +151,6 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
-
-		// TODO(3147): Handle multiple failures.
-		//{
-		//	name:               "Multiple peers with multiple failures",
-		//	currentSlot:        320, // 10 epochs
-		//	expectedBlockSlots: makeSequence(1, 320),
-		//	peers: []*peerData{
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//	},
-		//},
 		{
 			name:               "Multiple peers with different finalized epoch",
 			currentSlot:        320, // 10 epochs
