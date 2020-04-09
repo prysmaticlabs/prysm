@@ -60,7 +60,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/16)
+	validators := make([]*ethpb.Validator, 64)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -68,11 +68,9 @@ func TestProposeAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
-		Slot:        params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
+	state := testutil.NewBeaconState()
+	state.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1)
+	state.SetValidators(validators)
 
 	if err := db.SaveState(ctx, state, root); err != nil {
 		t.Fatal(err)

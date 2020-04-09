@@ -18,13 +18,14 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -262,10 +263,7 @@ func TestRoundRobinSync(t *testing.T) {
 			}
 			gRoot, _ := ssz.HashTreeRoot(gBlock.Block)
 			beaconDB.SaveGenesisBlockRoot(context.Background(), gRoot)
-			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			st := testutil.NewBeaconState()
 			beaconDB.SaveState(context.Background(), st, gRoot)
 
 			mc := &mock.ChainService{
