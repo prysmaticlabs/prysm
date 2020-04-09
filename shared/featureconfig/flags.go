@@ -272,6 +272,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDiscv5Flag = &cli.BoolFlag{
+		Name:   "enable-discv5",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -301,6 +306,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedInitSyncCacheStateFlag,
 	deprecatedProtectAttesterFlag,
 	deprecatedProtectProposerFlag,
+	deprecatedDiscv5Flag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.

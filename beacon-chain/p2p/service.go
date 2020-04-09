@@ -201,7 +201,7 @@ func (s *Service) Start() {
 		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
-	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
+	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
 		ipAddr := ipAddr()
 		listener, err := s.startDiscoveryV5(
 			ipAddr,
