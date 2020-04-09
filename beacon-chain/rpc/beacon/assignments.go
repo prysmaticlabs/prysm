@@ -4,15 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -32,14 +27,9 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]uint64, 0)
-	requestedEpoch := helpers.CurrentEpoch(headState)
-
+	var requestedEpoch uint64
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
 		if q.Genesis {
@@ -49,11 +39,12 @@ func (bs *Server) ListValidatorAssignments(
 		requestedEpoch = q.Epoch
 	}
 
-	if requestedEpoch > helpers.CurrentEpoch(headState) {
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.CurrentEpoch(headState),
+			currentEpoch,
 			requestedEpoch,
 		)
 	}
@@ -78,7 +69,11 @@ func (bs *Server) ListValidatorAssignments(
 		}
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, requestedEpoch)
+	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
+	}
+	activeIndices, err := helpers.ActiveValidatorIndices(requestedState, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator indices: %v", err)
 	}
@@ -99,35 +94,21 @@ func (bs *Server) ListValidatorAssignments(
 		return nil, status.Errorf(codes.Internal, "Could not paginate results: %v", err)
 	}
 
-	shouldFetchFromArchive := requestedEpoch < bs.FinalizationFetcher.FinalizedCheckpt().Epoch
-
-	// initialize all committee related data.
+	// Initialize all committee related data.
 	committeeAssignments := map[uint64]*helpers.CommitteeAssignmentContainer{}
 	proposerIndexToSlots := make(map[uint64][]uint64)
-
-	if shouldFetchFromArchive {
-		historicalState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
-		}
-		committeeAssignments, proposerIndexToSlots, err = helpers.CommitteeAssignments(historicalState, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve archived assignment for epoch %d: %v", requestedEpoch, err)
-		}
-	} else {
-		committeeAssignments, proposerIndexToSlots, err = helpers.CommitteeAssignments(headState, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
-		}
+	committeeAssignments, proposerIndexToSlots, err = helpers.CommitteeAssignments(requestedState, requestedEpoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
 	for _, index := range filteredIndices[start:end] {
-		if int(index) >= headState.NumValidators() {
+		if int(index) >= requestedState.NumValidators() {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
-				index, headState.NumValidators())
+				index, requestedState.NumValidators())
 		}
 		comAssignment := committeeAssignments[index]
-		pubkey := headState.PubkeyAtIndex(index)
+		pubkey := requestedState.PubkeyAtIndex(index)
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: comAssignment.Committee,
 			CommitteeIndex:   comAssignment.CommitteeIndex,
@@ -144,94 +125,4 @@ func (bs *Server) ListValidatorAssignments(
 		NextPageToken: nextPageToken,
 		TotalSize:     int32(len(filteredIndices)),
 	}, nil
-}
-
-// Computes validator assignments for an epoch and validator index using archived committee
-// information, archived balances, and a set of active validators.
-func archivedValidatorCommittee(
-	epoch uint64,
-	archivedInfo *pb.ArchivedCommitteeInfo,
-	activeIndices []uint64,
-	archivedBalances []uint64,
-) (map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment, error) {
-	proposerSeed := bytesutil.ToBytes32(archivedInfo.ProposerSeed)
-	attesterSeed := bytesutil.ToBytes32(archivedInfo.AttesterSeed)
-
-	startSlot := helpers.StartSlot(epoch)
-	proposerIndexToSlots := make(map[uint64][]uint64)
-	activeVals := make([]*ethpb.Validator, len(archivedBalances))
-	for i, bal := range archivedBalances {
-		activeVals[i] = &ethpb.Validator{EffectiveBalance: bal}
-	}
-
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		seedWithSlot := append(proposerSeed[:], bytesutil.Bytes8(slot)...)
-		seedWithSlotHash := hashutil.Hash(seedWithSlot)
-		i, err := helpers.ComputeProposerIndex(activeVals, activeIndices, seedWithSlotHash)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not check proposer at slot %d", slot)
-		}
-		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
-	}
-
-	assignmentMap := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
-		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
-			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
-		}
-		if countAtSlot == 0 {
-			countAtSlot = 1
-		}
-		for i := uint64(0); i < countAtSlot; i++ {
-			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, i)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not compute committee")
-			}
-			for _, index := range committee {
-				assignmentMap[index] = &ethpb.ValidatorAssignments_CommitteeAssignment{
-					BeaconCommittees: committee,
-					CommitteeIndex:   i,
-					AttesterSlot:     slot,
-					ProposerSlots:    proposerIndexToSlots[index],
-				}
-			}
-		}
-	}
-	return assignmentMap, nil
-}
-
-func (bs *Server) archivedCommitteeData(ctx context.Context, requestedEpoch uint64) (*pb.ArchivedCommitteeInfo,
-	[]uint64, error) {
-	archivedInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
-	if err != nil {
-		return nil, nil, status.Errorf(
-			codes.Internal,
-			"Could not retrieve archived committee info for epoch %d",
-			requestedEpoch,
-		)
-	}
-	if archivedInfo == nil {
-		return nil, nil, status.Errorf(
-			codes.NotFound,
-			"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-			requestedEpoch,
-		)
-	}
-	archivedBalances, err := bs.BeaconDB.ArchivedBalances(ctx, requestedEpoch)
-	if err != nil {
-		return nil, nil, status.Errorf(
-			codes.Internal,
-			"Could not retrieve archived balances for epoch %d",
-			requestedEpoch,
-		)
-	}
-	if archivedBalances == nil {
-		return nil, nil, status.Errorf(
-			codes.NotFound,
-			"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-			requestedEpoch,
-		)
-	}
-	return archivedInfo, archivedBalances, nil
 }
