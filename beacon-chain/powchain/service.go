@@ -522,7 +522,7 @@ func (s *Service) handleDelayTicker() {
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
-	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
+	fiveMinutesTimeout := roughtime.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
 	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) && roughtime.Now().Second()%15 == 0 {
 		log.Warn("eth1 client is not syncing")
