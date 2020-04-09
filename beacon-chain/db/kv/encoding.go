@@ -7,6 +7,7 @@ import (
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -44,6 +45,18 @@ func encode(msg proto.Message) ([]byte, error) {
 func isWhitelisted(obj interface{}) bool {
 	switch obj.(type) {
 	case *pb.BeaconState:
+		return true
+	case *ethpb.BeaconBlock:
+		return true
+	case *ethpb.Attestation:
+		return true
+	case *ethpb.Deposit:
+		return true
+	case *ethpb.AttesterSlashing:
+		return true
+	case *ethpb.ProposerSlashing:
+		return true
+	case *ethpb.VoluntaryExit:
 		return true
 	default:
 		return false
