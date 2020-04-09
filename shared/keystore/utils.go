@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
@@ -51,7 +52,7 @@ func ensureInt(x interface{}) int {
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<first 8 character of address hex>
 func keyFileName(pubkey *bls.PublicKey) string {
-	ts := time.Now().UTC()
+	ts := roughtime.Now().UTC()
 	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.Marshal())[:8])
 }
 
