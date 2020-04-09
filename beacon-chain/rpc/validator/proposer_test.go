@@ -48,7 +48,7 @@ func TestGetBlock_OK(t *testing.T) {
 
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
@@ -156,7 +156,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
@@ -213,7 +213,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	// Generate some more random attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
-	if atts, err := testutil.GenerateAttestations(beaconState, privKeys, 8, 1, true); err != nil {
+	if atts, err := testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true); err != nil {
 		t.Fatal(err)
 	} else {
 		found := false
