@@ -54,22 +54,10 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	// Retrieve the unaggregated attestation from pool.
-	unaggregatedAtts := as.AttPool.UnAggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
-	// In case there's left over aggregated attestations in the pool.
+	if err := as.AttPool.AggregateUnaggregatedAttestations(); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
+	}
 	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
-	aggregatedAtts, err = helpers.AggregateAttestations(append(aggregatedAtts, unaggregatedAtts...))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get aggregate attestations: %v", err)
-	}
-
-	// Save the aggregated attestations to the pool.
-	if err := as.AttPool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save aggregated attestations: %v", err)
-	}
-	if err := as.AttPool.DeleteUnaggregatedAttestations(unaggregatedAtts); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not delete unaggregated attestations: %v", err)
-	}
 
 	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
 	if len(aggregatedAtts) == 0 {

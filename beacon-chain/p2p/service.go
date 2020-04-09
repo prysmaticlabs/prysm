@@ -60,23 +60,25 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	beaconDB              db.Database
-	ctx                   context.Context
-	cancel                context.CancelFunc
 	started               bool
+	isPreGenesis          bool
+	pingMethod            func(ctx context.Context, id peer.ID) error
+	cancel                context.CancelFunc
 	cfg                   *Config
-	startupErr            error
-	dv5Listener           Listener
-	host                  host.Host
-	pubsub                *pubsub.PubSub
-	exclusionList         *ristretto.Cache
-	privKey               *ecdsa.PrivateKey
-	dht                   *kaddht.IpfsDHT
 	peers                 *peers.Status
+	dht                   *kaddht.IpfsDHT
+	privKey               *ecdsa.PrivateKey
+	exclusionList         *ristretto.Cache
+	metaData              *pb.MetaData
+	pubsub                *pubsub.PubSub
+	beaconDB              db.Database
+	dv5Listener           Listener
+	startupErr            error
+	stateNotifier         statefeed.Notifier
+	ctx                   context.Context
+	host                  host.Host
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
-	metaData              *pb.MetaData
-	stateNotifier         statefeed.Notifier
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -97,6 +99,7 @@ func NewService(cfg *Config) (*Service, error) {
 		cancel:        cancel,
 		cfg:           cfg,
 		exclusionList: cache,
+		isPreGenesis:  true,
 	}
 
 	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -183,6 +186,7 @@ func (s *Service) Start() {
 	} else {
 		s.awaitStateInitialized()
 	}
+	s.isPreGenesis = false
 
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
@@ -197,7 +201,7 @@ func (s *Service) Start() {
 		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
-	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
+	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
 		ipAddr := ipAddr()
 		listener, err := s.startDiscoveryV5(
 			ipAddr,
@@ -294,8 +298,14 @@ func (s *Service) Stop() error {
 // Status of the p2p service. Will return an error if the service is considered unhealthy to
 // indicate that this node should not serve traffic until the issue has been resolved.
 func (s *Service) Status() error {
+	if s.isPreGenesis {
+		return nil
+	}
 	if !s.started {
 		return errors.New("not running")
+	}
+	if s.startupErr != nil {
+		return s.startupErr
 	}
 	return nil
 }
@@ -383,6 +393,8 @@ func (s *Service) RefreshENR(epoch uint64) {
 		return
 	}
 	s.updateSubnetRecordWithMetadata(bitV)
+	// ping all peers to inform them of new metadata
+	s.pingPeers()
 }
 
 // FindPeersWithSubnet performs a network search for peers
@@ -427,6 +439,25 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		}
 	}
 	return exists, nil
+}
+
+// AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can
+// be used to refresh ENR.
+func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+	s.pingMethod = reqFunc
+}
+
+func (s *Service) pingPeers() {
+	if s.pingMethod == nil {
+		return
+	}
+	for _, pid := range s.peers.Connected() {
+		go func(id peer.ID) {
+			if err := s.pingMethod(s.ctx, id); err != nil {
+				log.WithField("peer", id).WithError(err).Error("Failed to ping peer")
+			}
+		}(pid)
+	}
 }
 
 // Waits for the beacon state to be initialized, important

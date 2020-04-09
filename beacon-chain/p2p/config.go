@@ -11,7 +11,7 @@ type Config struct {
 	BeaconDB              db.Database
 	NoDiscovery           bool
 	EnableUPnP            bool
-	EnableDiscv5          bool
+	DisableDiscv5         bool
 	StaticPeers           []string
 	BootstrapNodeAddr     []string
 	KademliaBootStrapAddr []string

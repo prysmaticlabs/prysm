@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context, msg proto.Message) error {
@@ -56,7 +57,7 @@ func (r *Service) aggregatorCommitteeIndices(currentSlot uint64) []uint64 {
 	for i := currentSlot; i <= endSlot; i++ {
 		commIds = append(commIds, cache.CommitteeIDs.GetAggregatorCommitteeIDs(i)...)
 	}
-	return commIds
+	return sliceutil.SetUint64(commIds)
 }
 
 func (r *Service) attesterCommitteeIndices(currentSlot uint64) []uint64 {
@@ -66,5 +67,5 @@ func (r *Service) attesterCommitteeIndices(currentSlot uint64) []uint64 {
 	for i := currentSlot; i <= endSlot; i++ {
 		commIds = append(commIds, cache.CommitteeIDs.GetAttesterCommitteeIDs(i)...)
 	}
-	return commIds
+	return sliceutil.SetUint64(commIds)
 }
