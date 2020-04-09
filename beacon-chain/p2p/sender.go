@@ -13,10 +13,10 @@ import (
 
 // Send a message to a specific peer. The returned stream may be used for reading, but has been
 // closed for writing.
-func (s *Service) Send(ctx context.Context, message interface{}, topic string, pid peer.ID) (network.Stream, error) {
+func (s *Service) Send(ctx context.Context, message interface{}, baseTopic string, pid peer.ID) (network.Stream, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
-	topic = topic + s.Encoding().ProtocolSuffix()
+	topic := baseTopic + s.Encoding().ProtocolSuffix()
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
@@ -38,11 +38,13 @@ func (s *Service) Send(ctx context.Context, message interface{}, topic string, p
 		return nil, err
 	}
 	// do not encode anything if we are sending a metadata request
-	if topic != RPCMetaDataTopic {
-		if _, err := s.Encoding().EncodeWithLength(stream, message); err != nil {
-			traceutil.AnnotateError(span, err)
-			return nil, err
-		}
+	if baseTopic == RPCMetaDataTopic {
+		return stream, nil
+	}
+
+	if _, err := s.Encoding().EncodeWithLength(stream, message); err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, err
 	}
 
 	// Close stream for writing.

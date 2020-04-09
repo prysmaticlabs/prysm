@@ -11,6 +11,7 @@ import (
 // for aggregator actor.
 type Pool interface {
 	// For Aggregated attestations
+	AggregateUnaggregatedAttestations() error
 	SaveAggregatedAttestation(att *ethpb.Attestation) error
 	SaveAggregatedAttestations(atts []*ethpb.Attestation) error
 	AggregatedAttestations() []*ethpb.Attestation
