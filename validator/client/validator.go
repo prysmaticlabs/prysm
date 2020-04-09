@@ -314,28 +314,28 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE {
 			attesterSlot := duty.AttesterSlot
-				committeeIndex := duty.CommitteeIndex
+			committeeIndex := duty.CommitteeIndex
 
-				if len(duty.ProposerSlots) > 0 {
+			if len(duty.ProposerSlots) > 0 {
 				lFields["proposerSlots"] = duty.ProposerSlots
 			}
 			lFields["attesterSlot"] = attesterSlot
 
-				alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
-				if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
-					continue
-				}
+			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
+			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
+				continue
+			}
 
-				aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
-				if err != nil {
-					return errors.Wrap(err, "could not check if a validator is an aggregator")
-				}
-				if aggregator {
-					alreadySubscribed[alreadySubscribedKey] = true
-				}
-				subscribeSlots = append(subscribeSlots, attesterSlot)
-				subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
-				subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				alreadySubscribed[alreadySubscribedKey] = true
+			}
+			subscribeSlots = append(subscribeSlots, attesterSlot)
+			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
 
 		log.WithFields(lFields).Info("New assignment")
