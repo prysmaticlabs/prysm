@@ -13,10 +13,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -26,17 +28,9 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot: 0,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: st,
-		},
+		BeaconDB:           db,
+		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
 	wanted := "Cannot retrieve information about an epoch in the future"
@@ -44,7 +38,7 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 		ctx,
 		&ethpb.ListValidatorAssignmentsRequest{
 			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Epoch{
-				Epoch: 1,
+				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	); err != nil && !strings.Contains(err.Error(), wanted) {
@@ -64,11 +58,23 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, st, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: st,
-		},
+		BeaconDB:           db,
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	wanted := &ethpb.ValidatorAssignments{
 		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
@@ -101,11 +107,23 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
+		BeaconDB:           db,
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
@@ -183,7 +201,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := db.SaveGenesisBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -197,6 +215,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
@@ -285,7 +305,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := db.SaveGenesisBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -293,35 +313,13 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	// we request assignments for epoch 0, it looks within the archived data.
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: s,
-		},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 10,
 			},
 		},
-	}
-
-	// We then store archived data into the DB.
-	currentEpoch := helpers.CurrentEpoch(s)
-	proposerSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	if err != nil {
-		t.Fatal(err)
-	}
-	attesterSeed, err := helpers.Seed(s, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &pbp2p.ArchivedCommitteeInfo{
-		ProposerSeed: proposerSeed[:],
-		AttesterSeed: attesterSeed[:],
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := db.SaveArchivedBalances(context.Background(), 0, balances); err != nil {
-		t.Fatal(err)
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	// Construct the wanted assignments.
@@ -393,20 +391,19 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := db.SaveGenesisBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: s,
-		},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	pubKey1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -482,20 +479,19 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := db.SaveGenesisBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: s,
-		},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
