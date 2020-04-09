@@ -97,7 +97,7 @@ func main() {
 		},
 		&cli.Int64Flag{
 			Name:        "depositAmount",
-			Value:       3200,
+			Value:       int64(params.BeaconConfig().MaxEffectiveBalance),
 			Usage:       "Maximum deposit value allowed in contract(in gwei)",
 			Destination: &depositAmount,
 		},
