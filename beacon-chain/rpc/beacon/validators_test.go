@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -1618,16 +1617,9 @@ func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.
 	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
 		t.Fatal(err)
 	}
-	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot: helpers.StartSlot(epoch + 10),
-		FinalizedCheckpoint: &ethpb.Checkpoint{
-			// We say there have been 5 epochs since finality.
-			Epoch: epoch + 5,
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	headState := testutil.NewBeaconState()
+	headState.SetSlot(helpers.StartSlot(epoch + 10))
+	headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: epoch + 5})
 
 	bs := &Server{
 		BeaconDB: db,
@@ -1675,21 +1667,11 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	}
 
 	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:                 validators,
-		Balances:                   balances,
-		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		Slashings:                  []uint64{0, 1e9, 1e9},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
-		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	headState := testutil.NewBeaconState()
+	headState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch + 1)
+	headState.SetValidators(validators)
+	headState.SetBalances(balances)
+	headState.SetCurrentEpochAttestations(atts)
 
 	m := &mock.ChainService{
 		State: headState,
@@ -1739,24 +1721,14 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 	}
 
 	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:                 validators,
-		Balances:                   balances,
-		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		Slashings:                  []uint64{0, 1e9, 1e9},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
-		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	headState := testutil.NewBeaconState()
+	headState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch + 1)
+	headState.SetValidators(validators)
+	headState.SetBalances(balances)
+	headState.SetCurrentEpochAttestations(atts)
 
 	m := &mock.ChainService{
-		State: s,
+		State: headState,
 	}
 	bs := &Server{
 		BeaconDB:             db,
@@ -1831,17 +1803,13 @@ func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
 	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
 		b.Fatal(err)
 	}
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot:       helpers.StartSlot(100 /* epoch 100 */),
-		Validators: validators,
-	})
-	if err != nil {
-		b.Fatal(err)
-	}
+	headState := testutil.NewBeaconState()
+	headState.SetSlot(helpers.StartSlot(100 /* epoch 100 */))
+	headState.SetValidators(validators)
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: s,
+			State: headState,
 		},
 	}
 
