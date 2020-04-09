@@ -108,6 +108,10 @@ func (s *State) loadHotStateBySlot(ctx context.Context, slot uint64) (*state.Bea
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateBySlot")
 	defer span.End()
 
+	if slot == 0 {
+		return s.beaconDB.GenesisState(ctx)
+	}
+
 	// Gather last saved state, that is where node starts to replay the blocks.
 	startState, err := s.lastSavedState(ctx, slot)
 
