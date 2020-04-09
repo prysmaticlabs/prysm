@@ -161,8 +161,12 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get block number from timestamp")
 	}
+	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get eth1 data from block number")
+	}
 
-	return vs.defaultEth1DataResponse(ctx, blockNumber)
+	return eth1Data, nil
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
