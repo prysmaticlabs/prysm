@@ -197,10 +197,11 @@ func (km *Remote) SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.Bea
 		Id:     &pb.SignBeaconProposalRequest_Account{Account: accountInfo.Name},
 		Domain: domain[:],
 		Data: &pb.BeaconBlockHeader{
-			Slot:       data.Slot,
-			ParentRoot: data.ParentRoot,
-			StateRoot:  data.StateRoot,
-			BodyRoot:   data.BodyRoot,
+			Slot:          data.Slot,
+			ProposerIndex: data.ProposerIndex,
+			ParentRoot:    data.ParentRoot,
+			StateRoot:     data.StateRoot,
+			BodyRoot:      data.BodyRoot,
 		},
 	}
 	resp, err := client.SignBeaconProposal(context.Background(), req)
