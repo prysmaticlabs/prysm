@@ -6,12 +6,11 @@ import (
 	"time"
 
 	detectrace "github.com/ipfs/go-detect-race"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-
 	tu "github.com/libp2p/go-libp2p-core/test"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 type tconn struct {
@@ -116,12 +115,12 @@ func TestConnsToClose(t *testing.T) {
 }
 
 func TestGetTagInfo(t *testing.T) {
-	start := time.Now()
+	start := roughtime.Now()
 	cm := NewConnManager(1, 1, 10*time.Minute)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
 	not.Connected(nil, conn)
-	end := time.Now()
+	end := roughtime.Now()
 
 	other := tu.RandPeerIDFatal(t)
 	tag := cm.GetTagInfo(other)
@@ -227,14 +226,14 @@ func TestUntagPeer(t *testing.T) {
 }
 
 func TestGetInfo(t *testing.T) {
-	start := time.Now()
+	start := roughtime.Now()
 	gp := 10 * time.Minute
 	cm := NewConnManager(1, 5, gp)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
 	not.Connected(nil, conn)
 	cm.TrimOpenConns(context.Background())
-	end := time.Now()
+	end := roughtime.Now()
 
 	info := cm.GetInfo()
 	if info.HighWater != 5 {

@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,7 +50,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	defer state.SkipSlotCache.Enable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
 	var lastEmptyRequests int
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	// Step 1 - Sync to end of finalized epoch.
