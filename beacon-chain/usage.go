@@ -92,7 +92,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SetGCPercent,
 			flags.UnsafeSync,
 			flags.SlotsPerArchivedPoint,
-			flags.EnableDiscv5,
+			flags.DisableDiscv5,
 		},
 	},
 	{
