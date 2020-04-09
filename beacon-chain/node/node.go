@@ -305,7 +305,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		MaxPeers:          ctx.Uint(cmd.P2PMaxPeers.Name),
 		WhitelistCIDR:     ctx.String(cmd.P2PWhitelist.Name),
 		EnableUPnP:        ctx.Bool(cmd.EnableUPnPFlag.Name),
-		EnableDiscv5:      ctx.Bool(flags.EnableDiscv5.Name),
+		DisableDiscv5:     ctx.Bool(flags.DisableDiscv5.Name),
 		Encoding:          ctx.String(cmd.P2PEncoding.Name),
 		StateNotifier:     b,
 	})
