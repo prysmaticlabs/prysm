@@ -25,13 +25,13 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32
 }
 
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
-	hashFunc := hashutil.CustomSHA256Hasher()
 	lock.Lock()
+	defer lock.Unlock()
+	hashFunc := hashutil.CustomSHA256Hasher()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
 		depth := GetDepth(length)
 		layersCache[fieldName] = make([][][32]byte, depth+1)
 	}
-	lock.Unlock()
 
 	leaves := make([][32]byte, length)
 	for i, chunk := range input {
@@ -39,9 +39,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	}
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
-	lock.RLock()
 	prevLeaves, ok := leavesCache[fieldName]
-	lock.RUnlock()
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
@@ -74,26 +72,20 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 				return [32]byte{}, err
 			}
 		}
-		lock.Lock()
 		leavesCache[fieldName] = chunks
-		lock.Unlock()
 		return rt, nil
 	}
 
 	var res [32]byte
 	res = h.merkleizeWithCache(leaves, length, fieldName, hashFunc)
 	if h.rootsCache != nil {
-		lock.Lock()
 		leavesCache[fieldName] = leaves
-		lock.Unlock()
 	}
 	return res, nil
 }
 
 func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	fieldName string, hasher func([]byte) [32]byte) [32]byte {
-	lock.Lock()
-	defer lock.Unlock()
 	if len(leaves) == 1 {
 		var root [32]byte
 		root = leaves[0]
@@ -144,8 +136,6 @@ func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
 
 func recomputeRoot(idx int, chunks [][32]byte, length uint64,
 	fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
-	lock.Lock()
-	defer lock.Unlock()
 	items, ok := layersCache[fieldName]
 	if !ok {
 		return [32]byte{}, errors.New("could not recompute root as there was no cache found")
