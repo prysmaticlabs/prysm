@@ -2,7 +2,9 @@ package beaconclient
 
 import (
 	"context"
+	"errors"
 	"io"
+	"strings"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -10,6 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// ReconnectPeriod represents the frequency in which we check the number of
+// open connections.
+var ReconnectPeriod = 5 * time.Second
 
 // receiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
@@ -32,6 +38,13 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		if ctx.Err() == context.Canceled {
 			log.WithError(ctx.Err()).Error("Context canceled - shutting down blocks receiver")
 			return
+		}
+		if err != nil && strings.Contains(err.Error(), "Context canceled") {
+			stream, err = bs.restartBlockStream(ctx)
+			if err != nil {
+				log.WithError(err).Error("Could not restart stream")
+				return
+			}
 		}
 		if err != nil {
 			log.WithError(err).Error("Could not receive block from beacon node")
@@ -70,9 +83,16 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			log.WithError(ctx.Err()).Error("Context canceled - shutting down attestations receiver")
 			return
 		}
+		if err != nil && strings.Contains(err.Error(), "Context canceled") {
+			stream, err = bs.restartIndexedAttestationStream(ctx)
+			if err != nil {
+				log.WithError(err).Error("Could not restart stream")
+				return
+			}
+		}
 		if err != nil {
 			log.WithError(err).Error("Could not receive attestations from beacon node")
-			continue
+			break
 		}
 		if res == nil {
 			continue
@@ -119,4 +139,44 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.BeaconChain_StreamIndexedAttestationsClient, error) {
+	ticker := time.NewTicker(ReconnectPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			log.Info("Context closed, trying to restart attestation stream")
+			stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
+			if err != nil {
+				continue
+			}
+			log.Info("Attestation stream restarted...")
+			return stream, nil
+		case <-ctx.Done():
+			log.Debug("Context closed, exiting reconnect routine")
+			return nil, errors.New("context closed, quit restart stream retries")
+		}
+	}
+
+}
+
+func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_StreamBlocksClient, error) {
+	ticker := time.NewTicker(ReconnectPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			log.Info("Context closed, trying to restart block stream")
+			stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
+			if err != nil {
+				continue
+			}
+			log.Info("Block stream restarted...")
+			return stream, nil
+		case <-ctx.Done():
+			log.Debug("Context closed, exiting reconnect routine")
+			return nil, errors.New("context closed, quit restart stream retries")
+		}
+	}
+
 }
