@@ -108,6 +108,11 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
+	enableNoiseHandshake = &cli.BoolFlag{
+		Name: "enable-noise",
+		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
+			"securing transports between peers",
+	}
 	dontPruneStateStartUp = &cli.BoolFlag{
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
@@ -140,11 +145,6 @@ const deprecatedUsage = "DEPRECATED. DO NOT USE."
 var (
 	deprecatedNoCustomConfigFlag = &cli.BoolFlag{
 		Name:   "no-custom-config",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedEnableNoiseHandshake = &cli.BoolFlag{
-		Name:   "enable-noise",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -198,6 +198,7 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
 	deprecatedEnableCustomStateSSZFlag = &cli.BoolFlag{
 		Name:   "enable-custom-state-ssz",
 		Usage:  deprecatedUsage,
@@ -282,7 +283,6 @@ var (
 
 var deprecatedFlags = []cli.Flag{
 	deprecatedNoCustomConfigFlag,
-	deprecatedEnableNoiseHandshake,
 	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
@@ -344,6 +344,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
+	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
 	disableNewStateMgmt,
