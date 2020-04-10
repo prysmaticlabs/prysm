@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
@@ -157,7 +158,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 1000
+	count := 500
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -191,13 +192,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		t.Fatal(err)
 	}
 
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := testutil.NewBeaconState()
+	s.SetValidators(validators)
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -261,8 +257,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	count := 1000
-	validators := make([]*ethpb.Validator, 0, count)
+	count := 500
+	validators := make([]*ethpb.Validator, 0)
 	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -294,14 +290,9 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Validators:  validators,
-		Balances:    balances,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := testutil.NewBeaconState()
+	s.SetValidators(validators)
+	s.SetBalances(balances)
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -381,13 +372,8 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := testutil.NewBeaconState()
+	s.SetValidators(validators)
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -469,13 +455,8 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := testutil.NewBeaconState()
+	s.SetValidators(validators)
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
