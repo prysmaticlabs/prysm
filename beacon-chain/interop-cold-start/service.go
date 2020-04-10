@@ -195,8 +195,5 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 			},
 		}
 	}
-	if err := s.beaconDB.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
-		return errors.Wrap(err, "could not save validator indices")
-	}
 	return nil
 }

@@ -115,10 +115,11 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 // ValidatorIndex is called by a validator to get its index location in the beacon state.
 func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, req.PublicKey)
+	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch validator index: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
+	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
 	}
