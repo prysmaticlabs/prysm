@@ -132,7 +132,6 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	params.UseDemoBeaconConfig()
 
 	cfg := &Config{
 		BeaconDB: db,

@@ -22,6 +22,7 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -409,7 +410,7 @@ func selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
 		return "", errNoPeersAvailable
 	}
 
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
 	randGenerator.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
@@ -447,7 +448,7 @@ func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
 
 	// Shuffle peers to prevent a bad peer from
 	// stalling sync with invalid blocks.
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
 	randGenerator.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
@@ -471,7 +472,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		return 0, errNoPeersAvailable
 	}
 
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
 	nextPID := func() peer.ID {
 		randGenerator.Shuffle(len(peers), func(i, j int) {
 			peers[i], peers[j] = peers[j], peers[i]

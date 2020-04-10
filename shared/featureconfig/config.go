@@ -28,29 +28,28 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoCustomConfig                             bool   // NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	MinimalConfig                              bool   // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions                   bool   // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify                           bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	EnableDynamicCommitteeSubnets              bool   // Enables dynamic attestation committee subnets via p2p.
-	SkipBLSVerify                              bool   // Skips BLS verification across the runtime.
-	EnableBackupWebhook                        bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates                   bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression                  bool   // EnableSnappyDBCompression in the database.
-	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
-	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
-	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
-	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-	EnableByteMempool                          bool   // EnaableByteMempool memory management.
-	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
-	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
-	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
-	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	DisableNewStateMgmt                        bool   // NewStateMgmt disables the new state mgmt service.
-	DisableInitSyncQueue                       bool   // DisableInitSyncQueue disables the new initial sync implementation.
-	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
-	EnableBlockHTR                             bool   // EnableBlockHTR enables custom hashing of our beacon blocks.
-	NoInitSyncBatchSaveBlocks                  bool   // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
+	MinimalConfig                              bool // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	EnableDynamicCommitteeSubnets              bool // Enables dynamic attestation committee subnets via p2p.
+	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
+	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
+	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
+	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
+	EnableByteMempool                          bool // EnaableByteMempool memory management.
+	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
+	EnableStateGenSigVerify                    bool // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
+	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
+	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
+	DisableNewStateMgmt                        bool // NewStateMgmt disables the new state mgmt service.
+	DisableInitSyncQueue                       bool // DisableInitSyncQueue disables the new initial sync implementation.
+	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
+	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
+	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -221,27 +220,12 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 }
 
 func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
-	if ctx.Bool(noCustomConfigFlag.Name) {
-		log.Warn("Using default mainnet config")
-		cfg.NoCustomConfig = true
-	}
 	if ctx.Bool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
-	}
-	// Use custom config values if the --no-custom-config flag is not set.
-	if !cfg.NoCustomConfig {
-		if cfg.MinimalConfig {
-			log.WithField(
-				"config", "minimal-spec",
-			).Info("Using custom chain parameters")
-			params.UseMinimalConfig()
-		} else {
-			log.WithField(
-				"config", "demo",
-			).Info("Using custom chain parameters")
-			params.UseDemoBeaconConfig()
-		}
+		params.UseMinimalConfig()
+	} else {
+		log.Warn("Using default mainnet config")
 	}
 	return cfg
 }
