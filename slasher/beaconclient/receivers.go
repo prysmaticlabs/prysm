@@ -13,8 +13,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ReconnectPeriod represents the frequency in which we check the number of
-// open connections.
+// ReconnectPeriod represents the frequency in which we try to restart our
+// streams when beacon chain is down.
 var ReconnectPeriod = 5 * time.Second
 
 // receiveBlocks starts a gRPC client stream listener to obtain
