@@ -39,7 +39,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 			log.WithError(ctx.Err()).Error("Context canceled - shutting down blocks receiver")
 			return
 		}
-		if err != nil && strings.Contains(err.Error(), "Context canceled") {
+		if err != nil && strings.Contains(err.Error(), context.Canceled.Error()) {
 			stream, err = bs.restartBlockStream(ctx)
 			if err != nil {
 				log.WithError(err).Error("Could not restart stream")
@@ -83,7 +83,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			log.WithError(ctx.Err()).Error("Context canceled - shutting down attestations receiver")
 			return
 		}
-		if err != nil && strings.Contains(err.Error(), "Context canceled") {
+		if err != nil && strings.Contains(err.Error(), context.Canceled.Error()) {
 			stream, err = bs.restartIndexedAttestationStream(ctx)
 			if err != nil {
 				log.WithError(err).Error("Could not restart stream")
