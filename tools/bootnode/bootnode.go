@@ -34,6 +34,7 @@ import (
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
@@ -187,6 +188,8 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	localNode.SetFallbackUDP(port)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
+	localNode.Set(enr.WithEntry("eth2", ""))
+	localNode.Set(enr.WithEntry("attnets", bitfield.NewBitvector64()))
 
 	return localNode, nil
 }
