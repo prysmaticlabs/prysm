@@ -14,8 +14,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// represents the frequency in which we try to restart our
-// streams when beacon chain is down.
+// reconnectPeriod is the frequency that we try to restart our
+// streams when the beacon chain is node does not respond.
 var reconnectPeriod = 5 * time.Second
 
 // receiveBlocks starts a gRPC client stream listener to obtain
