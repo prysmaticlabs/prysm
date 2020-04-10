@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -603,6 +606,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
@@ -705,6 +709,7 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
