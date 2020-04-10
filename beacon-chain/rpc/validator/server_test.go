@@ -40,7 +40,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	st := testutil.NewBeaconState()
 	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
@@ -259,10 +259,8 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
-	trie, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{Slot: 3})
-	if err != nil {
-		t.Fatal(err)
-	}
+	trie := testutil.NewBeaconState()
+	trie.SetSlot(3)
 	if err := db.SaveState(ctx, trie, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
