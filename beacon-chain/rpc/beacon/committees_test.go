@@ -17,6 +17,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -257,9 +258,8 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.B
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{Validators: validators, Balances: balances})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return st
+	s := testutil.NewBeaconState()
+	s.SetValidators(validators)
+	s.SetBalances(balances)
+	return s
 }

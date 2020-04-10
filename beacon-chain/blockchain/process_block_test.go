@@ -46,10 +46,7 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	st := testutil.NewBeaconState()
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +184,8 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: uint64(i)})
+		s := testutil.NewBeaconState()
+		s.SetSlot(uint64(i))
 		if err := service.beaconDB.SaveState(ctx, s, r); err != nil {
 			t.Fatal(err)
 		}
@@ -397,16 +395,17 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 
 	for i := uint64(0); i < 64; i++ {
 		b := &ethpb.BeaconBlock{Slot: i}
-		s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: i})
+		s := testutil.NewBeaconState()
+		s.SetSlot(i)
 		r, _ := ssz.HashTreeRoot(b)
 		service.initSyncState[r] = s
 	}
 
 	// Set finalized root as slot 32
 	finalizedRoot, _ := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 32})
-
-	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{
-		Epoch: 1, Root: finalizedRoot[:]}})
+	s := testutil.NewBeaconState()
+	s.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Epoch: 1, Root: finalizedRoot[:]})
 	if err := service.saveInitState(ctx, s); err != nil {
 		t.Fatal(err)
 	}
@@ -442,17 +441,15 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	}
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	st := testutil.NewBeaconState()
 	service.initSyncState[r] = st.Copy()
 	if err := db.SaveState(ctx, st.Copy(), r); err != nil {
 		t.Fatal(err)
 	}
 
 	// Could update
-	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}})
+	s := testutil.NewBeaconState()
+	s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: r[:]})
 	if err := service.updateJustified(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
@@ -487,7 +484,7 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	fRoot, _ := ssz.HashTreeRoot(fBlock)
 	hBlock := &ethpb.BeaconBlock{Slot: 1}
 	headRoot, _ := ssz.HashTreeRoot(hBlock)
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st := testutil.NewBeaconState()
 	if err := service.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: fBlock}); err != nil {
 		t.Fatal(err)
 	}
@@ -530,7 +527,7 @@ func TestPersistCache_CanSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st := testutil.NewBeaconState()
 
 	for i := uint64(0); i < initialSyncCacheSize; i++ {
 		st.SetSlot(i)
@@ -582,7 +579,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st := testutil.NewBeaconState()
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -636,7 +633,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st := testutil.NewBeaconState()
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -695,10 +692,7 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 	r7, _ := ssz.HashTreeRoot(b7)
 	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
 	r8, _ := ssz.HashTreeRoot(b8)
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
-	if err != nil {
-		return nil, err
-	}
+	st := testutil.NewBeaconState()
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, err

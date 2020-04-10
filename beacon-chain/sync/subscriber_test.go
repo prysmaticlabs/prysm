@@ -72,13 +72,13 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		r.attesterSlashingSubscriber(ctx, msg)
 		wg.Done()
 		return nil
 	})
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.chainStarted = true
 	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
@@ -120,13 +120,13 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		r.proposerSlashingSubscriber(ctx, msg)
 		wg.Done()
 		return nil
 	})
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.chainStarted = true
 	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(

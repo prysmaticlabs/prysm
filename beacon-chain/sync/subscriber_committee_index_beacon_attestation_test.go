@@ -16,9 +16,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -43,7 +41,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
-	savedState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	savedState := testutil.NewBeaconState()
 	db.SaveState(context.Background(), savedState, root)
 
 	c, _ := lru.New(10)
