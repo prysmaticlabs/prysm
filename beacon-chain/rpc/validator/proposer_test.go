@@ -44,7 +44,7 @@ func TestGetBlock_OK(t *testing.T) {
 	testutil.ResetCache()
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
