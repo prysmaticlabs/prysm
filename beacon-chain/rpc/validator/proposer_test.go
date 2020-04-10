@@ -36,6 +36,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+func init() {
+	// Use minimal config to reduce test setup time.
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
 func TestGetBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
