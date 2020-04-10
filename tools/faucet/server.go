@@ -24,7 +24,7 @@ import (
 
 const ipLimit = 5
 
-var fundingAmount = big.NewInt(32.5 * params.Ether)
+var fundingAmount = big.NewInt(32e9)
 var funded = make(map[string]bool)
 var ipCounter = make(map[string]int)
 var fundingLock sync.Mutex
