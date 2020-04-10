@@ -146,7 +146,7 @@ func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.B
 	for {
 		select {
 		case <-ticker.C:
-			log.Info("Context closed, trying to restart attestation stream")
+			log.Info("Context closed, attempting to restart attestation stream")
 			stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 			if err != nil {
 				continue
@@ -155,7 +155,7 @@ func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.B
 			return stream, nil
 		case <-ctx.Done():
 			log.Debug("Context closed, exiting reconnect routine")
-			return nil, errors.New("context closed, quit restart stream retries")
+			return nil, errors.New("context closed, no longer attempting to restart stream")
 		}
 	}
 
@@ -166,7 +166,7 @@ func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_St
 	for {
 		select {
 		case <-ticker.C:
-			log.Info("Context closed, trying to restart block stream")
+			log.Info("Context closed, attempting to restart block stream")
 			stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
 			if err != nil {
 				continue
@@ -175,7 +175,7 @@ func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_St
 			return stream, nil
 		case <-ctx.Done():
 			log.Debug("Context closed, exiting reconnect routine")
-			return nil, errors.New("context closed, quit restart stream retries")
+			return nil, errors.New("context closed, no longer attempting to restart stream")
 		}
 	}
 
