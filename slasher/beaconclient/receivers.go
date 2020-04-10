@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"io"
-	"strings"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // represents the frequency in which we try to restart our
@@ -39,16 +40,24 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 			log.WithError(ctx.Err()).Error("Context canceled - shutting down blocks receiver")
 			return
 		}
-		if err != nil && strings.Contains(strings.ToLower(err.Error()), strings.ToLower(context.Canceled.Error())) {
-			stream, err = bs.restartBlockStream(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not restart stream")
+		if err != nil {
+			if e, ok := status.FromError(err); ok {
+				switch e.Code() {
+				case codes.Canceled:
+					stream, err = bs.restartBlockStream(ctx)
+					if err != nil {
+						log.WithError(err).Error("Could not restart stream")
+						return
+					}
+					break
+				default:
+					log.WithError(err).Errorf("Could not receive block from beacon node. rpc status: %v", e.Code())
+					return
+				}
+			} else {
+				log.WithError(err).Error("Could not receive blocks from beacon node")
 				return
 			}
-		}
-		if err != nil {
-			log.WithError(err).Error("Could not receive block from beacon node")
-			break
 		}
 		if res == nil {
 			continue
@@ -83,16 +92,24 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			log.WithError(ctx.Err()).Error("Context canceled - shutting down attestations receiver")
 			return
 		}
-		if err != nil && strings.Contains(strings.ToLower(err.Error()), strings.ToLower(context.Canceled.Error())) {
-			stream, err = bs.restartIndexedAttestationStream(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not restart stream")
+		if err != nil {
+			if e, ok := status.FromError(err); ok {
+				switch e.Code() {
+				case codes.Canceled:
+					stream, err = bs.restartIndexedAttestationStream(ctx)
+					if err != nil {
+						log.WithError(err).Error("Could not restart stream")
+						return
+					}
+					break
+				default:
+					log.WithError(err).Errorf("Could not receive attestations from beacon node. rpc status: %v", e.Code())
+					return
+				}
+			} else {
+				log.WithError(err).Error("Could not receive attestations from beacon node")
 				return
 			}
-		}
-		if err != nil {
-			log.WithError(err).Error("Could not receive attestations from beacon node")
-			break
 		}
 		if res == nil {
 			continue
