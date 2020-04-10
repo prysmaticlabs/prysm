@@ -54,8 +54,8 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 // This loads a cold state by slot where the slot lies between the archived point.
 // This is a slower implementation given there's no root and slot is the only argument. It requires fetching
 // all the blocks between the archival points.
-func (s *State) loadColdIntermediateStateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateBySlot")
+func (s *State) loadColdStateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateBySlot")
 	defer span.End()
 
 	return s.ComputeStateUpToSlot(ctx, slot)

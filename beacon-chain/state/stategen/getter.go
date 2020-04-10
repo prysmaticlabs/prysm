@@ -44,7 +44,7 @@ func (s *State) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconStat
 	defer span.End()
 
 	if slot < s.splitInfo.slot {
-		return s.loadColdIntermediateStateBySlot(ctx, slot)
+		return s.loadColdStateBySlot(ctx, slot)
 	}
 
 	return s.loadHotStateBySlot(ctx, slot)

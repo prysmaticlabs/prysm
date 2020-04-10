@@ -41,6 +41,9 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 	if lastState == nil {
 		return nil, errUnknownState
 	}
+	if lastBlockSlot == 0 {
+		return s.ReplayBlocks(ctx, lastState, []*ethpb.SignedBeaconBlock{}, targetSlot)
+	}
 
 	// Return if the last valid state's slot is higher than the target slot.
 	if lastState.Slot() >= targetSlot {
@@ -246,7 +249,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 
 	lastSaved, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot+1)
 	if err != nil {
-		return [32]byte{}, 0, errUnknownBlock
+		return [32]byte{}, 0, err
 	}
 
 	// Given this is used to query canonical block. There should only be one saved canonical block of a given slot.
@@ -254,7 +257,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 		return [32]byte{}, 0, fmt.Errorf("highest saved block does not equal to 1, it equals to %d", len(lastSaved))
 	}
 	if lastSaved[0] == nil || lastSaved[0].Block == nil {
-		return [32]byte{}, 0, errUnknownBlock
+		return [32]byte{}, 0, nil
 	}
 	r, err := ssz.HashTreeRoot(lastSaved[0].Block)
 	if err != nil {
