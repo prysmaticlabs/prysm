@@ -13,9 +13,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ReconnectPeriod represents the frequency in which we try to restart our
+// represents the frequency in which we try to restart our
 // streams when beacon chain is down.
-var ReconnectPeriod = 5 * time.Second
+var reconnectPeriod = 5 * time.Second
 
 // receiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
@@ -142,7 +142,7 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 }
 
 func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.BeaconChain_StreamIndexedAttestationsClient, error) {
-	ticker := time.NewTicker(ReconnectPeriod)
+	ticker := time.NewTicker(reconnectPeriod)
 	for {
 		select {
 		case <-ticker.C:
@@ -162,7 +162,7 @@ func (bs *Service) restartIndexedAttestationStream(ctx context.Context) (ethpb.B
 }
 
 func (bs *Service) restartBlockStream(ctx context.Context) (ethpb.BeaconChain_StreamBlocksClient, error) {
-	ticker := time.NewTicker(ReconnectPeriod)
+	ticker := time.NewTicker(reconnectPeriod)
 	for {
 		select {
 		case <-ticker.C:
