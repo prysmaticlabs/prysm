@@ -538,7 +538,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
-
+	blockRoot := bytesutil.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
@@ -548,7 +548,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: []byte("root"),
+								BeaconBlockRoot: blockRoot[:],
 								Slot:            i,
 								CommitteeIndex:  0,
 							},
@@ -608,7 +608,13 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		},
 		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
-	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
+	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+		Root: blockRoot[:],
+		Slot: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot[:]))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -627,16 +633,18 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	}
 }
 
-func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
+func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
 
+	blockRoot := bytesutil.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
-	startSlot := helpers.StartSlot(50)
 	epoch := uint64(50)
+	startSlot := helpers.StartSlot(epoch)
+
 	for i := startSlot; i < count; i++ {
 		blockExample := &ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
@@ -644,7 +652,7 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: []byte("root"),
+								BeaconBlockRoot: blockRoot[:],
 								Slot:            i,
 								CommitteeIndex:  0,
 								Target: &ethpb.Checkpoint{
@@ -710,6 +718,12 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 			Genesis: time.Now(),
 		},
 		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
+	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+		Root: blockRoot[:],
+		Slot: helpers.StartSlot(epoch),
+	}); err != nil {
+		t.Fatal(err)
 	}
 	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
