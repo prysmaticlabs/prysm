@@ -33,7 +33,6 @@ func startNode(ctx *cli.Context) error {
 }
 
 var appFlags = []cli.Flag{
-	flags.NoCustomConfigFlag,
 	flags.BeaconRPCProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
