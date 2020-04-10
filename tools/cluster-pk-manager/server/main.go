@@ -6,11 +6,11 @@ import (
 	"net"
 
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
+
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 )
 
 var (
@@ -33,8 +33,6 @@ func main() {
 	if *verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-	// use demo-config for cluster deployments
-	params.UseDemoBeaconConfig()
 	if *ensureDeposited {
 		log.Warn("--ensure-deposited: Ensuring all keys are deposited or deleting them from database!")
 	}
