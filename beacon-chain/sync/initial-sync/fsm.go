@@ -6,6 +6,7 @@ import (
 	"time"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 const (
@@ -119,7 +120,7 @@ func (sm *stateMachine) addEpochState(epoch uint64) {
 		epoch:   epoch,
 		state:   stateNew,
 		blocks:  []*eth.SignedBeaconBlock{},
-		updated: time.Now(),
+		updated: roughtime.Now(),
 	}
 	sm.epochs = append(sm.epochs, state)
 }
@@ -223,7 +224,7 @@ func (es *epochState) setState(name stateID) {
 	if es.state == name {
 		return
 	}
-	es.updated = time.Now()
+	es.updated = roughtime.Now()
 	es.state = name
 }
 
