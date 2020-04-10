@@ -22,12 +22,12 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
-	slot, err := s.blockRootSlot(ctx, blockRoot)
+	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
-	if slot < s.splitInfo.slot {
+	if summary.Slot < s.splitInfo.slot {
 		return s.loadColdStateByRoot(ctx, blockRoot)
 	}
 
@@ -70,6 +70,17 @@ func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*pb.State
 		}
 	}
 	if summary == nil {
+		if s.beaconDB.HasBlock(ctx, blockRoot) {
+			b, err := s.beaconDB.Block(ctx, blockRoot)
+			if err != nil {
+				return nil, err
+			}
+			summary := &pb.StateSummary{Slot: b.Block.Slot, Root: blockRoot[:]}
+			if err := s.beaconDB.SaveStateSummary(ctx, summary); err != nil {
+				return nil, err
+			}
+			return summary, nil
+		}
 		return nil, errUnknownStateSummary
 	}
 	return summary, nil
