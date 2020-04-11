@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -54,7 +53,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	}
 	BlkWithStateBadAttRoot, _ := ssz.HashTreeRoot(BlkWithStateBadAtt.Block)
 
-	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	s := testutil.NewBeaconState()
 	if err := s.SetSlot(100 * params.BeaconConfig().SlotsPerEpoch); err != nil {
 		t.Fatal(err)
 	}
@@ -67,13 +66,11 @@ func TestStore_OnAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 	BlkWithValidStateRoot, _ := ssz.HashTreeRoot(BlkWithValidState.Block)
-	s, _ = stateTrie.InitializeFromProto(&pb.BeaconState{
-		Fork: &pb.Fork{
-			Epoch:           0,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	s = testutil.NewBeaconState()
+	s.SetFork(&pb.Fork{
+		Epoch:           0,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	})
 	if err := service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)

@@ -141,7 +141,7 @@ func (bs *Server) ListIndexedAttestations(
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		epoch := helpers.SlotToEpoch(att.Data.Slot)
-		attState, err := bs.BeaconDB.State(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+		attState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,

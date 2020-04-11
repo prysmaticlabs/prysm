@@ -46,7 +46,10 @@ func TestGetBlock_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	testutil.ResetCache()
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	if err != nil {
@@ -152,6 +155,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -209,7 +214,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	// Generate some more random attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
-	if atts, err := testutil.GenerateAttestations(beaconState, privKeys, 8, 1, true); err != nil {
+	if atts, err := testutil.GenerateAttestations(beaconState, privKeys, 300, 1, true); err != nil {
 		t.Fatal(err)
 	} else {
 		found := false
@@ -274,13 +279,15 @@ func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
+	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
@@ -321,6 +328,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -354,7 +363,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 9,
+			ProposerIndex: 41,
 			ParentRoot:    parentRoot[:],
 			Slot:          1,
 			Body: &ethpb.BeaconBlockBody{
@@ -1216,12 +1225,8 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	ctx := context.Background()
-	headState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
-		Eth1DepositIndex: 64,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	headState := testutil.NewBeaconState()
+	headState.SetEth1DepositIndex(64)
 	ps := &Server{
 		HeadFetcher:   &mock.ChainService{State: headState},
 		BeaconDB:      db,
@@ -1263,12 +1268,14 @@ func TestFilterAttestation_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
+	numDeposits := uint64(64)
 	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
 	if err := state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]); err != nil {
 		t.Fatal(err)
@@ -1307,7 +1314,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 	}
 
 	for i := 0; i < len(atts); i++ {
-		aggBits := bitfield.NewBitlist(4)
+		aggBits := bitfield.NewBitlist(2)
 		aggBits.SetBitAt(0, true)
 		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
 			CommitteeIndex: uint64(i),

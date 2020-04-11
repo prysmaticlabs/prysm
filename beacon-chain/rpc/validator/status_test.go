@@ -94,16 +94,15 @@ func TestValidatorStatus_Pending(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 	// Pending active because activation epoch is still defaulted at far future slot.
-	state, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Validators: []*ethpb.Validator{
-			{
-				ActivationEpoch:   params.BeaconConfig().FarFutureEpoch,
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-				PublicKey:         pubKey,
-			},
+	state := testutil.NewBeaconState()
+	state.SetSlot(5000)
+	state.SetValidators([]*ethpb.Validator{
+		{
+			ActivationEpoch:   params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey:         pubKey,
 		},
-		Slot: 5000,
 	})
 	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
@@ -412,7 +411,9 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatal(err)
@@ -420,12 +421,11 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	state, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot: slot,
-		Validators: []*ethpb.Validator{{
-			PublicKey:         pubKey,
-			WithdrawableEpoch: epoch + 1},
-		},
+	state := testutil.NewBeaconState()
+	state.SetSlot(slot)
+	state.SetValidators([]*ethpb.Validator{{
+		PublicKey:         pubKey,
+		WithdrawableEpoch: epoch + 1},
 	})
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -616,50 +616,47 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	}
 	currentSlot := uint64(5000)
 	// Pending active because activation epoch is still defaulted at far future slot.
-	state, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
-		Validators: []*ethpb.Validator{
-			{
-				ActivationEpoch:   0,
-				PublicKey:         pubKey(0),
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			{
-				ActivationEpoch:   0,
-				PublicKey:         pubKey(1),
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			{
-				ActivationEpoch:   0,
-				PublicKey:         pubKey(2),
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			{
-				ActivationEpoch:   0,
-				PublicKey:         pubKey(3),
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			{
-				ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 1,
-				PublicKey:         pbKey,
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
-			{
-				ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 4,
-				PublicKey:         pubKey(5),
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			},
+	validators := []*ethpb.Validator{
+		{
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(0),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
-		Slot: currentSlot,
-	})
-	if err != nil {
-		t.Fatal(err)
+		{
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(1),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(2),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			ActivationEpoch:   0,
+			PublicKey:         pubKey(3),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 1,
+			PublicKey:         pbKey,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			ActivationEpoch:   currentSlot/params.BeaconConfig().SlotsPerEpoch + 4,
+			PublicKey:         pubKey(5),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
 	}
+	state := testutil.NewBeaconState()
+	state.SetValidators(validators)
+	state.SetSlot(currentSlot)
 	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}

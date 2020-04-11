@@ -17,7 +17,6 @@ import (
 var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
-	t.Skip("To be resolved until 5119 gets in")
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState1Epoch()
 	if err != nil {

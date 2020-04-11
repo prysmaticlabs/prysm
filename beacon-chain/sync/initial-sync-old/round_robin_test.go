@@ -18,13 +18,13 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,7 +55,7 @@ func TestConstants(t *testing.T) {
 }
 
 func TestRoundRobinSync(t *testing.T) {
-
+	t.Skip("Test is filled with races and is part of legacy code, pending deletion")
 	tests := []struct {
 		name               string
 		currentSlot        uint64
@@ -151,38 +151,6 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
-
-		// TODO(3147): Handle multiple failures.
-		//{
-		//	name:               "Multiple peers with multiple failures",
-		//	currentSlot:        320, // 10 epochs
-		//	expectedBlockSlots: makeSequence(1, 320),
-		//	peers: []*peerData{
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//	},
-		//},
 		{
 			name:               "Multiple peers with different finalized epoch",
 			currentSlot:        320, // 10 epochs
@@ -262,10 +230,7 @@ func TestRoundRobinSync(t *testing.T) {
 			}
 			gRoot, _ := ssz.HashTreeRoot(gBlock.Block)
 			beaconDB.SaveGenesisBlockRoot(context.Background(), gRoot)
-			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-			if err != nil {
-				t.Fatal(err)
-			}
+			st := testutil.NewBeaconState()
 			beaconDB.SaveState(context.Background(), st, gRoot)
 
 			mc := &mock.ChainService{
