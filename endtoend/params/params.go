@@ -2,7 +2,9 @@ package params
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -54,7 +56,7 @@ func Init(beaconNodeCount int) error {
 	}
 
 	TestParams = &Params{
-		TestPath:              testPath,
+		TestPath:              path.Join(testPath, fmt.Sprintf("shard-%d", testIndex)),
 		LogPath:               logPath,
 		TestShardIndex:        testIndex,
 		BeaconNodeCount:       beaconNodeCount,

@@ -1,16 +1,21 @@
 package components
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/prysmaticlabs/prysm/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -36,6 +41,17 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 		t.Fatal("beacon chain binary not found")
 	}
 
+	seed := bytesutil.ToBytes(uint64(e2e.TestParams.BeaconNodeRPCPort), btcec.PrivKeyBytesLen)
+	file, err := os.Create(path.Join(e2e.TestParams.TestPath, fmt.Sprintf("enr-key-%d", index)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	hexBytes := make([]byte, hex.EncodedLen(len(seed)))
+	hex.Encode(hexBytes, seed)
+	if _, err := file.Write(hexBytes); err != nil {
+		t.Fatal(err)
+	}
+
 	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index))
 	if err != nil {
 		t.Fatal(err)
@@ -49,6 +65,7 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 		fmt.Sprintf("--http-web3provider=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
 		fmt.Sprintf("--web3provider=ws://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort+1),
 		fmt.Sprintf("--min-sync-peers=%d", e2e.TestParams.BeaconNodeCount-1),
+		fmt.Sprintf("--p2p-priv-key=%s", file.Name()),
 		fmt.Sprintf("--p2p-udp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+10),      //12200
 		fmt.Sprintf("--p2p-tcp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+20),      //13200
 		fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+30),   //8280
@@ -56,7 +73,6 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 		"--force-clear-db",
-		"--no-discovery",
 	}
 	args = append(args, featureconfig.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
@@ -74,16 +90,16 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 		t.Fatalf("Failed to start beacon node: %v", err)
 	}
 
-	if err = helpers.WaitForTextInFile(stdOutFile, "Node started p2p server"); err != nil {
+	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
+	//
+	//multiAddr, err := getMultiAddrFromLogFile(stdOutFile.Name())
+	//if err != nil {
+	//	t.Fatalf("could not get multiaddr for node %d: %v", index, err)
+	//}
 
-	multiAddr, err := getMultiAddrFromLogFile(stdOutFile.Name())
-	if err != nil {
-		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
-	}
-
-	return multiAddr, cmd.Process.Pid
+	return "", cmd.Process.Pid
 }
 
 func getMultiAddrFromLogFile(name string) (string, error) {

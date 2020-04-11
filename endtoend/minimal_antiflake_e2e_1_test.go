@@ -11,7 +11,6 @@ import (
 )
 
 func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
-	t.Skip("Temp skip for #5127, need proper network implementations")
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
@@ -26,7 +25,7 @@ func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
 			ev.ValidatorsAreActive,
 		},
 	}
-	if err := e2eParams.Init(4); err != nil {
+	if err := e2eParams.Init(1); err != nil {
 		t.Fatal(err)
 	}
 
