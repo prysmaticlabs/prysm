@@ -153,9 +153,6 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	for i := 0; i < numValidators; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
 			PublicKey:             pubKey,
@@ -241,15 +238,11 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 }
 
 func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.BeaconState {
-	ctx := context.Background()
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
 			PublicKey:             pubKey,

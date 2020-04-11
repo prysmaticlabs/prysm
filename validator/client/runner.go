@@ -18,8 +18,8 @@ import (
 type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
-	WaitForSync(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	WaitForSync(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time

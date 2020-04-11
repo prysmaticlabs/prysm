@@ -69,7 +69,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	if err != nil {
 		return nil, err
 	}
-	preStateValidatorCount := preState.NumValidators()
 
 	root, err := stateutil.BlockRoot(b)
 	if err != nil {
@@ -158,11 +157,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		}
 	}
 
-	// Update validator indices in database as needed.
-	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return nil, errors.Wrap(err, "could not save new validators")
-	}
-
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		logEpochData(postState)
@@ -216,7 +210,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return nil
 	}
 
-	preStateValidatorCount := preState.NumValidators()
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
@@ -316,11 +309,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 				return errors.Wrap(err, "could not migrate to cold")
 			}
 		}
-	}
-
-	// Update validator indices in database as needed.
-	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save new validators")
 	}
 
 	if featureconfig.Get().DisableNewStateMgmt {

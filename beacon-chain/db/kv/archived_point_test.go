@@ -30,6 +30,14 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
+	i, err := db.LastArchivedIndex(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i != 0 {
+		t.Error("Did not get correct index")
+	}
+
 	if err := db.SaveArchivedPointRoot(ctx, [32]byte{'A'}, 1); err != nil {
 		t.Fatal(err)
 	}
@@ -50,5 +58,13 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	}
 	if db.LastArchivedIndexRoot(ctx) != [32]byte{'B'} {
 		t.Error("Did not get wanted root")
+	}
+
+	i, err = db.LastArchivedIndex(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i != 3 {
+		t.Error("Did not get correct index")
 	}
 }
