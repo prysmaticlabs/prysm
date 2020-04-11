@@ -79,6 +79,10 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 
 	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators: []*ethpb.Validator{
+			&ethpb.Validator{PublicKey: pubKey(0)},
+			&ethpb.Validator{PublicKey: pubKey(1)},
+		},
 	})
 
 	server := &Server{
@@ -90,7 +94,11 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	pubKey := pubKey(1)
+	v, err := s.ValidatorAtIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := v.PublicKey
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	if _, err := server.SubmitAggregateAndProof(ctx, req); err != nil {
@@ -131,7 +139,11 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := pubKey(2)
+	v, err := beaconState.ValidatorAtIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := v.PublicKey
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
@@ -183,7 +195,11 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := pubKey(2)
+	v, err := beaconState.ValidatorAtIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := v.PublicKey
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {

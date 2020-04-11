@@ -46,8 +46,13 @@ func TestValidatorIndex_OK(t *testing.T) {
 
 	pubKey := pubKey(1)
 
+	st.SetValidators([]*ethpb.Validator{
+		&ethpb.Validator{PublicKey: pubKey},
+	})
+
 	Server := &Server{
-		BeaconDB: db,
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: st},
 	}
 
 	req := &ethpb.ValidatorIndexRequest{

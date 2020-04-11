@@ -45,9 +45,11 @@ func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	}
 
 	Server := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:        db,
+		HeadFetcher:     &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
+		Eth1InfoFetcher: &mockPOW.POWChain{},
+		DepositFetcher:  depositcache.NewDepositCache(),
 	}
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{{1}},
