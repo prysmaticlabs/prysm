@@ -196,11 +196,6 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
-		t.Fatal(err)
-	}
-	pubKey := v.PublicKey
-	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 

@@ -3,12 +3,12 @@ package client
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -67,14 +67,14 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, finish := setup(t)
 	defer finish()
-	currentTime := uint64(time.Now().Unix())
+	currentTime := uint64(roughtime.Now().Unix())
 	numOfSlots := uint64(4)
 	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 	timeToSleep := params.BeaconConfig().SecondsPerSlot * 2 / 3
 	twoThirdTime := currentTime + timeToSleep
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
 
-	currentTime = uint64(time.Now().Unix())
+	currentTime = uint64(roughtime.Now().Unix())
 	if currentTime != twoThirdTime {
 		t.Errorf("Wanted %d time for slot two third but got %d", twoThirdTime, currentTime)
 	}
