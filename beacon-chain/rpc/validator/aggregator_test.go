@@ -92,9 +92,6 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	sig := priv.Sign([]byte{'A'}, 0)
 	pubKey := pubKey(1)
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
-		t.Fatal(err)
-	}
 
 	if _, err := server.SubmitAggregateAndProof(ctx, req); err != nil {
 		t.Fatal(err)
@@ -136,9 +133,6 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	sig := priv.Sign([]byte{'B'}, 0)
 	pubKey := pubKey(2)
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
-		t.Fatal(err)
-	}
 
 	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
 		t.Fatal(err)
@@ -191,9 +185,6 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	sig := priv.Sign([]byte{'B'}, 0)
 	pubKey := pubKey(2)
 	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
-		t.Fatal(err)
-	}
 
 	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
 		t.Fatal(err)
