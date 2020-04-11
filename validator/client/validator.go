@@ -280,7 +280,6 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	// If duties is nil it means we have had no prior duties and just started up.
-	firstDutiesReceived := v.duties == nil
 	resp, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
 		v.duties = nil // Clear assignments so we know to retry the request.
@@ -289,32 +288,29 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	v.duties = resp
-	// Only log the full assignments output on epoch start to be less verbose.
-	// Also log out on first launch so the user doesn't have to wait a whole epoch to see their assignments.
-	if slot%params.BeaconConfig().SlotsPerEpoch == 0 || firstDutiesReceived {
-		for _, duty := range v.duties.Duties {
-			lFields := logrus.Fields{
-				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
-				"validatorIndex": duty.ValidatorIndex,
-				"committeeIndex": duty.CommitteeIndex,
-				"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
-				"status":         duty.Status,
-			}
 
-			if v.emitAccountMetrics {
-				fmtKey := fmt.Sprintf("%#x", duty.PublicKey[:])
-				validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
-			}
-
-			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
-				if duty.ProposerSlot > 0 {
-					lFields["proposerSlot"] = duty.ProposerSlot
-				}
-				lFields["attesterSlot"] = duty.AttesterSlot
-			}
-
-			log.WithFields(lFields).Info("New assignment")
+	for _, duty := range v.duties.Duties {
+		lFields := logrus.Fields{
+			"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
+			"validatorIndex": duty.ValidatorIndex,
+			"committeeIndex": duty.CommitteeIndex,
+			"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
+			"status":         duty.Status,
 		}
+
+		if v.emitAccountMetrics {
+			fmtKey := fmt.Sprintf("%#x", duty.PublicKey[:])
+			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+		}
+
+		if duty.Status == ethpb.ValidatorStatus_ACTIVE {
+			if duty.ProposerSlot > 0 {
+				lFields["proposerSlot"] = duty.ProposerSlot
+			}
+			lFields["attesterSlot"] = duty.AttesterSlot
+		}
+
+		log.WithFields(lFields).Info("New assignment")
 	}
 
 	return nil
