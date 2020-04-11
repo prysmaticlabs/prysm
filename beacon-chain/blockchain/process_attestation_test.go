@@ -2,9 +2,10 @@ package blockchain
 
 import (
 	"context"
-	"github.com/gogo/protobuf/proto"
 	"strings"
 	"testing"
+
+	"github.com/gogo/protobuf/proto"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"

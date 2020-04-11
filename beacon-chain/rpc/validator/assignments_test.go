@@ -45,9 +45,11 @@ func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	}
 
 	Server := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:        db,
+		HeadFetcher:     &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
+		Eth1InfoFetcher: &mockPOW.POWChain{},
+		DepositFetcher:  depositcache.NewDepositCache(),
 	}
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{{1}},
@@ -99,7 +101,6 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 func TestGetDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -127,9 +128,6 @@ func TestGetDuties_OK(t *testing.T) {
 	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
 	for i, pk := range pubKeys {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
-	}
-	if err := db.SaveValidatorIndices(ctx, pubkeysAs48ByteType, indices); err != nil {
-		t.Fatal(err)
 	}
 
 	vs := &Server{
@@ -186,7 +184,6 @@ func TestGetDuties_OK(t *testing.T) {
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -212,9 +209,6 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
 	}
-	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
-		t.Fatal(err)
-	}
 
 	vs := &Server{
 		BeaconDB:    db,
@@ -239,7 +233,6 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
@@ -263,9 +256,6 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
-	}
-	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
-		t.Fatal(err)
 	}
 
 	vs := &Server{
@@ -311,7 +301,6 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 func BenchmarkCommitteeAssignment(b *testing.B) {
 	db := dbutil.SetupDB(b)
 	defer dbutil.TeardownDB(b, db)
-	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(8192 * 2)
@@ -334,9 +323,6 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
-	}
-	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
-		b.Fatal(err)
 	}
 
 	vs := &Server{

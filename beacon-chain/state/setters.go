@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -271,6 +272,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.markFieldAsDirty(validators)
 	b.rebuildTrie[validators] = true
+	b.valIdxMap = coreutils.ValidatorIndexMap(b.state.Validators)
 	return nil
 }
 
@@ -626,6 +628,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.state.Validators = append(vals, val)
 	b.markFieldAsDirty(validators)
 	b.AddDirtyIndices(validators, []uint64{uint64(len(b.state.Validators) - 1)})
+	b.valIdxMap = coreutils.ValidatorIndexMap(b.state.Validators)
 	return nil
 }
 
