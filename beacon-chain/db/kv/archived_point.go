@@ -38,6 +38,9 @@ func (k *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
 	err := k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		b := bucket.Get(lastArchivedIndexKey)
+		if b == nil {
+			return nil
+		}
 		index = binary.LittleEndian.Uint64(b)
 		return nil
 	})
