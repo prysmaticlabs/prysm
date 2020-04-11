@@ -112,6 +112,37 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	return nil
 }
 
+// WaitForSync checks whether the beacon node has sync to the latest head
+func (v *validator) WaitForSync(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
+	defer span.End()
+
+	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "could not get sync status")
+	}
+	if !s.Syncing {
+		return nil
+	}
+
+	for {
+		select {
+		// Poll every half slot
+		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch/2) * time.Second):
+			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
+			if err != nil {
+				return errors.Wrap(err, "could not get sync status")
+			}
+			if !s.Syncing {
+				return nil
+			}
+			log.Info("Waiting for beacon node to sync to latest chain head")
+		case <-ctx.Done():
+			return errors.New("context has been canceled, exiting goroutine")
+		}
+	}
+}
+
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
@@ -156,37 +187,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 
 	return nil
-}
-
-// WaitForSync checks whether the beacon node has sync to the latest head
-func (v *validator) WaitForSync(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
-	defer span.End()
-
-	s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "could not get sync status")
-	}
-	if !s.Syncing {
-		return nil
-	}
-
-	for {
-		select {
-		// Poll every half slot
-		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch/2) * time.Second):
-			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
-			if err != nil {
-				return errors.Wrap(err, "could not get sync status")
-			}
-			if !s.Syncing {
-				return nil
-			}
-			log.Info("Waiting for beacon node to sync to latest chain head")
-		case <-ctx.Done():
-			return errors.New("context has been canceled, exiting goroutine")
-		}
-	}
 }
 
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) [][]byte {
