@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -141,28 +140,6 @@ func (s *Service) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 	finalizedSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	if finalizedSlot >= b.Slot {
 		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot, finalizedSlot)
-	}
-	return nil
-}
-
-// saveNewValidators saves newly added validator indices from the state to db.
-// Does nothing if validator count has not changed.
-func (s *Service) saveNewValidators(ctx context.Context, preStateValidatorCount int, postState *stateTrie.BeaconState) error {
-	postStateValidatorCount := postState.NumValidators()
-	if preStateValidatorCount != postStateValidatorCount {
-		indices := make([]uint64, 0)
-		pubKeys := make([][48]byte, 0)
-		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
-			indices = append(indices, uint64(i))
-			pubKeys = append(pubKeys, postState.PubkeyAtIndex(uint64(i)))
-		}
-		if err := s.beaconDB.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
-			return errors.Wrapf(err, "could not save activated validators: %v", indices)
-		}
-		log.WithFields(logrus.Fields{
-			"indices":             indices,
-			"totalValidatorCount": postStateValidatorCount - preStateValidatorCount,
-		}).Trace("Validator indices saved in DB")
 	}
 	return nil
 }

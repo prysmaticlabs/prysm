@@ -37,6 +37,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
@@ -45,6 +46,7 @@ import (
 
 var (
 	debug        = flag.Bool("debug", false, "Enable debug logging")
+	logFileName  = flag.String("log-file", "", "Specify log filename, relative or absolute")
 	privateKey   = flag.String("private", "", "Private key to use for peer ID")
 	discv5port   = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
 	kademliaPort = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
@@ -62,6 +64,12 @@ type handler struct {
 
 func main() {
 	flag.Parse()
+
+	if *logFileName != "" {
+		if err := logutil.ConfigurePersistentLogging(*logFileName); err != nil {
+			log.WithError(err).Error("Failed to configuring logging to disk.")
+		}
+	}
 
 	fmt.Printf("Starting bootnode. Version: %s\n", version.GetVersion())
 

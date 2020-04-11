@@ -5,6 +5,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -23,10 +24,12 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, req.PublicKey)
+	st, err := as.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
+
+	validatorIndex, exists := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !exists {
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
