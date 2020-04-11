@@ -209,9 +209,15 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 					"Deposit for validator received but not processed into state")
 			}
 		case ethpb.ValidatorStatus_PENDING:
-			log.WithFields(logrus.Fields{
-				"positionInActivationQueue": status.Status.PositionInActivationQueue,
-			}).Info("Waiting to be activated")
+			if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
+				log.WithFields(logrus.Fields{
+					"positionInActivationQueue": status.Status.PositionInActivationQueue,
+				}).Info("Waiting to be activated")
+			} else {
+				log.WithFields(logrus.Fields{
+					"activationEpoch": status.Status.ActivationEpoch,
+				}).Info("Waiting to be activated")
+			}
 		case ethpb.ValidatorStatus_ACTIVE:
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		case ethpb.ValidatorStatus_EXITED:
