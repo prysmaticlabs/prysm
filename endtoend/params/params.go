@@ -19,6 +19,7 @@ type Params struct {
 	BeaconNodeCount       int
 	Eth1RPCPort           int
 	ContractAddress       common.Address
+	BootNodePort          int
 	BeaconNodeRPCPort     int
 	BeaconNodeMetricsPort int
 	ValidatorMetricsPort  int
@@ -28,6 +29,9 @@ type Params struct {
 
 // TestParams is the globally accessible var for getting config elements.
 var TestParams *Params
+
+// BootNodeLogFileName is the file name used for the beacon chain node logs.
+var BootNodeLogFileName = "bootnode.log"
 
 // BeaconNodeLogFileName is the file name used for the beacon chain node logs.
 var BeaconNodeLogFileName = "beacon-%d.log"
@@ -61,7 +65,8 @@ func Init(beaconNodeCount int) error {
 		TestShardIndex:        testIndex,
 		BeaconNodeCount:       beaconNodeCount,
 		Eth1RPCPort:           3100 + testIndex*100, // Multiplying 100 here so the test index doesn't conflict with the other node ports.
-		BeaconNodeRPCPort:     4100 + testIndex*100,
+		BootNodePort:          4100 + testIndex*100,
+		BeaconNodeRPCPort:     4150 + testIndex*100,
 		BeaconNodeMetricsPort: 5100 + testIndex*100,
 		ValidatorMetricsPort:  6100 + testIndex*100,
 		SlasherRPCPort:        7100 + testIndex*100,
