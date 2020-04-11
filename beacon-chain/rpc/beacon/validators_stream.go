@@ -298,11 +298,7 @@ func (is *infostream) generateValidatorInfo(pubKey []byte, validators []*state.R
 
 	// Index
 	var ok bool
-	var err error
-	info.Index, ok, err = is.beaconDB.ValidatorIndex(is.ctx, pubKey)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Failed to obtain validator index")
-	}
+	info.Index, ok = headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
 		// We don't know of this validator; it's either a pending deposit or totally unknown.
 		return is.generatePendingValidatorInfo(info)
@@ -382,8 +378,8 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 	for _, validator := range validators {
 		if helpers.IsEligibleForActivationUsingTrie(headState, validator) {
 			pubKey := validator.PublicKey()
-			validatorIndex, ok, err := is.beaconDB.ValidatorIndex(is.ctx, pubKey[:])
-			if err == nil && ok {
+			validatorIndex, ok := headState.ValidatorIndexByPubkey(pubKey)
+			if ok {
 				pendingValidators = append(pendingValidators, validatorIndex)
 			}
 		}

@@ -16,7 +16,7 @@ func (k *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, i
 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(uint64ToBytes(index), blockRoot[:])
+		return bucket.Put(bytesutil.Uint64ToBytes(index), blockRoot[:])
 	})
 }
 
@@ -26,7 +26,7 @@ func (k *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(lastArchivedIndexKey, uint64ToBytes(index))
+		return bucket.Put(lastArchivedIndexKey, bytesutil.Uint64ToBytes(index))
 	})
 }
 
@@ -78,7 +78,7 @@ func (k *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		blockRoot = bucket.Get(uint64ToBytes(index))
+		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(index))
 		return nil
 	})
 
@@ -93,7 +93,7 @@ func (k *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(archivedIndexRootBucket)
-		exists = iBucket.Get(uint64ToBytes(index)) != nil
+		exists = iBucket.Get(bytesutil.Uint64ToBytes(index)) != nil
 		return nil
 	})
 	return exists
