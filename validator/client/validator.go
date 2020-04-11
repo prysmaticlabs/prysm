@@ -112,7 +112,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	return nil
 }
 
-// WaitForSync checks whether the beacon node has sync to the latest head
+// WaitForSync checks whether the beacon node has sync to the latest head.
 func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
@@ -127,8 +127,8 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	for {
 		select {
-		// Poll every half slot
-		case <-time.After(time.Duration(params.BeaconConfig().SlotsPerEpoch/2) * time.Second):
+		// Poll every half slot.
+		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second):
 			s, err := v.node.GetSyncStatus(ctx, &ptypes.Empty{})
 			if err != nil {
 				return errors.Wrap(err, "could not get sync status")
