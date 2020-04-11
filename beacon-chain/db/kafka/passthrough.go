@@ -352,3 +352,8 @@ func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*s
 func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
 	return e.db.SaveLastArchivedIndex(ctx, index)
 }
+
+// LastArchivedIndex -- passthrough
+func (e Exporter) LastArchivedIndex(ctx context.Context) (uint64, error) {
+	return e.db.LastArchivedIndex(ctx)
+}
