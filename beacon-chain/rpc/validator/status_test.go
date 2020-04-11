@@ -79,9 +79,6 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -160,9 +157,6 @@ func TestValidatorStatus_Active(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -244,9 +238,6 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 
 	// Initiated exit because validator exit epoch and withdrawable epoch are not FAR_FUTURE_EPOCH
 	slot := uint64(10000)
@@ -321,9 +312,6 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := uint64(10000)
@@ -395,9 +383,6 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 
 	// Exit because only exit epoch is =< current epoch.
 	slot := uint64(10000)
@@ -552,12 +537,6 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	depositTrie.Insert(dep.Data.Signature, 15)
 	depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root())
 
-	if err := db.SaveValidatorIndex(ctx, pubKeys[0], 0); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, pubKeys[1], 1); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
 	vs := &Server{
 		BeaconDB:           db,
 		Ctx:                context.Background(),
@@ -597,9 +576,6 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	ctx := context.Background()
 
 	pbKey := pubKey(5)
-	if err := db.SaveValidatorIndex(ctx, pbKey, 5); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -716,9 +692,6 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -795,9 +768,6 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
 
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
