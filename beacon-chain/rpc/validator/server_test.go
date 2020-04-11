@@ -45,12 +45,14 @@ func TestValidatorIndex_OK(t *testing.T) {
 	}
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
+
+	st.SetValidators([]*ethpb.Validator{
+		&ethpb.Validator{PublicKey: pubKey},
+	})
 
 	Server := &Server{
-		BeaconDB: db,
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: st},
 	}
 
 	req := &ethpb.ValidatorIndexRequest{
@@ -126,13 +128,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
-	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, pubKey2, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -168,12 +163,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, pubKey2, 1); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
 	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
 	if err != nil {
 		t.Fatal(err)

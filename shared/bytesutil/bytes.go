@@ -323,3 +323,10 @@ func HighestBitIndexAt(b []byte, index int) (int, error) {
 
 	return 0, nil
 }
+
+// Uint64ToBytes little endian conversion.
+func Uint64ToBytes(i uint64) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, i)
+	return buf
+}
