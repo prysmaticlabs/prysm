@@ -200,35 +200,27 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			fmtKey := fmt.Sprintf("%#x", status.PublicKey[:])
 			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
 		}
-		if status.Status.Status == ethpb.ValidatorStatus_ACTIVE {
-			activatedKeys = append(activatedKeys, status.PublicKey)
-			continue
-		}
-		if status.Status.Status == ethpb.ValidatorStatus_EXITED {
-			log.Info("Validator exited")
-			continue
-		}
-		if status.Status.Status == ethpb.ValidatorStatus_DEPOSITED {
-			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
-				"Deposit for validator received but not processed into state")
-			continue
-		}
-		if status.Status.DepositInclusionSlot == 0 && status.Status.PositionInActivationQueue == 0 {
-			log.Info("Waiting for deposit to be seen")
-			continue
-		}
-		if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
+		switch status.Status.Status {
+		case ethpb.ValidatorStatus_UNKNOWN_STATUS, ethpb.ValidatorStatus_DEPOSITED:
+			if status.Status.DepositInclusionSlot == 0 {
+				log.Info("Waiting for deposit to be seen")
+			} else {
+				log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
+					"Deposit for validator received but not processed into state")
+			}
+		case ethpb.ValidatorStatus_PENDING:
 			log.WithFields(logrus.Fields{
-				"depositInclusionSlot":      status.Status.DepositInclusionSlot,
 				"positionInActivationQueue": status.Status.PositionInActivationQueue,
 			}).Info("Waiting to be activated")
-			continue
+		case ethpb.ValidatorStatus_ACTIVE:
+			activatedKeys = append(activatedKeys, status.PublicKey)
+		case ethpb.ValidatorStatus_EXITED:
+			log.Info("Validator exited")
+		default:
+			log.WithFields(logrus.Fields{
+				"activationEpoch": status.Status.ActivationEpoch,
+			}).Info("Validator status")
 		}
-		log.WithFields(logrus.Fields{
-			"depositInclusionSlot":      status.Status.DepositInclusionSlot,
-			"activationEpoch":           status.Status.ActivationEpoch,
-			"positionInActivationQueue": status.Status.PositionInActivationQueue,
-		}).Info("Validator status")
 	}
 	return activatedKeys
 }
