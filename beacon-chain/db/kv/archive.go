@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -15,7 +16,7 @@ func (k *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedActiveValidatorChanges")
 	defer span.End()
 
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	var target *pb.ArchivedActiveSetChanges
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedValidatorSetChangesBucket)
@@ -33,7 +34,7 @@ func (k *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64
 func (k *Store) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *pb.ArchivedActiveSetChanges) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedActiveValidatorChanges")
 	defer span.End()
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	enc, err := encode(changes)
 	if err != nil {
 		return err
@@ -49,7 +50,7 @@ func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.Ar
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedCommitteeInfo")
 	defer span.End()
 
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	var target *pb.ArchivedCommitteeInfo
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedCommitteeInfoBucket)
@@ -67,7 +68,7 @@ func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.Ar
 func (k *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *pb.ArchivedCommitteeInfo) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedCommitteeInfo")
 	defer span.End()
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	enc, err := encode(info)
 	if err != nil {
 		return err
@@ -83,7 +84,7 @@ func (k *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedBalances")
 	defer span.End()
 
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	var target []uint64
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedBalancesBucket)
@@ -101,7 +102,7 @@ func (k *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, e
 func (k *Store) SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedBalances")
 	defer span.End()
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	enc := marshalBalances(balances)
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedBalancesBucket)
@@ -114,7 +115,7 @@ func (k *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedValidatorParticipation")
 	defer span.End()
 
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	var target *ethpb.ValidatorParticipation
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedValidatorParticipationBucket)
@@ -132,7 +133,7 @@ func (k *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64
 func (k *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *ethpb.ValidatorParticipation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedValidatorParticipation")
 	defer span.End()
-	buf := uint64ToBytes(epoch)
+	buf := bytesutil.Uint64ToBytes(epoch)
 	enc, err := encode(part)
 	if err != nil {
 		return err

@@ -22,7 +22,6 @@ go_library(
         "state.go",
         "state_summary.go",
         "utils.go",
-        "validators.go",
     ],
     gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kv",
@@ -75,7 +74,6 @@ go_test(
         "slashings_test.go",
         "state_summary_test.go",
         "state_test.go",
-        "validators_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
