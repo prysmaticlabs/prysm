@@ -273,8 +273,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableSSZCache = &cli.BoolFlag{
-		Name:  "enable-ssz-cache",
-		Usage: deprecatedUsage,
+		Name:   "enable-ssz-cache",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
