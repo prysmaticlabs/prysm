@@ -16,19 +16,17 @@ import (
 )
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) ([]string, []int) {
-	var multiAddrs []string
+func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) []int {
 	var processIDs []int
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		multiAddr, pID := StartNewBeaconNode(t, config, i, enr)
-		multiAddrs = append(multiAddrs, multiAddr)
+		pID := StartNewBeaconNode(t, config, i, enr)
 		processIDs = append(processIDs, pID)
 	}
-	return multiAddrs, processIDs
+	return processIDs
 }
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) (string, int) {
+func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) int {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
@@ -69,13 +67,8 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr st
 	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
-	//
-	//multiAddr, err := getMultiAddrFromLogFile(stdOutFile.Name())
-	//if err != nil {
-	//	t.Fatalf("could not get multiaddr for node %d: %v", index, err)
-	//}
 
-	return "", cmd.Process.Pid
+	return cmd.Process.Pid
 }
 
 // StartBootnode starts a bootnode and returns its ENR and process ID.
