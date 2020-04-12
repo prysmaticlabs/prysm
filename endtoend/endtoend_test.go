@@ -30,9 +30,9 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
 	keystorePath, eth1PID := components.StartEth1Node(t)
-	bootnodeENR, _ := components.StartBootnode(t, config)
+	bootnodeENR, _ := components.StartBootnode(t)
 	fmt.Println(bootnodeENR)
-	multiAddrs, bProcessIDs := components.StartBeaconNodes(t, config)
+	multiAddrs, bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
 	valProcessIDs := components.StartValidators(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
 	processIDs = append(processIDs, eth1PID)
@@ -49,9 +49,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		t.Fatal(err)
 	}
 	if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
-		t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
-	}
-	if err := helpers.WaitForTextInFile(beaconLogFile, "FODDD"); err != nil {
 		t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
 	}
 
@@ -105,9 +102,9 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		return
 	}
 
-	multiAddr, processID := components.StartNewBeaconNode(t, config, multiAddrs)
-	multiAddrs = append(multiAddrs, multiAddr)
 	index := e2e.TestParams.BeaconNodeCount
+	multiAddr, processID := components.StartNewBeaconNode(t, config, index, bootnodeENR)
+	multiAddrs = append(multiAddrs, multiAddr)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
