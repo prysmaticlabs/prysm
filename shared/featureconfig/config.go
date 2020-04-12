@@ -108,9 +108,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled dynamic attestation committee subnets")
 		cfg.EnableDynamicCommitteeSubnets = true
 	}
-	if ctx.Bool(enableSSZCache.Name) {
-		log.Warn("Enabled unsafe ssz cache")
-		cfg.EnableSSZCache = true
+	cfg.EnableSSZCache = true
+	if ctx.Bool(disableSSZCache.Name) {
+		log.Warn("Disabled ssz cache")
+		cfg.EnableSSZCache = false
 	}
 	if ctx.Bool(enableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")

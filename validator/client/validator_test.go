@@ -342,6 +342,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
+
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

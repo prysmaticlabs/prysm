@@ -402,7 +402,6 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Justified: %d\n", bState.CurrentJustifiedCheckpoint().Epoch)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
 		if err != nil {
