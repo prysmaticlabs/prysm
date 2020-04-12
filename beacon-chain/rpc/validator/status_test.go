@@ -223,9 +223,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 	}
 
 	expected := &ethpb.ValidatorStatusResponse{
-		Status:               ethpb.ValidatorStatus_ACTIVE,
-		ActivationEpoch:      5,
-		DepositInclusionSlot: 2218,
+		Status:          ethpb.ValidatorStatus_ACTIVE,
+		ActivationEpoch: 5,
 	}
 	if !proto.Equal(resp, expected) {
 		t.Errorf("Wanted %v, got %v", expected, resp)
