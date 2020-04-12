@@ -88,21 +88,6 @@ func (e Exporter) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 	return e.db.DeleteBlocks(ctx, blockRoots)
 }
 
-// ValidatorIndex -- passthrough.
-func (e Exporter) ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error) {
-	return e.db.ValidatorIndex(ctx, publicKey)
-}
-
-// HasValidatorIndex -- passthrough.
-func (e Exporter) HasValidatorIndex(ctx context.Context, publicKey []byte) bool {
-	return e.db.HasValidatorIndex(ctx, publicKey)
-}
-
-// DeleteValidatorIndex -- passthrough.
-func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey []byte) error {
-	return e.db.DeleteValidatorIndex(ctx, publicKey)
-}
-
 // State -- passthrough.
 func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	return e.db.State(ctx, blockRoot)
@@ -216,16 +201,6 @@ func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, e
 // SaveGenesisBlockRoot -- passthrough.
 func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	return e.db.SaveGenesisBlockRoot(ctx, blockRoot)
-}
-
-// SaveValidatorIndex -- passthrough.
-func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error {
-	return e.db.SaveValidatorIndex(ctx, publicKey, validatorIdx)
-}
-
-// SaveValidatorIndices -- passthrough.
-func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error {
-	return e.db.SaveValidatorIndices(ctx, publicKeys, validatorIndices)
 }
 
 // SaveState -- passthrough.
@@ -376,4 +351,9 @@ func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*s
 // SaveLastArchivedIndex -- passthrough
 func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
 	return e.db.SaveLastArchivedIndex(ctx, index)
+}
+
+// LastArchivedIndex -- passthrough
+func (e Exporter) LastArchivedIndex(ctx context.Context) (uint64, error) {
+	return e.db.LastArchivedIndex(ctx)
 }
