@@ -101,8 +101,6 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.Deposi
 func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.MarkPubkeyForChainstart")
 	defer span.End()
-	dc.chainstartPubkeysLock.Lock()
-	defer dc.chainstartPubkeysLock.Unlock()
 	dc.chainstartPubkeys[pubkey] = true
 }
 

@@ -323,14 +323,15 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(v.keyManager))
+	publicKeys := publicKeys(v.keyManager)
+	resp := generateMockStatusResponse(publicKeys)
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	resp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(v.keyManager),
+			PublicKeys: publicKeys,
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
