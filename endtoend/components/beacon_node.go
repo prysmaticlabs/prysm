@@ -78,24 +78,6 @@ func StartBootnode(t *testing.T) (string, int) {
 		t.Log(binaryPath)
 		t.Fatal("boot node binary not found")
 	}
-	//
-	//seed := bytesutil.ToBytes(uint64(e2e.TestParams.BeaconNodeRPCPort), btcec.PrivKeyBytesLen)
-	//keyFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.TestPath, "enr-key")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//keyss, err := crypto.UnmarshalSecp256k1PrivateKey(seed)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//keyBytes, err := keyss.GetPublic().Raw()
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//keyStr := hex.EncodeToString(keyBytes)
-	//if _, err := keyFile.WriteString(keyStr); err != nil {
-	//	t.Fatal(err)
-	//}
 
 	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.BootNodeLogFileName)
 	if err != nil {
@@ -104,7 +86,6 @@ func StartBootnode(t *testing.T) (string, int) {
 
 	args := []string{
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
-		//fmt.Sprintf("--private=%s", keyFile.Name()),
 		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
 		fmt.Sprintf("--kad-port=%d", e2e.TestParams.BootNodePort+10),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
