@@ -11,19 +11,19 @@ import (
 )
 
 func TestEndToEnd_AntiFlake_MinimalConfig_2(t *testing.T) {
-	t.Skip("Temp skip for #5127, need proper network implementations")
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=10"},
 		ValidatorFlags: []string{"--minimal-config"},
-		EpochsToRun:    3,
+		EpochsToRun:    4,
 		TestSync:       false,
 		TestSlasher:    false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.ValidatorsAreActive,
+			ev.ValidatorsParticipating,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {
