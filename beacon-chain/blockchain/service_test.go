@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -299,17 +298,6 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		DepositRoot: hashTreeRoot[:],
 	}); err != nil {
 		t.Fatal(err)
-	}
-
-	s, err := bc.beaconDB.State(ctx, bc.headRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, v := range s.Validators() {
-		if !db.HasValidatorIndex(ctx, v.PublicKey) {
-			t.Errorf("Validator %s missing from db", hex.EncodeToString(v.PublicKey))
-		}
 	}
 
 	if _, err := bc.HeadState(ctx); err != nil {

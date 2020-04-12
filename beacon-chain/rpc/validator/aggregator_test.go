@@ -78,6 +78,10 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 
 	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators: []*ethpb.Validator{
+			&ethpb.Validator{PublicKey: pubKey(0)},
+			&ethpb.Validator{PublicKey: pubKey(1)},
+		},
 	})
 
 	server := &Server{
@@ -89,11 +93,12 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'})
-	pubKey := pubKey(1)
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	v, err := s.ValidatorAtIndex(1)
+	if err != nil {
 		t.Fatal(err)
 	}
+	pubKey := v.PublicKey
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	if _, err := server.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), "No aggregated attestation in beacon node") {
 		t.Error("Did not get wanted error")
@@ -133,11 +138,12 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'})
-	pubKey := pubKey(2)
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	v, err := beaconState.ValidatorAtIndex(1)
+	if err != nil {
 		t.Fatal(err)
 	}
+	pubKey := v.PublicKey
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	if err := aggregatorServer.AttPool.SaveAggregatedAttestation(att0); err != nil {
 		t.Fatal(err)
@@ -184,11 +190,12 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'})
-	pubKey := pubKey(2)
-	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	v, err := beaconState.ValidatorAtIndex(1)
+	if err != nil {
 		t.Fatal(err)
 	}
+	pubKey := v.PublicKey
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
 	aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 

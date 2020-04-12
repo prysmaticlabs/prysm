@@ -162,6 +162,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		} else {
 			s.depositCache.MarkPubkeyForChainstart(ctx, pubkey)
 		}
+
 	}
 
 	// We always store all historical deposits in the DB.

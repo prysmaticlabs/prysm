@@ -51,10 +51,7 @@ func (bs *Server) ListValidatorAssignments(
 
 	// Filter out assignments by public keys.
 	for _, pubKey := range req.PublicKeys {
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, pubKey)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve validator index: %v", err)
-		}
+		index, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if !ok {
 			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubKey)
 		}

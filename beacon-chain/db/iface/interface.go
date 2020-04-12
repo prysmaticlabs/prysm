@@ -29,9 +29,6 @@ type ReadOnlyDatabase interface {
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error)
 	HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error)
-	// Validator related methods.
-	ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error)
-	HasValidatorIndex(ctx context.Context, publicKey []byte) bool
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	GenesisState(ctx context.Context) (*state.BeaconState, error)
@@ -59,6 +56,7 @@ type ReadOnlyDatabase interface {
 	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
 	HasArchivedPoint(ctx context.Context, index uint64) bool
 	LastArchivedIndexRoot(ctx context.Context) [32]byte
+	LastArchivedIndex(ctx context.Context) (uint64, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
@@ -80,10 +78,6 @@ type NoHeadAccessDatabase interface {
 	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
-	// Validator related methods.
-	DeleteValidatorIndex(ctx context.Context, publicKey []byte) error
-	SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error
-	SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error
 	// State related methods.
 	SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error
