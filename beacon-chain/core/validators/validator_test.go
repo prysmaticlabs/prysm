@@ -223,16 +223,19 @@ func TestActivatedValidatorIndices(t *testing.T) {
 				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
-						ActivationEpoch: helpers.ActivationExitEpoch(0),
+						ActivationEpoch: 0,
+						ExitEpoch:       1,
 					},
 					{
-						ActivationEpoch: helpers.ActivationExitEpoch(0),
+						ActivationEpoch: 0,
+						ExitEpoch:       1,
 					},
 					{
-						ActivationEpoch: helpers.ActivationExitEpoch(5),
+						ActivationEpoch: 5,
 					},
 					{
-						ActivationEpoch: helpers.ActivationExitEpoch(0),
+						ActivationEpoch: 0,
+						ExitEpoch:       1,
 					},
 				},
 			},
@@ -254,7 +257,8 @@ func TestActivatedValidatorIndices(t *testing.T) {
 				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
-						ActivationEpoch: helpers.ActivationExitEpoch(0),
+						ActivationEpoch: 0,
+						ExitEpoch:       1,
 					},
 				},
 			},
