@@ -38,11 +38,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
 
-	if config.TestSlasher {
-		slasherPIDs := components.StartSlashers(t)
-		defer helpers.KillProcesses(t, slasherPIDs)
-	}
-
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	if err != nil {
 		t.Fatal(err)
@@ -73,6 +68,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	// Small offset so evaluators perform in the middle of an epoch.
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
+
+	if config.TestSlasher {
+		slasherPIDs := components.StartSlashers(t)
+		defer helpers.KillProcesses(t, slasherPIDs)
+	}
 
 	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
