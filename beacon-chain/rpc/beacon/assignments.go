@@ -27,9 +27,6 @@ func (bs *Server) ListValidatorAssignments(
 		)
 	}
 
-	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
-	filteredIndices := make([]uint64, 0)
 	var requestedEpoch uint64
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
@@ -52,10 +49,12 @@ func (bs *Server) ListValidatorAssignments(
 
 	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", requestedEpoch, err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve state for epoch %d: %v", requestedEpoch, err)
 	}
 
 	// Filter out assignments by public keys.
+	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
+	filteredIndices := make([]uint64, 0, len(req.PublicKeys))
 	for _, pubKey := range req.PublicKeys {
 		index, ok := requestedState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if !ok {
@@ -101,6 +100,7 @@ func (bs *Server) ListValidatorAssignments(
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
+	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
 	for _, index := range filteredIndices[start:end] {
 		if int(index) >= requestedState.NumValidators() {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
