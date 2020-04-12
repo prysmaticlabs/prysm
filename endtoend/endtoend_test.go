@@ -32,7 +32,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	keystorePath, eth1PID := components.StartEth1Node(t)
 	bootnodeENR, _ := components.StartBootnode(t)
 	fmt.Println(bootnodeENR)
-	multiAddrs, bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
+	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
 	valProcessIDs := components.StartValidators(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
 	processIDs = append(processIDs, eth1PID)
@@ -103,8 +103,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	index := e2e.TestParams.BeaconNodeCount
-	multiAddr, processID := components.StartNewBeaconNode(t, config, index, bootnodeENR)
-	multiAddrs = append(multiAddrs, multiAddr)
+	processID := components.StartNewBeaconNode(t, config, index, bootnodeENR)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
