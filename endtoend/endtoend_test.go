@@ -31,7 +31,6 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 
 	keystorePath, eth1PID := components.StartEth1Node(t)
 	bootnodeENR, _ := components.StartBootnode(t)
-	fmt.Println(bootnodeENR)
 	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
 	valProcessIDs := components.StartValidators(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
