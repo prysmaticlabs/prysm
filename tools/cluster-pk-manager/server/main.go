@@ -6,7 +6,6 @@ import (
 	"net"
 
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
@@ -20,7 +19,7 @@ var (
 	rpcPath             = flag.String("rpc", "https://goerli.prylabs.net", "RPC address of a running ETH1 node")
 	beaconRPCPath       = flag.String("beaconRPC", "localhost:4000", "RPC address of Beacon Node")
 	depositContractAddr = flag.String("deposit-contract", "", "Address of the deposit contract")
-	depositAmount       = flag.Int64("deposit-amount", 0, "The amount of wei to deposit into the contract")
+	depositAmount       = flag.String("deposit-amount", "", "The amount of wei to deposit into the contract")
 	dbPath              = flag.String("db-path", "", "The file path for database storage")
 	disableWatchtower   = flag.Bool("disable-watchtower", false, "Disable kubernetes pod watcher. Useful for local testing")
 	verbose             = flag.Bool("verbose", false, "Enable debug logging")
@@ -33,8 +32,6 @@ func main() {
 	if *verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-	// use demo-config for cluster deployments
-	params.UseDemoBeaconConfig()
 	if *ensureDeposited {
 		log.Warn("--ensure-deposited: Ensuring all keys are deposited or deleting them from database!")
 	}

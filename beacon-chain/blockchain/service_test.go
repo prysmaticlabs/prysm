@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -235,10 +234,8 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.SaveBlock(ctx, genesisBlk); err != nil {
 		t.Fatal(err)
 	}
-	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
+	s := testutil.NewBeaconState()
+	s.SetSlot(1)
 	if err := db.SaveState(ctx, s, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -303,17 +300,6 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := bc.beaconDB.State(ctx, bc.headRoot())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, v := range s.Validators() {
-		if !db.HasValidatorIndex(ctx, v.PublicKey) {
-			t.Errorf("Validator %s missing from db", hex.EncodeToString(v.PublicKey))
-		}
-	}
-
 	if _, err := bc.HeadState(ctx); err != nil {
 		t.Error(err)
 	}
@@ -348,10 +334,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}}
-	headState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: finalizedSlot, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
-	if err != nil {
-		t.Fatal(err)
-	}
+	headState := testutil.NewBeaconState()
+	headState.SetSlot(finalizedSlot)
+	headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:])
 	headRoot, _ := ssz.HashTreeRoot(headBlock.Block)
 	if err := db.SaveState(ctx, headState, headRoot); err != nil {
 		t.Fatal(err)
@@ -414,8 +399,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, _ := ssz.HashTreeRoot(b)
-	state := &pb.BeaconState{}
-	newState, err := beaconstate.InitializeFromProto(state)
+	newState := testutil.NewBeaconState()
 	s.stateGen.SaveState(ctx, r, newState)
 	if err := s.saveHeadNoDB(ctx, b, r); err != nil {
 		t.Fatal(err)
@@ -447,11 +431,8 @@ func TestChainService_PruneOldStates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		state := &pb.BeaconState{Slot: uint64(i)}
-		newState, err := beaconstate.InitializeFromProto(state)
-		if err != nil {
-			t.Fatal(err)
-		}
+		newState := testutil.NewBeaconState()
+		newState.SetSlot(uint64(i))
 		if err := s.beaconDB.SaveState(ctx, newState, r); err != nil {
 			t.Fatal(err)
 		}

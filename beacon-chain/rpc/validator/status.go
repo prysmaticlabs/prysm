@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -152,10 +153,7 @@ func (vs *Server) retrieveStatusFromState(
 	if headState == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
-	idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, pubKey)
-	if err != nil {
-		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, err
-	}
+	idx, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok || int(idx) >= headState.NumValidators() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errPubkeyDoesNotExist
 	}

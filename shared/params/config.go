@@ -229,24 +229,6 @@ func MainnetConfig() *BeaconChainConfig {
 	return defaultBeaconConfig
 }
 
-// DemoBeaconConfig retrieves the demo beacon chain config. This is mainnet config with 1/10th of
-// mainnet deposit values.
-func DemoBeaconConfig() *BeaconChainConfig {
-	demoConfig := *MainnetConfig()
-
-	demoConfig.MinDepositAmount /= 10
-	demoConfig.MaxEffectiveBalance /= 10
-	demoConfig.EjectionBalance /= 10
-	demoConfig.EffectiveBalanceIncrement /= 10
-
-	demoConfig.InactivityPenaltyQuotient /= 10
-
-	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 4}
-
-	return &demoConfig
-}
-
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := *defaultBeaconConfig
@@ -317,11 +299,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	return &minimalConfig
-}
-
-// UseDemoBeaconConfig for beacon chain services.
-func UseDemoBeaconConfig() {
-	beaconConfig = DemoBeaconConfig()
 }
 
 // UseMinimalConfig for beacon chain services.

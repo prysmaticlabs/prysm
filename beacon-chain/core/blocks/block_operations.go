@@ -431,7 +431,7 @@ func ProcessProposerSlashings(
 	return beaconState, nil
 }
 
-// VerifyProposerSlashing verifies that the data provided fro slashing is valid.
+// VerifyProposerSlashing verifies that the data provided from slashing is valid.
 func VerifyProposerSlashing(
 	beaconState *stateTrie.BeaconState,
 	slashing *ethpb.ProposerSlashing,
@@ -456,7 +456,7 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.SlotToEpoch(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}

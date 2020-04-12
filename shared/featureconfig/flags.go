@@ -9,10 +9,6 @@ var (
 		Name:  "broadcast-slashing",
 		Usage: "Broadcast slashings from slashing pool.",
 	}
-	noCustomConfigFlag = &cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
 	minimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
@@ -112,6 +108,11 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
+	enableNoiseHandshake = &cli.BoolFlag{
+		Name: "enable-noise",
+		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
+			"securing transports between peers",
+	}
 	dontPruneStateStartUp = &cli.BoolFlag{
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
@@ -142,8 +143,8 @@ var (
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
-	deprecatedEnableNoiseHandshake = &cli.BoolFlag{
-		Name:   "enable-noise",
+	deprecatedNoCustomConfigFlag = &cli.BoolFlag{
+		Name:   "no-custom-config",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -197,6 +198,7 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
 	deprecatedEnableCustomStateSSZFlag = &cli.BoolFlag{
 		Name:   "enable-custom-state-ssz",
 		Usage:  deprecatedUsage,
@@ -272,10 +274,15 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDiscv5Flag = &cli.BoolFlag{
+		Name:   "enable-discv5",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
-	deprecatedEnableNoiseHandshake,
+	deprecatedNoCustomConfigFlag,
 	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
@@ -301,6 +308,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedInitSyncCacheStateFlag,
 	deprecatedProtectAttesterFlag,
 	deprecatedProtectProposerFlag,
+	deprecatedDiscv5Flag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -318,7 +326,6 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
-	noCustomConfigFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
@@ -337,6 +344,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
+	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
 	disableNewStateMgmt,

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
@@ -244,7 +245,7 @@ func createAttestationIndicesFromData(attData *ethpb.AttestationData) map[string
 	indices := make([][]byte, 0)
 	if attData.Source != nil {
 		buckets = append(buckets, attestationSourceEpochIndicesBucket)
-		indices = append(indices, uint64ToBytes(attData.Source.Epoch))
+		indices = append(indices, bytesutil.Uint64ToBytes(attData.Source.Epoch))
 		if attData.Source.Root != nil && len(attData.Source.Root) > 0 {
 			buckets = append(buckets, attestationSourceRootIndicesBucket)
 			indices = append(indices, attData.Source.Root)
@@ -252,7 +253,7 @@ func createAttestationIndicesFromData(attData *ethpb.AttestationData) map[string
 	}
 	if attData.Target != nil {
 		buckets = append(buckets, attestationTargetEpochIndicesBucket)
-		indices = append(indices, uint64ToBytes(attData.Target.Epoch))
+		indices = append(indices, bytesutil.Uint64ToBytes(attData.Target.Epoch))
 		if attData.Target.Root != nil && len(attData.Target.Root) > 0 {
 			buckets = append(buckets, attestationTargetRootIndicesBucket)
 			indices = append(indices, attData.Target.Root)
@@ -287,10 +288,10 @@ func createAttestationIndicesFromFilters(f *filters.QueryFilter) (map[string][]b
 			indicesByBucket[string(attestationSourceRootIndicesBucket)] = sourceRoot
 		case filters.SourceEpoch:
 			sourceEpoch := v.(uint64)
-			indicesByBucket[string(attestationSourceEpochIndicesBucket)] = uint64ToBytes(sourceEpoch)
+			indicesByBucket[string(attestationSourceEpochIndicesBucket)] = bytesutil.Uint64ToBytes(sourceEpoch)
 		case filters.TargetEpoch:
 			targetEpoch := v.(uint64)
-			indicesByBucket[string(attestationTargetEpochIndicesBucket)] = uint64ToBytes(targetEpoch)
+			indicesByBucket[string(attestationTargetEpochIndicesBucket)] = bytesutil.Uint64ToBytes(targetEpoch)
 		case filters.TargetRoot:
 			targetRoot := v.([]byte)
 			indicesByBucket[string(attestationTargetRootIndicesBucket)] = targetRoot

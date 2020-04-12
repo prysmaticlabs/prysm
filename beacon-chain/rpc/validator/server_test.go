@@ -40,18 +40,20 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	st := testutil.NewBeaconState()
 	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
 	pubKey := pubKey(1)
-	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
+
+	st.SetValidators([]*ethpb.Validator{
+		&ethpb.Validator{PublicKey: pubKey},
+	})
 
 	Server := &Server{
-		BeaconDB: db,
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: st},
 	}
 
 	req := &ethpb.ValidatorIndexRequest{
@@ -127,13 +129,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
-	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, pubKey2, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -172,12 +167,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
-	if err := db.SaveValidatorIndex(ctx, pubKey2, 1); err != nil {
-		t.Fatalf("could not save validator index: %v", err)
-	}
 	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
 	if err != nil {
 		t.Fatal(err)
@@ -260,10 +249,8 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
-	trie, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{Slot: 3})
-	if err != nil {
-		t.Fatal(err)
-	}
+	trie := testutil.NewBeaconState()
+	trie.SetSlot(3)
 	if err := db.SaveState(ctx, trie, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}

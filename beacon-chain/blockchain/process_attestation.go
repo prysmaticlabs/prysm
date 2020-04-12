@@ -3,7 +3,6 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -11,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"go.opencensus.io/trace"
 )
 
@@ -93,7 +93,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	genesisTime := baseState.GenesisTime()
 
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Unix()), tgt); err != nil {
+	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(roughtime.Now().Unix()), tgt); err != nil {
 		return nil, err
 	}
 
@@ -108,7 +108,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1, helpers.TimeShiftTolerance); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot, helpers.TimeShiftTolerance); err != nil {
 		return nil, err
 	}
 

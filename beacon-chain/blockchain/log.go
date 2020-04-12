@@ -19,6 +19,8 @@ func logStateTransitionData(b *ethpb.BeaconBlock) {
 		"attestations":      len(b.Body.Attestations),
 		"deposits":          len(b.Body.Deposits),
 		"attesterSlashings": len(b.Body.AttesterSlashings),
+		"proposerSlashings": len(b.Body.ProposerSlashings),
+		"voluntaryExits":    len(b.Body.VoluntaryExits),
 	}).Info("Finished applying state transition")
 }
 

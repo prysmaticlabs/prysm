@@ -17,6 +17,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -152,9 +153,6 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	for i := 0; i < numValidators; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
 			PublicKey:             pubKey,
@@ -240,15 +238,11 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 }
 
 func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.BeaconState {
-	ctx := context.Background()
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
 			PublicKey:             pubKey,
@@ -257,9 +251,8 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.B
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{Validators: validators, Balances: balances})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return st
+	s := testutil.NewBeaconState()
+	s.SetValidators(validators)
+	s.SetBalances(balances)
+	return s
 }

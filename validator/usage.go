@@ -72,7 +72,6 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "validator",
 		Flags: []cli.Flag{
-			flags.NoCustomConfigFlag,
 			flags.BeaconRPCProviderFlag,
 			flags.CertFlag,
 			flags.KeyManager,

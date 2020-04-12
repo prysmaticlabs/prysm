@@ -44,20 +44,6 @@ func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Set hot and cold state split point")
 }
 
-func TestMigrateToCold_NotEpochStart(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-
-	service := New(db, cache.NewStateSummaryCache())
-	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{}); err != nil {
-		t.Fatal(err)
-	}
-
-	testutil.AssertLogsDoNotContain(t, hook, "Set hot and cold state split point")
-}
-
 func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()

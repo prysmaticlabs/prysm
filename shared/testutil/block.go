@@ -173,6 +173,8 @@ func GenerateProposerSlashingForValidator(
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
 			BodyRoot:      bytesutil.PadTo([]byte{0, 1, 0}, 32),
+			StateRoot:     make([]byte, 32),
+			ParentRoot:    make([]byte, 32),
 		},
 	}
 	currentEpoch := helpers.CurrentEpoch(bState)
@@ -191,6 +193,8 @@ func GenerateProposerSlashingForValidator(
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
 			BodyRoot:      bytesutil.PadTo([]byte{0, 2, 0}, 32),
+			StateRoot:     make([]byte, 32),
+			ParentRoot:    make([]byte, 32),
 		},
 	}
 	root, err = helpers.ComputeSigningRoot(header2.Header, domain)

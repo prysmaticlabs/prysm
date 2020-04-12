@@ -37,8 +37,6 @@ func (e *endpoint) Set(value string) error {
 }
 
 func main() {
-	params.UseDemoBeaconConfig()
-
 	var endpts endpoint
 	clients := make(map[string]pb.BeaconChainClient)
 

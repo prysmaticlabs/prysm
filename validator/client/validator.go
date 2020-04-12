@@ -414,6 +414,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 			if aggregator {
 				roles = append(roles, roleAggregator)
 			}
+
 		}
 		if len(roles) == 0 {
 			roles = append(roles, roleUnknown)

@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -536,6 +538,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
 
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
@@ -565,14 +569,6 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	numValidators := 128
 	state := setupActiveValidators(t, db, numValidators)
 
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	if err := state.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
-
 	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -598,13 +594,24 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		indexedAtts[i] = idxAtt
 	}
 
+	summaryCache := cache.NewStateSummaryCache()
 	bs := &Server{
 		BeaconDB: db,
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, summaryCache),
 	}
-	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
+	root := bytesutil.ToBytes32([]byte("root"))
+	db.SaveState(ctx, state, root)
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaryCache.Put(root, &pbp2p.StateSummary{
+		Slot: 0,
+		Root: stateRoot[:],
+	})
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
