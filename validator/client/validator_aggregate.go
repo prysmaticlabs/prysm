@@ -89,7 +89,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		SlotSignature:  slotSig,
 	})
 	if err != nil {
-		log.Errorf("Could not submit slot signature to beacon node: %v", err)
+		log.WithField("slot", slot).Errorf("Could not submit slot signature to beacon node: %v", err)
 		if v.emitAccountMetrics {
 			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}

@@ -30,17 +30,13 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
 	keystorePath, eth1PID := components.StartEth1Node(t)
-	multiAddrs, bProcessIDs := components.StartBeaconNodes(t, config)
+	bootnodeENR, _ := components.StartBootnode(t)
+	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
 	valProcessIDs := components.StartValidators(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
 	processIDs = append(processIDs, eth1PID)
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
-
-	if config.TestSlasher {
-		slasherPIDs := components.StartSlashers(t)
-		defer helpers.KillProcesses(t, slasherPIDs)
-	}
 
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	if err != nil {
@@ -73,6 +69,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
 
+	if config.TestSlasher {
+		slasherPIDs := components.StartSlashers(t)
+		defer helpers.KillProcesses(t, slasherPIDs)
+	}
+
 	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
@@ -100,9 +101,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		return
 	}
 
-	multiAddr, processID := components.StartNewBeaconNode(t, config, multiAddrs)
-	multiAddrs = append(multiAddrs, multiAddr)
 	index := e2e.TestParams.BeaconNodeCount
+	processID := components.StartNewBeaconNode(t, config, index, bootnodeENR)
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+index), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
