@@ -107,10 +107,6 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 			return resp
 		}
 
-		if resp.Status == ethpb.ValidatorStatus_UNKNOWN_STATUS {
-			resp.Status = ethpb.ValidatorStatus_DEPOSITED
-		}
-
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
 		depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, headState)
