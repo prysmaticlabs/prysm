@@ -25,7 +25,9 @@ func (bs *Server) SubmitProposerSlashing(
 		return nil, status.Errorf(codes.Internal, "Could not insert proposer slashing into pool: %v", err)
 	}
 	if featureconfig.Get().BroadcastSlashings {
-		bs.Broadcaster.Broadcast(ctx, req)
+		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+			return nil, err
+		}
 	}
 	return &ethpb.SubmitSlashingResponse{
 		SlashedIndices: []uint64{req.ProposerIndex},
@@ -47,7 +49,9 @@ func (bs *Server) SubmitAttesterSlashing(
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
 	}
 	if featureconfig.Get().BroadcastSlashings {
-		bs.Broadcaster.Broadcast(ctx, req)
+		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
+			return nil, err
+		}
 	}
 	slashedIndices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
 	return &ethpb.SubmitSlashingResponse{

@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -295,14 +296,21 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	} else if err != nil {
 		return nil, err
 	}
-	defer SkipSlotCache.MarkNotInProgress(key)
+	defer func() {
+		if err := SkipSlotCache.MarkNotInProgress(key); err != nil {
+			traceutil.AnnotateError(span, err)
+			logrus.WithError(err).Error("Failed to mark skip slot no longer in progress")
+		}
+	}()
 
 	for state.Slot() < slot {
 		if ctx.Err() != nil {
 			traceutil.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
-				SkipSlotCache.Put(ctx, key, state)
+				if err := SkipSlotCache.Put(ctx, key, state); err != nil {
+					logrus.WithError(err).Error("Failed to put skip slot cache value")
+				}
 			}
 			return nil, ctx.Err()
 		}
@@ -318,11 +326,17 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
-		state.SetSlot(state.Slot() + 1)
+		if err := state.SetSlot(state.Slot() + 1); err != nil {
+			traceutil.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "failed to increment state slot")
+		}
 	}
 
 	if highestSlot < state.Slot() {
-		SkipSlotCache.Put(ctx, key, state)
+		if err := SkipSlotCache.Put(ctx, key, state); err != nil {
+			logrus.WithError(err).Error("Failed to put skip slot cache value")
+			traceutil.AnnotateError(span, err)
+		}
 	}
 
 	return state, nil

@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -21,7 +22,7 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
 
-	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	if err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
 		withdrawable := currentEpoch >= val.WithdrawableEpoch()
 		p := &Validator{
@@ -46,6 +47,9 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 
 		vp[idx] = p
 		return nil
-	})
+	}); err != nil {
+		log.WithError(err).Error("Failed to initialize precompute")
+		return nil, nil
+	}
 	return vp, bp
 }

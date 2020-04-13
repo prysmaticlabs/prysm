@@ -31,12 +31,13 @@ func (k *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasVoluntaryExit")
 	defer span.End()
 	exists := false
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(voluntaryExitsBucket)
 		exists = bkt.Get(exitRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 
