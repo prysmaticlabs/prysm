@@ -15,7 +15,8 @@ import (
 )
 
 // Doc explaining the tool.
-const Doc = "TODO"
+const Doc = "This tool enforces all errors must be handled and that type assertions test that " +
+	"the type implements the given interface to prevent runtime panics."
 
 // Analyzer runs static analysis.
 var Analyzer = &analysis.Analyzer{
