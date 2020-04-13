@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -47,6 +48,7 @@ func TestSaveHead_Different(t *testing.T) {
 	newRoot, _ := ssz.HashTreeRoot(newHeadBlock)
 	headState := testutil.NewBeaconState()
 	headState.SetSlot(1)
+	service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]})
 	service.beaconDB.SaveState(context.Background(), headState, newRoot)
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
