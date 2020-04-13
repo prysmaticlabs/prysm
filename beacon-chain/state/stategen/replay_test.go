@@ -428,8 +428,12 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 		splitInfo: &splitSlotAndRoot{slot: 128},
 	}
 
-	if _, _, err := s.lastSavedBlock(ctx, s.splitInfo.slot+1); err != errUnknownBlock {
-		t.Error("Did not get wanted error")
+	root, slot, err := s.lastSavedBlock(ctx, s.splitInfo.slot+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slot != 0 && root != [32]byte{} {
+		t.Error("Did not get wanted block")
 	}
 }
 
