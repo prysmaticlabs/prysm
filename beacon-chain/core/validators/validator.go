@@ -169,10 +169,9 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlow
 // ActivatedValidatorIndices determines the indices activated during the given epoch.
 func ActivatedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	activations := make([]uint64, 0)
-	delayedActivationEpoch := helpers.ActivationExitEpoch(epoch)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
-		if val.ActivationEpoch == delayedActivationEpoch {
+		if val.ActivationEpoch <= epoch && epoch < val.ExitEpoch {
 			activations = append(activations, uint64(i))
 		}
 	}

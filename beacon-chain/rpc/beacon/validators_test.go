@@ -1173,7 +1173,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		balance := params.BeaconConfig().MaxEffectiveBalance
 		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
-			activationEpoch = helpers.ActivationExitEpoch(0)
+			activationEpoch = 0
 		} else if i%3 == 0 {
 			// Mark indices divisible by 3 as slashed.
 			withdrawableEpoch = params.BeaconConfig().EpochsPerSlashingsVector
