@@ -368,5 +368,5 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--enable-state-field-trie",
 	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.
-	//"--enable-dynamic-committee-subnets",
+	"--enable-dynamic-committee-subnets",
 }
