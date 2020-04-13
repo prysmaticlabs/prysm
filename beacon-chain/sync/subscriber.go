@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -96,20 +97,20 @@ func (r *Service) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
-	//if featureconfig.Get().EnableDynamicCommitteeSubnets {
-	r.subscribeDynamicWithSubnets(
-		"/eth2/%x/committee_index%d_beacon_attestation",
-		r.validateCommitteeIndexBeaconAttestation,   /* validator */
-		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
-	)
-	//} else {
-	//	r.subscribeDynamic(
-	//		"/eth2/%x/committee_index%d_beacon_attestation",
-	//		r.committeesCount,                           /* determineSubsLen */
-	//		r.validateCommitteeIndexBeaconAttestation,   /* validator */
-	//		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
-	//	)
-	//}
+	if featureconfig.Get().DisableDynamicCommitteeSubnets {
+		r.subscribeDynamic(
+			"/eth2/%x/committee_index%d_beacon_attestation",
+			r.committeesCount,                           /* determineSubsLen */
+			r.validateCommitteeIndexBeaconAttestation,   /* validator */
+			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+		)
+	} else {
+		r.subscribeDynamicWithSubnets(
+			"/eth2/%x/committee_index%d_beacon_attestation",
+			r.validateCommitteeIndexBeaconAttestation,   /* validator */
+			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+		)
+	}
 }
 
 // subscribe to a given topic with a given validator and subscription handler.

@@ -17,9 +17,9 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	enableDynamicCommitteeSubnets = &cli.BoolFlag{
-		Name:  "enable-dynamic-committee-subnets",
-		Usage: "Enable dynamic committee attestation subnets.",
+	disableDynamicCommitteeSubnets = &cli.BoolFlag{
+		Name:  "disable-dynamic-committee-subnets",
+		Usage: "Disable dynamic committee attestation subnets.",
 	}
 	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -142,6 +142,11 @@ var (
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedEnableDynamicCommitteeSubnets = &cli.BoolFlag{
+		Name:   "enable-dynamic-committee-subnets",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedNoCustomConfigFlag = &cli.BoolFlag{
 		Name:   "no-custom-config",
 		Usage:  deprecatedUsage,
@@ -286,6 +291,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedEnableDynamicCommitteeSubnets,
 	deprecatedNoCustomConfigFlag,
 	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
@@ -335,7 +341,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
-	enableDynamicCommitteeSubnets,
+	disableDynamicCommitteeSubnets,
 	disableSSZCache,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
@@ -367,6 +373,4 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-state-field-trie",
-	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.
-	"--enable-dynamic-committee-subnets",
 }
