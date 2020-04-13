@@ -148,7 +148,10 @@ func (c *AttestationCache) Put(ctx context.Context, req *ethpb.AttestationDataRe
 }
 
 func wrapperToKey(i interface{}) (string, error) {
-	w := i.(*attestationReqResWrapper)
+	w, ok := i.(*attestationReqResWrapper)
+	if !ok {
+		return "", errors.New("key is not of type *attestationReqResWrapper")
+	}
 	if w == nil {
 		return "", errors.New("nil wrapper")
 	}

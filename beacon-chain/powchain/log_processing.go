@@ -448,7 +448,10 @@ func (s *Service) checkHeaderRange(start uint64, end uint64,
 }
 
 func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
-	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+	valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+	if err != nil {
+		log.WithError(err).Error("Could not determine active validator count from pref genesis state")
+	}
 	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(blockTime))
 	if triggered {
 		s.chainStartData.GenesisTime = s.createGenesisTime(blockTime)

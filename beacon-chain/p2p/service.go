@@ -46,9 +46,8 @@ var _ = shared.Service(&Service{})
 // Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
 
-// Refresh rate of ENR set at every quarter of an epoch.
-var refreshRate = time.Duration((params.BeaconConfig().SecondsPerSlot*
-	params.BeaconConfig().SlotsPerEpoch)/4) * time.Second
+// Refresh rate of ENR set at twice per slot.
+var refreshRate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
@@ -86,11 +85,14 @@ type Service struct {
 func NewService(cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
-	cache, _ := ristretto.NewCache(&ristretto.Config{
+	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,
 		MaxCost:     1000,
 		BufferItems: 64,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	s := &Service{
 		beaconDB:      cfg.BeaconDB,

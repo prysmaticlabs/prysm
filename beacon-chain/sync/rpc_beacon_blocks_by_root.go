@@ -47,13 +47,20 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 
 // beaconBlocksRootRPCHandler looks up the request blocks from the database from the given block roots.
 func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_root")
 
-	blockRoots := msg.([][32]byte)
+	blockRoots, ok := msg.([][32]byte)
+	if !ok {
+		return errors.New("message is not type [][32]byte")
+	}
 	if len(blockRoots) == 0 {
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
 		if err != nil {
@@ -70,7 +77,11 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			log.Debug("Disconnecting bad peer")
-			defer r.p2p.Disconnect(stream.Conn().RemotePeer())
+			defer func() {
+				if err := r.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
+					log.WithError(err).Error("Failed to disconnect peer")
+				}
+			}()
 		}
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
 		if err != nil {

@@ -61,6 +61,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  []*ethpb.Validator{},
 	})
 	if err != nil {
 		t.Fatal(err)
