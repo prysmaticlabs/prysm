@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -52,8 +53,7 @@ func (db *Store) HasBlockHeader(ctx context.Context, slot uint64, validatorID ui
 	defer span.End()
 	prefix := encodeSlotValidatorID(slot, validatorID)
 	var hasBlockHeader bool
-	// #nosec G104
-	_ = db.view(func(tx *bolt.Tx) error {
+	if err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
 		for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
 			hasBlockHeader = true
@@ -61,7 +61,9 @@ func (db *Store) HasBlockHeader(ctx context.Context, slot uint64, validatorID ui
 		}
 		hasBlockHeader = false
 		return nil
-	})
+	}); err != nil {
+		logrus.WithError(err).Error("Failed to lookup block header from DB")
+	}
 
 	return hasBlockHeader
 }

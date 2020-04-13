@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -175,7 +176,10 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.ChainStarted {
-				data := event.Data.(*statefeed.ChainStartedData)
+				data, ok := event.Data.(*statefeed.ChainStartedData)
+				if !ok {
+					return errors.New("event data is not type *statefeed.ChainStartData")
+				}
 				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
 				log.Info("Sending genesis time notification to connected validator clients")
 				res := &ethpb.ChainStartResponse{

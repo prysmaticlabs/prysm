@@ -86,7 +86,11 @@ func (s *Service) Start() {
 			select {
 			case event := <-stateChannel:
 				if event.Type == statefeed.Initialized {
-					data := event.Data.(*statefeed.InitializedData)
+					data, ok := event.Data.(*statefeed.InitializedData)
+					if !ok {
+						log.Error("event data is not type *statefeed.InitializedData")
+						return
+					}
 					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 					genesis = data.StartTime
 					genesisSet = true

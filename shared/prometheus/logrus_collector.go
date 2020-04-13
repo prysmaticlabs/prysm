@@ -1,6 +1,8 @@
 package prometheus
 
 import (
+	"errors"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sirupsen/logrus"
@@ -34,7 +36,10 @@ func NewLogrusCollector() *LogrusCollector {
 func (hook *LogrusCollector) Fire(entry *logrus.Entry) error {
 	prefix := defaultprefix
 	if prefixValue, ok := entry.Data[prefixKey]; ok {
-		prefix = prefixValue.(string)
+		prefix, ok = prefixValue.(string)
+		if !ok {
+			return errors.New("prefix is not a string")
+		}
 	}
 	hook.counterVec.WithLabelValues(entry.Level.String(), prefix).Inc()
 	return nil

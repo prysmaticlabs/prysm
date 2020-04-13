@@ -229,7 +229,6 @@ func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool
 	if len(pubKeys) == 0 {
 		return false
 	}
-	//#nosec G104
 	rawKeys := make([]bls12.PublicKey, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
 		rawKeys[i] = *pubKeys[i].p

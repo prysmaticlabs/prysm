@@ -20,12 +20,14 @@ func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
 	}
 
 	var historicalStateDeleted bool
-	kv.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(newStateServiceCompatibleBucket)
 		v := bkt.Get(historicalStateDeletedKey)
 		historicalStateDeleted = len(v) == 1 && v[0] == 0x01
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
 
 	regenHistoricalStatesConfirmed := false
 	var err error

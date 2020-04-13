@@ -335,7 +335,9 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally
-	beaconState.AppendEth1DataVotes(currentVote)
+	if err := beaconState.AppendEth1DataVotes(currentVote); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to append eth1 data votes to state")
+	}
 	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")

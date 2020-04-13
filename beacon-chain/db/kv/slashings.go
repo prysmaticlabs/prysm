@@ -31,12 +31,13 @@ func (k *Store) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) 
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasProposerSlashing")
 	defer span.End()
 	exists := false
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSlashingsBucket)
 		exists = bkt.Get(slashingRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 
@@ -90,12 +91,13 @@ func (k *Store) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) 
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttesterSlashing")
 	defer span.End()
 	exists := false
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attesterSlashingsBucket)
 		exists = bkt.Get(slashingRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 

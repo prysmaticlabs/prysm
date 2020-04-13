@@ -13,7 +13,10 @@ import (
 )
 
 func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	signed := msg.(*ethpb.SignedBeaconBlock)
+	signed, ok := msg.(*ethpb.SignedBeaconBlock)
+	if !ok {
+		return errors.New("message is not type *ethpb.SignedBeaconBlock")
+	}
 
 	if signed == nil || signed.Block == nil {
 		return errors.New("nil block")
