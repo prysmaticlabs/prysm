@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -25,15 +25,18 @@ const (
 )
 
 var (
-	errQueueCtxIsDone          = errors.New("queue's context is done, reinitialize")
-	errQueueTakesTooLongToStop = errors.New("queue takes too long to stop")
-	errNoEpochState            = errors.New("epoch state not found")
+	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
+	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
+	errNoEpochState               = errors.New("epoch state not found")
+	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
 )
 
 // blocksProvider exposes enough methods for queue to fetch incoming blocks.
 type blocksProvider interface {
 	requestResponses() <-chan *fetchRequestResponse
 	scheduleRequest(ctx context.Context, start, count uint64) error
+	nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error)
+	bestFinalizedSlot() uint64
 	start() error
 	stop()
 }
@@ -71,11 +74,15 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 			p2p:         cfg.p2p,
 		})
 	}
+	highestExpectedSlot := cfg.highestExpectedSlot
+	if highestExpectedSlot <= cfg.startSlot {
+		highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
+	}
 
 	queue := &blocksQueue{
 		ctx:                 ctx,
 		cancel:              cancel,
-		highestExpectedSlot: cfg.highestExpectedSlot,
+		highestExpectedSlot: highestExpectedSlot,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
 		fetchedBlocks:       make(chan *eth.SignedBeaconBlock, allowedBlocksPerSecond),
@@ -139,7 +146,13 @@ func (q *blocksQueue) loop() {
 	ticker := time.NewTicker(pollingInterval)
 	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventExtendWindow}
 	for {
+
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
+			// By the time initial sync is complete, highest slot may increase, re-check.
+			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
+				continue
+			}
 			log.Debug("Highest expected slot reached")
 			q.cancel()
 		}
@@ -155,13 +168,17 @@ func (q *blocksQueue) loop() {
 				// Trigger events on each epoch's state machine.
 				for _, event := range tickerEvents {
 					if err := q.state.trigger(event, state.epoch, data); err != nil {
-						log.WithError(err).Debug("Can not trigger event")
+						log.WithFields(logrus.Fields{
+							"event": event,
+							"epoch": state.epoch,
+							"error": err.Error(),
+						}).Debug("Can not trigger event")
 					}
 				}
 
 				// Do garbage collection, and advance sliding window forward.
 				if q.headFetcher.HeadSlot() >= helpers.StartSlot(state.epoch+1) {
-					highestEpochSlot, err := q.state.highestEpochSlot()
+					highestEpoch, err := q.state.highestEpoch()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
 						continue
@@ -170,7 +187,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove epoch state")
 					}
 					if len(q.state.epochs) < lookaheadEpochs {
-						q.state.addEpochState(highestEpochSlot + 1)
+						q.state.addEpochState(highestEpoch + 1)
 					}
 				}
 			}
@@ -185,7 +202,11 @@ func (q *blocksQueue) loop() {
 			if ind, ok := q.state.findEpochState(epoch); ok {
 				state := q.state.epochs[ind]
 				if err := q.state.trigger(eventDataReceived, state.epoch, response); err != nil {
-					log.WithError(err).Debug("Can not trigger event")
+					log.WithFields(logrus.Fields{
+						"event": eventDataReceived,
+						"epoch": state.epoch,
+						"error": err.Error(),
+					}).Debug("Can not trigger event")
 					state.setState(stateNew)
 					continue
 				}
@@ -201,14 +222,11 @@ func (q *blocksQueue) loop() {
 // onScheduleEvent is an event called on newly arrived epochs. Transforms state to scheduled.
 func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 	return func(es *epochState, in interface{}) (stateID, error) {
-		data := in.(*fetchRequestParams)
-		start := data.start
-		count := mathutil.Min(data.count, q.highestExpectedSlot-start+1)
-		if count <= 0 {
-			return es.state, errStartSlotIsTooHigh
+		data, ok := in.(*fetchRequestParams)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
 		}
-
-		if err := q.blocksFetcher.scheduleRequest(ctx, start, count); err != nil {
+		if err := q.blocksFetcher.scheduleRequest(ctx, data.start, data.count); err != nil {
 			return es.state, err
 		}
 		return stateScheduled, nil
@@ -222,11 +240,14 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			return es.state, ctx.Err()
 		}
 
-		response := in.(*fetchRequestResponse)
+		response, ok := in.(*fetchRequestResponse)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
+		}
 		epoch := helpers.SlotToEpoch(response.start)
 		if response.err != nil {
 			// Current window is already too big, re-request previous epochs.
-			if response.err == errStartSlotIsTooHigh {
+			if response.err == errSlotIsTooHigh {
 				for _, state := range q.state.epochs {
 					isSkipped := state.state == stateSkipped || state.state == stateSkippedExt
 					if state.epoch < epoch && isSkipped {
@@ -253,7 +274,10 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 			return es.state, ctx.Err()
 		}
 
-		data := in.(*fetchRequestParams)
+		data, ok := in.(*fetchRequestParams)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
+		}
 		epoch := helpers.SlotToEpoch(data.start)
 		ind, ok := q.state.findEpochState(epoch)
 		if !ok {
@@ -303,40 +327,67 @@ func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
 			return es.state, ctx.Err()
 		}
 
-		data := in.(*fetchRequestParams)
+		data, ok := in.(*fetchRequestParams)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
+		}
 		epoch := helpers.SlotToEpoch(data.start)
 		if _, ok := q.state.findEpochState(epoch); !ok {
 			return es.state, errNoEpochState
 		}
 
 		// Only the highest epoch with skipped state can trigger extension.
-		highestEpochSlot, err := q.state.highestEpochSlot()
+		highestEpoch, err := q.state.highestEpoch()
 		if err != nil {
 			return es.state, err
 		}
-		if highestEpochSlot != epoch {
+		if highestEpoch != epoch {
 			return es.state, nil
 		}
 
 		// Check if window is expanded recently, if so, time to reset and re-request the same blocks.
 		resetWindow := false
+		skippedEpochs := 0
 		for _, state := range q.state.epochs {
 			if state.state == stateSkippedExt {
 				resetWindow = true
 				break
 			}
+			if state.state == stateSkipped || state.state == stateSkippedExt {
+				skippedEpochs++
+			}
 		}
-		if resetWindow {
+		// Reset if everything is skipped or extension took place during previous iteration.
+		if resetWindow || (skippedEpochs == len(q.state.epochs)) {
 			for _, state := range q.state.epochs {
 				state.setState(stateNew)
+			}
+			// Fill the gaps between epochs.
+			start, err := q.state.lowestEpoch()
+			if err != nil {
+				return es.state, err
+			}
+			end, err := q.state.highestEpoch()
+			if err != nil {
+				return es.state, err
+			}
+			for i := start; i < end; i++ {
+				if _, ok := q.state.findEpochState(i); !ok {
+					q.state.addEpochState(i)
+				}
 			}
 			return stateNew, nil
 		}
 
 		// Extend sliding window.
-		for i := 1; i <= lookaheadEpochs; i++ {
-			q.state.addEpochState(highestEpochSlot + uint64(i))
+		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, helpers.StartSlot(highestEpoch+1))
+		if err != nil {
+			return es.state, err
 		}
+		if nonSkippedSlot > q.highestExpectedSlot {
+			return es.state, nil
+		}
+		q.state.addEpochState(helpers.SlotToEpoch(nonSkippedSlot))
 		return stateSkippedExt, nil
 	}
 }

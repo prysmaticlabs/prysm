@@ -23,6 +23,26 @@ func (k *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) 
 	})
 }
 
+// SaveStateSummaries saves state summary objects to the DB.
+func (k *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
+	defer span.End()
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateSummaryBucket)
+		for _, summary := range summaries {
+			enc, err := encode(summary)
+			if err != nil {
+				return err
+			}
+			if err := bucket.Put(summary.Root, enc); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // StateSummary returns the state summary object from the db using input block root.
 func (k *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.StateSummary")
@@ -47,11 +67,12 @@ func (k *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
 	var exists bool
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }

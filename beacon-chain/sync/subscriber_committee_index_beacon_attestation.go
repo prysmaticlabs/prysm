@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -19,7 +20,11 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
 	}
 
-	if exists, _ := r.attPool.HasAggregatedAttestation(a); exists {
+	exists, err := r.attPool.HasAggregatedAttestation(a)
+	if err != nil {
+		return errors.Wrap(err, "failed to determine if attestation pool has this atttestation")
+	}
+	if exists {
 		return nil
 	}
 

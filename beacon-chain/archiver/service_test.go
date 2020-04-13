@@ -317,8 +317,8 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	if retrieved == nil {
 		t.Fatal("Retrieved indices are nil")
 	}
-	if !reflect.DeepEqual(retrieved.Activated, []uint64{4, 5}) {
-		t.Errorf("Wanted indices 4 5 activated, received %v", retrieved.Activated)
+	if len(retrieved.Activated) != 98 {
+		t.Error("Did not get wanted active length")
 	}
 	testutil.AssertLogsContain(t, hook, "Successfully archived")
 }

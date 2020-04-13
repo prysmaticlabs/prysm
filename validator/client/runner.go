@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -19,14 +18,14 @@ import (
 type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
-	WaitForActivation(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
+	WaitForActivation(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
-	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) // validator pubKey -> roles
+	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
@@ -102,24 +101,24 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 			for id, roles := range allRoles {
-				wg.Add(1)
-				go func(roles []pb.ValidatorRole, id [48]byte) {
-					for _, role := range roles {
+				wg.Add(len(roles))
+				for _, role := range roles {
+					go func(role validatorRole, id [48]byte) {
+						defer wg.Done()
 						switch role {
-						case pb.ValidatorRole_ATTESTER:
-							go v.SubmitAttestation(slotCtx, slot, id)
-						case pb.ValidatorRole_PROPOSER:
-							go v.ProposeBlock(slotCtx, slot, id)
-						case pb.ValidatorRole_AGGREGATOR:
-							go v.SubmitAggregateAndProof(slotCtx, slot, id)
-						case pb.ValidatorRole_UNKNOWN:
+						case roleAttester:
+							v.SubmitAttestation(slotCtx, slot, id)
+						case roleProposer:
+							v.ProposeBlock(slotCtx, slot, id)
+						case roleAggregator:
+							v.SubmitAggregateAndProof(slotCtx, slot, id)
+						case roleUnknown:
 							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)
 						}
-					}
-					wg.Done()
-				}(roles, id)
+					}(role, id)
+				}
 			}
 			// Wait for all processes to complete, then report span complete.
 			go func() {

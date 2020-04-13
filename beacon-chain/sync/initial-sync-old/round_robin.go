@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,19 +46,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer s.chain.ClearCachedStates()
-
-	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
-		cfg.EnableSkipSlotsCache = false
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableSkipSlotsCache = true
-			featureconfig.Init(cfg)
-		}()
-	}
+	state.SkipSlotCache.Disable()
+	defer state.SkipSlotCache.Enable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
 	var lastEmptyRequests int
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	// Step 1 - Sync to end of finalized epoch.
@@ -181,7 +175,17 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				}
 			}
 		}
-		startBlock := s.chain.HeadSlot() + 1
+		var startBlock uint64
+		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
+			lastFinalizedEpoch := s.chain.FinalizedCheckpt().Epoch
+			lastFinalizedState, err := s.db.HighestSlotStatesBelow(ctx, helpers.StartSlot(lastFinalizedEpoch))
+			if err != nil {
+				return err
+			}
+			startBlock = lastFinalizedState[0].Slot() + 1
+		} else {
+			startBlock = s.chain.HeadSlot() + 1
+		}
 		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
 		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
 			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
@@ -196,7 +200,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			0,                    // remainder
 		)
 		if err != nil {
-			log.WithError(err).Error("Round robing sync request failed")
+			log.WithError(err).Error("Round robin sync request failed")
 			continue
 		}
 
@@ -209,10 +213,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
-			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
-				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
+			parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+			if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
+				log.WithField("parentRoot", parentRoot).Debug("Beacon node doesn't have a block in DB or cache")
 				continue
 			}
+
 			s.blockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
 				Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
@@ -306,7 +312,11 @@ func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRa
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request to peer")
 	}
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 
 	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
 	for {

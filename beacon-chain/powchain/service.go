@@ -120,13 +120,17 @@ type RPCClient interface {
 // Validator Registration Contract on the ETH1.0 chain to kick off the beacon
 // chain's validator registration process.
 type Service struct {
+	requestingOldLogs       bool
+	connectedETH1           bool
+	isRunning               bool
+	depositContractAddress  common.Address
+	processingLock          sync.RWMutex
 	ctx                     context.Context
 	cancel                  context.CancelFunc
 	client                  Client
 	headerChan              chan *gethTypes.Header
 	eth1Endpoint            string
 	httpEndpoint            string
-	depositContractAddress  common.Address
 	stateNotifier           statefeed.Notifier
 	reader                  Reader
 	logger                  bind.ContractFilterer
@@ -142,12 +146,8 @@ type Service struct {
 	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
-	isRunning               bool
 	runError                error
 	preGenesisState         *stateTrie.BeaconState
-	processingLock          sync.RWMutex
-	requestingOldLogs       bool
-	connectedETH1           bool
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -499,7 +499,9 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 	}
 	for _, h := range headers {
 		if h != nil {
-			s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h))
+			if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h)); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return headers, nil
@@ -522,7 +524,7 @@ func (s *Service) handleDelayTicker() {
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
-	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
+	fiveMinutesTimeout := roughtime.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
 	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) && roughtime.Now().Second()%15 == 0 {
 		log.Warn("eth1 client is not syncing")

@@ -15,6 +15,10 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
+func init() {
+	state.SkipSlotCache.Disable()
+}
+
 func runSlotProcessingTests(t *testing.T, config string) {
 	if err := spectest.SetConfig(config); err != nil {
 		t.Fatal(err)

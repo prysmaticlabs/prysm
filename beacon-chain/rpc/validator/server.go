@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -25,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -114,41 +114,16 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 // ValidatorIndex is called by a validator to get its index location in the beacon state.
 func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, req.PublicKey)
+	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch validator index: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
+	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
 	}
 
 	return &ethpb.ValidatorIndexResponse{Index: index}, nil
-}
-
-// ExitedValidators queries validator statuses for a give list of validators
-// and returns a filtered list of validator keys that are exited.
-func (vs *Server) ExitedValidators(
-	ctx context.Context,
-	req *pb.ExitedValidatorsRequest) (*pb.ExitedValidatorsResponse, error) {
-
-	_, statuses, err := vs.multipleValidatorStatus(ctx, req.PublicKeys)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve validator statuses: %v", err)
-	}
-
-	exitedKeys := make([][]byte, 0)
-	for _, st := range statuses {
-		s := st.Status.Status
-		if s == ethpb.ValidatorStatus_EXITED {
-			exitedKeys = append(exitedKeys, st.PublicKey)
-		}
-	}
-
-	resp := &pb.ExitedValidatorsResponse{
-		PublicKeys: exitedKeys,
-	}
-
-	return resp, nil
 }
 
 // DomainData fetches the current domain version information from the beacon state.
@@ -197,7 +172,10 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.ChainStarted {
-				data := event.Data.(*statefeed.ChainStartedData)
+				data, ok := event.Data.(*statefeed.ChainStartedData)
+				if !ok {
+					return errors.New("event data is not type *statefeed.ChainStartData")
+				}
 				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
 				log.Info("Sending genesis time notification to connected validator clients")
 				res := &ethpb.ChainStartResponse{

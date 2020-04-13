@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -39,16 +40,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer s.chain.ClearCachedStates()
-
-	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
-		cfg.EnableSkipSlotsCache = false
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableSkipSlotsCache = true
-			featureconfig.Init(cfg)
-		}()
-	}
+	state.SkipSlotCache.Enable()
+	defer state.SkipSlotCache.Disable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
@@ -144,7 +137,11 @@ func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRa
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request to peer")
 	}
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 
 	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
 	for {
@@ -198,7 +195,8 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 }
 
 func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock) error {
-	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
+	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 	}
 	s.blockNotifier.BlockFeed().Send(&feed.Event{

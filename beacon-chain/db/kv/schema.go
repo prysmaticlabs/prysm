@@ -9,7 +9,6 @@ package kv
 var (
 	attestationsBucket                   = []byte("attestations")
 	blocksBucket                         = []byte("blocks")
-	validatorsBucket                     = []byte("validators")
 	stateBucket                          = []byte("state")
 	stateSummaryBucket                   = []byte("state-summary")
 	proposerSlashingsBucket              = []byte("proposer-slashings")

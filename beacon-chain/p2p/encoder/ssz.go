@@ -11,6 +11,9 @@ import (
 
 var _ = NetworkEncoding(&SszNetworkEncoder{})
 
+// MaxChunkSize allowed for decoding messages.
+const MaxChunkSize = uint64(1 << 20) // 1Mb
+
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
 // with snappy compression (if enabled).
 type SszNetworkEncoder struct {
@@ -87,21 +90,15 @@ func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
 
 // DecodeWithLength the bytes from io.Reader to the protobuf message provided.
 func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
-	msgLen, err := readVarint(r)
-	if err != nil {
-		return err
-	}
-	b := make([]byte, msgLen)
-	_, err = r.Read(b)
-	if err != nil {
-		return err
-	}
-	return e.Decode(b, to)
+	return e.DecodeWithMaxLength(r, to, MaxChunkSize)
 }
 
 // DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
 // This checks that the decoded message isn't larger than the provided max limit.
 func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxSize uint64) error {
+	if maxSize > MaxChunkSize {
+		return fmt.Errorf("maxSize %d exceeds max chunk size %d", maxSize, MaxChunkSize)
+	}
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err

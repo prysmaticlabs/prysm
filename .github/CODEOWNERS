@@ -1,0 +1,5 @@
+# Automatically require code review from core-team.
+* @prysmaticlabs/core-team
+
+# Starlark code owners
+*.bzl @prestonvanloon

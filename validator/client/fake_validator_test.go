@@ -3,8 +3,6 @@ package client
 import (
 	"context"
 	"time"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
 var _ = Validator(&fakeValidator{})
@@ -14,22 +12,22 @@ type fakeValidator struct {
 	WaitForActivationCalled          bool
 	WaitForChainStartCalled          bool
 	WaitForSyncCalled                bool
-	NextSlotRet                      <-chan uint64
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
 	UpdateDutiesCalled               bool
-	UpdateDutiesArg1                 uint64
-	UpdateDutiesRet                  error
 	RoleAtCalled                     bool
-	RoleAtArg1                       uint64
-	RolesAtRet                       []pb.ValidatorRole
 	AttestToBlockHeadCalled          bool
-	AttestToBlockHeadArg1            uint64
 	ProposeBlockCalled               bool
-	ProposeBlockArg1                 uint64
 	LogValidatorGainsAndLossesCalled bool
 	SlotDeadlineCalled               bool
+	ProposeBlockArg1                 uint64
+	AttestToBlockHeadArg1            uint64
+	RoleAtArg1                       uint64
+	UpdateDutiesArg1                 uint64
+	NextSlotRet                      <-chan uint64
 	PublicKey                        string
+	UpdateDutiesRet                  error
+	RolesAtRet                       []validatorRole
 }
 
 func (fv *fakeValidator) Done() {
@@ -77,10 +75,10 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) {
+func (fv *fakeValidator) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	vr := make(map[[48]byte][]pb.ValidatorRole)
+	vr := make(map[[48]byte][]validatorRole)
 	vr[[48]byte{1}] = fv.RolesAtRet
 	return vr, nil
 }

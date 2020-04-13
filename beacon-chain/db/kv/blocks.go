@@ -11,7 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -121,12 +120,13 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 		return true
 	}
 	exists := false
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		exists = bkt.Get(blockRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 
@@ -227,16 +227,16 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 	defer span.End()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
 		for _, block := range blocks {
 			if err := k.setBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 				return err
 			}
-
-			blockRoot, err := ssz.HashTreeRoot(block.Block)
+			blockRoot, err := stateutil.BlockRoot(block.Block)
 			if err != nil {
 				return err
 			}
-			bkt := tx.Bucket(blocksBucket)
+
 			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 				continue
 			}
@@ -249,6 +249,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			k.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
+
 			if err := bkt.Put(blockRoot[:], enc); err != nil {
 				return err
 			}
@@ -263,7 +264,7 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
+			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil && !k.stateSummaryCache.Has(blockRoot) {
 				return errors.New("no state summary found with head block root")
 			}
 		} else {
@@ -338,6 +339,9 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 	err := k.db.View(func(tx *bolt.Tx) error {
 		sBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := sBkt.Get(savedBlockSlotsKey)
+		if len(savedSlots) == 0 {
+			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
+		}
 		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
 		if err != nil {
 			return err
@@ -587,7 +591,10 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, e
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.ParentRoot:
-			parentRoot := v.([]byte)
+			parentRoot, ok := v.([]byte)
+			if !ok {
+				return nil, errors.New("parent root is not []byte")
+			}
 			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:

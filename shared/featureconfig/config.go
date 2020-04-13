@@ -28,32 +28,31 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoCustomConfig                             bool   // NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	CustomGenesisDelay                         uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
-	MinimalConfig                              bool   // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions                   bool   // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify                           bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	EnableDynamicCommitteeSubnets              bool   // Enables dynamic attestation committee subnets via p2p.
-	SkipBLSVerify                              bool   // Skips BLS verification across the runtime.
-	EnableBackupWebhook                        bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates                   bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression                  bool   // EnableSnappyDBCompression in the database.
-	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
-	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
-	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
-	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-	EnableByteMempool                          bool   // EnaableByteMempool memory management.
-	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
-	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
-	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
-	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
-	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	NewStateMgmt                               bool   // NewStateMgmt enables the new experimental state mgmt service.
-	EnableInitSyncQueue                        bool   // EnableInitSyncQueue enables the new initial sync implementation.
-	EnableFieldTrie                            bool   // EnableFieldTrie enables the state from using field specific tries when computing the root.
-	EnableBlockHTR                             bool   // EnableBlockHTR enables custom hashing of our beacon blocks.
-	EnableRefCopy                              bool   // EnableRefCopy copies the references to objects  instead of the objects themselves when copying.
+	NoCustomConfig                             bool // NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
+	MinimalConfig                              bool // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	EnableDynamicCommitteeSubnets              bool // Enables dynamic attestation committee subnets via p2p.
+	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
+	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
+	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
+	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
+	EnableByteMempool                          bool // EnaableByteMempool memory management.
+	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
+	EnableStateGenSigVerify                    bool // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
+	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
+	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
+	NewStateMgmt                               bool // NewStateMgmt enables the new experimental state mgmt service.
+	DisableInitSyncQueue                       bool // DisableInitSyncQueue disables the new initial sync implementation.
+	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
+	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
+	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
+	EnableRefCopy                              bool // EnableRefCopy copies the references to objects instead of the objects themselves when copying.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -65,9 +64,11 @@ type Flags struct {
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
+
+	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 }
 
 var featureConfig *Flags
@@ -109,9 +110,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled dynamic attestation committee subnets")
 		cfg.EnableDynamicCommitteeSubnets = true
 	}
-	if ctx.Bool(enableSSZCache.Name) {
-		log.Warn("Enabled unsafe ssz cache")
-		cfg.EnableSSZCache = true
+	cfg.EnableSSZCache = true
+	if ctx.Bool(disableSSZCache.Name) {
+		log.Warn("Disabled ssz cache")
+		cfg.EnableSSZCache = false
 	}
 	if ctx.Bool(enableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
@@ -130,10 +132,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableBackupWebhookFlag.Name) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
-	}
-	if ctx.Bool(enableSkipSlotsCacheFlag.Name) {
-		log.Warn("Enabled skip slots cache.")
-		cfg.EnableSkipSlotsCache = true
 	}
 	if ctx.String(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
@@ -179,9 +177,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.Bool(enableInitSyncQueue.Name) {
-		log.Warn("Enabling initial sync queue")
-		cfg.EnableInitSyncQueue = true
+	if ctx.Bool(disableInitSyncQueue.Name) {
+		log.Warn("Disabled initial sync queue")
+		cfg.DisableInitSyncQueue = true
 	}
 	if ctx.Bool(enableFieldTrie.Name) {
 		log.Warn("Enabling state field trie")
@@ -190,6 +188,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableCustomBlockHTR.Name) {
 		log.Warn("Enabling custom block hashing")
 		cfg.EnableBlockHTR = true
+	}
+	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
+		log.Warn("Disabling init sync batch save blocks mode")
+		cfg.NoInitSyncBatchSaveBlocks = true
 	}
 	if ctx.Bool(enableRefCopy.Name) {
 		log.Warn("Enabling reference copy")
@@ -204,13 +206,15 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	if ctx.Bool(protectProposerFlag.Name) {
-		log.Warn("Enabled validator proposal slashing protection.")
-		cfg.ProtectProposer = true
+	cfg.ProtectProposer = true
+	if ctx.Bool(disableProtectProposerFlag.Name) {
+		log.Warn("Disabled validator proposal slashing protection.")
+		cfg.ProtectProposer = false
 	}
-	if ctx.Bool(protectAttesterFlag.Name) {
-		log.Warn("Enabled validator attestation slashing protection.")
-		cfg.ProtectAttester = true
+	cfg.ProtectAttester = true
+	if ctx.Bool(disableProtectAttesterFlag.Name) {
+		log.Warn("Disabled validator attestation slashing protection.")
+		cfg.ProtectAttester = false
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")

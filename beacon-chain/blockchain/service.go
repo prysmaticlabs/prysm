@@ -75,6 +75,8 @@ type Service struct {
 	checkpointStateLock    sync.Mutex
 	stateGen               *stategen.State
 	opsService             *attestations.Service
+	initSyncBlocks         map[[32]byte]*ethpb.SignedBeaconBlock
+	initSyncBlocksLock     sync.RWMutex
 }
 
 // Config options for the service.
@@ -117,6 +119,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		checkpointState:    cache.NewCheckpointStateCache(),
 		opsService:         cfg.OpsService,
 		stateGen:           cfg.StateGen,
+		initSyncBlocks:     make(map[[32]byte]*ethpb.SignedBeaconBlock),
 	}, nil
 }
 
@@ -207,7 +210,11 @@ func (s *Service) Start() {
 				select {
 				case event := <-stateChannel:
 					if event.Type == statefeed.ChainStarted {
-						data := event.Data.(*statefeed.ChainStartedData)
+						data, ok := event.Data.(*statefeed.ChainStartedData)
+						if !ok {
+							log.Error("event data is not type *statefeed.ChainStartedData")
+							return
+						}
 						log.WithField("starttime", data.StartTime).Debug("Received chain start event")
 						s.processChainStartTime(ctx, data.StartTime)
 						return
@@ -302,18 +309,6 @@ func (s *Service) ClearCachedStates() {
 	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
 }
 
-// This gets called when beacon chain is first initialized to save validator indices and public keys in db.
-func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.BeaconState) error {
-	pubkeys := make([][48]byte, state.NumValidators())
-	indices := make([]uint64, state.NumValidators())
-
-	for i := 0; i < state.NumValidators(); i++ {
-		pubkeys[i] = state.PubkeyAtIndex(uint64(i))
-		indices[i] = uint64(i)
-	}
-	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
-}
-
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
@@ -349,9 +344,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could save genesis block root")
-	}
-	if err := s.saveGenesisValidators(ctx, genesisState); err != nil {
-		return errors.Wrap(err, "could not save genesis validators")
 	}
 
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
@@ -462,6 +454,10 @@ func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
 		return err
 	}
 	if err := s.beaconDB.DeleteStates(ctx, roots); err != nil {
+		return err
+	}
+
+	if err := s.beaconDB.SaveLastArchivedIndex(ctx, 0); err != nil {
 		return err
 	}
 

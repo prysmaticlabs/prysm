@@ -4,7 +4,6 @@ load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
 load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 load("@io_bazel_rules_go//go:def.bzl", "nogo")
 load("@graknlabs_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
-load("//tools:binary_targets.bzl", "binary_targets", "determine_targets")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
@@ -104,39 +103,16 @@ nogo(
         "@org_golang_x_tools//go/analysis/passes/assign:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/inspect:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/asmdecl:go_tool_library",
+        "//tools/analyzers/maligned:go_tool_library",
+        "//tools/analyzers/roughtime:go_tool_library",
+        "//tools/analyzers/errcheck:go_tool_library",
     ],
-)
-
-assemble_versioned(
-    name = "assemble-versioned-all",
-    tags = ["manual"],
-    targets = [
-        ":assemble-{}-{}-targz".format(
-            pair[0],
-            pair[1],
-        )
-        for pair in binary_targets
-    ],
-    version_file = "//:VERSION",
 )
 
 common_files = {
     "//:LICENSE.md": "LICENSE.md",
     "//:README.md": "README.md",
 }
-
-[assemble_targz(
-    name = "assemble-{}-{}-targz".format(
-        pair[0],
-        pair[1],
-    ),
-    additional_files = determine_targets(pair, common_files),
-    output_filename = "prysm-{}-{}".format(
-        pair[0],
-        pair[1],
-    ),
-    tags = ["manual"],
-) for pair in binary_targets]
 
 toolchain(
     name = "built_cmake_toolchain",

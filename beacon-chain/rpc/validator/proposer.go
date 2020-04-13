@@ -27,6 +27,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// eth1DataNotification is a latch to stop flooding logs with the same warning.
+var eth1DataNotification bool
+
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
@@ -148,6 +151,7 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 		return vs.randomETH1DataVote(ctx)
 	}
+	eth1DataNotification = false
 
 	eth1VotingPeriodStartTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
 	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
@@ -157,13 +161,19 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get block number from timestamp")
 	}
+	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get eth1 data from block number")
+	}
 
-	return vs.defaultEth1DataResponse(ctx, blockNumber)
+	return eth1Data, nil
 }
 
 func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
-	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
-		"ETH1 Data votes are now mocked.")
+	if !eth1DataNotification {
+		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now mocked.")
+		eth1DataNotification = true
+	}
 	// If a mock eth1 data votes is specified, we use the following for the
 	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
 	//
@@ -192,8 +202,10 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 }
 
 func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
-	log.Warn("Beacon Node is no longer connected to an ETH1 Chain, so " +
-		"ETH1 Data votes are now random.")
+	if !eth1DataNotification {
+		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now random.")
+		eth1DataNotification = true
+	}
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
@@ -313,7 +325,9 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally
-	beaconState.AppendEth1DataVotes(currentVote)
+	if err := beaconState.AppendEth1DataVotes(currentVote); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to append eth1 data votes to state")
+	}
 	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")

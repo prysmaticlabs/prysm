@@ -20,13 +20,13 @@ func TestStateMachine_Stringify(t *testing.T) {
 		{
 			"newly created state machine",
 			[]*epochState{
-				{epoch: 8, state: stateNew,},
-				{epoch: 9, state: stateScheduled,},
-				{epoch: 10, state: stateDataParsed,},
-				{epoch: 11, state: stateSkipped,},
-				{epoch: 12, state: stateSkippedExt,},
-				{epoch: 13, state: stateComplete,},
-				{epoch: 14, state: stateSent,},
+				{epoch: 8, state: stateNew},
+				{epoch: 9, state: stateScheduled},
+				{epoch: 10, state: stateDataParsed},
+				{epoch: 11, state: stateSkipped},
+				{epoch: 12, state: stateSkippedExt},
+				{epoch: 13, state: stateComplete},
+				{epoch: 14, state: stateSent},
 			},
 			"[8:new 9:scheduled 10:dataParsed 11:skipped 12:skippedExt 13:complete 14:sent]",
 		},
@@ -85,9 +85,9 @@ func TestStateMachine_trigger(t *testing.T) {
 	}
 	type args struct {
 		name        eventID
+		returnState stateID
 		epoch       uint64
 		data        interface{}
-		returnState stateID
 	}
 	tests := []struct {
 		name   string
@@ -100,7 +100,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			name:   "event not found",
 			events: []event{},
 			epochs: []uint64{},
-			args:   args{eventSchedule, 12, nil, stateNew},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateNew},
 			err:    fmt.Errorf("event not found: %v", eventSchedule),
 		},
 		{
@@ -109,7 +109,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateNew, eventSchedule, stateScheduled, false},
 			},
 			epochs: []uint64{},
-			args:   args{eventSchedule, 12, nil, stateScheduled},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    fmt.Errorf("state for %v epoch not found", 12),
 		},
 		{
@@ -118,7 +118,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateNew, eventSchedule, stateScheduled, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateScheduled},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
@@ -129,7 +129,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateSent, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateScheduled},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
@@ -140,7 +140,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateSent, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateComplete},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateComplete},
 			err:    nil,
 		},
 		{
@@ -151,7 +151,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateNew, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{eventSchedule, 12, nil, stateSent},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateSent},
 			err:    nil,
 		},
 	}
@@ -242,29 +242,56 @@ func TestStateMachine_isLowestEpochState(t *testing.T) {
 	}
 }
 
-func TestStateMachine_highestEpochSlot(t *testing.T) {
+func TestStateMachine_highestEpoch(t *testing.T) {
 	sm := newStateMachine()
-	if _, err := sm.highestEpochSlot(); err == nil {
+	if _, err := sm.highestEpoch(); err == nil {
 		t.Error("expected error")
 	}
 	sm.addEpochState(12)
 	sm.addEpochState(13)
 	sm.addEpochState(14)
-	slot, err := sm.highestEpochSlot()
+	epoch, err := sm.highestEpoch()
 	if err != nil {
 		t.Error(err)
 	}
-	if slot != 14 {
-		t.Errorf("incorrect highest slot: %v, want: %v", slot, 14)
+	if epoch != 14 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 14)
 	}
 	if err := sm.removeEpochState(14); err != nil {
 		t.Error(err)
 	}
-	slot, err = sm.highestEpochSlot()
+	epoch, err = sm.highestEpoch()
 	if err != nil {
 		t.Error(err)
 	}
-	if slot != 13 {
-		t.Errorf("incorrect highest slot: %v, want: %v", slot, 13)
+	if epoch != 13 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
+	}
+}
+
+func TestStateMachine_lowestEpoch(t *testing.T) {
+	sm := newStateMachine()
+	if _, err := sm.highestEpoch(); err == nil {
+		t.Error("expected error")
+	}
+	sm.addEpochState(12)
+	sm.addEpochState(13)
+	sm.addEpochState(14)
+	epoch, err := sm.lowestEpoch()
+	if err != nil {
+		t.Error(err)
+	}
+	if epoch != 12 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 12)
+	}
+	if err := sm.removeEpochState(12); err != nil {
+		t.Error(err)
+	}
+	epoch, err = sm.lowestEpoch()
+	if err != nil {
+		t.Error(err)
+	}
+	if epoch != 13 {
+		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
 	}
 }

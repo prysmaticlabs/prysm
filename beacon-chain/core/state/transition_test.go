@@ -25,6 +25,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func init() {
+	state.SkipSlotCache.Disable()
+}
+
 func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 	base := &pb.BeaconState{
 		Slot: 5,
@@ -527,6 +531,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+		Validators:                 []*ethpb.Validator{},
 	}
 	s, err := beaconstate.InitializeFromProto(base)
 	if err != nil {

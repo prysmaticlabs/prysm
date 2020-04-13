@@ -60,6 +60,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Validators:  []*ethpb.Validator{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -144,9 +145,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
@@ -248,9 +246,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
@@ -372,9 +367,6 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		validators = append(validators, &ethpb.Validator{PublicKey: pubKey, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 
@@ -461,9 +453,6 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	for i := 0; i < count; i++ {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		validators = append(validators, &ethpb.Validator{PublicKey: pubKey, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 

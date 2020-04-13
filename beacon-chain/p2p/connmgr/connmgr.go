@@ -35,6 +35,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
@@ -104,7 +105,7 @@ func (s *segment) tagInfoFor(p peer.ID) *peerInfo {
 	// create a temporary peer to buffer early tags before the Connected notification arrives.
 	pi = &peerInfo{
 		id:        p,
-		firstSeen: time.Now(), // this timestamp will be updated when the first Connected notification arrives.
+		firstSeen: roughtime.Now(), // this timestamp will be updated when the first Connected notification arrives.
 		temp:      true,
 		tags:      make(map[string]int),
 		conns:     make(map[network.Conn]time.Time),
@@ -221,10 +222,12 @@ func (cm *BasicConnMgr) TrimOpenConns(ctx context.Context) {
 	for _, c := range cm.getConnsToClose(ctx) {
 		log.Info("closing conn: ", c.RemotePeer())
 		log.Event(ctx, "closeConn", c.RemotePeer())
-		c.Close()
+		if err := c.Close(); err != nil {
+			log.Errorf("Failed to close connection: %v", err)
+		}
 	}
 
-	cm.lastTrim = time.Now()
+	cm.lastTrim = roughtime.Now()
 }
 
 // getConnsToClose runs the heuristics described in TrimOpenConns and returns the
@@ -244,7 +247,7 @@ func (cm *BasicConnMgr) getConnsToClose(ctx context.Context) []network.Conn {
 	npeers := cm.segments.countPeers()
 	candidates := make([]*peerInfo, 0, npeers)
 	ncandidates := 0
-	gracePeriodStart := time.Now().Add(-cm.gracePeriod)
+	gracePeriodStart := roughtime.Now().Add(-cm.gracePeriod)
 
 	cm.plk.RLock()
 	for _, s := range cm.segments {
@@ -446,7 +449,7 @@ func (nn *cmNotifee) Connected(n network.Network, c network.Conn) {
 	if !ok {
 		pinfo = &peerInfo{
 			id:        id,
-			firstSeen: time.Now(),
+			firstSeen: roughtime.Now(),
 			tags:      make(map[string]int),
 			conns:     make(map[network.Conn]time.Time),
 		}
@@ -456,7 +459,7 @@ func (nn *cmNotifee) Connected(n network.Network, c network.Conn) {
 		// Connected notification arrived: flip the temporary flag, and update the firstSeen
 		// timestamp to the real one.
 		pinfo.temp = false
-		pinfo.firstSeen = time.Now()
+		pinfo.firstSeen = roughtime.Now()
 	}
 
 	_, ok = pinfo.conns[c]
@@ -465,7 +468,7 @@ func (nn *cmNotifee) Connected(n network.Network, c network.Conn) {
 		return
 	}
 
-	pinfo.conns[c] = time.Now()
+	pinfo.conns[c] = roughtime.Now()
 	atomic.AddInt32(&cm.connCount, 1)
 }
 

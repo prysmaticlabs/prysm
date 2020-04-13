@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime/debug"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -88,20 +90,34 @@ func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 	stack := debug.Stack()
-	// #nosec G104
-	w.Write(stack)
-	// #nosec G104
-	pprof.Lookup("goroutine").WriteTo(w, 2)
+	if _, err := w.Write(stack); err != nil {
+		log.WithError(err).Error("Failed to write goroutines stack")
+	}
+	if err := pprof.Lookup("goroutine").WriteTo(w, 2); err != nil {
+		log.WithError(err).Error("Failed to write pprof goroutines")
+	}
 }
 
 // Start the prometheus service.
 func (s *Service) Start() {
-	log.WithField("endpoint", s.server.Addr).Info("Collecting metrics at endpoint")
 	go func() {
-		err := s.server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			log.Errorf("Could not listen to host:port :%s: %v", s.server.Addr, err)
-			s.failStatus = err
+		// See if the port is already used.
+		addrParts := strings.Split(s.server.Addr, ":")
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%s", addrParts[1]), time.Second)
+		if err == nil {
+			if err := conn.Close(); err != nil {
+				log.WithError(err).Error("Failed to close connection")
+			}
+			// Something on the port; we cannot use it.
+			log.WithField("address", s.server.Addr).Warn("Port already in use; cannot start prometheus service")
+		} else {
+			// Nothing on that port; we can use it.
+			log.WithField("address", s.server.Addr).Debug("Starting prometheus service")
+			err := s.server.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
+				log.Errorf("Could not listen to host:port :%s: %v", s.server.Addr, err)
+				s.failStatus = err
+			}
 		}
 	}()
 }

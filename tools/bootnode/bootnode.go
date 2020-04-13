@@ -16,6 +16,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -34,6 +35,7 @@ import (
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
@@ -41,6 +43,7 @@ import (
 
 var (
 	debug        = flag.Bool("debug", false, "Enable debug logging")
+	logFileName  = flag.String("log-file", "", "Specify log filename, relative or absolute")
 	privateKey   = flag.String("private", "", "Private key to use for peer ID")
 	discv5port   = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
 	kademliaPort = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
@@ -58,6 +61,12 @@ type handler struct {
 
 func main() {
 	flag.Parse()
+
+	if *logFileName != "" {
+		if err := logutil.ConfigurePersistentLogging(*logFileName); err != nil {
+			log.WithError(err).Error("Failed to configuring logging to disk.")
+		}
+	}
 
 	fmt.Printf("Starting bootnode. Version: %s\n", version.GetVersion())
 
@@ -161,17 +170,21 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 
 func (h *handler) httpHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	allNodes := h.listener.AllNodes()
-	w.Write([]byte("Nodes stored in the table:\n"))
-	for i, n := range allNodes {
-		w.Write([]byte(fmt.Sprintf("Node %d\n", i)))
-		w.Write([]byte(n.String() + "\n"))
-		w.Write([]byte("Node ID: " + n.ID().String() + "\n"))
-		w.Write([]byte("IP: " + n.IP().String() + "\n"))
-		w.Write([]byte(fmt.Sprintf("UDP Port: %d", n.UDP()) + "\n"))
-		w.Write([]byte(fmt.Sprintf("TCP Port: %d", n.UDP()) + "\n\n"))
+	write := func(w io.Writer, b []byte) {
+		if _, err := w.Write(b); err != nil {
+			log.WithError(err).Error("Failed to write to http response")
+		}
 	}
-
+	allNodes := h.listener.AllNodes()
+	write(w, []byte("Nodes stored in the table:\n"))
+	for i, n := range allNodes {
+		write(w, []byte(fmt.Sprintf("Node %d\n", i)))
+		write(w, []byte(n.String()+"\n"))
+		write(w, []byte("Node ID: "+n.ID().String()+"\n"))
+		write(w, []byte("IP: "+n.IP().String()+"\n"))
+		write(w, []byte(fmt.Sprintf("UDP Port: %d", n.UDP())+"\n"))
+		write(w, []byte(fmt.Sprintf("TCP Port: %d", n.UDP())+"\n\n"))
+	}
 }
 
 func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {

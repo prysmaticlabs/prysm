@@ -6,33 +6,11 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
-
-type blocksProviderMock struct {
-}
-
-func (f *blocksProviderMock) start() error {
-	return nil
-}
-
-func (f *blocksProviderMock) stop() {
-}
-
-func (f *blocksProviderMock) scheduleRequest(ctx context.Context, start, count uint64) error {
-	return nil
-}
-
-func (f *blocksProviderMock) requestResponses() <-chan *fetchRequestResponse {
-	return nil
-}
 
 func TestBlocksQueueInitStartStop(t *testing.T) {
 	mc, p2p, beaconDB := initializeTestServices(t, []uint64{}, []*peerData{})
@@ -179,8 +157,8 @@ func TestBlocksQueueLoop(t *testing.T) {
 	}{
 		{
 			name:                "Single peer with all blocks",
-			highestExpectedSlot: 251,
-			expectedBlockSlots:  makeSequence(1, 251),
+			highestExpectedSlot: 251, // will be auto-fixed to 256 (to 8th epoch), by queue
+			expectedBlockSlots:  makeSequence(1, 256),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -191,8 +169,8 @@ func TestBlocksQueueLoop(t *testing.T) {
 		},
 		{
 			name:                "Multiple peers with all blocks",
-			highestExpectedSlot: 251,
-			expectedBlockSlots:  makeSequence(1, 251),
+			highestExpectedSlot: 256,
+			expectedBlockSlots:  makeSequence(1, 256),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -246,7 +224,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 		{
 			name:                "Multiple peers with failures",
 			highestExpectedSlot: 128,
-			expectedBlockSlots:  makeSequence(1, 128),
+			expectedBlockSlots:  makeSequence(1, 256),
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 320),
@@ -323,7 +301,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 				t.Error(err)
 			}
 
-			if queue.headFetcher.HeadSlot() < uint64(len(tt.expectedBlockSlots)) {
+			if queue.headFetcher.HeadSlot() < tt.highestExpectedSlot {
 				t.Errorf("Not enough slots synced, want: %v, got: %v",
 					len(tt.expectedBlockSlots), queue.headFetcher.HeadSlot())
 			}
@@ -338,32 +316,5 @@ func TestBlocksQueueLoop(t *testing.T) {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
 		})
-	}
-}
-
-func setBlocksFromCache(ctx context.Context, t *testing.T, mc *mock.ChainService, highestSlot uint64) {
-	cache.RLock()
-	parentRoot := cache.rootCache[0]
-	cache.RUnlock()
-	for slot := uint64(0); slot <= highestSlot; slot++ {
-		blk := &eth.SignedBeaconBlock{
-			Block: &eth.BeaconBlock{
-				Slot:       slot,
-				ParentRoot: parentRoot[:],
-			},
-		}
-		mc.BlockNotifier().BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: blockfeed.ReceivedBlockData{
-				SignedBlock: blk,
-			},
-		})
-
-		if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-			t.Error(err)
-		}
-
-		currRoot, _ := ssz.HashTreeRoot(blk.Block)
-		parentRoot = currRoot
 	}
 }

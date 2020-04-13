@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
@@ -15,7 +16,7 @@ func (k *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, i
 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(uint64ToBytes(index), blockRoot[:])
+		return bucket.Put(bytesutil.Uint64ToBytes(index), blockRoot[:])
 	})
 }
 
@@ -25,8 +26,26 @@ func (k *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(lastArchivedIndexKey, uint64ToBytes(index))
+		return bucket.Put(lastArchivedIndexKey, bytesutil.Uint64ToBytes(index))
 	})
+}
+
+// LastArchivedIndex from the db.
+func (k *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndex")
+	defer span.End()
+	var index uint64
+	err := k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(archivedIndexRootBucket)
+		b := bucket.Get(lastArchivedIndexKey)
+		if b == nil {
+			return nil
+		}
+		index = binary.LittleEndian.Uint64(b)
+		return nil
+	})
+
+	return index, err
 }
 
 // LastArchivedIndexRoot from the db.
@@ -35,8 +54,7 @@ func (k *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 	defer span.End()
 
 	var blockRoot []byte
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		lastArchivedIndex := bucket.Get(lastArchivedIndexKey)
 		if lastArchivedIndex == nil {
@@ -44,7 +62,9 @@ func (k *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 		}
 		blockRoot = bucket.Get(lastArchivedIndex)
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 
 	return bytesutil.ToBytes32(blockRoot)
 }
@@ -56,12 +76,13 @@ func (k *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 	defer span.End()
 
 	var blockRoot []byte
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		blockRoot = bucket.Get(uint64ToBytes(index))
+		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(index))
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 
 	return bytesutil.ToBytes32(blockRoot)
 }
@@ -71,11 +92,12 @@ func (k *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
 	defer span.End()
 	var exists bool
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(archivedIndexRootBucket)
-		exists = iBucket.Get(uint64ToBytes(index)) != nil
+		exists = iBucket.Get(bytesutil.Uint64ToBytes(index)) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }

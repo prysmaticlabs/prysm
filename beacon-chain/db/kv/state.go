@@ -163,12 +163,13 @@ func (k *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
 	var exists bool
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 
@@ -308,20 +309,34 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 		return stateSummary.Slot, nil
 	}
 
-	bkt := tx.Bucket(stateBucket)
+	bkt := tx.Bucket(blocksBucket)
 	enc := bkt.Get(blockRoot)
 	if enc == nil {
-		return 0, errors.New("state enc can't be nil")
+		// fallback and check the state.
+		bkt = tx.Bucket(stateBucket)
+		enc = bkt.Get(blockRoot)
+		if enc == nil {
+			return 0, errors.New("state enc can't be nil")
+		}
+		s, err := createState(enc)
+		if err != nil {
+			return 0, err
+		}
+		if s == nil {
+			return 0, errors.New("state can't be nil")
+		}
+		return s.Slot, nil
 	}
 
-	s, err := createState(enc)
+	b := &ethpb.SignedBeaconBlock{}
+	err := decode(enc, b)
 	if err != nil {
 		return 0, err
 	}
-	if s == nil {
-		return 0, errors.New("state can't be nil")
+	if b.Block == nil {
+		return 0, errors.New("block can't be nil")
 	}
-	return s.Slot, nil
+	return b.Block.Slot, nil
 }
 
 // HighestSlotStates returns the states with the highest slot from the db.
@@ -365,6 +380,9 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 	err := k.db.View(func(tx *bolt.Tx) error {
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
+		if len(savedSlots) == 0 {
+			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
+		}
 		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
 		if err != nil {
 			return err
