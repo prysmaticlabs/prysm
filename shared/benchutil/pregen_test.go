@@ -19,7 +19,6 @@ func TestPreGenState1Epoch(t *testing.T) {
 }
 
 func TestPreGenState2FullEpochs(t *testing.T) {
-	t.Skip("To be resolved until 5119 gets in")
 	_, err := PreGenFullBlock()
 	if err != nil {
 		t.Fatal(err)
