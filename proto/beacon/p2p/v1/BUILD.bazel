@@ -27,6 +27,7 @@ ssz_gen_marshal(
     objs = [
         "BeaconBlocksByRangeRequest",
         "ENRForkID",
+        "MetaData",
         "Fork",
         "HistoricalBatch",
         "Status",
