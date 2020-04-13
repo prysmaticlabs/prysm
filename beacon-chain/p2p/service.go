@@ -70,7 +70,7 @@ type Service struct {
 	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
-	beaconDB              db.Database
+	beaconDB              db.ReadOnlyDatabase
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
