@@ -619,8 +619,11 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 	if state == nil {
 		return nil, errors.New("nil state")
 	}
-	vp, bp := precompute.New(ctx, state)
-	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
+	vp, bp, err := precompute.New(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+	vp, bp, err = precompute.ProcessAttestations(ctx, state, vp, bp)
 	if err != nil {
 		return nil, err
 	}

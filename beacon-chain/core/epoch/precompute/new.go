@@ -3,17 +3,17 @@ package precompute
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // New gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
-func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Balance) {
+func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
 	vp := make([]*Validator, state.NumValidators())
@@ -48,8 +48,7 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 		vp[idx] = p
 		return nil
 	}); err != nil {
-		log.WithError(err).Error("Failed to initialize precompute")
-		return nil, nil
+		return nil, nil, errors.Wrap(err, "failed to initialize precompute")
 	}
-	return vp, bp
+	return vp, bp, nil
 }
