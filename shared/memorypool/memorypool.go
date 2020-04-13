@@ -19,7 +19,7 @@ var RootsMemoryPool = new(sync.Pool)
 var RandaoMixesMemoryPool = new(sync.Pool)
 
 // ValidatorsMemoryPool represents the memory pool
-// for randao mixes trie.
+// for 3d byte slices.
 var ValidatorsMemoryPool = new(sync.Pool)
 
 // GetDoubleByteSlice retrieves the 2d byte slice of

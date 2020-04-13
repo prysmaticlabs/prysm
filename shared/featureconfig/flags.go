@@ -140,8 +140,8 @@ var (
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
 	}
-	enableRefCopy = &cli.BoolFlag{
-		Name:  "enable-ref-copy",
+	enableStateRefCopy = &cli.BoolFlag{
+		Name:  "enable-state-ref-copy",
 		Usage: "Enables the usage of a new copying method for our state fields.",
 	}
 )
@@ -354,7 +354,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableFieldTrie,
 	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
-	enableRefCopy,
+	enableStateRefCopy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -365,7 +365,7 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-state-field-trie",
-	"--enable-ref-copy",
+	"--enable-state-ref-copy",
 	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.
 	//"--enable-dynamic-committee-subnets",
 }
