@@ -8,7 +8,6 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStateReferenceSharing_Finalizer(t *testing.T) {
@@ -67,14 +66,7 @@ func TestStateReferenceCopy_NoUnexpectedMutation(t *testing.T) {
 	// Add validator before copying state (so that a and b have shared data).
 	pubKey1, pubKey2 := [48]byte{29}, [48]byte{31}
 	err = a.AppendValidator(&eth.Validator{
-		PublicKey:                  pubKey1[:],
-		WithdrawalCredentials:      nil,
-		EffectiveBalance:           0,
-		Slashed:                    false,
-		ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
-		ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
-		ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
-		WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+		PublicKey: pubKey1[:],
 	})
 	if len(a.state.GetValidators()) != 1 {
 		t.Error("No validators found")
@@ -101,14 +93,9 @@ func TestStateReferenceCopy_NoUnexpectedMutation(t *testing.T) {
 		return false
 	}
 
-	t.Run("validators copy", func(t *testing.T) {
+	t.Run("validators", func(t *testing.T) {
 		err = a.AppendValidator(&eth.Validator{
-			PublicKey:                  pubKey2[:],
-			EffectiveBalance:           0,
-			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
-			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
+			PublicKey: pubKey2[:],
 		})
 
 		// Copy on write happened, reference counters are reset.
