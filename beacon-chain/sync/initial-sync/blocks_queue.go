@@ -25,9 +25,10 @@ const (
 )
 
 var (
-	errQueueCtxIsDone          = errors.New("queue's context is done, reinitialize")
-	errQueueTakesTooLongToStop = errors.New("queue takes too long to stop")
-	errNoEpochState            = errors.New("epoch state not found")
+	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
+	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
+	errNoEpochState               = errors.New("epoch state not found")
+	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
 )
 
 // blocksProvider exposes enough methods for queue to fetch incoming blocks.
@@ -221,7 +222,10 @@ func (q *blocksQueue) loop() {
 // onScheduleEvent is an event called on newly arrived epochs. Transforms state to scheduled.
 func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 	return func(es *epochState, in interface{}) (stateID, error) {
-		data := in.(*fetchRequestParams)
+		data, ok := in.(*fetchRequestParams)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
+		}
 		if err := q.blocksFetcher.scheduleRequest(ctx, data.start, data.count); err != nil {
 			return es.state, err
 		}
@@ -236,7 +240,10 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			return es.state, ctx.Err()
 		}
 
-		response := in.(*fetchRequestResponse)
+		response, ok := in.(*fetchRequestResponse)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
+		}
 		epoch := helpers.SlotToEpoch(response.start)
 		if response.err != nil {
 			// Current window is already too big, re-request previous epochs.
@@ -267,7 +274,10 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 			return es.state, ctx.Err()
 		}
 
-		data := in.(*fetchRequestParams)
+		data, ok := in.(*fetchRequestParams)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
+		}
 		epoch := helpers.SlotToEpoch(data.start)
 		ind, ok := q.state.findEpochState(epoch)
 		if !ok {
@@ -317,7 +327,10 @@ func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
 			return es.state, ctx.Err()
 		}
 
-		data := in.(*fetchRequestParams)
+		data, ok := in.(*fetchRequestParams)
+		if !ok {
+			return 0, errInputNotFetchRequestParams
+		}
 		epoch := helpers.SlotToEpoch(data.start)
 		if _, ok := q.state.findEpochState(epoch); !ok {
 			return es.state, errNoEpochState

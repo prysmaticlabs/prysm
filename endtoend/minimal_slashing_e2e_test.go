@@ -11,7 +11,6 @@ import (
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
-	t.Skip("To be resolved until 5119 gets in")
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 

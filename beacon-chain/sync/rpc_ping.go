@@ -13,7 +13,11 @@ import (
 
 // pingHandler reads the incoming ping rpc message from the peer.
 func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)

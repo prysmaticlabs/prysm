@@ -1,6 +1,7 @@
 package maligned
 
 import (
+	"errors"
 	"go/ast"
 	"go/types"
 
@@ -21,7 +22,10 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		return nil, errors.New("analyzer is not type *inspector.Inspector")
+	}
 
 	nodeFilter := []ast.Node{
 		(*ast.StructType)(nil),

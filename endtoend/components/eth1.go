@@ -52,7 +52,7 @@ func StartEth1Node(t *testing.T) (string, int) {
 		"--wsaddr=0.0.0.0",
 		"--wsorigins=\"*\"",
 		"--dev",
-		"--dev.period=0",
+		"--dev.period=2",
 		"--ipcdisable",
 	}
 	cmd := exec.Command(binaryPath, args...)

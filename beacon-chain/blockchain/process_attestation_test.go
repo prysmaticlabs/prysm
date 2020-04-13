@@ -156,6 +156,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		JustificationBits:   []byte{0},
 		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
+		Validators:          []*ethpb.Validator{{PublicKey: bytesutil.PadTo([]byte("foo"), 48)}},
+		Balances:            []uint64{0},
 	})
 	r := [32]byte{'g'}
 	if err := service.beaconDB.SaveState(ctx, s, r); err != nil {

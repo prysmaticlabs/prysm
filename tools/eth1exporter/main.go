@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
 )
 
@@ -135,7 +136,9 @@ func MetricsHTTP(w http.ResponseWriter, r *http.Request) {
 	allOut = append(allOut, fmt.Sprintf("%veth_load_seconds %0.2f", *prefix, loadSeconds))
 	allOut = append(allOut, fmt.Sprintf("%veth_loaded_addresses %v", *prefix, totalLoaded))
 	allOut = append(allOut, fmt.Sprintf("%veth_total_addresses %v", *prefix, len(allWatching)))
-	fmt.Fprintln(w, strings.Join(allOut, "\n"))
+	if _, err := fmt.Fprintln(w, strings.Join(allOut, "\n")); err != nil {
+		logrus.WithError(err).Error("Failed to write metrics")
+	}
 }
 
 // ReloadHTTP reloads the addresses from disk.
@@ -154,7 +157,11 @@ func OpenAddresses(filename string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			panic(err)
+		}
+	}()
 	scanner := bufio.NewScanner(file)
 	allWatching = []*Watching{}
 	for scanner.Scan() {

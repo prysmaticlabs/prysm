@@ -51,7 +51,11 @@ func (r *Service) registerSubscribers() {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {
-				data := event.Data.(*statefeed.InitializedData)
+				data, ok := event.Data.(*statefeed.InitializedData)
+				if !ok {
+					log.Error("Event feed data is not type *statefeed.InitializedData")
+					return
+				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 				if data.StartTime.After(roughtime.Now()) {
 					stateSub.Unsubscribe()
@@ -288,7 +292,9 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
 					for i, sub := range cancelSubs {
 						sub.Cancel()
-						r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, i+wantedSubs))
+						if err := r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, i+wantedSubs)); err != nil {
+							log.WithError(err).Error("Failed to unregister topic validator")
+						}
 					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
 					for i := len(subscriptions); i < wantedSubs; i++ {
@@ -314,7 +320,9 @@ func (r *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 		}
 		if !wanted && v != nil {
 			v.Cancel()
-			r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, k))
+			if err := r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, k)); err != nil {
+				log.WithError(err).Error("Failed to unregister topic validator")
+			}
 			delete(subscriptions, k)
 		}
 	}
