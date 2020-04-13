@@ -288,14 +288,14 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 				wantedSubs := determineSubsLen()
 				// Resize as appropriate.
 				if len(subscriptions) > wantedSubs { // Reduce topics
-					//var cancelSubs []*pubsub.Subscription
-					//subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
-					//for i, sub := range cancelSubs {
-					//	sub.Cancel()
-					//	if err := r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, i+wantedSubs)); err != nil {
-					//		log.WithError(err).Error("Failed to unregister topic validator")
-					//	}
-					//}
+					var cancelSubs []*pubsub.Subscription
+					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
+					for i, sub := range cancelSubs {
+						sub.Cancel()
+						if err := r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, i+wantedSubs)); err != nil {
+							log.WithError(err).Error("Failed to unregister topic validator")
+						}
+					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
 					for i := len(subscriptions); i < wantedSubs; i++ {
 						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, digest, i), validate, handle)
