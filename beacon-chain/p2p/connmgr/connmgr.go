@@ -222,7 +222,9 @@ func (cm *BasicConnMgr) TrimOpenConns(ctx context.Context) {
 	for _, c := range cm.getConnsToClose(ctx) {
 		log.Info("closing conn: ", c.RemotePeer())
 		log.Event(ctx, "closeConn", c.RemotePeer())
-		c.Close()
+		if err := c.Close(); err != nil {
+			log.Errorf("Failed to close connection: %v", err)
+		}
 	}
 
 	cm.lastTrim = roughtime.Now()

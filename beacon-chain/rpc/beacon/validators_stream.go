@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -331,7 +332,11 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 	is.eth1DepositsMutex.Lock()
 	if fetchedDeposit, exists := is.eth1Deposits.Get(key); exists {
 		eth1DepositCacheHits.Inc()
-		deposit = fetchedDeposit.(*eth1Deposit)
+		var ok bool
+		deposit, ok = fetchedDeposit.(*eth1Deposit)
+		if !ok {
+			return nil, errors.New("cached eth1 deposit is not type *eth1Deposit")
+		}
 	} else {
 		eth1DepositCacheMisses.Inc()
 		fetchedDeposit, eth1BlockNumber := is.depositFetcher.DepositByPubkey(is.ctx, info.PublicKey)
@@ -398,7 +403,10 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 
 	// Loop over epochs, roughly simulating progression.
 	for curEpoch := epoch + 1; len(sortedIndices) > 0 && len(pendingValidators) > 0; curEpoch++ {
-		toProcess, _ := helpers.ValidatorChurnLimit(numAttestingValidators)
+		toProcess, err := helpers.ValidatorChurnLimit(numAttestingValidators)
+		if err != nil {
+			log.WithError(err).Error("Failed to determine validator churn limit")
+		}
 		if toProcess > uint64(len(sortedIndices)) {
 			toProcess = uint64(len(sortedIndices))
 		}
@@ -491,7 +499,11 @@ func (is *infostream) depositQueueTimestamp(eth1BlockNumber *big.Int) (uint64, e
 	is.eth1BlocktimesMutex.Lock()
 	if cachedTimestamp, exists := is.eth1Blocktimes.Get(key); exists {
 		eth1BlocktimeCacheHits.Inc()
-		blockTimestamp = cachedTimestamp.(uint64)
+		var ok bool
+		blockTimestamp, ok = cachedTimestamp.(uint64)
+		if !ok {
+			return 0, errors.New("cached timestamp is not type uint64")
+		}
 	} else {
 		eth1BlocktimeCacheMisses.Inc()
 		var err error

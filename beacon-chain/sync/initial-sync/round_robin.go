@@ -136,7 +136,11 @@ func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRa
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request to peer")
 	}
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 
 	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
 	for {

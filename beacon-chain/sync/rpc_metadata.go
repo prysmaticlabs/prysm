@@ -13,7 +13,11 @@ import (
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
 func (r *Service) metaDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
@@ -36,7 +40,11 @@ func (r *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	// we close the stream outside of `send` because
 	// metadata requests send no payload, so closing the
 	// stream early leads it to a reset.
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
 	if err != nil {
 		return nil, err

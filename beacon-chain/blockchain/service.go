@@ -211,7 +211,11 @@ func (s *Service) Start() {
 				select {
 				case event := <-stateChannel:
 					if event.Type == statefeed.ChainStarted {
-						data := event.Data.(*statefeed.ChainStartedData)
+						data, ok := event.Data.(*statefeed.ChainStartedData)
+						if !ok {
+							log.Error("event data is not type *statefeed.ChainStartedData")
+							return
+						}
 						log.WithField("starttime", data.StartTime).Debug("Received chain start event")
 						s.processChainStartTime(ctx, data.StartTime)
 						return
