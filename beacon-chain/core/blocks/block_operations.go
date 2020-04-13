@@ -144,7 +144,6 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 		if err != nil {
 			return false, errors.Wrap(err, "could not retrieve eth1 data vote cache")
 		}
-
 	}
 	if voteCount == 0 {
 		for _, vote := range beaconState.Eth1DataVotes() {
