@@ -42,7 +42,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	}
 }
 
-func TestStateReferenceCopy_NoUnexpectedMutation(t *testing.T) {
+func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 	// Assert that feature is enabled.
 	if cfg := featureconfig.Get(); !cfg.EnableStateRefCopy {
 		cfg.EnableStateRefCopy = true
@@ -93,73 +93,71 @@ func TestStateReferenceCopy_NoUnexpectedMutation(t *testing.T) {
 		return false
 	}
 
-	t.Run("validators", func(t *testing.T) {
-		err = a.AppendValidator(&eth.Validator{
-			PublicKey: pubKey2[:],
-		})
-
-		// Copy on write happened, reference counters are reset.
-		if refsCount := a.sharedFieldReferences[validators].refs; refsCount != 1 {
-			t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 1, refsCount)
-		}
-		if refsCount := b.sharedFieldReferences[validators].refs; refsCount != 1 {
-			t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 1, refsCount)
-		}
-
-		valsA := a.state.GetValidators()
-		valsB := b.state.GetValidators()
-		if len(valsA) != 2 {
-			t.Errorf("Unexpected number of validators, want: %v, got: %v", 2, len(valsA))
-		}
-		// Both validators are known to a.
-		if !hasValidatorWithPubKey(a.state, pubKey1) {
-			t.Errorf("Expected validator not found, want: %v", pubKey1)
-		}
-		if !hasValidatorWithPubKey(a.state, pubKey2) {
-			t.Errorf("Expected validator not found, want: %v", pubKey2)
-		}
-		// Only one validator is known to b.
-		if !hasValidatorWithPubKey(b.state, pubKey1) {
-			t.Errorf("Expected validator not found, want: %v", pubKey1)
-		}
-		if hasValidatorWithPubKey(b.state, pubKey2) {
-			t.Errorf("Unexpected validator found, want: %v", pubKey2)
-		}
-		if len(valsA) == len(valsB) {
-			t.Error("Unexpected state mutation")
-		}
-
-		// Make sure that function applied to all validators in one state, doesn't affect another.
-		changedBalance := uint64(1)
-		for i, val := range valsA {
-			if val.EffectiveBalance == changedBalance {
-				t.Errorf("Unexpected effective balance, want: %v, got: %v", 0, valsA[i].EffectiveBalance)
-			}
-		}
-		for i, val := range valsB {
-			if val.EffectiveBalance == changedBalance {
-				t.Errorf("Unexpected effective balance, want: %v, got: %v", 0, valsB[i].EffectiveBalance)
-			}
-		}
-		// Applied to a, a and b share reference to the first validator, which shouldn't cause issues.
-		err := a.ApplyToEveryValidator(func(idx int, val *eth.Validator) (b bool, err error) {
-			return true, nil
-		}, func(idx int, val *eth.Validator) error {
-			val.EffectiveBalance = 1
-			return nil
-		})
-		if err != nil {
-			t.Error(err)
-		}
-		for i, val := range valsA {
-			if val.EffectiveBalance != changedBalance {
-				t.Errorf("Unexpected effective balance, want: %v, got: %v", changedBalance, valsA[i].EffectiveBalance)
-			}
-		}
-		for i, val := range valsB {
-			if val.EffectiveBalance == changedBalance {
-				t.Errorf("Unexpected mutation of effective balance, want: %v, got: %v", 0, valsB[i].EffectiveBalance)
-			}
-		}
+	err = a.AppendValidator(&eth.Validator{
+		PublicKey: pubKey2[:],
 	})
+
+	// Copy on write happened, reference counters are reset.
+	if refsCount := a.sharedFieldReferences[validators].refs; refsCount != 1 {
+		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 1, refsCount)
+	}
+	if refsCount := b.sharedFieldReferences[validators].refs; refsCount != 1 {
+		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 1, refsCount)
+	}
+
+	valsA := a.state.GetValidators()
+	valsB := b.state.GetValidators()
+	if len(valsA) != 2 {
+		t.Errorf("Unexpected number of validators, want: %v, got: %v", 2, len(valsA))
+	}
+	// Both validators are known to a.
+	if !hasValidatorWithPubKey(a.state, pubKey1) {
+		t.Errorf("Expected validator not found, want: %v", pubKey1)
+	}
+	if !hasValidatorWithPubKey(a.state, pubKey2) {
+		t.Errorf("Expected validator not found, want: %v", pubKey2)
+	}
+	// Only one validator is known to b.
+	if !hasValidatorWithPubKey(b.state, pubKey1) {
+		t.Errorf("Expected validator not found, want: %v", pubKey1)
+	}
+	if hasValidatorWithPubKey(b.state, pubKey2) {
+		t.Errorf("Unexpected validator found, want: %v", pubKey2)
+	}
+	if len(valsA) == len(valsB) {
+		t.Error("Unexpected state mutation")
+	}
+
+	// Make sure that function applied to all validators in one state, doesn't affect another.
+	changedBalance := uint64(1)
+	for i, val := range valsA {
+		if val.EffectiveBalance == changedBalance {
+			t.Errorf("Unexpected effective balance, want: %v, got: %v", 0, valsA[i].EffectiveBalance)
+		}
+	}
+	for i, val := range valsB {
+		if val.EffectiveBalance == changedBalance {
+			t.Errorf("Unexpected effective balance, want: %v, got: %v", 0, valsB[i].EffectiveBalance)
+		}
+	}
+	// Applied to a, a and b share reference to the first validator, which shouldn't cause issues.
+	err = a.ApplyToEveryValidator(func(idx int, val *eth.Validator) (b bool, err error) {
+		return true, nil
+	}, func(idx int, val *eth.Validator) error {
+		val.EffectiveBalance = 1
+		return nil
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	for i, val := range valsA {
+		if val.EffectiveBalance != changedBalance {
+			t.Errorf("Unexpected effective balance, want: %v, got: %v", changedBalance, valsA[i].EffectiveBalance)
+		}
+	}
+	for i, val := range valsB {
+		if val.EffectiveBalance == changedBalance {
+			t.Errorf("Unexpected mutation of effective balance, want: %v, got: %v", 0, valsB[i].EffectiveBalance)
+		}
+	}
 }
