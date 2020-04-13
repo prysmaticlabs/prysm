@@ -83,12 +83,13 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttestation")
 	defer span.End()
 	exists := false
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		exists = bkt.Get(attDataRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 
@@ -281,19 +282,34 @@ func createAttestationIndicesFromFilters(f *filters.QueryFilter) (map[string][]b
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.HeadBlockRoot:
-			headBlockRoot := v.([]byte)
+			headBlockRoot, ok := v.([]byte)
+			if !ok {
+				return nil, errors.New("headBlockRoot is not type []byte")
+			}
 			indicesByBucket[string(attestationHeadBlockRootBucket)] = headBlockRoot
 		case filters.SourceRoot:
-			sourceRoot := v.([]byte)
+			sourceRoot, ok := v.([]byte)
+			if !ok {
+				return nil, errors.New("sourceRoot is not type []byte")
+			}
 			indicesByBucket[string(attestationSourceRootIndicesBucket)] = sourceRoot
 		case filters.SourceEpoch:
-			sourceEpoch := v.(uint64)
+			sourceEpoch, ok := v.(uint64)
+			if !ok {
+				return nil, errors.New("sourceEpoch is not type uint64")
+			}
 			indicesByBucket[string(attestationSourceEpochIndicesBucket)] = bytesutil.Uint64ToBytes(sourceEpoch)
 		case filters.TargetEpoch:
-			targetEpoch := v.(uint64)
+			targetEpoch, ok := v.(uint64)
+			if !ok {
+				return nil, errors.New("targetEpoch is not type uint64")
+			}
 			indicesByBucket[string(attestationTargetEpochIndicesBucket)] = bytesutil.Uint64ToBytes(targetEpoch)
 		case filters.TargetRoot:
-			targetRoot := v.([]byte)
+			targetRoot, ok := v.([]byte)
+			if !ok {
+				return nil, errors.New("targetRoot is not type []byte")
+			}
 			indicesByBucket[string(attestationTargetRootIndicesBucket)] = targetRoot
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for attestations", k)

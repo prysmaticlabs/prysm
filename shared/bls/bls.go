@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -212,8 +213,11 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, do
 	if len(pubKeys) == 0 {
 		return false
 	}
-	//#nosec G104
-	aggregated, _ := pubKeys[0].Copy()
+	aggregated, err := pubKeys[0].Copy()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to copy public key")
+		return false
+	}
 
 	for i := 1; i < len(pubKeys); i++ {
 		aggregated.p.Add(pubKeys[i].p)

@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := params.BeaconConfig().FarFutureEpoch
-	v, b := precompute.New(context.Background(), s)
+	v, b, _ := precompute.New(context.Background(), s)
 	if !reflect.DeepEqual(v[0], &precompute.Validator{IsSlashed: true, CurrentEpochEffectiveBalance: 100,
 		InclusionDistance: e, InclusionSlot: e}) {
 		t.Error("Incorrect validator 0 status")

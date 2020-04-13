@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -201,7 +203,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 // waitToOneThird waits until one-third of the way through the slot
 // or the head slot equals to the input slot.
 func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
+	ctx, span := trace.StartSpan(ctx, "validator.waitToOneThird")
 	defer span.End()
 
 	// Don't need to wait if current slot is greater than requested slot.
@@ -224,7 +226,13 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 		case event := <-stateChannel:
 			// Node processed a block, check if the processed block is the same as input slot.
 			if event.Type == statefeed.BlockProcessed {
-				d := event.Data.(*statefeed.BlockProcessedData)
+				d, ok := event.Data.(*statefeed.BlockProcessedData)
+				if !ok {
+					err := errors.New("event feed is not type *statefeed.BlockProcessedData")
+					traceutil.AnnotateError(span, err)
+					log.Error(err)
+					continue
+				}
 				if slot == d.Slot {
 					return
 				}

@@ -31,7 +31,10 @@ type TestAccount struct {
 // Setup creates the simulated backend with the deposit contract deployed
 func Setup() (*TestAccount, error) {
 	genesis := make(core.GenesisAlloc)
-	privKey, _ := crypto.GenerateKey()
+	privKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
 	pubKeyECDSA, ok := privKey.Public().(*ecdsa.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("error casting public key to ECDSA")

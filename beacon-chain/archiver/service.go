@@ -147,7 +147,11 @@ func (s *Service) run(ctx context.Context) {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.BlockProcessed {
-				data := event.Data.(*statefeed.BlockProcessedData)
+				data, ok := event.Data.(*statefeed.BlockProcessedData)
+				if !ok {
+					log.Error("Event feed data is not type *statefeed.BlockProcessedData")
+					continue
+				}
 				log.WithField("headRoot", fmt.Sprintf("%#x", data.BlockRoot)).Debug("Received block processed event")
 				headState, err := s.headFetcher.HeadState(ctx)
 				if err != nil {

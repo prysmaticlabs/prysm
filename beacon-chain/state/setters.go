@@ -43,7 +43,11 @@ func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Fork = proto.Clone(val).(*pbp2p.Fork)
+	fk, ok := proto.Clone(val).(*pbp2p.Fork)
+	if !ok {
+		return errors.New("proto.Clone did not return a fork proto")
+	}
+	b.state.Fork = fk
 	b.markFieldAsDirty(fork)
 	return nil
 }

@@ -531,6 +531,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+		Validators:                 []*ethpb.Validator{},
 	}
 	s, err := beaconstate.InitializeFromProto(base)
 	if err != nil {
