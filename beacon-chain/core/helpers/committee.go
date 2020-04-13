@@ -354,12 +354,14 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 	}
 
 	indices := make([]uint64, 0, state.NumValidators())
-	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	if err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, uint64(idx))
 		}
 		return nil
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	return UnshuffleList(indices, seed)
 }

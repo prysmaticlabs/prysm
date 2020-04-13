@@ -136,7 +136,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 		// Prune proto array fork choice nodes, all nodes before finalized check point will
 		// be pruned.
-		s.forkChoiceStore.Prune(ctx, fRoot)
+		if err := s.forkChoiceStore.Prune(ctx, fRoot); err != nil {
+			return nil, errors.Wrap(err, "could not prune proto array fork choice nodes")
+		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()

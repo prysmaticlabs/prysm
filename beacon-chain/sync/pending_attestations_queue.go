@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -125,7 +126,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			pid := pids[rand.Int()%len(pids)]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
-				if cs, _ := s.p2p.Peers().ChainState(p); cs != nil && cs.HeadSlot >= targetSlot {
+				cs, err := s.p2p.Peers().ChainState(p)
+				if err != nil {
+					return errors.Wrap(err, "could not get chain state for peer")
+				}
+				if cs != nil && cs.HeadSlot >= targetSlot {
 					pid = p
 					break
 				}

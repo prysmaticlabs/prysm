@@ -125,7 +125,10 @@ func (c *Eth1DataVoteCache) IncrementEth1DataVote(eth1DataHash [32]byte) (uint64
 
 	eth1DataVoteCacheHit.Inc()
 
-	eInfo, _ := obj.(*Eth1DataVote)
+	eInfo, ok := obj.(*Eth1DataVote)
+	if !ok {
+		return 0, errors.New("cached value is not of type *Eth1DataVote")
+	}
 	eInfo.VoteCount++
 
 	if err := c.eth1DataVoteCache.Add(eInfo); err != nil {

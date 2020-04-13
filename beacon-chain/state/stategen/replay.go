@@ -226,7 +226,9 @@ func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slo
 				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
-		state.SetSlot(state.Slot() + 1)
+		if err := state.SetSlot(state.Slot() + 1); err != nil {
+			return nil, err
+		}
 	}
 
 	return state, nil
