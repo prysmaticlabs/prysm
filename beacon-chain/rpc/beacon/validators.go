@@ -371,9 +371,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	default:
 		requestedEpoch = currentEpoch
 	}
-
 	if requestedEpoch > currentEpoch {
-		// We are requesting data from the future and we return an error.
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
