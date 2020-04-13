@@ -37,12 +37,6 @@ func TestKV_AggregateUnaggregatedAttestations(t *testing.T) {
 	if len(cache.AggregatedAttestationsBySlotIndex(2, 0)) != 1 {
 		t.Fatal("Did not aggregate correctly")
 	}
-	if len(cache.UnAggregatedAttestationsBySlotIndex(1, 0)) != 0 {
-		t.Fatal("Did not clear unaggregated correctly")
-	}
-	if len(cache.UnAggregatedAttestationsBySlotIndex(2, 0)) != 0 {
-		t.Fatal("Did not clear unaggregated correctly")
-	}
 }
 
 func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
