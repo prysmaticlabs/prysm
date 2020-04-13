@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	noise "github.com/libp2p/go-libp2p-noise"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -67,7 +69,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	if err != nil {
 		t.Fatalf("Failed to p2p listen: %v", err)
 	}
-	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen)}...)
+	h, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.Security(noise.ID, noise.New)}...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,12 +246,20 @@ func TestListenForNewNodes(t *testing.T) {
 	exitRoutine <- true
 }
 
-func TestPeer_Disconnect(t *testing.T) {
-	h1, _, _ := createHost(t, 5000)
+func TestPeer_HandshakeCorrectly(t *testing.T) {
+	h1, _, ipaddr := createHost(t, 4999)
 	defer h1.Close()
 
 	s := &Service{
 		host: h1,
+	}
+	h1Addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipaddr, 4999, h1.ID()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	addrInfo1, err := peer.AddrInfoFromP2pAddr(h1Addr)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	h2, _, ipaddr := createHost(t, 5001)
@@ -259,23 +269,43 @@ func TestPeer_Disconnect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	addrInfo, err := peer.AddrInfoFromP2pAddr(h2Addr)
+	addrInfo2, err := peer.AddrInfoFromP2pAddr(h2Addr)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.host.Connect(context.Background(), *addrInfo); err != nil {
-		t.Fatal(err)
+	wg := new(sync.WaitGroup)
+	go func() {
+		wg.Add(1)
+		for i := 0; i < 20; i++ {
+			if err := h1.Connect(context.Background(), *addrInfo2); err != nil {
+				t.Fatal(err)
+			}
+			if len(h1.Network().Peers()) != 1 {
+				t.Error("Peer not connected, has 0 peers")
+			}
+			if err := s.Disconnect(h2.ID()); err != nil {
+				t.Fatal(err)
+			}
+			if len(h1.Network().Peers()) != 0 {
+				t.Error("Peer not disconnected, has 1 peer")
+			}
+		}
+		wg.Done()
+	}()
+
+	for i := 0; i < 20; i++ {
+		if err := h2.Connect(context.Background(), *addrInfo1); err != nil {
+			t.Fatal(err)
+		}
+		if len(h2.Network().Peers()) != 1 {
+			t.Error("Peer not connected, has 0 peers")
+		}
+		if err := h2.Network().ClosePeer(h1.ID()); err != nil {
+			t.Fatal(err)
+		}
+		if len(h2.Network().Peers()) != 0 {
+			t.Error("Peer not disconnected, has 1 peer")
+		}
 	}
-	if len(s.host.Network().Peers()) != 1 {
-		t.Fatalf("Number of peers is %d when it was supposed to be %d", len(s.host.Network().Peers()), 1)
-	}
-	if len(s.host.Network().Conns()) != 1 {
-		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 1)
-	}
-	if err := s.Disconnect(h2.ID()); err != nil {
-		t.Fatal(err)
-	}
-	if len(s.host.Network().Conns()) != 0 {
-		t.Fatalf("Number of connections is %d when it was supposed to be %d", len(s.host.Network().Conns()), 0)
-	}
+	wg.Wait()
 }

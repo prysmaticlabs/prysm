@@ -1603,8 +1603,8 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_noise",
     importpath = "github.com/libp2p/go-libp2p-noise",
-    sum = "h1:J1gHJRNFEk7NdiaPQQqAvxEy+7hhCsVv3uzduWybmqY=",
-    version = "v0.0.0-20200302201340-8c54356e12c9",
+    sum = "h1:RYHmqpmkDQF74IxFok7cMMDj+oDW5r/ELHq1rY5bpb0=",
+    version = "v0.0.0-20200330204701-3dd59da1c9e5",
 )
 
 go_repository(
@@ -1679,4 +1679,11 @@ go_repository(
     importpath = "github.com/ianlancetaylor/cgosymbolizer",
     sum = "h1:GWsU1WjSE2rtvyTYGcndqmPPkQkBNV7pEuZdnGtwtu4=",
     version = "v0.0.0-20200321040036-d43e30eacb43",
+)
+
+go_repository(
+    name = "com_github_flynn_noise",
+    importpath = "github.com/flynn/noise",
+    sum = "h1:u/UEqS66A5ckRmS4yNpjmVH56sVtS/RfclBAYocb4as=",
+    version = "v0.0.0-20180327030543-2492fe189ae6",
 )
