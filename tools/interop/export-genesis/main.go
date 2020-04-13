@@ -26,7 +26,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer d.Close()
+	defer func() {
+		if err := d.Close(); err != nil {
+			panic(err)
+		}
+	}()
 	gs, err := d.GenesisState(context.Background())
 	if err != nil {
 		panic(err)

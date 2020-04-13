@@ -172,7 +172,9 @@ func (b *blockCache) AddBlock(blk *gethTypes.Block) error {
 func trim(queue *cache.FIFO, maxSize int) {
 	for s := len(queue.ListKeys()); s > maxSize; s-- {
 		// #nosec G104 popProcessNoopFunc never returns an error
-		_, _ = queue.Pop(popProcessNoopFunc)
+		if _, err := queue.Pop(popProcessNoopFunc); err != nil { // This never returns an error, but we'll handle anyway for sanity.
+			panic(err)
+		}
 	}
 }
 
