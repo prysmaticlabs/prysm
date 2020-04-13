@@ -31,7 +31,7 @@ type Flags struct {
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	EnableDynamicCommitteeSubnets              bool // Enables dynamic attestation committee subnets via p2p.
+	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
 	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
@@ -104,9 +104,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
 		cfg.DisableForkChoice = true
 	}
-	if ctx.Bool(enableDynamicCommitteeSubnets.Name) {
-		log.Warn("Enabled dynamic attestation committee subnets")
-		cfg.EnableDynamicCommitteeSubnets = true
+	if ctx.Bool(disableDynamicCommitteeSubnets.Name) {
+		log.Warn("Disabled dynamic attestation committee subnets")
+		cfg.DisableDynamicCommitteeSubnets = true
 	}
 	cfg.EnableSSZCache = true
 	if ctx.Bool(disableSSZCache.Name) {
