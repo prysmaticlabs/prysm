@@ -166,7 +166,7 @@ func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 	}
 }
 
-func TestStateReferenceCopy_NoUnexpectedBlockRootMutation(t *testing.T) {
+func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	// Assert that feature is enabled.
 	if cfg := featureconfig.Get(); !cfg.EnableStateRefCopy {
 		cfg.EnableStateRefCopy = true
@@ -183,6 +183,9 @@ func TestStateReferenceCopy_NoUnexpectedBlockRootMutation(t *testing.T) {
 		BlockRoots: [][]byte{
 			root1[:],
 		},
+		StateRoots: [][]byte{
+			root1[:],
+		},
 	})
 	if err != nil {
 		t.Error(err)
@@ -190,21 +193,33 @@ func TestStateReferenceCopy_NoUnexpectedBlockRootMutation(t *testing.T) {
 	if refsCount := a.sharedFieldReferences[blockRoots].refs; refsCount != 1 {
 		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 1, refsCount)
 	}
+	if refsCount := a.sharedFieldReferences[stateRoots].refs; refsCount != 1 {
+		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 1, refsCount)
+	}
 
 	// Copy, increases reference count.
 	b := a.Copy()
 	if refsCount := a.sharedFieldReferences[blockRoots].refs; refsCount != 2 {
 		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 2, refsCount)
 	}
+	if refsCount := a.sharedFieldReferences[stateRoots].refs; refsCount != 2 {
+		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 2, refsCount)
+	}
 	if refsCount := b.sharedFieldReferences[blockRoots].refs; refsCount != 2 {
-		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 2, refsCount)
+		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 2, refsCount)
+	}
+	if refsCount := b.sharedFieldReferences[stateRoots].refs; refsCount != 2 {
+		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 2, refsCount)
 	}
 	if len(b.state.GetBlockRoots()) != 1 {
 		t.Error("No block roots found")
 	}
+	if len(b.state.GetStateRoots()) != 1 {
+		t.Error("No state roots found")
+	}
 
-	hasBlockRootWithKey := func(state *p2ppb.BeaconState, key [32]byte) bool {
-		for _, root := range state.GetBlockRoots() {
+	hasBlockRootWithKey := func(roots [][]byte, key [32]byte) bool {
+		for _, root := range roots {
 			if reflect.DeepEqual(root, key[:]) {
 				return true
 			}
@@ -212,44 +227,76 @@ func TestStateReferenceCopy_NoUnexpectedBlockRootMutation(t *testing.T) {
 		return false
 	}
 	// Assert shared state.
-	rootsA := a.state.GetBlockRoots()
-	rootsB := b.state.GetBlockRoots()
-	if len(rootsA) != len(rootsB) || len(rootsA) < 0 {
-		t.Errorf("Unexpected number of roots, want: %v", 1)
+	blockRootsA := a.state.GetBlockRoots()
+	stateRootsA := a.state.GetStateRoots()
+	blockRootsB := b.state.GetBlockRoots()
+	stateRootsB := b.state.GetStateRoots()
+	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 0 {
+		t.Errorf("Unexpected number of block roots, want: %v", 1)
 	}
-	if !hasBlockRootWithKey(a.state, root1) {
+	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 0 {
+		t.Errorf("Unexpected number of state roots, want: %v", 1)
+	}
+	if !hasBlockRootWithKey(a.state.GetBlockRoots(), root1) {
 		t.Errorf("Expected block root not found, want: %v", root1)
 	}
-	if !hasBlockRootWithKey(b.state, root1) {
-		t.Errorf("Expected block root not found, want: %v", root1)
+	if !hasBlockRootWithKey(a.state.GetStateRoots(), root1) {
+		t.Errorf("Expected state root not found, want: %v", root1)
+	}
+	if !hasBlockRootWithKey(b.state.GetStateRoots(), root1) {
+		t.Errorf("Expected state root not found, want: %v", root1)
 	}
 
-	// Mutator method, should only affect called state a.
+	// Mutator should only affect calling state: a.
 	err = a.UpdateBlockRootAtIndex(0, root2)
+	if err != nil {
+		t.Error(err)
+	}
+	err = a.UpdateStateRootAtIndex(0, root2)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
-	if hasBlockRootWithKey(a.state, root1) {
+	if hasBlockRootWithKey(a.state.GetBlockRoots(), root1) {
 		t.Errorf("Unexpected block root found, want: %v", root1)
 	}
-	if !hasBlockRootWithKey(a.state, root2) {
+	if hasBlockRootWithKey(a.state.GetStateRoots(), root1) {
+		t.Errorf("Unexpected state root found, want: %v", root1)
+	}
+	if !hasBlockRootWithKey(a.state.GetBlockRoots(), root2) {
 		t.Errorf("Expected block root not found, want: %v", root2)
 	}
-	if !hasBlockRootWithKey(b.state, root1) {
+	if !hasBlockRootWithKey(a.state.GetStateRoots(), root2) {
+		t.Errorf("Expected state root not found, want: %v", root2)
+	}
+	if !hasBlockRootWithKey(b.state.GetBlockRoots(), root1) {
 		t.Errorf("Expected block root not found, want: %v", root1)
 	}
-	// Get updated pointers to data.
-	rootsA = a.state.GetBlockRoots()
-	rootsB = b.state.GetBlockRoots()
-	if len(rootsA) != len(rootsB) || len(rootsA) < 1 {
-		t.Errorf("Unexpected number of roots, want: %v", 1)
+	if !hasBlockRootWithKey(b.state.GetStateRoots(), root1) {
+		t.Errorf("Expected state root not found, want: %v", root1)
 	}
-	if !reflect.DeepEqual(rootsA[0], root2[:]) {
+	// Get updated pointers to data.
+	blockRootsA = a.state.GetBlockRoots()
+	stateRootsA = a.state.GetStateRoots()
+	blockRootsB = b.state.GetBlockRoots()
+	stateRootsB = b.state.GetStateRoots()
+	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 1 {
+		t.Errorf("Unexpected number of block roots, want: %v", 1)
+	}
+	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
+		t.Errorf("Unexpected number of state roots, want: %v", 1)
+	}
+	if !reflect.DeepEqual(blockRootsA[0], root2[:]) {
 		t.Errorf("Expected mutation not found")
 	}
-	if !reflect.DeepEqual(rootsB[0], root1[:]) {
+	if !reflect.DeepEqual(stateRootsA[0], root2[:]) {
+		t.Errorf("Expected mutation not found")
+	}
+	if !reflect.DeepEqual(blockRootsB[0], root1[:]) {
+		t.Errorf("Unexpected mutation found")
+	}
+	if !reflect.DeepEqual(stateRootsB[0], root1[:]) {
 		t.Errorf("Unexpected mutation found")
 	}
 
@@ -257,7 +304,13 @@ func TestStateReferenceCopy_NoUnexpectedBlockRootMutation(t *testing.T) {
 	if refsCount := a.sharedFieldReferences[blockRoots].refs; refsCount != 1 {
 		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 1, refsCount)
 	}
+	if refsCount := a.sharedFieldReferences[stateRoots].refs; refsCount != 1 {
+		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 1, refsCount)
+	}
 	if refsCount := b.sharedFieldReferences[blockRoots].refs; refsCount != 1 {
 		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 1, refsCount)
+	}
+	if refsCount := b.sharedFieldReferences[stateRoots].refs; refsCount != 1 {
+		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 1, refsCount)
 	}
 }
