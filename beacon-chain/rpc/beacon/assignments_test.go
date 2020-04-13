@@ -17,9 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -52,14 +50,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
-	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
-		Slot:        0,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Validators:  []*ethpb.Validator{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	st := testutil.NewBeaconState()
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(ctx, b); err != nil {
