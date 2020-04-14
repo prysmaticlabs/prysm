@@ -19,10 +19,18 @@ func TestResume(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	root := [32]byte{'A'}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
-	service.beaconDB.SaveState(ctx, beaconState, root)
-	service.beaconDB.SaveArchivedPointRoot(ctx, root, 1)
-	service.beaconDB.SaveLastArchivedIndex(ctx, 1)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, root); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, root, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveLastArchivedIndex(ctx, 1); err != nil {
+		t.Fatal(err)
+	}
 
 	resumeState, err := service.Resume(ctx)
 	if err != nil {

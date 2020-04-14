@@ -58,7 +58,10 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			s.Slot = tt.stateSlot
-			state, _ := beaconstate.InitializeFromProto(s)
+			state, err := beaconstate.InitializeFromProto(s)
+			if err != nil {
+				t.Fatal(err)
+			}
 			wantedSlot := tt.slot
 			result, err := helpers.BlockRootAtSlot(state, wantedSlot)
 			if err != nil {
@@ -111,8 +114,11 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		s, _ := beaconstate.InitializeFromProto(state)
-		_, err := helpers.BlockRootAtSlot(s, tt.slot)
+		s, err := beaconstate.InitializeFromProto(state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = helpers.BlockRootAtSlot(s, tt.slot)
 		if err == nil {
 			t.Errorf("Expected error %s, got nil", tt.expectedErr)
 		}

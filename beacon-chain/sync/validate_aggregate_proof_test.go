@@ -59,7 +59,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	}
 
 	wanted := "validator index 1000 is not within the committee"
-	if err := validateIndexInCommittee(ctx, s, att, 1000); !strings.Contains(err.Error(), wanted) {
+	if err := validateIndexInCommittee(ctx, s, att, 1000); err == nil || !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -75,7 +75,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	data := &ethpb.AttestationData{}
 
 	wanted := "validator is not an aggregator for slot"
-	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); !strings.Contains(err.Error(), wanted) {
+	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); err == nil || !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -89,7 +89,7 @@ func TestVerifySelection_BadSignature(t *testing.T) {
 	data := &ethpb.AttestationData{}
 
 	wanted := "could not validate slot signature"
-	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); !strings.Contains(err.Error(), wanted) {
+	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); err == nil || !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -134,7 +134,10 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:                  p,
 		db:                   db,
@@ -173,10 +176,17 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	s := testutil.NewBeaconState()
-	db.SaveState(context.Background(), s, root)
+	if err := db.SaveState(context.Background(), s, root); err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -199,7 +209,10 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:         p,
 		db:          db,
@@ -258,8 +271,13 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -281,7 +299,10 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
 	}
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		attPool:     attestations.NewPool(),
 		p2p:         p,
@@ -324,10 +345,17 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	s := testutil.NewBeaconState()
-	db.SaveState(context.Background(), s, root)
+	if err := db.SaveState(context.Background(), s, root); err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -390,7 +418,10 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
 	}
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:         p,
 		db:          db,
@@ -438,10 +469,17 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	s := testutil.NewBeaconState()
-	db.SaveState(context.Background(), s, root)
+	if err := db.SaveState(context.Background(), s, root); err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -502,7 +540,10 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:         p,
 		db:          db,

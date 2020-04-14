@@ -128,7 +128,10 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
-	s, _ := state.InitializeFromProto(&pb.BeaconState{})
+	s, err := state.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	c.head = &head{slot: 100, state: s}
 	if c.HeadSlot() != 100 {
 		t.Errorf("Wanted head slot: %d, got: %d", 100, c.HeadSlot())
@@ -145,7 +148,10 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	s, _ := state.InitializeFromProto(&pb.BeaconState{})
+	s, err := state.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	c := &Service{}
 	c.head = &head{block: b, state: s}
 

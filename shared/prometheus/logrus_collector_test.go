@@ -26,7 +26,12 @@ func TestLogrusCollector(t *testing.T) {
 	hook := prometheus.NewLogrusCollector()
 	log.AddHook(hook)
 	go service.Start()
-	defer service.Stop()
+	defer func() {
+		err := service.Stop()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	tests := []struct {
 		name   string

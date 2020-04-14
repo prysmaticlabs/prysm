@@ -30,7 +30,10 @@ func TestProcessDeposit_OK(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -62,7 +65,10 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -97,7 +103,10 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	deposits[0].Data.PublicKey = []byte("junk")
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
@@ -120,7 +129,9 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		DepositRoot:  root[:],
 	}
 
-	web3Service.processDeposit(eth1Data, deposits[0])
+	if err := web3Service.processDeposit(eth1Data, deposits[0]); err != nil {
+		t.Fatal(err)
+	}
 
 	testutil.AssertLogsContain(t, hook, pubKeyErr)
 }
@@ -138,7 +149,10 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var fakeSig [96]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
@@ -160,7 +174,9 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		DepositRoot:  root[:],
 	}
 
-	web3Service.processDeposit(eth1Data, deposits[0])
+	if err := web3Service.processDeposit(eth1Data, deposits[0]); err != nil {
+		t.Fatal(err)
+	}
 
 	testutil.AssertLogsContain(t, hook, pubKeyErr)
 }
@@ -179,7 +195,10 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
-	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = sig.Marshal()[:]
 
@@ -197,7 +216,9 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 	deposits[0].Proof = proof
-	web3Service.processDeposit(eth1Data, deposits[0])
+	if err := web3Service.processDeposit(eth1Data, deposits[0]); err != nil {
+		t.Fatal(err)
+	}
 	want := "signature did not verify"
 
 	testutil.AssertLogsContain(t, hook, want)
@@ -297,7 +318,10 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
-	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(10)
+	deposits, keys, err := testutil.DeterministicDepositsAndKeys(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)

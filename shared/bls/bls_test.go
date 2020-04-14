@@ -264,7 +264,10 @@ func TestPublicKey_Copy(t *testing.T) {
 	pubkeyA := bls.RandKey().PublicKey()
 	pubkeyBytes := pubkeyA.Marshal()
 
-	pubkeyB, _ := pubkeyA.Copy()
+	pubkeyB, err := pubkeyA.Copy()
+	if err != nil {
+		t.Fatal(err)
+	}
 	pubkeyB.Aggregate(bls.RandKey().PublicKey())
 
 	if !bytes.Equal(pubkeyA.Marshal(), pubkeyBytes) {
@@ -276,5 +279,7 @@ func TestSerialize(t *testing.T) {
 	rk := bls.RandKey()
 	b := rk.Marshal()
 
-	bls.SecretKeyFromBytes(b)
+	if _, err := bls.SecretKeyFromBytes(b); err != nil {
+		t.Error(err)
+	}
 }
