@@ -16,11 +16,12 @@ import (
 )
 
 func init() {
-	err := bls12.Init(bls12.BLS12_381)
-	if err != nil {
+	if err := bls12.Init(bls12.BLS12_381); err != nil {
 		panic(err)
 	}
-	bls12.SetETHmode(1)
+	if err := bls12.SetETHmode(1); err != nil {
+		panic(err)
+	}
 }
 
 // DomainByteLength length of domain byte array.
