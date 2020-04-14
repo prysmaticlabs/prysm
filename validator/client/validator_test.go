@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -698,5 +699,103 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	}
 	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != roleUnknown {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
+	}
+}
+
+func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
+	type statusTest struct {
+		name       string
+		status     *ethpb.ValidatorActivationResponse_Status
+		log        string
+		activeKeys [][]byte
+	}
+	pubKeys := [][]byte{
+		bytesutil.Uint64ToBytes(0),
+		bytesutil.Uint64ToBytes(1),
+		bytesutil.Uint64ToBytes(2),
+		bytesutil.Uint64ToBytes(3),
+	}
+	tests := []statusTest{
+		{
+			name: "UNKNOWN_STATUS, no deposit found yet",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
+				},
+			},
+			log: "Waiting for a deposit to be put into an eth1 block",
+		},
+		{
+			name: "UNKNOWN_STATUS, but deposit found",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                 ethpb.ValidatorStatus_UNKNOWN_STATUS,
+					DepositInclusionSlot:   50,
+					Eth1DepositBlockNumber: 400,
+				},
+			},
+			log: "Waiting for deposit to be processed by the beacon chain\" eth1DepositBlockNumber=400 expectedInclusionSlot=50",
+		},
+		{
+			name: "DEPOSITED",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                    ethpb.ValidatorStatus_DEPOSITED,
+					PositionInActivationQueue: 30,
+				},
+			},
+			log: "Deposit processed, entering activation queue after finalization\" positionInActivationQueue=30",
+		},
+		{
+			name: "PENDING",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                    ethpb.ValidatorStatus_PENDING,
+					ActivationEpoch:           60,
+					PositionInActivationQueue: 5,
+				},
+			},
+			log: "Waiting to be activated\" activationEpoch=60 positionInActivationQueue=5",
+		},
+		{
+			name: "EXITED",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_EXITED,
+				},
+			},
+			log: "Validator exited",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+			v := validator{
+				keyManager:      testKeyManager,
+				validatorClient: client,
+				duties: &ethpb.DutiesResponse{
+					Duties: []*ethpb.DutiesResponse_Duty{
+						{
+							CommitteeIndex: 1,
+						},
+					},
+				},
+			}
+
+			activeKeys := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
+			if !reflect.DeepEqual(activeKeys, test.activeKeys) {
+				t.Fatal("expected active keys to be equal")
+			}
+
+			testutil.AssertLogsContain(t, hook, test.log)
+		})
 	}
 }
