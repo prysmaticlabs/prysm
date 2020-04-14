@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -128,11 +129,14 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		}
 	}
 
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		slot  uint64
@@ -162,7 +166,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	for _, tt := range tests {
 		ClearCache()
-		state.SetSlot(tt.slot)
+		if err := state.SetSlot(tt.slot); err != nil {
+			t.Fatal(err)
+		}
 		result, err := BeaconProposerIndex(state)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
@@ -205,11 +211,14 @@ func TestChurnLimit_OK(t *testing.T) {
 			}
 		}
 
-		beaconState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+		beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Slot:        1,
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
 		if err != nil {
 			t.Fatal(err)
@@ -235,22 +244,22 @@ func TestDomain_OK(t *testing.T) {
 	}
 	tests := []struct {
 		epoch      uint64
-		domainType uint64
-		version    uint64
+		domainType [4]byte
+		result     []byte
 	}{
-		{epoch: 1, domainType: 4, version: 144115188075855876},
-		{epoch: 2, domainType: 4, version: 144115188075855876},
-		{epoch: 2, domainType: 5, version: 144115188075855877},
-		{epoch: 3, domainType: 4, version: 216172782113783812},
-		{epoch: 3, domainType: 5, version: 216172782113783813},
+		{epoch: 1, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},
+		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},
+		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(947067381421703173, 32)},
+		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(9369798235163459588, 32)},
+		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(9369798235163459589, 32)},
 	}
 	for _, tt := range tests {
-		domain, err := Domain(state.Fork, tt.epoch, bytesutil.ToBytes4(bytesutil.Bytes4(tt.domainType)))
+		domain, err := Domain(state.Fork, tt.epoch, tt.domainType, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if domain != tt.version {
-			t.Errorf("wanted domain version: %d, got: %d", tt.version, domain)
+		if !bytes.Equal(domain[:8], tt.result[:8]) {
+			t.Errorf("wanted domain version: %d, got: %d", tt.result, domain)
 		}
 	}
 }
@@ -404,7 +413,10 @@ func TestActiveValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := beaconstate.InitializeFromProto(tt.args.state)
+			s, err := beaconstate.InitializeFromProto(tt.args.state)
+			if err != nil {
+				t.Fatal(err)
+			}
 			got, err := ActiveValidatorIndices(s, tt.args.epoch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ActiveValidatorIndices() error = %v, wantErr %v", err, tt.wantErr)
@@ -588,7 +600,10 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := beaconstate.InitializeFromProto(tt.state)
+			s, err := beaconstate.InitializeFromProto(tt.state)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if got := IsEligibleForActivation(s, tt.validator); got != tt.want {
 				t.Errorf("IsEligibleForActivation() = %v, want %v", got, tt.want)
 			}

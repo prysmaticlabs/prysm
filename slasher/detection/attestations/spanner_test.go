@@ -640,8 +640,16 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 		t.Run(tt.name, func(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
-			defer db.ClearDB()
-			defer db.Close()
+			defer func() {
+				if err := db.ClearDB(); err != nil {
+					t.Log(err)
+				}
+			}()
+			defer func() {
+				if err := db.Close(); err != nil {
+					t.Log(err)
+				}
+			}()
 
 			spanDetector := &SpanDetector{
 				slasherDB: db,
@@ -799,8 +807,16 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
 			ctx := context.Background()
-			defer db.ClearDB()
-			defer db.Close()
+			defer func() {
+				if err := db.ClearDB(); err != nil {
+					t.Log(err)
+				}
+			}()
+			defer func() {
+				if err := db.Close(); err != nil {
+					t.Log(err)
+				}
+			}()
 
 			sd := &SpanDetector{
 				slasherDB: db,

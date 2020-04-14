@@ -31,7 +31,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	// 10 represents the enum value of validators
-	trie, err := state.NewFieldTrie(10, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
+	trie, err := state.NewFieldTrie(11, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,8 +52,12 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	val2.ExitEpoch = 40
 
 	changedVals := []*ethpb.Validator{val1, val2}
-	newState.UpdateValidatorAtIndex(changedIdx[0], changedVals[0])
-	newState.UpdateValidatorAtIndex(changedIdx[1], changedVals[1])
+	if err := newState.UpdateValidatorAtIndex(changedIdx[0], changedVals[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := newState.UpdateValidatorAtIndex(changedIdx[1], changedVals[1]); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	if err != nil {
@@ -71,7 +75,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
-	trie, err := state.NewFieldTrie(12, newState.RandaoMixes(), params.BeaconConfig().EpochsPerHistoricalVector)
+	trie, err := state.NewFieldTrie(13, newState.RandaoMixes(), params.BeaconConfig().EpochsPerHistoricalVector)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,8 +85,12 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	changedIdx := []uint64{2, 29}
 
 	changedVals := [][32]byte{{'A', 'B'}, {'C', 'D'}}
-	newState.UpdateRandaoMixesAtIndex(changedVals[0][:], changedIdx[0])
-	newState.UpdateRandaoMixesAtIndex(changedVals[1][:], changedIdx[1])
+	if err := newState.UpdateRandaoMixesAtIndex(changedVals[0][:], changedIdx[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := newState.UpdateRandaoMixesAtIndex(changedVals[1][:], changedIdx[1]); err != nil {
+		t.Fatal(err)
+	}
 
 	root, err := trie.RecomputeTrie(changedIdx, newState.RandaoMixes())
 	if err != nil {

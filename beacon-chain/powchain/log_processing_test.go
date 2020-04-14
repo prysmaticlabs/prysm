@@ -61,7 +61,12 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	testutil.ResetCache()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +95,9 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
-	web3Service.ProcessLog(context.Background(), logs[0])
+	if err := web3Service.ProcessLog(context.Background(), logs[0]); err != nil {
+		t.Fatal(err)
+	}
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
@@ -130,7 +137,11 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	testutil.ResetCache()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -163,8 +174,12 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	web3Service.chainStartData.Chainstarted = true
 
-	web3Service.ProcessDepositLog(context.Background(), logs[0])
-	web3Service.ProcessDepositLog(context.Background(), logs[1])
+	if err := web3Service.ProcessDepositLog(context.Background(), logs[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := web3Service.ProcessDepositLog(context.Background(), logs[1]); err != nil {
+		t.Fatal(err)
+	}
 	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
 	if len(pendingDeposits) != 2 {
 		t.Errorf("Unexpected number of deposits. Wanted 2 deposit, got %+v", pendingDeposits)
@@ -199,7 +214,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Could not init from contract: %v", err)
 	}
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	testutil.ResetCache()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -275,9 +294,15 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
-	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
+		t.Fatal(err)
+	}
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	testutil.ResetCache()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -311,7 +336,9 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	}
 
 	for _, log := range logs {
-		web3Service.ProcessLog(context.Background(), log)
+		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	if web3Service.chainStartData.Chainstarted {
@@ -353,10 +380,15 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
-	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
+		t.Fatal(err)
+	}
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
-
+	testutil.ResetCache()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -401,7 +433,9 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	defer stateSub.Unsubscribe()
 
 	for _, log := range logs {
-		web3Service.ProcessLog(context.Background(), log)
+		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	err = web3Service.ProcessETH1Block(context.Background(), big.NewInt(int64(logs[len(logs)-1].BlockNumber)))
@@ -468,11 +502,16 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	flags.Get().DeploymentBlock = 0
 
 	testAcc.Backend.Commit()
-	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
+		t.Fatal(err)
+	}
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -563,9 +602,15 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
-	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
+		t.Fatal(err)
+	}
 	depositsWanted := 10
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
+	testutil.ResetCache()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -657,10 +702,15 @@ func TestConsistentGenesisState(t *testing.T) {
 	web3Service := newPowchainService(t, testAcc, beaconDB)
 
 	testAcc.Backend.Commit()
-	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
+		t.Fatal(err)
+	}
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
-
+	testutil.ResetCache()
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
+	if err != nil {
+		t.Fatal()
+	}
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)

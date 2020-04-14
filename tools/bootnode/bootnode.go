@@ -35,7 +35,11 @@ import (
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
@@ -193,6 +197,16 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		return nil, errors.Wrap(err, "Could not open node's peer database")
 	}
 
+	forkID := &pb.ENRForkID{
+		CurrentForkDigest: []byte{0, 0, 0, 0},
+		NextForkVersion:   params.BeaconConfig().NextForkVersion,
+		NextForkEpoch:     params.BeaconConfig().NextForkEpoch,
+	}
+	forkEntry, err := ssz.Marshal(forkID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not marshal fork id")
+	}
+
 	localNode := enode.NewLocalNode(db, privKey)
 	ipEntry := enr.IP(ipAddr)
 	udpEntry := enr.UDP(port)
@@ -200,6 +214,8 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	localNode.SetFallbackUDP(port)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
+	localNode.Set(enr.WithEntry("eth2", forkEntry))
+	localNode.Set(enr.WithEntry("attnets", bitfield.NewBitvector64()))
 
 	return localNode, nil
 }

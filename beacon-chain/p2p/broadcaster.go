@@ -22,11 +22,15 @@ var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub top
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
 	defer span.End()
+	forkDigest, err := s.ForkDigest()
+	if err != nil {
+		return err
+	}
 
 	var topic string
 	switch msg.(type) {
 	case *eth.Attestation:
-		topic = attestationToTopic(msg.(*eth.Attestation))
+		topic = attestationToTopic(msg.(*eth.Attestation), forkDigest)
 	default:
 		var ok bool
 		topic, ok = GossipTypeMapping[reflect.TypeOf(msg)]
@@ -34,6 +38,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 			traceutil.AnnotateError(span, ErrMessageNotMapped)
 			return ErrMessageNotMapped
 		}
+		topic = fmt.Sprintf(topic, forkDigest)
 	}
 
 	span.AddAttributes(trace.StringAttribute("topic", topic))
@@ -59,11 +64,11 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	return nil
 }
 
-const attestationSubnetTopicFormat = "/eth2/committee_index%d_beacon_attestation"
+const attestationSubnetTopicFormat = "/eth2/%x/committee_index%d_beacon_attestation"
 
-func attestationToTopic(att *eth.Attestation) string {
+func attestationToTopic(att *eth.Attestation, forkDigest [4]byte) string {
 	if att == nil || att.Data == nil {
 		return ""
 	}
-	return fmt.Sprintf(attestationSubnetTopicFormat, att.Data.CommitteeIndex)
+	return fmt.Sprintf(attestationSubnetTopicFormat, forkDigest, att.Data.CommitteeIndex)
 }

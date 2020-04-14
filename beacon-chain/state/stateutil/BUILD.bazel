@@ -19,6 +19,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//fuzz:__pkg__",
         "//proto/testing:__subpackages__",
+        "//shared/testutil:__subpackages__",
     ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",

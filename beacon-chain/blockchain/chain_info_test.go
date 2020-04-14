@@ -128,7 +128,10 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
-	s, _ := state.InitializeFromProto(&pb.BeaconState{})
+	s, err := state.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	c.head = &head{slot: 100, state: s}
 	if c.HeadSlot() != 100 {
 		t.Errorf("Wanted head slot: %d, got: %d", 100, c.HeadSlot())
@@ -145,7 +148,10 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	s, _ := state.InitializeFromProto(&pb.BeaconState{})
+	s, err := state.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	c := &Service{}
 	c.head = &head{block: b, state: s}
 
@@ -160,7 +166,7 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {
-	s, err := state.InitializeFromProto(&pb.BeaconState{Slot: 2})
+	s, err := state.InitializeFromProto(&pb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +176,7 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
+	if !proto.Equal(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
 		t.Error("incorrect head state received")
 	}
 }

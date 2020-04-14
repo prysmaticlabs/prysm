@@ -30,7 +30,7 @@ func (bs *Server) SubmitProposerSlashing(
 		}
 	}
 	return &ethpb.SubmitSlashingResponse{
-		SlashedIndices: []uint64{req.ProposerIndex},
+		SlashedIndices: []uint64{req.Header_1.Header.ProposerIndex},
 	}, nil
 }
 

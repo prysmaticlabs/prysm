@@ -98,8 +98,8 @@ func runBlockProcessingTest(t *testing.T, config string) {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}
 
-				if !proto.Equal(beaconState.CloneInnerState(), postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState.CloneInnerState(), postBeaconState)
+				if !proto.Equal(beaconState.InnerStateUnsafe(), postBeaconState) {
+					diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}

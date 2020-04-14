@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -29,29 +28,25 @@ func TestService_Send(t *testing.T) {
 		Bar: 55,
 	}
 
-	// Register testing topic.
-	RPCTypeMapping[reflect.TypeOf(msg)] = "/testing/1"
-
 	// Register external listener which will repeat the message back.
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go func() {
-		p2.SetStreamHandler("/testing/1/ssz", func(stream network.Stream) {
-			rcvd := &testpb.TestSimpleMessage{}
-			if err := svc.Encoding().DecodeWithLength(stream, rcvd); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := svc.Encoding().EncodeWithLength(stream, rcvd); err != nil {
-				t.Fatal(err)
-			}
-			if err := stream.Close(); err != nil {
-				t.Error(err)
-			}
-			wg.Done()
-		})
-	}()
 
-	stream, err := svc.Send(context.Background(), msg, p2.Host.ID())
+	p2.SetStreamHandler("/testing/1/ssz", func(stream network.Stream) {
+		rcvd := &testpb.TestSimpleMessage{}
+		if err := svc.Encoding().DecodeWithLength(stream, rcvd); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.Encoding().EncodeWithLength(stream, rcvd); err != nil {
+			t.Fatal(err)
+		}
+		if err := stream.Close(); err != nil {
+			t.Error(err)
+		}
+		wg.Done()
+	})
+
+	stream, err := svc.Send(context.Background(), msg, "/testing/1", p2.Host.ID())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,5 +60,4 @@ func TestService_Send(t *testing.T) {
 	if !proto.Equal(rcvd, msg) {
 		t.Errorf("Expected identical message to be received. got %v want %v", rcvd, msg)
 	}
-
 }

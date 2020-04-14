@@ -28,11 +28,9 @@ OPTS = [
 }) + select({
     ":use_openssl": [],
     "//conditions:default": [
-      "-DMCL_DONT_USE_OPENSSL",
+        "-DMCL_DONT_USE_OPENSSL",
     ],
 })
-
-
 
 genrule(
     name = "base64_ll",
@@ -81,7 +79,7 @@ cc_library(
     }) + select({
         ":use_openssl": [
             "-lssl",
-            "-lcrypto"
+            "-lcrypto",
         ],
         "//conditions:default": [],
     }),
@@ -146,7 +144,10 @@ go_library(
     }),
     cgo = True,
     copts = OPTS,
-    visibility = ["//visibility:public"],
+    visibility = [
+        # Additional access will require security approval.
+        "@prysm//shared/bls:__pkg__",
+    ],
     clinkopts = select({
         "@io_bazel_rules_go//go/platform:linux": ["-Wl,--unresolved-symbols=ignore-all"],
         "//conditions:default": [],

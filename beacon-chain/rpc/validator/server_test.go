@@ -16,6 +16,7 @@ import (
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
@@ -39,16 +40,17 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	st := testutil.NewBeaconState()
 	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
 	pubKey := pubKey(1)
 
-	st.SetValidators([]*ethpb.Validator{
-		&ethpb.Validator{PublicKey: pubKey},
-	})
+	err := st.SetValidators([]*ethpb.Validator{{PublicKey: pubKey}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	Server := &Server{
 		BeaconDB:    db,
@@ -68,10 +70,13 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -105,7 +110,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
 		want := "context canceled"
-		if err := vs.WaitForActivation(req, mockChainStream); !strings.Contains(err.Error(), want) {
+		if err := vs.WaitForActivation(req, mockChainStream); err == nil || !strings.Contains(err.Error(), want) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -147,12 +152,15 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
 	}
-	signingRoot, err := ssz.HashTreeRoot(depData)
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(depData, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	depData.Signature = priv1.Sign(signingRoot[:], domain).Marshal()[:]
+	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()[:]
 
 	deposit := &ethpb.Deposit{
 		Data: depData,
@@ -231,7 +239,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
-		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); err == nil || !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -245,8 +253,8 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
-	trie, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{Slot: 3})
-	if err != nil {
+	trie := testutil.NewBeaconState()
+	if err := trie.SetSlot(3); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, trie, headBlockRoot); err != nil {

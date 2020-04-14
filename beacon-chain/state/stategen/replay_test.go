@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -96,19 +95,28 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 	})
-	beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)); err != nil {
+		t.Fatal(err)
+	}
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	mockRoot := [32]byte{}
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
-	beaconState.SetCurrentJustifiedCheckpoint(cp)
-	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
+	if err := beaconState.SetCurrentJustifiedCheckpoint(cp); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
+		t.Fatal(err)
+	}
 
 	service := New(db, cache.NewStateSummaryCache())
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
@@ -132,19 +140,28 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 	})
-	beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)); err != nil {
+		t.Fatal(err)
+	}
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	mockRoot := [32]byte{}
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
-	beaconState.SetCurrentJustifiedCheckpoint(cp)
-	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
+	if err := beaconState.SetCurrentJustifiedCheckpoint(cp); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
+		t.Fatal(err)
+	}
 
 	service := New(db, cache.NewStateSummaryCache())
 	targetSlot := beaconState.Slot()
@@ -413,7 +430,10 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	if savedSlot != s.splitInfo.slot+20 {
 		t.Error("Did not save correct slot")
 	}
-	wantedRoot, _ := ssz.HashTreeRoot(b3.Block)
+	wantedRoot, err := ssz.HashTreeRoot(b3.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if savedRoot != wantedRoot {
 		t.Error("Did not save correct root")
 	}
@@ -484,11 +504,15 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
-	b2Root, _ := ssz.HashTreeRoot(b2.Block)
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{Slot: s.splitInfo.slot + 10})
+	b2Root, err := ssz.HashTreeRoot(b2.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(s.splitInfo.slot + 10); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := s.beaconDB.SaveState(ctx, st, b2Root); err != nil {
 		t.Fatal(err)
 	}
@@ -532,27 +556,52 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 //                         \- B7
 func tree1(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock, error) {
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
-	r0, _ := ssz.HashTreeRoot(b0)
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
-	r1, _ := ssz.HashTreeRoot(b1)
-	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:]}
-	r2, _ := ssz.HashTreeRoot(b2)
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r1[:]}
-	r3, _ := ssz.HashTreeRoot(b3)
-	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: r2[:]}
-	r4, _ := ssz.HashTreeRoot(b4)
-	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: r3[:]}
-	r5, _ := ssz.HashTreeRoot(b5)
-	b6 := &ethpb.BeaconBlock{Slot: 6, ParentRoot: r4[:]}
-	r6, _ := ssz.HashTreeRoot(b6)
-	b7 := &ethpb.BeaconBlock{Slot: 7, ParentRoot: r6[:]}
-	r7, _ := ssz.HashTreeRoot(b7)
-	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
-	r8, _ := ssz.HashTreeRoot(b8)
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	r0, err := ssz.HashTreeRoot(b0)
 	if err != nil {
 		return nil, nil, err
 	}
+	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
+	r1, err := ssz.HashTreeRoot(b1)
+	if err != nil {
+		return nil, nil, err
+	}
+	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:]}
+	r2, err := ssz.HashTreeRoot(b2)
+	if err != nil {
+		return nil, nil, err
+	}
+	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r1[:]}
+	r3, err := ssz.HashTreeRoot(b3)
+	if err != nil {
+		return nil, nil, err
+	}
+	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: r2[:]}
+	r4, err := ssz.HashTreeRoot(b4)
+	if err != nil {
+		return nil, nil, err
+	}
+	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: r3[:]}
+	r5, err := ssz.HashTreeRoot(b5)
+	if err != nil {
+		return nil, nil, err
+	}
+	b6 := &ethpb.BeaconBlock{Slot: 6, ParentRoot: r4[:]}
+	r6, err := ssz.HashTreeRoot(b6)
+	if err != nil {
+		return nil, nil, err
+	}
+	b7 := &ethpb.BeaconBlock{Slot: 7, ParentRoot: r6[:]}
+	r7, err := ssz.HashTreeRoot(b7)
+	if err != nil {
+		return nil, nil, err
+	}
+	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
+	r8, err := ssz.HashTreeRoot(b8)
+	if err != nil {
+		return nil, nil, err
+	}
+	st := testutil.NewBeaconState()
+
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b2, b3, b4, b5, b6, b7, b8} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, nil, err
@@ -572,23 +621,41 @@ func tree1(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 //        \- B2 -- B3
 func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock, error) {
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
-	r0, _ := ssz.HashTreeRoot(b0)
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
-	r1, _ := ssz.HashTreeRoot(b1)
-	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'A'}}
-	r21, _ := ssz.HashTreeRoot(b21)
-	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'B'}}
-	r22, _ := ssz.HashTreeRoot(b22)
-	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'C'}}
-	r23, _ := ssz.HashTreeRoot(b23)
-	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'D'}}
-	r24, _ := ssz.HashTreeRoot(b24)
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r24[:]}
-	r3, _ := ssz.HashTreeRoot(b3)
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	r0, err := ssz.HashTreeRoot(b0)
 	if err != nil {
 		return nil, nil, err
 	}
+	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
+	r1, err := ssz.HashTreeRoot(b1)
+	if err != nil {
+		return nil, nil, err
+	}
+	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'A'}}
+	r21, err := ssz.HashTreeRoot(b21)
+	if err != nil {
+		return nil, nil, err
+	}
+	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'B'}}
+	r22, err := ssz.HashTreeRoot(b22)
+	if err != nil {
+		return nil, nil, err
+	}
+	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'C'}}
+	r23, err := ssz.HashTreeRoot(b23)
+	if err != nil {
+		return nil, nil, err
+	}
+	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'D'}}
+	r24, err := ssz.HashTreeRoot(b24)
+	if err != nil {
+		return nil, nil, err
+	}
+	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r24[:]}
+	r3, err := ssz.HashTreeRoot(b3)
+	if err != nil {
+		return nil, nil, err
+	}
+	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24, b3} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
@@ -609,21 +676,36 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 //        \- B2
 func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock, error) {
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
-	r0, _ := ssz.HashTreeRoot(b0)
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
-	r1, _ := ssz.HashTreeRoot(b1)
-	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'A'}}
-	r21, _ := ssz.HashTreeRoot(b21)
-	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'B'}}
-	r22, _ := ssz.HashTreeRoot(b22)
-	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'C'}}
-	r23, _ := ssz.HashTreeRoot(b23)
-	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'D'}}
-	r24, _ := ssz.HashTreeRoot(b24)
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	r0, err := ssz.HashTreeRoot(b0)
 	if err != nil {
 		return nil, nil, err
 	}
+	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
+	r1, err := ssz.HashTreeRoot(b1)
+	if err != nil {
+		return nil, nil, err
+	}
+	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'A'}}
+	r21, err := ssz.HashTreeRoot(b21)
+	if err != nil {
+		return nil, nil, err
+	}
+	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'B'}}
+	r22, err := ssz.HashTreeRoot(b22)
+	if err != nil {
+		return nil, nil, err
+	}
+	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'C'}}
+	r23, err := ssz.HashTreeRoot(b23)
+	if err != nil {
+		return nil, nil, err
+	}
+	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'D'}}
+	r24, err := ssz.HashTreeRoot(b24)
+	if err != nil {
+		return nil, nil, err
+	}
+	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
@@ -645,19 +727,31 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 //   \- B2
 func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock, error) {
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
-	r0, _ := ssz.HashTreeRoot(b0)
-	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'A'}}
-	r21, _ := ssz.HashTreeRoot(b21)
-	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'B'}}
-	r22, _ := ssz.HashTreeRoot(b22)
-	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'C'}}
-	r23, _ := ssz.HashTreeRoot(b23)
-	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'D'}}
-	r24, _ := ssz.HashTreeRoot(b24)
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	r0, err := ssz.HashTreeRoot(b0)
 	if err != nil {
 		return nil, nil, err
 	}
+	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'A'}}
+	r21, err := ssz.HashTreeRoot(b21)
+	if err != nil {
+		return nil, nil, err
+	}
+	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'B'}}
+	r22, err := ssz.HashTreeRoot(b22)
+	if err != nil {
+		return nil, nil, err
+	}
+	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'C'}}
+	r23, err := ssz.HashTreeRoot(b23)
+	if err != nil {
+		return nil, nil, err
+	}
+	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'D'}}
+	r24, err := ssz.HashTreeRoot(b24)
+	if err != nil {
+		return nil, nil, err
+	}
+	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b21, b22, b23, b24} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {

@@ -10,10 +10,13 @@ import (
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
 	}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	balance := TotalBalance(state, []uint64{0, 1, 2, 3})
 	wanted := state.Validators()[0].EffectiveBalance + state.Validators()[1].EffectiveBalance +
@@ -24,11 +27,14 @@ func TestTotalBalance_OK(t *testing.T) {
 	}
 }
 
-func TestTotalBalance_ReturnsOne(t *testing.T) {
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
+func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	balance := TotalBalance(state, []uint64{})
-	wanted := uint64(1)
+	wanted := params.BeaconConfig().EffectiveBalanceIncrement
 
 	if balance != wanted {
 		t.Errorf("Incorrect TotalBalance. Wanted: %d, got: %d", wanted, balance)
@@ -36,7 +42,7 @@ func TestTotalBalance_ReturnsOne(t *testing.T) {
 }
 
 func TestTotalActiveBalance_OK(t *testing.T) {
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{
 			EffectiveBalance: 32 * 1e9,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -54,6 +60,9 @@ func TestTotalActiveBalance_OK(t *testing.T) {
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 		},
 	}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	balance, err := TotalActiveBalance(state)
 	if err != nil {
@@ -79,7 +88,10 @@ func TestGetBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{0, 0, 0}},
 	}
 	for _, test := range tests {
-		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Balances: test.b})
+		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Balances: test.b})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if state.Balances()[test.i] != test.b[test.i] {
 			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.b[test.i], state.Balances()[test.i])
 		}
@@ -98,11 +110,14 @@ func TestIncreaseBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9, eb: 65 * 1e9},
 	}
 	for _, test := range tests {
-		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := IncreaseBalance(state, test.i, test.nb); err != nil {
 			t.Fatal(err)
 		}
@@ -125,11 +140,14 @@ func TestDecreaseBalance_OK(t *testing.T) {
 		{i: 3, b: []uint64{27 * 1e9, 28 * 1e9, 1, 28 * 1e9}, nb: 28 * 1e9, eb: 0},
 	}
 	for _, test := range tests {
-		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 3}},
 			Balances: test.b,
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if err := DecreaseBalance(state, test.i, test.nb); err != nil {
 			t.Fatal(err)
 		}

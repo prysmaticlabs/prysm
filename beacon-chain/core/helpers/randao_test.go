@@ -18,7 +18,10 @@ func TestRandaoMix_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -37,7 +40,9 @@ func TestRandaoMix_OK(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		state.SetSlot((test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch)
+		if err := state.SetSlot((test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch); err != nil {
+			t.Fatal(err)
+		}
 		mix, err := RandaoMix(state, test.epoch)
 		if err != nil {
 			t.Fatal(err)
@@ -56,7 +61,10 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{RandaoMixes: randaoMixes})
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -75,7 +83,9 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		state.SetSlot((test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch)
+		if err := state.SetSlot((test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch); err != nil {
+			t.Fatal(err)
+		}
 		mix, err := RandaoMix(state, test.epoch)
 		if err != nil {
 			t.Fatal(err)
@@ -101,9 +111,13 @@ func TestGenerateSeed_OK(t *testing.T) {
 		randaoMixes[i] = intInBytes
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		RandaoMixes: randaoMixes,
-		Slot:        slot})
+		Slot:        slot,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	got, err := Seed(state, 10, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {

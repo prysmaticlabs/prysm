@@ -93,6 +93,7 @@ func (ds *Service) Start() {
 	// our gRPC client to keep detecting slashable offenses.
 	go ds.detectIncomingBlocks(ds.ctx, ds.blocksChan)
 	go ds.detectIncomingAttestations(ds.ctx, ds.attsChan)
+	go ds.detectHistoricalChainData(ds.ctx)
 }
 
 func (ds *Service) detectHistoricalChainData(ctx context.Context) {
@@ -159,5 +160,19 @@ func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*eth
 			}).Info("Found an attester slashing! Submitting to beacon node")
 			ds.attesterSlashingsFeed.Send(slashings[i])
 		}
+	}
+}
+
+func (ds *Service) submitProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) {
+	ctx, span := trace.StartSpan(ctx, "detection.submitProposerSlashing")
+	defer span.End()
+	if slashing != nil && slashing.Header_1 != nil && slashing.Header_2 != nil {
+		log.WithFields(logrus.Fields{
+			"header1Slot":        slashing.Header_1.Header.Slot,
+			"header2Slot":        slashing.Header_2.Header.Slot,
+			"proposerIdxHeader1": slashing.Header_1.Header.ProposerIndex,
+			"proposerIdxHeader2": slashing.Header_2.Header.ProposerIndex,
+		}).Info("Found a proposer slashing! Submitting to beacon node")
+		ds.proposerSlashingsFeed.Send(slashing)
 	}
 }

@@ -74,8 +74,11 @@ func TestEth1DataVoteCache_CanIncrement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = cache.IncrementEth1DataVote(eInfo.Eth1DataHash)
-	count, _ := cache.IncrementEth1DataVote(eInfo.Eth1DataHash)
+	_, err = cache.IncrementEth1DataVote(eInfo.Eth1DataHash)
+	if err != nil {
+		t.Error(err)
+	}
+	count, err := cache.IncrementEth1DataVote(eInfo.Eth1DataHash)
 
 	if count != 58 {
 		t.Errorf(

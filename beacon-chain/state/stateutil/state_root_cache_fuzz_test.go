@@ -42,7 +42,9 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 		for i := start; i < start+length; i++ {
 			func() {
 				defer func() {
-					recover() // Ignore fuzzing panics for out of range values
+					if r := recover(); r != nil {
+						// Ignore fuzzing panics for out of range values
+					}
 				}()
 				fuzzer.Fuzz(state)
 			}()

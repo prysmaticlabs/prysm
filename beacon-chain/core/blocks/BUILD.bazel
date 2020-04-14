@@ -44,6 +44,7 @@ go_test(
     srcs = [
         "block_operations_fuzz_test.go",
         "block_operations_test.go",
+        "block_regression_test.go",
         "block_test.go",
         "eth1_data_test.go",
     ],
@@ -51,6 +52,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",

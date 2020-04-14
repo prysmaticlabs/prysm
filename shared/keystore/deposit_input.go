@@ -3,7 +3,8 @@ package keystore
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -34,8 +35,15 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 		return nil, [32]byte{}, err
 	}
 
-	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	di.Signature = depositKey.SecretKey.Sign(sr[:], domain).Marshal()
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil /*forkVersion*/, nil/*genesisValidatorsRoot*/)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: sr[:], Domain: domain})
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	di.Signature = depositKey.SecretKey.Sign(root[:]).Marshal()
 
 	dr, err := ssz.HashTreeRoot(di)
 	if err != nil {

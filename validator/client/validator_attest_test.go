@@ -11,13 +11,14 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
@@ -87,7 +88,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: []byte{}}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -110,18 +111,20 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		AggregationBits: aggregationBitfield,
 	}
 
-	root, err := ssz.HashTreeRoot(expectedAttestation.Data)
+	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sig, err := validator.keyManager.Sign(validatorPubKey, root, 0)
+	sig, err := validator.keyManager.Sign(validatorPubKey, root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
+		diff, _ := messagediff.PrettyDiff(expectedAttestation, generatedAttestation)
+		t.Log(diff)
 	}
 }
 

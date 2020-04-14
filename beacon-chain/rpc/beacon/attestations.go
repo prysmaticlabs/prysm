@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -102,7 +103,6 @@ func (bs *Server) ListIndexedAttestations(
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
 	var err error
-	epoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
 		blocks, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
@@ -135,30 +135,40 @@ func (bs *Server) ListIndexedAttestations(
 		}, nil
 	}
 
-	committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(ctx, epoch)
-	if err != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not retrieve committees for epoch %d: %v",
-			epoch,
-			err,
-		)
-	}
-
 	// We use the retrieved committees for the epoch to convert all attestations
 	// into indexed form effectively.
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
-	startSlot := helpers.StartSlot(epoch)
-	endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-	for i := 0; i < len(indexedAtts); i++ {
+	for i := 0; i < len(atts); i++ {
 		att := atts[i]
-		// Out of range check, the attestation slot cannot be greater
-		// the last slot of the requested epoch or smaller than its start slot
-		// given committees are accessed as a map of slot -> commitees list, where there are
-		// SLOTS_PER_EPOCH keys in the map.
-		if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
-			continue
+		epoch := helpers.SlotToEpoch(att.Data.Slot)
+		attState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not retrieve state for attestation data block root %v: %v",
+				att.Data.BeaconBlockRoot,
+				err,
+			)
 		}
+		activeIndices, err := helpers.ActiveValidatorIndices(attState, epoch)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not retrieve active validator indices for epoch %d: %v",
+				epoch,
+				err,
+			)
+		}
+		seed, err := helpers.Seed(attState, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not seed for epoch %d: %v",
+				epoch,
+				err,
+			)
+		}
+		committeesBySlot, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, seed)
 		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		indexedAtts[i] = idxAtt

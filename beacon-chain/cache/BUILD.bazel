@@ -43,6 +43,7 @@ go_test(
         "attestation_data_test.go",
         "checkpoint_state_test.go",
         "committee_fuzz_test.go",
+        "committee_ids_test.go",
         "committee_test.go",
         "eth1_data_test.go",
         "feature_flag_test.go",

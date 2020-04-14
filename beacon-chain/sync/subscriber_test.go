@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	lru "github.com/hashicorp/golang-lru"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -31,12 +32,15 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		p2p:         p2p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
-	topic := "/eth2/voluntary_exit"
+	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
-		m := msg.(*pb.SignedVoluntaryExit)
+		m, ok := msg.(*pb.SignedVoluntaryExit)
+		if !ok {
+			t.Error("Object is not of type *pb.SignedVoluntaryExit")
+		}
 		if m.Exit == nil || m.Exit.Epoch != 55 {
 			t.Errorf("Unexpected incoming message: %+v", m)
 		}
@@ -58,24 +62,31 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{}
-	r := Service{
-		ctx:          ctx,
-		p2p:          p2p,
-		initialSync:  &mockSync.Sync{IsSyncing: false},
-		slashingPool: slashings.NewPool(),
-		chain:        chainService,
-		db:           d,
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
 	}
-	topic := "/eth2/attester_slashing"
+	r := Service{
+		ctx:                       ctx,
+		p2p:                       p2p,
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		slashingPool:              slashings.NewPool(),
+		chain:                     chainService,
+		db:                        d,
+		seenAttesterSlashingCache: c,
+	}
+	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
-		r.attesterSlashingSubscriber(ctx, msg)
+		if err := r.attesterSlashingSubscriber(ctx, msg); err != nil {
+			t.Fatal(err)
+		}
 		wg.Done()
 		return nil
 	})
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.chainStarted = true
 	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
@@ -86,7 +97,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating attester slashing")
 	}
-	r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	err = r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	if err != nil {
+		t.Fatal(err)
+	}
 	p2p.ReceivePubSub(topic, attesterSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -104,24 +118,31 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
-	r := Service{
-		ctx:          ctx,
-		p2p:          p2p,
-		initialSync:  &mockSync.Sync{IsSyncing: false},
-		slashingPool: slashings.NewPool(),
-		chain:        chainService,
-		db:           d,
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
 	}
-	topic := "/eth2/proposer_slashing"
+	r := Service{
+		ctx:                       ctx,
+		p2p:                       p2p,
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		slashingPool:              slashings.NewPool(),
+		chain:                     chainService,
+		db:                        d,
+		seenProposerSlashingCache: c,
+	}
+	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
-		r.proposerSlashingSubscriber(ctx, msg)
+		if err := r.proposerSlashingSubscriber(ctx, msg); err != nil {
+			t.Fatal(err)
+		}
 		wg.Done()
 		return nil
 	})
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	chainService.State = beaconState
 	r.chainStarted = true
 	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
@@ -133,7 +154,9 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		t.Fatalf("Error generating proposer slashing")
 	}
 	root, err := ssz.HashTreeRoot(proposerSlashing.Header_1.Header)
-	r.db.SaveState(ctx, beaconState, root)
+	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
+		t.Fatal(err)
+	}
 	p2p.ReceivePubSub(topic, proposerSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -156,8 +179,9 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
-	topic := "/eth2/beacon_block"
-	r.registerSubscribers()
+	topic := "/eth2/%x/beacon_block"
+	go r.registerSubscribers()
+	time.Sleep(100 * time.Millisecond)
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
@@ -178,7 +202,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		Block: &pb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
 		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent

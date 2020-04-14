@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
@@ -25,10 +27,16 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,6 +44,9 @@ var _ = shared.Service(&Service{})
 
 // Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
+
+// Refresh rate of ENR set at twice per slot.
+var refreshRate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
@@ -47,18 +58,24 @@ const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	started       bool
-	cfg           *Config
-	startupErr    error
-	dv5Listener   Listener
-	host          host.Host
-	pubsub        *pubsub.PubSub
-	exclusionList *ristretto.Cache
-	privKey       *ecdsa.PrivateKey
-	dht           *kaddht.IpfsDHT
-	peers         *peers.Status
+	started               bool
+	isPreGenesis          bool
+	pingMethod            func(ctx context.Context, id peer.ID) error
+	cancel                context.CancelFunc
+	cfg                   *Config
+	peers                 *peers.Status
+	dht                   *kaddht.IpfsDHT
+	privKey               *ecdsa.PrivateKey
+	exclusionList         *ristretto.Cache
+	metaData              *pb.MetaData
+	pubsub                *pubsub.PubSub
+	dv5Listener           Listener
+	startupErr            error
+	stateNotifier         statefeed.Notifier
+	ctx                   context.Context
+	host                  host.Host
+	genesisTime           time.Time
+	genesisValidatorsRoot []byte
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -77,9 +94,11 @@ func NewService(cfg *Config) (*Service, error) {
 
 	s := &Service{
 		ctx:           ctx,
+		stateNotifier: cfg.StateNotifier,
 		cancel:        cancel,
 		cfg:           cfg,
 		exclusionList: cache,
+		isPreGenesis:  true,
 	}
 
 	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -91,6 +110,11 @@ func NewService(cfg *Config) (*Service, error) {
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
+		return nil, err
+	}
+	s.metaData, err = metaDataFromConfig(s.cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create peer metadata")
 		return nil, err
 	}
 
@@ -148,6 +172,11 @@ func (s *Service) Start() {
 		return
 	}
 
+	// Waits until the state is initialized via an event feed.
+	// Used for fork-related data when connecting peers.
+	s.awaitStateInitialized()
+	s.isPreGenesis = false
+
 	var peersToWatch []string
 	if s.cfg.RelayNodeAddr != "" {
 		peersToWatch = append(peersToWatch, s.cfg.RelayNodeAddr)
@@ -161,9 +190,12 @@ func (s *Service) Start() {
 		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
-	if (len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery) || s.cfg.EnableDiscv5 {
+	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
 		ipAddr := ipAddr()
-		listener, err := startDiscoveryV5(ipAddr, s.privKey, s.cfg)
+		listener, err := s.startDiscoveryV5(
+			ipAddr,
+			s.privKey,
+		)
 		if err != nil {
 			log.WithError(err).Error("Failed to start discovery")
 			s.startupErr = err
@@ -221,6 +253,10 @@ func (s *Service) Start() {
 	})
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+	runutil.RunEvery(s.ctx, refreshRate, func() {
+		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(s.genesisTime))
+		s.RefreshENR(currentEpoch)
+	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIPAddr(s.host.ID(), multiAddrs...)
@@ -251,8 +287,14 @@ func (s *Service) Stop() error {
 // Status of the p2p service. Will return an error if the service is considered unhealthy to
 // indicate that this node should not serve traffic until the issue has been resolved.
 func (s *Service) Status() error {
+	if s.isPreGenesis {
+		return nil
+	}
 	if !s.started {
 		return errors.New("not running")
+	}
+	if s.startupErr != nil {
+		return s.startupErr
 	}
 	return nil
 }
@@ -305,6 +347,16 @@ func (s *Service) Peers() *peers.Status {
 	return s.peers
 }
 
+// Metadata returns a copy of the peer's metadata.
+func (s *Service) Metadata() *pb.MetaData {
+	return proto.Clone(s.metaData).(*pb.MetaData)
+}
+
+// MetadataSeq returns the metadata sequence number.
+func (s *Service) MetadataSeq() uint64 {
+	return s.metaData.SeqNumber
+}
+
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee id's for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee id's.
@@ -314,12 +366,28 @@ func (s *Service) RefreshENR(epoch uint64) {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	committees := cache.CommitteeIDs.GetIDs(epoch)
+
+	var committees []uint64
+	epochStartSlot := helpers.StartSlot(epoch)
+	for i := epochStartSlot; i < epochStartSlot+2*params.BeaconConfig().SlotsPerEpoch; i++ {
+		committees = append(committees, sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(i),
+			cache.CommitteeIDs.GetAggregatorCommitteeIDs(i))...)
+	}
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}
-	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
-	s.dv5Listener.LocalNode().Set(entry)
+	currentBitV, err := retrieveBitvector(s.dv5Listener.Self().Record())
+	if err != nil {
+		log.Errorf("Could not retrieve bitfield: %v", err)
+		return
+	}
+	if bytes.Equal(bitV, currentBitV) {
+		// return early if bitfield hasn't changed
+		return
+	}
+	s.updateSubnetRecordWithMetadata(bitV)
+	// ping all peers to inform them of new metadata
+	s.pingPeers()
 }
 
 // FindPeersWithSubnet performs a network search for peers
@@ -333,9 +401,17 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		if node.IP() == nil {
 			continue
 		}
+		// do not look for nodes with no tcp port set
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
+		}
 		subnets, err := retrieveAttSubnets(node.Record())
 		if err != nil {
-			return false, errors.Wrap(err, "could not retrieve subnets")
+			log.Errorf("could not retrieve subnets: %v", err)
+			continue
 		}
 		for _, comIdx := range subnets {
 			if comIdx == index {
@@ -355,7 +431,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 					exists = true
 					continue
 				}
-				s.peers.Add(info.ID, multiAddr, network.DirUnknown, subnets)
+				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(*info); err != nil {
 					log.Errorf("Could not connect with peer %s: %v", info.String(), err)
 				}
@@ -364,6 +440,48 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		}
 	}
 	return exists, nil
+}
+
+// AddPingMethod adds the metadata ping rpc method to the p2p service, so that it can
+// be used to refresh ENR.
+func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
+	s.pingMethod = reqFunc
+}
+
+func (s *Service) pingPeers() {
+	if s.pingMethod == nil {
+		return
+	}
+	for _, pid := range s.peers.Connected() {
+		go func(id peer.ID) {
+			if err := s.pingMethod(s.ctx, id); err != nil {
+				log.WithField("peer", id).WithError(err).Error("Failed to ping peer")
+			}
+		}(pid)
+	}
+}
+
+// Waits for the beacon state to be initialized, important
+// for initializing the p2p service as p2p needs to be aware
+// of genesis information for peering.
+func (s *Service) awaitStateInitialized() {
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Initialized {
+				data, ok := event.Data.(*statefeed.InitializedData)
+				if !ok {
+					log.Fatalf("Received wrong data over state initialized feed: %v", data)
+				}
+				s.genesisTime = data.StartTime
+				s.genesisValidatorsRoot = data.GenesisValidatorsRoot
+				return
+			}
+		}
+	}
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
@@ -418,6 +536,13 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		if node.IP() == nil {
 			continue
 		}
+		// do not dial nodes with their tcp ports not set
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
+		}
 		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to multiAddr")
@@ -434,13 +559,19 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
 			continue
 		}
-		indices, err := retrieveAttSubnets(node.Record())
-		if err != nil {
-			log.WithError(err).Error("Could not retrieve attestation subnets")
-			continue
+
+		nodeENR := node.Record()
+		// Decide whether or not to connect to peer that does not
+		// match the proper fork ENR data with our local node.
+		if s.genesisValidatorsRoot != nil {
+			if err := s.compareForkENR(nodeENR); err != nil {
+				log.WithError(err).Debug("Fork ENR mismatches between peer and local node")
+				continue
+			}
 		}
-		// add peer to peer handler.
-		s.peers.Add(peerData.ID, multiAddr, network.DirUnknown, indices)
+
+		// Add peer to peer handler.
+		s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
@@ -452,6 +583,13 @@ func (s *Service) connectToBootnodes() error {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return err
+		}
+		// do not dial bootnodes with their tcp ports not set
+		if err := bootNode.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
 		}
 		nodes = append(nodes, bootNode)
 	}
@@ -472,6 +610,19 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 	// bootnode is never dialled, so ttl is tentatively 1 year
 	s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	return nil
+}
+
+// Updates the service's discv5 listener record's attestation subnet
+// with a new value for a bitfield of subnets tracked. It also updates
+// the node's metadata by increasing the sequence number and the
+// subnets tracked by the node.
+func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
+	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
+	s.dv5Listener.LocalNode().Set(entry)
+	s.metaData = &pb.MetaData{
+		SeqNumber: s.metaData.SeqNumber + 1,
+		Attnets:   bitV,
+	}
 }
 
 func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {
