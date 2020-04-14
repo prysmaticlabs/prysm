@@ -71,7 +71,11 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
-		defer stream.Close()
+		defer func() {
+			if err := stream.Close(); err != nil {
+				log.WithError(err).Error("Failed to close stream")
+			}
+		}()
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
 		span.AddAttributes(trace.StringAttribute("topic", topic))

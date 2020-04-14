@@ -2,10 +2,10 @@ package blockchain
 
 import (
 	"context"
-	"github.com/gogo/protobuf/proto"
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -155,6 +155,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		JustificationBits:   []byte{0},
 		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
+		Validators:          []*ethpb.Validator{{PublicKey: bytesutil.PadTo([]byte("foo"), 48)}},
+		Balances:            []uint64{0},
 	})
 	r := [32]byte{'g'}
 	if err := service.beaconDB.SaveState(ctx, s, r); err != nil {

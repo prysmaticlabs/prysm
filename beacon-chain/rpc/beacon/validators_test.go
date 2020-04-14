@@ -571,9 +571,6 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 	activeValidators := make([]*ethpb.Validators_ValidatorContainer, 0)
 	for i := 0; i < count; i++ {
 		pubKey := pubKey(uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 
 		// We mark even validators as active, and odd validators as inactive.
@@ -608,7 +605,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 		},
 	}
 
-	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{
+	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 		Active: true,
 	})
 	if err != nil {
@@ -1123,7 +1120,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		balance := params.BeaconConfig().MaxEffectiveBalance
 		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
-			activationEpoch = helpers.ActivationExitEpoch(0)
+			activationEpoch = 0
 		} else if i%3 == 0 {
 			// Mark indices divisible by 3 as slashed.
 			withdrawableEpoch = params.BeaconConfig().EpochsPerSlashingsVector
@@ -1835,9 +1832,6 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
 		pubKey := pubKey(uint64(i))
-		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-			t.Fatal(err)
-		}
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
 			PublicKey:             pubKey,

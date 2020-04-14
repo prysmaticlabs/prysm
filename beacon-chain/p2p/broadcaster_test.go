@@ -11,7 +11,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )

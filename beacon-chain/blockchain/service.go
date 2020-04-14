@@ -211,7 +211,11 @@ func (s *Service) Start() {
 				select {
 				case event := <-stateChannel:
 					if event.Type == statefeed.ChainStarted {
-						data := event.Data.(*statefeed.ChainStartedData)
+						data, ok := event.Data.(*statefeed.ChainStartedData)
+						if !ok {
+							log.Error("event data is not type *statefeed.ChainStartedData")
+							return
+						}
 						log.WithField("starttime", data.StartTime).Debug("Received chain start event")
 						s.processChainStartTime(ctx, data.StartTime)
 						return
@@ -308,18 +312,6 @@ func (s *Service) ClearCachedStates() {
 	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
 }
 
-// This gets called when beacon chain is first initialized to save validator indices and public keys in db.
-func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.BeaconState) error {
-	pubkeys := make([][48]byte, state.NumValidators())
-	indices := make([]uint64, state.NumValidators())
-
-	for i := 0; i < state.NumValidators(); i++ {
-		pubkeys[i] = state.PubkeyAtIndex(uint64(i))
-		indices[i] = uint64(i)
-	}
-	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
-}
-
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
@@ -355,9 +347,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could save genesis block root")
-	}
-	if err := s.saveGenesisValidators(ctx, genesisState); err != nil {
-		return errors.Wrap(err, "could not save genesis validators")
 	}
 
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}

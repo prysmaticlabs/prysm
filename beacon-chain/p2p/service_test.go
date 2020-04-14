@@ -14,12 +14,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mockListener struct{}
@@ -99,7 +99,6 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 		TCPPort:  2000,
 		UDPPort:  2000,
 		Encoding: "ssz",
-		BeaconDB: db,
 	}
 	s, err := NewService(cfg)
 	if err != nil {
@@ -211,7 +210,6 @@ func TestListenForNewNodes(t *testing.T) {
 
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	cfg.BeaconDB = db
 
 	s, err := NewService(cfg)
 	if err != nil {

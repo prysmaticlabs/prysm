@@ -136,7 +136,9 @@ func generateMarshalledFullStateAndBlock() error {
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
 	root := beaconState.GenesisValidatorRoot()
-	beaconState.SetSlot(beaconState.Slot() + 1)
+	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
+		return err
+	}
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return err
@@ -150,7 +152,9 @@ func generateMarshalledFullStateAndBlock() error {
 		return errors.Wrap(err, "could not get signing root of block")
 	}
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:]).Marshal()
-	beaconState.SetSlot(beaconState.Slot() - 1)
+	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
+		return err
+	}
 
 	beaconBytes, err := ssz.Marshal(beaconState.InnerStateUnsafe())
 	if err != nil {

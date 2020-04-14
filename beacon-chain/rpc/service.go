@@ -325,7 +325,9 @@ func (s *Service) Stop() error {
 		log.Debug("Initiated graceful stop of gRPC server")
 	}
 	if s.slasherConn != nil {
-		s.slasherConn.Close()
+		if err := s.slasherConn.Close(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

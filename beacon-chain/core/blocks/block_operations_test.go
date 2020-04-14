@@ -37,7 +37,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9})
 
-	lbhsr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
+	lbhdr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -54,7 +54,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
-			ParentRoot: lbhsr[:],
+			ParentRoot: lbhdr[:],
 		},
 	}
 	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())

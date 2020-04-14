@@ -16,11 +16,12 @@ import (
 )
 
 func init() {
-	err := bls12.Init(bls12.BLS12_381)
-	if err != nil {
+	if err := bls12.Init(bls12.BLS12_381); err != nil {
 		panic(err)
 	}
-	bls12.SetETHmode(1)
+	if err := bls12.SetETHmode(1); err != nil {
+		panic(err)
+	}
 }
 
 // DomainByteLength length of domain byte array.
@@ -229,7 +230,6 @@ func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool
 	if len(pubKeys) == 0 {
 		return false
 	}
-	//#nosec G104
 	rawKeys := make([]bls12.PublicKey, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
 		rawKeys[i] = *pubKeys[i].p

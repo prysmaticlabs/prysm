@@ -17,13 +17,20 @@ import (
 func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
 	defer span.End()
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_range")
 
-	m := msg.(*pb.BeaconBlocksByRangeRequest)
+	m, ok := msg.(*pb.BeaconBlocksByRangeRequest)
+	if !ok {
+		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
+	}
 
 	startSlot := m.StartSlot
 	endSlot := startSlot + (m.Step * (m.Count - 1))
@@ -42,7 +49,11 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			log.Debug("Disconnecting bad peer")
-			defer r.p2p.Disconnect(stream.Conn().RemotePeer())
+			defer func() {
+				if err := r.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
+					log.WithError(err).Error("Failed to disconnect peer")
+				}
+			}()
 		}
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
 		if err != nil {

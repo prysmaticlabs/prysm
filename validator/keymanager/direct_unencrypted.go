@@ -48,7 +48,11 @@ func NewUnencrypted(input string) (*Unencrypted, string, error) {
 	if err != nil {
 		return nil, unencryptedOptsHelp, err
 	}
-	defer reader.Close()
+	defer func() {
+		if err := reader.Close(); err != nil {
+			log.WithError(err).Error("Failed to close file reader")
+		}
+	}()
 
 	keyMap, err := unencryptedKeysFromReader(reader)
 	if err != nil {

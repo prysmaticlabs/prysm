@@ -164,7 +164,7 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	eth1DataNotification = false
 
 	eth1VotingPeriodStartTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch)) * params.BeaconConfig().SecondsPerSlot
+	eth1VotingPeriodStartTime += (slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
@@ -335,7 +335,9 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally
-	beaconState.AppendEth1DataVotes(currentVote)
+	if err := beaconState.AppendEth1DataVotes(currentVote); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to append eth1 data votes to state")
+	}
 	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")

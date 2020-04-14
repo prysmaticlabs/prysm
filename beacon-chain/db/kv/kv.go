@@ -91,7 +91,6 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			attestationsBucket,
 			blocksBucket,
 			stateBucket,
-			validatorsBucket,
 			proposerSlashingsBucket,
 			attesterSlashingsBucket,
 			voluntaryExitsBucket,

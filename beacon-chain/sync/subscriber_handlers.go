@@ -2,10 +2,10 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -37,8 +37,6 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
 	if as != nil && as.Attestation_1 != nil && as.Attestation_1.Data != nil {
-		r.setAttesterSlashingIndicesSeen(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
-
 		s, err := r.db.State(ctx, bytesutil.ToBytes32(as.Attestation_1.Data.BeaconBlockRoot))
 		if err != nil {
 			return err
@@ -46,7 +44,10 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 		if s == nil {
 			return fmt.Errorf("no state found for block root %#x", as.Attestation_1.Data.BeaconBlockRoot)
 		}
-		return r.slashingPool.InsertAttesterSlashing(ctx, s, as)
+		if err := r.slashingPool.InsertAttesterSlashing(ctx, s, as); err != nil {
+			return errors.Wrap(err, "could not insert attester slashing into pool")
+		}
+		r.setAttesterSlashingIndicesSeen(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
 	}
 	return nil
 }
@@ -58,8 +59,6 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
 	if ps.Header_1 != nil && ps.Header_1.Header != nil {
-		r.setProposerSlashingIndexSeen(ps.Header_1.Header.ProposerIndex)
-
 		root, err := ssz.HashTreeRoot(ps.Header_1.Header)
 		s, err := r.db.State(ctx, root)
 		if err != nil {
@@ -68,7 +67,10 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 		if s == nil {
 			return fmt.Errorf("no state found for block root %#x", root)
 		}
-		return r.slashingPool.InsertProposerSlashing(ctx, s, ps)
+		if err := r.slashingPool.InsertProposerSlashing(ctx, s, ps); err != nil {
+			return errors.Wrap(err, "could not insert proposer slashing into pool")
+		}
+		r.setProposerSlashingIndexSeen(ps.Header_1.Header.ProposerIndex)
 	}
 	return nil
 }

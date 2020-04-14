@@ -69,7 +69,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	if err != nil {
 		return nil, err
 	}
-	preStateValidatorCount := preState.NumValidators()
 
 	root, err := stateutil.BlockRoot(b)
 	if err != nil {
@@ -137,7 +136,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 		// Prune proto array fork choice nodes, all nodes before finalized check point will
 		// be pruned.
-		s.forkChoiceStore.Prune(ctx, fRoot)
+		if err := s.forkChoiceStore.Prune(ctx, fRoot); err != nil {
+			return nil, errors.Wrap(err, "could not prune proto array fork choice nodes")
+		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
@@ -156,11 +157,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 				return nil, errors.Wrap(err, "could not migrate to cold")
 			}
 		}
-	}
-
-	// Update validator indices in database as needed.
-	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return nil, errors.Wrap(err, "could not save new validators")
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -216,7 +212,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return nil
 	}
 
-	preStateValidatorCount := preState.NumValidators()
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
@@ -316,11 +311,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 				return errors.Wrap(err, "could not migrate to cold")
 			}
 		}
-	}
-
-	// Update validator indices in database as needed.
-	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save new validators")
 	}
 
 	if featureconfig.Get().DisableNewStateMgmt {
