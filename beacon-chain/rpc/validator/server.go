@@ -195,3 +195,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 		}
 	}
 }
+
+func (vs *Server) WaitForSynced(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
+	return status.Error(codes.Unimplemented, "not implemented")
+}
