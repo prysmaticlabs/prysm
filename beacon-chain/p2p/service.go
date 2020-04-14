@@ -26,18 +26,18 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -397,9 +397,17 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		if node.IP() == nil {
 			continue
 		}
+		// do not look for nodes with no tcp port set
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
+		}
 		subnets, err := retrieveAttSubnets(node.Record())
 		if err != nil {
-			return false, errors.Wrap(err, "could not retrieve subnets")
+			log.Errorf("could not retrieve subnets: %v", err)
+			continue
 		}
 		for _, comIdx := range subnets {
 			if comIdx == index {
@@ -524,6 +532,13 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		if node.IP() == nil {
 			continue
 		}
+		// do not dial nodes with their tcp ports not set
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
+		}
 		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to multiAddr")
@@ -564,6 +579,13 @@ func (s *Service) connectToBootnodes() error {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return err
+		}
+		// do not dial bootnodes with their tcp ports not set
+		if err := bootNode.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
 		}
 		nodes = append(nodes, bootNode)
 	}
