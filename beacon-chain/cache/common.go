@@ -14,8 +14,12 @@ var (
 // trim the FIFO queue to the maxSize.
 func trim(queue *cache.FIFO, maxSize int) {
 	for s := len(queue.ListKeys()); s > maxSize; s-- {
-		// #nosec G104 popProcessNoopFunc never returns an error
-		_, _ = queue.Pop(popProcessNoopFunc)
+		_, err := queue.Pop(popProcessNoopFunc)
+		if err != nil {
+			// popProcessNoopFunc never returns an error, but we handle this anyway to make linter
+			// happy.
+			return
+		}
 	}
 }
 

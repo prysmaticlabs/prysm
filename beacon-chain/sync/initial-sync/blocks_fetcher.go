@@ -383,7 +383,11 @@ func (f *blocksFetcher) requestBlocks(
 	if err != nil {
 		return nil, err
 	}
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 
 	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
 	for {

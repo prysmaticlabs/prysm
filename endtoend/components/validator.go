@@ -98,7 +98,10 @@ func StartValidators(
 		t.Fatal(err)
 	}
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(validatorNum))
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(validatorNum))
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)

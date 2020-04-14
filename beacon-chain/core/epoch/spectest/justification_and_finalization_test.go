@@ -28,7 +28,7 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 
 func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, state *state.BeaconState) (*state.BeaconState, error) {
 	ctx := context.Background()
-	vp, bp := precompute.New(ctx, state)
+	vp, bp, _ := precompute.New(ctx, state)
 	_, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
 	if err != nil {
 		t.Fatal(err)

@@ -499,7 +499,9 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 	}
 	for _, h := range headers {
 		if h != nil {
-			s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h))
+			if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h)); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return headers, nil

@@ -66,11 +66,14 @@ type Service struct {
 func NewService(cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
-	cache, _ := ristretto.NewCache(&ristretto.Config{
+	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,
 		MaxCost:     1000,
 		BufferItems: 64,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	s := &Service{
 		ctx:           ctx,

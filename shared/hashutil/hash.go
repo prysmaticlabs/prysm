@@ -25,7 +25,10 @@ var sha256Pool = sync.Pool{New: func() interface{} {
 // Hash defines a function that returns the sha256 checksum of the data passed in.
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#hash
 func Hash(data []byte) [32]byte {
-	h := sha256Pool.Get().(hash.Hash)
+	h, ok := sha256Pool.Get().(hash.Hash)
+	if !ok {
+		h = sha256.New()
+	}
 	defer sha256Pool.Put(h)
 	h.Reset()
 
@@ -49,8 +52,12 @@ func Hash(data []byte) [32]byte {
 // Note: that this method is only more performant over
 // hashutil.Hash if the callback is used more than 5 times.
 func CustomSHA256Hasher() func([]byte) [32]byte {
-	hasher := sha256Pool.Get().(hash.Hash)
-	hasher.Reset()
+	hasher, ok := sha256Pool.Get().(hash.Hash)
+	if !ok {
+		hasher = sha256.New()
+	} else {
+		hasher.Reset()
+	}
 	var hash [32]byte
 
 	return func(data []byte) [32]byte {
@@ -76,7 +83,10 @@ var keccak256Pool = sync.Pool{New: func() interface{} {
 func HashKeccak256(data []byte) [32]byte {
 	var b [32]byte
 
-	h := keccak256Pool.Get().(hash.Hash)
+	h, ok := keccak256Pool.Get().(hash.Hash)
+	if !ok {
+		h = sha3.NewLegacyKeccak256()
+	}
 	defer keccak256Pool.Put(h)
 	h.Reset()
 

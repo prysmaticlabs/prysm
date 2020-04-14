@@ -28,7 +28,9 @@ func (r *Service) processPendingBlocksQueue() {
 	locker := new(sync.Mutex)
 	runutil.RunEvery(r.ctx, processPendingBlocksPeriod, func() {
 		locker.Lock()
-		r.processPendingBlocks(ctx)
+		if err := r.processPendingBlocks(ctx); err != nil {
+			log.WithError(err).Error("Failed to process pending blocks")
+		}
 		locker.Unlock()
 	})
 }
@@ -80,7 +82,11 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 			// have a head slot newer than the block slot we are requesting.
 			pid := pids[rand.Int()%len(pids)]
 			for _, p := range pids {
-				if cs, _ := r.p2p.Peers().ChainState(p); cs != nil && cs.HeadSlot >= uint64(s) {
+				cs, err := r.p2p.Peers().ChainState(p)
+				if err != nil {
+					return errors.Wrap(err, "failed to read chain state for peer")
+				}
+				if cs != nil && cs.HeadSlot >= uint64(s) {
 					pid = p
 					break
 				}
