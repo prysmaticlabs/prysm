@@ -5,10 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"regexp"
-	"strings"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,11 +14,6 @@ import (
 	pb "github.com/wealdtech/eth2-signer-api/pb/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-)
-
-const (
-	// maxMessageSize is the largest message that can be received over GRPC.  Set to 8MB, which handles ~128K keys.
-	maxMessageSize = 8 * 1024 * 1024
 )
 
 // Remote is a key manager that accesses a remote wallet daemon.
@@ -123,8 +115,6 @@ func NewRemoteWallet(input string) (KeyManager, string, error) {
 	grpcOpts := []grpc.DialOption{
 		// Require TLS with client certificate.
 		grpc.WithTransportCredentials(clientCreds),
-		// Receive large messages without erroring.
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMessageSize)),
 	}
 
 	conn, err := grpc.Dial(opts.Location, grpcOpts...)
@@ -177,9 +167,9 @@ func (km *Remote) SignGeneric(pubKey [48]byte, root [32]byte, domain [32]byte) (
 		return nil, err
 	}
 	switch resp.State {
-	case pb.ResponseState_DENIED:
+	case pb.SignState_DENIED:
 		return nil, ErrDenied
-	case pb.ResponseState_FAILED:
+	case pb.SignState_FAILED:
 		return nil, ErrCannotSign
 	}
 	return bls.SignatureFromBytes(resp.Signature)
@@ -208,9 +198,9 @@ func (km *Remote) SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.Bea
 		return nil, err
 	}
 	switch resp.State {
-	case pb.ResponseState_DENIED:
+	case pb.SignState_DENIED:
 		return nil, ErrDenied
-	case pb.ResponseState_FAILED:
+	case pb.SignState_FAILED:
 		return nil, ErrCannotSign
 	}
 	return bls.SignatureFromBytes(resp.Signature)
@@ -246,9 +236,9 @@ func (km *Remote) SignAttestation(pubKey [48]byte, domain [32]byte, data *ethpb.
 		return nil, err
 	}
 	switch resp.State {
-	case pb.ResponseState_DENIED:
+	case pb.SignState_DENIED:
 		return nil, ErrDenied
-	case pb.ResponseState_FAILED:
+	case pb.SignState_FAILED:
 		return nil, ErrCannotSign
 	}
 	return bls.SignatureFromBytes(resp.Signature)
@@ -260,30 +250,12 @@ func (km *Remote) RefreshValidatingKeys() error {
 	listAccountsReq := &pb.ListAccountsRequest{
 		Paths: km.paths,
 	}
-	resp, err := listerClient.ListAccounts(context.Background(), listAccountsReq)
+	accountsResp, err := listerClient.ListAccounts(context.Background(), listAccountsReq)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	if resp.State == pb.ResponseState_DENIED {
-		return errors.New("attempt to fetch keys denied")
-	}
-	if resp.State == pb.ResponseState_FAILED {
-		return errors.New("attempt to fetch keys failed")
-	}
-	verificationRegexes := pathsToVerificationRegexes(km.paths)
-	accounts := make(map[[48]byte]*accountInfo, len(resp.Accounts))
-	for _, account := range resp.Accounts {
-		verified := false
-		for _, verificationRegex := range verificationRegexes {
-			if verificationRegex.Match([]byte(account.Name)) {
-				verified = true
-				break
-			}
-		}
-		if !verified {
-			log.WithField("path", account.Name).Warn("Received unwanted account from server; ignoring")
-			continue
-		}
+	accounts := make(map[[48]byte]*accountInfo, len(accountsResp.Accounts))
+	for _, account := range accountsResp.Accounts {
 		account := &accountInfo{
 			Name:   account.Name,
 			PubKey: account.PublicKey,
@@ -292,36 +264,4 @@ func (km *Remote) RefreshValidatingKeys() error {
 	}
 	km.accounts = accounts
 	return nil
-}
-
-// pathsToVerificationRegexes turns path specifiers in to regexes to ensure accounts we are given are good.
-func pathsToVerificationRegexes(paths []string) []*regexp.Regexp {
-	regexes := make([]*regexp.Regexp, 0, len(paths))
-	for _, path := range paths {
-		log := log.WithField("path", path)
-		parts := strings.Split(path, "/")
-		if len(parts) == 0 || len(parts[0]) == 0 {
-			log.Debug("Invalid path")
-			continue
-		}
-		if len(parts) == 1 {
-			parts = append(parts, ".*")
-		}
-		if strings.HasPrefix(parts[1], "^") {
-			parts[1] = parts[1][1:]
-		}
-		var specifier string
-		if strings.HasSuffix(parts[1], "$") {
-			specifier = fmt.Sprintf("^%s/%s", parts[0], parts[1])
-		} else {
-			specifier = fmt.Sprintf("^%s/%s$", parts[0], parts[1])
-		}
-		regex, err := regexp.Compile(specifier)
-		if err != nil {
-			log.WithField("specifier", specifier).WithError(err).Warn("Invalid path regex")
-			continue
-		}
-		regexes = append(regexes, regex)
-	}
-	return regexes
 }
