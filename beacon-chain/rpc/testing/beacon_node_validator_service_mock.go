@@ -2,7 +2,7 @@
 // Source: github.com/prysmaticlabs/ethereumapis/eth/v1alpha1 (interfaces: BeaconNodeValidator_WaitForSyncedServer,BeaconNodeValidator_WaitForActivationServer,BeaconNodeValidator_WaitForChainStartServer)
 
 // Package mock is a generated GoMock package.
-package mock
+package testing
 
 import (
 	context "context"

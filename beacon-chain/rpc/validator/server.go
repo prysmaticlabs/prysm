@@ -220,7 +220,10 @@ func (vs *Server) WaitForSynced(req *ptypes.Empty, stream ethpb.BeaconNodeValida
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Synced {
-				data := event.Data.(*statefeed.ChainStartedData)
+				data, ok := event.Data.(*statefeed.SyncedData)
+				if !ok {
+					return errors.New("event data is not type *statefeed.SyncedData")
+				}
 				log.WithField("starttime", data.StartTime).Debug("Received sync completed event")
 				log.Info("Sending genesis time notification to connected validator clients")
 				res := &ethpb.SyncedResponse{
