@@ -20,7 +20,9 @@ func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	tmp := fmt.Sprintf("%s/datadirtest2", testutil.TempDir())
-	os.RemoveAll(tmp)
+	if err := os.RemoveAll(tmp); err != nil {
+		t.Log(err)
+	}
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -42,5 +44,7 @@ func TestNodeClose_OK(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Stopping beacon node")
 
-	os.RemoveAll(tmp)
+	if err := os.RemoveAll(tmp); err != nil {
+		t.Log(err)
+	}
 }

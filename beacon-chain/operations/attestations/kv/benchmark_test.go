@@ -13,7 +13,11 @@ func BenchmarkAttCaches(b *testing.B) {
 	att := &ethpb.Attestation{}
 
 	for i := 0; i < b.N; i++ {
-		ac.SaveUnaggregatedAttestation(att)
-		ac.DeleteAggregatedAttestation(att)
+		if err := ac.SaveUnaggregatedAttestation(att); err != nil {
+			b.Error(err)
+		}
+		if err := ac.DeleteAggregatedAttestation(att); err != nil {
+			b.Error(err)
+		}
 	}
 }

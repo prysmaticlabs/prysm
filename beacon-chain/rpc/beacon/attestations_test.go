@@ -588,9 +588,6 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
 		indexedAtts[i] = idxAtt
 	}
 
@@ -603,7 +600,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		StateGen: stategen.New(db, summaryCache),
 	}
 	root := bytesutil.ToBytes32([]byte("root"))
-	db.SaveState(ctx, state, root)
+	if err := db.SaveState(ctx, state, root); err != nil {
+		t.Fatal(err)
+	}
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -670,14 +669,6 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	// We setup 128 validators.
 	numValidators := 128
 	state := setupActiveValidators(t, db, numValidators)
-
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	if err := state.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
 	if err := state.SetSlot(startSlot); err != nil {
 		t.Fatal(err)
 	}
@@ -701,9 +692,6 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
 		indexedAtts[i] = idxAtt
 	}
 
@@ -713,7 +701,9 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 			Genesis: time.Now(),
 		},
 	}
-	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
+		t.Fatal(err)
+	}
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,
@@ -990,9 +980,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		att := aggAtts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
 		indexedAtts[i] = idxAtt
 	}
 

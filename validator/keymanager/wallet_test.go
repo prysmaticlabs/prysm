@@ -51,7 +51,11 @@ func wallet(t *testing.T, opts string) keymanager.KeyManager {
 
 func TestMultiplePassphrases(t *testing.T) {
 	path := SetupWallet(t)
-	defer os.RemoveAll(path)
+	defer func() {
+		if err := os.RemoveAll(path); err != nil {
+			t.Log(err)
+		}
+	}()
 	tests := []struct {
 		name     string
 		wallet   keymanager.KeyManager

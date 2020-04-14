@@ -25,7 +25,9 @@ func TestSaveHotState_AlreadyHas(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'A'}
 
 	// Pre cache the hot state.
@@ -52,7 +54,9 @@ func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'A'}
 
 	if err := service.saveHotState(ctx, r, beaconState); err != nil {
@@ -77,13 +81,18 @@ func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1); err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'A'}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	gRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -131,8 +140,13 @@ func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, _ := ssz.HashTreeRoot(blk.Block)
-	service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot)
+	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -164,8 +178,13 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, _ := ssz.HashTreeRoot(blk.Block)
-	service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot)
+	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +218,10 @@ func TestLoadHoteStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	gRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}

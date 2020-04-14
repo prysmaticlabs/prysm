@@ -8,9 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -26,7 +24,9 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	}
 
 	st := testutil.NewBeaconState()
-	st.SetSlot(100)
+	if err := st.SetSlot(100); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.SaveState(context.Background(), st, r); err != nil {
 		t.Fatal(err)
@@ -63,7 +63,9 @@ func TestHeadState_CanSaveRetrieve(t *testing.T) {
 	headRoot := [32]byte{'A'}
 
 	st := testutil.NewBeaconState()
-	st.SetSlot(100)
+	if err := st.SetSlot(100); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.SaveState(context.Background(), st, headRoot); err != nil {
 		t.Fatal(err)
@@ -90,7 +92,9 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 	headRoot := [32]byte{'B'}
 
 	st := testutil.NewBeaconState()
-	st.SetSlot(1)
+	if err := st.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.SaveGenesisBlockRoot(context.Background(), headRoot); err != nil {
 		t.Fatal(err)
@@ -143,7 +147,9 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 			t.Fatal(err)
 		}
 		st := testutil.NewBeaconState()
-		st.SetSlot(uint64(i))
+		if err := st.SetSlot(uint64(i)); err != nil {
+			t.Fatal(err)
+		}
 		if err := db.SaveState(context.Background(), st, r); err != nil {
 			t.Fatal(err)
 		}
@@ -184,7 +190,9 @@ func TestStore_DeleteGenesisState(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := testutil.NewBeaconState()
-	st.SetSlot(100)
+	if err := st.SetSlot(100); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, st, genesisBlockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +228,9 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	}
 
 	finalizedState := testutil.NewBeaconState()
-	finalizedState.SetSlot(100)
+	if err := finalizedState.SetSlot(100); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, finalizedState, finalizedBlockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +270,9 @@ func TestStore_DeleteHeadState(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := testutil.NewBeaconState()
-	st.SetSlot(100)
+	if err := st.SetSlot(100); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, st, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +290,10 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 	defer teardownDB(t, db)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, _ := ssz.HashTreeRoot(b.Block)
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -292,12 +307,17 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 	s0 := st.InnerStateUnsafe()
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 999}}
-	r1, _ := ssz.HashTreeRoot(b.Block)
+	r1, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
 	st = testutil.NewBeaconState()
-	st.SetSlot(999)
+	if err := st.SetSlot(999); err != nil {
+		t.Fatal(err)
+	}
 	s1 := st.InnerStateUnsafe()
 	if err := db.SaveState(context.Background(), st, r1); err != nil {
 		t.Fatal(err)
@@ -312,12 +332,17 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 	}
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
-	r2, _ := ssz.HashTreeRoot(b.Block)
+	r2, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
 	st = testutil.NewBeaconState()
-	st.SetSlot(1000)
+	if err := st.SetSlot(1000); err != nil {
+		t.Fatal(err)
+	}
 	s2 := st.InnerStateUnsafe()
 	if err := db.SaveState(context.Background(), st, r2); err != nil {
 		t.Fatal(err)
@@ -331,7 +356,9 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s2)
 	}
 
-	db.DeleteState(context.Background(), r2)
+	if err := db.DeleteState(context.Background(), r2); err != nil {
+		t.Fatal(err)
+	}
 	highest, err = db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -340,7 +367,9 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s1)
 	}
 
-	db.DeleteState(context.Background(), r1)
+	if err := db.DeleteState(context.Background(), r1); err != nil {
+		t.Fatal(err)
+	}
 	highest, err = db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -359,24 +388,34 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	defer teardownDB(t, db)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, _ := ssz.HashTreeRoot(b.Block)
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
 	st := testutil.NewBeaconState()
-	st.SetSlot(1)
+	if err := st.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	s0 := st.InnerStateUnsafe()
 	if err := db.SaveState(context.Background(), st, r); err != nil {
 		t.Fatal(err)
 	}
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
-	r1, _ := ssz.HashTreeRoot(b.Block)
+	r1, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
 	st = testutil.NewBeaconState()
-	st.SetSlot(100)
+	if err := st.SetSlot(100); err != nil {
+		t.Fatal(err)
+	}
 	s1 := st.InnerStateUnsafe()
 	if err := db.SaveState(context.Background(), st, r1); err != nil {
 		t.Fatal(err)
@@ -391,12 +430,17 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	}
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
-	r2, _ := ssz.HashTreeRoot(b.Block)
+	r2, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
 	st = testutil.NewBeaconState()
-	st.SetSlot(1000)
+	if err := st.SetSlot(1000); err != nil {
+		t.Fatal(err)
+	}
 	s2 := st.InnerStateUnsafe()
 
 	if err := db.SaveState(context.Background(), st, r2); err != nil {
@@ -434,17 +478,26 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 
 	genesisState := testutil.NewBeaconState()
 	genesisRoot := [32]byte{'a'}
-	db.SaveGenesisBlockRoot(context.Background(), genesisRoot)
-	db.SaveState(context.Background(), genesisState, genesisRoot)
+	if err := db.SaveGenesisBlockRoot(context.Background(), genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), genesisState, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, _ := ssz.HashTreeRoot(b.Block)
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
 
 	st := testutil.NewBeaconState()
-	st.SetSlot(1)
+	if err := st.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(context.Background(), st, r); err != nil {
 		t.Fatal(err)
 	}
@@ -470,18 +523,5 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	}
 	if !proto.Equal(highest[0].InnerStateUnsafe(), genesisState.InnerStateUnsafe()) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, genesisState.InnerStateUnsafe())
-	}
-}
-
-func initializeBeaconState(slot uint64) *pb.BeaconState {
-	return &pb.BeaconState{
-		Slot:                      slot,
-		GenesisValidatorsRoot:     make([]byte, 32),
-		BlockRoots:                make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		StateRoots:                make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Slashings:                 make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		PreviousEpochAttestations: make([]*pb.PendingAttestation, 0, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch),
-		CurrentEpochAttestations:  make([]*pb.PendingAttestation, 0, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch),
 	}
 }

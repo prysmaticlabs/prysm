@@ -86,7 +86,9 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	beaconState.SetSlot(currentSlot)
+	if err := beaconState.SetSlot(currentSlot); err != nil {
+		t.Fatal(err)
+	}
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{

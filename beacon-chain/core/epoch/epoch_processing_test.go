@@ -63,7 +63,9 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	slashedValidator := indices[0]
 	validators = state.Validators()
 	validators[slashedValidator].Slashed = true
-	state.SetValidators(validators)
+	if err = state.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
 	indices, err = unslashedAttestingIndices(state, atts)
 	if err != nil {
 		t.Fatal(err)
@@ -311,17 +313,26 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s := buildState(params.BeaconConfig().SlotsPerHistoricalRoot-1, params.BeaconConfig().SlotsPerEpoch)
 	ce := helpers.CurrentEpoch(s)
 	ne := ce + 1
-	s.SetEth1DataVotes([]*ethpb.Eth1Data{})
+	if err := s.SetEth1DataVotes([]*ethpb.Eth1Data{}); err != nil {
+		t.Fatal(err)
+	}
 	balances := s.Balances()
 	balances[0] = 31.75 * 1e9
 	balances[1] = 31.74 * 1e9
-	s.SetBalances(balances)
+	if err := s.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
+
 	slashings := s.Slashings()
 	slashings[ce] = 0
-	s.SetSlashings(slashings)
+	if err := s.SetSlashings(slashings); err != nil {
+		t.Fatal(err)
+	}
 	mixes := s.RandaoMixes()
 	mixes[ce] = []byte{'A'}
-	s.SetRandaoMixes(mixes)
+	if err := s.SetRandaoMixes(mixes); err != nil {
+		t.Fatal(err)
+	}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
@@ -343,7 +354,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 
 	// Verify randao is correctly updated in the right position.
-	if mix, _ := newS.RandaoMixAtIndex(ne); bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
+	if mix, err := newS.RandaoMixAtIndex(ne); err != nil || bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("latest RANDAO still zero hashes")
 	}
 
