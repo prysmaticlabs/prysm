@@ -75,10 +75,15 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
-	s, _ := NewService(&Config{})
+	s, err := NewService(&Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	s.started = true
 	s.dv5Listener = &mockListener{}
-	_ = s.Stop()
+	if err := s.Stop(); err != nil {
+		t.Error(err)
+	}
 
 	if s.started != false {
 		t.Error("Expected Service.started to be false, got true")
@@ -86,8 +91,13 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
-	s, _ := NewService(&Config{})
-	_ = s.Stop()
+	s, err := NewService(&Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Stop(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
@@ -204,7 +214,9 @@ func TestListenForNewNodes(t *testing.T) {
 	// close peers upon exit of test
 	defer func() {
 		for _, h := range hosts {
-			_ = h.Close()
+			if err := h.Close(); err != nil {
+				t.Log(err)
+			}
 		}
 	}()
 
@@ -244,14 +256,22 @@ func TestListenForNewNodes(t *testing.T) {
 
 func TestPeer_Disconnect(t *testing.T) {
 	h1, _, _ := createHost(t, 5000)
-	defer h1.Close()
+	defer func() {
+		if err := h1.Close(); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	s := &Service{
 		host: h1,
 	}
 
 	h2, _, ipaddr := createHost(t, 5001)
-	defer h2.Close()
+	defer func() {
+		if err := h2.Close(); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	h2Addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipaddr, 5001, h2.ID()))
 	if err != nil {

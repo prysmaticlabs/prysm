@@ -24,7 +24,9 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 
 	// This goes to cold section.
 	slot := uint64(1)
-	beaconState.SetSlot(slot)
+	if err := beaconState.SetSlot(slot); err != nil {
+		t.Fatal(err)
+	}
 	service.splitInfo.slot = slot + 1
 
 	r := [32]byte{'a'}
@@ -53,7 +55,9 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 
 	r := [32]byte{'a'}
 	if err := service.SaveState(ctx, r, beaconState); err != nil {
@@ -79,7 +83,9 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 
 	// Cache the state prior.
 	r := [32]byte{'a'}

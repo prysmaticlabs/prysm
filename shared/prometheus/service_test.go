@@ -26,7 +26,10 @@ func TestLifecycle(t *testing.T) {
 		t.Error("Unexpected content length 0")
 	}
 
-	prometheusService.Stop()
+	err = prometheusService.Stop()
+	if err != nil {
+		t.Error(err)
+	}
 	// Give service time to stop.
 	time.Sleep(time.Second)
 

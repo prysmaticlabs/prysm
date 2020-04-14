@@ -130,7 +130,10 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidProposerSlashing(t)
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: s},
@@ -169,7 +172,10 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: state},

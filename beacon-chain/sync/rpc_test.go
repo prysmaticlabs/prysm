@@ -54,7 +54,10 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	wg.Add(1)
 	topic := "/testing/foobar/1"
 	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-		m := msg.(*pb.TestSimpleMessage)
+		m, ok := msg.(*pb.TestSimpleMessage)
+		if !ok {
+			t.Error("Object is not of type *pb.TestSimpleMessage")
+		}
 		if !bytes.Equal(m.Foo, []byte("foo")) {
 			t.Errorf("Unexpected incoming message: %+v", m)
 		}

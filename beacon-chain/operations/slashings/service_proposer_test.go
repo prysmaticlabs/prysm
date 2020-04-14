@@ -50,11 +50,20 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	}
 
 	// We mark the following validators with some preconditions.
-	exitedVal, _ := beaconState.ValidatorAtIndex(uint64(2))
+	exitedVal, err := beaconState.ValidatorAtIndex(uint64(2))
+	if err != nil {
+		t.Fatal(err)
+	}
 	exitedVal.ExitEpoch = 0
-	futureExitedVal, _ := beaconState.ValidatorAtIndex(uint64(4))
+	futureExitedVal, err := beaconState.ValidatorAtIndex(uint64(4))
+	if err != nil {
+		t.Fatal(err)
+	}
 	futureExitedVal.ExitEpoch = 17
-	slashedVal, _ := beaconState.ValidatorAtIndex(uint64(5))
+	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
+	if err != nil {
+		t.Fatal(err)
+	}
 	slashedVal.Slashed = true
 	if err := beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal); err != nil {
 		t.Fatal(err)

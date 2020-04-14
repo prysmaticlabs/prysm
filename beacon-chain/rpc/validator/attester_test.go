@@ -68,8 +68,12 @@ func TestProposeAttestation_OK(t *testing.T) {
 	}
 
 	state := testutil.NewBeaconState()
-	state.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1)
-	state.SetValidators(validators)
+	if err := state.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.SaveState(ctx, state, root); err != nil {
 		t.Fatal(err)
@@ -113,7 +117,7 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 		},
 	}
 	wanted := "Incorrect attestation signature"
-	if _, err := attesterServer.ProposeAttestation(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+	if _, err := attesterServer.ProposeAttestation(context.Background(), req); err == nil || !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Did not get wanted error")
 	}
 }
@@ -146,17 +150,23 @@ func TestGetAttestationData_OK(t *testing.T) {
 	}
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	beaconState := testutil.NewBeaconState()
-	beaconState.SetSlot(slot)
-	beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	if err := beaconState.SetSlot(slot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 2,
 		Root:  justifiedRoot[:],
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	beaconState.SetBlockRoots(blockRoots)
+	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
+		t.Fatal(err)
+	}
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -218,7 +228,7 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
-	if strings.Contains(err.Error(), "syncing to latest head") {
+	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
 	}
 }
@@ -267,16 +277,22 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	slot := uint64(10000)
 
 	beaconState := testutil.NewBeaconState()
-	beaconState.SetSlot(slot)
-	beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	if err := beaconState.SetSlot(slot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: helpers.SlotToEpoch(1500),
 		Root:  justifiedBlockRoot[:],
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-	beaconState.SetBlockRoots(blockRoots)
+	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
+		t.Fatal(err)
+	}
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -331,7 +347,10 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &pbp2p.BeaconState{Slot: 100}
-	state, _ := beaconstate.InitializeFromProto(s)
+	state, err := beaconstate.InitializeFromProto(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
@@ -444,26 +463,39 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
+
 	beaconState := testutil.NewBeaconState()
-	beaconState.SetSlot(slot)
-	beaconState.SetGenesisTime(uint64(time.Now().Unix() - int64((slot * params.BeaconConfig().SecondsPerSlot))))
-	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	if err := beaconState.SetSlot(slot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix() - int64(slot*params.BeaconConfig().SecondsPerSlot))); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		ParentRoot: blockRoot2[:],
 		StateRoot:  make([]byte, 32),
 		BodyRoot:   make([]byte, 32),
-	})
-	beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 2,
 		Root:  justifiedRoot[:],
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	beaconState.SetBlockRoots(blockRoots)
+	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
+		t.Fatal(err)
+	}
 
 	beaconState2 := beaconState.Copy()
-	beaconState2.SetSlot(beaconState2.Slot() - 1)
+	if err := beaconState2.SetSlot(beaconState2.Slot() - 1); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, beaconState2, blockRoot2); err != nil {
 		t.Fatal(err)
 	}
@@ -545,17 +577,24 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
+
 	beaconState := testutil.NewBeaconState()
-	beaconState.SetSlot(slot)
-	beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	if err := beaconState.SetSlot(slot); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
 		Epoch: 0,
 		Root:  justifiedRoot[:],
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	blockRoots := beaconState.BlockRoots()
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	beaconState.SetBlockRoots(blockRoots)
+	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
+		t.Fatal(err)
+	}
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}

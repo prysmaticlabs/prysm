@@ -17,10 +17,9 @@ func TestHeadSlot_DataRace(t *testing.T) {
 		beaconDB: db,
 	}
 	go func() {
-		s.saveHead(
-			context.Background(),
-			[32]byte{},
-		)
+		if err := s.saveHead(context.Background(), [32]byte{}, ); err != nil {
+			t.Fatal(err)
+		}
 	}()
 	s.HeadSlot()
 }
@@ -34,10 +33,9 @@ func TestHeadRoot_DataRace(t *testing.T) {
 		stateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	go func() {
-		s.saveHead(
-			context.Background(),
-			[32]byte{},
-		)
+		if err := s.saveHead(context.Background(), [32]byte{}, ); err != nil {
+			t.Fatal(err)
+		}
 	}()
 	if _, err := s.HeadRoot(context.Background()); err != nil {
 		t.Fatal(err)
@@ -53,12 +51,13 @@ func TestHeadBlock_DataRace(t *testing.T) {
 		stateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	go func() {
-		s.saveHead(
-			context.Background(),
-			[32]byte{},
-		)
+		if err := s.saveHead(context.Background(), [32]byte{}, ); err != nil {
+			t.Fatal(err)
+		}
 	}()
-	s.HeadBlock(context.Background())
+	if _, err := s.HeadBlock(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestHeadState_DataRace(t *testing.T) {
@@ -69,10 +68,11 @@ func TestHeadState_DataRace(t *testing.T) {
 		stateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	go func() {
-		s.saveHead(
-			context.Background(),
-			[32]byte{},
-		)
+		if err := s.saveHead(context.Background(), [32]byte{}, ); err != nil {
+			t.Fatal(err)
+		}
 	}()
-	s.HeadState(context.Background())
+	if _, err := s.HeadState(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 }

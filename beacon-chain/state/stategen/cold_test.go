@@ -21,7 +21,9 @@ func TestSaveColdState_NonArchivedPoint(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(1)
+	if err := beaconState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := service.saveColdState(ctx, [32]byte{}, beaconState); err != errSlotNonArchivedPoint {
 		t.Error("Did not get wanted error")
@@ -36,7 +38,9 @@ func TestSaveColdState_CanSave(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(1)
+	if err := beaconState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 
 	r := [32]byte{'a'}
 	if err := service.saveColdState(ctx, r, beaconState); err != nil {
@@ -73,8 +77,13 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, _ := ssz.HashTreeRoot(blk.Block)
-	service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot)
+	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -104,8 +113,13 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, _ := ssz.HashTreeRoot(blk.Block)
-	service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot)
+	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}

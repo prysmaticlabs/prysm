@@ -15,7 +15,10 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	state.SkipSlotCache.Enable()
 	defer state.SkipSlotCache.Disable()
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	originalState, _ := beaconstate.InitializeFromProto(bState.CloneInnerState())
+	originalState, err := beaconstate.InitializeFromProto(bState.CloneInnerState())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
