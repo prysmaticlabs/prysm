@@ -23,17 +23,10 @@ func TestBlockSignature(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-<<<<<<< HEAD
-	beaconState.SetSlot(beaconState.Slot() - 1)
-=======
+
 	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
-		t.Fatal(err)
-	}
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
-	if err != nil {
 		t.Error(err)
 	}
->>>>>>> 748d513c627bd072221f9ce4b897a7f58bd47ebd
 	epoch := helpers.SlotToEpoch(block.Block.Slot)
 	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {
