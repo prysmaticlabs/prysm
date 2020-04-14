@@ -11,11 +11,11 @@ def bls_dependencies():
     _maybe(
         http_archive,
         name = "herumi_bls_eth_go_binary",
-        strip_prefix = "bls-eth-go-binary-da18d415993a059052dfed16711f2b3bd03c34b8",
+        strip_prefix = "bls-eth-go-binary-f58f8b8bd66f1d286d650e9b39b9629411067f82",
         urls = [
-            "https://github.com/herumi/bls-eth-go-binary/archive/da18d415993a059052dfed16711f2b3bd03c34b8.tar.gz",
+            "https://github.com/herumi/bls-eth-go-binary/archive/f58f8b8bd66f1d286d650e9b39b9629411067f82.tar.gz",
         ],
-        sha256 = "69080ca634f8aaeb0950e19db218811f4bb920a054232e147669ea574ba11ef0",
+        sha256 = "1a61363fdc33018d4334481410082c804f5aa083c4454b7eef3b2395a0df98f1",
         build_file = "@prysm//third_party/herumi:bls_eth_go_binary.BUILD",
     )
     _maybe(
