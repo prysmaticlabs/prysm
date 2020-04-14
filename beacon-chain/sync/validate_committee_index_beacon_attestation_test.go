@@ -54,8 +54,13 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	savedState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
-	db.SaveState(context.Background(), savedState, validBlockRoot)
+	savedState, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), savedState, validBlockRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name                      string

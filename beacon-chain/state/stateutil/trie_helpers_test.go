@@ -68,8 +68,12 @@ func TestRecomputeFromLayer_FixedSizedArray(t *testing.T) {
 
 	changedIdx := []uint64{24, 41}
 	changedRoots := [][32]byte{{'A', 'B', 'C'}, {'D', 'E', 'F'}}
-	newState.UpdateBlockRootAtIndex(changedIdx[0], changedRoots[0])
-	newState.UpdateBlockRootAtIndex(changedIdx[1], changedRoots[1])
+	if err := newState.UpdateBlockRootAtIndex(changedIdx[0], changedRoots[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := newState.UpdateBlockRootAtIndex(changedIdx[1], changedRoots[1]); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedRoot, err := stateutil.RootsArrayHashTreeRoot(newState.BlockRoots(), params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
 	if err != nil {
@@ -114,8 +118,12 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	val2.ExitEpoch = 40
 
 	changedVals := []*ethpb.Validator{val1, val2}
-	newState.UpdateValidatorAtIndex(changedIdx[0], changedVals[0])
-	newState.UpdateValidatorAtIndex(changedIdx[1], changedVals[1])
+	if err := newState.UpdateValidatorAtIndex(changedIdx[0], changedVals[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := newState.UpdateValidatorAtIndex(changedIdx[1], changedVals[1]); err != nil {
+		t.Fatal(err)
+	}
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	if err != nil {

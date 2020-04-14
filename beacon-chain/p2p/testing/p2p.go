@@ -83,7 +83,11 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 	if err != nil {
 		p.t.Fatalf("Failed to open stream %v", err)
 	}
-	defer s.Close()
+	defer func() {
+		if err := s.Close(); err != nil {
+			p.t.Log(err)
+		}
+	}()
 
 	n, err := p.Encoding().EncodeWithLength(s, msg)
 	if err != nil {
@@ -184,7 +188,9 @@ func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
 				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
-				f(context.Background(), conn.RemotePeer())
+				if err := f(context.Background(), conn.RemotePeer()); err != nil {
+					logrus.WithError(err).Debug("Unable to invoke callback")
+				}
 				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 			}()
 		},

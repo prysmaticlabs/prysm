@@ -1437,12 +1437,15 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 			PublicKey:         []byte("2"),
 		},
 	}
-	headState, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators: validators,
 		FinalizedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,

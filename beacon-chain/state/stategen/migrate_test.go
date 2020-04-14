@@ -54,14 +54,19 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	service.slotsPerArchivedPoint = 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 	b := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{Slot: 2},
 	}
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, _ := ssz.HashTreeRoot(b.Block)
+	bRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:], Slot: 2}); err != nil {
 		t.Fatal(err)
 	}
@@ -70,14 +75,19 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	}
 
 	newBeaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	newBeaconState.SetSlot(3)
+	if err := newBeaconState.SetSlot(3); err != nil {
+		t.Fatal(err)
+	}
 	b = &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{Slot: 3},
 	}
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, _ = ssz.HashTreeRoot(b.Block)
+	bRoot, err = ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bRoot[:], Slot: 3}); err != nil {
 		t.Fatal(err)
 	}

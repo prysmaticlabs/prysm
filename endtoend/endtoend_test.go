@@ -62,7 +62,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 			t.Fatalf("Failed to dial: %v", err)
 		}
 		conns[i] = conn
-		defer conn.Close()
+		defer func() {
+			if err := conn.Close(); err != nil {
+				t.Log(err)
+			}
+		}()
 	}
 	nodeClient := eth.NewNodeClient(conns[0])
 	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})

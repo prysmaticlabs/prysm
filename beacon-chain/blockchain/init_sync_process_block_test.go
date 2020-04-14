@@ -30,10 +30,15 @@ func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := uint64(0); i < 500; i++ {
-		st.SetSlot(i)
+		if err := st.SetSlot(i); err != nil {
+			t.Fatal(err)
+		}
 		root := [32]byte{}
 		copy(root[:], bytesutil.Bytes32(i))
 		service.initSyncState[root] = st.Copy()
@@ -43,14 +48,18 @@ func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
 	}
 	lastIndex := len(service.boundaryRoots) - 1
 	for i := uint64(500); i < 2000; i++ {
-		st.SetSlot(i)
+		if err := st.SetSlot(i); err != nil {
+			t.Fatal(err)
+		}
 		root := [32]byte{}
 		copy(root[:], bytesutil.Bytes32(i))
 		service.initSyncState[root] = st.Copy()
 	}
 	// Set current state.
 	latestSlot := helpers.RoundUpToNearestEpoch(2000)
-	st.SetSlot(latestSlot)
+	if err := st.SetSlot(latestSlot); err != nil {
+		t.Fatal(err)
+	}
 	lastRoot := [32]byte{}
 	copy(lastRoot[:], bytesutil.Bytes32(latestSlot))
 
@@ -85,10 +94,15 @@ func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := uint64(0); i < 500; i++ {
-		st.SetSlot(i)
+		if err := st.SetSlot(i); err != nil {
+			t.Fatal(err)
+		}
 		root := [32]byte{}
 		copy(root[:], bytesutil.Bytes32(i))
 		service.initSyncState[root] = st.Copy()
@@ -98,7 +112,9 @@ func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 	}
 	lastIndex := len(service.boundaryRoots) - 1
 	for i := uint64(500); i < 2000; i++ {
-		st.SetSlot(i)
+		if err := st.SetSlot(i); err != nil {
+			t.Fatal(err)
+		}
 		root := [32]byte{}
 		copy(root[:], bytesutil.Bytes32(i))
 		// save only for offsetted slots
@@ -108,7 +124,9 @@ func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 	}
 	// Set current state.
 	latestSlot := helpers.RoundUpToNearestEpoch(2000)
-	st.SetSlot(latestSlot)
+	if err := st.SetSlot(latestSlot); err != nil {
+		t.Fatal(err)
+	}
 	lastRoot := [32]byte{}
 	copy(lastRoot[:], bytesutil.Bytes32(latestSlot))
 
@@ -150,10 +168,15 @@ func TestPruneOldStates_AlreadyFinalized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := uint64(100); i < 200; i++ {
-		st.SetSlot(i)
+		if err := st.SetSlot(i); err != nil {
+			t.Fatal(err)
+		}
 		root := [32]byte{}
 		copy(root[:], bytesutil.Bytes32(i))
 		service.initSyncState[root] = st.Copy()
@@ -184,10 +207,15 @@ func TestPruneNonBoundary_CanPrune(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := uint64(0); i < 2000; i++ {
-		st.SetSlot(i)
+		if err := st.SetSlot(i); err != nil {
+			t.Fatal(err)
+		}
 		root := [32]byte{}
 		copy(root[:], bytesutil.Bytes32(i))
 		service.initSyncState[root] = st.Copy()
@@ -223,19 +251,28 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 	})
-	beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)); err != nil {
+		t.Fatal(err)
+	}
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	mockRoot := [32]byte{}
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
-	beaconState.SetCurrentJustifiedCheckpoint(cp)
-	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
+	if err := beaconState.SetCurrentJustifiedCheckpoint(cp); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{}); err != nil {
+		t.Fatal(err)
+	}
 	err = db.SaveBlock(context.Background(), genesisBlock)
 	if err != nil {
 		t.Fatal(err)
