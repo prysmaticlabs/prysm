@@ -32,6 +32,6 @@ message ENRForkID {
  )
 */
 message MetaData {
-  uint64 seq_number =1;
-  bytes attnets = 2 [(gogoproto.moretags) = "ssz-size:\"64\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector64"];
+  uint64 seq_number = 1;
+  bytes attnets = 2 [(gogoproto.moretags) = "ssz-size:\"8\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector64"];
 }
