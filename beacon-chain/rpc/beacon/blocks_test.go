@@ -413,14 +413,29 @@ func TestServer_GetChainHead(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	finalizedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}}
-	db.SaveBlock(context.Background(), finalizedBlock)
-	fRoot, _ := ssz.HashTreeRoot(finalizedBlock.Block)
+	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
+		t.Fatal(err)
+	}
+	fRoot, err := ssz.HashTreeRoot(finalizedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	justifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}}
-	db.SaveBlock(context.Background(), justifiedBlock)
-	jRoot, _ := ssz.HashTreeRoot(justifiedBlock.Block)
+	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	jRoot, err := ssz.HashTreeRoot(justifiedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prevJustifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}}
-	db.SaveBlock(context.Background(), prevJustifiedBlock)
-	pjRoot, _ := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	pjRoot, err := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
@@ -517,14 +532,29 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	finalizedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}}
-	db.SaveBlock(context.Background(), finalizedBlock)
-	fRoot, _ := ssz.HashTreeRoot(finalizedBlock.Block)
+	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
+		t.Fatal(err)
+	}
+	fRoot, err := ssz.HashTreeRoot(finalizedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	justifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}}
-	db.SaveBlock(context.Background(), justifiedBlock)
-	jRoot, _ := ssz.HashTreeRoot(justifiedBlock.Block)
+	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	jRoot, err := ssz.HashTreeRoot(justifiedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	prevJustifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}}
-	db.SaveBlock(context.Background(), prevJustifiedBlock)
-	pjRoot, _ := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
+		t.Fatal(err)
+	}
+	pjRoot, err := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
@@ -537,7 +567,10 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
-	hRoot, _ := ssz.HashTreeRoot(b.Block)
+	hRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	chainService := &mock.ChainService{}
 	ctx := context.Background()

@@ -16,8 +16,16 @@ func TestNode_Builds(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
 	dir := testutil.TempDir() + "/keystore1"
-	defer os.RemoveAll(dir)
-	defer os.RemoveAll(testutil.TempDir() + "/datadir")
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Log(err)
+		}
+	}()
+	defer func() {
+		if err := os.RemoveAll(testutil.TempDir() + "/datadir"); err != nil {
+			t.Log(err)
+		}
+	}()
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")
 	set.String("verbosity", "debug", "log verbosity")

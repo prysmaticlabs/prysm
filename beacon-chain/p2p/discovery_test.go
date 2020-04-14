@@ -177,7 +177,9 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 
 	defer func() {
 		for _, h := range hosts {
-			_ = h.Close()
+			if err := h.Close(); err != nil {
+				t.Log(err)
+			}
 		}
 	}()
 
@@ -189,6 +191,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	exitRoutine := make(chan bool)
 	go func() {
 		s.Start()

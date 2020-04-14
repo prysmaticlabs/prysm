@@ -182,7 +182,9 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	}
 
 	s := testutil.NewBeaconState()
-	s.SetValidators(validators)
+	if err := s.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -277,8 +279,12 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 		t.Fatal(err)
 	}
 	s := testutil.NewBeaconState()
-	s.SetValidators(validators)
-	s.SetBalances(balances)
+	if err := s.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +362,9 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 		t.Fatal(err)
 	}
 	s := testutil.NewBeaconState()
-	s.SetValidators(validators)
+	if err := s.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +444,9 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		t.Fatal(err)
 	}
 	s := testutil.NewBeaconState()
-	s.SetValidators(validators)
+	if err := s.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
