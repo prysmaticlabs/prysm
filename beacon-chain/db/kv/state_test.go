@@ -294,7 +294,10 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 
 	s0 := &pb.BeaconState{Slot: 1}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, _ := ssz.HashTreeRoot(b.Block)
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +311,10 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 
 	s1 := &pb.BeaconState{Slot: 999}
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 999}}
-	r1, _ := ssz.HashTreeRoot(b.Block)
+	r1, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +336,10 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 
 	s2 := &pb.BeaconState{Slot: 1000}
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
-	r2, _ := ssz.HashTreeRoot(b.Block)
+	r2, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +359,9 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s2)
 	}
 
-	db.DeleteState(context.Background(), r2)
+	if err := db.DeleteState(context.Background(), r2); err != nil {
+		t.Fatal(err)
+	}
 	highest, err = db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -359,7 +370,9 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 		t.Errorf("Did not retrieve saved state: %v != %v", highest, s1)
 	}
 
-	db.DeleteState(context.Background(), r1)
+	if err := db.DeleteState(context.Background(), r1); err != nil {
+		t.Fatal(err)
+	}
 	highest, err = db.HighestSlotStates(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -375,7 +388,10 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 
 	s0 := &pb.BeaconState{Slot: 1}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, _ := ssz.HashTreeRoot(b.Block)
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +405,10 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 
 	s1 := &pb.BeaconState{Slot: 100}
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
-	r1, _ := ssz.HashTreeRoot(b.Block)
+	r1, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +430,10 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 
 	s2 := &pb.BeaconState{Slot: 1000}
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
-	r2, _ := ssz.HashTreeRoot(b.Block)
+	r2, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -458,12 +480,19 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 		t.Fatal(err)
 	}
 	genesisRoot := [32]byte{'a'}
-	db.SaveGenesisBlockRoot(context.Background(), genesisRoot)
-	db.SaveState(context.Background(), genesisState, genesisRoot)
+	if err := db.SaveGenesisBlockRoot(context.Background(), genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), genesisState, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	s0 := &pb.BeaconState{Slot: 1}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, _ := ssz.HashTreeRoot(b.Block)
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}

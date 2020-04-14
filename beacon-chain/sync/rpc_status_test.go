@@ -204,7 +204,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		log.WithField("status", out).Warn("sending status")
-		stream.Close()
+		if err := stream.Close(); err != nil {
+			t.Log(err)
+		}
 	})
 
 	numInactive1 := len(p1.Peers().Inactive())

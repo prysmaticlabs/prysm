@@ -10,7 +10,10 @@ import (
 func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	// This test showcases the logic on a the RandaoMixes field with the GC finalizer.
 
-	a, _ := InitializeFromProtoUnsafe(&p2ppb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if a.sharedFieldReferences[randaoMixes].refs != 1 {
 		t.Error("Expected a single reference for Randao mixes")
 	}
@@ -33,7 +36,9 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	if b.sharedFieldReferences[randaoMixes].refs != 2 {
 		t.Error("Expected 2 shared references to randao mixes")
 	}
-	b.UpdateRandaoMixesAtIndex([]byte("bar"), 0)
+	if err := b.UpdateRandaoMixesAtIndex([]byte("bar"), 0); err != nil {
+		t.Fatal(err)
+	}
 	if b.sharedFieldReferences[randaoMixes].refs != 1 || a.sharedFieldReferences[randaoMixes].refs != 1 {
 		t.Error("Expected 1 shared reference to randao mix for both a and b")
 	}

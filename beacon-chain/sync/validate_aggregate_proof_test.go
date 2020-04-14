@@ -171,10 +171,20 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.HashTreeRoot(b.Block)
-	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
-	db.SaveState(context.Background(), s, root)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), s, root); err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -252,8 +262,13 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -316,10 +331,20 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.HashTreeRoot(b.Block)
-	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
-	db.SaveState(context.Background(), s, root)
+	if err := db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), s, root); err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)

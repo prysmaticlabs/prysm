@@ -155,7 +155,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Start()
-	defer s.Stop()
+	defer func() {
+		if err := s.Stop(); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	// Wait for the nodes to have their local routing tables to be populated with the other nodes
 	time.Sleep(discoveryWaitTime)
@@ -232,7 +236,9 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 
 	defer func() {
 		for _, h := range hosts {
-			_ = h.Close()
+			if err := h.Close(); err != nil {
+				t.Log(err)
+			}
 		}
 	}()
 
@@ -247,7 +253,11 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 
 	s.Start()
 	s.dv5Listener = &mockListener{}
-	defer s.Stop()
+	defer func() {
+		if err := s.Stop(); err != nil {
+			t.Log(err)
+		}
+	}()
 	time.Sleep(100 * time.Millisecond)
 
 	peers := s.host.Network().Peers()

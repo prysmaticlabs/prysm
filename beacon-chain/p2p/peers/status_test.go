@@ -192,7 +192,10 @@ func TestPeerBadResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	{
-		bytes, _ := id.MarshalBinary()
+		bytes, err := id.MarshalBinary()
+		if err != nil {
+			t.Fatal(err)
+		}
 		fmt.Printf("%x\n", bytes)
 	}
 
@@ -322,15 +325,24 @@ func TestDecay(t *testing.T) {
 	p.Decay()
 
 	// Ensure the new values are as expected
-	badResponses1, _ := p.BadResponses(pid1)
+	badResponses1, err := p.BadResponses(pid1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if badResponses1 != 0 {
 		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses1)
 	}
-	badResponses2, _ := p.BadResponses(pid2)
+	badResponses2, err := p.BadResponses(pid2)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if badResponses2 != 0 {
 		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses2)
 	}
-	badResponses3, _ := p.BadResponses(pid3)
+	badResponses3, err := p.BadResponses(pid3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if badResponses3 != 1 {
 		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses3)
 	}
@@ -500,7 +512,9 @@ func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) pee
 	// Set up some peers with different states
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)
-	rand.Read(idBytes)
+	if _, err := rand.Read(idBytes); err != nil {
+		t.Fatal(err)
+	}
 	mhBytes = append(mhBytes, idBytes...)
 	id, err := peer.IDFromBytes(mhBytes)
 	if err != nil {
