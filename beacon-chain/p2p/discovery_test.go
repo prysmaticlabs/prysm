@@ -184,7 +184,6 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.TCPPort = 14500
 	cfg.UDPPort = 14501
 	cfg.StaticPeers = staticPeers
-	cfg.BeaconDB = db
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	s, err := NewService(cfg)
 	if err != nil {
