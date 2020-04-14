@@ -576,7 +576,10 @@ func TestPeerProtectionIdempotent(t *testing.T) {
 	cm := NewConnManager(10, 20, 0)
 	SilencePeriod = 10 * time.Second
 
-	id, _ := tu.RandPeerID()
+	id, err := tu.RandPeerID()
+	if err != nil {
+		t.Error(err)
+	}
 	cm.Protect(id, "global")
 	cm.Protect(id, "global")
 	cm.Protect(id, "global")

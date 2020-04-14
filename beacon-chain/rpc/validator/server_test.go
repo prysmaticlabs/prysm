@@ -39,16 +39,22 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
 	pubKey := pubKey(1)
 
-	st.SetValidators([]*ethpb.Validator{
+	err = st.SetValidators([]*ethpb.Validator{
 		&ethpb.Validator{PublicKey: pubKey},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	Server := &Server{
 		BeaconDB:    db,
@@ -68,10 +74,13 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)

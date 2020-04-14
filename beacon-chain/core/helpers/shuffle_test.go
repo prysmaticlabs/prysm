@@ -101,7 +101,9 @@ func BenchmarkShuffledIndex(b *testing.B) {
 	for _, listSize := range listSizes {
 		b.Run(fmt.Sprintf("ShuffledIndex_%d", listSize), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				ShuffledIndex(i%listSize, listSize, seed)
+				if _, err := ShuffledIndex(i%listSize, listSize, seed); err != nil {
+					b.Error(err)
+				}
 			}
 		})
 	}
@@ -115,7 +117,9 @@ func BenchmarkIndexComparison(b *testing.B) {
 			for i := 0; i < ib.N; i++ {
 				// Simulate a list-shuffle by running shuffle-index listSize times.
 				for j := uint64(0); j < listSize; j++ {
-					ShuffledIndex(j, listSize, seed)
+					if _, err := ShuffledIndex(j, listSize, seed); err != nil {
+						b.Error(err)
+					}
 				}
 			}
 		})
@@ -132,7 +136,9 @@ func BenchmarkShuffleList(b *testing.B) {
 		}
 		b.Run(fmt.Sprintf("ShuffleList_%d", listSize), func(ib *testing.B) {
 			for i := 0; i < ib.N; i++ {
-				ShuffleList(testIndices, seed)
+				if _, err := ShuffleList(testIndices, seed); err != nil {
+					b.Error(err)
+				}
 			}
 		})
 	}
