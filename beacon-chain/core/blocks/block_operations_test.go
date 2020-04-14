@@ -54,7 +54,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
-			ParentRoot: lbhsr[:],
+			ParentRoot: lbhdr[:],
 		},
 	}
 	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
