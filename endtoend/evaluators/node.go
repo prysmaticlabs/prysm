@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
 )
@@ -17,6 +20,13 @@ var PeersConnect = types.Evaluator{
 	Name:       "peers_connect_epoch_%d",
 	Policy:     onEpoch(0),
 	Evaluation: peersConnect,
+}
+
+// HealthzCheck pings healthz and errors if it doesn't have the expected OK status.
+var HealthzCheck = types.Evaluator{
+	Name:       "healthz_check_epoch_%d",
+	Policy:     afterNthEpoch(0),
+	Evaluation: healthzCheck,
 }
 
 // FinishedSyncing returns whether the beacon node with the given rpc port has finished syncing.
@@ -38,6 +48,38 @@ func onEpoch(epoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return currentEpoch == epoch
 	}
+}
+
+func healthzCheck(conns ...*grpc.ClientConn) error {
+	count := len(conns)
+	for i := 0; i < count; i++ {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.BeaconNodeMetricsPort+i))
+		if err != nil {
+			return errors.Wrapf(err, "could not connect to beacon node %d", i)
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("expected status code to be OK for port beacon node %d, received %v, error %s", i, resp.StatusCode, body)
+		}
+		if err := resp.Body.Close(); err != nil {
+			return err
+		}
+
+		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.ValidatorMetricsPort+i))
+		if err != nil {
+			return errors.Wrapf(err, "could not connect to validator client %d", i)
+		}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("expexcted status code to be OK for port validator client %d, received %v", i, resp.StatusCode)
+		}
+		if err := resp.Body.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func peersConnect(conns ...*grpc.ClientConn) error {

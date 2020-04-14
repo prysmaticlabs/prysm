@@ -22,6 +22,7 @@ func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
 		TestSlasher:    false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
+			ev.HealthzCheck,
 			ev.ValidatorsAreActive,
 		},
 	}
