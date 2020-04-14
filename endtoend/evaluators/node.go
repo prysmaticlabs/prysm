@@ -57,12 +57,12 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return errors.Wrapf(err, "could not connect to beacon node %d", i)
 		}
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("expected status code to be OK for port beacon node %d, received %v, error %s", i, resp.StatusCode, body)
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("expected status code OK for beacon node %d, received %v with body %s", i, resp.StatusCode, body)
 		}
 		if err := resp.Body.Close(); err != nil {
 			return err
@@ -73,7 +73,11 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 			return errors.Wrapf(err, "could not connect to validator client %d", i)
 		}
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("expexcted status code to be OK for port validator client %d, received %v", i, resp.StatusCode)
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("expected status code OK for validator client %d, received %v with body %s", i, resp.StatusCode, body)
 		}
 		if err := resp.Body.Close(); err != nil {
 			return err
