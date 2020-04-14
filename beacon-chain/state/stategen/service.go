@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,12 +59,6 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	}
 
 	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
-
-	// In case the finalized state slot was skipped.
-	slot := lastArchivedState.Slot()
-	if !helpers.IsEpochStart(slot) {
-		slot = helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
-	}
 
 	return lastArchivedState, nil
 }

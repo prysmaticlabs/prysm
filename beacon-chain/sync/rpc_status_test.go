@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
@@ -48,9 +49,9 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		if code == 0 {
 			t.Error("Expected a non-zero code")
 		}
-		if errMsg != errWrongForkVersion.Error() {
-			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkVersion.Error()))
-			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkVersion.Error())
+		if errMsg != errWrongForkDigestVersion.Error() {
+			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkDigestVersion.Error()))
+			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkDigestVersion.Error())
 		}
 	})
 
@@ -59,9 +60,9 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: []byte("fake")}, stream1)
-	if err != errWrongForkVersion {
-		t.Errorf("Expected error %v, got %v", errWrongForkVersion, err)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: []byte("fake")}, stream1)
+	if err != errWrongForkDigestVersion {
+		t.Errorf("Expected error %v, got %v", errWrongForkDigestVersion, err)
 	}
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
@@ -130,11 +131,11 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:        genesisState.Slot(),
-			HeadRoot:        headRoot[:],
-			FinalizedEpoch:  5,
-			FinalizedRoot:   finalizedRoot[:],
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:       genesisState.Slot(),
+			HeadRoot:       headRoot[:],
+			FinalizedEpoch: 5,
+			FinalizedRoot:  finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
@@ -145,7 +146,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{HeadForkVersion: params.BeaconConfig().GenesisForkVersion}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: params.BeaconConfig().GenesisForkVersion}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -160,6 +161,16 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
+
+	p1.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'A', 'B'},
+	}
+
+	p2.LocalMetadata = &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   []byte{'C', 'D'},
+	}
 
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 5,
@@ -179,6 +190,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		},
 		ctx: context.Background(),
 	}
+	r2 := &Service{
+		p2p: p2,
+	}
 
 	r.Start()
 
@@ -194,7 +208,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		}
 		log.WithField("status", out).Warn("received status")
 
-		resp := &pb.Status{HeadSlot: 100, HeadForkVersion: params.BeaconConfig().GenesisForkVersion}
+		resp := &pb.Status{HeadSlot: 100, ForkDigest: params.BeaconConfig().GenesisForkVersion}
 
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
@@ -209,12 +223,42 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		}
 	})
 
+	pcl = protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
+	var wg2 sync.WaitGroup
+	wg2.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg2.Done()
+		out := new(uint64)
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+			t.Fatal(err)
+		}
+		if *out != 2 {
+			t.Fatalf("Wanted 2 but got %d as our sequence number", *out)
+		}
+		err := r2.pingHandler(context.Background(), out, stream)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := stream.Close(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	numInactive1 := len(p1.Peers().Inactive())
 	numActive1 := len(p1.Peers().Active())
 
 	p1.Connect(p2)
 
+	p1.Peers().Add(new(enr.Record), p2.Host.ID(), p2.Host.Addrs()[0], network.DirUnknown)
+	p1.Peers().SetMetadata(p2.Host.ID(), p2.LocalMetadata)
+
+	p2.Peers().Add(new(enr.Record), p1.Host.ID(), p1.Host.Addrs()[0], network.DirUnknown)
+	p2.Peers().SetMetadata(p1.Host.ID(), p1.LocalMetadata)
+
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+	if testutil.WaitTimeout(&wg2, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
@@ -302,11 +346,11 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:        genesisState.Slot(),
-			HeadRoot:        headRoot[:],
-			FinalizedEpoch:  5,
-			FinalizedRoot:   finalizedRoot[:],
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			HeadSlot:       genesisState.Slot(),
+			HeadRoot:       headRoot[:],
+			FinalizedEpoch: 5,
+			FinalizedRoot:  finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
 			t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
@@ -380,11 +424,11 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
-			HeadForkVersion: []byte{1, 1, 1, 1},
-			HeadSlot:        genesisState.Slot(),
-			HeadRoot:        headRoot[:],
-			FinalizedEpoch:  5,
-			FinalizedRoot:   finalizedRoot[:],
+			ForkDigest:     []byte{1, 1, 1, 1},
+			HeadSlot:       genesisState.Slot(),
+			HeadRoot:       headRoot[:],
+			FinalizedEpoch: 5,
+			FinalizedRoot:  finalizedRoot[:],
 		}
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			log.WithError(err).Error("Failed to write to stream")

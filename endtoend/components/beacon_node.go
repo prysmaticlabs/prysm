@@ -16,20 +16,17 @@ import (
 )
 
 // StartBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func StartBeaconNodes(t *testing.T, config *types.E2EConfig) ([]string, []int) {
-	var multiAddrs []string
+func StartBeaconNodes(t *testing.T, config *types.E2EConfig, enr string) []int {
 	var processIDs []int
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-		multiAddr, pID := StartNewBeaconNode(t, config, multiAddrs)
-		multiAddrs = append(multiAddrs, multiAddr)
+		pID := StartNewBeaconNode(t, config, i, enr)
 		processIDs = append(processIDs, pID)
 	}
-	return multiAddrs, processIDs
+	return processIDs
 }
 
 // StartNewBeaconNode starts a fresh beacon node, connecting to all passed in beacon nodes.
-func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []string) (string, int) {
-	index := len(multiAddrs)
+func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, index int, enr string) int {
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
 	if !found {
 		t.Log(binaryPath)
@@ -56,17 +53,11 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 		"--force-clear-db",
-		"--no-discovery",
+		fmt.Sprintf("--bootstrap-node=%s", enr),
+		"--verbosity=debug",
 	}
 	args = append(args, featureconfig.E2EBeaconChainFlags...)
 	args = append(args, config.BeaconFlags...)
-
-	// After the first node is made, have all following nodes connect to all previously made nodes.
-	if index >= 1 {
-		for p := 0; p < index; p++ {
-			args = append(args, fmt.Sprintf("--peer=%s", multiAddrs[p]))
-		}
-	}
 
 	cmd := exec.Command(binaryPath, args...)
 	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
@@ -74,34 +65,69 @@ func StartNewBeaconNode(t *testing.T, config *types.E2EConfig, multiAddrs []stri
 		t.Fatalf("Failed to start beacon node: %v", err)
 	}
 
-	if err = helpers.WaitForTextInFile(stdOutFile, "Node started p2p server"); err != nil {
+	if err = helpers.WaitForTextInFile(stdOutFile, "RPC-API listening on port"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
 
-	multiAddr, err := getMultiAddrFromLogFile(stdOutFile.Name())
-	if err != nil {
-		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
-	}
-
-	return multiAddr, cmd.Process.Pid
+	return cmd.Process.Pid
 }
 
-func getMultiAddrFromLogFile(name string) (string, error) {
+// StartBootnode starts a bootnode and returns its ENR and process ID.
+func StartBootnode(t *testing.T) (string, int) {
+	binaryPath, found := bazel.FindBinary("tools/bootnode", "bootnode")
+	if !found {
+		t.Log(binaryPath)
+		t.Fatal("boot node binary not found")
+	}
+
+	stdOutFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, e2e.BootNodeLogFileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{
+		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
+		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
+		fmt.Sprintf("--kad-port=%d", e2e.TestParams.BootNodePort+10),
+		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
+	}
+
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Stdout = stdOutFile
+	cmd.Stderr = stdOutFile
+	t.Logf("Starting boot node with flags: %s", strings.Join(args[1:], " "))
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("Failed to start beacon node: %v", err)
+	}
+
+	if err = helpers.WaitForTextInFile(stdOutFile, "Running bootnode"); err != nil {
+		t.Fatalf("could not find enr for bootnode, this means the bootnode had issues starting: %v", err)
+	}
+
+	enr, err := getENRFromLogFile(stdOutFile.Name())
+	if err != nil {
+		t.Fatalf("could not get enr for bootnode: %v", err)
+	}
+
+	return enr, cmd.Process.Pid
+}
+
+func getENRFromLogFile(name string) (string, error) {
 	byteContent, err := ioutil.ReadFile(name)
 	if err != nil {
 		return "", err
 	}
 	contents := string(byteContent)
 
-	searchText := "\"Node started p2p server\" multiAddr=\""
+	searchText := "Running bootnode: "
 	startIdx := strings.Index(contents, searchText)
 	if startIdx == -1 {
-		return "", fmt.Errorf("did not find peer text in %s", contents)
+		return "", fmt.Errorf("did not find ENR text in %s", contents)
 	}
 	startIdx += len(searchText)
-	endIdx := strings.Index(contents[startIdx:], "\"")
+	endIdx := strings.Index(contents[startIdx:], " prefix=bootnode")
 	if endIdx == -1 {
-		return "", fmt.Errorf("did not find peer text in %s", contents)
+		return "", fmt.Errorf("did not find ENR text in %s", contents)
 	}
-	return contents[startIdx : startIdx+endIdx], nil
+	return contents[startIdx : startIdx+endIdx-1], nil
 }

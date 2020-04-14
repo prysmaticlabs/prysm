@@ -3,15 +3,15 @@ package client
 // Validator client proposer functions.
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -79,15 +79,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Graffiti:     v.graffiti,
 	})
 	if err != nil {
-		log.WithError(err).Error("Failed to request block from beacon node")
+		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
 		if v.emitAccountMetrics {
 			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
 
+	var slotBits bitfield.Bitlist
 	if featureconfig.Get().ProtectProposer {
-		history, err := v.db.ProposalHistory(ctx, pubKey[:])
+		slotBits, err = v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")
 			if v.emitAccountMetrics {
@@ -96,7 +97,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			return
 		}
 
-		if HasProposedForEpoch(history, epoch) {
+		// If the bit for the current slot is marked, do not propose.
+		if slotBits.BitAt(slot % params.BeaconConfig().SlotsPerEpoch) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
 			if v.emitAccountMetrics {
 				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -130,16 +132,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	if featureconfig.Get().ProtectProposer {
-		history, err := v.db.ProposalHistory(ctx, pubKey[:])
-		if err != nil {
-			log.WithError(err).Error("Failed to get proposal history")
-			if v.emitAccountMetrics {
-				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-		history = SetProposedForEpoch(history, epoch)
-		if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
+		slotBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
+		if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
 			log.WithError(err).Error("Failed to save updated proposal history")
 			if v.emitAccountMetrics {
 				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -175,13 +169,11 @@ func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) 
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao[:])
-
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	var buf [32]byte
-	binary.LittleEndian.PutUint64(buf[:], epoch)
-	randaoReveal, err := v.keyManager.Sign(pubKey, buf, domain.SignatureDomain)
+
+	randaoReveal, err := v.signObject(pubKey, epoch, domain.SignatureDomain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign reveal")
 	}
@@ -206,61 +198,19 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 			ParentRoot: b.ParentRoot,
 			BodyRoot:   bodyRoot[:],
 		}
-		sig, err = protectingKeymanager.SignProposal(pubKey, domain.SignatureDomain, blockHeader)
+		sig, err = protectingKeymanager.SignProposal(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), blockHeader)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
 	} else {
-		blockRoot, err := ssz.HashTreeRoot(b)
+		blockRoot, err := helpers.ComputeSigningRoot(b, domain.SignatureDomain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
 		}
-		sig, err = v.keyManager.Sign(pubKey, blockRoot, domain.SignatureDomain)
+		sig, err = v.keyManager.Sign(pubKey, blockRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not sign block proposal")
 		}
 	}
 	return sig.Marshal(), nil
-}
-
-// HasProposedForEpoch returns whether a validators proposal history has been marked for the entered epoch.
-// If the request is more in the future than what the history contains, it will return false.
-// If the request is from the past, and likely previously pruned it will return false.
-func HasProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) bool {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	// Previously pruned, we should return false.
-	if int(epoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
-		return false
-	}
-	// Accessing future proposals that haven't been marked yet. Needs to return false.
-	if epoch > history.LatestEpochWritten {
-		return false
-	}
-	return history.EpochBits.BitAt(epoch % wsPeriod)
-}
-
-// SetProposedForEpoch updates the proposal history to mark the indicated epoch in the bitlist
-// and updates the last epoch written if needed.
-// Returns the modified proposal history.
-func SetProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) *slashpb.ProposalHistory {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-
-	if epoch > history.LatestEpochWritten {
-		// If the history is empty, just update the latest written and mark the epoch.
-		// This is for the first run of a validator.
-		if history.EpochBits.Count() < 1 {
-			history.LatestEpochWritten = epoch
-			history.EpochBits.SetBitAt(epoch%wsPeriod, true)
-			return history
-		}
-		// If the epoch to mark is ahead of latest written epoch, override the old votes and mark the requested epoch.
-		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		maxToWrite := history.LatestEpochWritten + wsPeriod
-		for i := history.LatestEpochWritten + 1; i < epoch && i <= maxToWrite; i++ {
-			history.EpochBits.SetBitAt(i%wsPeriod, false)
-		}
-		history.LatestEpochWritten = epoch
-	}
-	history.EpochBits.SetBitAt(epoch%wsPeriod, true)
-	return history
 }

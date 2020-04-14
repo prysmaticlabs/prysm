@@ -84,10 +84,20 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
 	}
 
+	// Calculate new proposer index.
+	if err := head.SetSlot(req.Slot); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set slot to calculate proposer index: %v", err)
+	}
+	idx, err := helpers.BeaconProposerIndex(head)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
+	}
+
 	blk := &ethpb.BeaconBlock{
-		Slot:       req.Slot,
-		ParentRoot: parentRoot[:],
-		StateRoot:  stateRoot,
+		Slot:          req.Slot,
+		ParentRoot:    parentRoot[:],
+		StateRoot:     stateRoot,
+		ProposerIndex: idx,
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data:          eth1Data,
 			Deposits:          deposits,
@@ -154,7 +164,7 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	eth1DataNotification = false
 
 	eth1VotingPeriodStartTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)) * params.BeaconConfig().SecondsPerSlot
+	eth1VotingPeriodStartTime += (slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
@@ -183,7 +193,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	//   DepositCount = state.eth1_deposit_index,
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
-	slotInVotingPeriod := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
+	slotInVotingPeriod := slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch)
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, err
@@ -226,7 +236,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaconBlock) ([]byte, error) {
 	var beaconState *stateTrie.BeaconState
 	var err error
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		beaconState, err = vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not retrieve beacon state")

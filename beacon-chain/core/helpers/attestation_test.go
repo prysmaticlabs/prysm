@@ -202,7 +202,7 @@ func TestAggregateAttestations(t *testing.T) {
 		atts := make([]*ethpb.Attestation, len(bl))
 		for i, b := range bl {
 			sk := bls.RandKey()
-			sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+			sig := sk.Sign([]byte("dummy_test_data"))
 			atts[i] = &ethpb.Attestation{
 				AggregationBits: b,
 				Data:            nil,
@@ -258,15 +258,15 @@ func TestSlotSignature_Verify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := ssz.HashTreeRoot(slot)
+	msg, err := helpers.ComputeSigningRoot(slot, domain)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !sig.Verify(msg[:], pub, domain) {
+	if !sig.Verify(msg[:], pub) {
 		t.Error("Could not verify slot signature")
 	}
 }
@@ -278,7 +278,7 @@ func TestIsAggregator_True(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[0].Sign([]byte{}, 0)
+	sig := privKeys[0].Sign([]byte{'A'})
 	agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
 	if err != nil {
 		t.Fatal(err)
@@ -297,7 +297,7 @@ func TestIsAggregator_False(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[0].Sign([]byte{}, 0)
+	sig := privKeys[0].Sign([]byte{'A'})
 	agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
 	if err != nil {
 		t.Fatal(err)
@@ -310,11 +310,11 @@ func TestIsAggregator_False(t *testing.T) {
 func TestAggregateSignature_True(t *testing.T) {
 	pubkeys := make([]*bls.PublicKey, 0, 100)
 	atts := make([]*ethpb.Attestation, 0, 100)
-	msg := []byte("hello")
+	msg := bytesutil.ToBytes32([]byte("hello"))
 	for i := 0; i < 100; i++ {
 		priv := bls.RandKey()
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:], 0)
+		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		att := &ethpb.Attestation{Signature: sig.Marshal()}
 		atts = append(atts, att)
@@ -323,7 +323,7 @@ func TestAggregateSignature_True(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !aggSig.VerifyAggregateCommon(pubkeys, bytesutil.ToBytes32(msg), 0) {
+	if !aggSig.FastAggregateVerify(pubkeys, msg) {
 		t.Error("Signature did not verify")
 	}
 }
@@ -335,7 +335,7 @@ func TestAggregateSignature_False(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		priv := bls.RandKey()
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:], 0)
+		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		att := &ethpb.Attestation{Signature: sig.Marshal()}
 		atts = append(atts, att)
@@ -344,7 +344,7 @@ func TestAggregateSignature_False(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if aggSig.VerifyAggregateCommon(pubkeys, bytesutil.ToBytes32(msg), 0) {
+	if aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)) {
 		t.Error("Signature not suppose to verify")
 	}
 }

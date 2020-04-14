@@ -43,7 +43,7 @@ func newServer(
 	rpcAddr string,
 	depositContractAddr string,
 	funderPK string,
-	validatorDepositAmount int64,
+	validatorDepositAmount string,
 	beaconRPCAddr string,
 ) *server {
 	rpcClient, err := rpc.Dial(rpcAddr)
@@ -62,7 +62,8 @@ func newServer(
 		panic(err)
 	}
 
-	depositAmount := big.NewInt(validatorDepositAmount)
+	depositAmount := big.NewInt(0)
+	depositAmount.SetString(validatorDepositAmount, 10)
 
 	conn, err := grpc.DialContext(context.Background(), beaconRPCAddr, grpc.WithInsecure(), grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
 	if err != nil {

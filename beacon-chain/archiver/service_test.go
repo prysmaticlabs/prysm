@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -34,10 +33,8 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Slot: 1,
-	})
-	if err != nil {
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(1); err != nil {
 		t.Fatal(err)
 	}
 	svc.headFetcher = &mock.ChainService{
@@ -61,10 +58,8 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	// The head state is NOT an epoch end.
-	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch - 2,
-	})
-	if err != nil {
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(params.BeaconConfig().SlotsPerEpoch - 2); err != nil {
 		t.Fatal(err)
 	}
 	svc.headFetcher = &mock.ChainService{
@@ -433,18 +428,20 @@ func setupState(validatorCount uint64) (*stateTrie.BeaconState, error) {
 
 	// We initialize a head state that has attestations from participated
 	// validators in a simulated fashion.
-	return stateTrie.InitializeFromProto(&pb.BeaconState{
-		Slot:                       (2 * params.BeaconConfig().SlotsPerEpoch) - 1,
-		Validators:                 validators,
-		Balances:                   balances,
-		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		Slashings:                  []uint64{0, 1e9, 1e9},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
-		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-	})
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot((2 * params.BeaconConfig().SlotsPerEpoch) - 1); err != nil {
+		return nil, err
+	}
+	if err := st.SetValidators(validators); err != nil {
+		return nil, err
+	}
+	if err := st.SetBalances(balances); err != nil {
+		return nil, err
+	}
+	if err := st.SetCurrentEpochAttestations(atts); err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 func setupService(t *testing.T) (*Service, db.Database) {

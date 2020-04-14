@@ -8,8 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -26,12 +24,16 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
+	root, err := helpers.ComputeSigningRoot(epoch, domain)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute signing root of epoch")
+	}
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature := privKeys[proposerIdx].Sign(root[:])
 	return epochSignature.Marshal(), nil
 }
 
@@ -47,8 +49,11 @@ func BlockSignature(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-
-	blockRoot, err := ssz.HashTreeRoot(block)
+	domain, err := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	if err != nil {
+		return nil, err
+	}
+	blockRoot, err := helpers.ComputeSigningRoot(block, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +67,10 @@ func BlockSignature(
 	if err != nil {
 		return nil, err
 	}
-	domain, err := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
-	if err != nil {
-		return nil, err
-	}
 	if err := bState.SetSlot(currentSlot); err != nil {
 		return nil, err
 	}
-	return privKeys[proposerIdx].Sign(blockRoot[:], domain), nil
+	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
 }
 
 // Random32Bytes generates a random 32 byte slice.

@@ -519,7 +519,8 @@ func (is *infostream) depositQueueTimestamp(eth1BlockNumber *big.Int) (uint64, e
 	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimestamp), 0).Add(followTime)
 
-	votingPeriod := time.Duration(params.BeaconConfig().SlotsPerEth1VotingPeriod*params.BeaconConfig().SecondsPerSlot) * time.Second
+	period := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().EpochsPerEth1VotingPeriod
+	votingPeriod := time.Duration(period*params.BeaconConfig().SecondsPerSlot) * time.Second
 	activationTime := eth1UnixTime.Add(votingPeriod)
 	eth2Genesis := time.Unix(int64(is.genesisTime), 0)
 
