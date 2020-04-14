@@ -198,7 +198,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 	}
 }
 
-// WaitForInitialization subscribes to the state channel and ends the stream when the state channel
+// WaitForSynced subscribes to the state channel and ends the stream when the state channel
 // indicates the beacon node has been initialized and is ready
 func (vs *Server) WaitForSynced(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
 	head, err := vs.HeadFetcher.HeadState(context.Background())
