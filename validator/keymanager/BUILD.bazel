@@ -26,7 +26,7 @@ go_library(
         "@com_github_wealdtech_eth2_signer_api//pb/v1:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_store_filesystem//:go_default_library",
-        "@com_github_wealdtech_go_eth2_wallet_types_v2//:go_default_library",
+        "@com_github_wealdtech_go_eth2_wallet_types//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
         "@org_golang_x_crypto//ssh/terminal:go_default_library",
@@ -48,7 +48,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
-        "@com_github_wealdtech_go_eth2_wallet_nd_v2//:go_default_library",
+        "@com_github_wealdtech_go_eth2_wallet_nd//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_store_filesystem//:go_default_library",
     ],
 )
