@@ -397,9 +397,17 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		if node.IP() == nil {
 			continue
 		}
+		// do not look for nodes with no tcp port set
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
+		}
 		subnets, err := retrieveAttSubnets(node.Record())
 		if err != nil {
-			return false, errors.Wrap(err, "could not retrieve subnets")
+			log.Errorf("could not retrieve subnets: %v", err)
+			continue
 		}
 		for _, comIdx := range subnets {
 			if comIdx == index {
