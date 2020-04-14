@@ -95,7 +95,8 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	}
 
 	switch resp.Status {
-	case ethpb.ValidatorStatus_UNKNOWN_STATUS, ethpb.ValidatorStatus_DEPOSITED:
+	// Unknown status means the validator has not been put into the state yet.
+	case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 		// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
 		if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
@@ -114,7 +115,8 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 			return resp
 		}
 		resp.DepositInclusionSlot = int64(depositBlockSlot)
-	case ethpb.ValidatorStatus_PENDING:
+	// Deposited and Pending mean the validator has been put into the state.
+	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING:
 		var lastActivatedValidatorIdx uint64
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
 			val, err := headState.ValidatorAtIndex(uint64(j))
