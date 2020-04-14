@@ -87,7 +87,6 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	cfg.BeaconDB = db
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -176,7 +175,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	cfg.BeaconDB = db
 	params.OverrideBeaconConfig(originalBeaconConfig)
 	s, err := NewService(cfg)
 	if err != nil {
