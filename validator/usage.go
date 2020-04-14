@@ -76,6 +76,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.CertFlag,
 			flags.KeyManager,
 			flags.KeyManagerOpts,
+			flags.KeystorePathFlag,
+			flags.PasswordFlag,
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,

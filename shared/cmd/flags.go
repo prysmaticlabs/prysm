@@ -15,7 +15,7 @@ var (
 	// DataDirFlag defines a path on disk.
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases",
+		Usage: "Data directory for the databases and keystore",
 		Value: DefaultDataDir(),
 	}
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
