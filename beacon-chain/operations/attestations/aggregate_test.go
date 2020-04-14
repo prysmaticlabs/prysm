@@ -90,9 +90,15 @@ func TestAggregateAttestations_MultipleAttestationsDifferentRoots(t *testing.T) 
 		Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
 		Target:          &ethpb.Checkpoint{Root: mockRoot[:]},
 	}
-	d1 := proto.Clone(d).(*ethpb.AttestationData)
+	d1, ok := proto.Clone(d).(*ethpb.AttestationData)
+	if !ok {
+		t.Fatal("Entity is not of type *ethpb.AttestationData")
+	}
 	d1.Slot = 1
-	d2 := proto.Clone(d).(*ethpb.AttestationData)
+	d2, ok := proto.Clone(d).(*ethpb.AttestationData)
+	if !ok {
+		t.Fatal("Entity is not of type *ethpb.AttestationData")
+	}
 	d2.Slot = 2
 
 	sk := bls.RandKey()
@@ -118,8 +124,14 @@ func TestAggregateAttestations_MultipleAttestationsDifferentRoots(t *testing.T) 
 	sort.Slice(received, func(i, j int) bool {
 		return received[i].Data.Slot < received[j].Data.Slot
 	})
-	att1, _ := helpers.AggregateAttestations([]*ethpb.Attestation{atts[0], atts[1]})
-	att2, _ := helpers.AggregateAttestations([]*ethpb.Attestation{atts[2], atts[3]})
+	att1, err := helpers.AggregateAttestations([]*ethpb.Attestation{atts[0], atts[1]})
+	if err != nil {
+		t.Error(err)
+	}
+	att2, err := helpers.AggregateAttestations([]*ethpb.Attestation{atts[2], atts[3]})
+	if err != nil {
+		t.Error(err)
+	}
 	wanted := append(att1, att2...)
 	if !reflect.DeepEqual(wanted, received) {
 		t.Error("Did not aggregate attestations")

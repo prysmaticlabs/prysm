@@ -300,7 +300,10 @@ func TestStore_DuplicatedAttestations_FiltersCorrectly(t *testing.T) {
 		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
 	}
 
-	att1 := proto.Clone(att).(*ethpb.Attestation)
+	att1, ok := proto.Clone(att).(*ethpb.Attestation)
+	if !ok {
+		t.Error("Entity is not of type *ethpb.Attestation")
+	}
 	att1.Data.Source.Epoch = 6
 	atts = []*ethpb.Attestation{att, att, att, att1, att1, att1}
 	if err := db.SaveAttestations(ctx, atts); err != nil {

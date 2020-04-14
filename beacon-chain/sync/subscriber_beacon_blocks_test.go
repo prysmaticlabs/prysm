@@ -39,7 +39,10 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), parent); err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, _ := ssz.HashTreeRoot(parent.Block)
+	parentRoot, err := ssz.HashTreeRoot(parent.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	chain := &mock.ChainService{State: s}
 	r := &Service{
 		db:            db,

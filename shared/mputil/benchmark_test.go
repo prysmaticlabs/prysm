@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/mputil"
+	log "github.com/sirupsen/logrus"
 )
 
 var input [][]byte
@@ -21,7 +22,10 @@ func init() {
 	input = make([][]byte, benchmarkElements)
 	for i := 0; i < benchmarkElements; i++ {
 		input[i] = make([]byte, benchmarkElementSize)
-		rand.Read(input[i])
+		_, err := rand.Read(input[i])
+		if err != nil {
+			log.WithError(err).Debug("Cannot read from rand")
+		}
 	}
 }
 
@@ -47,9 +51,12 @@ func BenchmarkHash(b *testing.B) {
 func BenchmarkHashMP(b *testing.B) {
 	output := make([][]byte, len(input))
 	for i := 0; i < b.N; i++ {
-		workerResults, _ := mputil.Scatter(len(input), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		workerResults, err := mputil.Scatter(len(input), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 			return hash(input[offset : offset+entries]), nil
 		})
+		if err != nil {
+			b.Error(err)
+		}
 		for _, result := range workerResults {
 			copy(output[result.Offset:], result.Extent.([][]byte))
 		}

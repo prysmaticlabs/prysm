@@ -23,7 +23,10 @@ import (
 )
 
 func TestPathExpansion(t *testing.T) {
-	user, _ := user.Current()
+	user, err := user.Current()
+	if err != nil {
+		t.Error(err)
+	}
 	tests := map[string]string{
 		"/home/someuser/tmp": "/home/someuser/tmp",
 		"~/tmp":              user.HomeDir + "/tmp",
@@ -31,7 +34,10 @@ func TestPathExpansion(t *testing.T) {
 		"$DDDXXX/a/b":        "/tmp/a/b",
 		"/a/b/":              "/a/b",
 	}
-	os.Setenv("DDDXXX", "/tmp")
+	err = os.Setenv("DDDXXX", "/tmp")
+	if err != nil {
+		t.Error(err)
+	}
 	for test, expected := range tests {
 		got := expandPath(test)
 		if got != expected {

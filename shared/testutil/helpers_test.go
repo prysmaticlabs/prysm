@@ -17,12 +17,16 @@ func TestBlockSignature(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState.SetSlot(beaconState.Slot() + 1)
+	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.SetSlot(beaconState.Slot() - 1)
+	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Error(err)

@@ -44,10 +44,20 @@ func TestSaveHead_Different(t *testing.T) {
 
 	newHeadBlock := &ethpb.BeaconBlock{Slot: 1}
 	newHeadSignedBlock := &ethpb.SignedBeaconBlock{Block: newHeadBlock}
-	service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock)
-	newRoot, _ := ssz.HashTreeRoot(newHeadBlock)
-	headState, _ := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	service.beaconDB.SaveState(context.Background(), headState, newRoot)
+	if err := service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock); err != nil {
+		t.Fatal(err)
+	}
+	newRoot, err := ssz.HashTreeRoot(newHeadBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	headState, err := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(context.Background(), headState, newRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
 	}

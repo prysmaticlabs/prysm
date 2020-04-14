@@ -86,8 +86,12 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	for i := 0; i < len(mixes); i++ {
 		mixes[i] = make([]byte, 32)
 	}
-	headState.SetRandaoMixes(mixes)
-	headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2)
+	if err := headState.SetRandaoMixes(mixes); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2); err != nil {
+		t.Fatal(err)
+	}
 
 	m := &mock.ChainService{
 		State:   headState,
