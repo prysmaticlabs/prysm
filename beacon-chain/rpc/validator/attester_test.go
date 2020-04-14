@@ -65,11 +65,14 @@ func TestProposeAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+	state, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:        params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.SaveState(ctx, state, root); err != nil {
 		t.Fatal(err)
@@ -156,7 +159,10 @@ func TestGetAttestationData_OK(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	s, _ := beaconstate.InitializeFromProto(beaconState)
+	s, err := beaconstate.InitializeFromProto(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -270,7 +276,10 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-	s, _ := beaconstate.InitializeFromProto(beaconState)
+	s, err := beaconstate.InitializeFromProto(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}
@@ -323,7 +332,10 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &pbp2p.BeaconState{Slot: 100}
-	state, _ := beaconstate.InitializeFromProto(s)
+	state, err := beaconstate.InitializeFromProto(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
@@ -411,7 +423,10 @@ func TestWaitForSlotOneThird_HeadIsHereNoWait(t *testing.T) {
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 
 	s := &pbp2p.BeaconState{Slot: 2}
-	state, _ := beaconstate.InitializeFromProto(s)
+	state, err := beaconstate.InitializeFromProto(s)
+	if err != nil {
+		t.Fatal(err)
+	}
 	server := &Server{
 		AttestationCache:   cache.NewAttestationCache(),
 		HeadFetcher:        &mock.ChainService{State: state},
@@ -498,10 +513,16 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	s, _ := beaconstate.InitializeFromProto(beaconState)
+	s, err := beaconstate.InitializeFromProto(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	beaconState2 := s.CloneInnerState()
 	beaconState2.Slot--
-	s2, _ := beaconstate.InitializeFromProto(beaconState2)
+	s2, err := beaconstate.InitializeFromProto(beaconState2)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s2, blockRoot2); err != nil {
 		t.Fatal(err)
 	}
@@ -593,7 +614,10 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	beaconState.BlockRoots[1] = blockRoot[:]
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	s, _ := beaconstate.InitializeFromProto(beaconState)
+	s, err := beaconstate.InitializeFromProto(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 	}

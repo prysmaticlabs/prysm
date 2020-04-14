@@ -32,7 +32,10 @@ var _ = Validator(&validator{})
 const cancelledCtx = "context has been canceled"
 
 func publicKeys(km keymanager.KeyManager) [][]byte {
-	keys, _ := km.FetchValidatingKeys()
+	keys, err := km.FetchValidatingKeys()
+	if err != nil {
+		log.WithError(err).Debug("Cannot fetch validating keys")
+	}
 	res := make([][]byte, len(keys))
 	for i := range keys {
 		res[i] = keys[i][:]

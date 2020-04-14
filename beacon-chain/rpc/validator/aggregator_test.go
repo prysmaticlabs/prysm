@@ -53,9 +53,12 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -77,13 +80,16 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators: []*ethpb.Validator{
 			&ethpb.Validator{PublicKey: pubKey(0)},
 			&ethpb.Validator{PublicKey: pubKey(1)},
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -127,7 +133,10 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -183,7 +192,10 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -227,7 +239,10 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 		},
 		AggregationBits: aggBits,
 	}
-	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
 	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
@@ -239,7 +254,10 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
-		hashTreeRoot, _ := ssz.HashTreeRoot(att.Data)
+		hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
+		if err != nil {
+			return nil, err
+		}
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
 		sigs[i] = sig
 	}

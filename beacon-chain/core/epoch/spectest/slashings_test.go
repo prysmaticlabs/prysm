@@ -37,8 +37,11 @@ func processSlashingsWrapper(t *testing.T, state *beaconstate.BeaconState) (*bea
 
 func processSlashingsPrecomputeWrapper(t *testing.T, state *beaconstate.BeaconState) (*beaconstate.BeaconState, error) {
 	ctx := context.Background()
-	vp, bp, _ := precompute.New(ctx, state)
-	_, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
+	vp, bp, err := precompute.New(ctx, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, bp, err = precompute.ProcessAttestations(ctx, state, vp, bp)
 	if err != nil {
 		t.Fatal(err)
 	}

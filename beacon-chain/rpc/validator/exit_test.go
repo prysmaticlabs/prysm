@@ -24,7 +24,10 @@ func TestSub(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +83,10 @@ func TestSub(t *testing.T) {
 		case event := <-opChannel:
 			if event.Type == opfeed.ExitReceived {
 				notificationFound = true
-				data := event.Data.(*opfeed.ExitReceivedData)
+				data, ok := event.Data.(*opfeed.ExitReceivedData)
+				if !ok {
+					t.Error("Entity is not of type *opfeed.ExitReceivedData")
+				}
 				if epoch != data.Exit.Exit.Epoch {
 					t.Errorf("Unexpected state feed epoch: expected %v, found %v", epoch, data.Exit.Exit.Epoch)
 				}

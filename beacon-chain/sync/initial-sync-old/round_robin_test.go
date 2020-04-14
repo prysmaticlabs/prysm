@@ -259,13 +259,20 @@ func TestRoundRobinSync(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			gRoot, _ := ssz.HashTreeRoot(gBlock.Block)
-			beaconDB.SaveGenesisBlockRoot(context.Background(), gRoot)
+			gRoot, err := ssz.HashTreeRoot(gBlock.Block)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := beaconDB.SaveGenesisBlockRoot(context.Background(), gRoot); err != nil {
+				t.Fatal(err)
+			}
 			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			beaconDB.SaveState(context.Background(), st, gRoot)
+			if err := beaconDB.SaveState(context.Background(), st, gRoot); err != nil {
+				t.Fatal(err)
+			}
 
 			mc := &mock.ChainService{
 				State:               st,
@@ -315,7 +322,11 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 		var datum = d
 
 		peer.SetStreamHandler(topic, func(stream network.Stream) {
-			defer stream.Close()
+			defer func() {
+				if err := stream.Close(); err != nil {
+					t.Log(err)
+				}
+			}()
 
 			req := &p2ppb.BeaconBlocksByRangeRequest{}
 			if err := peer.Encoding().DecodeWithLength(stream, req); err != nil {
@@ -358,7 +369,10 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 					blk.Block.ParentRoot = newRoot[:]
 				}
 				ret = append(ret, blk)
-				currRoot, _ := ssz.HashTreeRoot(blk.Block)
+				currRoot, err := ssz.HashTreeRoot(blk.Block)
+				if err != nil {
+					t.Fatal(err)
+				}
 				logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 			}
 

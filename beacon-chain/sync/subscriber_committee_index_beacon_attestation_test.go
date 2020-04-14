@@ -42,8 +42,13 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
-	savedState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
-	db.SaveState(context.Background(), savedState, root)
+	savedState, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(context.Background(), savedState, root); err != nil {
+		t.Fatal(err)
+	}
 
 	r := &Service{
 		attPool: attestations.NewPool(),

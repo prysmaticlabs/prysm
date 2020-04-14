@@ -233,9 +233,15 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 		Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
 		Target:          &ethpb.Checkpoint{Root: mockRoot[:]},
 	}
-	d1 := proto.Clone(d).(*ethpb.AttestationData)
+	d1, ok := proto.Clone(d).(*ethpb.AttestationData)
+	if !ok {
+		t.Fatal("Entity is not of type *ethpb.AttestationData")
+	}
 	d1.Slot = 1
-	d2 := proto.Clone(d).(*ethpb.AttestationData)
+	d2, ok := proto.Clone(d).(*ethpb.AttestationData)
+	if !ok {
+		t.Fatal("Entity is not of type *ethpb.AttestationData")
+	}
 	d2.Slot = 2
 
 	atts1 := []*ethpb.Attestation{
