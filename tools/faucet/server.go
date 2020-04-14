@@ -24,7 +24,7 @@ import (
 
 const ipLimit = 5
 
-var fundingAmount = big.NewInt(32.5 * params.Ether)
+var fundingAmount *big.Int
 var funded = make(map[string]bool)
 var ipCounter = make(map[string]int)
 var fundingLock sync.Mutex
@@ -36,6 +36,14 @@ type faucetServer struct {
 	funder   common.Address
 	pk       *ecdsa.PrivateKey
 	minScore float64
+}
+
+func init() {
+	var ok bool
+	fundingAmount, ok = new(big.Int).SetString("32500000000000000000", 10)
+	if !ok {
+		log.Fatal("could not set funding amount")
+	}
 }
 
 func newFaucetServer(
