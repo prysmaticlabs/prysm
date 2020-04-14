@@ -12,7 +12,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var errMissingStateForCheckpoint = errors.New("no state exists with checkpoint root")
+var errMissingStateForCheckpoint = errors.New("missing state summary for finalized root")
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
@@ -65,8 +65,11 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil && !k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root)) {
+		if !featureconfig.Get().DisableNewStateMgmt {
+			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
+			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
 				return errors.New("missing state summary for finalized root")
 			}
 		} else {
@@ -93,8 +96,11 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil && !k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root)) {
+		if !featureconfig.Get().DisableNewStateMgmt {
+			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
+			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
 				return errors.New("missing state summary for finalized root")
 			}
 		} else {

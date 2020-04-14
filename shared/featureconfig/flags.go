@@ -9,10 +9,6 @@ var (
 		Name:  "broadcast-slashing",
 		Usage: "Broadcast slashings from slashing pool.",
 	}
-	noCustomConfigFlag = &cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
 	minimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
@@ -21,9 +17,9 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	enableDynamicCommitteeSubnets = &cli.BoolFlag{
-		Name:  "enable-dynamic-committee-subnets",
-		Usage: "Enable dynamic committee attestation subnets.",
+	disableDynamicCommitteeSubnets = &cli.BoolFlag{
+		Name:  "disable-dynamic-committee-subnets",
+		Usage: "Disable dynamic committee attestation subnets.",
 	}
 	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -120,9 +116,9 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	newStateMgmt = &cli.BoolFlag{
-		Name:  "new-state-mgmt",
-		Usage: "This enables the usage of experimental state mgmt service across Prysm",
+	disableNewStateMgmt = &cli.BoolFlag{
+		Name:  "disable-new-state-mgmt",
+		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
 	disableInitSyncQueue = &cli.BoolFlag{
 		Name:  "disable-init-sync-queue",
@@ -146,6 +142,16 @@ var (
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedEnableDynamicCommitteeSubnets = &cli.BoolFlag{
+		Name:   "enable-dynamic-committee-subnets",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedNoCustomConfigFlag = &cli.BoolFlag{
+		Name:   "no-custom-config",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableInitSyncQueue = &cli.BoolFlag{
 		Name:   "enable-initial-sync-queue",
 		Usage:  deprecatedUsage,
@@ -272,6 +278,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDiscv5Flag = &cli.BoolFlag{
+		Name:   "enable-discv5",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableSSZCache = &cli.BoolFlag{
 		Name:   "enable-ssz-cache",
 		Usage:  deprecatedUsage,
@@ -280,6 +291,8 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedEnableDynamicCommitteeSubnets,
+	deprecatedNoCustomConfigFlag,
 	deprecatedEnableInitSyncQueue,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
@@ -305,6 +318,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedInitSyncCacheStateFlag,
 	deprecatedProtectAttesterFlag,
 	deprecatedProtectProposerFlag,
+	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
 }
 
@@ -323,12 +337,11 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
-	noCustomConfigFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
-	enableDynamicCommitteeSubnets,
+	disableDynamicCommitteeSubnets,
 	disableSSZCache,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
@@ -345,7 +358,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
-	newStateMgmt,
+	disableNewStateMgmt,
 	disableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,
@@ -360,6 +373,4 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-state-field-trie",
-	// TODO(5123): This flag currently fails E2E. Commenting until it's resolved.
-	//"--enable-dynamic-committee-subnets",
 }

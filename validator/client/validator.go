@@ -15,6 +15,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -41,22 +42,24 @@ const (
 )
 
 type validator struct {
-	genesisTime          uint64
-	ticker               *slotutil.SlotTicker
-	db                   *db.Store
-	duties               *ethpb.DutiesResponse
-	validatorClient      ethpb.BeaconNodeValidatorClient
-	beaconClient         ethpb.BeaconChainClient
-	graffiti             []byte
-	node                 ethpb.NodeClient
-	keyManager           keymanager.KeyManager
-	prevBalance          map[[48]byte]uint64
-	logValidatorBalances bool
-	emitAccountMetrics   bool
-	attLogs              map[[32]byte]*attSubmitted
-	attLogsLock          sync.Mutex
-	domainDataLock       sync.Mutex
-	domainDataCache      *ristretto.Cache
+	genesisTime                        uint64
+	ticker                             *slotutil.SlotTicker
+	db                                 *db.Store
+	duties                             *ethpb.DutiesResponse
+	validatorClient                    ethpb.BeaconNodeValidatorClient
+	beaconClient                       ethpb.BeaconChainClient
+	graffiti                           []byte
+	node                               ethpb.NodeClient
+	keyManager                         keymanager.KeyManager
+	prevBalance                        map[[48]byte]uint64
+	logValidatorBalances               bool
+	emitAccountMetrics                 bool
+	attLogs                            map[[32]byte]*attSubmitted
+	attLogsLock                        sync.Mutex
+	domainDataLock                     sync.Mutex
+	domainDataCache                    *ristretto.Cache
+	aggregatedSlotCommitteeIDCache     *lru.Cache
+	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(
@@ -287,6 +290,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	v.duties = resp
+	subscribeSlots := make([]uint64, 0, len(validatingKeys))
+	subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
+	subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
+	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range v.duties.Duties {
 		lFields := logrus.Fields{
@@ -303,16 +310,71 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		}
 
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE {
-			if duty.ProposerSlot > 0 {
-				lFields["proposerSlot"] = duty.ProposerSlot
-			}
-			lFields["attesterSlot"] = duty.AttesterSlot
-		}
+			attesterSlot := duty.AttesterSlot
+			committeeIndex := duty.CommitteeIndex
 
-		log.WithFields(lFields).Info("New assignment")
+			if len(duty.ProposerSlots) > 0 {
+				lFields["proposerSlots"] = duty.ProposerSlots
+			}
+			lFields["attesterSlot"] = attesterSlot
+
+			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
+			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
+				continue
+			}
+
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				alreadySubscribed[alreadySubscribedKey] = true
+			}
+			subscribeSlots = append(subscribeSlots, attesterSlot)
+			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+			log.WithFields(lFields).Info("New assignment")
+		}
 	}
 
-	return nil
+	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
+	req.Epoch++
+	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	for _, duty := range dutiesNextEpoch.Duties {
+		if duty.Status == ethpb.ValidatorStatus_ACTIVE {
+			attesterSlot := duty.AttesterSlot
+			committeeIndex := duty.CommitteeIndex
+
+			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
+			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
+				continue
+			}
+
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				alreadySubscribed[alreadySubscribedKey] = true
+			}
+
+			subscribeSlots = append(subscribeSlots, attesterSlot)
+			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+		}
+	}
+
+	_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
+		Slots:        subscribeSlots,
+		CommitteeIds: subscribeCommitteeIDs,
+		IsAggregator: subscribeIsAggregator,
+	})
+
+	return err
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
@@ -326,8 +388,13 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 		if duty == nil {
 			continue
 		}
-		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
-			roles = append(roles, roleProposer)
+		if len(duty.ProposerSlots) > 0 {
+			for _, proposerSlot := range duty.ProposerSlots {
+				if proposerSlot != 0 && proposerSlot == slot {
+					roles = append(roles, roleProposer)
+					break
+				}
+			}
 		}
 		if duty.AttesterSlot == slot {
 			roles = append(roles, roleAttester)
@@ -418,4 +485,10 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 	}
 
 	return res, nil
+}
+
+// This constructs a validator subscribed key, it's used to track
+// which subnet has already been pending requested.
+func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
+	return bytesutil.ToBytes64(append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...))
 }

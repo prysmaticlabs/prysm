@@ -24,16 +24,17 @@ func TestService_SubscribeDetectedProposerSlashings(t *testing.T) {
 	}
 
 	slashing := &ethpb.ProposerSlashing{
-		ProposerIndex: 5,
 		Header_1: &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
-				Slot: 5,
+				ProposerIndex: 5,
+				Slot:          5,
 			},
 			Signature: make([]byte, 96),
 		},
 		Header_2: &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
-				Slot: 5,
+				ProposerIndex: 5,
+				Slot:          5,
 			},
 			Signature: make([]byte, 96),
 		},

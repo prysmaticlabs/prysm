@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -509,10 +508,11 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{Slot: s.splitInfo.slot + 10})
-	if err != nil {
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(s.splitInfo.slot + 10); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := s.beaconDB.SaveState(ctx, st, b2Root); err != nil {
 		t.Fatal(err)
 	}
@@ -600,10 +600,8 @@ func tree1(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 	if err != nil {
 		return nil, nil, err
 	}
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
-	if err != nil {
-		return nil, nil, err
-	}
+	st := testutil.NewBeaconState()
+
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b2, b3, b4, b5, b6, b7, b8} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, nil, err
@@ -657,10 +655,7 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 	if err != nil {
 		return nil, nil, err
 	}
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
-	if err != nil {
-		return nil, nil, err
-	}
+	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24, b3} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
@@ -710,10 +705,7 @@ func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 	if err != nil {
 		return nil, nil, err
 	}
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
-	if err != nil {
-		return nil, nil, err
-	}
+	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
@@ -759,10 +751,7 @@ func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 	if err != nil {
 		return nil, nil, err
 	}
-	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
-	if err != nil {
-		return nil, nil, err
-	}
+	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b21, b22, b23, b24} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {

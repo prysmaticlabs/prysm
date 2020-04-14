@@ -26,7 +26,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				log.WithField("currentState", peerConnectionState).WithField("reason", "already active").Trace("Ignoring connection request")
 				return
 			}
-			s.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction, nil)
+			s.peers.Add(nil /* ENR */, conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
 			if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
 				log.WithField("reason", "at peer limit").Trace("Ignoring connection request")
 				if err := s.Disconnect(conn.RemotePeer()); err != nil {

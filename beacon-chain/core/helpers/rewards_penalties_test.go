@@ -27,14 +27,14 @@ func TestTotalBalance_OK(t *testing.T) {
 	}
 }
 
-func TestTotalBalance_ReturnsOne(t *testing.T) {
+func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	balance := TotalBalance(state, []uint64{})
-	wanted := uint64(1)
+	wanted := params.BeaconConfig().EffectiveBalanceIncrement
 
 	if balance != wanted {
 		t.Errorf("Incorrect TotalBalance. Wanted: %d, got: %d", wanted, balance)

@@ -6,7 +6,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -80,15 +80,15 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	blockRoot := bytesutil.ToBytes32([]byte("muahahahaha I'm an evil validator"))
 	attData.BeaconBlockRoot = blockRoot[:]
 
-	dataRoot, err := ssz.HashTreeRoot(attData)
+	req := &eth.DomainRequest{
+		Epoch:  chainHead.HeadEpoch,
+		Domain: params.BeaconConfig().DomainBeaconAttester[:],
+	}
+	resp, err := valClient.DomainData(ctx, req)
 	if err != nil {
 		return err
 	}
-
-	domainResp, err := valClient.DomainData(ctx, &eth.DomainRequest{
-		Epoch:  attData.Target.Epoch,
-		Domain: params.BeaconConfig().DomainBeaconAttester[:],
-	})
+	signingRoot, err := helpers.ComputeSigningRoot(attData, resp.SignatureDomain)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		att := &eth.Attestation{
 			AggregationBits: attBitfield,
 			Data:            attData,
-			Signature:       privKeys[committee[i]].Sign(dataRoot[:], domainResp.SignatureDomain).Marshal(),
+			Signature:       privKeys[committee[i]].Sign(signingRoot[:]).Marshal(),
 		}
 		for _, conn := range conns {
 			client := eth.NewBeaconNodeValidatorClient(conn)
