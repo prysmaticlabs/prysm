@@ -135,6 +135,7 @@ func generateMarshalledFullStateAndBlock() error {
 	block.Block.StateRoot = s[:]
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
+	root := beaconState.GenesisValidatorRoot()
 	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
 		return err
 	}
@@ -142,7 +143,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer, nil)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer, root)
 	if err != nil {
 		return err
 	}
