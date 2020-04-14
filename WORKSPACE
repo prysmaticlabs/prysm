@@ -285,13 +285,6 @@ http_archive(
     urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
 )
 
-http_archive(
-    name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "3b155ff597c307b5b0875c3b1ffc3beaa0a6634ee1cfad8768041b61c47eac39",
-    strip_prefix = "bls-eth-go-binary-946ee977cd0f585757741dda65073cbd84a160ac",
-    url = "https://github.com/prysmaticlabs/bls-eth-go-binary/archive/946ee977cd0f585757741dda65073cbd84a160ac.zip",
-)
-
 # External dependencies
 
 go_repository(
@@ -1670,4 +1663,11 @@ go_repository(
     importpath = "github.com/ianlancetaylor/cgosymbolizer",
     sum = "h1:GWsU1WjSE2rtvyTYGcndqmPPkQkBNV7pEuZdnGtwtu4=",
     version = "v0.0.0-20200321040036-d43e30eacb43",
+)
+
+go_repository(
+    name = "org_golang_x_mod",
+    importpath = "golang.org/x/mod",
+    sum = "h1:KU7oHjnv3XNWfa5COkzUifxZmxp1TyI7ImMXqFxLwvQ=",
+    version = "v0.2.0",
 )
