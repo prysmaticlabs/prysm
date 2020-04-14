@@ -23,7 +23,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	bitfield := [64]byte{'A', 'B'}
+	bitfield := [8]byte{'A', 'B'}
 	p1.LocalMetadata = &pb.MetaData{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
