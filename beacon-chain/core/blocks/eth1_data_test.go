@@ -11,6 +11,17 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func FakeDeposits(n int) []*ethpb.Eth1Data {
+	deposits := make([]*ethpb.Eth1Data, n)
+	for i := 0; i < n; i++ {
+		deposits[i] = &ethpb.Eth1Data{
+			DepositCount: 1,
+			DepositRoot:  []byte("root"),
+		}
+	}
+	return deposits
+}
+
 func TestEth1DataHasEnoughSupport(t *testing.T) {
 	tests := []struct {
 		stateVotes         []*ethpb.Eth1Data
@@ -19,43 +30,15 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 		votingPeriodLength uint64
 	}{
 		{
-			stateVotes: []*ethpb.Eth1Data{
-				{
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				},
-			},
+			stateVotes: FakeDeposits(4 * int(params.BeaconConfig().SlotsPerEpoch)),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
 			},
-			hasSupport:         false,
+			hasSupport:         true,
 			votingPeriodLength: 7,
 		}, {
-			stateVotes: []*ethpb.Eth1Data{
-				{
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				},
-			},
+			stateVotes: FakeDeposits(4 * int(params.BeaconConfig().SlotsPerEpoch)),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
@@ -63,21 +46,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			hasSupport:         false,
 			votingPeriodLength: 8,
 		}, {
-			stateVotes: []*ethpb.Eth1Data{
-				{
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				}, {
-					DepositCount: 1,
-					DepositRoot:  []byte("root"),
-				},
-			},
+			stateVotes: FakeDeposits(4 * int(params.BeaconConfig().SlotsPerEpoch)),
 			data: &ethpb.Eth1Data{
 				DepositCount: 1,
 				DepositRoot:  []byte("root"),
@@ -103,8 +72,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 
 			if result != tt.hasSupport {
 				t.Errorf(
-					"blocks.Eth1DataHasEnoughSupport(%+v, %+v) = %t, wanted %t",
-					s,
+					"blocks.Eth1DataHasEnoughSupport(%+v) = %t, wanted %t",
 					tt.data,
 					result,
 					tt.hasSupport,
