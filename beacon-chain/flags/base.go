@@ -105,9 +105,9 @@ var (
 		Usage: "The slot durations of when an archived state gets saved in the DB.",
 		Value: 128,
 	}
-	// EnableDiscv5 enables running discv5.
-	EnableDiscv5 = &cli.BoolFlag{
-		Name:  "enable-discv5",
-		Usage: "Starts dv5 dht.",
+	// DisableDiscv5 disables running discv5.
+	DisableDiscv5 = &cli.BoolFlag{
+		Name:  "disable-discv5",
+		Usage: "Does not run the discoveryV5 dht.",
 	}
 )

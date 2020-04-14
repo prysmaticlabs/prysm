@@ -2,18 +2,19 @@ package blockchain
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +26,11 @@ func TestStore_OnAttestation(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &Config{
+		BeaconDB:        db,
+		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
+		StateGen:        stategen.New(db, cache.NewStateSummaryCache()),
+	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +59,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	s := testutil.NewBeaconState()
 	if err := s.SetSlot(100 * params.BeaconConfig().SlotsPerEpoch); err != nil {
 		t.Fatal(err)
 	}
@@ -66,19 +71,17 @@ func TestStore_OnAttestation(t *testing.T) {
 	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
 		t.Fatal(err)
 	}
+
 	BlkWithValidStateRoot, err := ssz.HashTreeRoot(BlkWithValidState.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err = stateTrie.InitializeFromProto(&pb.BeaconState{
-		Fork: &pb.Fork{
-			Epoch:           0,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	})
-	if err != nil {
+	s = testutil.NewBeaconState()
+	if err := s.SetFork(&pb.Fork{
+		Epoch:           0,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot); err != nil {
@@ -111,7 +114,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "pre state of target block 0 does not exist",
+			wantErrString: "could not get pre state for slot 0: unknown boundary state",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
@@ -141,9 +144,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	params.UseDemoBeaconConfig()
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{
+		BeaconDB: db,
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -172,13 +177,18 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, s, r); err != nil {
 		t.Fatal(err)
 	}
+
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 
+	r = bytesutil.ToBytes32([]byte{'A'})
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
 	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}); err != nil {
 		t.Fatal(err)
 	}
 	s1, err := service.getAttPreState(ctx, cp1)
@@ -191,6 +201,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
 	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}); err != nil {
 		t.Fatal(err)
 	}
 	s2, err := service.getAttPreState(ctx, cp2)
@@ -236,6 +249,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})); err != nil {
 		t.Fatal(err)
 	}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}); err != nil {
+		t.Fatal(err)
+	}
 	s3, err := service.getAttPreState(ctx, cp3)
 	if err != nil {
 		t.Fatal(err)
@@ -250,7 +266,10 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{
+		BeaconDB: db,
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -302,7 +321,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(returned, cached) {
+	if !proto.Equal(returned.InnerStateUnsafe(), cached.InnerStateUnsafe()) {
 		t.Error("Incorrectly cached base state")
 	}
 }

@@ -12,10 +12,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// SubmitAggregateAndProof is called by a validator when its assigned to be an aggregator.
-// The beacon node will broadcast aggregated attestation and proof on the aggregator's behavior.
-func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *ethpb.AggregationRequest) (*ethpb.AggregationResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregation")
+// SubmitAggregateSelectionProof is called by a validator when its assigned to be an aggregator.
+// The aggregator submits the selection proof to obtain the aggregated attestation
+// object to sign over.
+func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregateSelectionProof")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
@@ -56,30 +57,47 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *ethpb.Aggreg
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	// Retrieve the unaggregated attestation from pool.
+	if err := as.AttPool.AggregateUnaggregatedAttestations(); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
+	}
 	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
-	for _, aggregatedAtt := range aggregatedAtts {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		if helpers.IsAggregated(aggregatedAtt) {
-			if err := as.P2P.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
-				AggregatorIndex: validatorIndex,
-				SelectionProof:  req.SlotSignature,
-				Aggregate:       aggregatedAtt,
-			}); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
-			}
-
-			log.WithFields(logrus.Fields{
-				"slot":            req.Slot,
-				"committeeIndex":  req.CommitteeIndex,
-				"validatorIndex":  validatorIndex,
-				"aggregatedCount": aggregatedAtt.AggregationBits.Count(),
-			}).Debug("Broadcasting aggregated attestation and proof")
+	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
+	if len(aggregatedAtts) == 0 {
+		return nil, status.Error(codes.Internal, "No aggregated attestation in beacon node")
+	}
+	best := aggregatedAtts[0]
+	for _, aggregatedAtt := range aggregatedAtts[1:] {
+		if aggregatedAtt.AggregationBits.Count() > best.AggregationBits.Count() {
+			best = aggregatedAtt
 		}
 	}
 
-	return &ethpb.AggregationResponse{}, nil
+	a := &ethpb.AggregateAttestationAndProof{
+		Aggregate:       best,
+		SelectionProof:  req.SlotSignature,
+		AggregatorIndex: validatorIndex,
+	}
+	return &ethpb.AggregateSelectionResponse{AggregateAndProof: a}, nil
+}
+
+// SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
+// aggregated and proof object.
+func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+	if req.SignedAggregateAndProof == nil {
+		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
+	}
+
+	if err := as.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast signed aggregated attestation: %v", err)
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":            req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
+		"committeeIndex":  req.SignedAggregateAndProof.Message.Aggregate.Data.CommitteeIndex,
+		"validatorIndex":  req.SignedAggregateAndProof.Message.AggregatorIndex,
+		"aggregatedCount": req.SignedAggregateAndProof.Message.Aggregate.AggregationBits.Count(),
+	}).Debug("Broadcasting aggregated attestation and proof")
+
+	return &ethpb.SignedAggregateSubmitResponse{}, nil
 }

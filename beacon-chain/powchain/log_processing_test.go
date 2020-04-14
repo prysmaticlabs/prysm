@@ -61,10 +61,12 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -135,6 +137,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	if err != nil {
 		t.Fatal(err)
@@ -211,6 +214,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Could not init from contract: %v", err)
 	}
 
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	if err != nil {
 		t.Fatal(err)
@@ -294,6 +298,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
 	if err != nil {
 		t.Fatal(err)
@@ -379,11 +384,11 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -601,6 +606,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 	depositsWanted := 10
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
 	if err != nil {
 		t.Fatal(err)
@@ -700,11 +706,11 @@ func TestConsistentGenesisState(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
 	if err != nil {
 		t.Fatal()
 	}
-
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)

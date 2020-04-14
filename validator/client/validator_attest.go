@@ -5,18 +5,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -65,6 +68,8 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	v.waitToSlotOneThird(ctx, slot)
+
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
@@ -78,8 +83,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	var history *slashpb.AttestationHistory
 	if featureconfig.Get().ProtectAttester {
-		history, err := v.db.AttestationHistory(ctx, pubKey[:])
+		history, err = v.db.AttestationHistory(ctx, pubKey[:])
 		if err != nil {
 			log.Errorf("Could not get attestation history from DB: %v", err)
 			if v.emitAccountMetrics {
@@ -143,14 +149,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 
 	if featureconfig.Get().ProtectAttester {
-		history, err := v.db.AttestationHistory(ctx, pubKey[:])
-		if err != nil {
-			log.Errorf("Could not get attestation history from DB: %v", err)
-			if v.emitAccountMetrics {
-				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
 		history = markAttestationForTargetEpoch(history, data.Source.Epoch, data.Target.Epoch)
 		if err := v.db.SaveAttestationHistory(ctx, pubKey[:], history); err != nil {
 			log.Errorf("Could not save attestation history to DB: %v", err)
@@ -206,16 +204,16 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		return nil, err
 	}
 
-	root, err := ssz.HashTreeRoot(data)
+	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
 
 	var sig *bls.Signature
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		sig, err = protectingKeymanager.SignAttestation(pubKey, domain.SignatureDomain, data)
+		sig, err = protectingKeymanager.SignAttestation(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), data)
 	} else {
-		sig, err = v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+		sig, err = v.keyManager.Sign(pubKey, root)
 	}
 	if err != nil {
 		return nil, err
@@ -306,4 +304,18 @@ func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64)
 		return params.BeaconConfig().FarFutureEpoch
 	}
 	return history.TargetToSource[targetEpoch%wsPeriod]
+}
+
+// waitToSlotOneThird waits until one third through the current slot period
+// such that head block for beacon node can get updated.
+func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
+	defer span.End()
+
+	twoThird := params.BeaconConfig().SecondsPerSlot * 1 / 3
+	delay := time.Duration(twoThird) * time.Second
+
+	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
+	finalTime := startTime.Add(delay)
+	time.Sleep(roughtime.Until(finalTime))
 }

@@ -41,6 +41,13 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 
+	if slashing.Header_1 == nil || slashing.Header_1.Header == nil {
+		return false
+	}
+	if r.hasSeenProposerSlashingIndex(slashing.Header_1.Header.ProposerIndex) {
+		return false
+	}
+
 	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
@@ -64,4 +71,19 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return true
+}
+
+// Returns true if the node has already received a valid proposer slashing received for the proposer with index
+func (r *Service) hasSeenProposerSlashingIndex(i uint64) bool {
+	r.seenProposerSlashingLock.RLock()
+	defer r.seenProposerSlashingLock.RUnlock()
+	_, seen := r.seenProposerSlashingCache.Get(i)
+	return seen
+}
+
+// Set proposer slashing index in proposer slashing cache.
+func (r *Service) setProposerSlashingIndexSeen(i uint64) {
+	r.seenProposerSlashingLock.Lock()
+	defer r.seenProposerSlashingLock.Unlock()
+	r.seenProposerSlashingCache.Add(i, true)
 }

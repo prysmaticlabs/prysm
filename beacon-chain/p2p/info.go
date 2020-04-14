@@ -22,7 +22,7 @@ self=%s
 %v
 `,
 		s.cfg.BootstrapNodeAddr,
-		selfAddresses(s.host),
+		s.selfAddresses(),
 		len(s.host.Network().Peers()),
 		formatPeers(s.host), // Must be last. Writes one entry per row.
 	); err != nil {
@@ -37,10 +37,13 @@ self=%s
 }
 
 // selfAddresses formats the host data into dialable strings, comma separated.
-func selfAddresses(h host.Host) string {
+func (s *Service) selfAddresses() string {
 	var addresses []string
-	for _, ma := range h.Addrs() {
-		addresses = append(addresses, ma.String()+"/p2p/"+h.ID().Pretty())
+	if s.dv5Listener != nil {
+		addresses = append(addresses, s.dv5Listener.Self().String())
+	}
+	for _, ma := range s.host.Addrs() {
+		addresses = append(addresses, ma.String()+"/p2p/"+s.host.ID().Pretty())
 	}
 	return strings.Join(addresses, ",")
 }

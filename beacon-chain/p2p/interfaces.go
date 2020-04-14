@@ -9,6 +9,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // P2P represents the full p2p interface composed of all of the sub-interfaces.
@@ -21,6 +22,7 @@ type P2P interface {
 	Sender
 	ConnectionHandler
 	PeersProvider
+	MetadataProvider
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
@@ -42,6 +44,7 @@ type ConnectionHandler interface {
 // EncodingProvider provides p2p network encoding.
 type EncodingProvider interface {
 	Encoding() encoder.NetworkEncoding
+	ForkDigest() ([4]byte, error)
 }
 
 // PubSubProvider provides the p2p pubsub protocol.
@@ -55,14 +58,21 @@ type PeerManager interface {
 	PeerID() peer.ID
 	RefreshENR(epoch uint64)
 	FindPeersWithSubnet(index uint64) (bool, error)
+	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
 }
 
 // Sender abstracts the sending functionality from libp2p.
 type Sender interface {
-	Send(context.Context, interface{}, peer.ID) (network.Stream, error)
+	Send(context.Context, interface{}, string, peer.ID) (network.Stream, error)
 }
 
 // PeersProvider abstracts obtaining our current list of known peers status.
 type PeersProvider interface {
 	Peers() *peers.Status
+}
+
+// MetadataProvider returns the metadata related information for the local peer.
+type MetadataProvider interface {
+	Metadata() *pb.MetaData
+	MetadataSeq() uint64
 }

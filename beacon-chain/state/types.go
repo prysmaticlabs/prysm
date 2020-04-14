@@ -35,6 +35,7 @@ type dataType int
 // of the beacon state.
 const (
 	genesisTime fieldIndex = iota
+	genesisValidatorRoot
 	slot
 	fork
 	latestBlockHeader

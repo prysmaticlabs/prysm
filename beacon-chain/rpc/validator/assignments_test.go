@@ -112,9 +112,9 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
+		t.Fatalf("Could not setup genesis bs: %v", err)
 	}
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
@@ -135,7 +135,7 @@ func TestGetDuties_OK(t *testing.T) {
 
 	vs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -148,9 +148,9 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot()+params.BeaconConfig().SlotsPerEpoch {
+	if res.Duties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot()+params.BeaconConfig().SlotsPerEpoch)
+			res.Duties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
@@ -163,9 +163,9 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot()+params.BeaconConfig().SlotsPerEpoch {
+	if res.Duties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot()+params.BeaconConfig().SlotsPerEpoch)
+			res.Duties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// We request for duties for all validators.
@@ -245,6 +245,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
+	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	if err != nil {
 		t.Fatal(err)
@@ -253,9 +254,9 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
+		t.Fatalf("Could not setup genesis bs: %v", err)
 	}
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
@@ -271,7 +272,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 
 	vs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -291,11 +292,11 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if len(res.Duties) != 2 {
 		t.Errorf("expected 2 assignments but got %d", len(res.Duties))
 	}
-	if res.Duties[0].AttesterSlot != 4 {
-		t.Errorf("Expected res.Duties[0].AttesterSlot == 4, got %d", res.Duties[0].AttesterSlot)
+	if res.Duties[0].AttesterSlot != 2 {
+		t.Errorf("Expected res.Duties[0].AttesterSlot == 7, got %d", res.Duties[0].AttesterSlot)
 	}
-	if res.Duties[1].AttesterSlot != 3 {
-		t.Errorf("Expected res.Duties[1].AttesterSlot == 3, got %d", res.Duties[0].AttesterSlot)
+	if res.Duties[1].AttesterSlot != 1 {
+		t.Errorf("Expected res.Duties[1].AttesterSlot == 1, got %d", res.Duties[1].AttesterSlot)
 	}
 }
 
@@ -304,7 +305,7 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
 	_, err := vs.GetDuties(context.Background(), &ethpb.DutiesRequest{})
-	if strings.Contains(err.Error(), "syncing to latest head") {
+	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
 	}
 }
@@ -323,9 +324,9 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
-		b.Fatalf("Could not setup genesis state: %v", err)
+		b.Fatalf("Could not setup genesis bs: %v", err)
 	}
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
@@ -341,7 +342,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 
 	vs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
