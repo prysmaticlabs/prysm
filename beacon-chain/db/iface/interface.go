@@ -130,4 +130,8 @@ type Database interface {
 
 	// Backup and restore methods
 	Backup(ctx context.Context) error
+
+	// HistoricalStatesDeleted verifies historical states exist in DB and is compatible
+	// with user config flags.
+	HistoricalStatesDeleted(ctx context.Context) error
 }
