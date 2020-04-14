@@ -33,7 +33,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "aggregate_test.go",
         "pool_test.go",
         "prepare_forkchoice_test.go",
         "prune_expired_test.go",
@@ -49,6 +48,5 @@ go_test(
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
     ],
 )
