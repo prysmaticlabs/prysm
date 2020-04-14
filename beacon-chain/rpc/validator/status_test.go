@@ -88,7 +88,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 	// Pending active because activation epoch is still defaulted at far future slot.
-	state, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	state, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:   params.BeaconConfig().FarFutureEpoch,
@@ -99,6 +99,9 @@ func TestValidatorStatus_Pending(t *testing.T) {
 		},
 		Slot: 5000,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -403,13 +406,16 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	state, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	state, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
 		},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),

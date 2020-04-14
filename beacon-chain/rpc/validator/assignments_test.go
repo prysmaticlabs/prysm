@@ -104,7 +104,10 @@ func TestGetDuties_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +190,10 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +202,10 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	bState.SetSlot(5) // Set state to non-epoch start slot.
+	// Set state to non-epoch start slot.
+	if err := bState.SetSlot(5); err != nil {
+		t.Fatal(err)
+	}
 
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
@@ -236,7 +245,10 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -303,7 +315,10 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(8192 * 2)
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		b.Fatal(err)
+	}
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		b.Fatal(err)

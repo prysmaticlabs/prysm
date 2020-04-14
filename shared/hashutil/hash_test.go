@@ -54,7 +54,10 @@ func TestHashKeccak256(t *testing.T) {
 	}
 
 	// Same hashing test from go-ethereum for keccak256
-	hashOfabc, _ := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
+	hashOfabc, err := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
+	if err != nil {
+		t.Error(err)
+	}
 	hash = hashutil.HashKeccak256([]byte("abc"))
 
 	h := bytesutil.ToBytes32(hashOfabc)
@@ -96,7 +99,9 @@ func TestHashProtoFuzz(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		msg := &pb.AddressBook{}
 		f.Fuzz(msg)
-		_, _ = hashutil.HashProto(msg)
+		if _, err := hashutil.HashProto(msg); err != nil {
+			t.Log(err)
+		}
 	}
 }
 
@@ -114,6 +119,8 @@ func BenchmarkHashProto(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		hashutil.HashProto(att)
+		if _, err := hashutil.HashProto(att); err != nil {
+			b.Log(err)
+		}
 	}
 }

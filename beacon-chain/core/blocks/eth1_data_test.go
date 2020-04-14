@@ -93,9 +93,12 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 			c.SlotsPerEth1VotingPeriod = tt.votingPeriodLength
 			params.OverrideBeaconConfig(c)
 
-			s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+			s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 				Eth1DataVotes: tt.stateVotes,
 			})
+			if err != nil {
+				t.Fatal(err)
+			}
 			result, err := blocks.Eth1DataHasEnoughSupport(s, tt.data)
 			if err != nil {
 				t.Fatal(err)
