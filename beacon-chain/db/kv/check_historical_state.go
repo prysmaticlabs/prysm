@@ -33,7 +33,7 @@ func (kv *Store) HistoricalStatesDeleted(ctx context.Context) error {
 	regenHistoricalStatesConfirmed := false
 	var err error
 	if historicalStateDeleted {
-		actionText := "--disable-new-state-mgmt was used and historical states were deleted, to proceed without the flag, the db will need " +
+		actionText := "--disable-new-state-mgmt was previously used and historical states cannot be found. To proceed without using the flag, the db will need " +
 			"to generate and re-save historical states. This process may take a while, - do you want to proceed? (Y/N)"
 		deniedText := "Historical states will not be generated. Please continue using --disable-new-state-mgmt"
 
