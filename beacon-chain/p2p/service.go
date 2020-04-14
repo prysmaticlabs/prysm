@@ -525,7 +525,7 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 			continue
 		}
 		// do not dial nodes with their tcp ports not set
-		if err := node.Record().Load(enr.WithEntry("tcp", new(int))); err != nil {
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
 			if !enr.IsNotFound(err) {
 				log.WithError(err).Error("Could not retrieve tcp port")
 			}
@@ -573,7 +573,7 @@ func (s *Service) connectToBootnodes() error {
 			return err
 		}
 		// do not dial bootnodes with their tcp ports not set
-		if err := bootNode.Record().Load(enr.WithEntry("tcp", new(int))); err != nil {
+		if err := bootNode.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
 			if !enr.IsNotFound(err) {
 				log.WithError(err).Error("Could not retrieve tcp port")
 			}
