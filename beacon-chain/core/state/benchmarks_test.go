@@ -28,7 +28,8 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	}
 
 	oldSlot := beaconState.Slot()
-	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	if err != nil {
 		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
 	}
 	if oldSlot == beaconState.Slot() {
