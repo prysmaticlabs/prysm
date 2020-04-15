@@ -391,6 +391,10 @@ func (s *Service) RefreshENR(epoch uint64) {
 // with those peers.
 func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 	nodes := make([]*enode.Node, searchLimit)
+	if s.dv5Listener == nil {
+		// return if discovery isn't set
+		return false, nil
+	}
 	num := s.dv5Listener.ReadRandomNodes(nodes)
 	exists := false
 	for _, node := range nodes[:num] {
