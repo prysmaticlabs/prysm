@@ -1196,92 +1196,12 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-<<<<<<< HEAD
-	gRoot, _ := ssz.HashTreeRoot(b.Block)
-	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-=======
-	wantedActive := [][]byte{
-		pubKey(0),
-		pubKey(2),
-		pubKey(4),
-		pubKey(6),
-	}
-	wantedActiveIndices := []uint64{0, 2, 4, 6}
-	wantedExited := [][]byte{
-		pubKey(5),
-	}
-	wantedExitedIndices := []uint64{5}
-	wantedSlashed := [][]byte{
-		pubKey(3),
-	}
-	wantedSlashedIndices := []uint64{3}
-	wantedEjected := [][]byte{
-		pubKey(7),
-	}
-	wantedEjectedIndices := []uint64{7}
-	wanted := &ethpb.ActiveSetChanges{
-		Epoch:               0,
-		ActivatedPublicKeys: wantedActive,
-		ActivatedIndices:    wantedActiveIndices,
-		ExitedPublicKeys:    wantedExited,
-		ExitedIndices:       wantedExitedIndices,
-		SlashedPublicKeys:   wantedSlashed,
-		SlashedIndices:      wantedSlashedIndices,
-		EjectedPublicKeys:   wantedEjected,
-		EjectedIndices:      wantedEjectedIndices,
-	}
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
-	}
-}
 
-func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-	ctx := context.Background()
-	validators := make([]*ethpb.Validator, 8)
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(helpers.StartSlot(100)); err != nil {
+	gRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := headState.SetValidators(validators); err != nil {
-		t.Fatal(err)
-	}
-	activatedIndices := make([]uint64, 0)
-	exitedIndices := make([]uint64, 0)
-	slashedIndices := make([]uint64, 0)
-	ejectedIndices := make([]uint64, 0)
-	for i := 0; i < len(validators); i++ {
-		// Mark indices divisible by two as activated.
-		if i%2 == 0 {
-			activatedIndices = append(activatedIndices, uint64(i))
-		} else if i%3 == 0 {
-			// Mark indices divisible by 3 as slashed.
-			slashedIndices = append(slashedIndices, uint64(i))
-		} else if i%5 == 0 {
-			// Mark indices divisible by 5 as exited.
-			exitedIndices = append(exitedIndices, uint64(i))
-		} else if i%7 == 0 {
-			// Mark indices divisible by 7 as ejected.
-			ejectedIndices = append(ejectedIndices, uint64(i))
-		}
-		key := make([]byte, 48)
-		copy(key, strconv.Itoa(i))
-		if err := headState.UpdateValidatorAtIndex(uint64(i), &ethpb.Validator{
-			PublicKey: key,
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	archivedChanges := &pbp2p.ArchivedActiveSetChanges{
-		Activated: activatedIndices,
-		Exited:    exitedIndices,
-		Slashed:   slashedIndices,
-		Ejected:   ejectedIndices,
-	}
-	// We store the changes during the genesis epoch.
-	if err := db.SaveArchivedActiveValidatorChanges(ctx, 0, archivedChanges); err != nil {
->>>>>>> v0.11
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, headState, gRoot); err != nil {
