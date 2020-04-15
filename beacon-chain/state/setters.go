@@ -318,7 +318,7 @@ func (b *BeaconState) ApplyToEveryValidator(checker func(idx int, val *ethpb.Val
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
-	changedVals := []uint64{}
+	var changedVals []uint64
 	for i, val := range v {
 		changed, err := checker(i, val)
 		if err != nil {

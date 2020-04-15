@@ -62,12 +62,10 @@ func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 
 	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	if refsCount := a.sharedFieldReferences[validators].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 1, refsCount)
-	}
+	assertRefCount(t, a, validators, 1)
 
 	// Add validator before copying state (so that a and b have shared data).
 	pubKey1, pubKey2 := [48]byte{29}, [48]byte{31}
@@ -80,12 +78,8 @@ func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 
 	// Copy, increases reference count.
 	b := a.Copy()
-	if refsCount := a.sharedFieldReferences[validators].refs; refsCount != 2 {
-		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 2, refsCount)
-	}
-	if refsCount := b.sharedFieldReferences[validators].refs; refsCount != 2 {
-		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 2, refsCount)
-	}
+	assertRefCount(t, a, validators, 2)
+	assertRefCount(t, b, validators, 2)
 	if len(b.state.GetValidators()) != 1 {
 		t.Error("No validators found")
 	}
@@ -103,16 +97,12 @@ func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 		PublicKey: pubKey2[:],
 	})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	// Copy on write happened, reference counters are reset.
-	if refsCount := a.sharedFieldReferences[validators].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 1, refsCount)
-	}
-	if refsCount := b.sharedFieldReferences[validators].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for validators field, want: %v, got: %v", 1, refsCount)
-	}
+	assertRefCount(t, a, validators, 1)
+	assertRefCount(t, b, validators, 1)
 
 	valsA := a.state.GetValidators()
 	valsB := b.state.GetValidators()
@@ -131,7 +121,7 @@ func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 		t.Errorf("Expected validator not found, want: %v", pubKey1)
 	}
 	if hasValidatorWithPubKey(b.state, pubKey2) {
-		t.Errorf("Unexpected validator found, want: %v", pubKey2)
+		t.Errorf("Unexpected validator found: %v", pubKey2)
 	}
 	if len(valsA) == len(valsB) {
 		t.Error("Unexpected state mutation")
@@ -157,7 +147,7 @@ func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	for i, val := range valsA {
 		if val.EffectiveBalance != changedBalance {
@@ -193,29 +183,17 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	if refsCount := a.sharedFieldReferences[blockRoots].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 1, refsCount)
-	}
-	if refsCount := a.sharedFieldReferences[stateRoots].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 1, refsCount)
-	}
+	assertRefCount(t, a, blockRoots, 1)
+	assertRefCount(t, a, stateRoots, 1)
 
 	// Copy, increases reference count.
 	b := a.Copy()
-	if refsCount := a.sharedFieldReferences[blockRoots].refs; refsCount != 2 {
-		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 2, refsCount)
-	}
-	if refsCount := a.sharedFieldReferences[stateRoots].refs; refsCount != 2 {
-		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 2, refsCount)
-	}
-	if refsCount := b.sharedFieldReferences[blockRoots].refs; refsCount != 2 {
-		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 2, refsCount)
-	}
-	if refsCount := b.sharedFieldReferences[stateRoots].refs; refsCount != 2 {
-		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 2, refsCount)
-	}
+	assertRefCount(t, a, blockRoots, 2)
+	assertRefCount(t, a, stateRoots, 2)
+	assertRefCount(t, b, blockRoots, 2)
+	assertRefCount(t, b, stateRoots, 2)
 	if len(b.state.GetBlockRoots()) != 1 {
 		t.Error("No block roots found")
 	}
@@ -236,14 +214,11 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	stateRootsA := a.state.GetStateRoots()
 	blockRootsB := b.state.GetBlockRoots()
 	stateRootsB := b.state.GetStateRoots()
-	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 0 {
+	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 1 {
 		t.Errorf("Unexpected number of block roots, want: %v", 1)
 	}
-	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 0 {
+	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
 		t.Errorf("Unexpected number of state roots, want: %v", 1)
-	}
-	if !hasBlockRootWithKey(a.state.GetBlockRoots(), root1) {
-		t.Errorf("Expected block root not found, want: %v", root1)
 	}
 	if !hasBlockRootWithKey(a.state.GetStateRoots(), root1) {
 		t.Errorf("Expected state root not found, want: %v", root1)
@@ -255,19 +230,19 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	// Mutator should only affect calling state: a.
 	err = a.UpdateBlockRootAtIndex(0, root2)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	err = a.UpdateStateRootAtIndex(0, root2)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
 	if hasBlockRootWithKey(a.state.GetBlockRoots(), root1) {
-		t.Errorf("Unexpected block root found, want: %v", root1)
+		t.Errorf("Unexpected block root found: %v", root1)
 	}
 	if hasBlockRootWithKey(a.state.GetStateRoots(), root1) {
-		t.Errorf("Unexpected state root found, want: %v", root1)
+		t.Errorf("Unexpected state root found: %v", root1)
 	}
 	if !hasBlockRootWithKey(a.state.GetBlockRoots(), root2) {
 		t.Errorf("Expected block root not found, want: %v", root2)
@@ -306,16 +281,100 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	}
 
 	// Copy on write happened, reference counters are reset.
-	if refsCount := a.sharedFieldReferences[blockRoots].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 1, refsCount)
+	assertRefCount(t, a, blockRoots, 1)
+	assertRefCount(t, a, stateRoots, 1)
+	assertRefCount(t, b, blockRoots, 1)
+	assertRefCount(t, b, stateRoots, 1)
+}
+
+func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
+	// Assert that feature is enabled.
+	if cfg := featureconfig.Get(); !cfg.EnableStateRefCopy {
+		cfg.EnableStateRefCopy = true
+		featureconfig.Init(cfg)
+		defer func() {
+			cfg := featureconfig.Get()
+			cfg.EnableStateRefCopy = false
+			featureconfig.Init(cfg)
+		}()
 	}
-	if refsCount := a.sharedFieldReferences[stateRoots].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 1, refsCount)
+
+	val1, val2 := []byte("foo"), []byte("bar")
+	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{
+		RandaoMixes: [][]byte{
+			val1,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if refsCount := b.sharedFieldReferences[blockRoots].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for block roots field, want: %v, got: %v", 1, refsCount)
+	assertRefCount(t, a, randaoMixes, 1)
+
+	// Copy, increases reference count.
+	b := a.Copy()
+	assertRefCount(t, a, randaoMixes, 2)
+	assertRefCount(t, b, randaoMixes, 2)
+	if len(b.state.GetRandaoMixes()) != 1 {
+		t.Error("No randao mixes found")
 	}
-	if refsCount := b.sharedFieldReferences[stateRoots].refs; refsCount != 1 {
-		t.Errorf("Unexpected count of references for state roots field, want: %v, got: %v", 1, refsCount)
+
+	assertValFound := func(key []byte, vals [][]byte) {
+		for _, val := range vals {
+			if reflect.DeepEqual(val, key) {
+				return
+			}
+		}
+		t.Errorf("Expected key not found (%v), want: %v", vals, key)
+	}
+	assertValNotFound := func(key []byte, vals [][]byte) {
+		for _, val := range vals {
+			if reflect.DeepEqual(val, key) {
+				t.Errorf("Unexpected key found (%v), key: %v", vals, key)
+				return
+			}
+		}
+	}
+	// Assert shared state.
+	mixesA := a.state.GetRandaoMixes()
+	mixesB := b.state.GetRandaoMixes()
+	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
+		t.Errorf("Unexpected number of mix values, want: %v", 1)
+	}
+	assertValFound(val1, mixesA)
+	assertValFound(val1, mixesB)
+
+	// Mutator should only affect calling state: a.
+	err = a.UpdateRandaoMixesAtIndex(val2, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Assert no shared state mutation occurred only on state a (copy on write).
+	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
+		t.Errorf("Unexpected number of mix values, want: %v", 1)
+	}
+	assertValFound(val2, a.state.GetRandaoMixes())
+	assertValNotFound(val1, a.state.GetRandaoMixes())
+	assertValFound(val1, b.state.GetRandaoMixes())
+	assertValNotFound(val2, b.state.GetRandaoMixes())
+	assertValFound(val1, mixesB)
+	assertValNotFound(val2, mixesB)
+	if !reflect.DeepEqual(a.state.GetRandaoMixes()[0], val2) {
+		t.Errorf("Expected mutation not found")
+	}
+	if !reflect.DeepEqual(mixesB[0], val1) {
+		t.Errorf("Unexpected mutation found")
+	}
+
+	// Copy on write happened, reference counters are reset.
+	assertRefCount(t, a, randaoMixes, 1)
+	assertRefCount(t, b, randaoMixes, 1)
+}
+
+// assertRefCount checks whether reference count for a given state
+// at a given index is equal to expected amount.
+func assertRefCount(t *testing.T, b *BeaconState, idx fieldIndex, want uint) {
+	if cnt := b.sharedFieldReferences[idx].refs; cnt != want {
+		t.Errorf("Unexpected count of references for index %d, want: %v, got: %v", idx, want, cnt)
 	}
 }
