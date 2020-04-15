@@ -497,7 +497,6 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 			attesterKeys[duty.AttesterSlot-slotOffset] = append(attesterKeys[duty.AttesterSlot-slotOffset], validatorKey)
 		}
 
-		// 0.11 has multiple proposer slots; use this code in place of the above when merged.
 		for _, proposerSlot := range duty.ProposerSlots {
 			proposerIndex := proposerSlot - slotOffset
 			if proposerIndex >= params.BeaconConfig().SlotsPerEpoch {
