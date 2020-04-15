@@ -177,19 +177,21 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 
 	defer func() {
 		for _, h := range hosts {
-			_ = h.Close()
+			if err := h.Close(); err != nil {
+				t.Log(err)
+			}
 		}
 	}()
 
 	cfg.TCPPort = 14500
 	cfg.UDPPort = 14501
 	cfg.StaticPeers = staticPeers
-	cfg.BeaconDB = db
 	cfg.StateNotifier = &mock.MockStateNotifier{}
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	exitRoutine := make(chan bool)
 	go func() {
 		s.Start()

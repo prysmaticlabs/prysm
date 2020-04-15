@@ -82,10 +82,17 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 				Target: &ethpb.Checkpoint{}}}}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	r32, _ := ssz.HashTreeRoot(b.Block)
+	r32, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	s := testutil.NewBeaconState()
-	r.db.SaveBlock(context.Background(), b)
-	r.db.SaveState(context.Background(), s, r32)
+	if err := r.db.SaveBlock(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.db.SaveState(context.Background(), s, r32); err != nil {
+		t.Fatal(err)
+	}
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: a}}
 	if err := r.processPendingAtts(context.Background()); err != nil {
@@ -115,8 +122,13 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sb := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	db.SaveBlock(context.Background(), sb)
-	root, _ := ssz.HashTreeRoot(sb.Block)
+	if err := db.SaveBlock(context.Background(), sb); err != nil {
+		t.Fatal(err)
+	}
+	root, err := ssz.HashTreeRoot(sb.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -191,10 +203,17 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	}
 
 	sb = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	r32, _ := ssz.HashTreeRoot(sb.Block)
-	r.db.SaveBlock(context.Background(), sb)
+	r32, err := ssz.HashTreeRoot(sb.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.db.SaveBlock(context.Background(), sb); err != nil {
+		t.Fatal(err)
+	}
 	s := testutil.NewBeaconState()
-	r.db.SaveState(context.Background(), s, r32)
+	if err := r.db.SaveState(context.Background(), s, r32); err != nil {
+		t.Fatal(err)
+	}
 
 	r.blkRootToPendingAtts[r32] = []*ethpb.SignedAggregateAttestationAndProof{{Message: aggregateAndProof, Signature: aggreSig}}
 	if err := r.processPendingAtts(context.Background()); err != nil {

@@ -87,12 +87,10 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	cfg.BeaconDB = db
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Stop()
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
@@ -101,6 +99,9 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	// We should not have valid peers if the fork digest mismatched.
 	if len(multiAddrs) != 0 {
 		t.Errorf("Expected 0 valid peers, got %d", len(multiAddrs))
+	}
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -176,13 +177,11 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	cfg.BeaconDB = db
 	params.OverrideBeaconConfig(originalBeaconConfig)
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Stop()
 
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
@@ -193,6 +192,9 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Peer matches fork digest but has different next fork epoch")
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {

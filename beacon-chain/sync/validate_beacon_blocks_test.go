@@ -47,7 +47,10 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 
 	p := p2ptest.NewTestP2P(t)
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		db:          db,
 		p2p:         p,
@@ -94,7 +97,10 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		db:                db,
 		p2p:               p,
@@ -148,7 +154,9 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		t.Fatal(err)
 	}
 	copied := beaconState.Copy()
-	copied.SetSlot(1)
+	if err := copied.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	proposerIdx, err := helpers.BeaconProposerIndex(copied)
 	if err != nil {
 		t.Fatal(err)
@@ -172,7 +180,10 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	stateSummaryCache := cache.NewStateSummaryCache()
 	stateGen := stategen.New(db, stateSummaryCache)
 	r := &Service{
@@ -279,7 +290,10 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:                 p,
 		db:                  db,
@@ -328,7 +342,10 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	}
 
 	genesisTime := time.Now()
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		db:          db,
 		p2p:         p,
@@ -406,7 +423,10 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	msg.Signature = blockSig[:]
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		db:          db,
 		p2p:         p,
@@ -452,12 +472,18 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), parent); err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, _ := ssz.HashTreeRoot(parent.Block)
+	parentRoot, err := ssz.HashTreeRoot(parent.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	chain := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 1,
 		}}
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		db:             db,
 		p2p:            p,

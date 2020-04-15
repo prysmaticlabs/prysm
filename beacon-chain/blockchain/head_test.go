@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -43,11 +44,24 @@ func TestSaveHead_Different(t *testing.T) {
 
 	newHeadBlock := &ethpb.BeaconBlock{Slot: 1}
 	newHeadSignedBlock := &ethpb.SignedBeaconBlock{Block: newHeadBlock}
-	service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock)
-	newRoot, _ := ssz.HashTreeRoot(newHeadBlock)
+
+	if err := service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock); err != nil {
+		t.Fatal(err)
+	}
+	newRoot, err := ssz.HashTreeRoot(newHeadBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	headState := testutil.NewBeaconState()
-	headState.SetSlot(1)
-	service.beaconDB.SaveState(context.Background(), headState, newRoot)
+	if err := headState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(context.Background(), headState, newRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
 	}
