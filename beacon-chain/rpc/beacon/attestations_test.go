@@ -689,12 +689,11 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
-		committees, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			t.Fatal(err)
 		}
-		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
