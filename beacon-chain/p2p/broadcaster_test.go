@@ -10,8 +10,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -67,7 +67,7 @@ func TestService_Broadcast(t *testing.T) {
 		}
 
 		result := &testpb.TestSimpleMessage{}
-		if err := p.Encoding().Decode(incomingMessage.Data, result); err != nil {
+		if err := p.Encoding().DecodeGossip(incomingMessage.Data, result); err != nil {
 			tt.Fatal(err)
 		}
 		if !proto.Equal(result, msg) {
