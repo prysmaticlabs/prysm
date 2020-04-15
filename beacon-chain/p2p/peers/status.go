@@ -226,8 +226,8 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 	peers := make([]peer.ID, 0)
 	for pid, status := range p.status {
 		// look at active peers
-		if status.peerState == PeerConnecting || status.peerState == PeerConnected &&
-			status.metaData != nil {
+		connectedStatus := status.peerState == PeerConnecting || status.peerState == PeerConnected
+		if connectedStatus && status.metaData != nil && status.metaData.Attnets != nil {
 			indices := retrieveIndicesFromBitfield(status.metaData.Attnets)
 			for _, idx := range indices {
 				if idx == index {
