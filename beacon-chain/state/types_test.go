@@ -208,7 +208,7 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if !reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
 		t.Fatal("Test precondition failed, fields are not equal")
 	}
-	if err := a.UpdateRandaoMixesAtIndex([]byte("foo"), 1); err != nil {
+	if err := a.UpdateRandaoMixesAtIndex(1, []byte("foo")); err != nil {
 		t.Fatal(err)
 	}
 	if reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
