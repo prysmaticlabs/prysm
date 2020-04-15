@@ -464,7 +464,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 
 // UpdateRandaoMixesAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
-func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
+func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
