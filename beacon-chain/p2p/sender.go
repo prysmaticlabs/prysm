@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
@@ -14,10 +13,10 @@ import (
 
 // Send a message to a specific peer. The returned stream may be used for reading, but has been
 // closed for writing.
-func (s *Service) Send(ctx context.Context, message interface{}, pid peer.ID) (network.Stream, error) {
+func (s *Service) Send(ctx context.Context, message interface{}, baseTopic string, pid peer.ID) (network.Stream, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
-	topic := RPCTypeMapping[reflect.TypeOf(message)] + s.Encoding().ProtocolSuffix()
+	topic := baseTopic + s.Encoding().ProtocolSuffix()
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
@@ -38,6 +37,11 @@ func (s *Service) Send(ctx context.Context, message interface{}, pid peer.ID) (n
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
+	// do not encode anything if we are sending a metadata request
+	if baseTopic == RPCMetaDataTopic {
+		return stream, nil
+	}
+
 	if _, err := s.Encoding().EncodeWithLength(stream, message); err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, err

@@ -25,9 +25,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -66,9 +69,10 @@ type peerStatus struct {
 	direction             network.Direction
 	peerState             PeerConnectionState
 	chainState            *pb.Status
+	enr                   *enr.Record
+	metaData              *pb.MetaData
 	chainStateLastUpdated time.Time
 	badResponses          int
-	committeeIndices      []uint64
 }
 
 // NewStatus creates a new status entity.
@@ -86,7 +90,7 @@ func (p *Status) MaxBadResponses() int {
 
 // Add adds a peer.
 // If a peer already exists with this ID its address and direction are updated with the supplied data.
-func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direction, indices []uint64) {
+func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, direction network.Direction) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -94,19 +98,21 @@ func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direct
 		// Peer already exists, just update its address info.
 		status.address = address
 		status.direction = direction
-		if indices != nil {
-			status.committeeIndices = indices
+		if record != nil {
+			status.enr = record
 		}
 		return
 	}
-
-	p.status[pid] = &peerStatus{
+	status := &peerStatus{
 		address:   address,
 		direction: direction,
 		// Peers start disconnected; state will be updated when the handshake process begins.
-		peerState:        PeerDisconnected,
-		committeeIndices: indices,
+		peerState: PeerDisconnected,
 	}
+	if record != nil {
+		status.enr = record
+	}
+	p.status[pid] = status
 }
 
 // Address returns the multiaddress of the given remote peer.
@@ -131,6 +137,17 @@ func (p *Status) Direction(pid peer.ID) (network.Direction, error) {
 		return status.direction, nil
 	}
 	return network.DirUnknown, ErrPeerUnknown
+}
+
+// ENR returns the enr for the corresponding peer id.
+func (p *Status) ENR(pid peer.ID) (*enr.Record, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	if status, ok := p.status[pid]; ok {
+		return status.enr, nil
+	}
+	return nil, ErrPeerUnknown
 }
 
 // SetChainState sets the chain state of the given remote peer.
@@ -165,16 +182,37 @@ func (p *Status) IsActive(pid peer.ID) bool {
 	return ok && (status.peerState == PeerConnected || status.peerState == PeerConnecting)
 }
 
+// SetMetadata sets the metadata of the given remote peer.
+func (p *Status) SetMetadata(pid peer.ID, metaData *pb.MetaData) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	status := p.fetch(pid)
+	status.metaData = metaData
+}
+
+// Metadata returns a copy of the metadata corresponding to the provided
+// peer id.
+func (p *Status) Metadata(pid peer.ID) (*pb.MetaData, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	if status, ok := p.status[pid]; ok {
+		return proto.Clone(status.metaData).(*pb.MetaData), nil
+	}
+	return nil, ErrPeerUnknown
+}
+
 // CommitteeIndices retrieves the committee subnets the peer is subscribed to.
 func (p *Status) CommitteeIndices(pid peer.ID) ([]uint64, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	if status, ok := p.status[pid]; ok {
-		if status.committeeIndices == nil {
+		if status.enr == nil || status.metaData == nil {
 			return []uint64{}, nil
 		}
-		return status.committeeIndices, nil
+		return retrieveIndicesFromBitfield(status.metaData.Attnets), nil
 	}
 	return nil, ErrPeerUnknown
 }
@@ -189,10 +227,12 @@ func (p *Status) SubscribedToSubnet(index uint64) []peer.ID {
 	for pid, status := range p.status {
 		// look at active peers
 		if status.peerState == PeerConnecting || status.peerState == PeerConnected &&
-			status.committeeIndices != nil {
-			for _, idx := range status.committeeIndices {
+			status.metaData != nil {
+			indices := retrieveIndicesFromBitfield(status.metaData.Attnets)
+			for _, idx := range indices {
 				if idx == index {
 					peers = append(peers, pid)
+					break
 				}
 			}
 		}
@@ -454,4 +494,14 @@ func (p *Status) CurrentEpoch() uint64 {
 		}
 	}
 	return helpers.SlotToEpoch(highestSlot)
+}
+
+func retrieveIndicesFromBitfield(bitV bitfield.Bitvector64) []uint64 {
+	committeeIdxs := []uint64{}
+	for i := uint64(0); i < 64; i++ {
+		if bitV.BitAt(i) {
+			committeeIdxs = append(committeeIdxs, i)
+		}
+	}
+	return committeeIdxs
 }

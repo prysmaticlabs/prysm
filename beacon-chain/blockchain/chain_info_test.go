@@ -166,7 +166,7 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {
-	s, err := state.InitializeFromProto(&pb.BeaconState{Slot: 2})
+	s, err := state.InitializeFromProto(&pb.BeaconState{Slot: 2, GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:]})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
+	if !proto.Equal(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
 		t.Error("incorrect head state received")
 	}
 }

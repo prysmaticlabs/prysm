@@ -10,6 +10,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // EffectiveBalance returns the effective balance of the
@@ -99,6 +100,7 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	}
 	return &pbp2p.BeaconState{
 		GenesisTime:                 b.GenesisTime(),
+		GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 		Slot:                        b.Slot(),
 		Fork:                        b.Fork(),
 		LatestBlockHeader:           b.LatestBlockHeader(),
@@ -133,6 +135,21 @@ func (b *BeaconState) GenesisTime() uint64 {
 		return 0
 	}
 	return b.state.GenesisTime
+}
+
+// GenesisValidatorRoot of the beacon state.
+func (b *BeaconState) GenesisValidatorRoot() []byte {
+	if !b.HasInnerState() {
+		return nil
+	}
+
+	if b.state.GenesisValidatorsRoot == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
+
+	root := make([]byte, 32)
+	copy(root, b.state.GenesisValidatorsRoot)
+	return root
 }
 
 // GenesisUnixTime returns the genesis time as time.Time.
@@ -190,7 +207,8 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	defer b.lock.RUnlock()
 
 	hdr := &ethpb.BeaconBlockHeader{
-		Slot: b.state.LatestBlockHeader.Slot,
+		Slot:          b.state.LatestBlockHeader.Slot,
+		ProposerIndex: b.state.LatestBlockHeader.ProposerIndex,
 	}
 
 	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))

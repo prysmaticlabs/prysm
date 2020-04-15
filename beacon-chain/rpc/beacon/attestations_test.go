@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -536,6 +538,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
 
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
@@ -563,22 +567,14 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	// We setup 128 validators.
 	numValidators := 128
-	headState := setupActiveValidators(t, db, numValidators)
+	state := setupActiveValidators(t, db, numValidators)
 
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
-
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	epoch := uint64(0)
-	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	attesterSeed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -586,29 +582,35 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Next up we convert the test attestations to indexed form:
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
 		indexedAtts[i] = idxAtt
 	}
 
+	summaryCache := cache.NewStateSummaryCache()
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, summaryCache),
 	}
-
+	root := bytesutil.ToBytes32([]byte("root"))
+	if err := db.SaveState(ctx, state, root); err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaryCache.Put(root, &pbp2p.StateSummary{
+		Slot: 0,
+		Root: stateRoot[:],
+	})
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -666,24 +668,16 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 
 	// We setup 128 validators.
 	numValidators := 128
-	headState := setupActiveValidators(t, db, numValidators)
-
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetSlot(startSlot); err != nil {
+	state := setupActiveValidators(t, db, numValidators)
+	if err := state.SetSlot(startSlot); err != nil {
 		t.Fatal(err)
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, epoch)
+	activeIndices, err := helpers.ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
-	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	attesterSeed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -698,22 +692,18 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
 		indexedAtts[i] = idxAtt
 	}
 
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
 	}
-
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
+		t.Fatal(err)
+	}
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,
@@ -946,11 +936,11 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 					},
 				},
 			}
-			encoded, err := ssz.Marshal(attExample.Data)
+			encoded, err := helpers.ComputeSigningRoot(attExample.Data, []byte{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			sig := privKeys[j].Sign(encoded, 0 /*domain*/)
+			sig := privKeys[j].Sign(encoded[:])
 			attExample.Signature = sig.Marshal()
 
 			var indexInCommittee uint64
@@ -990,9 +980,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		att := aggAtts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
-		if err != nil {
-			t.Fatalf("Could not convert attestation to indexed: %v", err)
-		}
 		indexedAtts[i] = idxAtt
 	}
 

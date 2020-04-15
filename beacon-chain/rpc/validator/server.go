@@ -129,7 +129,11 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
-	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain))
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), s.GenesisValidatorRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -190,4 +194,9 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
+}
+
+// WaitForSynced is to be implemented.
+func (vs *Server) WaitForSynced(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
+	return status.Error(codes.Unimplemented, "not implemented")
 }

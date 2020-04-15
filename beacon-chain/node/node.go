@@ -259,7 +259,12 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		if err := d.HistoricalStatesDeleted(ctx); err != nil {
+			return err
+		}
 	}
+
 	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
@@ -298,13 +303,15 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		HostAddress:       ctx.String(cmd.P2PHost.Name),
 		HostDNS:           ctx.String(cmd.P2PHostDNS.Name),
 		PrivateKey:        ctx.String(cmd.P2PPrivKey.Name),
+		MetaDataDir:       ctx.String(cmd.P2PMetadata.Name),
 		TCPPort:           ctx.Uint(cmd.P2PTCPPort.Name),
 		UDPPort:           ctx.Uint(cmd.P2PUDPPort.Name),
 		MaxPeers:          ctx.Uint(cmd.P2PMaxPeers.Name),
 		WhitelistCIDR:     ctx.String(cmd.P2PWhitelist.Name),
 		EnableUPnP:        ctx.Bool(cmd.EnableUPnPFlag.Name),
-		EnableDiscv5:      ctx.Bool(flags.EnableDiscv5.Name),
+		DisableDiscv5:     ctx.Bool(flags.DisableDiscv5.Name),
 		Encoding:          ctx.String(cmd.P2PEncoding.Name),
+		StateNotifier:     b,
 	})
 	if err != nil {
 		return err
@@ -441,6 +448,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		ExitPool:            b.exitPool,
 		SlashingPool:        b.slashingsPool,
 		StateSummaryCache:   b.stateSummaryCache,
+		StateGen:            b.stateGen,
 	})
 
 	return b.services.RegisterService(rs)

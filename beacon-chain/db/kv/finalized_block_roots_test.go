@@ -6,10 +6,9 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
@@ -39,10 +38,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
-	st, err := state.InitializeFromProto(&pb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	st := testutil.NewBeaconState()
 	// a state is required to save checkpoint
 	if err := db.SaveState(ctx, st, root); err != nil {
 		t.Fatal(err)
@@ -115,10 +111,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 1,
 	}
 
-	st, err := state.InitializeFromProto(&pb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	st := testutil.NewBeaconState()
 	// A state is required to save checkpoint
 	if err := db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)); err != nil {
 		t.Fatal(err)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -15,6 +16,12 @@ func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.SignedVoluntaryExit got: %T", msg)
 	}
+
+	if ve.Exit == nil {
+		return errors.New("exit can't be nil")
+	}
+	r.setExitIndexSeen(ve.Exit.ValidatorIndex)
+
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
 		return err
@@ -37,7 +44,10 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 		if s == nil {
 			return fmt.Errorf("no state found for block root %#x", as.Attestation_1.Data.BeaconBlockRoot)
 		}
-		return r.slashingPool.InsertAttesterSlashing(ctx, s, as)
+		if err := r.slashingPool.InsertAttesterSlashing(ctx, s, as); err != nil {
+			return errors.Wrap(err, "could not insert attester slashing into pool")
+		}
+		r.setAttesterSlashingIndicesSeen(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
 	}
 	return nil
 }
@@ -57,7 +67,10 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 		if s == nil {
 			return fmt.Errorf("no state found for block root %#x", root)
 		}
-		return r.slashingPool.InsertProposerSlashing(ctx, s, ps)
+		if err := r.slashingPool.InsertProposerSlashing(ctx, s, ps); err != nil {
+			return errors.Wrap(err, "could not insert proposer slashing into pool")
+		}
+		r.setProposerSlashingIndexSeen(ps.Header_1.Header.ProposerIndex)
 	}
 	return nil
 }

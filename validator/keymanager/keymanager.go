@@ -13,22 +13,27 @@ var ErrNoSuchKey = errors.New("no such key")
 // ErrCannotSign is returned whenever a signing attempt fails.
 var ErrCannotSign = errors.New("cannot sign")
 
-// ErrCouldSlash is returned whenever a signing attempt is refused due to a potential slashing event.
-var ErrCouldSlash = errors.New("could result in a slashing event")
+// ErrDenied is returned whenever a signing attempt is denied.
+var ErrDenied = errors.New("signing attempt denied")
 
 // KeyManager controls access to private keys by the validator.
 type KeyManager interface {
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 	FetchValidatingKeys() ([][48]byte, error)
 	// Sign signs a message for the validator to broadcast.
-	Sign(pubKey [48]byte, root [32]byte, domain uint64) (*bls.Signature, error)
+	// Note that the domain should already be part of the root, but it is passed along for security purposes.
+	Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error)
 }
 
 // ProtectingKeyManager provides access to a keymanager that protects its clients from slashing events.
 type ProtectingKeyManager interface {
+	// SignGeneric signs a generic root.
+	// Note that the domain should already be part of the root, but it is provided for authorisation purposes.
+	SignGeneric(pubKey [48]byte, root [32]byte, domain [32]byte) (*bls.Signature, error)
+
 	// SignProposal signs a block proposal for the validator to broadcast.
-	SignProposal(pubKey [48]byte, domain uint64, data *ethpb.BeaconBlockHeader) (*bls.Signature, error)
+	SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.BeaconBlockHeader) (*bls.Signature, error)
 
 	// SignAttestation signs an attestation for the validator to broadcast.
-	SignAttestation(pubKey [48]byte, domain uint64, data *ethpb.AttestationData) (*bls.Signature, error)
+	SignAttestation(pubKey [48]byte, domain [32]byte, data *ethpb.AttestationData) (*bls.Signature, error)
 }

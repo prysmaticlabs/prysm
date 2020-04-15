@@ -150,7 +150,7 @@ func (p *Pool) InsertProposerSlashing(
 		return errors.Wrap(err, "could not verify proposer slashing")
 	}
 
-	idx := slashing.ProposerIndex
+	idx := slashing.Header_1.Header.ProposerIndex
 	ok, err := p.validatorSlashingPreconditionCheck(state, idx)
 	if err != nil {
 		return err
@@ -166,16 +166,17 @@ func (p *Pool) InsertProposerSlashing(
 	// Check if the validator already exists in the list of slashings.
 	// Use binary search to find the answer.
 	found := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
-		return p.pendingProposerSlashing[i].ProposerIndex >= slashing.ProposerIndex
+		return p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex >= slashing.Header_1.Header.ProposerIndex
 	})
-	if found != len(p.pendingProposerSlashing) && p.pendingProposerSlashing[found].ProposerIndex == slashing.ProposerIndex {
+	if found != len(p.pendingProposerSlashing) && p.pendingProposerSlashing[found].Header_1.Header.ProposerIndex ==
+		slashing.Header_1.Header.ProposerIndex {
 		return errors.New("slashing object already exists in pending proposer slashings")
 	}
 
 	// Insert into pending list and sort again.
 	p.pendingProposerSlashing = append(p.pendingProposerSlashing, slashing)
 	sort.Slice(p.pendingProposerSlashing, func(i, j int) bool {
-		return p.pendingProposerSlashing[i].ProposerIndex < p.pendingProposerSlashing[j].ProposerIndex
+		return p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex < p.pendingProposerSlashing[j].Header_1.Header.ProposerIndex
 	})
 	return nil
 }
@@ -206,12 +207,12 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	i := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
-		return p.pendingProposerSlashing[i].ProposerIndex >= ps.ProposerIndex
+		return p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex >= ps.Header_1.Header.ProposerIndex
 	})
-	if i != len(p.pendingProposerSlashing) && p.pendingProposerSlashing[i].ProposerIndex == ps.ProposerIndex {
+	if i != len(p.pendingProposerSlashing) && p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex == ps.Header_1.Header.ProposerIndex {
 		p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
 	}
-	p.included[ps.ProposerIndex] = true
+	p.included[ps.Header_1.Header.ProposerIndex] = true
 	numProposerSlashingsIncluded.Inc()
 }
 

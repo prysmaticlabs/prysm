@@ -29,8 +29,8 @@ func TestSignVerify(t *testing.T) {
 	priv := bls.RandKey()
 	pub := priv.PublicKey()
 	msg := []byte("hello")
-	sig := priv.Sign(msg, 0)
-	if !sig.Verify(msg, pub, 0) {
+	sig := priv.Sign(msg)
+	if !sig.Verify(msg, pub) {
 		t.Error("Signature did not verify")
 	}
 }
@@ -43,13 +43,13 @@ func TestVerifyAggregate(t *testing.T) {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
 		priv := bls.RandKey()
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:], 0)
+		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
 	aggSig := bls.AggregateSignatures(sigs)
-	if !aggSig.VerifyAggregate(pubkeys, msgs, 0) {
+	if !aggSig.VerifyAggregate(pubkeys, msgs) {
 		t.Error("Signature did not verify")
 	}
 }
@@ -61,12 +61,12 @@ func TestVerifyAggregateCommon(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		priv := bls.RandKey()
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:], 0)
+		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 	}
 	aggSig := bls.AggregateSignatures(sigs)
-	if !aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
+	if !aggSig.FastAggregateVerify(pubkeys, msg) {
 		t.Error("Signature did not verify")
 	}
 }
@@ -77,29 +77,9 @@ func TestVerifyAggregate_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
 	aggSig := bls.AggregateSignatures(sigs)
-	if aggSig.VerifyAggregateCommon(pubkeys, msg, 0 /*domain*/) != false {
+	if aggSig.FastAggregateVerify(pubkeys, msg) != false {
 		t.Error("Expected VerifyAggregate to return false with empty input " +
 			"of public keys.")
-	}
-}
-
-func TestComputeDomain_OK(t *testing.T) {
-	tests := []struct {
-		epoch      uint64
-		domainType uint64
-		domain     uint64
-	}{
-		{epoch: 1, domainType: 4, domain: 4},
-		{epoch: 2, domainType: 4, domain: 4},
-		{epoch: 2, domainType: 5, domain: 5},
-		{epoch: 3, domainType: 4, domain: 4},
-		{epoch: 3, domainType: 5, domain: 5},
-	}
-	for _, tt := range tests {
-		domain := bls.ComputeDomain(bytesutil.ToBytes4(bytesutil.Bytes4(tt.domainType)))
-		if domain != tt.domain {
-			t.Errorf("wanted domain version: %d, got: %d", tt.domain, domain)
-		}
 	}
 }
 

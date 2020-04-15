@@ -12,6 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -26,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -144,11 +146,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
+		StateGen:          stategen.New(beaconDB, cache.NewStateSummaryCache()),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
 		OpsService:        opsService,
-	}
-	if err != nil {
-		t.Fatalf("could not register blockchain service: %v", err)
 	}
 
 	chainService, err := NewService(ctx, cfg)
@@ -231,8 +231,8 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.SaveBlock(ctx, genesisBlk); err != nil {
 		t.Fatal(err)
 	}
-	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	if err != nil {
+	s := testutil.NewBeaconState()
+	if err := s.SetSlot(1); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, s, blkRoot); err != nil {
@@ -289,14 +289,14 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		DepositRoot:  hashTreeRoot[:],
 		DepositCount: uint64(len(deposits)),
 	})
-	if err != nil {
-		t.Fatal(err)
+	for _, deposit := range deposits {
+		genState, err = b.ProcessPreGenesisDeposit(ctx, genState, deposit)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	genState, err = b.ProcessDeposits(ctx, genState, &ethpb.BeaconBlockBody{Deposits: deposits})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{
+
+	if _, err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{
 		DepositRoot: hashTreeRoot[:],
 	}); err != nil {
 		t.Fatal(err)
@@ -336,8 +336,11 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
 	headBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}}
-	headState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: finalizedSlot})
-	if err != nil {
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(finalizedSlot); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]); err != nil {
 		t.Fatal(err)
 	}
 	headRoot, err := ssz.HashTreeRoot(headBlock.Block)
@@ -345,6 +348,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, headState, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, genesisRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveBlock(ctx, headBlock); err != nil {
@@ -359,7 +365,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err := db.SaveBlock(ctx, headBlock); err != nil {
 		t.Fatal(err)
 	}
-	c := &Service{beaconDB: db}
+	c := &Service{beaconDB: db, stateGen: stategen.New(db, cache.NewStateSummaryCache())}
 	if err := c.initializeChainInfo(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -398,17 +404,18 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	ctx := context.Background()
 	s := &Service{
 		beaconDB: db,
+		stateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, err := ssz.HashTreeRoot(b)
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := &pb.BeaconState{}
-	newState, err := beaconstate.InitializeFromProto(state)
-	if err := s.beaconDB.SaveState(ctx, newState, r); err != nil {
+	newState := testutil.NewBeaconState()
+	if err := s.stateGen.SaveState(ctx, r, newState); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := s.saveHeadNoDB(ctx, b, r); err != nil {
 		t.Fatal(err)
 	}
@@ -439,9 +446,8 @@ func TestChainService_PruneOldStates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		state := &pb.BeaconState{Slot: uint64(i)}
-		newState, err := beaconstate.InitializeFromProto(state)
-		if err != nil {
+		newState := testutil.NewBeaconState()
+		if err := newState.SetSlot(uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		if err := s.beaconDB.SaveState(ctx, newState, r); err != nil {

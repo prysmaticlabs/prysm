@@ -30,15 +30,15 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
 		state:                 st,
-		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
+		dirtyFields:           make(map[fieldIndex]interface{}, 21),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		rebuildTrie:           make(map[fieldIndex]bool, 20),
+		rebuildTrie:           make(map[fieldIndex]bool, 21),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 21; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
 		b.rebuildTrie[fieldIndex(i)] = true
 		b.dirtyIndices[fieldIndex(i)] = []uint64{}
@@ -101,12 +101,13 @@ func (b *BeaconState) Copy() *BeaconState {
 			PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+			GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
 		},
-		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 20),
-		rebuildTrie:           make(map[fieldIndex]bool, 20),
+		dirtyFields:           make(map[fieldIndex]interface{}, 21),
+		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+		rebuildTrie:           make(map[fieldIndex]bool, 21),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
+		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
 
 		// Copy on write validator index map.
 		valIdxMap: b.valIdxMap,
@@ -192,7 +193,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 		}
 		layers := merkleize(fieldRoots)
 		b.merkleLayers = layers
-		b.dirtyFields = make(map[fieldIndex]interface{})
+		b.dirtyFields = make(map[fieldIndex]interface{}, 21)
 	}
 
 	for field := range b.dirtyFields {
@@ -243,6 +244,8 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return stateutil.Uint64Root(b.state.GenesisTime), nil
+	case genesisValidatorRoot:
+		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return stateutil.Uint64Root(b.state.Slot), nil
 	case eth1DepositIndex:
@@ -286,7 +289,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case eth1DataVotes:
 		if featureconfig.Get().EnableFieldTrie {
 			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().SlotsPerEth1VotingPeriod)
+				err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
 				if err != nil {
 					return [32]byte{}, err
 				}

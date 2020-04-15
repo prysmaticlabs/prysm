@@ -14,6 +14,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	multiaddr "github.com/multiformats/go-multiaddr"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -54,17 +58,6 @@ func (mockListener) RequestENR(*enode.Node) (*enode.Node, error) {
 
 func (mockListener) LocalNode() *enode.LocalNode {
 	panic("implement me")
-}
-
-func createPeer(t *testing.T, cfg *Config, port int) (Listener, host.Host) {
-	h, pkey, ipAddr := createHost(t, port)
-	cfg.UDPPort = uint(port)
-	cfg.TCPPort = uint(port)
-	listener, err := startDiscoveryV5(ipAddr, pkey, cfg)
-	if err != nil {
-		t.Errorf("Could not start discovery for node: %v", err)
-	}
-	return listener, h
 }
 
 func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
@@ -108,6 +101,8 @@ func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
@@ -119,18 +114,33 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.stateNotifier = &mock.MockStateNotifier{}
 	s.dv5Listener = &mockListener{}
-	defer func() {
-		if err := s.Stop(); err != nil {
-			t.Log(err)
-		}
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
 	}()
-	s.Start()
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             time.Now(),
+				GenesisValidatorsRoot: make([]byte, 32),
+			},
+		})
+	}
+	time.Sleep(time.Second * 2)
 	if s.started != true {
 		t.Error("Expected service to be started")
 	}
 	s.Start()
 	testutil.AssertLogsContain(t, hook, "Attempted to start p2p service when it was already started")
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	exitRoutine <- true
 }
 
 func TestService_Status_NotRunning(t *testing.T) {
@@ -142,13 +152,22 @@ func TestService_Status_NotRunning(t *testing.T) {
 }
 
 func TestListenForNewNodes(t *testing.T) {
-	// setup bootnode
+	// Setup bootnode.
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
 	cfg := &Config{}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
 	ipAddr := net.ParseIP("127.0.0.1")
-	bootListener := createListener(ipAddr, pkey, cfg)
+	genesisTime := time.Now()
+	genesisValidatorsRoot := make([]byte, 32)
+	s := &Service{
+		cfg:                   cfg,
+		genesisTime:           genesisTime,
+		genesisValidatorsRoot: genesisValidatorsRoot,
+	}
+	bootListener := s.createListener(ipAddr, pkey)
 	defer bootListener.Close()
 
 	// Use shorter period for testing.
@@ -160,20 +179,37 @@ func TestListenForNewNodes(t *testing.T) {
 
 	bootNode := bootListener.Self()
 
+	var listeners []*discover.UDPv5
+	var hosts []host.Host
+	// setup other nodes.
 	cfg = &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		Encoding:            "ssz",
 		MaxPeers:            30,
 	}
-	var listeners []*discover.UDPv5
-	var hosts []host.Host
-	// setup other nodes
 	for i := 1; i <= 5; i++ {
-		listener, h := createPeer(t, cfg, port+i)
-		listeners = append(listeners, listener.(*discover.UDPv5))
+		h, pkey, ipAddr := createHost(t, port+i)
+		cfg.UDPPort = uint(port + i)
+		cfg.TCPPort = uint(port + i)
+		s := &Service{
+			cfg:                   cfg,
+			genesisTime:           genesisTime,
+			genesisValidatorsRoot: genesisValidatorsRoot,
+		}
+		listener, err := s.startDiscoveryV5(ipAddr, pkey)
+		if err != nil {
+			t.Errorf("Could not start discovery for node: %v", err)
+		}
+		listeners = append(listeners, listener)
 		hosts = append(hosts, h)
 	}
+	defer func() {
+		// Close down all peers.
+		for _, listener := range listeners {
+			listener.Close()
+		}
+	}()
 
 	// close peers upon exit of test
 	defer func() {
@@ -184,31 +220,38 @@ func TestListenForNewNodes(t *testing.T) {
 		}
 	}()
 
-	cfg.TCPPort = 14001
 	cfg.UDPPort = 14000
+	cfg.TCPPort = 14001
 
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	s.Start()
-	defer func() {
-		if err := s.Stop(); err != nil {
-			t.Log(err)
-		}
+	s.stateNotifier = &mock.MockStateNotifier{}
+	exitRoutine := make(chan bool)
+	go func() {
+		s.Start()
+		<-exitRoutine
 	}()
-
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
+				StartTime:             genesisTime,
+				GenesisValidatorsRoot: genesisValidatorsRoot,
+			},
+		})
+	}
 	time.Sleep(4 * time.Second)
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
 		t.Errorf("Not all peers added to peerstore, wanted %d but got %d", 5, len(peers))
 	}
-
-	// close down all peers
-	for _, listener := range listeners {
-		listener.Close()
+	if err := s.Stop(); err != nil {
+		t.Fatal(err)
 	}
+	exitRoutine <- true
 }
 
 func TestPeer_Disconnect(t *testing.T) {
