@@ -12,7 +12,10 @@ import (
 )
 
 func TestBeaconAggregateProofSubscriber_CanSave(t *testing.T) {
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,

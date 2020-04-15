@@ -34,7 +34,9 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	st := testutil.NewBeaconState()
-	st.SetSlot(1)
+	if err := st.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	svc.headFetcher = &mock.ChainService{
 		State: st,
 	}
@@ -57,7 +59,9 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	defer dbutil.TeardownDB(t, beaconDB)
 	// The head state is NOT an epoch end.
 	st := testutil.NewBeaconState()
-	st.SetSlot(params.BeaconConfig().SlotsPerEpoch - 2)
+	if err := st.SetSlot(params.BeaconConfig().SlotsPerEpoch - 2); err != nil {
+		t.Fatal(err)
+	}
 	svc.headFetcher = &mock.ChainService{
 		State: st,
 	}
@@ -425,10 +429,18 @@ func setupState(validatorCount uint64) (*stateTrie.BeaconState, error) {
 	// We initialize a head state that has attestations from participated
 	// validators in a simulated fashion.
 	st := testutil.NewBeaconState()
-	st.SetSlot((2 * params.BeaconConfig().SlotsPerEpoch) - 1)
-	st.SetValidators(validators)
-	st.SetBalances(balances)
-	st.SetCurrentEpochAttestations(atts)
+	if err := st.SetSlot((2 * params.BeaconConfig().SlotsPerEpoch) - 1); err != nil {
+		return nil, err
+	}
+	if err := st.SetValidators(validators); err != nil {
+		return nil, err
+	}
+	if err := st.SetBalances(balances); err != nil {
+		return nil, err
+	}
+	if err := st.SetCurrentEpochAttestations(atts); err != nil {
+		return nil, err
+	}
 	return st, nil
 }
 

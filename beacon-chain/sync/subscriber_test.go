@@ -37,7 +37,10 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	wg.Add(1)
 
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
-		m := msg.(*pb.SignedVoluntaryExit)
+		m, ok := msg.(*pb.SignedVoluntaryExit)
+		if !ok {
+			t.Error("Object is not of type *pb.SignedVoluntaryExit")
+		}
 		if m.Exit == nil || m.Exit.Epoch != 55 {
 			t.Errorf("Unexpected incoming message: %+v", m)
 		}
@@ -59,7 +62,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{}
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := Service{
 		ctx:                       ctx,
 		p2p:                       p2p,
@@ -74,7 +80,9 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	wg.Add(1)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
-		r.attesterSlashingSubscriber(ctx, msg)
+		if err := r.attesterSlashingSubscriber(ctx, msg); err != nil {
+			t.Fatal(err)
+		}
 		wg.Done()
 		return nil
 	})
@@ -89,7 +97,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating attester slashing")
 	}
-	r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	err = r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	if err != nil {
+		t.Fatal(err)
+	}
 	p2p.ReceivePubSub(topic, attesterSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -107,7 +118,10 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := Service{
 		ctx:                       ctx,
 		p2p:                       p2p,
@@ -122,7 +136,9 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	wg.Add(1)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
-		r.proposerSlashingSubscriber(ctx, msg)
+		if err := r.proposerSlashingSubscriber(ctx, msg); err != nil {
+			t.Fatal(err)
+		}
 		wg.Done()
 		return nil
 	})
@@ -138,7 +154,9 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		t.Fatalf("Error generating proposer slashing")
 	}
 	root, err := ssz.HashTreeRoot(proposerSlashing.Header_1.Header)
-	r.db.SaveState(ctx, beaconState, root)
+	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
+		t.Fatal(err)
+	}
 	p2p.ReceivePubSub(topic, proposerSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {

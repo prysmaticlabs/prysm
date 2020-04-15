@@ -28,7 +28,11 @@ func keySetup() {
 	keyMap = make(map[[48]byte]*keystore.Key)
 	keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
 
-	validatorKey, _ = keystore.NewKey()
+	var err error
+	validatorKey, err = keystore.NewKey()
+	if err != nil {
+		log.WithError(err).Debug("Cannot create key")
+	}
 	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
 	keyMap[validatorPubKey] = validatorKey
 
@@ -38,7 +42,10 @@ func keySetup() {
 
 	sks = make([]*bls.SecretKey, 3)
 	for i := 0; i < 3; i++ {
-		vKey, _ := keystore.NewKey()
+		vKey, err := keystore.NewKey()
+		if err != nil {
+			log.WithError(err).Debug("Cannot create key")
+		}
 		var pubKey [48]byte
 		copy(pubKey[:], vKey.PublicKey.Marshal())
 		keyMapThreeValidators[pubKey] = vKey
@@ -49,8 +56,14 @@ func keySetup() {
 
 func TestMain(m *testing.M) {
 	dir := testutil.TempDir() + "/keystore1"
-	defer os.RemoveAll(dir)
-	accounts.NewValidatorAccount(dir, "1234")
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			log.WithError(err).Debug("Cannot remove keystore folder")
+		}
+	}()
+	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
+		log.WithError(err).Debug("Cannot create validator account")
+	}
 	keySetup()
 	os.Exit(m.Run())
 }

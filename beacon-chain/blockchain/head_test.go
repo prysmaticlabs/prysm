@@ -44,12 +44,24 @@ func TestSaveHead_Different(t *testing.T) {
 
 	newHeadBlock := &ethpb.BeaconBlock{Slot: 1}
 	newHeadSignedBlock := &ethpb.SignedBeaconBlock{Block: newHeadBlock}
-	service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock)
-	newRoot, _ := ssz.HashTreeRoot(newHeadBlock)
+
+	if err := service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock); err != nil {
+		t.Fatal(err)
+	}
+	newRoot, err := ssz.HashTreeRoot(newHeadBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	headState := testutil.NewBeaconState()
-	headState.SetSlot(1)
-	service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]})
-	service.beaconDB.SaveState(context.Background(), headState, newRoot)
+	if err := headState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Slot: 1, Root: newRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(context.Background(), headState, newRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
 	}

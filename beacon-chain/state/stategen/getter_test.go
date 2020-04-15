@@ -27,11 +27,18 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, _ := ssz.HashTreeRoot(b.Block)
+	bRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(1)
-	service.beaconDB.SaveState(ctx, beaconState, bRoot)
+	if err := beaconState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'a'}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Root: r[:],
@@ -58,8 +65,13 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, _ := ssz.HashTreeRoot(blk.Block)
-	service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot)
+	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -116,16 +128,23 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	service.splitInfo.slot = service.slotsPerArchivedPoint + 1
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	beaconState.SetSlot(1)
+	if err := beaconState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, _ := ssz.HashTreeRoot(b.Block)
+	bRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
-	db.SaveGenesisBlockRoot(ctx, bRoot)
+	if err := db.SaveGenesisBlockRoot(ctx, bRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	r := [32]byte{}
 	if err := service.beaconDB.SaveArchivedPointRoot(ctx, r, 0); err != nil {
@@ -163,11 +182,16 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, _ := ssz.HashTreeRoot(b.Block)
+	bRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
-	db.SaveGenesisBlockRoot(ctx, bRoot)
+	if err := db.SaveGenesisBlockRoot(ctx, bRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	slot := uint64(10)
 	loadedState, err := service.StateBySlot(ctx, slot)

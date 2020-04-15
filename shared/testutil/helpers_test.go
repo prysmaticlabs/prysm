@@ -16,12 +16,17 @@ func TestBlockSignature(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState.SetSlot(beaconState.Slot() + 1)
+	if err := beaconState.SetSlot(beaconState.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.SetSlot(beaconState.Slot() - 1)
+
+	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
+		t.Error(err)
+	}
 	epoch := helpers.SlotToEpoch(block.Block.Slot)
 	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
 	if err != nil {

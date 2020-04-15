@@ -22,7 +22,9 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Root:  root[:],
 	}
 	st := testutil.NewBeaconState()
-	st.SetSlot(1)
+	if err := st.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := db.SaveState(ctx, st, root); err != nil {
 		t.Fatal(err)
@@ -73,7 +75,9 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := testutil.NewBeaconState()
-	st.SetSlot(1)
+	if err := st.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	// a state is required to save checkpoint
 	if err := db.SaveState(ctx, st, root); err != nil {
 		t.Fatal(err)
