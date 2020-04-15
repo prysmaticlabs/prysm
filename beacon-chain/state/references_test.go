@@ -3,6 +3,7 @@ package state
 import (
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -201,14 +202,6 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 		t.Error("No state roots found")
 	}
 
-	hasBlockRootWithKey := func(roots [][]byte, key [32]byte) bool {
-		for _, root := range roots {
-			if reflect.DeepEqual(root, key[:]) {
-				return true
-			}
-		}
-		return false
-	}
 	// Assert shared state.
 	blockRootsA := a.state.GetBlockRoots()
 	stateRootsA := a.state.GetStateRoots()
@@ -220,12 +213,10 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
 		t.Errorf("Unexpected number of state roots, want: %v", 1)
 	}
-	if !hasBlockRootWithKey(a.state.GetStateRoots(), root1) {
-		t.Errorf("Expected state root not found, want: %v", root1)
-	}
-	if !hasBlockRootWithKey(b.state.GetStateRoots(), root1) {
-		t.Errorf("Expected state root not found, want: %v", root1)
-	}
+	assertValFound(t, blockRootsA, root1[:])
+	assertValFound(t, blockRootsB, root1[:])
+	assertValFound(t, stateRootsA, root1[:])
+	assertValFound(t, stateRootsB, root1[:])
 
 	// Mutator should only affect calling state: a.
 	err = a.UpdateBlockRootAtIndex(0, root2)
@@ -238,39 +229,22 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	}
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
-	if hasBlockRootWithKey(a.state.GetBlockRoots(), root1) {
-		t.Errorf("Unexpected block root found: %v", root1)
-	}
-	if hasBlockRootWithKey(a.state.GetStateRoots(), root1) {
-		t.Errorf("Unexpected state root found: %v", root1)
-	}
-	if !hasBlockRootWithKey(a.state.GetBlockRoots(), root2) {
-		t.Errorf("Expected block root not found, want: %v", root2)
-	}
-	if !hasBlockRootWithKey(a.state.GetStateRoots(), root2) {
-		t.Errorf("Expected state root not found, want: %v", root2)
-	}
-	if !hasBlockRootWithKey(b.state.GetBlockRoots(), root1) {
-		t.Errorf("Expected block root not found, want: %v", root1)
-	}
-	if !hasBlockRootWithKey(b.state.GetStateRoots(), root1) {
-		t.Errorf("Expected state root not found, want: %v", root1)
-	}
-	// Get updated pointers to data.
-	blockRootsA = a.state.GetBlockRoots()
-	stateRootsA = a.state.GetStateRoots()
-	blockRootsB = b.state.GetBlockRoots()
-	stateRootsB = b.state.GetStateRoots()
+	assertValNotFound(t, a.state.GetBlockRoots(), root1[:])
+	assertValNotFound(t, a.state.GetStateRoots(), root1[:])
+	assertValFound(t, a.state.GetBlockRoots(), root2[:])
+	assertValFound(t, a.state.GetStateRoots(), root2[:])
+	assertValFound(t, b.state.GetBlockRoots(), root1[:])
+	assertValFound(t, b.state.GetStateRoots(), root1[:])
 	if len(blockRootsA) != len(blockRootsB) || len(blockRootsA) < 1 {
 		t.Errorf("Unexpected number of block roots, want: %v", 1)
 	}
 	if len(stateRootsA) != len(stateRootsB) || len(stateRootsA) < 1 {
 		t.Errorf("Unexpected number of state roots, want: %v", 1)
 	}
-	if !reflect.DeepEqual(blockRootsA[0], root2[:]) {
+	if !reflect.DeepEqual(a.state.GetBlockRoots()[0], root2[:]) {
 		t.Errorf("Expected mutation not found")
 	}
-	if !reflect.DeepEqual(stateRootsA[0], root2[:]) {
+	if !reflect.DeepEqual(a.state.GetStateRoots()[0], root2[:]) {
 		t.Errorf("Expected mutation not found")
 	}
 	if !reflect.DeepEqual(blockRootsB[0], root1[:]) {
@@ -318,30 +292,14 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 		t.Error("No randao mixes found")
 	}
 
-	assertValFound := func(key []byte, vals [][]byte) {
-		for _, val := range vals {
-			if reflect.DeepEqual(val, key) {
-				return
-			}
-		}
-		t.Errorf("Expected key not found (%v), want: %v", vals, key)
-	}
-	assertValNotFound := func(key []byte, vals [][]byte) {
-		for _, val := range vals {
-			if reflect.DeepEqual(val, key) {
-				t.Errorf("Unexpected key found (%v), key: %v", vals, key)
-				return
-			}
-		}
-	}
 	// Assert shared state.
 	mixesA := a.state.GetRandaoMixes()
 	mixesB := b.state.GetRandaoMixes()
 	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
 		t.Errorf("Unexpected number of mix values, want: %v", 1)
 	}
-	assertValFound(val1, mixesA)
-	assertValFound(val1, mixesB)
+	assertValFound(t, mixesA, val1)
+	assertValFound(t, mixesB, val1)
 
 	// Mutator should only affect calling state: a.
 	err = a.UpdateRandaoMixesAtIndex(val2, 0)
@@ -353,12 +311,12 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 	if len(mixesA) != len(mixesB) || len(mixesA) < 1 {
 		t.Errorf("Unexpected number of mix values, want: %v", 1)
 	}
-	assertValFound(val2, a.state.GetRandaoMixes())
-	assertValNotFound(val1, a.state.GetRandaoMixes())
-	assertValFound(val1, b.state.GetRandaoMixes())
-	assertValNotFound(val2, b.state.GetRandaoMixes())
-	assertValFound(val1, mixesB)
-	assertValNotFound(val2, mixesB)
+	assertValFound(t, a.state.GetRandaoMixes(), val2)
+	assertValNotFound(t, a.state.GetRandaoMixes(), val1)
+	assertValFound(t, b.state.GetRandaoMixes(), val1)
+	assertValNotFound(t, b.state.GetRandaoMixes(), val2)
+	assertValFound(t, mixesB, val1)
+	assertValNotFound(t, mixesB, val2)
 	if !reflect.DeepEqual(a.state.GetRandaoMixes()[0], val2) {
 		t.Errorf("Expected mutation not found")
 	}
@@ -376,5 +334,27 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 func assertRefCount(t *testing.T, b *BeaconState, idx fieldIndex, want uint) {
 	if cnt := b.sharedFieldReferences[idx].refs; cnt != want {
 		t.Errorf("Unexpected count of references for index %d, want: %v, got: %v", idx, want, cnt)
+	}
+}
+
+// assertValFound checks whether item with a given value exists in list.
+func assertValFound(t *testing.T, vals [][]byte, val []byte) {
+	for i := range vals {
+		if reflect.DeepEqual(vals[i], val) {
+			return
+		}
+	}
+	t.Log(string(debug.Stack()))
+	t.Fatalf("Expected value not found (%v), want: %v", vals, val)
+}
+
+// assertValNotFound checks whether item with a given value doesn't exist in list.
+func assertValNotFound(t *testing.T, vals [][]byte, val []byte) {
+	for i := range vals {
+		if reflect.DeepEqual(vals[i], val) {
+			t.Log(string(debug.Stack()))
+			t.Errorf("Unexpected value found (%v),: %v", vals, val)
+			return
+		}
 	}
 }
