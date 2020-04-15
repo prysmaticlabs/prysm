@@ -56,7 +56,10 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	gRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +108,10 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	gRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
