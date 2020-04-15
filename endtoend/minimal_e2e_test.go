@@ -33,6 +33,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		TestSlasher:    true,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
+			ev.HealthzCheck,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
