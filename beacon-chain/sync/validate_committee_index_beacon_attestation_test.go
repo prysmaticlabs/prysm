@@ -32,7 +32,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		ValidAttestation: true,
 	}
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	s := &Service{
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		p2p:                  p,
@@ -58,7 +61,9 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	}
 
 	savedState := testutil.NewBeaconState()
-	db.SaveState(context.Background(), savedState, validBlockRoot)
+	if err := db.SaveState(context.Background(), savedState, validBlockRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name                      string

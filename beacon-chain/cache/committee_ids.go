@@ -53,9 +53,12 @@ func (c *committeeIDs) GetAttesterCommitteeIDs(slot uint64) []uint64 {
 
 	val, exists := c.attester.Get(slot)
 	if !exists {
-		return []uint64{}
+		return nil
 	}
-	return val.([]uint64)
+	if v, ok := val.([]uint64); ok {
+	   return v
+	}
+	return nil
 }
 
 // AddAggregatorCommiteeID adds committee ID for subscribing subnet for the aggregator of a given slot.

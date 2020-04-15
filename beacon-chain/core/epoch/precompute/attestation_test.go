@@ -74,13 +74,17 @@ func TestUpdateBalance(t *testing.T) {
 
 func TestSameHead(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	beaconState.SetSlot(1)
+	if err := beaconState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := [32]byte{'A'}
 	br := beaconState.BlockRoots()
 	br[0] = r[:]
-	beaconState.SetBlockRoots(br)
+	if err := beaconState.SetBlockRoots(br); err != nil {
+		t.Fatal(err)
+	}
 	att.Data.BeaconBlockRoot = r[:]
 	same, err := precompute.SameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
@@ -102,13 +106,17 @@ func TestSameHead(t *testing.T) {
 
 func TestSameTarget(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	beaconState.SetSlot(1)
+	if err := beaconState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := [32]byte{'A'}
 	br := beaconState.BlockRoots()
 	br[0] = r[:]
-	beaconState.SetBlockRoots(br)
+	if err := beaconState.SetBlockRoots(br); err != nil {
+		t.Fatal(err)
+	}
 	att.Data.Target.Root = r[:]
 	same, err := precompute.SameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
 	if err != nil {
@@ -130,13 +138,17 @@ func TestSameTarget(t *testing.T) {
 
 func TestAttestedPrevEpoch(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
 	r := [32]byte{'A'}
 	br := beaconState.BlockRoots()
 	br[0] = r[:]
-	beaconState.SetBlockRoots(br)
+	if err := beaconState.SetBlockRoots(br); err != nil {
+		t.Fatal(err)
+	}
 	att.Data.Target.Root = r[:]
 	att.Data.BeaconBlockRoot = r[:]
 	votedEpoch, votedTarget, votedHead, err := precompute.AttestedPrevEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
@@ -156,14 +168,18 @@ func TestAttestedPrevEpoch(t *testing.T) {
 
 func TestAttestedCurrentEpoch(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
+		t.Fatal(err)
+	}
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1}}}
 	r := [32]byte{'A'}
 
 	br := beaconState.BlockRoots()
 	br[params.BeaconConfig().SlotsPerEpoch] = r[:]
-	beaconState.SetBlockRoots(br)
+	if err := beaconState.SetBlockRoots(br); err != nil {
+		t.Fatal(err)
+	}
 	att.Data.Target.Root = r[:]
 	att.Data.BeaconBlockRoot = r[:]
 	votedEpoch, votedTarget, err := precompute.AttestedCurrentEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
@@ -184,7 +200,9 @@ func TestProcessAttestations(t *testing.T) {
 
 	validators := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
-	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 
 	bf := []byte{0xff}
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
@@ -199,18 +217,26 @@ func TestProcessAttestations(t *testing.T) {
 	br := beaconState.BlockRoots()
 	newRt := [32]byte{'B'}
 	br[0] = newRt[:]
-	beaconState.SetBlockRoots(br)
+	if err := beaconState.SetBlockRoots(br); err != nil {
+		t.Fatal(err)
+	}
 	att2.Data.Target.Root = rt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}})
-	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf}})
+	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	vp := make([]*precompute.Validator, validators)
 	for i := 0; i < len(vp); i++ {
 		vp[i] = &precompute.Validator{CurrentEpochEffectiveBalance: 100}
 	}
 	bp := &precompute.Balance{}
-	vp, bp, err := precompute.ProcessAttestations(context.Background(), beaconState, vp, bp)
+	vp, bp, err = precompute.ProcessAttestations(context.Background(), beaconState, vp, bp)
 	if err != nil {
 		t.Fatal(err)
 	}

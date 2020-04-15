@@ -47,9 +47,10 @@ func TestValidatorIndex_OK(t *testing.T) {
 
 	pubKey := pubKey(1)
 
-	st.SetValidators([]*ethpb.Validator{
-		&ethpb.Validator{PublicKey: pubKey},
-	})
+	err := st.SetValidators([]*ethpb.Validator{{PublicKey: pubKey}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	Server := &Server{
 		BeaconDB:    db,
@@ -69,10 +70,13 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+	beaconState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -106,7 +110,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
 		want := "context canceled"
-		if err := vs.WaitForActivation(req, mockChainStream); !strings.Contains(err.Error(), want) {
+		if err := vs.WaitForActivation(req, mockChainStream); err == nil || !strings.Contains(err.Error(), want) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -235,7 +239,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
-		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); err == nil || !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -250,7 +254,9 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
 	trie := testutil.NewBeaconState()
-	trie.SetSlot(3)
+	if err := trie.SetSlot(3); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, trie, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}

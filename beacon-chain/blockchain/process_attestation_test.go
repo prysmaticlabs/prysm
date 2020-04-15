@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -46,13 +45,19 @@ func TestStore_OnAttestation(t *testing.T) {
 	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithOutStateRoot, _ := ssz.HashTreeRoot(BlkWithOutState.Block)
+	BlkWithOutStateRoot, err := ssz.HashTreeRoot(BlkWithOutState.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	BlkWithStateBadAtt := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithStateBadAttRoot, _ := ssz.HashTreeRoot(BlkWithStateBadAtt.Block)
+	BlkWithStateBadAttRoot, err := ssz.HashTreeRoot(BlkWithStateBadAtt.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s := testutil.NewBeaconState()
 	if err := s.SetSlot(100 * params.BeaconConfig().SlotsPerEpoch); err != nil {
@@ -66,13 +71,19 @@ func TestStore_OnAttestation(t *testing.T) {
 	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithValidStateRoot, _ := ssz.HashTreeRoot(BlkWithValidState.Block)
+
+	BlkWithValidStateRoot, err := ssz.HashTreeRoot(BlkWithValidState.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	s = testutil.NewBeaconState()
-	s.SetFork(&pb.Fork{
+	if err := s.SetFork(&pb.Fork{
 		Epoch:           0,
 		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +154,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Fork: &pb.Fork{
 			Epoch:           0,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -159,6 +170,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		Validators:          []*ethpb.Validator{{PublicKey: bytesutil.PadTo([]byte("foo"), 48)}},
 		Balances:            []uint64{0},
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'g'}
 	if err := service.beaconDB.SaveState(ctx, s, r); err != nil {
 		t.Fatal(err)
@@ -171,7 +185,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	r = bytesutil.ToBytes32([]byte{'A'})
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'}))
+	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}); err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +200,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
-	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'}))
+	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'})); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'B'}, 32)}); err != nil {
 		t.Fatal(err)
 	}
@@ -220,13 +238,17 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot())
 	}
 
-	s.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1)
+	if err := s.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
+		t.Fatal(err)
+	}
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, 32)}
-	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'}))
+	if err := service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'C'}, 32)}); err != nil {
 		t.Fatal(err)
 	}
@@ -255,9 +277,13 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	epoch := uint64(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
-	baseState.SetSlot(epoch * params.BeaconConfig().SlotsPerEpoch)
+	if err := baseState.SetSlot(epoch * params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
-	service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root))
+	if err := service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root)); err != nil {
+		t.Fatal(err)
+	}
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	if err != nil {
 		t.Fatal(err)
@@ -276,7 +302,9 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	epoch = uint64(2)
 	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch}
-	service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root))
+	if err := service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root)); err != nil {
+		t.Fatal(err)
+	}
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	if err != nil {
 		t.Fatal(err)
@@ -388,11 +416,17 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
-	service.beaconDB.SaveBlock(ctx, b)
-	r, _ := ssz.HashTreeRoot(b.Block)
+	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
 
-	if err := service.verifyBeaconBlock(ctx, d); !strings.Contains(err.Error(), "could not process attestation for future block") {
+	err = service.verifyBeaconBlock(ctx, d)
+	if err == nil || !strings.Contains(err.Error(), "could not process attestation for future block") {
 		t.Error("Did not receive the wanted error")
 	}
 }
@@ -409,8 +443,13 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
-	service.beaconDB.SaveBlock(ctx, b)
-	r, _ := ssz.HashTreeRoot(b.Block)
+	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
 
 	if err := service.verifyBeaconBlock(ctx, d); err != nil {

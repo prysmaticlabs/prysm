@@ -163,7 +163,6 @@ func TestNewRemoteWallet(t *testing.T) {
 				if err := os.MkdirAll(dir, 0777); err != nil {
 					t.Fatalf(err.Error())
 				}
-				defer os.RemoveAll(dir)
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
 					if err := ioutil.WriteFile(caCertPath, []byte(test.caCert), 0666); err != nil {

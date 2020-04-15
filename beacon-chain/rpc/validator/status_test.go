@@ -89,15 +89,19 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	}
 	// Pending active because activation epoch is still defaulted at far future slot.
 	state := testutil.NewBeaconState()
-	state.SetSlot(5000)
-	state.SetValidators([]*ethpb.Validator{
+	if err := state.SetSlot(5000); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetValidators([]*ethpb.Validator{
 		{
 			ActivationEpoch:   params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 			PublicKey:         pubKey,
 		},
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -405,11 +409,15 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 	state := testutil.NewBeaconState()
-	state.SetSlot(slot)
-	state.SetValidators([]*ethpb.Validator{{
+	if err := state.SetSlot(slot); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetValidators([]*ethpb.Validator{{
 		PublicKey:         pubKey,
 		WithdrawableEpoch: epoch + 1},
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -625,8 +633,12 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		},
 	}
 	state := testutil.NewBeaconState()
-	state.SetValidators(validators)
-	state.SetSlot(currentSlot)
+	if err := state.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetSlot(currentSlot); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}

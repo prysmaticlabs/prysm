@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -46,9 +45,8 @@ var _ = shared.Service(&Service{})
 // Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
 
-// Refresh rate of ENR set at every quarter of an epoch.
-var refreshRate = time.Duration((params.BeaconConfig().SecondsPerSlot*
-	params.BeaconConfig().SlotsPerEpoch)/4) * time.Second
+// Refresh rate of ENR set at twice per slot.
+var refreshRate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
@@ -71,7 +69,6 @@ type Service struct {
 	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
 	pubsub                *pubsub.PubSub
-	beaconDB              db.Database
 	dv5Listener           Listener
 	startupErr            error
 	stateNotifier         statefeed.Notifier
@@ -96,7 +93,6 @@ func NewService(cfg *Config) (*Service, error) {
 	}
 
 	s := &Service{
-		beaconDB:      cfg.BeaconDB,
 		ctx:           ctx,
 		stateNotifier: cfg.StateNotifier,
 		cancel:        cancel,
@@ -177,18 +173,8 @@ func (s *Service) Start() {
 	}
 
 	// Waits until the state is initialized via an event feed.
-	// Check if we have a genesis time / genesis state
-	// used for fork-related data when connecting peers.
-	genesisState, err := s.beaconDB.GenesisState(s.ctx)
-	if err != nil {
-		log.WithError(err).Error("Could not read genesis state")
-	}
-	if genesisState != nil {
-		s.genesisTime = time.Unix(int64(genesisState.GenesisTime()), 0)
-		s.genesisValidatorsRoot = genesisState.GenesisValidatorRoot()
-	} else {
-		s.awaitStateInitialized()
-	}
+	// Used for fork-related data when connecting peers.
+	s.awaitStateInitialized()
 	s.isPreGenesis = false
 
 	var peersToWatch []string
@@ -411,9 +397,17 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		if node.IP() == nil {
 			continue
 		}
+		// do not look for nodes with no tcp port set
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
+		}
 		subnets, err := retrieveAttSubnets(node.Record())
 		if err != nil {
-			return false, errors.Wrap(err, "could not retrieve subnets")
+			log.Errorf("could not retrieve subnets: %v", err)
+			continue
 		}
 		for _, comIdx := range subnets {
 			if comIdx == index {
@@ -538,6 +532,13 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 		if node.IP() == nil {
 			continue
 		}
+		// do not dial nodes with their tcp ports not set
+		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
+		}
 		multiAddr, err := convertToSingleMultiAddr(node)
 		if err != nil {
 			log.WithError(err).Error("Could not convert to multiAddr")
@@ -578,6 +579,13 @@ func (s *Service) connectToBootnodes() error {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return err
+		}
+		// do not dial bootnodes with their tcp ports not set
+		if err := bootNode.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+			if !enr.IsNotFound(err) {
+				log.WithError(err).Error("Could not retrieve tcp port")
+			}
+			continue
 		}
 		nodes = append(nodes, bootNode)
 	}

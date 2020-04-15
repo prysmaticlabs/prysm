@@ -129,11 +129,14 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		}
 	}
 
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		slot  uint64
@@ -163,7 +166,9 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	for _, tt := range tests {
 		ClearCache()
-		state.SetSlot(tt.slot)
+		if err := state.SetSlot(tt.slot); err != nil {
+			t.Fatal(err)
+		}
 		result, err := BeaconProposerIndex(state)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
@@ -206,11 +211,14 @@ func TestChurnLimit_OK(t *testing.T) {
 			}
 		}
 
-		beaconState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+		beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Slot:        1,
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
 		if err != nil {
 			t.Fatal(err)
@@ -405,7 +413,10 @@ func TestActiveValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := beaconstate.InitializeFromProto(tt.args.state)
+			s, err := beaconstate.InitializeFromProto(tt.args.state)
+			if err != nil {
+				t.Fatal(err)
+			}
 			got, err := ActiveValidatorIndices(s, tt.args.epoch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ActiveValidatorIndices() error = %v, wantErr %v", err, tt.wantErr)
@@ -589,7 +600,10 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _ := beaconstate.InitializeFromProto(tt.state)
+			s, err := beaconstate.InitializeFromProto(tt.state)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if got := IsEligibleForActivation(s, tt.validator); got != tt.want {
 				t.Errorf("IsEligibleForActivation() = %v, want %v", got, tt.want)
 			}

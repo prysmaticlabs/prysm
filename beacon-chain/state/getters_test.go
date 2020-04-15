@@ -8,12 +8,17 @@ import (
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
-	headState, _ := InitializeFromProto(&pb.BeaconState{Slot: 1})
+	headState, err := InitializeFromProto(&pb.BeaconState{Slot: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		headState.SetSlot(uint64(0))
+		if err := headState.SetSlot(uint64(0)); err != nil {
+			t.Fatal(err)
+		}
 		wg.Done()
 	}()
 	go func() {

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/params"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

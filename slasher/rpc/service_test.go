@@ -29,7 +29,9 @@ func TestLifecycle_OK(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "listening on port")
 
-	rpcService.Stop()
+	if err := rpcService.Stop(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestStatus_CredentialError(t *testing.T) {
@@ -52,5 +54,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, fmt.Sprint("listening on port"))
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 
-	rpcService.Stop()
+	if err := rpcService.Stop(); err != nil {
+		t.Error(err)
+	}
 }

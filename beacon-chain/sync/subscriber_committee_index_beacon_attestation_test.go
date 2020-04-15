@@ -17,11 +17,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
+	fc := featureconfig.Get()
+	fc.DisableDynamicCommitteeSubnets = true
+	featureconfig.Init(fc)
 
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)
@@ -41,10 +45,16 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
-	savedState := testutil.NewBeaconState()
-	db.SaveState(context.Background(), savedState, root)
 
-	c, _ := lru.New(10)
+	savedState := testutil.NewBeaconState()
+	if err := db.SaveState(context.Background(), savedState, root); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		attPool: attestations.NewPool(),
 		chain: &mock.ChainService{

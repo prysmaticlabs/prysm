@@ -93,7 +93,10 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: s},
@@ -133,7 +136,10 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: state},

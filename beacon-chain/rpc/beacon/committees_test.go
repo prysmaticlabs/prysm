@@ -94,7 +94,11 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.B
 		})
 	}
 	s := testutil.NewBeaconState()
-	s.SetValidators(validators)
-	s.SetBalances(balances)
+	if err := s.SetValidators(validators); err != nil {
+		return nil
+	}
+	if err := s.SetBalances(balances); err != nil {
+		return nil
+	}
 	return s
 }

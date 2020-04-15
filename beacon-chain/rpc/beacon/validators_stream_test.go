@@ -69,7 +69,9 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 		pubKeys:      make([][]byte, 0),
 	}
 	for _, test := range tests {
-		is.handleSetValidatorKeys(test.reqPubKeys)
+		if err := is.handleSetValidatorKeys(test.reqPubKeys); err != nil {
+			t.Log(err)
+		}
 		if len(is.pubKeys) != len(test.reqPubKeys) {
 			t.Errorf("Incorrect number of keys: expected %v, received %v", len(test.reqPubKeys), len(is.pubKeys))
 		}
@@ -112,8 +114,12 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 		pubKeys:      make([][]byte, 0),
 	}
 	for _, test := range tests {
-		is.handleSetValidatorKeys(test.initialPubKeys)
-		is.handleAddValidatorKeys(test.reqPubKeys)
+		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
+			t.Log(err)
+		}
+		if err := is.handleAddValidatorKeys(test.reqPubKeys); err != nil {
+			t.Log(err)
+		}
 		if len(is.pubKeys) != test.finalLen {
 			t.Errorf("Incorrect number of keys: expected %v, received %v", len(is.pubKeys), test.finalLen)
 		}
@@ -156,7 +162,9 @@ func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 		pubKeys:      make([][]byte, 0),
 	}
 	for _, test := range tests {
-		is.handleSetValidatorKeys(test.initialPubKeys)
+		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
+			t.Log(err)
+		}
 		is.handleRemoveValidatorKeys(test.reqPubKeys)
 		if len(is.pubKeys) != test.finalLen {
 			t.Errorf("Incorrect number of keys: expected %v, received %v", len(is.pubKeys), test.finalLen)

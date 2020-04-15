@@ -164,7 +164,7 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	eth1DataNotification = false
 
 	eth1VotingPeriodStartTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	eth1VotingPeriodStartTime += (slot - (slot % params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch)) * params.BeaconConfig().SecondsPerSlot
+	eth1VotingPeriodStartTime += (slot - (slot % (params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch))) * params.BeaconConfig().SecondsPerSlot
 
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)

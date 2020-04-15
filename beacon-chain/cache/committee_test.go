@@ -177,14 +177,17 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 func TestCommitteeCacheOutOfRange(t *testing.T) {
 	cache := NewCommitteesCache()
 	seed := bytesutil.ToBytes32([]byte("foo"))
-	cache.CommitteeCache.Add(&Committees{
+	err := cache.CommitteeCache.Add(&Committees{
 		CommitteeCount:  1,
 		Seed:            seed,
 		ShuffledIndices: []uint64{0},
 		SortedIndices:   []uint64{},
 		ProposerIndices: []uint64{},
 	})
-	_, err := cache.Committee(0, seed, math.MaxUint64) // Overflow!
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = cache.Committee(0, seed, math.MaxUint64) // Overflow!
 	if err == nil {
 		t.Fatal("Did not fail as expected")
 	}

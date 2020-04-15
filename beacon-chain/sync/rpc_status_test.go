@@ -218,7 +218,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		log.WithField("status", out).Warn("sending status")
-		stream.Close()
+		if err := stream.Close(); err != nil {
+			t.Log(err)
+		}
 	})
 
 	pcl = protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
@@ -237,7 +239,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		stream.Close()
+		if err := stream.Close(); err != nil {
+			t.Fatal(err)
+		}
 	})
 
 	numInactive1 := len(p1.Peers().Inactive())

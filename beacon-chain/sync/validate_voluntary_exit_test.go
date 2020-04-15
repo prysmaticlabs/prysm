@@ -87,7 +87,10 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
-	c, _ := lru.New(10)
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p: p,
 		chain: &mock.ChainService{

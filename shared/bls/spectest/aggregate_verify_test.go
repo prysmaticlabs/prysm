@@ -63,7 +63,6 @@ func TestAggregateVerifyYaml(t *testing.T) {
 				t.Fatalf("Signature does not match the expected verification output. "+
 					"Expected %#v but received %#v for test case %d", test.Output, verified, i)
 			}
-			t.Log("Success")
 		})
 	}
 }
