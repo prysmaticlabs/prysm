@@ -903,7 +903,10 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	gRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
