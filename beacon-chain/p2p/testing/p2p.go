@@ -119,7 +119,7 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 	time.Sleep(time.Millisecond * 100)
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		p.t.Fatalf("Failed to encode message: %v", err)
 	}
 	digest, err := p.ForkDigest()
