@@ -44,7 +44,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	buf := new(bytes.Buffer)
-	if _, err := s.Encoding().Encode(buf, msg); err != nil {
+	if _, err := s.Encoding().EncodeGossip(buf, msg); err != nil {
 		err := errors.Wrap(err, "could not encode message")
 		traceutil.AnnotateError(span, err)
 		return err
