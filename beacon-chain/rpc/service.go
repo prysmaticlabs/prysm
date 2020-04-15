@@ -262,6 +262,7 @@ func (s *Service) Start() {
 		StateGen:                    s.stateGen,
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),
+		StateGen:                    s.stateGen,
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
