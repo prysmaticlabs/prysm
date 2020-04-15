@@ -13,8 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	bitfield "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_bitfield"
-	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -535,6 +533,8 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
@@ -566,9 +566,11 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	}
 
 	// We setup 128 validators.
-	numValidators := 128
-	state := setupActiveValidators(t, db, numValidators)
-
+	numValidators := uint64(128)
+	state, err := testutil.DeterministicGenesisState(t, numValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
@@ -577,25 +579,15 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	epoch := uint64(0)
-	attesterSeed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committees, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, attesterSeed)
-	if err != nil {
-		t.Fatal(err)
-	}
 	// Next up we convert the test attestations to indexed form:
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
-		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
 		if err != nil {
 			t.Fatalf("Could not convert attestation to indexed: %v", err)
 		}
@@ -603,11 +595,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	}
 
 	bs := &Server{
-		BeaconDB: db,
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: time.Now(),
-		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		BeaconDB:           db,
+		GenesisTimeFetcher: &mock.ChainService{State: state},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
@@ -615,7 +605,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot[:]))
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot[:])); err != nil {
+		t.Fatal(err)
+	}
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -635,6 +627,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 }
 
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
@@ -674,8 +668,11 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	}
 
 	// We setup 128 validators.
-	numValidators := 128
-	state := setupActiveValidators(t, db, numValidators)
+	numValidators := uint64(128)
+	state, err := testutil.DeterministicGenesisState(t, numValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
@@ -688,23 +685,14 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	attesterSeed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committees, err := computeCommittees(epoch, activeIndices, attesterSeed)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Next up we convert the test attestations to indexed form:
 	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
-	for i := 0; i < len(indexedAtts); i++ {
+	for i := 0; i < len(atts); i++ {
 		att := atts[i]
+		committees, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
@@ -726,7 +714,9 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
+	if err = db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
+		t.Fatal(err)
+	}
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,

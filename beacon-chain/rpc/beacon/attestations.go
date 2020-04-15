@@ -7,7 +7,6 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -140,7 +139,6 @@ func (bs *Server) ListIndexedAttestations(
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
-		epoch := helpers.SlotToEpoch(att.Data.Slot)
 		attState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 		if err != nil {
 			return nil, status.Errorf(
@@ -150,9 +148,15 @@ func (bs *Server) ListIndexedAttestations(
 				err,
 			)
 		}
-		helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
-		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		committee, err := helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not retrieve committees from state %v",
+				err,
+			)
+		}
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
 		indexedAtts[i] = idxAtt
 	}
 
