@@ -5,7 +5,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,31 +19,39 @@ func (bs *Server) ListBeaconCommittees(
 	req *ethpb.ListCommitteesRequest,
 ) (*ethpb.BeaconCommittees, error) {
 
-	var requestingGenesis bool
-	var startSlot uint64
-	headSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	var requestedSlot uint64
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListCommitteesRequest_Epoch:
-		startSlot = helpers.StartSlot(q.Epoch)
+		requestedSlot = helpers.StartSlot(q.Epoch)
 	case *ethpb.ListCommitteesRequest_Genesis:
-		requestingGenesis = q.Genesis
-		if !requestingGenesis {
-			startSlot = headSlot
-		}
+		requestedSlot = 0
 	default:
-		startSlot = headSlot
+		requestedSlot = currentSlot
 	}
-	committees, activeIndices, err := bs.retrieveCommitteesForEpoch(ctx, helpers.SlotToEpoch(startSlot))
+
+	requestedEpoch := helpers.SlotToEpoch(requestedSlot)
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	if requestedEpoch > currentEpoch {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information for an future epoch, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
+	}
+
+	committees, activeIndices, err := bs.retrieveCommitteesForEpoch(ctx, requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(
 			codes.Internal,
 			"Could not retrieve committees for epoch %d: %v",
-			helpers.SlotToEpoch(startSlot),
+			requestedEpoch,
 			err,
 		)
 	}
 	return &ethpb.BeaconCommittees{
-		Epoch:                helpers.SlotToEpoch(startSlot),
+		Epoch:                requestedEpoch,
 		Committees:           committees,
 		ActiveValidatorCount: uint64(len(activeIndices)),
 	}, nil
@@ -54,70 +61,21 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	ctx context.Context,
 	epoch uint64,
 ) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, []uint64, error) {
-	var attesterSeed [32]byte
-	var activeIndices []uint64
-	var err error
 	startSlot := helpers.StartSlot(epoch)
-	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
-	if helpers.SlotToEpoch(startSlot)+1 < currentEpoch {
-		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(helpers.SlotToEpoch(startSlot))
-		if err != nil {
-			return nil, nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve active indices for epoch %d: %v",
-				helpers.SlotToEpoch(startSlot),
-				err,
-			)
-		}
-		archivedCommitteeInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, helpers.SlotToEpoch(startSlot))
-		if err != nil {
-			return nil, nil, status.Errorf(
-				codes.Internal,
-				"Could not request archival data for epoch %d: %v",
-				helpers.SlotToEpoch(startSlot),
-				err,
-			)
-		}
-		if archivedCommitteeInfo == nil {
-			return nil, nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				helpers.SlotToEpoch(startSlot),
-			)
-		}
-		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
-	} else if helpers.SlotToEpoch(startSlot)+1 == currentEpoch || helpers.SlotToEpoch(startSlot) == currentEpoch {
-		// Otherwise, we use current beacon state to calculate the committees.
-		requestedEpoch := helpers.SlotToEpoch(startSlot)
-		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(requestedEpoch)
-		if err != nil {
-			return nil, nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve active indices for requested epoch %d: %v",
-				requestedEpoch,
-				err,
-			)
-		}
-		attesterSeed, err = bs.HeadFetcher.HeadSeed(requestedEpoch)
-		if err != nil {
-			return nil, nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve attester seed for requested epoch %d: %v",
-				requestedEpoch,
-				err,
-			)
-		}
-	} else {
-		// Otherwise, we are requesting data from the future and we return an error.
-		return nil, nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			currentEpoch,
-			helpers.SlotToEpoch(startSlot),
-		)
+	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	if err != nil {
+		return nil, nil, status.Error(codes.Internal, "Could not get state")
+	}
+	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, nil, status.Error(codes.Internal, "Could not get seed")
+	}
+	activeIndices, err := helpers.ActiveValidatorIndices(requestedState, epoch)
+	if err != nil {
+		return nil, nil, status.Error(codes.Internal, "Could not get active indices")
 	}
 
-	committeesListsBySlot, err := computeCommittees(startSlot, activeIndices, attesterSeed)
+	committeesListsBySlot, err := computeCommittees(startSlot, activeIndices, seed)
 	if err != nil {
 		return nil, nil, status.Errorf(
 			codes.InvalidArgument,
