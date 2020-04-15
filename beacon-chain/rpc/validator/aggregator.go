@@ -84,7 +84,8 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 // SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
 // aggregated and proof object.
 func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
-	if req.SignedAggregateAndProof == nil {
+	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
+		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
 	}
 
