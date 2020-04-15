@@ -22,7 +22,7 @@ func (r *Service) decodePubsubMessage(msg *pubsub.Message) (proto.Message, error
 		return nil, fmt.Errorf("no message mapped for topic %s", topic)
 	}
 	m := proto.Clone(base)
-	if err := r.p2p.Encoding().Decode(msg.Data, m); err != nil {
+	if err := r.p2p.Encoding().DecodeGossip(msg.Data, m); err != nil {
 		return nil, err
 	}
 	return m, nil
