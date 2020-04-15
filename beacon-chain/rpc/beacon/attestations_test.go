@@ -10,12 +10,11 @@ import (
 	"testing"
 	"time"
 
-	bitfield "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_bitfield"
-	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
-
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	bitfield "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_bitfield"
+	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
