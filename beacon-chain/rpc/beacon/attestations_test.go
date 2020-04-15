@@ -567,10 +567,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	// We setup 128 validators.
 	numValidators := uint64(128)
-	state, err := testutil.DeterministicGenesisState(t, numValidators)
-	if err != nil {
-		t.Fatal(err)
-	}
+	state, _ := testutil.DeterministicGenesisState(t, numValidators)
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = make([]byte, 32)
@@ -669,10 +666,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 
 	// We setup 128 validators.
 	numValidators := uint64(128)
-	state, err := testutil.DeterministicGenesisState(t, numValidators)
-	if err != nil {
-		t.Fatal(err)
-	}
+	state, _ := testutil.DeterministicGenesisState(t, numValidators)
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
@@ -713,7 +707,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err = db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
 		t.Fatal(err)
 	}
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
