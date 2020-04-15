@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	bitfield "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_bitfield"
+	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
+
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -537,9 +540,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
-
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	blockRoot := bytesutil.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
@@ -549,7 +550,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: []byte("root"),
+								BeaconBlockRoot: blockRoot[:],
 								Slot:            i,
 								CommitteeIndex:  0,
 							},
@@ -568,6 +569,14 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	// We setup 128 validators.
 	numValidators := 128
 	state := setupActiveValidators(t, db, numValidators)
+
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
+	}
+	if err := state.SetRandaoMixes(randaoMixes); err != nil {
+		t.Fatal(err)
+	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(state, 0)
 	if err != nil {
@@ -588,29 +597,26 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		if err != nil {
+			t.Fatalf("Could not convert attestation to indexed: %v", err)
+		}
 		indexedAtts[i] = idxAtt
 	}
 
-	summaryCache := cache.NewStateSummaryCache()
 	bs := &Server{
 		BeaconDB: db,
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, summaryCache),
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
-	root := bytesutil.ToBytes32([]byte("root"))
-	if err := db.SaveState(ctx, state, root); err != nil {
+	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+		Root: blockRoot[:],
+		Slot: 1,
+	}); err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err := state.HashTreeRoot(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	summaryCache.Put(root, &pbp2p.StateSummary{
-		Slot: 0,
-		Root: stateRoot[:],
-	})
+	db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot[:]))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
@@ -629,16 +635,18 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	}
 }
 
-func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
+func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
 
+	blockRoot := bytesutil.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
-	startSlot := helpers.StartSlot(50)
 	epoch := uint64(50)
+	startSlot := helpers.StartSlot(epoch)
+
 	for i := startSlot; i < count; i++ {
 		blockExample := &ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
@@ -646,7 +654,7 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: []byte("root"),
+								BeaconBlockRoot: blockRoot[:],
 								Slot:            i,
 								CommitteeIndex:  0,
 								Target: &ethpb.Checkpoint{
@@ -669,6 +677,14 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 	// We setup 128 validators.
 	numValidators := 128
 	state := setupActiveValidators(t, db, numValidators)
+
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
+	}
+	if err := state.SetRandaoMixes(randaoMixes); err != nil {
+		t.Fatal(err)
+	}
 	if err := state.SetSlot(startSlot); err != nil {
 		t.Fatal(err)
 	}
@@ -692,6 +708,9 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		if err != nil {
+			t.Fatalf("Could not convert attestation to indexed: %v", err)
+		}
 		indexedAtts[i] = idxAtt
 	}
 
@@ -700,10 +719,15 @@ func TestServer_ListIndexedAttestations_ArchivedEpoch(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root"))); err != nil {
+	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+		Root: blockRoot[:],
+		Slot: helpers.StartSlot(epoch),
+	}); err != nil {
 		t.Fatal(err)
 	}
+	db.SaveState(ctx, state, bytesutil.ToBytes32([]byte("root")))
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 			Epoch: epoch,

@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -91,13 +93,12 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
-// ListIndexedAttestations retrieves indexed attestations by target epoch.
-// IndexedAttestationsForEpoch are sorted by data slot by default. Either a target epoch filter
-// or a boolean filter specifying a request for genesis epoch attestations may be used.
+// ListIndexedAttestations retrieves indexed attestations by block root.
+// IndexedAttestationsForEpoch are sorted by data slot by default. Either a start-end epoch
+//filter is used to retrieve blocks with.
 //
 // The server may return an empty list when no attestations match the given
-// filter criteria. This RPC should not return NOT_FOUND. Only one filter
-// criteria should be used.
+// filter criteria. This RPC should not return NOT_FOUND.
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
@@ -150,25 +151,7 @@ func (bs *Server) ListIndexedAttestations(
 				err,
 			)
 		}
-		activeIndices, err := helpers.ActiveValidatorIndices(attState, epoch)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve active validator indices for epoch %d: %v",
-				epoch,
-				err,
-			)
-		}
-		seed, err := helpers.Seed(attState, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not seed for epoch %d: %v",
-				epoch,
-				err,
-			)
-		}
-		committeesBySlot, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, seed)
+		helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
 		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		indexedAtts[i] = idxAtt
