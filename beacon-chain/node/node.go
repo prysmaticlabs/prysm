@@ -259,7 +259,12 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		if err := d.HistoricalStatesDeleted(ctx); err != nil {
+			return err
+		}
 	}
+
 	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
