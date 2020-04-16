@@ -143,5 +143,9 @@ go_library(
     }),
     copts = OPTS,
     cgo = True,
-    visibility = ["//visibility:public"],
+    visibility = [
+        # Additional access will require security approval.
+        "@prysm//shared/bls:__pkg__",
+        "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
+    ],
 )

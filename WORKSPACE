@@ -1555,12 +1555,14 @@ go_repository(
     version = "v2.0.1",
 )
 
-http_archive(
+go_repository(
     name = "com_github_wealdtech_go_eth2_types_v2",
-    url = "https://github.com/wealdtech/go-eth2-types/archive/2245f15f56405852a0dc040864f6e8570735b04a.zip",
-    sha256 = "95a166c015e1a25ed53421807b8cc382fde3c414bae6f3ad8bcc3cb511cd77cb",
-    strip_prefix = "go-eth2-types-2245f15f56405852a0dc040864f6e8570735b04a",
-    build_file = "@prysm//third_party:eth2_types.BUILD"
+    importpath = "github.com/wealdtech/go-eth2-types/v2",
+    sum = "h1:qfmgaCBkH2N11LHCXsRWYz7OOxc+1QXrKHlS9yDnFsw=",
+    version = "v2.3.0",
+    build_directives = [
+       "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
+    ]
 )
 
 go_repository(
