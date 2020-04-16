@@ -25,6 +25,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+// StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
+// Should only be used on initialization.
 func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath string) []int {
 	// Always using genesis count since using anything else would be difficult to test for.
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -39,30 +41,12 @@ func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath s
 		processIDs[i] = pID
 	}
 
-	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
-	if err != nil {
-		t.Fatal(err)
-	}
-	web3 := ethclient.NewClient(client)
+	SendAndMineDeposits(t, keystorePath, validatorNum, 0)
 
-	jsonBytes, err := ioutil.ReadFile(keystorePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := SendDeposits(web3, jsonBytes, validatorNum, 0); err != nil {
-		t.Fatal(err)
-	}
-	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		t.Fatalf("failed to mine blocks %v", err)
-	}
 	return processIDs
 }
 
-// StartNewValidators sends the deposits to the eth1 chain and starts the validator clients.
+// StartNewValidatorClient starts a validator client with the passed in configuration.
 func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum int, index int) int {
 	validatorsPerClient := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
 	// Only allow validatorsPerClient count for each validator client.
@@ -80,7 +64,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		beaconRPCPort = e2e.TestParams.BeaconNodeCount
 	}
 
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, n))
+	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +82,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 	args = append(args, config.ValidatorFlags...)
 
 	cmd := exec.Command(binaryPath, args...)
-	t.Logf("Starting validator client %d with flags: %s", n, strings.Join(args[2:], " "))
+	t.Logf("Starting validator client %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -106,8 +90,34 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 	return cmd.Process.Pid
 }
 
-func SendDeposits(web3 *ethclient.Client, jsonBytes []byte, num int, offset int) error {
-	txOps, err := bind.NewTransactor(bytes.NewReader(jsonBytes), "" /*password*/)
+// SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
+func SendAndMineDeposits(t *testing.T, keystorePath string, validatorNum int, offset int) {
+	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	web3 := ethclient.NewClient(client)
+
+	keystoreBytes, err := ioutil.ReadFile(keystorePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := SendDeposits(web3, keystoreBytes, validatorNum, offset); err != nil {
+		t.Fatal(err)
+	}
+	mineKey, err := keystore.DecryptKey(keystoreBytes, "" /*password*/)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mineBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
+		t.Fatalf("failed to mine blocks %v", err)
+	}
+}
+
+// SendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
+func SendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num int, offset int) error {
+	txOps, err := bind.NewTransactor(bytes.NewReader(keystoreBytes), "" /*password*/)
 	if err != nil {
 		return err
 	}
