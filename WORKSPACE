@@ -1555,11 +1555,12 @@ go_repository(
     version = "v2.0.1",
 )
 
-go_repository(
+http_archive(
     name = "com_github_wealdtech_go_eth2_types_v2",
-    importpath = "github.com/wealdtech/go-eth2-types/v2",
-    sum = "h1:qfmgaCBkH2N11LHCXsRWYz7OOxc+1QXrKHlS9yDnFsw=",
-    version = "v2.3.0",
+    url = "https://github.com/wealdtech/go-eth2-types/archive/2245f15f56405852a0dc040864f6e8570735b04a.zip",
+    sha256 = "95a166c015e1a25ed53421807b8cc382fde3c414bae6f3ad8bcc3cb511cd77cb",
+    strip_prefix = "go-eth2-types-2245f15f56405852a0dc040864f6e8570735b04a",
+    build_file = "@prysm//third_party:eth2_types.BUILD"
 )
 
 go_repository(
@@ -1607,13 +1608,6 @@ go_repository(
     name = "com_github_ferranbt_fastssz",
     commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     importpath = "github.com/ferranbt/fastssz",
-)
-
-http_archive(
-    name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "fe9307f9ec757e3fc68afea089369907842ca079c1f32e4a7546df5f4a09ad44",
-    strip_prefix = "bls-go-binary-4ef039dc8ada18325fd835e07893612f408bcb59",
-    url = "https://github.com/nisdas/bls-go-binary/archive/4ef039dc8ada18325fd835e07893612f408bcb59.zip",
 )
 
 go_repository(

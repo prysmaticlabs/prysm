@@ -143,8 +143,5 @@ go_library(
     }),
     copts = OPTS,
     cgo = True,
-    visibility = [
-        # Additional access will require security approval.
-        "@prysm//shared/bls:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
 )
