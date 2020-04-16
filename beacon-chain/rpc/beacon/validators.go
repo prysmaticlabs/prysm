@@ -110,7 +110,7 @@ func (bs *Server) ListValidatorBalances(
 	// Otherwise, attempting to paginate 0 balances below would result in an error.
 	if balancesCount == 0 {
 		return &ethpb.ValidatorBalances{
-			Epoch:         currentEpoch,
+			Epoch:         requestedEpoch,
 			Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
 			TotalSize:     int32(0),
 			NextPageToken: strconv.Itoa(0),
