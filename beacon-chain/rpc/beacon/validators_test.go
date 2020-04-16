@@ -99,7 +99,6 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 		Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
 		TotalSize:     int32(0),
 		NextPageToken: strconv.Itoa(0),
-		Epoch:         helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()),
 	}
 	res, err := bs.ListValidatorBalances(
 		ctx,
