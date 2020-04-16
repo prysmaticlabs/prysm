@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec"
 	gethlog "github.com/ethereum/go-ethereum/log"
@@ -35,26 +36,36 @@ import (
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	_ "go.uber.org/automaxprocs"
 )
 
 var (
-	debug        = flag.Bool("debug", false, "Enable debug logging")
-	logFileName  = flag.String("log-file", "", "Specify log filename, relative or absolute")
-	privateKey   = flag.String("private", "", "Private key to use for peer ID")
-	discv5port   = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
-	kademliaPort = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
-	metricsPort  = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP   = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
-
-	log = logrus.WithField("prefix", "bootnode")
+	debug         = flag.Bool("debug", false, "Enable debug logging")
+	logFileName   = flag.String("log-file", "", "Specify log filename, relative or absolute")
+	privateKey    = flag.String("private", "", "Private key to use for peer ID")
+	discv5port    = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
+	kademliaPort  = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
+	metricsPort   = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP    = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
+	log           = logrus.WithField("prefix", "bootnode")
+	kadPeersCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "bootstrap_node_kaddht_peers",
+		Help: "The current number of kaddht peers of the bootstrap node",
+	})
+	discv5PeersCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "bootstrap_node_discv5_peers",
+		Help: "The current number of discv5 peers of the bootstrap node",
+	})
 )
 
 const dhtProtocol = "/prysm/0.0.0/dht"
@@ -93,7 +104,7 @@ func main() {
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
 
-	startKademliaDHT(interfacePrivKey)
+	dht := startKademliaDHT(interfacePrivKey)
 
 	handler := &handler{
 		listener: listener,
@@ -105,15 +116,19 @@ func main() {
 		log.Fatalf("Failed to start server %v", err)
 	}
 
+	// Update metrics once per slot.
+	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot)
+	runutil.RunEvery(context.Background(), slotDuration*time.Second, func() {
+		updateMetrics(listener, dht)
+	})
+
 	select {}
 }
 
-func startKademliaDHT(privKey crypto.PrivKey) {
-
+func startKademliaDHT(privKey crypto.PrivKey) *kaddht.IpfsDHT {
 	if *debug {
 		logging.SetDebugLogging()
 	}
-
 	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", *externalIP, *kademliaPort))
 	if err != nil {
 		log.Fatalf("Failed to construct new multiaddress. %v", err)
@@ -145,6 +160,7 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 	}
 
 	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", *externalIP, *kademliaPort, host.ID().Pretty())
+	return dht
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
@@ -251,4 +267,9 @@ func extractPrivateKey() (*ecdsa.PrivateKey, crypto.PrivKey) {
 	}
 
 	return privKey, interfaceKey
+}
+
+func updateMetrics(listener *discover.UDPv5, dht *kaddht.IpfsDHT) {
+	kadPeersCount.Set(float64(len(dht.Host().Peerstore().Peers())))
+	discv5PeersCount.Set(float64(len(listener.AllNodes())))
 }
