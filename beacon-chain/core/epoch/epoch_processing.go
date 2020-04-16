@@ -246,7 +246,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	}
 
 	bals := state.Balances()
-	checkerFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+	checker := func(idx int, val *ethpb.Validator) (bool, error) {
 		if val == nil {
 			return false, fmt.Errorf("validator %d is nil in state", idx)
 		}
@@ -267,7 +267,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		return false, nil
 	}
 	// Update effective balances with hysteresis.
-	validatorFunc := func(idx int, val *ethpb.Validator) error {
+	updateEffectiveBalances := func(idx int, val *ethpb.Validator) error {
 		balance := bals[idx]
 		hysteresisInc := params.BeaconConfig().EffectiveBalanceIncrement / params.BeaconConfig().HysteresisQuotient
 		downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
@@ -283,7 +283,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		return nil
 	}
 
-	if err := state.ApplyToEveryValidator(checkerFunc, validatorFunc); err != nil {
+	if err := state.ApplyToEveryValidator(checker, updateEffectiveBalances); err != nil {
 		return nil, err
 	}
 

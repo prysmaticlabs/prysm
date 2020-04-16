@@ -29,7 +29,7 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, p *Balance) error 
 		return false, nil
 	}
 
-	validatorFunc := func(idx int, val *ethpb.Validator) error {
+	updateEffectiveBalances := func(idx int, val *ethpb.Validator) error {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, p.CurrentEpoch)
@@ -44,5 +44,5 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, p *Balance) error 
 		return nil
 	}
 
-	return state.ApplyToEveryValidator(checker, validatorFunc)
+	return state.ApplyToEveryValidator(checker, updateEffectiveBalances)
 }
