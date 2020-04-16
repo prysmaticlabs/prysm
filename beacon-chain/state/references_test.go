@@ -303,7 +303,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 	assertValFound(t, mixesB, val1)
 
 	// Mutator should only affect calling state: a.
-	err = a.UpdateRandaoMixesAtIndex(val2, 0)
+	err = a.UpdateRandaoMixesAtIndex(0, val2)
 	if err != nil {
 		t.Fatal(err)
 	}
