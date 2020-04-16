@@ -36,7 +36,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	if b.sharedFieldReferences[randaoMixes].refs != 2 {
 		t.Error("Expected 2 shared references to randao mixes")
 	}
-	if err := b.UpdateRandaoMixesAtIndex([]byte("bar"), 0); err != nil {
+	if err := b.UpdateRandaoMixesAtIndex(0, []byte("bar")); err != nil {
 		t.Fatal(err)
 	}
 	if b.sharedFieldReferences[randaoMixes].refs != 1 || a.sharedFieldReferences[randaoMixes].refs != 1 {
