@@ -11,6 +11,10 @@ type NetworkConfig struct {
 	TtfbTimeout                     time.Duration `yaml:"TTFB_TIMEOUT"`                       // TtfbTimeout is the maximum time to wait for first byte of request response (time-to-first-byte).
 	RespTimeout                     time.Duration `yaml:"RESP_TIMEOUT"`                       // RespTimeout is the maximum time for complete response transfer.
 	MaximumGossipClockDisparity     time.Duration `yaml:"MAXIMUM_GOSSIP_CLOCK_DISPARITY"`     // MaximumGossipClockDisparity is the maximum milliseconds of clock disparity assumed between honest nodes.
+
+	// DiscoveryV5 Config
+	ETH2Key      string // ETH2Key is the ENR key of the eth2 object in an enr.
+	AttSubnetKey string // AttSubnetKey is the ENR key of the subnet bitfield in the enr.
 }
 
 var defaultNetworkConfig = &NetworkConfig{
@@ -21,6 +25,8 @@ var defaultNetworkConfig = &NetworkConfig{
 	TtfbTimeout:                     5 * time.Second,
 	RespTimeout:                     10 * time.Second,
 	MaximumGossipClockDisparity:     500 * time.Millisecond,
+	ETH2Key:                         "eth2",
+	AttSubnetKey:                    "attnets",
 }
 
 // BeaconNetworkConfig returns the current network config for

@@ -9,7 +9,7 @@ import (
 
 var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
 
-const attSubnetEnrKey = "attnets"
+var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 
 func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 	bitV := bitfield.NewBitvector64()
