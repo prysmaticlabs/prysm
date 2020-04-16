@@ -379,7 +379,7 @@ func ProcessRandaoNoVerify(
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
-	if err := beaconState.UpdateRandaoMixesAtIndex(latestMixSlice, currentEpoch%latestMixesLength); err != nil {
+	if err := beaconState.UpdateRandaoMixesAtIndex(currentEpoch%latestMixesLength, latestMixSlice); err != nil {
 		return nil, err
 	}
 	return beaconState, nil
@@ -987,7 +987,7 @@ func ProcessDeposit(
 		depositSig := deposit.Data.Signature
 		if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 			// Ignore this error as in the spec pseudo code.
-			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
+			log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
 			return beaconState, nil
 		}
 
