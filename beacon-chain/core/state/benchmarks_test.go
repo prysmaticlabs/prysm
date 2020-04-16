@@ -27,8 +27,13 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
+	oldSlot := beaconState.Slot()
+	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
+	if err != nil {
 		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
+	}
+	if oldSlot == beaconState.Slot() {
+		t.Fatal("Expected slots to be different")
 	}
 }
 
@@ -69,11 +74,15 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
-	beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch); err != nil {
+		b.Fatal(err)
+	}
 	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
 		b.Fatal(err)
 	}
-	beaconState.SetSlot(currentSlot)
+	if err := beaconState.SetSlot(currentSlot); err != nil {
+		b.Fatal(err)
+	}
 	// Run the state transition once to populate the cache.
 	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
 		b.Fatalf("failed to process block, benchmarks will fail: %v", err)
@@ -98,11 +107,15 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
-	beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch)
+	if err := beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch); err != nil {
+		b.Fatal(err)
+	}
 	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
 		b.Fatal(err)
 	}
-	beaconState.SetSlot(currentSlot)
+	if err := beaconState.SetSlot(currentSlot); err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

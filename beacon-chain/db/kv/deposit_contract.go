@@ -15,12 +15,13 @@ func (k *Store) DepositContractAddress(ctx context.Context) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositContractAddress")
 	defer span.End()
 	var addr []byte
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainMetadataBucket)
 		addr = chainInfo.Get(depositContractAddressKey)
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return addr, nil
 }
 

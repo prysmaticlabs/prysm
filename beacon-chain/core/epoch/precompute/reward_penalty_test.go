@@ -35,7 +35,10 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vp, bp := New(context.Background(), state)
+	vp, bp, err := New(context.Background(), state)
+	if err != nil {
+		t.Error(err)
+	}
 	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +91,10 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vp, bp := New(context.Background(), state)
+	vp, bp, err := New(context.Background(), state)
+	if err != nil {
+		t.Error(err)
+	}
 	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
 	if err != nil {
 		t.Fatal(err)
@@ -173,7 +179,10 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vp, bp := New(context.Background(), state)
+	vp, bp, err := New(context.Background(), state)
+	if err != nil {
+		t.Error(err)
+	}
 	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
 	if err != nil {
 		t.Fatal(err)

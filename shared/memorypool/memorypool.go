@@ -33,7 +33,10 @@ func GetDoubleByteSlice(size int) [][]byte {
 	if rawObj == nil {
 		return make([][]byte, size)
 	}
-	byteSlice := rawObj.([][]byte)
+	byteSlice, ok := rawObj.([][]byte)
+	if !ok {
+		return nil
+	}
 	if len(byteSlice) >= size {
 		return byteSlice[:size]
 	}
@@ -59,7 +62,10 @@ func GetBlockRootsTrie(size int) [][]*[32]byte {
 	if rawObj == nil {
 		return make([][]*[32]byte, size)
 	}
-	byteSlice := rawObj.([][]*[32]byte)
+	byteSlice, ok := rawObj.([][]*[32]byte)
+	if !ok {
+		return nil
+	}
 	if len(byteSlice) >= size {
 		return byteSlice[:size]
 	}
@@ -85,7 +91,10 @@ func GetStateRootsTrie(size int) [][]*[32]byte {
 	if rawObj == nil {
 		return make([][]*[32]byte, size)
 	}
-	byteSlice := rawObj.([][]*[32]byte)
+	byteSlice, ok := rawObj.([][]*[32]byte)
+	if !ok {
+		return nil
+	}
 	if len(byteSlice) >= size {
 		return byteSlice[:size]
 	}
@@ -111,7 +120,10 @@ func GetRandaoMixesTrie(size int) [][]*[32]byte {
 	if rawObj == nil {
 		return make([][]*[32]byte, size)
 	}
-	byteSlice := rawObj.([][]*[32]byte)
+	byteSlice, ok := rawObj.([][]*[32]byte)
+	if !ok {
+		return nil
+	}
 	if len(byteSlice) >= size {
 		return byteSlice[:size]
 	}

@@ -22,6 +22,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 		TestSlasher:    true,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
+			ev.HealthzCheck,
 			ev.ValidatorsSlashed,
 			ev.SlashedValidatorsLoseBalance,
 			ev.InjectDoubleVote,

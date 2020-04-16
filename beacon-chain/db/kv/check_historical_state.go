@@ -11,8 +11,9 @@ import (
 
 var historicalStateDeletedKey = []byte("historical-states-deleted")
 
-func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
-	if !featureconfig.Get().NewStateMgmt {
+// HistoricalStatesDeleted verifies historical states exist in DB.
+func (kv *Store) HistoricalStatesDeleted(ctx context.Context) error {
+	if featureconfig.Get().DisableNewStateMgmt {
 		return kv.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(newStateServiceCompatibleBucket)
 			return bkt.Put(historicalStateDeletedKey, []byte{0x01})
@@ -20,19 +21,21 @@ func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
 	}
 
 	var historicalStateDeleted bool
-	kv.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(newStateServiceCompatibleBucket)
 		v := bkt.Get(historicalStateDeletedKey)
 		historicalStateDeleted = len(v) == 1 && v[0] == 0x01
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
 
 	regenHistoricalStatesConfirmed := false
 	var err error
 	if historicalStateDeleted {
-		actionText := "Looks like you stopped using --new-state-mgmt. To reuse it, the node will need " +
-			"to generate and save historical states. The process may take a while, - do you want to proceed? (Y/N)"
-		deniedText := "Historical states will not be generated. Please remove usage --new-state-mgmt"
+		actionText := "--disable-new-state-mgmt was previously used and historical states cannot be found. To proceed without using the flag, the db will need " +
+			"to generate and re-save historical states. This process may take a while, - do you want to proceed? (Y/N)"
+		deniedText := "Historical states will not be generated. Please continue using --disable-new-state-mgmt"
 
 		regenHistoricalStatesConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
 		if err != nil {
@@ -40,7 +43,7 @@ func (kv *Store) ensureNewStateServiceCompatible(ctx context.Context) error {
 		}
 
 		if !regenHistoricalStatesConfirmed {
-			return errors.New("exiting... please do not run with flag --new-state-mgmt")
+			return errors.New("exiting... please use --disable-new-state-mgmt")
 		}
 
 		if err := kv.regenHistoricalStates(ctx); err != nil {

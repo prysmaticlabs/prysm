@@ -20,7 +20,7 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	var mockRoot [32]byte
 
 	unaggregatedAtts := []*ethpb.Attestation{
@@ -98,21 +98,24 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[0], aggregatedAtts[0], blockAtts[0]})
+	wanted, err := helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[0], blockAtts[0]})
 	if err != nil {
 		t.Fatal(err)
 	}
-	aggregated, err := helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[1], aggregatedAtts[1], blockAtts[1]})
+	aggregated, err := helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[1], blockAtts[1]})
 	if err != nil {
 		t.Fatal(err)
 	}
 	wanted = append(wanted, aggregated...)
-	aggregated, err = helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[2], aggregatedAtts[2], blockAtts[2]})
+	aggregated, err = helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[2], blockAtts[2]})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	wanted = append(wanted, aggregated...)
+	if err := s.pool.AggregateUnaggregatedAttestations(); err != nil {
+		return
+	}
 	received := s.pool.ForkchoiceAttestations()
 
 	sort.Slice(received, func(i, j int) bool {
@@ -134,7 +137,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -194,7 +197,7 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -226,16 +229,22 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	}
 
 	sk := bls.RandKey()
-	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	sig := sk.Sign([]byte("dummy_test_data"))
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
 		Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
 		Target:          &ethpb.Checkpoint{Root: mockRoot[:]},
 	}
-	d1 := proto.Clone(d).(*ethpb.AttestationData)
+	d1, ok := proto.Clone(d).(*ethpb.AttestationData)
+	if !ok {
+		t.Fatal("Entity is not of type *ethpb.AttestationData")
+	}
 	d1.Slot = 1
-	d2 := proto.Clone(d).(*ethpb.AttestationData)
+	d2, ok := proto.Clone(d).(*ethpb.AttestationData)
+	if !ok {
+		t.Fatal("Entity is not of type *ethpb.AttestationData")
+	}
 	d2.Slot = 2
 
 	atts1 := []*ethpb.Attestation{

@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -163,12 +162,13 @@ func (k *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
 	var exists bool
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 
@@ -193,15 +193,9 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		bkt = tx.Bucket(blocksBucket)
 		headBlkRoot := bkt.Get(headBlockRootKey)
 
-		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
-				return errors.New("cannot delete state without state summary")
-			}
-		} else {
-			// Safe guard against deleting genesis, finalized, head state.
-			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-				return errors.New("cannot delete genesis, finalized, or head state")
-			}
+		// Safe guard against deleting genesis, finalized, head state.
+		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+			return errors.New("cannot delete genesis, finalized, or head state")
 		}
 
 		slot, err := slotByBlockRoot(ctx, tx, blockRoot[:])
@@ -252,15 +246,9 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 
 		for blockRoot, _ := c.First(); blockRoot != nil; blockRoot, _ = c.Next() {
 			if rootMap[bytesutil.ToBytes32(blockRoot)] {
-				if featureconfig.Get().NewStateMgmt {
-					if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
-						return errors.New("cannot delete state without state summary")
-					}
-				} else {
-					// Safe guard against deleting genesis, finalized, head state.
-					if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-						return errors.New("cannot delete genesis, finalized, or head state")
-					}
+				// Safe guard against deleting genesis, finalized, head state.
+				if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+					return errors.New("cannot delete genesis, finalized, or head state")
 				}
 
 				slot, err := slotByBlockRoot(ctx, tx, blockRoot)
@@ -295,47 +283,45 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.slotByBlockRoot")
 	defer span.End()
 
-	if featureconfig.Get().NewStateMgmt {
-		bkt := tx.Bucket(stateSummaryBucket)
-		enc := bkt.Get(blockRoot)
-		if enc == nil {
-			return 0, errors.New("state summary enc can't be nil")
-		}
-		stateSummary := &pb.StateSummary{}
-		if err := decode(enc, stateSummary); err != nil {
-			return 0, err
-		}
-		return stateSummary.Slot, nil
-	}
-
-	bkt := tx.Bucket(blocksBucket)
+	bkt := tx.Bucket(stateSummaryBucket)
 	enc := bkt.Get(blockRoot)
+
 	if enc == nil {
-		// fallback and check the state.
-		bkt = tx.Bucket(stateBucket)
-		enc = bkt.Get(blockRoot)
+		// Fall back to check the block.
+		bkt := tx.Bucket(blocksBucket)
+		enc := bkt.Get(blockRoot)
+
 		if enc == nil {
-			return 0, errors.New("state enc can't be nil")
+			// Fallback and check the state.
+			bkt = tx.Bucket(stateBucket)
+			enc = bkt.Get(blockRoot)
+			if enc == nil {
+				return 0, errors.New("state enc can't be nil")
+			}
+			s, err := createState(enc)
+			if err != nil {
+				return 0, err
+			}
+			if s == nil {
+				return 0, errors.New("state can't be nil")
+			}
+			return s.Slot, nil
 		}
-		s, err := createState(enc)
+		b := &ethpb.SignedBeaconBlock{}
+		err := decode(enc, b)
 		if err != nil {
 			return 0, err
 		}
-		if s == nil {
-			return 0, errors.New("state can't be nil")
+		if b.Block == nil {
+			return 0, errors.New("block can't be nil")
 		}
-		return s.Slot, nil
+		return b.Block.Slot, nil
 	}
-
-	b := &ethpb.SignedBeaconBlock{}
-	err := decode(enc, b)
-	if err != nil {
+	stateSummary := &pb.StateSummary{}
+	if err := decode(enc, stateSummary); err != nil {
 		return 0, err
 	}
-	if b.Block == nil {
-		return 0, errors.New("block can't be nil")
-	}
-	return b.Block.Slot, nil
+	return stateSummary.Slot, nil
 }
 
 // HighestSlotStates returns the states with the highest slot from the db.

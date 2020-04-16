@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -46,16 +47,25 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, _ := ssz.HashTreeRoot(b0.Block)
+	b0Root, err := ssz.HashTreeRoot(b0.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}}
 	if err := r.db.SaveBlock(context.Background(), b3); err != nil {
 		t.Fatal(err)
 	}
 	// Incomplete block link
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
-	b1Root, _ := ssz.HashTreeRoot(b1.Block)
+	b1Root, err := ssz.HashTreeRoot(b1.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}}
-	b2Root, _ := ssz.HashTreeRoot(b1.Block)
+	b2Root, err := ssz.HashTreeRoot(b1.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Add b2 to the cache
 	r.slotToPendingBlocks[b2.Block.Slot] = b2
@@ -113,9 +123,9 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		if code == 0 {
 			t.Error("Expected a non-zero code")
 		}
-		if errMsg != errWrongForkVersion.Error() {
-			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkVersion.Error()))
-			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkVersion.Error())
+		if errMsg != errWrongForkDigestVersion.Error() {
+			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkDigestVersion.Error()))
+			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkDigestVersion.Error())
 		}
 	})
 
@@ -129,7 +139,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
-	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound, []uint64{})
+	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
@@ -137,22 +147,40 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, _ := ssz.HashTreeRoot(b0.Block)
+	b0Root, err := ssz.HashTreeRoot(b0.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
 	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
 		t.Fatal(err)
 	}
-	b1Root, _ := ssz.HashTreeRoot(b1.Block)
+	b1Root, err := ssz.HashTreeRoot(b1.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, _ := ssz.HashTreeRoot(b2)
+	b2Root, err := ssz.HashTreeRoot(b2)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, _ := ssz.HashTreeRoot(b5)
+	b5Root, err := ssz.HashTreeRoot(b5)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, _ := ssz.HashTreeRoot(b3)
+	b3Root, err := ssz.HashTreeRoot(b3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, _ := ssz.HashTreeRoot(b4)
+	b4Root, err := ssz.HashTreeRoot(b4)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	r.slotToPendingBlocks[b4.Slot] = &ethpb.SignedBeaconBlock{Block: b4}
 	r.seenPendingBlocks[b4Root] = true
@@ -224,7 +252,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
-	p1.Peers().Add(p1.PeerID(), nil, network.DirOutbound, []uint64{})
+	p1.Peers().Add(new(enr.Record), p1.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p1.PeerID(), &pb.Status{})
 
@@ -232,22 +260,40 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, _ := ssz.HashTreeRoot(b0.Block)
+	b0Root, err := ssz.HashTreeRoot(b0.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
 	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
 		t.Fatal(err)
 	}
-	b1Root, _ := ssz.HashTreeRoot(b1.Block)
+	b1Root, err := ssz.HashTreeRoot(b1.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, _ := ssz.HashTreeRoot(b2)
+	b2Root, err := ssz.HashTreeRoot(b2)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, _ := ssz.HashTreeRoot(b5)
+	b5Root, err := ssz.HashTreeRoot(b5)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, _ := ssz.HashTreeRoot(b3)
+	b3Root, err := ssz.HashTreeRoot(b3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, _ := ssz.HashTreeRoot(b4)
+	b4Root, err := ssz.HashTreeRoot(b4)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}
 	r.seenPendingBlocks[b2Root] = true

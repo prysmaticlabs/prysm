@@ -120,12 +120,13 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 		return true
 	}
 	exists := false
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
+	if err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		exists = bkt.Get(blockRoot[:]) != nil
 		return nil
-	})
+	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+		panic(err)
+	}
 	return exists
 }
 
@@ -262,9 +263,12 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
-		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil && !k.stateSummaryCache.Has(blockRoot) {
-				return errors.New("no state summary found with head block root")
+		if !featureconfig.Get().DisableNewStateMgmt {
+			hasStateSummaryInCache := k.stateSummaryCache.Has(blockRoot)
+			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
+			hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
+			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+				return errors.New("no state or state summary found with head block root")
 			}
 		} else {
 			if tx.Bucket(stateBucket).Get(blockRoot[:]) == nil {
@@ -590,7 +594,10 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, e
 	for k, v := range f.Filters() {
 		switch k {
 		case filters.ParentRoot:
-			parentRoot := v.([]byte)
+			parentRoot, ok := v.([]byte)
+			if !ok {
+				return nil, errors.New("parent root is not []byte")
+			}
 			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:

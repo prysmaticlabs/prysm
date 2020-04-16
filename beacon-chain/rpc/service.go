@@ -259,6 +259,7 @@ func (s *Service) Start() {
 		BlockNotifier:               s.blockNotifier,
 		AttestationNotifier:         s.operationNotifier,
 		Broadcaster:                 s.p2p,
+		StateGen:                    s.stateGen,
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),
 	}
@@ -324,7 +325,9 @@ func (s *Service) Stop() error {
 		log.Debug("Initiated graceful stop of gRPC server")
 	}
 	if s.slasherConn != nil {
-		s.slasherConn.Close()
+		if err := s.slasherConn.Close(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

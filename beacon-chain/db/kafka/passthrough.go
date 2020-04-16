@@ -357,3 +357,8 @@ func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error
 func (e Exporter) LastArchivedIndex(ctx context.Context) (uint64, error) {
 	return e.db.LastArchivedIndex(ctx)
 }
+
+// HistoricalStatesDeleted -- passthrough
+func (e Exporter) HistoricalStatesDeleted(ctx context.Context) error {
+	return e.db.HistoricalStatesDeleted(ctx)
+}

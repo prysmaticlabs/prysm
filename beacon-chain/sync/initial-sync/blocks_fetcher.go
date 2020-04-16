@@ -3,7 +3,6 @@ package initialsync
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -328,10 +327,9 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 	}
 
 	req := &p2ppb.BeaconBlocksByRangeRequest{
-		HeadBlockRoot: root,
-		StartSlot:     start,
-		Count:         count,
-		Step:          step,
+		StartSlot: start,
+		Count:     count,
+		Step:      step,
 	}
 
 	resp, respErr := f.requestBlocks(ctx, req, pid)
@@ -376,14 +374,17 @@ func (f *blocksFetcher) requestBlocks(
 		"start": req.StartSlot,
 		"count": req.Count,
 		"step":  req.Step,
-		"head":  fmt.Sprintf("%#x", req.HeadBlockRoot),
 	}).Debug("Requesting blocks")
 	f.Unlock()
-	stream, err := f.p2p.Send(ctx, req, pid)
+	stream, err := f.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
 	if err != nil {
 		return nil, err
 	}
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 
 	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
 	for {
@@ -470,7 +471,7 @@ func (f *blocksFetcher) selectPeers(peers []peer.ID) []peer.ID {
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find non-empty future slot.
 func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	root, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	_, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	if len(peers) == 0 {
 		return 0, errNoPeersAvailable
 	}
@@ -485,10 +486,9 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 
 	for slot <= helpers.StartSlot(epoch+1) {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
-			HeadBlockRoot: root,
-			StartSlot:     slot + 1,
-			Count:         blockBatchSize,
-			Step:          1,
+			StartSlot: slot + 1,
+			Count:     blockBatchSize,
+			Step:      1,
 		}
 
 		blocks, err := f.requestBlocks(ctx, req, nextPID())

@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -32,8 +33,8 @@ func (r *Service) maintainPeerStatuses() {
 					return
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
-					if err := r.sendRPCStatusRequest(r.ctx, id); err != nil {
-						log.WithField("peer", id).WithError(err).Error("Failed to request peer status")
+					if err := r.reValidatePeer(r.ctx, id); err != nil {
+						log.WithField("peer", id).WithError(err).Error("Failed to reValidate peer")
 					}
 				}
 			}(pid)
@@ -77,14 +78,18 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 
-	resp := &pb.Status{
-		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
-		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        headRoot,
-		HeadSlot:        r.chain.HeadSlot(),
+	forkDigest, err := r.p2p.ForkDigest()
+	if err != nil {
+		return err
 	}
-	stream, err := r.p2p.Send(ctx, resp, id)
+	resp := &pb.Status{
+		ForkDigest:     forkDigest[:],
+		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
+		HeadRoot:       headRoot,
+		HeadSlot:       r.chain.HeadSlot(),
+	}
+	stream, err := r.p2p.Send(ctx, resp, p2p.RPCStatusTopic, id)
 	if err != nil {
 		return err
 	}
@@ -112,6 +117,16 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	return err
 }
 
+func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
+	if err := r.sendRPCStatusRequest(ctx, id); err != nil {
+		return err
+	}
+	if err := r.sendPingRequest(ctx, id); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
 	return nil
 }
@@ -119,12 +134,19 @@ func (r *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID)
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
 func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	defer stream.Close()
+	defer func() {
+		if err := stream.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stream")
+		}
+	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "status")
-	m := msg.(*pb.Status)
+	m, ok := msg.(*pb.Status)
+	if !ok {
+		return errors.New("message is not type *pb.Status")
+	}
 
 	if err := r.validateStatusMessage(m, stream); err != nil {
 		log.WithField("peer", stream.Conn().RemotePeer()).Debug("Invalid fork version from peer")
@@ -139,7 +161,9 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 				log.WithError(err).Debug("Failed to write to stream")
 			}
 		}
-		stream.Close() // Close before disconnecting.
+		if err := stream.Close(); err != nil { // Close before disconnecting.
+			log.WithError(err).Error("Failed to close stream")
+		}
 		// Add a short delay to allow the stream to flush before closing the connection.
 		// There is still a chance that the peer won't receive the message.
 		time.Sleep(50 * time.Millisecond)
@@ -155,12 +179,16 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return err
 	}
 
+	forkDigest, err := r.p2p.ForkDigest()
+	if err != nil {
+		return err
+	}
 	resp := &pb.Status{
-		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
-		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        headRoot,
-		HeadSlot:        r.chain.HeadSlot(),
+		ForkDigest:     forkDigest[:],
+		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
+		HeadRoot:       headRoot,
+		HeadSlot:       r.chain.HeadSlot(),
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
@@ -172,8 +200,12 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 }
 
 func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
-	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.HeadForkVersion) {
-		return errWrongForkVersion
+	forkDigest, err := r.p2p.ForkDigest()
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
+		return errWrongForkDigestVersion
 	}
 	genesis := r.chain.GenesisTime()
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)

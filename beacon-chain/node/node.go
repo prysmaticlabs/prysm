@@ -16,7 +16,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -150,10 +149,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerArchiverService(ctx); err != nil {
-		return nil, err
-	}
-
 	if !ctx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := beacon.registerPrometheusService(ctx); err != nil {
 			return nil, err
@@ -259,7 +254,12 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		if err := d.HistoricalStatesDeleted(ctx); err != nil {
+			return err
+		}
 	}
+
 	log.WithField("database-path", dbPath).Info("Checking DB")
 	b.db = d
 	b.depositCache = depositcache.NewDepositCache()
@@ -298,13 +298,15 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		HostAddress:       ctx.String(cmd.P2PHost.Name),
 		HostDNS:           ctx.String(cmd.P2PHostDNS.Name),
 		PrivateKey:        ctx.String(cmd.P2PPrivKey.Name),
+		MetaDataDir:       ctx.String(cmd.P2PMetadata.Name),
 		TCPPort:           ctx.Uint(cmd.P2PTCPPort.Name),
 		UDPPort:           ctx.Uint(cmd.P2PUDPPort.Name),
 		MaxPeers:          ctx.Uint(cmd.P2PMaxPeers.Name),
 		WhitelistCIDR:     ctx.String(cmd.P2PWhitelist.Name),
 		EnableUPnP:        ctx.Bool(cmd.EnableUPnPFlag.Name),
-		EnableDiscv5:      ctx.Bool(flags.EnableDiscv5.Name),
+		DisableDiscv5:     ctx.Bool(flags.DisableDiscv5.Name),
 		Encoding:          ctx.String(cmd.P2PEncoding.Name),
+		StateNotifier:     b,
 	})
 	if err != nil {
 		return err
@@ -441,6 +443,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		ExitPool:            b.exitPool,
 		SlashingPool:        b.slashingsPool,
 		StateSummaryCache:   b.stateSummaryCache,
+		StateGen:            b.stateGen,
 	})
 
 	return b.services.RegisterService(rs)
@@ -615,21 +618,4 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 		return b.services.RegisterService(svc)
 	}
 	return nil
-}
-
-func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
-	if !flags.Get().EnableArchive {
-		return nil
-	}
-	var chainService *blockchain.Service
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
-		BeaconDB:             b.db,
-		HeadFetcher:          chainService,
-		ParticipationFetcher: chainService,
-		StateNotifier:        b,
-	})
-	return b.services.RegisterService(svc)
 }

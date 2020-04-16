@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -98,7 +97,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify Attestations cannot be from future epochs.
-	if err := helpers.VerifySlotTime(genesisTime, tgtSlot); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, tgtSlot, helpers.TimeShiftTolerance); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation target slot")
 	}
 
@@ -108,7 +107,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot, helpers.TimeShiftTolerance); err != nil {
 		return nil, err
 	}
 
@@ -118,11 +117,14 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, err
 	}
 
-	// Only save attestation in DB for archival node.
-	if flags.Get().EnableArchive {
-		if err := s.beaconDB.SaveAttestation(ctx, a); err != nil {
-			return nil, err
-		}
+	if indexedAtt.AttestingIndices == nil {
+		return nil, errors.New("nil attesting indices")
+	}
+	if a.Data == nil {
+		return nil, errors.New("nil att data")
+	}
+	if a.Data.Target == nil {
+		return nil, errors.New("nil att target")
 	}
 
 	// Update forkchoice store with the new attestation for updating weight.

@@ -22,6 +22,16 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 	return nil
 }
 
+// SetGenesisValidatorRoot for the beacon state.
+func (b *BeaconState) SetGenesisValidatorRoot(val []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.GenesisValidatorsRoot = val
+	b.markFieldAsDirty(genesisValidatorRoot)
+	return nil
+}
+
 // SetSlot for the beacon state.
 func (b *BeaconState) SetSlot(val uint64) error {
 	if !b.HasInnerState() {
@@ -43,7 +53,11 @@ func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Fork = proto.Clone(val).(*pbp2p.Fork)
+	fk, ok := proto.Clone(val).(*pbp2p.Fork)
+	if !ok {
+		return errors.New("proto.Clone did not return a fork proto")
+	}
+	b.state.Fork = fk
 	b.markFieldAsDirty(fork)
 	return nil
 }
@@ -413,7 +427,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 
 // UpdateRandaoMixesAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
-func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
+func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}

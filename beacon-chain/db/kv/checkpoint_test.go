@@ -2,14 +2,14 @@ package kv
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
@@ -21,10 +21,11 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Epoch: 10,
 		Root:  root[:],
 	}
-	st, err := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	if err != nil {
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(1); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := db.SaveState(ctx, st, root); err != nil {
 		t.Fatal(err)
 	}
@@ -73,8 +74,8 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
-	st, err := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	if err != nil {
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(1); err != nil {
 		t.Fatal(err)
 	}
 	// a state is required to save checkpoint
@@ -144,7 +145,7 @@ func TestStore_FinalizedCheckpoint_StateMustExist(t *testing.T) {
 		Root:  []byte{'B'},
 	}
 
-	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != errMissingStateForCheckpoint {
+	if err := db.SaveFinalizedCheckpoint(ctx, cp); !strings.Contains(err.Error(), errMissingStateForCheckpoint.Error()) {
 		t.Fatalf("wanted err %v, got %v", errMissingStateForCheckpoint, err)
 	}
 }

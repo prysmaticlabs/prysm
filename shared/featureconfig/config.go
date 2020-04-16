@@ -28,11 +28,10 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoCustomConfig                             bool // NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	EnableDynamicCommitteeSubnets              bool // Enables dynamic attestation committee subnets via p2p.
+	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
 	SkipBLSVerify                              bool // Skips BLS verification across the runtime.
 	EnableBackupWebhook                        bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
@@ -47,7 +46,7 @@ type Flags struct {
 	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	NewStateMgmt                               bool // NewStateMgmt enables the new experimental state mgmt service.
+	DisableNewStateMgmt                        bool // NewStateMgmt disables the new state mgmt service.
 	DisableInitSyncQueue                       bool // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
@@ -105,9 +104,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
 		cfg.DisableForkChoice = true
 	}
-	if ctx.Bool(enableDynamicCommitteeSubnets.Name) {
-		log.Warn("Enabled dynamic attestation committee subnets")
-		cfg.EnableDynamicCommitteeSubnets = true
+	if ctx.Bool(disableDynamicCommitteeSubnets.Name) {
+		log.Warn("Disabled dynamic attestation committee subnets")
+		cfg.DisableDynamicCommitteeSubnets = true
 	}
 	cfg.EnableSSZCache = true
 	if ctx.Bool(disableSSZCache.Name) {
@@ -172,9 +171,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(newStateMgmt.Name) {
-		log.Warn("Enabling experimental state management service")
-		cfg.NewStateMgmt = true
+	if ctx.Bool(disableNewStateMgmt.Name) {
+		log.Warn("Disabling state management service")
+		cfg.DisableNewStateMgmt = true
 	}
 	if ctx.Bool(disableInitSyncQueue.Name) {
 		log.Warn("Disabled initial sync queue")
@@ -227,27 +226,12 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 }
 
 func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
-	if ctx.Bool(noCustomConfigFlag.Name) {
-		log.Warn("Using default mainnet config")
-		cfg.NoCustomConfig = true
-	}
 	if ctx.Bool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
-	}
-	// Use custom config values if the --no-custom-config flag is not set.
-	if !cfg.NoCustomConfig {
-		if cfg.MinimalConfig {
-			log.WithField(
-				"config", "minimal-spec",
-			).Info("Using custom chain parameters")
-			params.UseMinimalConfig()
-		} else {
-			log.WithField(
-				"config", "demo",
-			).Info("Using custom chain parameters")
-			params.UseDemoBeaconConfig()
-		}
+		params.UseMinimalConfig()
+	} else {
+		log.Warn("Using default mainnet config")
 	}
 	return cfg
 }

@@ -39,7 +39,11 @@ func (k *Store) Backup(ctx context.Context) error {
 	if err != nil {
 		panic(err)
 	}
-	defer copyDB.Close()
+	defer func() {
+		if err := copyDB.Close(); err != nil {
+			logrus.WithError(err).Error("Failed to close destination database")
+		}
+	}()
 
 	return k.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {

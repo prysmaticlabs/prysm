@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,7 +41,7 @@ func TestPeerExplicitAdd(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction := network.DirInbound
-	p.Add(id, address, direction, []uint64{})
+	p.Add(new(enr.Record), id, address, direction)
 
 	resAddress, err := p.Address(id)
 	if err != nil {
@@ -62,7 +65,7 @@ func TestPeerExplicitAdd(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction2 := network.DirOutbound
-	p.Add(id, address2, direction2, []uint64{})
+	p.Add(new(enr.Record), id, address2, direction2)
 
 	resAddress2, err := p.Address(id)
 	if err != nil {
@@ -78,6 +81,58 @@ func TestPeerExplicitAdd(t *testing.T) {
 	}
 	if resDirection2 != direction2 {
 		t.Errorf("Unexpected direction: expected %v, received %v", direction2, resDirection2)
+	}
+}
+
+func TestPeerNoENR(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	id, err := peer.IDB58Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	if err != nil {
+		t.Fatalf("Failed to create ID: %v", err)
+	}
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	if err != nil {
+		t.Fatalf("Failed to create address: %v", err)
+	}
+	direction := network.DirInbound
+	p.Add(nil, id, address, direction)
+
+	retrievedENR, err := p.ENR(id)
+	if err != nil {
+		t.Fatalf("Could not retrieve chainstate: %v", err)
+	}
+	if retrievedENR != nil {
+		t.Error("Wanted a nil enr to be saved")
+	}
+}
+
+func TestPeerNoOverwriteENR(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	id, err := peer.IDB58Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	if err != nil {
+		t.Fatalf("Failed to create ID: %v", err)
+	}
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	if err != nil {
+		t.Fatalf("Failed to create address: %v", err)
+	}
+	direction := network.DirInbound
+	record := new(enr.Record)
+	record.Set(enr.WithEntry("test", []byte{'a'}))
+	p.Add(record, id, address, direction)
+	// try to overwrite
+	p.Add(nil, id, address, direction)
+
+	retrievedENR, err := p.ENR(id)
+	if err != nil {
+		t.Fatalf("Could not retrieve chainstate: %v", err)
+	}
+	if retrievedENR == nil {
+		t.Error("Wanted a non-nil enr")
 	}
 }
 
@@ -121,6 +176,94 @@ func TestErrUnknownPeer(t *testing.T) {
 	}
 }
 
+func TestPeerCommitteeIndices(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	id, err := peer.IDB58Decode("16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR")
+	if err != nil {
+		t.Fatalf("Failed to create ID: %v", err)
+	}
+	address, err := ma.NewMultiaddr("/ip4/213.202.254.180/tcp/13000")
+	if err != nil {
+		t.Fatalf("Failed to create address: %v", err)
+	}
+	direction := network.DirInbound
+	record := new(enr.Record)
+	record.Set(enr.WithEntry("test", []byte{'a'}))
+	p.Add(record, id, address, direction)
+	bitV := bitfield.NewBitvector64()
+	for i := 0; i < 64; i++ {
+		if i == 2 || i == 8 || i == 9 {
+			bitV.SetBitAt(uint64(i), true)
+		}
+	}
+	p.SetMetadata(id, &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   bitV,
+	})
+
+	wantedIndices := []uint64{2, 8, 9}
+
+	indices, err := p.CommitteeIndices(id)
+	if err != nil {
+		t.Fatalf("Could not retrieve committee indices: %v", err)
+	}
+
+	if !reflect.DeepEqual(indices, wantedIndices) {
+		t.Errorf("Wanted indices of %v but got %v", wantedIndices, indices)
+	}
+}
+
+func TestPeerSubscribedToSubnet(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	// Add some peers with different states
+	numPeers := 2
+	for i := 0; i < numPeers; i++ {
+		addPeer(t, p, peers.PeerConnected)
+	}
+	expectedPeer := p.All()[1]
+	bitV := bitfield.NewBitvector64()
+	for i := 0; i < 64; i++ {
+		if i == 2 || i == 8 || i == 9 {
+			bitV.SetBitAt(uint64(i), true)
+		}
+	}
+	p.SetMetadata(expectedPeer, &pb.MetaData{
+		SeqNumber: 2,
+		Attnets:   bitV,
+	})
+	numPeers = 3
+	for i := 0; i < numPeers; i++ {
+		addPeer(t, p, peers.PeerDisconnected)
+	}
+	peers := p.SubscribedToSubnet(2)
+	if len(peers) != 1 {
+		t.Errorf("Expected num of peers to be %d but got %d", 1, len(peers))
+	}
+	if peers[0] != expectedPeer {
+		t.Errorf("Expected peer of %s but got %s", expectedPeer, peers[0])
+	}
+
+	peers = p.SubscribedToSubnet(8)
+	if len(peers) != 1 {
+		t.Errorf("Expected num of peers to be %d but got %d", 1, len(peers))
+	}
+	if peers[0] != expectedPeer {
+		t.Errorf("Expected peer of %s but got %s", expectedPeer, peers[0])
+	}
+
+	peers = p.SubscribedToSubnet(9)
+	if len(peers) != 1 {
+		t.Errorf("Expected num of peers to be %d but got %d", 1, len(peers))
+	}
+	if peers[0] != expectedPeer {
+		t.Errorf("Expected peer of %s but got %s", expectedPeer, peers[0])
+	}
+}
+
 func TestPeerImplicitAdd(t *testing.T) {
 	maxBadResponses := 2
 	p := peers.NewStatus(maxBadResponses)
@@ -156,7 +299,7 @@ func TestPeerChainState(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction := network.DirInbound
-	p.Add(id, address, direction, []uint64{})
+	p.Add(new(enr.Record), id, address, direction)
 
 	oldChainStartLastUpdated, err := p.ChainStateLastUpdated(id)
 	if err != nil {
@@ -192,7 +335,10 @@ func TestPeerBadResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	{
-		bytes, _ := id.MarshalBinary()
+		bytes, err := id.MarshalBinary()
+		if err != nil {
+			t.Fatal(err)
+		}
 		fmt.Printf("%x\n", bytes)
 	}
 
@@ -205,7 +351,7 @@ func TestPeerBadResponses(t *testing.T) {
 		t.Fatalf("Failed to create address: %v", err)
 	}
 	direction := network.DirInbound
-	p.Add(id, address, direction, []uint64{})
+	p.Add(new(enr.Record), id, address, direction)
 
 	resBadResponses, err := p.BadResponses(id)
 	if err != nil {
@@ -252,6 +398,32 @@ func TestPeerBadResponses(t *testing.T) {
 	}
 	if !p.IsBad(id) {
 		t.Error("Peer not marked as bad when it should be")
+	}
+}
+
+func TestAddMetaData(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	// Add some peers with different states
+	numPeers := 5
+	for i := 0; i < numPeers; i++ {
+		addPeer(t, p, peers.PeerConnected)
+	}
+	newPeer := p.All()[2]
+
+	newMetaData := &pb.MetaData{
+		SeqNumber: 8,
+		Attnets:   bitfield.NewBitvector64(),
+	}
+	p.SetMetadata(newPeer, newMetaData)
+
+	md, err := p.Metadata(newPeer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if md.SeqNumber != newMetaData.SeqNumber {
+		t.Errorf("Wanted sequence number of %d but got %d", newMetaData.SeqNumber, md.SeqNumber)
 	}
 }
 
@@ -322,15 +494,24 @@ func TestDecay(t *testing.T) {
 	p.Decay()
 
 	// Ensure the new values are as expected
-	badResponses1, _ := p.BadResponses(pid1)
+	badResponses1, err := p.BadResponses(pid1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if badResponses1 != 0 {
 		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses1)
 	}
-	badResponses2, _ := p.BadResponses(pid2)
+	badResponses2, err := p.BadResponses(pid2)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if badResponses2 != 0 {
 		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses2)
 	}
-	badResponses3, _ := p.BadResponses(pid3)
+	badResponses3, err := p.BadResponses(pid3)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if badResponses3 != 1 {
 		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses3)
 	}
@@ -458,7 +639,7 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	p := peers.NewStatus(maxBadResponses)
 
 	for i := 0; i <= maxPeers+100; i++ {
-		p.Add(peer.ID(i), nil, network.DirOutbound, []uint64{})
+		p.Add(new(enr.Record), peer.ID(i), nil, network.DirOutbound)
 		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
 		p.SetChainState(peer.ID(i), &pb.Status{
 			FinalizedEpoch: 10,
@@ -500,13 +681,19 @@ func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) pee
 	// Set up some peers with different states
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)
-	rand.Read(idBytes)
+	if _, err := rand.Read(idBytes); err != nil {
+		t.Fatal(err)
+	}
 	mhBytes = append(mhBytes, idBytes...)
 	id, err := peer.IDFromBytes(mhBytes)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	p.Add(id, nil, network.DirUnknown, []uint64{})
+	p.Add(new(enr.Record), id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
+	p.SetMetadata(id, &pb.MetaData{
+		SeqNumber: 0,
+		Attnets:   bitfield.NewBitvector64(),
+	})
 	return id
 }

@@ -11,6 +11,7 @@ import (
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -24,7 +25,11 @@ func TestSub(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	testutil.ResetCache()
+	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
@@ -65,8 +70,16 @@ func TestSub(t *testing.T) {
 			Epoch:          epoch,
 			ValidatorIndex: validatorIndex,
 		},
-		Signature: []byte{0xb3, 0xe1, 0x9d, 0xc6, 0x7c, 0x78, 0x6c, 0xcf, 0x33, 0x1d, 0xb9, 0x6f, 0x59, 0x64, 0x44, 0xe1, 0x29, 0xd0, 0x87, 0x03, 0x26, 0x6e, 0x49, 0x1c, 0x05, 0xae, 0x16, 0x7b, 0x04, 0x0f, 0x3f, 0xf8, 0x82, 0x77, 0x60, 0xfc, 0xcf, 0x2f, 0x59, 0xc7, 0x40, 0x0b, 0x2c, 0xa9, 0x23, 0x8a, 0x6c, 0x8d, 0x01, 0x21, 0x5e, 0xa8, 0xac, 0x36, 0x70, 0x31, 0xb0, 0xe1, 0xa8, 0xb8, 0x8f, 0x93, 0x8c, 0x1c, 0xa2, 0x86, 0xe7, 0x22, 0x00, 0x6a, 0x7d, 0x36, 0xc0, 0x2b, 0x86, 0x2c, 0xf5, 0xf9, 0x10, 0xb9, 0xf2, 0xbd, 0x5e, 0xa6, 0x5f, 0x12, 0x86, 0x43, 0x20, 0x4d, 0xa2, 0x9d, 0x8b, 0xe6, 0x6f, 0x09},
 	}
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainVoluntaryExit, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigRoot, err := helpers.ComputeSigningRoot(req.Exit, domain)
+	if err != nil {
+		t.Fatalf("Could not compute signing root: %v", err)
+	}
+	req.Signature = keys[0].Sign(sigRoot[:]).Marshal()
 
 	_, err = server.ProposeExit(context.Background(), req)
 	if err != nil {
@@ -80,7 +93,10 @@ func TestSub(t *testing.T) {
 		case event := <-opChannel:
 			if event.Type == opfeed.ExitReceived {
 				notificationFound = true
-				data := event.Data.(*opfeed.ExitReceivedData)
+				data, ok := event.Data.(*opfeed.ExitReceivedData)
+				if !ok {
+					t.Error("Entity is not of type *opfeed.ExitReceivedData")
+				}
 				if epoch != data.Exit.Exit.Epoch {
 					t.Errorf("Unexpected state feed epoch: expected %v, found %v", epoch, data.Exit.Exit.Epoch)
 				}

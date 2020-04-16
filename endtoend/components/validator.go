@@ -135,7 +135,10 @@ func SendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num int, offset 
 		return err
 	}
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(num + offset))
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(num + offset))
+	if err != nil {
+		return err
+	}
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		return err

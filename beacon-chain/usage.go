@@ -92,7 +92,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SetGCPercent,
 			flags.UnsafeSync,
 			flags.SlotsPerArchivedPoint,
-			flags.EnableDiscv5,
+			flags.DisableDiscv5,
 		},
 	},
 	{
@@ -103,6 +103,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PHostDNS,
 			cmd.P2PMaxPeers,
 			cmd.P2PPrivKey,
+			cmd.P2PMetadata,
 			cmd.P2PWhitelist,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
@@ -127,15 +128,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropGenesisStateFlag,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
-		},
-	},
-	{
-		Name: "archive",
-		Flags: []cli.Flag{
-			flags.ArchiveEnableFlag,
-			flags.ArchiveValidatorSetChangesFlag,
-			flags.ArchiveBlocksFlag,
-			flags.ArchiveAttestationsFlag,
 		},
 	},
 }

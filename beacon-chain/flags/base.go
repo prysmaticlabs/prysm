@@ -21,7 +21,7 @@ var (
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
-		Value: "0x4689a3C63CE249355C8a573B5974db21D2d1b8Ef",
+		Value: "0x5cA1e00004366Ac85f492887AAab12d0e6418876",
 	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{
@@ -74,7 +74,7 @@ var (
 	ContractDeploymentBlock = &cli.IntFlag{
 		Name:  "contract-deployment-block",
 		Usage: "The eth1 block in which the deposit contract was deployed.",
-		Value: 1960177,
+		Value: 2523557,
 	}
 	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.
 	SetGCPercent = &cli.IntFlag{
@@ -105,9 +105,9 @@ var (
 		Usage: "The slot durations of when an archived state gets saved in the DB.",
 		Value: 128,
 	}
-	// EnableDiscv5 enables running discv5.
-	EnableDiscv5 = &cli.BoolFlag{
-		Name:  "enable-discv5",
-		Usage: "Starts dv5 dht.",
+	// DisableDiscv5 disables running discv5.
+	DisableDiscv5 = &cli.BoolFlag{
+		Name:  "disable-discv5",
+		Usage: "Does not run the discoveryV5 dht.",
 	}
 )

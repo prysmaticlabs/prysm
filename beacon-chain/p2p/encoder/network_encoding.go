@@ -12,8 +12,10 @@ const (
 
 // NetworkEncoding represents an encoder compatible with Ethereum 2.0 p2p.
 type NetworkEncoding interface {
-	// Decodes to the provided message. The interface must be a pointer to the decoding destination.
+	// Decode to the provided message. The interface must be a pointer to the decoding destination.
 	Decode([]byte, interface{}) error
+	// DecodeGossip to the provided gossip message. The interface must be a pointer to the decoding destination.
+	DecodeGossip([]byte, interface{}) error
 	// DecodeWithLength a bytes from a reader with a varint length prefix. The interface must be a pointer to the
 	// decoding destination.
 	DecodeWithLength(io.Reader, interface{}) error
@@ -22,6 +24,8 @@ type NetworkEncoding interface {
 	DecodeWithMaxLength(io.Reader, interface{}, uint64) error
 	// Encode an arbitrary message to the provided writer. The interface must be a pointer object to encode.
 	Encode(io.Writer, interface{}) (int, error)
+	// EncodeGossip an arbitrary gossip message to the provided writer. The interface must be a pointer object to encode.
+	EncodeGossip(io.Writer, interface{}) (int, error)
 	// EncodeWithLength an arbitrary message to the provided writer with a varint length prefix. The interface must be
 	// a pointer object to encode.
 	EncodeWithLength(io.Writer, interface{}) (int, error)

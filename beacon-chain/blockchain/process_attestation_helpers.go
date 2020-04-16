@@ -32,7 +32,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	}
 
 	var baseState *stateTrie.BeaconState
-	if featureconfig.Get().NewStateMgmt {
+	if !featureconfig.Get().DisableNewStateMgmt {
 		baseState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
@@ -123,21 +123,25 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	}
 	indexedAtt := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
-		if err == blocks.ErrSigFailedToVerify {
+		if err == helpers.ErrSigFailedToVerify {
 			// When sig fails to verify, check if there's a differences in committees due to
 			// different seeds.
 			var aState *stateTrie.BeaconState
 			var err error
-			if featureconfig.Get().NewStateMgmt {
+			if !featureconfig.Get().DisableNewStateMgmt {
 				aState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				return nil, err
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				if err != nil {
+					return nil, err
+				}
 			}
-
-			aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-			if err != nil {
-				return nil, err
+			if aState == nil {
+				return nil, fmt.Errorf("nil state for block root %#x", a.Data.BeaconBlockRoot)
 			}
-
 			epoch := helpers.SlotToEpoch(a.Data.Slot)
 			origSeed, err := helpers.Seed(baseState, epoch, params.BeaconConfig().DomainBeaconAttester)
 			if err != nil {

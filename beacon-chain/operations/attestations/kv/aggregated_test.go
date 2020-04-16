@@ -3,21 +3,39 @@ package kv
 import (
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func TestKV_Aggregated_NotAggregated(t *testing.T) {
+func TestKV_AggregateUnaggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
+	priv := bls.RandKey()
+	sig1 := priv.Sign([]byte{'a'})
+	sig2 := priv.Sign([]byte{'b'})
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig1.Marshal()}
+	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1010}, Signature: sig1.Marshal()}
+	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()}
+	att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()}
+	att5 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig1.Marshal()}
+	att6 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1010}, Signature: sig1.Marshal()}
+	att7 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()}
+	att8 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()}
+	atts := []*ethpb.Attestation{att1, att2, att3, att4, att5, att6, att7, att8}
+	if err := cache.SaveUnaggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+	if err := cache.AggregateUnaggregatedAttestations(); err != nil {
+		t.Fatal(err)
+	}
 
-	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11}, Data: &ethpb.AttestationData{}}
-
-	wanted := "attestation is not aggregated"
-	if err := cache.SaveAggregatedAttestation(att); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not received wanted error")
+	if len(cache.AggregatedAttestationsBySlotIndex(1, 0)) != 1 {
+		t.Fatal("Did not aggregate correctly")
+	}
+	if len(cache.AggregatedAttestationsBySlotIndex(2, 0)) != 1 {
+		t.Fatal("Did not aggregate correctly")
 	}
 }
 

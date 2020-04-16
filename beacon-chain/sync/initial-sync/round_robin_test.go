@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -330,7 +331,11 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 		var datum = d
 
 		peer.SetStreamHandler(topic, func(stream network.Stream) {
-			defer stream.Close()
+			defer func() {
+				if err := stream.Close(); err != nil {
+					t.Log(err)
+				}
+			}()
 
 			req := &p2ppb.BeaconBlocksByRangeRequest{}
 			if err := peer.Encoding().DecodeWithLength(stream, req); err != nil {
@@ -373,7 +378,10 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 					blk.Block.ParentRoot = newRoot[:]
 				}
 				ret = append(ret, blk)
-				currRoot, _ := ssz.HashTreeRoot(blk.Block)
+				currRoot, err := ssz.HashTreeRoot(blk.Block)
+				if err != nil {
+					t.Fatal(err)
+				}
 				logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 			}
 
@@ -390,14 +398,14 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 
 		peer.Connect(host)
 
-		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound, []uint64{})
+		peerStatus.Add(new(enr.Record), peer.PeerID(), nil, network.DirOutbound)
 		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
 		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
-			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			FinalizedRoot:   []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
-			FinalizedEpoch:  datum.finalizedEpoch,
-			HeadRoot:        []byte("head_root"),
-			HeadSlot:        datum.headSlot,
+			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
+			FinalizedEpoch: datum.finalizedEpoch,
+			HeadRoot:       []byte("head_root"),
+			HeadSlot:       datum.headSlot,
 		})
 	}
 }
