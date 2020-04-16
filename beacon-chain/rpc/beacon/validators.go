@@ -30,51 +30,35 @@ func (bs *Server) ListValidatorBalances(
 			req.PageSize, flags.Get().MaxPageSize)
 	}
 
-	res := make([]*ethpb.ValidatorBalances_Balance, 0)
-	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
-
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-
-	var requestingGenesis bool
-	var epoch uint64
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	requestedEpoch := currentEpoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorBalancesRequest_Epoch:
-		epoch = q.Epoch
+		requestedEpoch = q.Epoch
 	case *ethpb.ListValidatorBalancesRequest_Genesis:
-		requestingGenesis = q.Genesis
+		requestedEpoch = 0
 	default:
-		epoch = helpers.CurrentEpoch(headState)
+		requestedEpoch = currentEpoch
 	}
 
-	var balances []uint64
-	validators := headState.Validators()
-	if requestingGenesis || epoch < helpers.CurrentEpoch(headState) {
-		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
-		}
-		if balances == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				0,
-			)
-		}
-	} else if epoch == helpers.CurrentEpoch(headState) {
-		balances = headState.Balances()
-	} else {
-		// Otherwise, we are requesting data from the future and we return an error.
+	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.CurrentEpoch(headState),
-			epoch,
+			currentEpoch,
+			requestedEpoch,
 		)
 	}
+	res := make([]*ethpb.ValidatorBalances_Balance, 0)
+	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 
+	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state")
+	}
+
+	validators := requestedState.Validators()
+	balances := requestedState.Balances()
 	balancesCount := len(balances)
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key.
@@ -82,7 +66,7 @@ func (bs *Server) ListValidatorBalances(
 			continue
 		}
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)
-		index, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
+		index, ok := requestedState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubkeyBytes)
 		}
@@ -104,10 +88,6 @@ func (bs *Server) ListValidatorBalances(
 
 	for _, index := range req.Indices {
 		if int(index) >= len(balances) {
-			if epoch <= helpers.CurrentEpoch(headState) {
-				return nil, status.Errorf(codes.OutOfRange, "Validator index %d does not exist in historical balances",
-					index)
-			}
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -130,7 +110,7 @@ func (bs *Server) ListValidatorBalances(
 	// Otherwise, attempting to paginate 0 balances below would result in an error.
 	if balancesCount == 0 {
 		return &ethpb.ValidatorBalances{
-			Epoch:         epoch,
+			Epoch:         currentEpoch,
 			Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
 			TotalSize:     int32(0),
 			NextPageToken: strconv.Itoa(0),
@@ -149,7 +129,7 @@ func (bs *Server) ListValidatorBalances(
 	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
 		// Return everything.
 		for i := start; i < end; i++ {
-			pubkey := headState.PubkeyAtIndex(uint64(i))
+			pubkey := requestedState.PubkeyAtIndex(uint64(i))
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: pubkey[:],
 				Index:     uint64(i),
@@ -157,7 +137,7 @@ func (bs *Server) ListValidatorBalances(
 			})
 		}
 		return &ethpb.ValidatorBalances{
-			Epoch:         epoch,
+			Epoch:         requestedEpoch,
 			Balances:      res,
 			TotalSize:     int32(balancesCount),
 			NextPageToken: nextPageToken,
@@ -165,7 +145,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	return &ethpb.ValidatorBalances{
-		Epoch:         epoch,
+		Epoch:         requestedEpoch,
 		Balances:      res[start:end],
 		TotalSize:     int32(balancesCount),
 		NextPageToken: nextPageToken,
