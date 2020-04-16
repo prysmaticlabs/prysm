@@ -60,7 +60,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
 	defer span.End()
 
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().EnableNewStateMgmt {
 		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
 		if !s.stateGen.StateSummaryExists(ctx, parentRoot) {
 			return nil, errors.New("provided block root does not have block saved in the db")
@@ -269,7 +269,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		s.justifiedCheckpt = cpt
 	}
 
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().EnableNewStateMgmt {
 		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
 		justifiedState := s.initSyncState[justifiedRoot]
