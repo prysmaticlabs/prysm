@@ -158,7 +158,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	if !s.chainStartData.Chainstarted {
 		var pubkey = fmt.Sprintf("%#x", depositData.PublicKey)
 		if s.depositCache.PubkeyInChainstart(ctx, pubkey) {
-			log.WithField("publicKey", pubkey).Warn("Pubkey has already been submitted for chainstart")
+			log.WithField("publicKey", pubkey).Debug("Pubkey has already been submitted for chainstart")
 		} else {
 			s.depositCache.MarkPubkeyForChainstart(ctx, pubkey)
 		}
