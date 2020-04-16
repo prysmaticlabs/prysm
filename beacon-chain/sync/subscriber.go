@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"go.opencensus.io/trace"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -22,10 +21,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
 
 const pubsubMessageTimeout = 30 * time.Second
-const maximumGossipClockDisparity = 500 * time.Millisecond
+
+var maximumGossipClockDisparity = params.BeaconNetworkConfig().MaximumGossipClockDisparity
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
