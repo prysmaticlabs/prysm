@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -302,6 +303,12 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
+
+	// State summary is only used for new state mgmt service.
+	// This is a new state mgmt service specific test.
+	fc := featureconfig.Get()
+	fc.EnableNewStateMgmt = true
+	featureconfig.Init(fc)
 
 	cfg := &Config{
 		BeaconDB: db,
