@@ -59,9 +59,9 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 	}
 
 	beaconRPCPort := e2e.TestParams.BeaconNodeRPCPort + index
-	if beaconRPCPort >= e2e.TestParams.BeaconNodeCount+e2e.TestParams.BeaconNodeCount {
+	if beaconRPCPort >= e2e.TestParams.BeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
 		// Point any extra validator clients to a node we know is running.
-		beaconRPCPort = e2e.TestParams.BeaconNodeCount
+		beaconRPCPort = e2e.TestParams.BeaconNodeRPCPort
 	}
 
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, fmt.Sprintf(e2e.ValidatorLogFileName, index))
