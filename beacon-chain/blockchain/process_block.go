@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -241,6 +242,13 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		defer s.initSyncStateLock.Unlock()
 		s.initSyncState[root] = postState.Copy()
 		s.filterBoundaryCandidates(ctx, root, postState)
+	}
+
+	if flags.Get().EnableArchive {
+		atts := signed.Block.Body.Attestations
+		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
+			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
+		}
 	}
 
 	// Update justified check point.
