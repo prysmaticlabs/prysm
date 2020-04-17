@@ -38,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -53,8 +54,8 @@ var (
 	kademliaPort = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
 	metricsPort  = flag.Int("metrics-port", 5000, "Port to listen for connections")
 	externalIP   = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
-
-	log = logrus.WithField("prefix", "bootnode")
+	disableKad   = flag.Bool("disable-kad", false, "Disables the bootnode from running kademlia dht")
+	log          = logrus.WithField("prefix", "bootnode")
 )
 
 const dhtProtocol = "/prysm/0.0.0/dht"
@@ -93,7 +94,9 @@ func main() {
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
 
-	startKademliaDHT(interfacePrivKey)
+	if !*disableKad {
+		startKademliaDHT(interfacePrivKey)
+	}
 
 	handler := &handler{
 		listener: listener,
@@ -152,15 +155,23 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
 	}
+	localIP := ip
+	if !ip.IsLoopback() {
+		rawIP, err := iputils.ExternalIPv4()
+		if err != nil {
+			log.Fatal(err)
+		}
+		localIP = net.ParseIP(rawIP)
+	}
 	udpAddr := &net.UDPAddr{
-		IP:   ip,
+		IP:   localIP,
 		Port: port,
 	}
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(cfg.PrivateKey, ip, port)
+	localNode, err := createLocalNode(cfg.PrivateKey, localIP, ip, port)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -191,7 +202,7 @@ func (h *handler) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {
+func createLocalNode(privKey *ecdsa.PrivateKey, internalIP net.IP, externalIP net.IP, port int) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not open node's peer database")
@@ -208,9 +219,9 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	}
 
 	localNode := enode.NewLocalNode(db, privKey)
-	ipEntry := enr.IP(ipAddr)
+	ipEntry := enr.IP(internalIP)
 	udpEntry := enr.UDP(port)
-	localNode.SetFallbackIP(ipAddr)
+	localNode.SetFallbackIP(externalIP)
 	localNode.SetFallbackUDP(port)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
