@@ -71,7 +71,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 		// during initial syncing. There's no risk given a state summary object is just a
 		// a subset of the block object.
 		if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
-			return nil, errors.New("provided block root does not have block saved in the db")
+			return nil, errors.New("could not reconstruct parent state")
 		}
 		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)
 		if err != nil {
