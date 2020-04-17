@@ -28,7 +28,7 @@ func TestService_RequestValidator(t *testing.T) {
 		beaconClient:   client,
 		publicKeyCache: validatorCache,
 	}
-	wanted := &ethpb.Validators{
+	input1 := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
 			{
 				Index: 0, Validator: &ethpb.Validator{PublicKey: []byte{1, 2, 3}, ActivationEpoch: 1},
@@ -38,7 +38,7 @@ func TestService_RequestValidator(t *testing.T) {
 			},
 		},
 	}
-	wanted2 := &ethpb.Validators{
+	input2 := &ethpb.Validators{
 		ValidatorList: []*ethpb.Validators_ValidatorContainer{
 			{
 				Index: 3, Validator: &ethpb.Validator{PublicKey: []byte{3, 4, 5}, ActivationEpoch: 222},
@@ -48,21 +48,25 @@ func TestService_RequestValidator(t *testing.T) {
 	client.EXPECT().ListValidators(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(wanted, nil)
+	).Return(input1, nil)
 
 	client.EXPECT().ListValidators(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(wanted2, nil)
+	).Return(input2, nil)
 
 	// We request public key of validator id 0,1.
 	res, err := bs.FindOrGetValidatorsData(context.Background(), []uint64{0, 1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i, v := range wanted.ValidatorList {
-		if !reflect.DeepEqual(res[v.Index], wanted.ValidatorList[i].Validator.PublicKey) {
-			t.Errorf("Wanted %v, received %v", wanted, res)
+	for i, v := range input1.ValidatorList {
+		wanted := cache.ValidatorData{
+			PublicKey:       input1.ValidatorList[i].Validator.PublicKey,
+			ActivationEpoch: input1.ValidatorList[i].Validator.ActivationEpoch,
+		}
+		if !reflect.DeepEqual(res[v.Index], wanted) {
+			t.Errorf("Wanted %v, received %v", input1, res)
 		}
 	}
 
@@ -74,10 +78,14 @@ func TestService_RequestValidator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i, v := range wanted2.ValidatorList {
-		if !reflect.DeepEqual(res[v.Index], wanted2.ValidatorList[i].Validator.PublicKey) {
-			t.Errorf("Wanted %v, received %v", wanted2, res)
+	for i, v := range input2.ValidatorList {
+		wanted := cache.ValidatorData{
+			PublicKey:       input2.ValidatorList[i].Validator.PublicKey,
+			ActivationEpoch: input2.ValidatorList[i].Validator.ActivationEpoch,
+		}
+		if !reflect.DeepEqual(res[v.Index], wanted) {
+			t.Errorf("Wanted %v, received %v", input2, res)
 		}
 	}
-	testutil.AssertLogsContain(t, hook, "Retrieved validators public keys from cache: map[0:[1 2 3]]")
+	testutil.AssertLogsContain(t, hook, "Retrieved validators public keys from cache:")
 }

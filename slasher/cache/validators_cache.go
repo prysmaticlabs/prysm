@@ -52,14 +52,14 @@ func (c *ValidatorsCache) Get(validatorIdx uint64) (ValidatorData, bool) {
 	}
 
 	validatorsCacheMiss.Inc()
-	return nil, false
+	return ValidatorData{}, false
 }
 
 // Set the response in the cache.
 func (c *ValidatorsCache) Set(validatorIdx uint64, data ValidatorData) {
 	evicted := c.cache.Add(validatorIdx, data)
 	if evicted {
-		log.Warn("ValidatorsCache is full. Please consider raising it. current number of cached items: %d", c.cache.Len())
+		log.Warnf("ValidatorsCache is full. Please consider raising it. current number of cached items: %d", c.cache.Len())
 	}
 }
 
