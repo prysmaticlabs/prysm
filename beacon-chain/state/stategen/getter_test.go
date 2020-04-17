@@ -2,7 +2,6 @@ package stategen
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -107,7 +106,6 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 		t.Fatal(err)
 	}
 	if loadedState.Slot() != targetSlot {
-		fmt.Println(loadedState.Slot(), targetSlot)
 		t.Error("Did not correctly load state")
 	}
 }
