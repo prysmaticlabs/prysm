@@ -171,7 +171,7 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	if err != nil {
 		log.Fatal(err)
 	}
-	localNode, err := createLocalNode(cfg.PrivateKey, localIP, ip, port)
+	localNode, err := createLocalNode(cfg.PrivateKey, ip, port)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func (h *handler) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func createLocalNode(privKey *ecdsa.PrivateKey, internalIP net.IP, externalIP net.IP, port int) (*enode.LocalNode, error) {
+func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode.LocalNode, error) {
 	db, err := enode.OpenDB("")
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not open node's peer database")
@@ -219,9 +219,9 @@ func createLocalNode(privKey *ecdsa.PrivateKey, internalIP net.IP, externalIP ne
 	}
 
 	localNode := enode.NewLocalNode(db, privKey)
-	ipEntry := enr.IP(internalIP)
+	ipEntry := enr.IP(ipAddr)
 	udpEntry := enr.UDP(port)
-	localNode.SetFallbackIP(externalIP)
+	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(port)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
