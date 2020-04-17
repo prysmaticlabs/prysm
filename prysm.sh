@@ -71,7 +71,6 @@ readonly wrapper_dir="$(dirname "$(get_realpath "${BASH_SOURCE[0]}")")/dist"
 arch=$(uname -m)
 arch=${arch/x86_64/amd64}
 arch=${arch/aarch64/arm64}
-readonly os_arch_suffix="$(uname -s | tr '[:upper:]' '[:lower:]')-$arch"
 
 system=""
 case "$OSTYPE" in
