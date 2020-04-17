@@ -72,16 +72,9 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 
 	// Since the hot state is not in cache nor DB, start replaying using the parent state which is
 	// retrieved using input block's parent root.
-	blk, err := s.beaconDB.Block(ctx, blockRoot)
+	startState, err := s.lastAncestorState(ctx, blockRoot)
 	if err != nil {
-		return nil, err
-	}
-	if blk == nil {
-		return nil, errUnknownBlock
-	}
-	startState, err := s.loadHotStateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
 	if startState == nil {
 		return nil, errUnknownBoundaryState
@@ -138,4 +131,35 @@ func (s *State) loadHotStateBySlot(ctx context.Context, slot uint64) (*state.Bea
 	}
 
 	return s.ReplayBlocks(ctx, startState, replayBlks, slot)
+}
+
+// This returns the last saved in DB ancestor state of the input block root.
+// It recursively look up block's parent until a corresponding state of the block root
+// is found in the DB.
+func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.lastAncestorState")
+	defer span.End()
+
+	b, err := s.beaconDB.Block(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, errUnknownBlock
+	}
+
+	for {
+		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
+		if s.beaconDB.HasState(ctx, parentRoot) {
+			return s.beaconDB.State(ctx, parentRoot)
+		}
+
+		b, err = s.beaconDB.Block(ctx, parentRoot)
+		if err != nil {
+			return nil, err
+		}
+		if b == nil {
+			return nil, errUnknownBlock
+		}
+	}
 }
