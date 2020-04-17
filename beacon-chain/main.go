@@ -7,6 +7,7 @@ import (
 	"runtime"
 	runtimeDebug "runtime/debug"
 
+	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -167,7 +168,12 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 	if level == logrus.TraceLevel {
+		// libp2p specific logging
 		golog.SetAllLoggers(gologging.DEBUG)
+		// Geth specific logging.
+		glogger := gethlog.NewGlogHandler(gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true)))
+		glogger.Verbosity(gethlog.LvlTrace)
+		gethlog.Root().SetHandler(glogger)
 	}
 
 	beacon, err := node.NewBeaconNode(ctx)
