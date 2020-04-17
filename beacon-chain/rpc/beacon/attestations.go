@@ -165,15 +165,6 @@ func (bs *Server) ListIndexedAttestations(
 			}
 		}
 
-		attState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve state for attestation data block root %v: %v",
-				att.Data.BeaconBlockRoot,
-				err,
-			)
-		}
 		committee, err := helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			return nil, status.Errorf(
