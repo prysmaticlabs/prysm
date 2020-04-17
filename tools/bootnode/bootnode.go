@@ -89,7 +89,7 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	listener := createListener(*discv5port, cfg)
+	listener := createListener(defaultIP, *discv5port, cfg)
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
@@ -154,8 +154,8 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", ipAddr, *kademliaPort, host.ID().Pretty())
 }
 
-func createListener(port int, cfg discover.Config) *discover.UDPv5 {
-	ip := net.ParseIP(defaultIP)
+func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
+	ip := net.ParseIP(ipAddr)
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", defaultIP)
 	}
