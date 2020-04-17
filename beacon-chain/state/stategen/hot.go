@@ -70,7 +70,16 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
-	startState, err := s.lastSavedState(ctx, summary.Slot)
+	// Since the hot state is not in cache nor DB, start replaying using the parent state which is
+	// retrieved using input block's parent root.
+	blk, err := s.beaconDB.Block(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if blk == nil {
+		return nil, errUnknownBlock
+	}
+	startState, err := s.loadHotStateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {
 		return nil, err
 	}
