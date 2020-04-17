@@ -173,9 +173,6 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	if err != nil {
 		log.Fatal(err)
 	}
-	if *externalIP != "" {
-		ip = net.ParseIP(*externalIP)
-	}
 	localNode, err := createLocalNode(cfg.PrivateKey, ip, port)
 	if err != nil {
 		log.Fatal(err)
@@ -212,6 +209,10 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not open node's peer database")
 	}
+	external := net.ParseIP(*externalIP)
+	if external.String() == "" {
+		external = ipAddr
+	}
 
 	forkID := &pb.ENRForkID{
 		CurrentForkDigest: []byte{0, 0, 0, 0},
@@ -226,12 +227,12 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	localNode := enode.NewLocalNode(db, privKey)
 	ipEntry := enr.IP(ipAddr)
 	udpEntry := enr.UDP(port)
-	localNode.SetFallbackIP(ipAddr)
-	localNode.SetFallbackUDP(port)
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
 	localNode.Set(enr.WithEntry("eth2", forkEntry))
 	localNode.Set(enr.WithEntry("attnets", bitfield.NewBitvector64()))
+	localNode.SetFallbackIP(external)
+	localNode.SetFallbackUDP(port)
 
 	return localNode, nil
 }
