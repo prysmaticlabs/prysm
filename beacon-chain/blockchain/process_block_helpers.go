@@ -21,7 +21,12 @@ import (
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() uint64 {
-	return uint64(roughtime.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
+	now := roughtime.Now().Unix()
+	genesis := s.genesisTime.Unix()
+	if now < genesis {
+		return 0
+	}
+	return uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
