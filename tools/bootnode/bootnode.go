@@ -38,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -155,6 +156,10 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
+	ipAddr, err := iputils.ExternalIPv4()
+	if err != nil {
+		log.Fatal(err)
+	}
 	ip := net.ParseIP(ipAddr)
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", defaultIP)
