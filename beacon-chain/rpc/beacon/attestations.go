@@ -96,7 +96,7 @@ func (bs *Server) ListAttestations(
 
 // ListIndexedAttestations retrieves indexed attestations by block root.
 // IndexedAttestationsForEpoch are sorted by data slot by default. Either a start-end epoch
-//filter is used to retrieve blocks with.
+// filter is used to retrieve blocks with.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND.
