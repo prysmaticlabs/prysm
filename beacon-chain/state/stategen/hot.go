@@ -76,6 +76,9 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	if err != nil {
 		return nil, err
 	}
+	if blk == nil {
+		return nil, errUnknownBlock
+	}
 	startState, err := s.loadHotStateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 	if err != nil {
 		return nil, err
