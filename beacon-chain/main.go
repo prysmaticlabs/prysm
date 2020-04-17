@@ -168,7 +168,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 	if level == logrus.TraceLevel {
-		// libp2p specific logging
+		// libp2p specific logging.
 		golog.SetAllLoggers(gologging.DEBUG)
 		// Geth specific logging.
 		glogger := gethlog.NewGlogHandler(gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true)))
