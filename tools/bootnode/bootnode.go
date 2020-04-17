@@ -21,8 +21,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/shared/iputils"
-
 	"github.com/btcsuite/btcd/btcec"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -157,10 +155,6 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
-	ipAddr, err := iputils.ExternalIPv4()
-	if err != nil {
-		log.Fatal(err)
-	}
 	ip := net.ParseIP(ipAddr)
 	if ip.To4() == nil {
 		log.Fatalf("IPV4 address not provided instead %s was provided", defaultIP)
