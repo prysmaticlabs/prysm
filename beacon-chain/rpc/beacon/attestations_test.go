@@ -889,7 +889,6 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
-	params.UseMainnetConfig()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	exitRoutine := make(chan bool)
@@ -899,18 +898,11 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	numValidators := 64
 	headState, privKeys := testutil.DeterministicGenesisState(t, uint64(numValidators))
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	if err := db.SaveBlock(ctx, b); err != nil {
-		t.Fatal(err)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, headState, gRoot); err != nil {
+	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1003,7 +995,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		},
 		AttestationNotifier:         chainService.OperationNotifier(),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
-		StateGen:                    stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
