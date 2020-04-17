@@ -57,7 +57,7 @@ type Service struct {
 	proposerSlashingsFeed       *event.Feed
 	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
 	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
-	publicKeyCache              *cache.PublicKeyCache
+	publicKeyCache              *cache.ValidatorsCache
 }
 
 // Config options for the beaconclient service.

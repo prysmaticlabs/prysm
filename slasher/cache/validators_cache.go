@@ -4,6 +4,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -20,13 +21,18 @@ var (
 	})
 )
 
-// PublicKeyCache is used to store the public keys needed for signature verification.
-type PublicKeyCache struct {
+// ValidatorsCache is used to store the public keys needed for signature verification.
+type ValidatorsCache struct {
 	cache *lru.Cache
 }
 
+type ValidatorData struct {
+	PublicKey       []byte
+	ActivationEpoch uint64
+}
+
 // NewPublicKeyCache initializes the cache.
-func NewPublicKeyCache(size int, onEvicted func(key interface{}, value interface{})) (*PublicKeyCache, error) {
+func NewPublicKeyCache(size int, onEvicted func(key interface{}, value interface{})) (*ValidatorsCache, error) {
 	if size != 0 {
 		validatorsCacheSize = size
 	}
@@ -34,15 +40,15 @@ func NewPublicKeyCache(size int, onEvicted func(key interface{}, value interface
 	if err != nil {
 		return nil, err
 	}
-	return &PublicKeyCache{cache: cache}, nil
+	return &ValidatorsCache{cache: cache}, nil
 }
 
 // Get returns an ok bool and the cached value for the requested validator id key, if any.
-func (c *PublicKeyCache) Get(validatorIdx uint64) ([]byte, bool) {
+func (c *ValidatorsCache) Get(validatorIdx uint64) (ValidatorData, bool) {
 	item, exists := c.cache.Get(validatorIdx)
 	if exists && item != nil {
 		validatorsCacheHit.Inc()
-		return item.([]byte), true
+		return item.(ValidatorData), true
 	}
 
 	validatorsCacheMiss.Inc()
@@ -50,22 +56,25 @@ func (c *PublicKeyCache) Get(validatorIdx uint64) ([]byte, bool) {
 }
 
 // Set the response in the cache.
-func (c *PublicKeyCache) Set(validatorIdx uint64, publicKey []byte) {
-	_ = c.cache.Add(validatorIdx, publicKey)
+func (c *ValidatorsCache) Set(validatorIdx uint64, data ValidatorData) {
+	evicted := c.cache.Add(validatorIdx, data)
+	if evicted {
+		log.Warn("ValidatorsCache is full. Please consider raising it. current number of cached items: %d", c.cache.Len())
+	}
 }
 
 // Delete removes a validator id from the cache and returns if it existed or not.
 // Performs the onEviction function before removal.
-func (c *PublicKeyCache) Delete(validatorIdx uint64) bool {
+func (c *ValidatorsCache) Delete(validatorIdx uint64) bool {
 	return c.cache.Remove(validatorIdx)
 }
 
 // Has returns true if the key exists in the cache.
-func (c *PublicKeyCache) Has(validatorIdx uint64) bool {
+func (c *ValidatorsCache) Has(validatorIdx uint64) bool {
 	return c.cache.Contains(validatorIdx)
 }
 
 // Clear removes all keys from the ValidatorCache.
-func (c *PublicKeyCache) Clear() {
+func (c *ValidatorsCache) Clear() {
 	c.cache.Purge()
 }
