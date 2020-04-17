@@ -207,6 +207,9 @@ func (db *Store) EpochSpanByValidatorsIndices(ctx context.Context, validatorIndi
 				valSpans[v] = value
 			}
 			epochsSpanMap[epoch] = valSpans
+			if epoch == 0 {
+				break
+			}
 			epochBucket = b.Bucket(bytesutil.Bytes8(maxEpoch))
 		}
 		return nil
