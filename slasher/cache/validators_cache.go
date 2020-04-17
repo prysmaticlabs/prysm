@@ -26,8 +26,11 @@ type ValidatorsCache struct {
 	cache *lru.Cache
 }
 
+// ValidatorData data structure that holds the relevant validator data for slasher.
 type ValidatorData struct {
-	PublicKey       []byte
+	// PublicKey public key of the validator
+	PublicKey []byte
+	// ActivationEpoch activation epoch of the validator.
 	ActivationEpoch uint64
 }
 
