@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -139,6 +142,29 @@ func (bs *Server) ListIndexedAttestations(
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
 	for i := 0; i < len(atts); i++ {
 		att := atts[i]
+		var attState *stateTrie.BeaconState
+		if !featureconfig.Get().DisableNewStateMgmt {
+			attState, err = bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+			if err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"Could not retrieve state for attestation data block root %v: %v",
+					att.Data.BeaconBlockRoot,
+					err,
+				)
+			}
+		} else {
+			attState, err = bs.BeaconDB.State(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+			if err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"Could not retrieve state for attestation data block root %v: %v",
+					att.Data.BeaconBlockRoot,
+					err,
+				)
+			}
+		}
+
 		attState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
 		if err != nil {
 			return nil, status.Errorf(
