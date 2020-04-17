@@ -73,6 +73,20 @@ arch=${arch/x86_64/amd64}
 arch=${arch/aarch64/arm64}
 readonly os_arch_suffix="$(uname -s | tr '[:upper:]' '[:lower:]')-$arch"
 
+system=""
+case "$OSTYPE" in
+  darwin*)  system="darwin" ;; 
+  linux*)   system="linux" ;;
+  msys*)    system="windows" ;;
+  cygwin*)  system="windows" ;;
+  *)        exit 1 ;;
+esac
+
+if [ "$system" == "windows" ]
+then 
+	arch="amd64.exe"
+fi
+
 mkdir -p $wrapper_dir
 
 function get_prysm_version() {
@@ -91,13 +105,12 @@ get_prysm_version
 
 color "37" "Latest Prysm version is $prysm_version."
 
-BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${os_arch_suffix}"
-VALIDATOR_REAL="${wrapper_dir}/validator-${prysm_version}-${os_arch_suffix}"
+BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
+VALIDATOR_REAL="${wrapper_dir}/validator-${prysm_version}-${system}-${arch}"
 
 if [[ ! -x $BEACON_CHAIN_REAL ]]; then 
     color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
-
-    curl -L "https://github.com/prysmaticlabs/prysm/releases/download/${prysm_version}/beacon-chain-${prysm_version}-${os_arch_suffix}" -o $BEACON_CHAIN_REAL
+    curl -L "https://github.com/prysmaticlabs/prysm/releases/download/${prysm_version}/beacon-chain-${prysm_version}-${system}-${arch}" -o $BEACON_CHAIN_REAL
     chmod +x $BEACON_CHAIN_REAL
 else
     color "37" "Beacon chain is up to date."
@@ -106,7 +119,7 @@ fi
 if [[ ! -x $VALIDATOR_REAL ]]; then 
     color "34" "Downloading validator@${prysm_version} to ${VALIDATOR_REAL} (${reason})"
 
-    curl -L "https://github.com/prysmaticlabs/prysm/releases/download/${prysm_version}/validator-${prysm_version}-${os_arch_suffix}" -o $VALIDATOR_REAL
+    curl -L "https://github.com/prysmaticlabs/prysm/releases/download/${prysm_version}/validator-${prysm_version}-${system}-${arch}" -o $VALIDATOR_REAL
     chmod +x $VALIDATOR_REAL
 else
     color "37" "Validator is up to date."
