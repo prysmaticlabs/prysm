@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -20,7 +21,7 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	// TTFB_TIME (5s) + RESP_TIMEOUT (10s).
-	const deadline = 15 * time.Second
+	var deadline = params.BeaconNetworkConfig().TtfbTimeout + params.BeaconNetworkConfig().RespTimeout
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 

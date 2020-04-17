@@ -158,6 +158,13 @@ func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	beaconState, _ = testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(10); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, targetRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	// This tests where hot state was not cached and needs processing.
 	loadedState, err := service.loadHotStateByRoot(ctx, targetRoot)

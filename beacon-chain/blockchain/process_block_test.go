@@ -20,6 +20,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -760,4 +761,14 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 		return nil, err
 	}
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
+}
+
+func TestCurrentSlot_HandlesOverflow(t *testing.T) {
+	svc := Service{genesisTime: roughtime.Now().Add(1 * time.Hour)}
+
+	slot := svc.CurrentSlot()
+
+	if slot != 0 {
+		t.Fatalf("Expected slot to be 0, got %d", slot)
+	}
 }
