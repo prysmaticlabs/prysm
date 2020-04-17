@@ -67,7 +67,10 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 
 	if !featureconfig.Get().DisableNewStateMgmt {
 		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
-		if !s.stateGen.StateSummaryExists(ctx, parentRoot) {
+		// Loosen the check to HasBlock because state summary gets saved in batches
+		// during initial syncing. There's no risk given a state summary object is just a
+		// a subset of the block object.
+		if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
 			return nil, errors.New("provided block root does not have block saved in the db")
 		}
 		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)
