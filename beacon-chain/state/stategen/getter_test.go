@@ -2,7 +2,6 @@ package stategen
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
