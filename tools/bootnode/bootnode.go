@@ -52,12 +52,13 @@ var (
 	discv5port   = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
 	kademliaPort = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
 	metricsPort  = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP   = flag.String("external-ip", "127.0.0.1", "External IP for the bootnode")
-
-	log = logrus.WithField("prefix", "bootnode")
+	externalIP   = flag.String("external-ip", "", "External IP for the bootnode")
+	disableKad   = flag.Bool("disable-kad", false, "Disables the bootnode from running kademlia dht")
+	log          = logrus.WithField("prefix", "bootnode")
 )
 
 const dhtProtocol = "/prysm/0.0.0/dht"
+const defaultIP = "127.0.0.1"
 
 type handler struct {
 	listener *discover.UDPv5
@@ -88,12 +89,14 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	listener := createListener(*externalIP, *discv5port, cfg)
+	listener := createListener(defaultIP, *discv5port, cfg)
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
 
-	startKademliaDHT(interfacePrivKey)
+	if !*disableKad {
+		startKademliaDHT(interfacePrivKey)
+	}
 
 	handler := &handler{
 		listener: listener,
@@ -113,8 +116,12 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 	if *debug {
 		logging.SetDebugLogging()
 	}
+	ipAddr := defaultIP
+	if *externalIP != "" {
+		ipAddr = *externalIP
+	}
 
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", *externalIP, *kademliaPort))
+	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, *kademliaPort))
 	if err != nil {
 		log.Fatalf("Failed to construct new multiaddress. %v", err)
 	}
@@ -144,13 +151,13 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 		log.Fatalf("Failed to bootstrap DHT. %v", err)
 	}
 
-	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", *externalIP, *kademliaPort, host.ID().Pretty())
+	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", ipAddr, *kademliaPort, host.ID().Pretty())
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
 	ip := net.ParseIP(ipAddr)
 	if ip.To4() == nil {
-		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
+		log.Fatalf("IPV4 address not provided instead %s was provided", defaultIP)
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   ip,
@@ -159,6 +166,9 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *externalIP != "" {
+		ip = net.ParseIP(*externalIP)
 	}
 	localNode, err := createLocalNode(cfg.PrivateKey, ip, port)
 	if err != nil {
