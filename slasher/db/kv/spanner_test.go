@@ -269,3 +269,23 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 		}
 	}
 }
+
+func TestStore_EpochSpanByValidatorsIndices(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	db := setupDB(t, cli.NewContext(&app, set, nil))
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	for _, tt := range spanTests {
+		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
+		if err != nil {
+			t.Fatalf("Save validator span map failed: %v", err)
+		}
+	}
+	res, err := db.EpochSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(res)
+}
