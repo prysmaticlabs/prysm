@@ -149,6 +149,9 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 	}
 
 	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
 		if s.beaconDB.HasState(ctx, parentRoot) {
 			return s.beaconDB.State(ctx, parentRoot)
