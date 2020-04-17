@@ -162,7 +162,7 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	}
 	ip := net.ParseIP(ipAddr)
 	if ip.To4() == nil {
-		log.Fatalf("IPV4 address not provided instead %s was provided", defaultIP)
+		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   ip,
@@ -209,7 +209,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		return nil, errors.Wrap(err, "Could not open node's peer database")
 	}
 	external := net.ParseIP(*externalIP)
-	if external.String() == "" {
+	if *externalIP == "" {
 		external = ipAddr
 	}
 
