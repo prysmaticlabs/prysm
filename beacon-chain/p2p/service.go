@@ -162,6 +162,9 @@ func NewService(cfg *Config) (*Service, error) {
 	}
 
 	var gs *pubsub.PubSub
+	if cfg.PubSub == "" {
+		cfg.PubSub = pubsubGossip
+	}
 	if cfg.PubSub == pubsubFlood {
 		gs, err = pubsub.NewFloodSub(s.ctx, s.host, psOpts...)
 	} else if cfg.PubSub == pubsubGossip {
