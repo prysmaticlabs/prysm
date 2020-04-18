@@ -69,6 +69,9 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := service.beaconDB.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +79,21 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 		t.Fatal(err)
 	}
 	targetSlot := uint64(10)
-	targetRoot := [32]byte{'a'}
+	targetBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: targetSlot, ParentRoot: blkRoot[:], ProposerIndex: 7}}
+	if err := service.beaconDB.SaveBlock(ctx, targetBlock); err != nil {
+		t.Fatal(err)
+	}
+	targetRoot, err := ssz.HashTreeRoot(targetBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ = testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(10); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, targetRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot: targetSlot,
 		Root: targetRoot[:],
