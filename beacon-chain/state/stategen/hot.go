@@ -13,6 +13,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// HasState returns true if the state exists in cache or in DB.
+func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
+	if s.hotStateCache.Has(blockRoot) {
+		return true
+	}
+
+	return s.beaconDB.HasState(ctx, blockRoot)
+}
+
 // This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
