@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -90,7 +91,8 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 	for {
 		select {
-		case <-time.After(6 * time.Second):
+		// Pinging every slot for activation.
+		case <-time.After(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second):
 			activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
@@ -196,7 +198,44 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 	}
 }
 
-// WaitForSynced is to be implemented.
-func (vs *Server) WaitForSynced(_ *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
-	return status.Error(codes.Unimplemented, "not implemented")
+// WaitForSynced subscribes to the state channel and ends the stream when the state channel
+// indicates the beacon node has been initialized and is ready
+func (vs *Server) WaitForSynced(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForSyncedServer) error {
+	head, err := vs.HeadFetcher.HeadState(context.Background())
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
+	}
+	if head != nil && !vs.SyncChecker.Syncing() {
+		res := &ethpb.SyncedResponse{
+			Synced:      true,
+			GenesisTime: head.GenesisTime(),
+		}
+		return stream.Send(res)
+	}
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Synced {
+				data, ok := event.Data.(*statefeed.SyncedData)
+				if !ok {
+					return errors.New("event data is not type *statefeed.SyncedData")
+				}
+				log.WithField("starttime", data.StartTime).Debug("Received sync completed event")
+				log.Info("Sending genesis time notification to connected validator clients")
+				res := &ethpb.SyncedResponse{
+					Synced:      true,
+					GenesisTime: uint64(data.StartTime.Unix()),
+				}
+				return stream.Send(res)
+			}
+		case <-stateSub.Err():
+			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
+		case <-vs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }
