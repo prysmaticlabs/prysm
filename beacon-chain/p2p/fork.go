@@ -21,7 +21,7 @@ var eth2ENRKey = params.BeaconNetworkConfig().ETH2Key
 
 // ForkDigest returns the current fork digest of
 // the node.
-func (s *Service) ForkDigest() ([4]byte, error) {
+func (s *Service) forkDigest() ([4]byte, error) {
 	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
 }
 

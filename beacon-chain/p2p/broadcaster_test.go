@@ -38,7 +38,7 @@ func TestService_Broadcast(t *testing.T) {
 	topic := "/eth2/%x/testing"
 	// Set a test gossip mapping for testpb.TestSimpleMessage.
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
-	digest, err := p.ForkDigest()
+	digest, err := p.forkDigest()
 	if err != nil {
 		t.Fatal(err)
 	}
