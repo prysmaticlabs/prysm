@@ -33,6 +33,12 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 
 	var baseState *stateTrie.BeaconState
 	if !featureconfig.Get().DisableNewStateMgmt {
+		if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root)) {
+			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+				return nil, errors.Wrap(err, "could not save initial sync blocks")
+			}
+			s.clearInitSyncBlocks()
+		}
 		baseState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
@@ -129,6 +135,12 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			var aState *stateTrie.BeaconState
 			var err error
 			if !featureconfig.Get().DisableNewStateMgmt {
+				if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) {
+					if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+						return nil, errors.Wrap(err, "could not save initial sync blocks")
+					}
+					s.clearInitSyncBlocks()
+				}
 				aState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if err != nil {
 					return nil, err
