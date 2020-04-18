@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -89,36 +90,38 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	hasStateSummaryDB := r.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
-	hasStateSummaryCache := r.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
-	if !hasStateSummaryDB && !hasStateSummaryCache {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("No access to parent state")
-		return false
-	}
-	parentState, err := r.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
-	if err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get parent state")
-		return false
-	}
+	if !featureconfig.Get().DisableNewStateMgmt {
+		hasStateSummaryDB := r.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+		hasStateSummaryCache := r.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
+		if !hasStateSummaryDB && !hasStateSummaryCache {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("No access to parent state")
+			return false
+		}
+		parentState, err := r.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
+		if err != nil {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get parent state")
+			return false
+		}
 
-	if err := blocks.VerifyBlockHeaderSignature(parentState, blk); err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
-		return false
-	}
+		if err := blocks.VerifyBlockHeaderSignature(parentState, blk); err != nil {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
+			return false
+		}
 
-	err = parentState.SetSlot(blk.Block.Slot)
-	if err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not set parent state slot")
-		return false
-	}
-	idx, err := helpers.BeaconProposerIndex(parentState)
-	if err != nil {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get proposer index using parent state")
-		return false
-	}
-	if blk.Block.ProposerIndex != idx {
-		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Incorrect proposer index")
-		return false
+		err = parentState.SetSlot(blk.Block.Slot)
+		if err != nil {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not set parent state slot")
+			return false
+		}
+		idx, err := helpers.BeaconProposerIndex(parentState)
+		if err != nil {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not get proposer index using parent state")
+			return false
+		}
+		if blk.Block.ProposerIndex != idx {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Incorrect proposer index")
+			return false
+		}
 	}
 
 	msg.ValidatorData = blk // Used in downstream subscriber
