@@ -4,12 +4,12 @@ import (
 	"context"
 	"reflect"
 	"strings"
+	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -18,12 +18,12 @@ import (
 // Time to first byte timeout. The maximum time to wait for first byte of
 // request response (time-to-first-byte). The client is expected to give up if
 // they don't receive the first byte within 5 seconds.
-var ttfbTimeout = params.BeaconNetworkConfig().TtfbTimeout
+const ttfbTimeout = 5 * time.Second
 
 // maxChunkSize would be the maximum allowed size that a request/response chunk can be.
 // any size beyond that would be rejected and the corresponding stream reset. This would
 // be 1048576 bytes or 1 MiB.
-var maxChunkSize = params.BeaconNetworkConfig().MaxChunkSize
+const maxChunkSize = 1 << 20
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will

@@ -4,11 +4,10 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var defaultReadDuration = ttfbTimeout
-var defaultWriteDuration = params.BeaconNetworkConfig().RespTimeout // RESP_TIMEOUT
+const defaultReadDuration = ttfbTimeout
+const defaultWriteDuration = 10 * time.Second // RESP_TIMEOUT
 
 func setRPCStreamDeadlines(stream network.Stream) {
 	setStreamReadDeadline(stream, defaultReadDuration)

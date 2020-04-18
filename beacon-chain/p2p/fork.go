@@ -17,7 +17,7 @@ import (
 )
 
 // ENR key used for eth2-related fork data.
-var eth2ENRKey = params.BeaconNetworkConfig().ETH2Key
+const eth2ENRKey = "eth2"
 
 // ForkDigest returns the current fork digest of
 // the node.

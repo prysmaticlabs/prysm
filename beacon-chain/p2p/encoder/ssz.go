@@ -7,19 +7,14 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
-	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 var _ = NetworkEncoding(&SszNetworkEncoder{})
 
 // MaxChunkSize allowed for decoding messages.
-var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize // 1Mib
-
-// MaxGossipSize allowed for gossip messages.
-var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
+const MaxChunkSize = uint64(1 << 20) // 1Mb
 
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
 // with snappy compression (if enabled).
@@ -54,9 +49,6 @@ func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg interface{}) (int, erro
 	b, err := e.doEncode(msg)
 	if err != nil {
 		return 0, err
-	}
-	if len(b) > int(MaxGossipSize) {
-		return 0, errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
 	}
 	if e.UseSnappyCompression {
 		b = snappy.Encode(nil /*dst*/, b)
@@ -136,9 +128,6 @@ func (e SszNetworkEncoder) DecodeGossip(b []byte, to interface{}) error {
 		if err != nil {
 			return err
 		}
-	}
-	if len(b) > int(MaxGossipSize) {
-		return errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
 	}
 	return e.doDecode(b, to)
 }
