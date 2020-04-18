@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	e2wallet "github.com/wealdtech/go-eth2-wallet"
 	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
-	e2wtypes "github.com/wealdtech/go-eth2-wallet-types"
+	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
 )
 
 type walletOpts struct {
@@ -128,7 +128,7 @@ func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error) {
 		return nil, ErrNoSuchKey
 	}
 	// TODO(#4817) Update with new library to remove domain here.
-	sig, err := account.Sign(root[:], 0)
+	sig, err := account.Sign(root[:])
 	if err != nil {
 		return nil, err
 	}
