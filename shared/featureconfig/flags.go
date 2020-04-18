@@ -75,11 +75,13 @@ var (
 		Name: "disable-protect-proposer",
 		Usage: "Disables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
+		Value: true,
 	}
 	disableProtectAttesterFlag = &cli.BoolFlag{
 		Name: "disable-protect-attester",
 		Usage: "Disables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 any slashable attestations.",
+		Value: true,
 	}
 	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
 		Name:  "disable-strict-attestation-pubsub-verification",
