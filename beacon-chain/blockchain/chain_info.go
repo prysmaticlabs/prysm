@@ -184,6 +184,8 @@ func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
 }
 
+// GenesisValidatorRoot returns the genesis validator
+// root of the chain.
 func (s *Service) GenesisValidatorRoot() [32]byte {
 	return s.genesisRoot
 }
