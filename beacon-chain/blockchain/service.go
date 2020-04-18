@@ -58,6 +58,7 @@ type Service struct {
 	headLock               sync.RWMutex
 	stateNotifier          statefeed.Notifier
 	genesisRoot            [32]byte
+	genesisValidatorRoot   [32]byte
 	epochParticipation     map[uint64]*precompute.Balance
 	epochParticipationLock sync.RWMutex
 	forkChoiceStore        f.ForkChoicer
@@ -189,6 +190,7 @@ func (s *Service) Start() {
 			}
 		}
 
+		s.genesisValidatorRoot = bytesutil.ToBytes32(beaconState.GenesisValidatorRoot())
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
@@ -242,6 +244,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
+	s.genesisValidatorRoot = bytesutil.ToBytes32(initializedState.GenesisValidatorRoot())
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{

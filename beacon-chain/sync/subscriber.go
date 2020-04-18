@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -219,7 +221,7 @@ func (r *Service) subscribeDynamicWithSubnets(
 	if base == nil {
 		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
 	}
-	digest, err := r.p2p.ForkDigest()
+	digest, err := r.forkDigest()
 	if err != nil {
 		log.WithError(err).Fatal("Could not compute fork digest")
 	}
@@ -267,7 +269,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 	if base == nil {
 		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
 	}
-	digest, err := r.p2p.ForkDigest()
+	digest, err := r.forkDigest()
 	if err != nil {
 		log.WithError(err).Fatal("Could not compute fork digest")
 	}
@@ -385,9 +387,14 @@ func (r *Service) addDigestToTopic(topic string) string {
 	if !strings.Contains(topic, "%x") {
 		log.Fatal("Topic does not have appropriate formatter for digest")
 	}
-	digest, err := r.p2p.ForkDigest()
+	digest, err := r.forkDigest()
 	if err != nil {
 		log.WithError(err).Fatal("Could not compute fork digest")
 	}
 	return fmt.Sprintf(topic, digest)
+}
+
+func (r *Service) forkDigest() ([4]byte, error) {
+	genRoot := r.chain.GenesisValidatorRoot()
+	return p2putils.CreateForkDigest(r.chain.GenesisTime(), genRoot[:])
 }

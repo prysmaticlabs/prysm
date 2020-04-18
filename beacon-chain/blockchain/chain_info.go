@@ -19,12 +19,18 @@ import (
 type ChainInfoFetcher interface {
 	HeadFetcher
 	FinalizationFetcher
+	GenesisFetcher
 }
 
 // TimeFetcher retrieves the Eth2 data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time
 	CurrentSlot() uint64
+}
+
+// GenesisFetcher retrieves the eth2 data related to its genesis.
+type GenesisFetcher interface {
+	GenesisValidatorRoot() [32]byte
 }
 
 // HeadFetcher defines a common interface for methods in blockchain service which
@@ -176,6 +182,10 @@ func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
+}
+
+func (s *Service) GenesisValidatorRoot() [32]byte {
+	return s.genesisRoot
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.

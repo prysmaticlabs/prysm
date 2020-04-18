@@ -73,7 +73,7 @@ var (
 
 func (r *Service) updateMetrics() {
 	// We update the dynamic subnet topics.
-	digest, err := r.p2p.ForkDigest()
+	digest, err := r.forkDigest()
 	if err != nil {
 		log.WithError(err).Errorf("Could not compute fork digest")
 	}
