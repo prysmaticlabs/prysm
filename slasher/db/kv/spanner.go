@@ -195,8 +195,9 @@ func (db *Store) EpochSpanByValidatorsIndices(ctx context.Context, validatorIndi
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epoch := maxEpoch
-		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
-		for ; epochBucket != nil; epoch-- {
+
+		for epochBucket != nil {
+			epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
 			valSpans := make(map[uint64]types.Span, len(validatorIndices))
 			for _, v := range validatorIndices {
 				enc := epochBucket.Get(bytesutil.Bytes8(v))
@@ -210,7 +211,8 @@ func (db *Store) EpochSpanByValidatorsIndices(ctx context.Context, validatorIndi
 			if epoch == 0 {
 				break
 			}
-			epochBucket = b.Bucket(bytesutil.Bytes8(maxEpoch))
+			epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
+
 		}
 		return nil
 	})

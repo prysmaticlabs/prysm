@@ -287,5 +287,7 @@ func TestStore_EpochSpanByValidatorsIndices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(res)
+	if len(res) != len(spanTests) {
+		t.Errorf("Wanted map of %v elemets, received map of %v elements", len(spanTests), len(res))
+	}
 }
