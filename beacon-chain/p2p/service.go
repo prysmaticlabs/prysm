@@ -441,7 +441,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 				}
 				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(*info); err != nil {
-					log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+					log.WithError(err).Debugf("Could not connect with peer %s", info.String())
 				}
 				exists = true
 			}
@@ -511,7 +511,7 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
 			if err := s.connectWithPeer(info); err != nil {
-				log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+				log.WithError(err).Debugf("Could not connect with peer %s", info.String())
 			}
 		}(info)
 	}
