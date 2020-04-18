@@ -120,12 +120,6 @@ func (s *Service) Start() {
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: genesis,
-			},
-		})
 		return
 	}
 	log.Info("Starting initial chain sync...")
@@ -133,12 +127,6 @@ func (s *Service) Start() {
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
 		s.synced = true
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Synced,
-			Data: &statefeed.SyncedData{
-				StartTime: genesis,
-			},
-		})
 		return
 	}
 	s.waitForMinimumPeers()
@@ -147,12 +135,6 @@ func (s *Service) Start() {
 	}
 	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
 	s.synced = true
-	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: genesis,
-		},
-	})
 }
 
 // Stop initial sync.
