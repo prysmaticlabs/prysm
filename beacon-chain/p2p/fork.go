@@ -79,6 +79,12 @@ func createForkDigest(
 	genesisTime time.Time,
 	genesisValidatorsRoot []byte,
 ) ([4]byte, error) {
+	if genesisTime.IsZero() {
+		return [4]byte{}, errors.New("genesis time is not set")
+	}
+	if len(genesisValidatorsRoot) == 0 {
+		return [4]byte{}, errors.New("genesis validators root is not set")
+	}
 	currentSlot := helpers.SlotsSince(genesisTime)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
