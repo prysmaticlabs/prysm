@@ -32,6 +32,14 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	}
 }
 
+func TestCancelledContext_WaitsForSynced(t *testing.T) {
+	v := &fakeValidator{}
+	run(cancelledContext(), v)
+	if !v.WaitForSyncedCalled {
+		t.Error("Expected WaitForSynced() to be called")
+	}
+}
+
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
