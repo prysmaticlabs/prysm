@@ -139,7 +139,7 @@ var (
 	}
 	P2PPubsub = &cli.StringFlag{
 		Name:  "p2p-pubsub",
-		Usage: "The name of the pubsub router to use. Supported values are gossip and flood",
+		Usage: "The name of the pubsub router to use. Supported values are: gossip, flood, random",
 		Value: "gossip",
 	}
 	// ForceClearDB removes any previously stored data at the data directory.

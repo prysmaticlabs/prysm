@@ -60,6 +60,7 @@ const maxBadResponses = 3
 const (
 	pubsubFlood  = "flood"
 	pubsubGossip = "gossip"
+	pubsubRandom = "random"
 )
 
 // Service for managing peer to peer (p2p) networking.
@@ -165,6 +166,8 @@ func NewService(cfg *Config) (*Service, error) {
 		gs, err = pubsub.NewFloodSub(s.ctx, s.host, psOpts...)
 	} else if cfg.PubSub == pubsubGossip {
 		gs, err = pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
+	} else if cfg.PubSub == pubsubRandom {
+		gs, err = pubsub.NewRandomSub(s.ctx, s.host, psOpts...)
 	} else {
 		return nil, fmt.Errorf("unknown pubsub type %s", cfg.PubSub)
 	}
