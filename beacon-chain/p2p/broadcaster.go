@@ -22,7 +22,7 @@ var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub top
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
 	defer span.End()
-	forkDigest, err := s.ForkDigest()
+	forkDigest, err := s.forkDigest()
 	if err != nil {
 		return err
 	}

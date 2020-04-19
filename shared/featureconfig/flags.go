@@ -75,11 +75,13 @@ var (
 		Name: "disable-protect-proposer",
 		Usage: "Disables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
+		Value: true,
 	}
 	disableProtectAttesterFlag = &cli.BoolFlag{
 		Name: "disable-protect-attester",
 		Usage: "Disables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 any slashable attestations.",
+		Value: true,
 	}
 	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
 		Name:  "disable-strict-attestation-pubsub-verification",
@@ -135,6 +137,10 @@ var (
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
+	}
+	enableStateRefCopy = &cli.BoolFlag{
+		Name:  "enable-state-ref-copy",
+		Usage: "Enables the usage of a new copying method for our state fields.",
 	}
 )
 
@@ -363,6 +369,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableFieldTrie,
 	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
+	enableStateRefCopy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -373,4 +380,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-state-field-trie",
+	"--enable-state-ref-copy",
 }

@@ -114,7 +114,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "could not get pre state for slot 0: unknown boundary state",
+			wantErrString: "could not get pre state for slot 0: could not get ancestor state",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
@@ -124,13 +124,34 @@ func TestStore_OnAttestation(t *testing.T) {
 			wantErr:       true,
 			wantErrString: "does not match current epoch",
 		},
+		{
+			name:          "process nil field (a.Target) in attestation",
+			a:             nil,
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "nil attestation",
+		},
+		{
+			name:          "process nil field (a.Data) in attestation",
+			a:             &ethpb.Attestation{},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "nil attestation.Data field",
+		},
+		{
+			name:          "process nil field (a.Target) in attestation",
+			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "nil attestation.Data.Target field",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := service.onAttestation(ctx, tt.a)
 			if tt.wantErr {
-				if !strings.Contains(err.Error(), tt.wantErrString) {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrString) {
 					t.Errorf("Store.onAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
 				}
 			} else {

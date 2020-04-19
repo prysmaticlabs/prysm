@@ -13,6 +13,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// HasState returns true if the state exists in cache or in DB.
+func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
+	if s.hotStateCache.Has(blockRoot) {
+		return true
+	}
+
+	return s.beaconDB.HasState(ctx, blockRoot)
+}
+
 // This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
@@ -70,9 +79,11 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
-	startState, err := s.lastSavedState(ctx, summary.Slot)
+	// Since the hot state is not in cache nor DB, start replaying using the parent state which is
+	// retrieved using input block's parent root.
+	startState, err := s.lastAncestorState(ctx, blockRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
 	if startState == nil {
 		return nil, errUnknownBoundaryState
@@ -129,4 +140,38 @@ func (s *State) loadHotStateBySlot(ctx context.Context, slot uint64) (*state.Bea
 	}
 
 	return s.ReplayBlocks(ctx, startState, replayBlks, slot)
+}
+
+// This returns the last saved in DB ancestor state of the input block root.
+// It recursively look up block's parent until a corresponding state of the block root
+// is found in the DB.
+func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.lastAncestorState")
+	defer span.End()
+
+	b, err := s.beaconDB.Block(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, errUnknownBlock
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
+		if s.beaconDB.HasState(ctx, parentRoot) {
+			return s.beaconDB.State(ctx, parentRoot)
+		}
+
+		b, err = s.beaconDB.Block(ctx, parentRoot)
+		if err != nil {
+			return nil, err
+		}
+		if b == nil {
+			return nil, errUnknownBlock
+		}
+	}
 }

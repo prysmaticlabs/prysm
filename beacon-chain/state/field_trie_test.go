@@ -85,10 +85,10 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	changedIdx := []uint64{2, 29}
 
 	changedVals := [][32]byte{{'A', 'B'}, {'C', 'D'}}
-	if err := newState.UpdateRandaoMixesAtIndex(changedVals[0][:], changedIdx[0]); err != nil {
+	if err := newState.UpdateRandaoMixesAtIndex(changedIdx[0], changedVals[0][:]); err != nil {
 		t.Fatal(err)
 	}
-	if err := newState.UpdateRandaoMixesAtIndex(changedVals[1][:], changedIdx[1]); err != nil {
+	if err := newState.UpdateRandaoMixesAtIndex(changedIdx[1], changedVals[1][:]); err != nil {
 		t.Fatal(err)
 	}
 
