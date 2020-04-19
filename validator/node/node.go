@@ -161,7 +161,7 @@ func (s *ValidatorClient) Close() {
 
 func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", flags.Int64(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())

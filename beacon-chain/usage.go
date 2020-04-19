@@ -55,7 +55,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
-			cmd.MonitoringPortFlag,
+			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
 			cmd.ForceClearDB,

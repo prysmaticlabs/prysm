@@ -42,6 +42,12 @@ var (
 		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
 		Value: 500,
 	}
+	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
+	MonitoringPortFlag = &cli.Int64Flag{
+		Name:  "monitoring-port",
+		Usage: "Port used to listening and respond metrics for prometheus.",
+		Value: 8080,
+	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = &cli.StringFlag{
 		Name:  "tls-cert",

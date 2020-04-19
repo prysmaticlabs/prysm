@@ -59,7 +59,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	cmd.MonitoringPortFlag,
+	flags.MonitoringPortFlag,
 	cmd.LogFormat,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
