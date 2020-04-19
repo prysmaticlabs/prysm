@@ -36,6 +36,17 @@ func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].Data.Slot < s[j].Data.Slot
 }
 
+func mapAttestationToBlockRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
+	attsMap := make(map[[32]byte][]*ethpb.Attestation)
+	if len(atts) == 0 {
+		return attsMap
+	}
+	for _, att := range atts {
+		attsMap[bytesutil.ToBytes32(att.Data.BeaconBlockRoot)] = append(attsMap[bytesutil.ToBytes32(att.Data.BeaconBlockRoot)], att)
+	}
+	return attsMap
+}
+
 // ListAttestations retrieves attestations by block root, slot, or epoch.
 // Attestations are sorted by data slot by default.
 //
@@ -119,13 +130,13 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		atts = append(atts, block.Block.Body.Attestations...)
+		attsArray = append(attsArray, block.Block.Body.Attestations...)
 	}
 	// We sort attestations according to the Sortable interface.
-	sort.Sort(sortableAttestations(atts))
-	numAttestations := len(atts)
+	sort.Sort(sortableAttestations(attsArray))
+	numAttestations := len(attsArray)
 
 	// If there are no attestations, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 attestations below would result in an error.
@@ -136,12 +147,11 @@ func (bs *Server) ListIndexedAttestations(
 			NextPageToken:       strconv.Itoa(0),
 		}, nil
 	}
-
-	// We use the retrieved committees for the epoch to convert all attestations
+	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
+	mappedAttestations := mapAttestationToBlockRoot(ctx, attsArray)
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
-	for i := 0; i < len(atts); i++ {
-		att := atts[i]
+	for atts := range mappedAttestations {
 		var attState *stateTrie.BeaconState
 		if !featureconfig.Get().DisableNewStateMgmt {
 			attState, err = bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
@@ -164,17 +174,20 @@ func (bs *Server) ListIndexedAttestations(
 				)
 			}
 		}
+		for i := 0; i < len(atts); i++ {
+			att := atts[i]
 
-		committee, err := helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve committees from state %v",
-				err,
-			)
+			committee, err := helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
+			if err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"Could not retrieve committees from state %v",
+					err,
+				)
+			}
+			idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
+			indexedAtts[i] = idxAtt
 		}
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
-		indexedAtts[i] = idxAtt
 	}
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(indexedAtts))
