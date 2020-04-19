@@ -218,7 +218,7 @@ func (ms *ChainService) GenesisTime() time.Time {
 	return ms.Genesis
 }
 
-// GenesisTime mocks the same method in the chain service.
+// GenesisValidatorRoot mocks the same method in the chain service.
 func (ms *ChainService) GenesisValidatorRoot() [32]byte {
 	return ms.ValidatorsRoot
 }
