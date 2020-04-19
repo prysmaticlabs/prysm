@@ -32,7 +32,7 @@ func (bs *Server) ListValidatorAssignments(
 		)
 	}
 
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().DisableNewStateMgmt {
 		return bs.listValidatorAssignmentsUsingOldArchival(ctx, req)
 	}
 
