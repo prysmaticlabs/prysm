@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -58,6 +59,12 @@ const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 3
+
+const (
+	pubsubFlood  = "flood"
+	pubsubGossip = "gossip"
+	pubsubRandom = "random"
+)
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -156,7 +163,20 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithStrictSignatureVerification(false),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
-	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
+
+	var gs *pubsub.PubSub
+	if cfg.PubSub == "" {
+		cfg.PubSub = pubsubGossip
+	}
+	if cfg.PubSub == pubsubFlood {
+		gs, err = pubsub.NewFloodSub(s.ctx, s.host, psOpts...)
+	} else if cfg.PubSub == pubsubGossip {
+		gs, err = pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
+	} else if cfg.PubSub == pubsubRandom {
+		gs, err = pubsub.NewRandomSub(s.ctx, s.host, psOpts...)
+	} else {
+		return nil, fmt.Errorf("unknown pubsub type %s", cfg.PubSub)
+	}
 	if err != nil {
 		log.WithError(err).Error("Failed to start pubsub")
 		return nil, err

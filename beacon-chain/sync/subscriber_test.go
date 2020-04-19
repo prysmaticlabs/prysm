@@ -31,6 +31,15 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		ctx:         context.Background(),
 		p2p:         p2p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mockChain.ChainService{
+			ValidatorsRoot: [32]byte{'A'},
+			Genesis:        time.Now(),
+		},
+	}
+	var err error
+	p2p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
@@ -61,7 +70,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	ctx := context.Background()
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
-	chainService := &mockChain.ChainService{}
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
 	c, err := lru.New(10)
 	if err != nil {
 		t.Fatal(err)
@@ -101,6 +113,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	p2p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
 	p2p.ReceivePubSub(topic, attesterSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -115,7 +131,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	chainService := &mockChain.ChainService{}
+	chainService := &mockChain.ChainService{
+		ValidatorsRoot: [32]byte{'A'},
+		Genesis:        time.Now(),
+	}
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 	c, err := lru.New(10)
@@ -157,6 +176,10 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
 		t.Fatal(err)
 	}
+	p2p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
 	p2p.ReceivePubSub(topic, proposerSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -170,7 +193,10 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 
 func TestSubscribe_WaitToSync(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
-	chainService := &mockChain.ChainService{}
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
 	r := Service{
 		ctx:           context.Background(),
 		p2p:           p2p,
@@ -217,7 +243,16 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	r := Service{
 		ctx: context.Background(),
+		chain: &mockChain.ChainService{
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		},
 		p2p: p,
+	}
+	var err error
+	p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SignedVoluntaryExit{})]
