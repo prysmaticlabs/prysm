@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -187,7 +188,7 @@ func (s *Service) GenesisTime() time.Time {
 // GenesisValidatorRoot returns the genesis validator
 // root of the chain.
 func (s *Service) GenesisValidatorRoot() [32]byte {
-	return s.genesisRoot
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
