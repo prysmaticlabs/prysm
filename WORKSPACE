@@ -289,15 +289,9 @@ http_archive(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "861ae1b1875c17d86a6a5d68118708ab2b099658",
     importpath = "github.com/ethereum/go-ethereum",
-    # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
-    # a fork that has resolved these issues by disabling HID/USB support and
-    # some manual fixes for c imports in the crypto package. This is forked
-    # branch should be updated from time to time with the latest go-ethereum
-    # code.
-    remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
-    vcs = "git",
+    sum = "h1:rOPqjSngvs1VSYH2H+PMPiWt4VEulvNRbFgqiGqJM3E=",
+    version = "v1.9.13",
 )
 
 go_repository(
@@ -1685,4 +1679,102 @@ go_repository(
     importpath = "golang.org/x/mod",
     sum = "h1:KU7oHjnv3XNWfa5COkzUifxZmxp1TyI7ImMXqFxLwvQ=",
     version = "v0.2.0",
+)
+
+go_repository(
+    name = "com_github_steakknife_bloomfilter",
+    importpath = "github.com/steakknife/bloomfilter",
+    sum = "h1:gIlAHnH1vJb5vwEjIp5kBj/eu99p/bl0Ay2goiPe5xE=",
+    version = "v0.0.0-20180922174646-6819c0d2a570",
+)
+
+go_repository(
+    name = "com_github_victoriametrics_fastcache",
+    importpath = "github.com/victoriametrics/fastcache",
+    sum = "h1:qDMc5MSBLqqiOxvPxlR/ci0OE74oI2VDmsxcxVYtK4k=",
+    version = "v1.5.7",
+)
+
+go_repository(
+    name = "com_github_cespare_xxhash_v2",
+    importpath = "github.com/cespare/xxhash/v2",
+    sum = "h1:6MnRN8NT7+YBpUIWxHtefFZOKTAPgGjpQSxqLNn0+qY=",
+    version = "v2.1.1",
+)
+
+go_repository(
+    name = "com_github_steakknife_hamming",
+    importpath = "github.com/steakknife/hamming",
+    sum = "h1:njlZPzLwU639dk2kqnCPPv+wNjq7Xb6EfUxe/oX0/NM=",
+    version = "v0.0.0-20180906055917-c99c65617cd3",
+)
+
+go_repository(
+    name = "com_github_olekukonko_tablewriter",
+    importpath = "github.com/olekukonko/tablewriter",
+    sum = "h1:vHD/YYe1Wolo78koG299f7V/VAS08c6IpCLn+Ejf/w8=",
+    version = "v0.0.4",
+)
+
+go_repository(
+    name = "com_github_prometheus_tsdb",
+    importpath = "github.com/prometheus/tsdb",
+    sum = "h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38ic=",
+    version = "v0.10.0",
+)
+
+go_repository(
+    name = "com_github_karalabe_usb",
+    importpath = "github.com/karalabe/usb",
+    sum = "h1:ZHuwnjpP8LsVsUYqTqeVAI+GfDfJ6UNPrExZF+vX/DQ=",
+    version = "v0.0.0-20191104083709-911d15fe12a9",
+)
+
+go_repository(
+    name = "com_github_wsddn_go_ecdh",
+    importpath = "github.com/wsddn/go-ecdh",
+    sum = "h1:1cngl9mPEoITZG8s8cVcUy5CeIBYhEESkOB7m6Gmkrk=",
+    version = "v0.0.0-20161211032359-48726bab9208",
+)
+
+go_repository(
+    name = "com_github_status_im_keycard_go",
+    importpath = "github.com/status-im/keycard-go",
+    sum = "h1:Oo2KZNP70KE0+IUJSidPj/BFS/RXNHmKIJOdckzml2E=",
+    version = "v0.0.0-20200402102358-957c09536969",
+)
+
+go_repository(
+    name = "com_github_gballet_go_libpcsclite",
+    importpath = "github.com/gballet/go-libpcsclite",
+    sum = "h1:f6D9Hr8xV8uYKlyuj8XIruxlh9WjVjdh1gIicAS7ays=",
+    version = "v0.0.0-20191108122812-4678299bea08",
+)
+
+go_repository(
+    name = "com_github_tyler_smith_go_bip39",
+    importpath = "github.com/tyler-smith/go-bip39",
+    sum = "h1:+t3w+KwLXO6154GNJY+qUtIxLTmFjfUmpguQT1OlOT8=",
+    version = "v1.0.2",
+)
+
+go_repository(
+    name = "com_github_dop251_goja",
+    importpath = "github.com/dop251/goja",
+    sum = "h1:Nud597JuGCF/MScrb6NNVDRgmuk8X7w3pFc5GvSsm5E=",
+    version = "v0.0.0-20200414142002-77e84ffb8c65",
+)
+
+go_repository(
+    name = "com_github_dlclark_regexp2",
+    importpath = "github.com/dlclark/regexp2",
+    sum = "h1:8sAhBGEM0dRWogWqWyQeIJnxjWO6oIjl8FKqREDsGfk=",
+    version = "v1.2.0",
+)
+
+go_repository(
+    name = "com_github_go_sourcemap_sourcemap",
+    importpath = "github.com/go-sourcemap/sourcemap",
+    sum = "h1:W1iEw64niKVGogNgBN3ePyLFfuisuzeidWPMPWmECqU=",
+    version = "v2.1.3+incompatible",
 )
