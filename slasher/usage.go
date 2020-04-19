@@ -50,7 +50,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.BootstrapNode,
-			cmd.MonitoringPortFlag,
+			flags.MonitoringPortFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
 			cmd.ForceClearDB,
