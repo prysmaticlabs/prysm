@@ -115,6 +115,7 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared/iputils:go_default_library",
+        "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/discover:go_default_library",
