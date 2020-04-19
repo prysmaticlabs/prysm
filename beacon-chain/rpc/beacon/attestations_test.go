@@ -555,7 +555,7 @@ func TestServer_mapAttestationToBlockRoot(t *testing.T) {
 		}
 
 	}
-	mappedAtts := mapAttestationToBlockRoot(ctx, atts)
+	mappedAtts := mapAttestationsByBlockRoot(ctx, atts)
 	wantedMapLen := 2
 	wantedMapNumberOfElements := 50
 	if len(mappedAtts) != wantedMapLen {

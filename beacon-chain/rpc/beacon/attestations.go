@@ -6,9 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -17,8 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -36,7 +35,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].Data.Slot < s[j].Data.Slot
 }
 
-func mapAttestationToBlockRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
+func mapAttestationsByBlockRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
 	attsMap := make(map[[32]byte][]*ethpb.Attestation)
 	if len(atts) == 0 {
 		return attsMap
@@ -106,7 +105,7 @@ func (bs *Server) ListAttestations(
 }
 
 // ListIndexedAttestations retrieves indexed attestations by block root.
-// IndexedAttestationsForEpoch are sorted by data slot by default. Either a start-end epoch
+// IndexedAttestationsForEpoch are sorted by data slot by default. Start-end epoch
 // filter is used to retrieve blocks with.
 //
 // The server may return an empty list when no attestations match the given
@@ -149,30 +148,23 @@ func (bs *Server) ListIndexedAttestations(
 	}
 	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
-	mappedAttestations := mapAttestationToBlockRoot(ctx, attsArray)
+	mappedAttestations := mapAttestationsByBlockRoot(ctx, attsArray)
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
-	for br, atts := range mappedAttestations {
+	attIndex := 0
+	for blockRoot, atts := range mappedAttestations {
 		var attState *stateTrie.BeaconState
 		if !featureconfig.Get().DisableNewStateMgmt {
-			attState, err = bs.StateGen.StateByRoot(ctx, br)
-			if err != nil {
-				return nil, status.Errorf(
-					codes.Internal,
-					"Could not retrieve state for attestation data block root %v: %v",
-					br,
-					err,
-				)
-			}
+			attState, err = bs.StateGen.StateByRoot(ctx, blockRoot)
 		} else {
-			attState, err = bs.BeaconDB.State(ctx, br)
-			if err != nil {
-				return nil, status.Errorf(
-					codes.Internal,
-					"Could not retrieve state for attestation data block root %v: %v",
-					br,
-					err,
-				)
-			}
+			attState, err = bs.BeaconDB.State(ctx, blockRoot)
+		}
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not retrieve state for attestation data block root %v: %v",
+				blockRoot,
+				err,
+			)
 		}
 		for i := 0; i < len(atts); i++ {
 			att := atts[i]
@@ -185,7 +177,8 @@ func (bs *Server) ListIndexedAttestations(
 				)
 			}
 			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
-			indexedAtts[i] = idxAtt
+			indexedAtts[attIndex] = idxAtt
+			attIndex++
 		}
 	}
 
