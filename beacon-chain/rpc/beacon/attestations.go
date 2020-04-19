@@ -151,32 +151,31 @@ func (bs *Server) ListIndexedAttestations(
 	// into indexed form effectively.
 	mappedAttestations := mapAttestationToBlockRoot(ctx, attsArray)
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
-	for atts := range mappedAttestations {
+	for br, atts := range mappedAttestations {
 		var attState *stateTrie.BeaconState
 		if !featureconfig.Get().DisableNewStateMgmt {
-			attState, err = bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+			attState, err = bs.StateGen.StateByRoot(ctx, br)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
 					"Could not retrieve state for attestation data block root %v: %v",
-					att.Data.BeaconBlockRoot,
+					br,
 					err,
 				)
 			}
 		} else {
-			attState, err = bs.BeaconDB.State(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+			attState, err = bs.BeaconDB.State(ctx, br)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
 					"Could not retrieve state for attestation data block root %v: %v",
-					att.Data.BeaconBlockRoot,
+					br,
 					err,
 				)
 			}
 		}
 		for i := 0; i < len(atts); i++ {
 			att := atts[i]
-
 			committee, err := helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
 			if err != nil {
 				return nil, status.Errorf(
@@ -185,7 +184,7 @@ func (bs *Server) ListIndexedAttestations(
 					err,
 				)
 			}
-			idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee)
+			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
 			indexedAtts[i] = idxAtt
 		}
 	}
