@@ -78,7 +78,7 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 
-	forkDigest, err := r.p2p.ForkDigest()
+	forkDigest, err := r.forkDigest()
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return err
 	}
 
-	forkDigest, err := r.p2p.ForkDigest()
+	forkDigest, err := r.forkDigest()
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 }
 
 func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
-	forkDigest, err := r.p2p.ForkDigest()
+	forkDigest, err := r.forkDigest()
 	if err != nil {
 		return err
 	}

@@ -72,8 +72,13 @@ var (
 )
 
 func (r *Service) updateMetrics() {
+	// do not update metrics if genesis time
+	// has not been initialized
+	if r.chain.GenesisTime().IsZero() {
+		return
+	}
 	// We update the dynamic subnet topics.
-	digest, err := r.p2p.ForkDigest()
+	digest, err := r.forkDigest()
 	if err != nil {
 		log.WithError(err).Errorf("Could not compute fork digest")
 	}
