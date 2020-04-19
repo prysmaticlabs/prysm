@@ -35,7 +35,11 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := &Service{p2p: p1}
+	r := &Service{p2p: p1,
+		chain: &mock.ChainService{
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		}}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -116,7 +120,13 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			},
+			ValidatorsRoot: [32]byte{'A'},
+			Genesis:        time.Now(),
 		},
+	}
+	digest, err := r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Setup streams
@@ -131,7 +141,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
-			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
 			HeadRoot:       headRoot[:],
 			FinalizedEpoch: 5,
@@ -146,7 +156,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: params.BeaconConfig().GenesisForkVersion}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: digest[:]}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -187,6 +197,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			},
+			ValidatorsRoot: [32]byte{'A'},
 		},
 		ctx: context.Background(),
 	}
@@ -331,6 +342,8 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			},
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
 		},
 		ctx: context.Background(),
 	}
@@ -345,8 +358,12 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
+		digest, err := r.forkDigest()
+		if err != nil {
+			t.Fatal(err)
+		}
 		expected := &pb.Status{
-			ForkDigest:     params.BeaconConfig().GenesisForkVersion,
+			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
 			HeadRoot:       headRoot[:],
 			FinalizedEpoch: 5,
@@ -407,6 +424,8 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			},
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
 		},
 		ctx: context.Background(),
 	}

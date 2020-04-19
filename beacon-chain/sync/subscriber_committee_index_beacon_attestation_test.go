@@ -61,6 +61,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 			State:            s,
 			Genesis:          time.Now(),
 			ValidAttestation: true,
+			ValidatorsRoot:   [32]byte{'A'},
 		},
 		chainStarted:         true,
 		p2p:                  p,
