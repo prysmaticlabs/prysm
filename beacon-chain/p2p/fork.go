@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -21,8 +21,8 @@ var eth2ENRKey = params.BeaconNetworkConfig().ETH2Key
 
 // ForkDigest returns the current fork digest of
 // the node.
-func (s *Service) ForkDigest() ([4]byte, error) {
-	return createForkDigest(s.genesisTime, s.genesisValidatorsRoot)
+func (s *Service) forkDigest() ([4]byte, error) {
+	return p2putils.CreateForkDigest(s.genesisTime, s.genesisValidatorsRoot)
 }
 
 // Compares fork ENRs between an incoming peer's record and our node's
@@ -72,35 +72,6 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	return nil
 }
 
-// Creates a fork digest from a genesis time and genesis
-// validators root, utilizing the current slot to determine
-// the active fork version in the node.
-func createForkDigest(
-	genesisTime time.Time,
-	genesisValidatorsRoot []byte,
-) ([4]byte, error) {
-	currentSlot := helpers.SlotsSince(genesisTime)
-	currentEpoch := helpers.SlotToEpoch(currentSlot)
-
-	// We retrieve a list of scheduled forks by epoch.
-	// We loop through the keys in this map to determine the current
-	// fork version based on the current, time-based epoch number
-	// since the genesis time.
-	currentForkVersion := params.BeaconConfig().GenesisForkVersion
-	scheduledForks := params.BeaconConfig().ForkVersionSchedule
-	for epoch, forkVersion := range scheduledForks {
-		if epoch <= currentEpoch {
-			currentForkVersion = forkVersion
-		}
-	}
-
-	digest, err := helpers.ComputeForkDigest(currentForkVersion, genesisValidatorsRoot)
-	if err != nil {
-		return [4]byte{}, err
-	}
-	return digest, nil
-}
-
 // Adds a fork entry as an ENR record under the eth2EnrKey for
 // the local node. The fork entry is an ssz-encoded enrForkID type
 // which takes into account the current fork version from the current
@@ -111,7 +82,7 @@ func addForkEntry(
 	genesisTime time.Time,
 	genesisValidatorsRoot []byte,
 ) (*enode.LocalNode, error) {
-	digest, err := createForkDigest(genesisTime, genesisValidatorsRoot)
+	digest, err := p2putils.CreateForkDigest(genesisTime, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
