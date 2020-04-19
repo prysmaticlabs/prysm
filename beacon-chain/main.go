@@ -70,7 +70,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	cmd.MonitoringPortFlag,
+	flags.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
 	cmd.ClearDB,
 	cmd.ForceClearDB,

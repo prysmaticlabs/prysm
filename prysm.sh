@@ -71,6 +71,7 @@ readonly wrapper_dir="$(dirname "$(get_realpath "${BASH_SOURCE[0]}")")/dist"
 arch=$(uname -m)
 arch=${arch/x86_64/amd64}
 arch=${arch/aarch64/arm64}
+readonly os_arch_suffix="$(uname -s | tr '[:upper:]' '[:lower:]')-$arch"
 
 system=""
 case "$OSTYPE" in
@@ -81,9 +82,11 @@ case "$OSTYPE" in
   *)        exit 1 ;;
 esac
 
-if [ "$system" == "windows" ]
-then 
+
+if [ "$system" == "windows" ]; then
 	arch="amd64.exe"
+elif [[ "$os_arch_suffix" == *"arm64"* ]]; then
+  arch="arm64"
 fi
 
 mkdir -p $wrapper_dir
