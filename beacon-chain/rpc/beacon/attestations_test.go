@@ -576,10 +576,20 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
-	blockRoot := bytesutil.ToBytes32([]byte("root"))
+	blockRoot1 := bytesutil.ToBytes32([]byte("root"))
+	blockRoot2 := bytesutil.ToBytes32([]byte("root2"))
+
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
+	atts2 := make([]*ethpb.Attestation, 0, count)
+
 	for i := uint64(0); i < count; i++ {
+		var blockRoot [32]byte
+		if i%2 == 0 {
+			blockRoot = blockRoot1
+		} else {
+			blockRoot = blockRoot2
+		}
 		blockExample := &ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
 				Body: &ethpb.BeaconBlockBody{
@@ -599,7 +609,12 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		if err := db.SaveBlock(ctx, blockExample); err != nil {
 			t.Fatal(err)
 		}
-		atts = append(atts, blockExample.Block.Body.Attestations...)
+		if i%2 == 0 {
+			atts = append(atts, blockExample.Block.Body.Attestations...)
+		} else {
+			atts2 = append(atts2, blockExample.Block.Body.Attestations...)
+		}
+
 	}
 
 	// We setup 128 validators.
@@ -614,8 +629,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	}
 
 	// Next up we convert the test attestations to indexed form:
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
-	for i := 0; i < len(indexedAtts); i++ {
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts)+len(atts2), len(atts)+len(atts2))
+	for i := 0; i < len(atts); i++ {
 		att := atts[i]
 		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
@@ -627,6 +642,18 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		}
 		indexedAtts[i] = idxAtt
 	}
+	for i := 0; i < len(atts2); i++ {
+		att := atts2[i]
+		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			t.Fatal(err)
+		}
+		idxAtt := attestationutil.ConvertToIndexed(ctx, atts2[i], committee)
+		if err != nil {
+			t.Fatalf("Could not convert attestation to indexed: %v", err)
+		}
+		indexedAtts[i+len(atts)] = idxAtt
+	}
 
 	bs := &Server{
 		BeaconDB:           db,
@@ -634,12 +661,25 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
-		Root: blockRoot[:],
+		Root: blockRoot1[:],
 		Slot: 1,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot[:])); err != nil {
+	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
+		Root: blockRoot2[:],
+		Slot: 2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot1[:])); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetSlot(state.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot2[:])); err != nil {
 		t.Fatal(err)
 	}
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
@@ -650,7 +690,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	if len(res.IndexedAttestations) != len(indexedAtts) {
+		t.Errorf("Incorrect indexted attestations length. expected: %d got: %d", len(indexedAtts), len(res.IndexedAttestations))
+	}
 	if !reflect.DeepEqual(indexedAtts, res.IndexedAttestations) {
 		t.Fatalf(
 			"Incorrect list indexed attestations response: wanted %v, received %v",
