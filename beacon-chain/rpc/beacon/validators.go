@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -360,6 +361,11 @@ func (bs *Server) GetValidator(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
+
+	if featureconfig.Get().DisableNewStateMgmt {
+		return bs.getValidatorActiveSetChangesUsingOldArchival(ctx, req)
+	}
+
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
 	var requestedEpoch uint64
@@ -425,6 +431,105 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	}
 	for i, idx := range ejectedIndices {
 		pubkey := requestedState.PubkeyAtIndex(idx)
+		ejectedKeys[i] = pubkey[:]
+	}
+	return &ethpb.ActiveSetChanges{
+		Epoch:               requestedEpoch,
+		ActivatedPublicKeys: activatedKeys,
+		ActivatedIndices:    activatedIndices,
+		ExitedPublicKeys:    exitedKeys,
+		ExitedIndices:       exitedIndices,
+		SlashedPublicKeys:   slashedKeys,
+		SlashedIndices:      slashedIndices,
+		EjectedPublicKeys:   ejectedKeys,
+		EjectedIndices:      ejectedIndices,
+	}, nil
+}
+
+func (bs *Server) getValidatorActiveSetChangesUsingOldArchival(
+	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
+) (*ethpb.ActiveSetChanges, error) {
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	currentEpoch := helpers.CurrentEpoch(headState)
+	requestedEpoch := currentEpoch
+	requestingGenesis := false
+
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
+		requestingGenesis = q.Genesis
+		requestedEpoch = 0
+	case *ethpb.GetValidatorActiveSetChangesRequest_Epoch:
+		requestedEpoch = q.Epoch
+	}
+
+	activatedIndices := make([]uint64, 0)
+	exitedIndices := make([]uint64, 0)
+	slashedIndices := make([]uint64, 0)
+	ejectedIndices := make([]uint64, 0)
+	if requestingGenesis || requestedEpoch < currentEpoch {
+		archivedChanges, err := bs.BeaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch archived active validator changes: %v", err)
+		}
+		if archivedChanges == nil {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"Did not find any data for epoch %d - perhaps no active set changed occurred during the epoch",
+				requestedEpoch,
+			)
+		}
+		activatedIndices = archivedChanges.Activated
+		exitedIndices = archivedChanges.Exited
+		slashedIndices = archivedChanges.Slashed
+		ejectedIndices = archivedChanges.Ejected
+	} else if requestedEpoch == currentEpoch {
+		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
+		}
+		vals := headState.Validators()
+		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), vals)
+		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), vals, activeValidatorCount)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
+		}
+		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), vals)
+		ejectedIndices, err = validators.EjectedValidatorIndices(helpers.PrevEpoch(headState), vals, activeValidatorCount)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not determine ejected validator indices: %v", err)
+		}
+	} else {
+		// We are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
+	}
+
+	// We retrieve the public keys for the indices.
+	activatedKeys := make([][]byte, len(activatedIndices))
+	exitedKeys := make([][]byte, len(exitedIndices))
+	slashedKeys := make([][]byte, len(slashedIndices))
+	ejectedKeys := make([][]byte, len(ejectedIndices))
+	for i, idx := range activatedIndices {
+		pubkey := headState.PubkeyAtIndex(idx)
+		activatedKeys[i] = pubkey[:]
+	}
+	for i, idx := range exitedIndices {
+		pubkey := headState.PubkeyAtIndex(idx)
+		exitedKeys[i] = pubkey[:]
+	}
+	for i, idx := range slashedIndices {
+		pubkey := headState.PubkeyAtIndex(idx)
+		slashedKeys[i] = pubkey[:]
+	}
+	for i, idx := range ejectedIndices {
+		pubkey := headState.PubkeyAtIndex(idx)
 		ejectedKeys[i] = pubkey[:]
 	}
 	return &ethpb.ActiveSetChanges{
