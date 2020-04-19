@@ -188,6 +188,9 @@ func (s *Service) GenesisTime() time.Time {
 // GenesisValidatorRoot returns the genesis validator
 // root of the chain.
 func (s *Service) GenesisValidatorRoot() [32]byte {
+	if !s.hasHeadState() {
+		return [32]byte{}
+	}
 	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
