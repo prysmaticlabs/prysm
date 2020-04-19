@@ -532,6 +532,43 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	}
 }
 
+func TestServer_mapAttestationToBlockRoot(t *testing.T) {
+	ctx := context.Background()
+
+	count := uint64(100)
+	atts := make([]*ethpb.Attestation, count, count)
+	blockRoot1 := bytesutil.ToBytes32([]byte("root1"))
+	blockRoot2 := bytesutil.ToBytes32([]byte("root2"))
+
+	for i := uint64(0); i < count; i++ {
+		var blockRoot [32]byte
+		if i%2 == 0 {
+			blockRoot = blockRoot1
+		} else {
+			blockRoot = blockRoot2
+		}
+		atts[i] = &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: blockRoot[:],
+			},
+			AggregationBits: bitfield.Bitlist{0b11},
+		}
+
+	}
+	mappedAtts := mapAttestationToBlockRoot(ctx, atts)
+	wantedMapLen := 2
+	wantedMapNumberOfElements := 50
+	if len(mappedAtts) != wantedMapLen {
+		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapLen, len(mappedAtts))
+	}
+	if len(mappedAtts[blockRoot1]) != wantedMapNumberOfElements {
+		t.Errorf("Expected number of attestations per block root to be: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[blockRoot1]))
+	}
+	if len(mappedAtts[blockRoot2]) != wantedMapNumberOfElements {
+		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[blockRoot2]))
+	}
+}
+
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
