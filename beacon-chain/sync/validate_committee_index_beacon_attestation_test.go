@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 	chain := &mockChain.ChainService{
 		Genesis:          time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
+		ValidatorsRoot:   [32]byte{'A'},
 		ValidAttestation: true,
 	}
 
@@ -44,6 +46,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),
+	}
+	digest, err := s.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	blk := &ethpb.SignedBeaconBlock{
@@ -82,7 +88,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					Slot:            63,
 				},
 			},
-			topic:                     "/eth2/00000000/committee_index1_beacon_attestation",
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
 			validAttestationSignature: true,
 			want:                      true,
 		},
@@ -96,7 +102,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					Slot:            63,
 				},
 			},
-			topic:                     "/eth2/00000000/committee_index1_beacon_attestation",
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
 			validAttestationSignature: true,
 			want:                      false,
 		},
@@ -110,7 +116,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					Slot:            63,
 				},
 			},
-			topic:                     "/eth2/00000000/committee_index3_beacon_attestation",
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index3_beacon_attestation", digest),
 			validAttestationSignature: true,
 			want:                      false,
 		},
@@ -124,7 +130,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					Slot:            63,
 				},
 			},
-			topic:                     "/eth2/00000000/committee_index1_beacon_attestation",
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
 			validAttestationSignature: true,
 			want:                      false,
 		},
@@ -138,7 +144,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					Slot:            63,
 				},
 			},
-			topic:                     "/eth2/00000000/committee_index1_beacon_attestation",
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
 			validAttestationSignature: true,
 			want:                      false,
 		},
@@ -152,7 +158,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					Slot:            63,
 				},
 			},
-			topic:                     "/eth2/00000000/committee_index1_beacon_attestation",
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
 			validAttestationSignature: false,
 			want:                      false,
 		},
