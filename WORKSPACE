@@ -1723,11 +1723,13 @@ go_repository(
     version = "v0.10.0",
 )
 
-go_repository(
+http_archive(
     name = "com_github_karalabe_usb",
-    importpath = "github.com/karalabe/usb",
-    sum = "h1:ZHuwnjpP8LsVsUYqTqeVAI+GfDfJ6UNPrExZF+vX/DQ=",
-    version = "v0.0.0-20191104083709-911d15fe12a9",
+    urls = [
+        "https://github.com/karalabe/usb/archive/911d15fe12a9c411cf5d0dd5635231c759399bed.tar.gz",
+    ],
+    strip_prefix = "usb-911d15fe12a9c411cf5d0dd5635231c759399bed",
+    build_file = "@prysm//third_party:com_github_karalabe_usb.BUILD",
 )
 
 go_repository(
