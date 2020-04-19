@@ -29,6 +29,8 @@ func TestService_Broadcast(t *testing.T) {
 		cfg: &Config{
 			Encoding: "ssz",
 		},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
 	}
 
 	msg := &testpb.TestSimpleMessage{
@@ -85,7 +87,10 @@ func TestService_Broadcast(t *testing.T) {
 }
 
 func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
-	p := Service{}
+	p := Service{
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
+	}
 	if err := p.Broadcast(context.Background(), &testpb.AddressBook{}); err != ErrMessageNotMapped {
 		t.Fatalf("Expected error %v, got %v", ErrMessageNotMapped, err)
 	}

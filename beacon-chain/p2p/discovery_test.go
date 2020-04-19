@@ -53,7 +53,9 @@ func TestCreateListener(t *testing.T) {
 	port := 1024
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	s := &Service{
-		cfg: &Config{UDPPort: uint(port)},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
+		cfg:                   &Config{UDPPort: uint(port)},
 	}
 	listener := s.createListener(ipAddr, pkey)
 	defer listener.Close()
@@ -130,7 +132,10 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
 	addr := net.ParseIP("invalidIP")
 	_, pkey := createAddrAndPrivKey(t)
-	s := &Service{}
+	s := &Service{
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
+	}
 	node, err := s.createLocalNode(pkey, addr, 0, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -149,6 +154,8 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 			TCPPort: 0,
 			UDPPort: 0,
 		},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
 	}
 	listener := s.createListener(ipAddr, pkey)
 	defer listener.Close()
