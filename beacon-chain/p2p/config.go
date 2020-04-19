@@ -27,4 +27,5 @@ type Config struct {
 	WhitelistCIDR         string
 	Encoding              string
 	StateNotifier         statefeed.Notifier
+	PubSub                string
 }
