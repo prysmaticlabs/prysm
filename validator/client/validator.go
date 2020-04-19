@@ -295,13 +295,13 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range v.duties.Duties {
-		if duty.Status != ethpb.ValidatorStatus_ACTIVE {
-			continue
-		}
-
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", duty.PublicKey[:])
 			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+		}
+
+		if duty.Status != ethpb.ValidatorStatus_ACTIVE {
+			continue
 		}
 
 		lFields := logrus.Fields{
