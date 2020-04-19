@@ -73,6 +73,10 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),
 	}
+	p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
 	r.registerSubscribers()
 	r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,

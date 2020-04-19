@@ -33,7 +33,13 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mockChain.ChainService{
 			ValidatorsRoot: [32]byte{'A'},
+			Genesis:        time.Now(),
 		},
+	}
+	var err error
+	p2p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 	topic := "/eth2/%x/voluntary_exit"
 	var wg sync.WaitGroup
@@ -187,7 +193,10 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 
 func TestSubscribe_WaitToSync(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
-	chainService := &mockChain.ChainService{}
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
 	r := Service{
 		ctx:           context.Background(),
 		p2p:           p2p,
@@ -234,7 +243,16 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	r := Service{
 		ctx: context.Background(),
+		chain: &mockChain.ChainService{
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		},
 		p2p: p,
+	}
+	var err error
+	p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SignedVoluntaryExit{})]

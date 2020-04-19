@@ -197,12 +197,22 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			},
+			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
 		ctx: context.Background(),
 	}
+	p1.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	r2 := &Service{
 		p2p: p2,
+	}
+	p2.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	r.Start()
@@ -219,7 +229,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		}
 		log.WithField("status", out).Warn("received status")
 
-		resp := &pb.Status{HeadSlot: 100, ForkDigest: params.BeaconConfig().GenesisForkVersion}
+		resp := &pb.Status{HeadSlot: 100, ForkDigest: p2.Digest[:]}
 
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
