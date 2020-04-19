@@ -170,6 +170,12 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 		return nil, err
 	}
 	if preState == nil {
+		if !s.stateGen.HasState(ctx, startRoot) {
+			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+				return nil, errors.Wrap(err, "could not save initial sync blocks")
+			}
+			s.clearInitSyncBlocks()
+		}
 		preState, err = s.stateGen.StateByRoot(ctx, startRoot)
 		if err != nil {
 			return nil, err
