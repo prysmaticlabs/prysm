@@ -136,6 +136,10 @@ var (
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
 	}
+	waitForSyncedStartup = &cli.BoolFlag{
+		Name:  "wait-for-synced",
+		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
+	}
 )
 
 // Deprecated flags list.
@@ -333,6 +337,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--enable-domain-data-cache",
+	"--wait-for-synced",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -363,6 +368,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableFieldTrie,
 	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
+	waitForSyncedStartup,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
