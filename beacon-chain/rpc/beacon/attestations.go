@@ -129,7 +129,7 @@ func (bs *Server) ListIndexedAttestations(
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
 	if featureconfig.Get().DisableNewStateMgmt {
-		return nil, status.Error(codes.Internal, "New state management must be turned on to support historic attestation. Please consider running without --disable-new-state-mgmt flag")
+		return nil, status.Error(codes.Internal, "New state management must be turned on to support historic attestation. Please run without --disable-new-state-mgmt flag")
 	}
 
 	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
