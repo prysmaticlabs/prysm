@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -14,10 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -129,6 +129,10 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
+	if !featureconfig.Get().DisableNewStateMgmt {
+		return nil, status.Error(codes.Internal, "New state management must be turned on to support historic attestation. Please consider running without --disable-new-state-mgmt flag")
+	}
+
 	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
 		attsArray = append(attsArray, block.Block.Body.Attestations...)
@@ -152,12 +156,7 @@ func (bs *Server) ListIndexedAttestations(
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
 	attIndex := 0
 	for blockRoot, atts := range mappedAttestations {
-		var attState *stateTrie.BeaconState
-		if !featureconfig.Get().DisableNewStateMgmt {
-			attState, err = bs.StateGen.StateByRoot(ctx, blockRoot)
-		} else {
-			attState, err = bs.BeaconDB.State(ctx, blockRoot)
-		}
+		attState, err := bs.StateGen.StateByRoot(ctx, blockRoot)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
