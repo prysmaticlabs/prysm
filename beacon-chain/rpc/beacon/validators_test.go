@@ -23,6 +23,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -1547,6 +1548,39 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidatorParticipation_CannotRequestCurrentEpoch(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(helpers.StartSlot(2)); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch currently in progress"
+	if _, err := bs.GetValidatorParticipation(
+		ctx,
+		&ethpb.GetValidatorParticipationRequest{
+			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+				Epoch: 2,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
 func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1564,7 +1598,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
-	wanted := "Cannot retrieve information about an epoch until older than current epoch"
+	wanted := "Cannot retrieve information about an epoch in the future"
 	if _, err := bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
@@ -1574,6 +1608,123 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		},
 	); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	epoch := uint64(4)
+	part := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate: 1.0,
+		VotedEther:              20,
+		EligibleEther:           20,
+	}
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch-2, part); err != nil {
+		t.Fatal(err)
+	}
+
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(helpers.StartSlot(epoch + 1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: epoch + 1}); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch + 2,
+		},
+	}); err == nil {
+		t.Error("Expected error when requesting future epoch, received nil")
+	}
+	// We request data from epoch 0, which we didn't archive, so we should expect an error.
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Genesis{
+			Genesis: true,
+		},
+	}); err == nil {
+		t.Error("Expected error when data from archive is not found, received nil")
+	}
+
+	want := &ethpb.ValidatorParticipationResponse{
+		Epoch:         epoch - 2,
+		Finalized:     true,
+		Participation: part,
+	}
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch - 2,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v, received %v", want, res)
+	}
+}
+
+func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	part := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate: 1.0,
+		VotedEther:              20,
+		EligibleEther:           20,
+	}
+	epoch := uint64(1)
+	// We archive data for epoch 1.
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
+		t.Fatal(err)
+	}
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(helpers.StartSlot(epoch + 10)); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: epoch + 5}); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			// 10 epochs into the future.
+			State: headState,
+		},
+	}
+	want := &ethpb.ValidatorParticipationResponse{
+		Epoch:         epoch,
+		Finalized:     true,
+		Participation: part,
+	}
+	// We request epoch 1.
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v, received %v", want, res)
 	}
 }
 
