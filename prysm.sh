@@ -86,7 +86,7 @@ esac
 if [ "$system" == "windows" ]; then
 	arch="amd64.exe"
 elif [[ "$os_arch_suffix" == *"arm64"* ]]; then
-  arch=$os_arch_suffix
+  arch="arm64"
 fi
 
 mkdir -p $wrapper_dir
