@@ -5,10 +5,14 @@ import (
 
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestBlockRoot(t *testing.T) {
+	f := featureconfig.Get()
+	f.EnableBlockHTR = true
+	featureconfig.Init(f)
 	genState, keys := testutil.DeterministicGenesisState(t, 100)
 	blk, err := testutil.GenerateFullBlock(genState, keys, testutil.DefaultBlockGenConfig(), 10)
 	if err != nil {

@@ -30,7 +30,7 @@ var (
 	MonitoringPortFlag = &cli.Int64Flag{
 		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
-		Value: 8080,
+		Value: 8082,
 	}
 	// RPCPort defines a slasher node RPC port to open.
 	RPCPort = &cli.IntFlag{

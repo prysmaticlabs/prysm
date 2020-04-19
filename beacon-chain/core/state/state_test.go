@@ -42,7 +42,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	genesisTime := uint64(99999)
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
+	if err != nil {
+		t.Fatal(err)
+	}
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -68,10 +71,18 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.Validators()) != depositsForChainStart {
 		t.Error("Validators was not correctly initialized")
 	}
-	if v, _ := newState.ValidatorAtIndex(0); v.ActivationEpoch != 0 {
+	v, err := newState.ValidatorAtIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.ActivationEpoch != 0 {
 		t.Error("Validators was not correctly initialized")
 	}
-	if v, _ := newState.ValidatorAtIndex(0); v.ActivationEligibilityEpoch != 0 {
+	v, err = newState.ValidatorAtIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.ActivationEligibilityEpoch != 0 {
 		t.Error("Validators was not correctly initialized")
 	}
 	if len(newState.Balances()) != depositsForChainStart {
@@ -82,7 +93,11 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.RandaoMixes()) != latestRandaoMixesLength {
 		t.Error("Length of RandaoMixes was not correctly initialized")
 	}
-	if mix, _ := newState.RandaoMixAtIndex(0); !bytes.Equal(mix, eth1Data.BlockHash) {
+	mix, err := newState.RandaoMixAtIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(mix, eth1Data.BlockHash) {
 		t.Error("RandaoMixes was not correctly initialized")
 	}
 
@@ -130,7 +145,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(100)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Error(err)

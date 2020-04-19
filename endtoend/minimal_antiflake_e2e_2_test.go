@@ -17,12 +17,14 @@ func TestEndToEnd_AntiFlake_MinimalConfig_2(t *testing.T) {
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=10"},
 		ValidatorFlags: []string{"--minimal-config"},
-		EpochsToRun:    3,
+		EpochsToRun:    4,
 		TestSync:       false,
 		TestSlasher:    false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
+			ev.HealthzCheck,
 			ev.ValidatorsAreActive,
+			ev.ValidatorsParticipating,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {

@@ -71,6 +71,16 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	ctx, span := trace.StartSpan(ctx, "blockchain.onAttestation")
 	defer span.End()
 
+	if a == nil {
+		return nil, errors.New("nil attestation")
+	}
+	if a.Data == nil {
+		return nil, errors.New("nil attestation.Data field")
+	}
+	if a.Data.Target == nil {
+		return nil, errors.New("nil attestation.Data.Target field")
+	}
+
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
@@ -98,7 +108,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify Attestations cannot be from future epochs.
-	if err := helpers.VerifySlotTime(genesisTime, tgtSlot); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, tgtSlot, helpers.TimeShiftTolerance); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation target slot")
 	}
 
@@ -108,7 +118,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot, helpers.TimeShiftTolerance); err != nil {
 		return nil, err
 	}
 
@@ -123,6 +133,10 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		if err := s.beaconDB.SaveAttestation(ctx, a); err != nil {
 			return nil, err
 		}
+	}
+
+	if indexedAtt.AttestingIndices == nil {
+		return nil, errors.New("nil attesting indices")
 	}
 
 	// Update forkchoice store with the new attestation for updating weight.

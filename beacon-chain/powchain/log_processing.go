@@ -156,13 +156,12 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !s.chainStartData.Chainstarted {
-		var pubkey = fmt.Sprintf("#%x", depositData.PublicKey)
+		var pubkey = fmt.Sprintf("%#x", depositData.PublicKey)
 		if s.depositCache.PubkeyInChainstart(ctx, pubkey) {
-			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
+			log.WithField("publicKey", pubkey).Debug("Pubkey has already been submitted for chainstart")
 		} else {
 			s.depositCache.MarkPubkeyForChainstart(ctx, pubkey)
 		}
-
 	}
 
 	// We always store all historical deposits in the DB.

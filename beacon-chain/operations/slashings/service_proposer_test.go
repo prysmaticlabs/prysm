@@ -15,7 +15,12 @@ import (
 
 func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
 	return &ethpb.ProposerSlashing{
-		ProposerIndex: valIdx,
+		Header_1: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{ProposerIndex: valIdx},
+		},
+		Header_2: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{ProposerIndex: valIdx},
+		},
 	}
 }
 
@@ -45,11 +50,20 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	}
 
 	// We mark the following validators with some preconditions.
-	exitedVal, _ := beaconState.ValidatorAtIndex(uint64(2))
+	exitedVal, err := beaconState.ValidatorAtIndex(uint64(2))
+	if err != nil {
+		t.Fatal(err)
+	}
 	exitedVal.ExitEpoch = 0
-	futureExitedVal, _ := beaconState.ValidatorAtIndex(uint64(4))
+	futureExitedVal, err := beaconState.ValidatorAtIndex(uint64(4))
+	if err != nil {
+		t.Fatal(err)
+	}
 	futureExitedVal.ExitEpoch = 17
-	slashedVal, _ := beaconState.ValidatorAtIndex(uint64(5))
+	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
+	if err != nil {
+		t.Fatal(err)
+	}
 	slashedVal.Slashed = true
 	if err := beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal); err != nil {
 		t.Fatal(err)
@@ -182,12 +196,12 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))
 			}
 			for i := range p.pendingAttesterSlashing {
-				if p.pendingProposerSlashing[i].ProposerIndex != tt.want[i].ProposerIndex {
+				if p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex != tt.want[i].Header_1.Header.ProposerIndex {
 					t.Errorf(
 						"Pending proposer to slash at index %d does not match expected. Got=%v wanted=%v",
 						i,
-						p.pendingProposerSlashing[i].ProposerIndex,
-						tt.want[i].ProposerIndex,
+						p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex,
+						tt.want[i].Header_1.Header.ProposerIndex,
 					)
 				}
 				if !proto.Equal(p.pendingProposerSlashing[i], tt.want[i]) {

@@ -17,7 +17,11 @@ func TestPrivateKeyLoading(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer func() {
+		if err := os.Remove(file.Name()); err != nil {
+			t.Log(err)
+		}
+	}()
 	key, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	if err != nil {
 		t.Fatalf("Could not generate key: %v", err)
@@ -46,7 +50,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newRaw, _ := newPkey.Raw()
+	newRaw, err := newPkey.Raw()
 	if err != nil {
 		t.Fatal(err)
 	}

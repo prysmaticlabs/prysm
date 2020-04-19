@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 )
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
@@ -25,7 +26,10 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cloned := proto.Clone(genesis).(*pb.BeaconState)
+	cloned, ok := proto.Clone(genesis).(*pb.BeaconState)
+	if !ok {
+		t.Error("Object is not of type *pb.BeaconState")
+	}
 	custom := customState.CloneInnerState()
 	if !proto.Equal(cloned, custom) {
 		t.Fatal("Cloned states did not match")
@@ -140,7 +144,10 @@ func BenchmarkStateClone_Proto(b *testing.B) {
 	genesis := setupGenesisState(b, 64)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = proto.Clone(genesis).(*pb.BeaconState)
+		_, ok := proto.Clone(genesis).(*pb.BeaconState)
+		if !ok {
+			b.Error("Entity is not of type *pb.BeaconState")
+		}
 	}
 }
 
@@ -159,9 +166,13 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 }
 
 func cloneValidatorsWithProto(vals []*ethpb.Validator) []*ethpb.Validator {
+	var ok bool
 	res := make([]*ethpb.Validator, len(vals))
 	for i := 0; i < len(res); i++ {
-		res[i] = proto.Clone(vals[i]).(*ethpb.Validator)
+		res[i], ok = proto.Clone(vals[i]).(*ethpb.Validator)
+		if !ok {
+			log.Debug("Entity is not of type *ethpb.Validator")
+		}
 	}
 	return res
 }
@@ -197,7 +208,9 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if !reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
 		t.Fatal("Test precondition failed, fields are not equal")
 	}
-	a.UpdateRandaoMixesAtIndex([]byte("foo"), 1)
+	if err := a.UpdateRandaoMixesAtIndex(1, []byte("foo")); err != nil {
+		t.Fatal(err)
+	}
 	if reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
 		t.Error("Expect a.RandaoMixes() to be different from b.RandaoMixes()")
 	}
@@ -206,7 +219,9 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if !reflect.DeepEqual(a.Validators(), b.Validators()) {
 		t.Fatal("Test precondition failed, fields are not equal")
 	}
-	a.UpdateValidatorAtIndex(1, &ethpb.Validator{Slashed: true})
+	if err := a.UpdateValidatorAtIndex(1, &ethpb.Validator{Slashed: true}); err != nil {
+		t.Fatal(err)
+	}
 	if reflect.DeepEqual(a.Validators(), b.Validators()) {
 		t.Error("Expect a.Validators() to be different from b.Validators()")
 	}
@@ -215,7 +230,9 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if !reflect.DeepEqual(a.StateRoots(), b.StateRoots()) {
 		t.Fatal("Test precondition failed, fields are not equal")
 	}
-	a.UpdateStateRootAtIndex(1, bytesutil.ToBytes32([]byte("foo")))
+	if err := a.UpdateStateRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))); err != nil {
+		t.Fatal(err)
+	}
 	if reflect.DeepEqual(a.StateRoots(), b.StateRoots()) {
 		t.Fatal("Expected a.StateRoots() to be different from b.StateRoots()")
 	}
@@ -224,7 +241,9 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if !reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
 		t.Fatal("Test precondition failed, fields are not equal")
 	}
-	a.UpdateBlockRootAtIndex(1, bytesutil.ToBytes32([]byte("foo")))
+	if err := a.UpdateBlockRootAtIndex(1, bytesutil.ToBytes32([]byte("foo"))); err != nil {
+		t.Fatal(err)
+	}
 	if reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
 		t.Fatal("Expected a.BlockRoots() to be different from b.BlockRoots()")
 	}
@@ -242,7 +261,9 @@ func TestForkManualCopy_OK(t *testing.T) {
 		CurrentVersion:  []byte{'d', 'e', 'f'},
 		Epoch:           0,
 	}
-	a.SetFork(wantedFork)
+	if err := a.SetFork(wantedFork); err != nil {
+		t.Fatal(err)
+	}
 
 	newState := a.CloneInnerState()
 	if !ssz.DeepEqual(newState.Fork, wantedFork) {

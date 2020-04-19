@@ -12,7 +12,7 @@ Evaluators have 3 parts, the name for it's test name, a `policy` which declares 
 
 ## Current end-to-end tests
 * Minimal Config - 4 beacon nodes, 64 validators, running for 6 epochs
-* ~~Demo Config - 2 beacon nodes, 16,384 validators, running for 5 epochs~~ Disabled for now
+* ~~Mainnet Config - 2 beacon nodes, 16,384 validators, running for 5 epochs~~ Disabled for now
 
 ## Instructions
 If you wish to run all the E2E tests, you can run them through bazel with:

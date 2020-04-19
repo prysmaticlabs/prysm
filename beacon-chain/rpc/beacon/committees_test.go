@@ -17,6 +17,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -86,8 +87,12 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	for i := 0; i < len(mixes); i++ {
 		mixes[i] = make([]byte, 32)
 	}
-	headState.SetRandaoMixes(mixes)
-	headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2)
+	if err := headState.SetRandaoMixes(mixes); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2); err != nil {
+		t.Fatal(err)
+	}
 
 	m := &mock.ChainService{
 		State:   headState,
@@ -250,9 +255,12 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.B
 			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
-	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{Validators: validators, Balances: balances})
-	if err != nil {
-		t.Fatal(err)
+	s := testutil.NewBeaconState()
+	if err := s.SetValidators(validators); err != nil {
+		return nil
 	}
-	return st
+	if err := s.SetBalances(balances); err != nil {
+		return nil
+	}
+	return s
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 )
 
@@ -14,8 +15,8 @@ type ValidatorDB interface {
 	DatabasePath() string
 	ClearDB() error
 	// Proposer protection related methods.
-	ProposalHistory(ctx context.Context, publicKey []byte) (*slashpb.ProposalHistory, error)
-	SaveProposalHistory(ctx context.Context, publicKey []byte, history *slashpb.ProposalHistory) error
+	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
+	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
 	DeleteProposalHistory(ctx context.Context, publicKey []byte) error
 	// Attester protection related methods.
 	AttestationHistory(ctx context.Context, publicKey []byte) (*slashpb.AttestationHistory, error)

@@ -10,7 +10,9 @@ import (
 )
 
 func BenchmarkPairing(b *testing.B) {
-	bls2.Init(bls2.BLS12_381)
+	if err := bls2.Init(bls2.BLS12_381); err != nil {
+		b.Fatal(err)
+	}
 	newGt := &bls2.GT{}
 	newG1 := &bls2.G1{}
 	newG2 := &bls2.G2{}

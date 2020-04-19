@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -40,16 +40,16 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
-	if err != nil {
-		t.Error(err)
-	}
-	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	sig0 := privKeys[0].Sign(hashTreeRoot[:])
+	sig1 := privKeys[1].Sign(hashTreeRoot[:])
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
@@ -60,12 +60,12 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
+	hashTreeRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	sig0 = privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 = privKeys[1].Sign(hashTreeRoot[:], domain)
+	sig0 = privKeys[0].Sign(hashTreeRoot[:])
+	sig1 = privKeys[1].Sign(hashTreeRoot[:])
 	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
 	att2.Signature = aggregateSig.Marshal()[:]
 
@@ -93,10 +93,15 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: s},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		seenAttesterSlashingCache: c,
 	}
 
 	buf := new(bytes.Buffer)
@@ -131,10 +136,15 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: state},
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		p2p:                       p,
+		chain:                     &mock.ChainService{State: state},
+		initialSync:               &mockSync.Sync{IsSyncing: false},
+		seenAttesterSlashingCache: c,
 	}
 
 	buf := new(bytes.Buffer)

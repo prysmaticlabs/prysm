@@ -28,11 +28,9 @@ OPTS = [
 }) + select({
     ":use_openssl": [],
     "//conditions:default": [
-      "-DMCL_DONT_USE_OPENSSL",
+        "-DMCL_DONT_USE_OPENSSL",
     ],
 })
-
-
 
 genrule(
     name = "base64_ll",
@@ -81,10 +79,10 @@ cc_library(
     }) + select({
         ":use_openssl": [
             "-lssl",
-            "-lcrypto"
+            "-lcrypto",
         ],
         "//conditions:default": [],
-    })
+    }),
 )
 
 cc_library(
@@ -145,5 +143,9 @@ go_library(
     }),
     copts = OPTS,
     cgo = True,
-    visibility = ["//visibility:public"],
+    visibility = [
+        # Additional access will require security approval.
+        "@prysm//shared/bls:__pkg__",
+        "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
+    ],
 )

@@ -38,7 +38,10 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if tt.epoch != CurrentEpoch(state) {
 			t.Errorf("CurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
 		}
@@ -55,7 +58,10 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if tt.epoch != PrevEpoch(state) {
 			t.Errorf("PrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
 		}
@@ -74,7 +80,10 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 200/params.BeaconConfig().SlotsPerEpoch + 1},
 	}
 	for _, tt := range tests {
-		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		state, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if tt.epoch != NextEpoch(state) {
 			t.Errorf("NextEpoch(%d) = %d, wanted: %d", state.Slot(), NextEpoch(state), tt.epoch)
 		}

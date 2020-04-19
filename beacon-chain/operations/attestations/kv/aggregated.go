@@ -3,9 +3,67 @@ package kv
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
+
+// AggregateUnaggregatedAttestations aggregates the unaggregated attestations and save the
+// newly aggregated attestations in the pool.
+// It tracks the unaggregated attestations that weren't able to aggregate to prevent
+// the deletion of unaggregated attestations in the pool.
+func (p *AttCaches) AggregateUnaggregatedAttestations() error {
+	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
+	unaggregatedAtts := p.UnaggregatedAttestations()
+	for _, att := range unaggregatedAtts {
+		attDataRoot, err := ssz.HashTreeRoot(att.Data)
+		if err != nil {
+			return err
+		}
+		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+	}
+
+	// Aggregate unaggregated attestations from the pool and save them in the pool.
+	// Track the unaggregated attestations that aren't able to aggregate.
+	leftOverUnaggregatedAtt := make(map[[32]byte]bool)
+	for _, atts := range attsByDataRoot {
+		aggregatedAtts := make([]*ethpb.Attestation, 0, len(atts))
+		processedAtts, err := helpers.AggregateAttestations(atts)
+		if err != nil {
+			return err
+		}
+		for _, att := range processedAtts {
+			if helpers.IsAggregated(att) {
+				aggregatedAtts = append(aggregatedAtts, att)
+			} else {
+				h, err := ssz.HashTreeRoot(att)
+				if err != nil {
+					return err
+				}
+				leftOverUnaggregatedAtt[h] = true
+			}
+		}
+		if err := p.SaveAggregatedAttestations(aggregatedAtts); err != nil {
+			return err
+		}
+	}
+
+	// Remove the unaggregated attestations from the pool that were successfully aggregated.
+	for _, att := range unaggregatedAtts {
+		h, err := ssz.HashTreeRoot(att)
+		if err != nil {
+			return err
+		}
+		if leftOverUnaggregatedAtt[h] {
+			continue
+		}
+		if err := p.DeleteUnaggregatedAttestation(att); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
 func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
