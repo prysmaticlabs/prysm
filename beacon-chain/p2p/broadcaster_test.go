@@ -29,6 +29,8 @@ func TestService_Broadcast(t *testing.T) {
 		cfg: &Config{
 			Encoding: "ssz",
 		},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
 	}
 
 	msg := &testpb.TestSimpleMessage{
@@ -38,7 +40,7 @@ func TestService_Broadcast(t *testing.T) {
 	topic := "/eth2/%x/testing"
 	// Set a test gossip mapping for testpb.TestSimpleMessage.
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
-	digest, err := p.ForkDigest()
+	digest, err := p.forkDigest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +87,10 @@ func TestService_Broadcast(t *testing.T) {
 }
 
 func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
-	p := Service{}
+	p := Service{
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: []byte{'A'},
+	}
 	if err := p.Broadcast(context.Background(), &testpb.AddressBook{}); err != ErrMessageNotMapped {
 		t.Fatalf("Expected error %v, got %v", ErrMessageNotMapped, err)
 	}

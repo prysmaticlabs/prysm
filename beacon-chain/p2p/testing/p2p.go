@@ -40,6 +40,7 @@ type TestP2P struct {
 	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
 	DelaySend       bool
+	Digest          [4]byte
 	peers           *peers.Status
 	LocalMetadata   *pb.MetaData
 }
@@ -257,7 +258,7 @@ func (p *TestP2P) RefreshENR(epoch uint64) {
 
 // ForkDigest mocks the p2p func.
 func (p *TestP2P) ForkDigest() ([4]byte, error) {
-	return [4]byte{}, nil
+	return p.Digest, nil
 }
 
 // Metadata mocks the peer's metadata.
