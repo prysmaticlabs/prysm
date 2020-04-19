@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -129,7 +128,7 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().DisableNewStateMgmt {
 		return nil, status.Error(codes.Internal, "New state management must be turned on to support historic attestation. Please consider running without --disable-new-state-mgmt flag")
 	}
 

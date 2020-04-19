@@ -30,8 +30,10 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"google.golang.org/grpc/status"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -566,6 +568,40 @@ func TestServer_mapAttestationToBlockRoot(t *testing.T) {
 	}
 	if len(mappedAtts[blockRoot2]) != wantedMapNumberOfElements {
 		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[blockRoot2]))
+	}
+}
+
+func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	ctx := context.Background()
+	numValidators := uint64(128)
+	state, _ := testutil.DeterministicGenesisState(t, numValidators)
+	config := &featureconfig.Flags{
+		DisableNewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+	bs := &Server{
+		BeaconDB:           db,
+		GenesisTimeFetcher: &mock.ChainService{State: state},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+	}
+	_, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
+		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
+			GenesisEpoch: true,
+		},
+	})
+
+	if err == nil {
+		t.Error("Expecting error if new state management is off")
+	}
+	expectedErrString := "New state management must be turned on"
+	if e, ok := status.FromError(err); ok {
+		if !strings.Contains(e.Message(), expectedErrString) {
+			t.Errorf("expecting error message to contain %s", expectedErrString)
+		}
 	}
 }
 
