@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -460,6 +461,68 @@ func (bs *Server) GetValidatorActiveSetChanges(
 // it returns the information about validator's participation rate in voting on the proof of stake
 // rules based on their balance compared to the total active validator balance.
 func (bs *Server) GetValidatorParticipation(
+	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
+) (*ethpb.ValidatorParticipationResponse, error) {
+
+	if featureconfig.Get().DisableNewStateMgmt {
+		return bs.getValidatorParticipationUsingOldArchival(ctx, req)
+	}
+
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+
+	var requestedEpoch uint64
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorParticipationRequest_Genesis:
+		requestedEpoch = 0
+	case *ethpb.GetValidatorParticipationRequest_Epoch:
+		requestedEpoch = q.Epoch
+	default:
+		// Prevent underflow and ensure participation is always queried for previous epoch.
+		if currentEpoch > 1 {
+			requestedEpoch = currentEpoch - 1
+		}
+	}
+
+	if requestedEpoch >= currentEpoch {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch until older than current epoch, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
+	}
+
+	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch+1))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get state")
+	}
+
+	v, b, err := precompute.New(ctx, requestedState)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not set up pre compute instance")
+	}
+	_, b, err = precompute.ProcessAttestations(ctx, requestedState, v, b)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not pre compute attestations")
+	}
+
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
+	return &ethpb.ValidatorParticipationResponse{
+		Epoch:     requestedEpoch,
+		Finalized: requestedEpoch <= headState.FinalizedCheckpointEpoch(),
+		Participation: &ethpb.ValidatorParticipation{
+			GlobalParticipationRate: float32(b.PrevEpochTargetAttesters) / float32(b.PrevEpoch),
+			VotedEther:              b.PrevEpochTargetAttesters,
+			EligibleEther:           b.PrevEpoch,
+		},
+	}, nil
+}
+
+func (bs *Server) getValidatorParticipationUsingOldArchival(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
