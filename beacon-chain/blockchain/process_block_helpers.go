@@ -210,7 +210,7 @@ func (s *Service) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot 
 	}
 
 	if err := s.beaconDB.DeleteStates(ctx, roots); err != nil {
-		return err
+		log.Warnf("Could not delete states: %v", err)
 	}
 
 	return nil
