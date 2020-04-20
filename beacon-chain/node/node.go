@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -146,6 +147,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerGRPCGateway(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerArchiverService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -307,6 +312,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		DisableDiscv5:     ctx.Bool(flags.DisableDiscv5.Name),
 		Encoding:          ctx.String(cmd.P2PEncoding.Name),
 		StateNotifier:     b,
+		PubSub:            ctx.String(cmd.P2PPubsub.Name),
 	})
 	if err != nil {
 		return err
@@ -581,7 +587,7 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", ctx.Int64(flags.MonitoringPortFlag.Name)),
 		b.services,
 		additionalHandlers...,
 	)
@@ -618,4 +624,21 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 		return b.services.RegisterService(svc)
 	}
 	return nil
+}
+
+func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
+	if !flags.Get().EnableArchive {
+		return nil
+	}
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
+		BeaconDB:             b.db,
+		HeadFetcher:          chainService,
+		ParticipationFetcher: chainService,
+		StateNotifier:        b,
+	})
+	return b.services.RegisterService(svc)
 }

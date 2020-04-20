@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -70,6 +71,16 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	ctx, span := trace.StartSpan(ctx, "blockchain.onAttestation")
 	defer span.End()
 
+	if a == nil {
+		return nil, errors.New("nil attestation")
+	}
+	if a.Data == nil {
+		return nil, errors.New("nil attestation.Data field")
+	}
+	if a.Data.Target == nil {
+		return nil, errors.New("nil attestation.Data.Target field")
+	}
+
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
@@ -117,14 +128,15 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, err
 	}
 
+	// Only save attestation in DB for archival node.
+	if flags.Get().EnableArchive {
+		if err := s.beaconDB.SaveAttestation(ctx, a); err != nil {
+			return nil, err
+		}
+	}
+
 	if indexedAtt.AttestingIndices == nil {
 		return nil, errors.New("nil attesting indices")
-	}
-	if a.Data == nil {
-		return nil, errors.New("nil att data")
-	}
-	if a.Data.Target == nil {
-		return nil, errors.New("nil att target")
 	}
 
 	// Update forkchoice store with the new attestation for updating weight.
