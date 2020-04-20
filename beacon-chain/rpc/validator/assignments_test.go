@@ -28,38 +28,6 @@ func pubKey(i uint64) []byte {
 	binary.LittleEndian.PutUint64(pubKey, uint64(i))
 	return pubKey
 }
-
-func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
-	ctx := context.Background()
-
-	beaconState, _ := testutil.DeterministicGenesisState(t, 8)
-	block := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(ctx, block); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
-	if err != nil {
-		t.Fatalf("Could not get signing root %v", err)
-	}
-
-	Server := &Server{
-		BeaconDB:        db,
-		HeadFetcher:     &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
-		SyncChecker:     &mockSync.Sync{IsSyncing: false},
-		Eth1InfoFetcher: &mockPOW.POWChain{},
-		DepositFetcher:  depositcache.NewDepositCache(),
-	}
-	req := &ethpb.DutiesRequest{
-		PublicKeys: [][]byte{{1}},
-		Epoch:      0,
-	}
-	if _, err := Server.GetDuties(context.Background(), req); err != nil && !strings.Contains(err.Error(), "incorrect key length") {
-		t.Errorf("Expected \"incorrect key length\", received %v", err)
-	}
-}
-
 func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
