@@ -7,7 +7,7 @@ import (
 var (
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
-		Usage: "Enable development mode features.",
+		Usage: "Enable experimental features still in development. These features may not be stable.",
 	}
 	broadcastSlashingFlag = &cli.BoolFlag{
 		Name:  "broadcast-slashing",
