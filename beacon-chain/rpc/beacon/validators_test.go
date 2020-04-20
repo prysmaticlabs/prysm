@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -1566,6 +1565,10 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 }
 
 func TestServer_GetValidatorParticipation_CannotRequestCurrentEpoch(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1608,6 +1611,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
+		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
 	wanted := "Cannot retrieve information about an epoch in the future"
@@ -1615,7 +1619,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
 			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-				Epoch: 1,
+				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
 			},
 		},
 	); err != nil && !strings.Contains(err.Error(), wanted) {
@@ -1624,6 +1628,10 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 }
 
 func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -1684,7 +1692,116 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	validatorCount := uint64(100)
+
+	validators := make([]*ethpb.Validator, validatorCount)
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+
+	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetPreviousEpochAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: params.BeaconConfig().SlotsPerEpoch}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	bRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	m := &mock.ChainService{State: headState}
+	bs := &Server{
+		BeaconDB:             db,
+		HeadFetcher:          m,
+		ParticipationFetcher: m,
+		GenesisTimeFetcher:   &mock.ChainService{},
+		StateGen:             stategen.New(db, cache.NewStateSummaryCache()),
+	}
+
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := &ethpb.ValidatorParticipation{EligibleEther: validatorCount * params.BeaconConfig().MaxEffectiveBalance}
+	if !reflect.DeepEqual(res.Participation, wanted) {
+		t.Error("Incorrect validator participation respond")
+	}
+}
+
+func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: params.BeaconConfig().SlotsPerEpoch}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	bRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	m := &mock.ChainService{State: headState}
+	bs := &Server{
+		BeaconDB:             db,
+		HeadFetcher:          m,
+		ParticipationFetcher: m,
+		GenesisTimeFetcher:   &mock.ChainService{},
+		StateGen:             stategen.New(db, cache.NewStateSummaryCache()),
+	}
+
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if res.Participation.VotedEther != 0 || res.Participation.EligibleEther != 0 {
+		t.Error("Incorrect validator participation response")
+	}
+}
+
 func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -1729,127 +1846,6 @@ func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.
 	}
 	if !proto.Equal(want, res) {
 		t.Errorf("Wanted %v, received %v", want, res)
-	}
-}
-
-func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
-	ctx := context.Background()
-	epoch := uint64(1)
-	attestedBalance := uint64(1)
-	validatorCount := uint64(100)
-
-	validators := make([]*ethpb.Validator, validatorCount)
-	balances := make([]uint64, validatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-		}
-		balances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-
-	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetValidators(validators); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetBalances(balances); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetCurrentEpochAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
-
-	m := &mock.ChainService{
-		State: headState,
-		Balance: &precompute.Balance{
-			PrevEpoch:                validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-			PrevEpochTargetAttesters: attestedBalance,
-		},
-	}
-	bs := &Server{
-		BeaconDB:             db,
-		HeadFetcher:          m,
-		ParticipationFetcher: m,
-	}
-
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wanted := &ethpb.ValidatorParticipation{
-		VotedEther:              attestedBalance,
-		EligibleEther:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		GlobalParticipationRate: float32(attestedBalance) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-	}
-
-	if !reflect.DeepEqual(res.Participation, wanted) {
-		t.Error("Incorrect validator participation respond")
-	}
-}
-
-func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
-	ctx := context.Background()
-	epoch := uint64(1)
-	validatorCount := uint64(100)
-
-	validators := make([]*ethpb.Validator, validatorCount)
-	balances := make([]uint64, validatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-		}
-		balances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-
-	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(epoch*params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetValidators(validators); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetBalances(balances); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetCurrentEpochAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
-
-	m := &mock.ChainService{
-		State: headState,
-	}
-	bs := &Server{
-		BeaconDB:             db,
-		HeadFetcher:          m,
-		ParticipationFetcher: m,
-	}
-
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wanted := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate: 0,
-		VotedEther:              0,
-		EligibleEther:           0,
-	}
-
-	if !reflect.DeepEqual(res.Participation, wanted) {
-		t.Errorf("Incorrect validator participation response, got %s", res.Participation.String())
 	}
 }
 

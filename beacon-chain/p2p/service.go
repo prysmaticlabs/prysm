@@ -43,14 +43,17 @@ import (
 
 var _ = shared.Service(&Service{})
 
-// Check local table every 5 seconds for newly added peers.
-var pollingPeriod = 5 * time.Second
+// Check local table every 15 seconds for newly added peers.
+var pollingPeriod = 15 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
+
+// lookup limit whenever looking up for random nodes.
+const lookupLimit = 15
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
@@ -509,6 +512,10 @@ func (s *Service) listenForNewNodes() {
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
 		nodes := s.dv5Listener.LookupRandom()
 		multiAddresses := s.processPeers(nodes)
+		// do not process a large amount than required peers.
+		if len(multiAddresses) > lookupLimit {
+			multiAddresses = multiAddresses[:lookupLimit]
+		}
 		s.connectWithAllPeers(multiAddresses)
 	})
 }
@@ -573,13 +580,15 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 			log.WithError(err).Error("Could not get peer id")
 			continue
 		}
+		if s.peers.IsBad(peerData.ID) {
+			continue
+		}
 		if s.peers.IsActive(peerData.ID) {
 			continue
 		}
 		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
 			continue
 		}
-
 		nodeENR := node.Record()
 		// Decide whether or not to connect to peer that does not
 		// match the proper fork ENR data with our local node.
