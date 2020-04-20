@@ -19,6 +19,10 @@ var (
 		Name: "beacon_head_slot",
 		Help: "Slot of the head block of the beacon chain",
 	})
+	clockTimeSlot = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_clock_time_slot",
+		Help: "The current slot based on the genesis time and current clock",
+	})
 	competingBlks = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_blocks",
 		Help: "The # of blocks received and processed from a competing chain",
@@ -82,8 +86,9 @@ var (
 )
 
 // reportSlotMetrics reports slot related metrics.
-func reportSlotMetrics(currentSlot uint64, headSlot uint64, finalizedCheckpoint *ethpb.Checkpoint) {
-	beaconSlot.Set(float64(currentSlot))
+func reportSlotMetrics(stateSlot uint64, headSlot uint64, clockSlot uint64, finalizedCheckpoint *ethpb.Checkpoint) {
+	clockTimeSlot.Set(float64(clockSlot))
+	beaconSlot.Set(float64(stateSlot))
 	beaconHeadSlot.Set(float64(headSlot))
 	if finalizedCheckpoint != nil {
 		headFinalizedEpoch.Set(float64(finalizedCheckpoint.Epoch))
