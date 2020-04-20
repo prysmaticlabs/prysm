@@ -47,6 +47,7 @@ type Config struct {
 // Service service.
 type Service struct {
 	ctx               context.Context
+	cancel            context.CancelFunc
 	chain             blockchainService
 	p2p               p2p.P2P
 	db                db.ReadOnlyDatabase
@@ -60,8 +61,10 @@ type Service struct {
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
-		ctx:               context.Background(),
+		ctx:               ctx,
+		cancel:            cancel,
 		chain:             cfg.Chain,
 		p2p:               cfg.P2P,
 		db:                cfg.DB,
@@ -139,6 +142,7 @@ func (s *Service) Start() {
 
 // Stop initial sync.
 func (s *Service) Stop() error {
+	s.cancel()
 	return nil
 }
 
