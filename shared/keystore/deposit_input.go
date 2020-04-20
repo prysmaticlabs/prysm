@@ -35,7 +35,7 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 		return nil, [32]byte{}, err
 	}
 
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil /*forkVersion*/, nil/*genesisValidatorsRoot*/)
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil /*forkVersion*/, nil /*genesisValidatorsRoot*/)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
