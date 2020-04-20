@@ -21,11 +21,11 @@ func TestChainService_SaveHead_DataRace(t *testing.T) {
 		beaconDB: db,
 	}
 	go func() {
-		if err := s.saveHead(context.Background(), [32]byte{}, ); err != nil {
+		if err := s.saveHead(context.Background(), [32]byte{}); err != nil {
 			t.Fatal(err)
 		}
 	}()
-	if err := s.saveHead(context.Background(), [32]byte{}, ); err != nil {
+	if err := s.saveHead(context.Background(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 }
