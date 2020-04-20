@@ -103,6 +103,20 @@ function get_prysm_version() {
   fi
 }
 
+function verify() {
+  file=$1
+
+  hash sha256sum 2>/dev/null || { echo >&2 "sha256sum is not available. Not verifying integrity of downloaded binary."; return 1; }
+  hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; return 1; }
+
+  color "37" "Verifying binary integrity."
+
+  (cd $wrapper_dir; sha256sum -c "${file}.sha256")
+  (cd $wrapper_dir; gpg -u 0AE0051D647BA3C1A917AF4072E33E4DF1A5036E --verify "${file}.sig" $file)
+
+  color "32;1" "Verified ${file} has been signed by Prysmatic Labs."
+}
+
 get_prysm_version
 
 color "37" "Latest Prysm version is $prysm_version."
@@ -147,6 +161,8 @@ case $1 in
     color "31" "PROCESS can be beacon-chain or validator."
     ;;
 esac
+
+verify $process
 
 color "36" "Starting Prysm $1 ${@:2}"
 exec -a "$0" "${process}" "${@:2}"
