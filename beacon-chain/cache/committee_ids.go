@@ -56,7 +56,7 @@ func (c *committeeIDs) GetAttesterCommitteeIDs(slot uint64) []uint64 {
 		return nil
 	}
 	if v, ok := val.([]uint64); ok {
-	   return v
+		return v
 	}
 	return nil
 }
