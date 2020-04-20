@@ -47,6 +47,7 @@ type Config struct {
 // Service service.
 type Service struct {
 	ctx               context.Context
+	cancel            context.CancelFunc
 	chain             blockchainService
 	p2p               p2p.P2P
 	db                db.ReadOnlyDatabase
@@ -60,8 +61,10 @@ type Service struct {
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
-		ctx:               context.Background(),
+		ctx:               ctx,
+		cancel:            cancel,
 		chain:             cfg.Chain,
 		p2p:               cfg.P2P,
 		db:                cfg.DB,
@@ -120,6 +123,12 @@ func (s *Service) Start() {
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: genesis,
+			},
+		})
 		return
 	}
 	log.Info("Starting initial chain sync...")
@@ -127,6 +136,12 @@ func (s *Service) Start() {
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
 		s.synced = true
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: genesis,
+			},
+		})
 		return
 	}
 	s.waitForMinimumPeers()
@@ -135,10 +150,17 @@ func (s *Service) Start() {
 	}
 	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
 	s.synced = true
+	s.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Synced,
+		Data: &statefeed.SyncedData{
+			StartTime: genesis,
+		},
+	})
 }
 
 // Stop initial sync.
 func (s *Service) Stop() error {
+	s.cancel()
 	return nil
 }
 

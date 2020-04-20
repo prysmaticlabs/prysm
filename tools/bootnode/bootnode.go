@@ -38,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -89,7 +90,11 @@ func main() {
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
-	listener := createListener(defaultIP, *discv5port, cfg)
+	ipAddr, err := iputils.ExternalIPv4()
+	if err != nil {
+		log.Fatal(err)
+	}
+	listener := createListener(ipAddr, *discv5port, cfg)
 
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
@@ -157,7 +162,7 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
 	ip := net.ParseIP(ipAddr)
 	if ip.To4() == nil {
-		log.Fatalf("IPV4 address not provided instead %s was provided", defaultIP)
+		log.Fatalf("IPV4 address not provided instead %s was provided", ipAddr)
 	}
 	udpAddr := &net.UDPAddr{
 		IP:   ip,
@@ -166,9 +171,6 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		log.Fatal(err)
-	}
-	if *externalIP != "" {
-		ip = net.ParseIP(*externalIP)
 	}
 	localNode, err := createLocalNode(cfg.PrivateKey, ip, port)
 	if err != nil {
@@ -206,6 +208,10 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not open node's peer database")
 	}
+	external := net.ParseIP(*externalIP)
+	if *externalIP == "" {
+		external = ipAddr
+	}
 
 	forkID := &pb.ENRForkID{
 		CurrentForkDigest: []byte{0, 0, 0, 0},
@@ -218,14 +224,10 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	}
 
 	localNode := enode.NewLocalNode(db, privKey)
-	ipEntry := enr.IP(ipAddr)
-	udpEntry := enr.UDP(port)
-	localNode.SetFallbackIP(ipAddr)
-	localNode.SetFallbackUDP(port)
-	localNode.Set(ipEntry)
-	localNode.Set(udpEntry)
 	localNode.Set(enr.WithEntry("eth2", forkEntry))
 	localNode.Set(enr.WithEntry("attnets", bitfield.NewBitvector64()))
+	localNode.SetFallbackIP(external)
+	localNode.SetFallbackUDP(port)
 
 	return localNode, nil
 }

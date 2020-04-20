@@ -9,12 +9,16 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,23 +31,30 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	helpers.ClearCache()
 
 	numValidators := 128
+	ctx := context.Background()
 	headState := setupActiveValidators(t, db, numValidators)
 
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
-		t.Fatal(err)
-	}
-
 	m := &mock.ChainService{
-		State:   headState,
 		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot))) * time.Second),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+	}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, gRoot); err != nil {
+		t.Fatal(err)
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
@@ -76,6 +87,10 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
@@ -146,6 +161,10 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
+	fc := featureconfig.Get()
+	fc.DisableNewStateMgmt = true
+	featureconfig.Init(fc)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()

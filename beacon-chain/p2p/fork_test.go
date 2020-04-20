@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -213,7 +214,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
-	digest, err := createForkDigest(genesisTime, make([]byte, 32))
+	digest, err := p2putils.CreateForkDigest(genesisTime, make([]byte, 32))
 	if err != nil {
 		t.Fatal(err)
 	}

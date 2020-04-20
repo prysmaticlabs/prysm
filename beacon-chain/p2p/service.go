@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -42,8 +43,8 @@ import (
 
 var _ = shared.Service(&Service{})
 
-// Check local table every 5 seconds for newly added peers.
-var pollingPeriod = 5 * time.Second
+// Check local table every 15 seconds for newly added peers.
+var pollingPeriod = 15 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
@@ -51,10 +52,19 @@ var refreshRate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.S
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
 
+// lookup limit whenever looking up for random nodes.
+const lookupLimit = 15
+
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 3
+
+const (
+	pubsubFlood  = "flood"
+	pubsubGossip = "gossip"
+	pubsubRandom = "random"
+)
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -153,7 +163,20 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithStrictSignatureVerification(false),
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
-	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
+
+	var gs *pubsub.PubSub
+	if cfg.PubSub == "" {
+		cfg.PubSub = pubsubGossip
+	}
+	if cfg.PubSub == pubsubFlood {
+		gs, err = pubsub.NewFloodSub(s.ctx, s.host, psOpts...)
+	} else if cfg.PubSub == pubsubGossip {
+		gs, err = pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
+	} else if cfg.PubSub == pubsubRandom {
+		gs, err = pubsub.NewRandomSub(s.ctx, s.host, psOpts...)
+	} else {
+		return nil, fmt.Errorf("unknown pubsub type %s", cfg.PubSub)
+	}
 	if err != nil {
 		log.WithError(err).Error("Failed to start pubsub")
 		return nil, err
@@ -433,7 +456,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 				}
 				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(*info); err != nil {
-					log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+					log.WithError(err).Debugf("Could not connect with peer %s", info.String())
 				}
 				exists = true
 			}
@@ -489,6 +512,10 @@ func (s *Service) listenForNewNodes() {
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
 		nodes := s.dv5Listener.LookupRandom()
 		multiAddresses := s.processPeers(nodes)
+		// do not process a large amount than required peers.
+		if len(multiAddresses) > lookupLimit {
+			multiAddresses = multiAddresses[:lookupLimit]
+		}
 		s.connectWithAllPeers(multiAddresses)
 	})
 }
@@ -503,7 +530,7 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
 			if err := s.connectWithPeer(info); err != nil {
-				log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+				log.WithError(err).Debugf("Could not connect with peer %s", info.String())
 			}
 		}(info)
 	}
@@ -553,13 +580,15 @@ func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
 			log.WithError(err).Error("Could not get peer id")
 			continue
 		}
+		if s.peers.IsBad(peerData.ID) {
+			continue
+		}
 		if s.peers.IsActive(peerData.ID) {
 			continue
 		}
 		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
 			continue
 		}
-
 		nodeENR := node.Record()
 		// Decide whether or not to connect to peer that does not
 		// match the proper fork ENR data with our local node.

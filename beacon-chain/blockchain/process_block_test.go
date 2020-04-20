@@ -88,7 +88,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "parent block root does not have a state",
 			blk:           &ethpb.BeaconBlock{},
 			s:             st.Copy(),
-			wantErrString: "provided block root does not have block saved in the db",
+			wantErrString: "could not reconstruct parent state",
 		},
 		{
 			name:          "block is from the feature",
@@ -354,7 +354,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	_, err = service.verifyBlkPreState(ctx, b)
-	wanted := "provided block root does not have block saved in the db"
+	wanted := "could not reconstruct parent state"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
 	}

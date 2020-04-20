@@ -61,6 +61,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 			State:            s,
 			Genesis:          time.Now(),
 			ValidAttestation: true,
+			ValidatorsRoot:   [32]byte{'A'},
 		},
 		chainStarted:         true,
 		p2p:                  p,
@@ -71,6 +72,10 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		initialSync:          &mockSync.Sync{IsSyncing: false},
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),
+	}
+	p.Digest, err = r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
 	}
 	r.registerSubscribers()
 	r.stateNotifier.StateFeed().Send(&feed.Event{
