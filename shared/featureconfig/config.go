@@ -196,6 +196,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state reference copy")
 		cfg.EnableStateRefCopy = true
 	}
+	if ctx.Bool(broadcastSlashingFlag.Name) {
+		log.Warn("Enabling broadcast slashing to p2p network")
+		cfg.BroadcastSlashings = true
+	}
 	Init(cfg)
 }
 
