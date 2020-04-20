@@ -42,7 +42,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
 	cmd.BootstrapNode,
-	cmd.MonitoringPortFlag,
+	flags.MonitoringPortFlag,
 	cmd.LogFileName,
 	cmd.LogFormat,
 	cmd.ClearDB,
