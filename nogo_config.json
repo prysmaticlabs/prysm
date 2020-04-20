@@ -84,5 +84,10 @@
       ".*/.*mock\\.go": "Mocks are OK",
       ".*/testmain\\.go": "Test runner generated code"
     }
+  },
+  "pkgfact": {
+    "exclude_files": {
+      "external/.*": "Third party code"
+    }
   }
 }

@@ -292,6 +292,10 @@ go_repository(
     importpath = "github.com/ethereum/go-ethereum",
     sum = "h1:rOPqjSngvs1VSYH2H+PMPiWt4VEulvNRbFgqiGqJM3E=",
     version = "v1.9.13",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_ethereum_go_ethereum.patch",
+    ],
 )
 
 go_repository(
@@ -663,8 +667,9 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "9d007e481048296f09f59bd19bb7ae584563cd95",  # v1.0.0
     importpath = "github.com/syndtr/goleveldb",
+    sum = "h1:gZZadD8H+fF+n9CmNhYL1Y0dJB+kLOmKd7FbPJLeGHs=",
+    version = "v1.0.1-0.20190923125748-758128399b1d",
 )
 
 go_repository(
@@ -1690,8 +1695,8 @@ go_repository(
 
 go_repository(
     name = "com_github_victoriametrics_fastcache",
-    importpath = "github.com/victoriametrics/fastcache",
-    sum = "h1:qDMc5MSBLqqiOxvPxlR/ci0OE74oI2VDmsxcxVYtK4k=",
+    importpath = "github.com/VictoriaMetrics/fastcache",
+    sum = "h1:4y6y0G8PRzszQUYIQHHssv/jgPHAb5qQuuDNdCbyAgw=",
     version = "v1.5.7",
 )
 
@@ -1721,15 +1726,6 @@ go_repository(
     importpath = "github.com/prometheus/tsdb",
     sum = "h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38ic=",
     version = "v0.10.0",
-)
-
-http_archive(
-    name = "com_github_karalabe_usb",
-    urls = [
-        "https://github.com/karalabe/usb/archive/911d15fe12a9c411cf5d0dd5635231c759399bed.tar.gz",
-    ],
-    strip_prefix = "usb-911d15fe12a9c411cf5d0dd5635231c759399bed",
-    build_file = "@prysm//third_party:com_github_karalabe_usb.BUILD",
 )
 
 go_repository(
@@ -1779,4 +1775,15 @@ go_repository(
     importpath = "github.com/go-sourcemap/sourcemap",
     sum = "h1:W1iEw64niKVGogNgBN3ePyLFfuisuzeidWPMPWmECqU=",
     version = "v2.1.3+incompatible",
+)
+
+go_repository(
+    name = "com_github_karalabe_usb",
+    importpath = "github.com/karalabe/usb",
+    sum = "h1:ZHuwnjpP8LsVsUYqTqeVAI+GfDfJ6UNPrExZF+vX/DQ=",
+    version = "v0.0.0-20191104083709-911d15fe12a9",
+    patch_args = ["-p1"],
+    patches = [
+      "//third_party:com_github_karalabe_usb.patch",
+    ],
 )

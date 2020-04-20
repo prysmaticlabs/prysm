@@ -1,0 +1,633 @@
+diff --git a/hidapi/README.txt b/hidapi/README.txt
+index f19dae4..1022ebb 100644
+--- a/hidapi/README.txt
++++ b/hidapi/README.txt
+@@ -51,7 +51,7 @@ simplicity):
+ #endif
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include "hidapi.h"
++#include "hidapi/hidapi/hidapi.h"
+ 
+ #define MAX_STR 255
+ 
+diff --git a/hidapi/libusb/hid.c b/hidapi/libusb/hid.c
+index 474dff4..aab8427 100644
+--- a/hidapi/libusb/hid.c
++++ b/hidapi/libusb/hid.c
+@@ -42,12 +42,12 @@
+ #include <wchar.h>
+ 
+ /* GNU / LibUSB */
+-#include <libusb.h>
++#include <libusb/libusb/libusb.h>
+ #ifndef __ANDROID__
+ #include <iconv.h>
+ #endif
+ 
+-#include "hidapi.h"
++#include "hidapi/hidapi/hidapi.h"
+ 
+ #ifdef __ANDROID__
+ 
+diff --git a/hidapi/mac/hid.c b/hidapi/mac/hid.c
+index e0756a1..fa5b671 100644
+--- a/hidapi/mac/hid.c
++++ b/hidapi/mac/hid.c
+@@ -33,7 +33,7 @@
+ #include <unistd.h>
+ #include <dlfcn.h>
+ 
+-#include "hidapi.h"
++#include "hidapi/hidapi/hidapi.h"
+ 
+ /* Barrier implementation because Mac OSX doesn't have pthread_barrier.
+    It also doesn't have clock_gettime(). So much for POSIX and SUSv2.
+diff --git a/hidapi/windows/hid.c b/hidapi/windows/hid.c
+index 60da646..dd30615 100644
+--- a/hidapi/windows/hid.c
++++ b/hidapi/windows/hid.c
+@@ -64,7 +64,7 @@ extern "C" {
+ #include <stdlib.h>
+ 
+ 
+-#include "hidapi.h"
++#include "hidapi/hidapi/hidapi.h"
+ 
+ #undef MIN
+ #define MIN(x,y) ((x) < (y)? (x): (y))
+diff --git a/libs.go b/libs.go
+index 6446ace..a116914 100644
+--- a/libs.go
++++ b/libs.go
+@@ -35,40 +35,40 @@ package usb
+ 
+ #if defined(OS_LINUX) || defined(OS_DARWIN) || defined(DOS_FREEBSD) || defined(OS_OPENBSD)
+ 	#include <poll.h>
+-	#include "os/threads_posix.c"
+-	#include "os/poll_posix.c"
++	#include "libusb/libusb/os/threads_posix.c"
++	#include "libusb/libusb/os/poll_posix.c"
+ #elif defined(OS_WINDOWS)
+-	#include "os/poll_windows.c"
+-	#include "os/threads_windows.c"
++	#include "libusb/libusb/os/poll_windows.c"
++	#include "libusb/libusb/os/threads_windows.c"
+ #endif
+ 
+ #ifdef OS_LINUX
+-	#include "os/linux_usbfs.c"
+-	#include "os/linux_netlink.c"
++	#include "libusb/libusb/os/linux_usbfs.c"
++	#include "libusb/libusb/os/linux_netlink.c"
+ 	#include "hidapi/libusb/hid.c"
+ #elif OS_DARWIN
+-	#include "os/darwin_usb.c"
++	#include "libusb/libusb/os/darwin_usb.c"
+ 	#include "hidapi/mac/hid.c"
+ #elif OS_WINDOWS
+-	#include "os/windows_nt_common.c"
+-	#include "os/windows_usbdk.c"
+-	#include "os/windows_winusb.c"
++	#include "libusb/libusb/os/windows_nt_common.c"
++	#include "libusb/libusb/os/windows_usbdk.c"
++	#include "libusb/libusb/os/windows_winusb.c"
+ 	#include "hidapi/windows/hid.c"
+ #elif OS_FREEBSD
+-	#include <libusb.h>
++	#include <libusb/libusb/libusb.h>
+ 	#include "hidapi/libusb/hid.c"
+ #elif DOS_OPENBSD
+-	#include "os/openbsd_usb.c"
++	#include "libusb/libusb/os/openbsd_usb.c"
+ 	#include "hidapi/libusb/hid.c"
+ #endif
+ 
+ #ifndef OS_FREEBSD
+-	#include "core.c"
+-	#include "descriptor.c"
+-	#include "hotplug.c"
+-	#include "io.c"
+-	#include "strerror.c"
+-	#include "sync.c"
++	#include "libusb/libusb/core.c"
++	#include "libusb/libusb/descriptor.c"
++	#include "libusb/libusb/hotplug.c"
++	#include "libusb/libusb/io.c"
++	#include "libusb/libusb/strerror.c"
++	#include "libusb/libusb/sync.c"
+ #endif
+ */
+ import "C"
+diff --git a/libusb/libusb/core.c b/libusb/libusb/core.c
+index 50f92f6..81e7db9 100644
+--- a/libusb/libusb/core.c
++++ b/libusb/libusb/core.c
+@@ -20,7 +20,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include "config.h"
++#include "./config.h"
+ 
+ #include <errno.h>
+ #include <stdarg.h>
+@@ -41,7 +41,7 @@
+ #include <android/log.h>
+ #endif
+ 
+-#include "libusbi.h"
++#include "./libusbi.h"
+ #include "hotplug.h"
+ 
+ struct libusb_context *usbi_default_context = NULL;
+diff --git a/libusb/libusb/descriptor.c b/libusb/libusb/descriptor.c
+index 74d6de5..39b57a5 100644
+--- a/libusb/libusb/descriptor.c
++++ b/libusb/libusb/descriptor.c
+@@ -19,14 +19,14 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <errno.h>
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
+-#include "libusbi.h"
++#include "./libusbi.h"
+ 
+ #define DESC_HEADER_LENGTH		2
+ #define DEVICE_DESC_LENGTH		18
+diff --git a/libusb/libusb/hotplug.c b/libusb/libusb/hotplug.c
+index a4320bc..b9e7855 100644
+--- a/libusb/libusb/hotplug.c
++++ b/libusb/libusb/hotplug.c
+@@ -19,7 +19,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <errno.h>
+ #include <stdio.h>
+@@ -30,7 +30,7 @@
+ #endif
+ #include <assert.h>
+ 
+-#include "libusbi.h"
++#include "./libusbi.h"
+ #include "hotplug.h"
+ 
+ /**
+@@ -95,7 +95,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <time.h>
+-#include <libusb.h>
++#include <libusb/libusb/libusb.h>
+ 
+ static int count = 0;
+ 
+diff --git a/libusb/libusb/hotplug.h b/libusb/libusb/hotplug.h
+index dbadbcb..c867bc9 100644
+--- a/libusb/libusb/hotplug.h
++++ b/libusb/libusb/hotplug.h
+@@ -22,7 +22,7 @@
+ #ifndef USBI_HOTPLUG_H
+ #define USBI_HOTPLUG_H
+ 
+-#include "libusbi.h"
++#include "./libusbi.h"
+ 
+ enum usbi_hotplug_flags {
+ 	/* This callback is interested in device arrivals */
+diff --git a/libusb/libusb/io.c b/libusb/libusb/io.c
+index a03bfaa..47e23db 100644
+--- a/libusb/libusb/io.c
++++ b/libusb/libusb/io.c
+@@ -19,7 +19,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <assert.h>
+ #include <errno.h>
+@@ -34,7 +34,7 @@
+ #include <sys/timerfd.h>
+ #endif
+ 
+-#include "libusbi.h"
++#include "./libusbi.h"
+ #include "hotplug.h"
+ 
+ /**
+diff --git a/libusb/libusb/libusbi.h b/libusb/libusb/libusbi.h
+index 31d6ce9..a524b84 100644
+--- a/libusb/libusb/libusbi.h
++++ b/libusb/libusb/libusbi.h
+@@ -21,7 +21,7 @@
+ #ifndef LIBUSBI_H
+ #define LIBUSBI_H
+ 
+-#include <config.h>
++#include "./config.h"
+ 
+ #include <stdlib.h>
+ 
+diff --git a/libusb/libusb/os/darwin_usb.c b/libusb/libusb/os/darwin_usb.c
+index 35ea1c3..9bc24f3 100644
+--- a/libusb/libusb/os/darwin_usb.c
++++ b/libusb/libusb/os/darwin_usb.c
+@@ -18,7 +18,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include "config.h"
++#include "../config.h"
+ #include <time.h>
+ #include <ctype.h>
+ #include <errno.h>
+diff --git a/libusb/libusb/os/darwin_usb.h b/libusb/libusb/os/darwin_usb.h
+index 474567f..df81a69 100644
+--- a/libusb/libusb/os/darwin_usb.h
++++ b/libusb/libusb/os/darwin_usb.h
+@@ -20,7 +20,7 @@
+ #if !defined(LIBUSB_DARWIN_H)
+ #define LIBUSB_DARWIN_H
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ 
+ #include <IOKit/IOTypes.h>
+ #include <IOKit/IOCFBundle.h>
+diff --git a/libusb/libusb/os/haiku_usb.h b/libusb/libusb/os/haiku_usb.h
+index d51ae9e..b946bfa 100644
+--- a/libusb/libusb/os/haiku_usb.h
++++ b/libusb/libusb/os/haiku_usb.h
+@@ -22,7 +22,7 @@
+ #include <Autolock.h>
+ #include <USBKit.h>
+ #include <map>
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "haiku_usb_raw.h"
+ 
+ using namespace std;
+diff --git a/libusb/libusb/os/linux_netlink.c b/libusb/libusb/os/linux_netlink.c
+index c1ad1ec..1386931 100644
+--- a/libusb/libusb/os/linux_netlink.c
++++ b/libusb/libusb/os/linux_netlink.c
+@@ -21,7 +21,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <assert.h>
+ #include <errno.h>
+@@ -40,7 +40,7 @@
+ #include <sys/socket.h>
+ #include <linux/netlink.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "linux_usbfs.h"
+ 
+ #define NL_GROUP_KERNEL 1
+diff --git a/libusb/libusb/os/linux_udev.c b/libusb/libusb/os/linux_udev.c
+index c97806b..2ba4070 100644
+--- a/libusb/libusb/os/linux_udev.c
++++ b/libusb/libusb/os/linux_udev.c
+@@ -20,7 +20,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <assert.h>
+ #include <ctype.h>
+@@ -39,7 +39,7 @@
+ #include <unistd.h>
+ #include <libudev.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "linux_usbfs.h"
+ 
+ /* udev context */
+diff --git a/libusb/libusb/os/linux_usbfs.c b/libusb/libusb/os/linux_usbfs.c
+index 768e7d5..c66f506 100644
+--- a/libusb/libusb/os/linux_usbfs.c
++++ b/libusb/libusb/os/linux_usbfs.c
+@@ -21,7 +21,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include "config.h"
++#include "../config.h"
+ 
+ #include <assert.h>
+ #include <ctype.h>
+@@ -39,7 +39,7 @@
+ #include <sys/utsname.h>
+ #include <time.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "linux_usbfs.h"
+ 
+ /* sysfs vs usbfs:
+diff --git a/libusb/libusb/os/netbsd_usb.c b/libusb/libusb/os/netbsd_usb.c
+index d9c059a..23b624f 100644
+--- a/libusb/libusb/os/netbsd_usb.c
++++ b/libusb/libusb/os/netbsd_usb.c
+@@ -16,7 +16,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <sys/time.h>
+ #include <sys/types.h>
+@@ -30,7 +30,7 @@
+ 
+ #include <dev/usb/usb.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ 
+ struct device_priv {
+ 	char devnode[16];
+diff --git a/libusb/libusb/os/openbsd_usb.c b/libusb/libusb/os/openbsd_usb.c
+index f174e49..228d2a9 100644
+--- a/libusb/libusb/os/openbsd_usb.c
++++ b/libusb/libusb/os/openbsd_usb.c
+@@ -16,7 +16,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <sys/time.h>
+ #include <sys/types.h>
+@@ -30,7 +30,7 @@
+ 
+ #include <dev/usb/usb.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ 
+ struct device_priv {
+ 	char *devname;				/* name of the ugen(4) node */
+diff --git a/libusb/libusb/os/poll_posix.c b/libusb/libusb/os/poll_posix.c
+index 337714a..ef5558b 100644
+--- a/libusb/libusb/os/poll_posix.c
++++ b/libusb/libusb/os/poll_posix.c
+@@ -18,14 +18,14 @@
+  *
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <errno.h>
+ #include <stdlib.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ 
+ int usbi_pipe(int pipefd[2])
+ {
+diff --git a/libusb/libusb/os/poll_windows.c b/libusb/libusb/os/poll_windows.c
+index 4d28333..a402a1b 100644
+--- a/libusb/libusb/os/poll_windows.c
++++ b/libusb/libusb/os/poll_windows.c
+@@ -34,13 +34,13 @@
+  * with a fake pipe. The read/write functions are only meant to be used in that
+  * context.
+  */
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <assert.h>
+ #include <errno.h>
+ #include <stdlib.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "windows_common.h"
+ 
+ // public fd data
+diff --git a/libusb/libusb/os/sunos_usb.c b/libusb/libusb/os/sunos_usb.c
+index 7150a3e..6b1c087 100644
+--- a/libusb/libusb/os/sunos_usb.c
++++ b/libusb/libusb/os/sunos_usb.c
+@@ -17,7 +17,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <sys/time.h>
+ #include <sys/types.h>
+@@ -40,7 +40,7 @@
+ #include <sys/usb/usba.h>
+ #include <sys/pci.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "sunos_usb.h"
+ 
+ #define UPDATEDRV_PATH	"/usr/sbin/update_drv"
+diff --git a/libusb/libusb/os/sunos_usb.h b/libusb/libusb/os/sunos_usb.h
+index 52bb3d3..5a8a372 100644
+--- a/libusb/libusb/os/sunos_usb.h
++++ b/libusb/libusb/os/sunos_usb.h
+@@ -22,7 +22,7 @@
+ 
+ #include <libdevinfo.h>
+ #include <pthread.h>
+-#include "libusbi.h"
++#include "../libusbi.h"
+ 
+ #define	READ	0
+ #define	WRITE	1
+diff --git a/libusb/libusb/os/threads_posix.c b/libusb/libusb/os/threads_posix.c
+index 16a7578..0942e07 100644
+--- a/libusb/libusb/os/threads_posix.c
++++ b/libusb/libusb/os/threads_posix.c
+@@ -19,7 +19,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <time.h>
+ #if defined(__linux__) || defined(__OpenBSD__)
+@@ -34,8 +34,8 @@
+ # include <windows.h>
+ #endif
+ 
+-#include "threads_posix.h"
+-#include "libusbi.h"
++#include "./threads_posix.h"
++#include "../libusbi.h"
+ 
+ int usbi_cond_timedwait(pthread_cond_t *cond,
+ 	pthread_mutex_t *mutex, const struct timeval *tv)
+diff --git a/libusb/libusb/os/threads_windows.c b/libusb/libusb/os/threads_windows.c
+index 409c490..a3bf1a0 100644
+--- a/libusb/libusb/os/threads_windows.c
++++ b/libusb/libusb/os/threads_windows.c
+@@ -18,11 +18,11 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <errno.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ 
+ struct usbi_cond_perthread {
+ 	struct list_head list;
+diff --git a/libusb/libusb/os/wince_usb.c b/libusb/libusb/os/wince_usb.c
+index a0f35e9..3e47ee9 100644
+--- a/libusb/libusb/os/wince_usb.c
++++ b/libusb/libusb/os/wince_usb.c
+@@ -22,12 +22,12 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <stdint.h>
+ #include <inttypes.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "wince_usb.h"
+ 
+ // Global variables
+diff --git a/libusb/libusb/os/windows_nt_common.c b/libusb/libusb/os/windows_nt_common.c
+index 92dbde5..93c2ede 100644
+--- a/libusb/libusb/os/windows_nt_common.c
++++ b/libusb/libusb/os/windows_nt_common.c
+@@ -22,13 +22,13 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <inttypes.h>
+ #include <process.h>
+ #include <stdio.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "windows_common.h"
+ #include "windows_nt_common.h"
+ 
+diff --git a/libusb/libusb/os/windows_usbdk.c b/libusb/libusb/os/windows_usbdk.c
+index fbccbd5..ddf8e96 100644
+--- a/libusb/libusb/os/windows_usbdk.c
++++ b/libusb/libusb/os/windows_usbdk.c
+@@ -21,12 +21,12 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <windows.h>
+ #include <stdio.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "windows_common.h"
+ #include "windows_nt_common.h"
+ #include "windows_usbdk.h"
+diff --git a/libusb/libusb/os/windows_winusb.c b/libusb/libusb/os/windows_winusb.c
+index ce1b55c..0e35271 100644
+--- a/libusb/libusb/os/windows_winusb.c
++++ b/libusb/libusb/os/windows_winusb.c
+@@ -23,7 +23,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <windows.h>
+ #include <setupapi.h>
+@@ -36,7 +36,7 @@
+ #include <objbase.h>
+ #include <winioctl.h>
+ 
+-#include "libusbi.h"
++#include "../libusbi.h"
+ #include "windows_common.h"
+ #include "windows_nt_common.h"
+ #include "windows_winusb.h"
+diff --git a/libusb/libusb/strerror.c b/libusb/libusb/strerror.c
+index d2be0e2..540a4f2 100644
+--- a/libusb/libusb/strerror.c
++++ b/libusb/libusb/strerror.c
+@@ -17,7 +17,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <locale.h>
+ #include <stdlib.h>
+@@ -26,7 +26,7 @@
+ #include <strings.h>
+ #endif
+ 
+-#include "libusbi.h"
++#include "./libusbi.h"
+ 
+ #if defined(_MSC_VER)
+ #define strncasecmp _strnicmp
+diff --git a/libusb/libusb/sync.c b/libusb/libusb/sync.c
+index a609f65..fb4e5d5 100644
+--- a/libusb/libusb/sync.c
++++ b/libusb/libusb/sync.c
+@@ -17,14 +17,14 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
+-#include <config.h>
++#include <libusb/libusb/config.h>
+ 
+ #include <errno.h>
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+ 
+-#include "libusbi.h"
++#include "./libusbi.h"
+ 
+ /**
+  * @defgroup libusb_syncio Synchronous device I/O

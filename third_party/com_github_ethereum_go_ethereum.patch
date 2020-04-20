@@ -1,0 +1,41 @@
+diff --git a/crypto/secp256k1/libsecp256k1/src/modules/recovery/main_impl.h b/crypto/secp256k1/libsecp256k1/src/modules/recovery/main_impl.h
+index c6fbe2398..cffd3e772 100755
+--- a/crypto/secp256k1/libsecp256k1/src/modules/recovery/main_impl.h
++++ b/crypto/secp256k1/libsecp256k1/src/modules/recovery/main_impl.h
+@@ -7,7 +7,7 @@
+ #ifndef _SECP256K1_MODULE_RECOVERY_MAIN_
+ #define _SECP256K1_MODULE_RECOVERY_MAIN_
+ 
+-#include "include/secp256k1_recovery.h"
++#include "../../../include/secp256k1_recovery.h"
+ 
+ static void secp256k1_ecdsa_recoverable_signature_load(const secp256k1_context* ctx, secp256k1_scalar* r, secp256k1_scalar* s, int* recid, const secp256k1_ecdsa_recoverable_signature* sig) {
+     (void)ctx;
+diff --git a/crypto/secp256k1/libsecp256k1/src/secp256k1.c b/crypto/secp256k1/libsecp256k1/src/secp256k1.c
+index 7d637bfad..f3983d67a 100755
+--- a/crypto/secp256k1/libsecp256k1/src/secp256k1.c
++++ b/crypto/secp256k1/libsecp256k1/src/secp256k1.c
+@@ -4,7 +4,7 @@
+  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
+  **********************************************************************/
+ 
+-#include "include/secp256k1.h"
++#include "../include/secp256k1.h"
+ 
+ #include "util.h"
+ #include "num_impl.h"
+diff --git a/crypto/secp256k1/secp256.go b/crypto/secp256k1/secp256.go
+index 35d0eef34..a59dd10ca 100644
+--- a/crypto/secp256k1/secp256.go
++++ b/crypto/secp256k1/secp256.go
+@@ -6,8 +6,8 @@
+ package secp256k1
+ 
+ /*
+-#cgo CFLAGS: -I./libsecp256k1
+-#cgo CFLAGS: -I./libsecp256k1/src/
++#cgo CFLAGS: -Icrypto/secp256k1/libsecp256k1
++#cgo CFLAGS: -Icrypto/secp256k1/libsecp256k1/src/
+ #define USE_NUM_NONE
+ #define USE_FIELD_10X26
+ #define USE_FIELD_INV_BUILTIN
