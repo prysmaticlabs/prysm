@@ -238,23 +238,24 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
 		}
 		switch status.Status.Status {
-		case ethpb.ValidatorStatus_UNKNOWN_STATUS, ethpb.ValidatorStatus_DEPOSITED:
-			if status.Status.DepositInclusionSlot == 0 {
-				log.Info("Waiting for deposit to be seen")
+		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
+			if status.Status.DepositInclusionSlot != 0 {
+				log.WithFields(logrus.Fields{
+					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
+					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
+				}).Info("Waiting for deposit to be processed by the beacon chain")
 			} else {
-				log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
-					"Deposit for validator received but not processed into state")
+				log.Info("Waiting for a deposit to be put into an eth1 block")
 			}
+		case ethpb.ValidatorStatus_DEPOSITED:
+			log.WithField(
+				"positionInActivationQueue", status.Status.PositionInActivationQueue,
+			).Info("Deposit processed, entering activation queue after finalization")
 		case ethpb.ValidatorStatus_PENDING:
-			if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
-				log.WithFields(logrus.Fields{
-					"positionInActivationQueue": status.Status.PositionInActivationQueue,
-				}).Info("Waiting to be activated")
-			} else {
-				log.WithFields(logrus.Fields{
-					"activationEpoch": status.Status.ActivationEpoch,
-				}).Info("Waiting to be activated")
-			}
+			log.WithFields(logrus.Fields{
+				"positionInActivationQueue": status.Status.PositionInActivationQueue,
+				"activationEpoch":           status.Status.ActivationEpoch,
+			}).Info("Waiting to be activated")
 		case ethpb.ValidatorStatus_ACTIVE:
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		case ethpb.ValidatorStatus_EXITED:
