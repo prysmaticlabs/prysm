@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -11,6 +12,7 @@ import (
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -54,6 +56,10 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	cacheState, err := lru.New(int(params.BeaconConfig().SlotsPerEpoch) * 2)
+	if err != nil {
+		return err
+	}
 	for i := lastArchivedIndex; i <= lastSavedBlockArchivedIndex; i++ {
 		targetSlot := startSlot + slotsPerArchivedPoint
 		filter := filters.NewFilter().SetStartSlot(startSlot + 1).SetEndSlot(targetSlot)
@@ -63,17 +69,36 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		}
 
 		// Replay blocks and replay slots if necessary.
-		fmt.Println(currentState.Slot())
 		if len(blocks) > 0 {
 			for i := 0; i < len(blocks); i++ {
 				if blocks[i].Block.Slot == 0 {
 					continue
 				}
-				preState := currentState.Copy()
-				currentState, err = regenHistoricalStateTransition(ctx, currentState, blocks[i])
-				if err != nil {
-					currentState = preState
+
+				var preState *stateTrie.BeaconState
+				item, ok := cacheState.Get(bytesutil.ToBytes32(blocks[i].Block.ParentRoot))
+				if !ok {
+					preState, err = kv.State(ctx, bytesutil.ToBytes32(blocks[i].Block.ParentRoot))
+					if err != nil {
+						return err
+					}
+				} else {
+					preState = item.(*stateTrie.BeaconState).Copy()
 				}
+				if preState == nil {
+					return errors.New("pre state can't be nil")
+				}
+
+				currentState, err = regenHistoricalStateTransition(ctx, preState.Copy(), blocks[i])
+				if err != nil {
+					return errors.Wrap(err, "could not regenerate historical state transition")
+				}
+
+				r, err := ssz.HashTreeRoot(blocks[i].Block)
+				if err != nil {
+					return err
+				}
+				cacheState.Add(r, currentState)
 			}
 		}
 		if targetSlot > currentState.Slot() {
@@ -96,6 +121,10 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		}
 		startSlot += slotsPerArchivedPoint
 	}
+
+	// Flush the cache, the cached states never be used again.
+	cacheState.Purge()
+
 	return nil
 }
 
