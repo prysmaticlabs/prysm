@@ -82,7 +82,9 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 			// could cause issue switching back.
 			if s.beaconDB.HasState(ctx, r) && r != finalizedRoot {
 				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
-					return err
+					// For whatever reason if node is unable to delete a state due to
+					// state is finalized, it is more reasonable to continue than to exit.
+					continue
 				}
 				log.WithFields(logrus.Fields{
 					"slot": stateSummary.Slot,
