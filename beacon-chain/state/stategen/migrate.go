@@ -84,6 +84,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
 					// For whatever reason if node is unable to delete a state due to
 					// state is finalized, it is more reasonable to continue than to exit.
+					log.Warnf("Unable to delete state during migration: %v", err)
 					continue
 				}
 				log.WithFields(logrus.Fields{
