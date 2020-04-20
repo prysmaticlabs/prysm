@@ -62,36 +62,6 @@ type blockchainService interface {
 	blockchain.GenesisFetcher
 }
 
-// NewRegularSync service.
-func NewRegularSync(cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(context.Background())
-	r := &Service{
-		ctx:                  ctx,
-		cancel:               cancel,
-		db:                   cfg.DB,
-		p2p:                  cfg.P2P,
-		attPool:              cfg.AttPool,
-		exitPool:             cfg.ExitPool,
-		slashingPool:         cfg.SlashingPool,
-		chain:                cfg.Chain,
-		initialSync:          cfg.InitialSync,
-		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
-		seenPendingBlocks:    make(map[[32]byte]bool),
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		stateNotifier:        cfg.StateNotifier,
-		blockNotifier:        cfg.BlockNotifier,
-		stateSummaryCache:    cfg.StateSummaryCache,
-		stateGen:             cfg.StateGen,
-		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
-	}
-
-	r.registerRPCHandlers()
-	go r.registerSubscribers()
-
-	return r
-}
-
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
@@ -127,6 +97,36 @@ type Service struct {
 	seenAttesterSlashingCache *lru.Cache
 	stateSummaryCache         *cache.StateSummaryCache
 	stateGen                  *stategen.State
+}
+
+// NewRegularSync service.
+func NewRegularSync(cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &Service{
+		ctx:                  ctx,
+		cancel:               cancel,
+		db:                   cfg.DB,
+		p2p:                  cfg.P2P,
+		attPool:              cfg.AttPool,
+		exitPool:             cfg.ExitPool,
+		slashingPool:         cfg.SlashingPool,
+		chain:                cfg.Chain,
+		initialSync:          cfg.InitialSync,
+		attestationNotifier:  cfg.AttestationNotifier,
+		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:    make(map[[32]byte]bool),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		stateNotifier:        cfg.StateNotifier,
+		blockNotifier:        cfg.BlockNotifier,
+		stateSummaryCache:    cfg.StateSummaryCache,
+		stateGen:             cfg.StateGen,
+		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
+	}
+
+	r.registerRPCHandlers()
+	go r.registerSubscribers()
+
+	return r
 }
 
 // Start the regular sync service.
