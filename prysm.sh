@@ -86,7 +86,7 @@ esac
 if [ "$system" == "windows" ]; then
 	arch="amd64.exe"
 elif [[ "$os_arch_suffix" == *"arm64"* ]]; then
-  arch=$os_arch_suffix
+  arch="arm64"
 fi
 
 mkdir -p $wrapper_dir
@@ -98,7 +98,7 @@ function get_prysm_version() {
   else
     # Find the latest Prysm version available for download.
     readonly reason="automatically selected latest available version"
-    prysm_version=$(curl -s https://api.github.com/repos/prysmaticlabs/prysm/releases/latest | grep "tag_name" | cut -d : -f 2,3 | tr -d \" | tr -d , | tr -d [:space:])
+    prysm_version=$(curl -s https://prysmaticlabs.com/releases/latest)
     readonly prysm_version
   fi
 }
@@ -112,7 +112,10 @@ VALIDATOR_REAL="${wrapper_dir}/validator-${prysm_version}-${system}-${arch}"
 
 if [[ ! -x $BEACON_CHAIN_REAL ]]; then 
     color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
-    curl -L "https://github.com/prysmaticlabs/prysm/releases/download/${prysm_version}/beacon-chain-${prysm_version}-${system}-${arch}" -o $BEACON_CHAIN_REAL
+    file=beacon-chain-${prysm_version}-${system}-${arch}
+    curl -L "https://prysmaticlabs.com/releases/${file}" -o $BEACON_CHAIN_REAL
+    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
+    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
     chmod +x $BEACON_CHAIN_REAL
 else
     color "37" "Beacon chain is up to date."
@@ -121,7 +124,10 @@ fi
 if [[ ! -x $VALIDATOR_REAL ]]; then 
     color "34" "Downloading validator@${prysm_version} to ${VALIDATOR_REAL} (${reason})"
 
-    curl -L "https://github.com/prysmaticlabs/prysm/releases/download/${prysm_version}/validator-${prysm_version}-${system}-${arch}" -o $VALIDATOR_REAL
+    file=validator-${prysm_version}-${system}-${arch}
+    curl -L "https://prysmaticlabs.com/releases/${file}" -o $VALIDATOR_REAL
+    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
+    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
     chmod +x $VALIDATOR_REAL
 else
     color "37" "Validator is up to date."
