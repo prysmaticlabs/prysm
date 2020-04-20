@@ -130,7 +130,7 @@ func (s *SlasherNode) Close() {
 
 func (s *SlasherNode) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", ctx.Int64(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())

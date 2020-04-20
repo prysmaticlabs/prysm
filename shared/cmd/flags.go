@@ -46,12 +46,6 @@ var (
 		Name:  "disable-monitoring",
 		Usage: "Disable monitoring service.",
 	}
-	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
-	MonitoringPortFlag = &cli.Int64Flag{
-		Name:  "monitoring-port",
-		Usage: "Port used to listening and respond metrics for prometheus.",
-		Value: 8080,
-	}
 	// NoDiscovery specifies whether we are running a local network and have no need for connecting
 	// to the bootstrap nodes in the cloud
 	NoDiscovery = &cli.BoolFlag{
@@ -136,6 +130,12 @@ var (
 		Name:  "p2p-encoding",
 		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
 		Value: "ssz-snappy",
+	}
+	// P2PPubsub defines the pubsub router to use for p2p messages.
+	P2PPubsub = &cli.StringFlag{
+		Name:  "p2p-pubsub",
+		Usage: "The name of the pubsub router to use. Supported values are: gossip, flood, random",
+		Value: "gossip",
 	}
 	// ForceClearDB removes any previously stored data at the data directory.
 	ForceClearDB = &cli.BoolFlag{

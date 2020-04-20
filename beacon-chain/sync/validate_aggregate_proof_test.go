@@ -549,11 +549,13 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
+			ValidatorsRoot:   [32]byte{'A'},
 			State:            beaconState,
 			ValidAttestation: true,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
+
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),

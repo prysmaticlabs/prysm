@@ -266,3 +266,21 @@ func CopySignedVoluntaryExit(exit *ethpb.SignedVoluntaryExit) *ethpb.SignedVolun
 		Signature: bytesutil.SafeCopyBytes(exit.Signature),
 	}
 }
+
+// CopyValidator copies the provided validator.
+func CopyValidator(val *ethpb.Validator) *ethpb.Validator {
+	pubKey := make([]byte, len(val.PublicKey))
+	copy(pubKey, val.PublicKey)
+	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
+	copy(withdrawalCreds, val.WithdrawalCredentials)
+	return &ethpb.Validator{
+		PublicKey:                  pubKey[:],
+		WithdrawalCredentials:      withdrawalCreds,
+		EffectiveBalance:           val.EffectiveBalance,
+		Slashed:                    val.Slashed,
+		ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
+		ActivationEpoch:            val.ActivationEpoch,
+		ExitEpoch:                  val.ExitEpoch,
+		WithdrawableEpoch:          val.WithdrawableEpoch,
+	}
+}
