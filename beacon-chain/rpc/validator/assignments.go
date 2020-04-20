@@ -58,14 +58,14 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 
 		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if ok {
+			assignment.ValidatorIndex = idx
+			assignment.Status = vs.assignmentStatus(idx, s)
+			assignment.ProposerSlots = proposerIndexToSlots[idx]
+
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
-				assignment.Status = vs.assignmentStatus(idx, s)
-				assignment.ValidatorIndex = idx
-				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
-				assignment.ProposerSlots = proposerIndexToSlots[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
 				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
@@ -74,8 +74,8 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			if ok {
 				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
 			}
-
 		} else {
+			// If the validator isn't in the beacon state, assume their status is unknown.
 			assignment.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
