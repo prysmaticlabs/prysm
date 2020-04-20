@@ -28,7 +28,6 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	DevMode                                    bool // DevMode enables all development mode features.
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
