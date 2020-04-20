@@ -370,8 +370,8 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 
 	// Update initial state.
 	atts := []*p2ppb.PendingAttestation{
-		{AggregationBits: bitfield.NewBitlist(1),},
-		{AggregationBits: bitfield.NewBitlist(2),},
+		{AggregationBits: bitfield.NewBitlist(1)},
+		{AggregationBits: bitfield.NewBitlist(2)},
 	}
 	if err := a.SetPreviousEpochAttestations(atts[:1]); err != nil {
 		t.Fatal(err)
