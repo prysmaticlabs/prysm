@@ -76,11 +76,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			}
 
 		} else {
-			vStatus, _, err := vs.retrieveStatusFromState(ctx, pubKey, s)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve status from state: %v", err)
-			}
-			assignment.Status = vStatus
+			assignment.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
