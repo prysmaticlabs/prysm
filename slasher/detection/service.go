@@ -137,10 +137,10 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			}
 			ds.submitAttesterSlashings(ctx, slashings)
 		}
-	}
-
-	if err := ds.slasherDB.SaveChainHead(ctx, currentChainHead); err != nil {
-		log.WithError(err).Error("Could not persist chain head to disk")
+		latestStoredHead = &ethpb.ChainHead{HeadEpoch: epoch}
+		if err := ds.slasherDB.SaveChainHead(ctx, latestStoredHead); err != nil {
+			log.WithError(err).Error("Could not persist chain head to disk")
+		}
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", currentChainHead.HeadEpoch)
 }
