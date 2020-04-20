@@ -5,6 +5,10 @@ import (
 )
 
 var (
+	devModeFlag = &cli.BoolFlag{
+		Name:  "dev",
+		Usage: "Enable development mode features.",
+	}
 	broadcastSlashingFlag = &cli.BoolFlag{
 		Name:  "broadcast-slashing",
 		Usage: "Broadcast slashings from slashing pool.",
@@ -143,6 +147,13 @@ var (
 		Usage: "Enables the usage of a new copying method for our state fields.",
 	}
 )
+
+// devModeFlags holds list of flags that are set when development mode is on.
+var devModeFlags = []cli.Flag{
+	enableByteMempool,
+	enableStateRefCopy,
+	enableFieldTrie,
+}
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
@@ -343,6 +354,7 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+	devModeFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,

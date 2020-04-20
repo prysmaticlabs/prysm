@@ -28,6 +28,7 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	DevMode                                    bool // DevMode enables all development mode features.
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -91,6 +92,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
+	if ctx.Bool(devModeFlag.Name) {
+		enableDevModeFlags(ctx)
+	}
 	delay := params.BeaconConfig().MinGenesisDelay
 	if ctx.IsSet(customGenesisDelayFlag.Name) {
 		delay = ctx.Uint64(customGenesisDelayFlag.Name)
@@ -224,6 +228,18 @@ func ConfigureValidator(ctx *cli.Context) {
 		cfg.EnableDomainDataCache = true
 	}
 	Init(cfg)
+}
+
+// enableDevModeFlags switches development mode features on.
+func enableDevModeFlags(ctx *cli.Context) {
+	log.Warn("Enabling development mode flags")
+	for _, f := range devModeFlags {
+		if !ctx.IsSet(f.Names()[0]) {
+			if err := ctx.Set(f.Names()[0], "true"); err != nil {
+				log.WithError(err).Debug("Error enabling development mode flag")
+			}
+		}
+	}
 }
 
 func complainOnDeprecatedFlags(ctx *cli.Context) {
