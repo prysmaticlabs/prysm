@@ -167,6 +167,116 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	}
 }
 
+func TestWaitForSynced_SetsGenesisTime(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	genesis := uint64(time.Unix(1, 0).Unix())
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.SyncedResponse{
+			Synced:      true,
+			GenesisTime: genesis,
+		},
+		nil,
+	)
+	if err := v.WaitForSynced(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if v.genesisTime != genesis {
+		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
+	}
+	if v.ticker == nil {
+		t.Error("Expected ticker to be set, received nil")
+	}
+}
+
+func TestWaitForSynced_ContextCanceled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	genesis := uint64(time.Unix(0, 0).Unix())
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.SyncedResponse{
+			Synced:      true,
+			GenesisTime: genesis,
+		},
+		nil,
+	)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := v.WaitForSynced(ctx)
+	want := cancelledCtx
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestWaitForSynced_StreamSetupFails(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, errors.New("failed stream"))
+	err := v.WaitForSynced(context.Background())
+	want := "could not setup beacon chain Synced streaming client"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestWaitForSynced_ReceiveErrorFromStream(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		nil,
+		errors.New("fails"),
+	)
+	err := v.WaitForSynced(context.Background())
+	want := "could not receive Synced from stream"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
 func TestWaitActivation_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
