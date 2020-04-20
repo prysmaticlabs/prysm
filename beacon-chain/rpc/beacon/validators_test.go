@@ -36,6 +36,27 @@ func init() {
 	})
 }
 
+func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
+	ctx := context.Background()
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(0); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.GetValidatorActiveSetChanges(
+		ctx,
+		&ethpb.GetValidatorActiveSetChangesRequest{
+			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
+				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
 func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1120,27 +1141,6 @@ func TestServer_GetValidator(t *testing.T) {
 		if !reflect.DeepEqual(test.res, res) {
 			t.Errorf("Wanted %v, got %v", test.res, res)
 		}
-	}
-}
-
-func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
-	ctx := context.Background()
-	st := testutil.NewBeaconState()
-	if err := st.SetSlot(0); err != nil {
-		t.Fatal(err)
-	}
-	bs := &Server{GenesisTimeFetcher: &mock.ChainService{}}
-
-	wanted := "Cannot retrieve information about an epoch in the future"
-	if _, err := bs.GetValidatorActiveSetChanges(
-		ctx,
-		&ethpb.GetValidatorActiveSetChangesRequest{
-			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
-				Epoch: helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
-			},
-		},
-	); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 
