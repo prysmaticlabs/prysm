@@ -270,7 +270,7 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	}
 }
 
-func TestStore_EpochSpanByValidatorsIndices(t *testing.T) {
+func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
