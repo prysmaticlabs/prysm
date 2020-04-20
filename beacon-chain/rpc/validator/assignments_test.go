@@ -3,15 +3,19 @@ package validator
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,6 +27,43 @@ func pubKey(i uint64) []byte {
 	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.LittleEndian.PutUint64(pubKey, uint64(i))
 	return pubKey
+}
+func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
+			0: uint64(height),
+		},
+	}
+
+	vs := &Server{
+		BeaconDB:        db,
+		HeadFetcher:     &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
+		Eth1InfoFetcher: p,
+		DepositFetcher:  depositcache.NewDepositCache(),
+	}
+
+	pubKey := pubKey(99999)
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{pubKey},
+		Epoch:      0,
+	}
+	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
+	if _, err := vs.GetDuties(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
 }
 
 func TestGetDuties_OK(t *testing.T) {
