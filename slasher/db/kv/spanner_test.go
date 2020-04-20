@@ -283,11 +283,34 @@ func TestStore_EpochSpanByValidatorsIndices(t *testing.T) {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
 	}
-	res, err := db.EpochSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
+	res, err := db.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(res) != len(spanTests) {
-		t.Errorf("Wanted map of %v elemets, received map of %v elements", len(spanTests), len(res))
+		t.Errorf("Wanted map of %d elemets, received map of %d elements", len(spanTests), len(res))
 	}
+	for _, tt := range spanTests {
+		if !reflect.DeepEqual(res[tt.epoch], tt.spanMap) {
+			t.Errorf("Wanted span map to be equal to: %v , received span map: %v ", spanTests[0].spanMap, res[1])
+		}
+	}
+	teardownDB(t, db)
+	db = setupDB(t, cli.NewContext(&app, set, nil))
+	if err := db.SaveEpochsSpanByValidatorsIndices(ctx, res); err != nil {
+		t.Fatal(err)
+	}
+	res, err = db.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res) != len(spanTests) {
+		t.Errorf("Wanted map of %d elemets, received map of %d elements", len(spanTests), len(res))
+	}
+	for _, tt := range spanTests {
+		if !reflect.DeepEqual(res[tt.epoch], tt.spanMap) {
+			t.Errorf("Wanted span map to be equal to: %v , received span map: %v ", spanTests[0].spanMap, res[1])
+		}
+	}
+
 }

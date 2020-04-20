@@ -181,13 +181,11 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 	return spans, err
 }
 
-// EpochSpanByValidatorsIndices accepts validator indices and epoch and
+// EpochsSpanByValidatorsIndices accepts validator indices and epoch and
 // returns all their previous corresponding spans for slashing detection epoch=> validator index => spammap.
-// it reads the epoch spans from cache and gets the requested value from there if it exists
-// when caching is enabled.
-// Returns empty.
-func (db *Store) EpochSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpanByValidatorsIndices")
+// Returns empty map if no values exists and error on db error.
+func (db *Store) EpochsSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]types.Span, error) {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochsSpanByValidatorsIndices")
 	defer span.End()
 
 	var err error
@@ -195,9 +193,9 @@ func (db *Store) EpochSpanByValidatorsIndices(ctx context.Context, validatorIndi
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epoch := maxEpoch
+		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
 
 		for epochBucket != nil {
-			epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
 			valSpans := make(map[uint64]types.Span, len(validatorIndices))
 			for _, v := range validatorIndices {
 				enc := epochBucket.Get(bytesutil.Bytes8(v))
@@ -211,12 +209,38 @@ func (db *Store) EpochSpanByValidatorsIndices(ctx context.Context, validatorIndi
 			if epoch == 0 {
 				break
 			}
-			epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
-
+			epoch--
+			epochBucket = b.Bucket(bytesutil.Bytes8(epoch))
 		}
 		return nil
 	})
 	return epochsSpanMap, err
+}
+
+// SaveEpochsSpanByValidatorsIndices accepts epochs span maps by validator indices and
+// writes them to db.
+// Returns error on db write error.
+func (db *Store) SaveEpochsSpanByValidatorsIndices(ctx context.Context, epochsSpans map[uint64]map[uint64]types.Span) error {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochsSpanByValidatorsIndices")
+	defer span.End()
+
+	err := db.update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(validatorsMinMaxSpanBucket)
+		for epoch, indicesSpanMaps := range epochsSpans {
+			epochBucket, err := b.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
+			if err != nil {
+				return err
+			}
+			for idx, v := range indicesSpanMaps {
+				enc := marshalSpan(v)
+				if err := epochBucket.Put(bytesutil.Bytes8(idx), enc); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	return err
 }
 
 // SaveValidatorEpochSpan accepts validator index epoch and spans returns.
