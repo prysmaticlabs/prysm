@@ -63,6 +63,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		}
 
 		// Replay blocks and replay slots if necessary.
+		fmt.Println(currentState.Slot())
 		if len(blocks) > 0 {
 			for i := 0; i < len(blocks); i++ {
 				if blocks[i].Block.Slot == 0 {
@@ -70,14 +71,14 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 				}
 				currentState, err = regenHistoricalStateTransition(ctx, currentState, blocks[i])
 				if err != nil {
-					return err
+					return errors.Wrap(err, "could not regenerate historical state transition")
 				}
 			}
 		}
 		if targetSlot > currentState.Slot() {
 			currentState, err = regenHistoricalStateProcessSlots(ctx, currentState, targetSlot)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "could not regenerate historical process slot")
 			}
 		}
 
