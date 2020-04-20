@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -29,6 +30,18 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	run(cancelledContext(), v)
 	if !v.WaitForChainStartCalled {
 		t.Error("Expected WaitForChainStart() to be called")
+	}
+}
+
+func TestCancelledContext_WaitsForSynced(t *testing.T) {
+	cfg := &featureconfig.Flags{
+		WaitForSynced: true,
+	}
+	featureconfig.Init(cfg)
+	v := &fakeValidator{}
+	run(cancelledContext(), v)
+	if !v.WaitForSyncedCalled {
+		t.Error("Expected WaitForSynced() to be called")
 	}
 }
 
