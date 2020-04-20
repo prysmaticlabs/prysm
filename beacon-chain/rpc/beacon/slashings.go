@@ -6,7 +6,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -29,7 +28,6 @@ func (bs *Server) SubmitProposerSlashing(
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
 			return nil, err
 		}
-		log.Infof("Proposer Slashing has been broadcast to p2p network ")
 	}
 	return &ethpb.SubmitSlashingResponse{
 		SlashedIndices: []uint64{req.Header_1.Header.ProposerIndex},
@@ -54,7 +52,6 @@ func (bs *Server) SubmitAttesterSlashing(
 		if err := bs.Broadcaster.Broadcast(ctx, req); err != nil {
 			return nil, err
 		}
-		log.Infof("Attester Slashing has been broadcast to p2p network ")
 	}
 	slashedIndices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
 	return &ethpb.SubmitSlashingResponse{
