@@ -1784,6 +1784,6 @@ go_repository(
     version = "v0.0.0-20191104083709-911d15fe12a9",
     patch_args = ["-p1"],
     patches = [
-      "//third_party:com_github_karalabe_usb.patch",
+        "//third_party:com_github_karalabe_usb.patch",
     ],
 )
