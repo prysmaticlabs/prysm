@@ -1584,12 +1584,12 @@ go_repository(
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_types_v2",
-    importpath = "github.com/wealdtech/go-eth2-types/v2",
-    sum = "h1:qfmgaCBkH2N11LHCXsRWYz7OOxc+1QXrKHlS9yDnFsw=",
-    version = "v2.3.0",
     build_directives = [
         "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
     ],
+    importpath = "github.com/wealdtech/go-eth2-types/v2",
+    sum = "h1:qfmgaCBkH2N11LHCXsRWYz7OOxc+1QXrKHlS9yDnFsw=",
+    version = "v2.3.0",
 )
 
 go_repository(
