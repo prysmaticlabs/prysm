@@ -290,8 +290,7 @@ http_archive(
 go_repository(
     name = "com_github_ethereum_go_ethereum",
     importpath = "github.com/ethereum/go-ethereum",
-    sum = "h1:rOPqjSngvs1VSYH2H+PMPiWt4VEulvNRbFgqiGqJM3E=",
-    version = "v1.9.13",
+    commit = "7a63faf734d7150e764c0c08de7f83ceaf64e272",
     patch_args = ["-p1"],
     patches = [
         "//third_party:com_github_ethereum_go_ethereum.patch",
