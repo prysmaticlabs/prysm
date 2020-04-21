@@ -34,13 +34,13 @@ func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].Data.Slot < s[j].Data.Slot
 }
 
-func mapAttestationsByBlockRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
+func mapAttestationsByTargetRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
 	attsMap := make(map[[32]byte][]*ethpb.Attestation)
 	if len(atts) == 0 {
 		return attsMap
 	}
 	for _, att := range atts {
-		attsMap[bytesutil.ToBytes32(att.Data.BeaconBlockRoot)] = append(attsMap[bytesutil.ToBytes32(att.Data.BeaconBlockRoot)], att)
+		attsMap[bytesutil.ToBytes32(att.Data.Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.Data.Target.Root)], att)
 	}
 	return attsMap
 }
@@ -151,16 +151,16 @@ func (bs *Server) ListIndexedAttestations(
 	}
 	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
-	mappedAttestations := mapAttestationsByBlockRoot(ctx, attsArray)
-	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
+	mappedAttestations := mapAttestationsByTargetRoot(ctx, attsArray)
+	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations)
 	attIndex := 0
-	for blockRoot, atts := range mappedAttestations {
-		attState, err := bs.StateGen.StateByRoot(ctx, blockRoot)
+	for targetRoot, atts := range mappedAttestations {
+		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
 				"Could not retrieve state for attestation data block root %v: %v",
-				blockRoot,
+				targetRoot,
 				err,
 			)
 		}
