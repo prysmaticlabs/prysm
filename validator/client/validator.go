@@ -146,6 +146,40 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
+// WaitForSynced opens a stream with the beacon chain node so it can be informed of when the beacon node is
+// fully synced and ready to communicate with the validator.
+func (v *validator) WaitForSynced(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForSynced")
+	defer span.End()
+	// First, check if the beacon chain has started.
+	stream, err := v.validatorClient.WaitForSynced(ctx, &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "could not setup beacon chain Synced streaming client")
+	}
+	for {
+		log.Info("Waiting for chainstart to occur and the beacon node to be fully synced")
+		syncedRes, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+		}
+		if err != nil {
+			return errors.Wrap(err, "could not receive Synced from stream")
+		}
+		v.genesisTime = syncedRes.GenesisTime
+		break
+	}
+	// Once the Synced log is received, we update the genesis time of the validator client
+	// and begin a slot ticker used to track the current slot the beacon node is in.
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Chain has started and the beacon node is synced")
+	return nil
+}
+
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
@@ -204,23 +238,24 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
 		}
 		switch status.Status.Status {
-		case ethpb.ValidatorStatus_UNKNOWN_STATUS, ethpb.ValidatorStatus_DEPOSITED:
-			if status.Status.DepositInclusionSlot == 0 {
-				log.Info("Waiting for deposit to be seen")
+		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
+			if status.Status.DepositInclusionSlot != 0 {
+				log.WithFields(logrus.Fields{
+					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
+					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
+				}).Info("Waiting for deposit to be processed by the beacon chain")
 			} else {
-				log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
-					"Deposit for validator received but not processed into state")
+				log.Info("Waiting for a deposit to be put into an eth1 block")
 			}
+		case ethpb.ValidatorStatus_DEPOSITED:
+			log.WithField(
+				"positionInActivationQueue", status.Status.PositionInActivationQueue,
+			).Info("Deposit processed, entering activation queue after finalization")
 		case ethpb.ValidatorStatus_PENDING:
-			if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
-				log.WithFields(logrus.Fields{
-					"positionInActivationQueue": status.Status.PositionInActivationQueue,
-				}).Info("Waiting to be activated")
-			} else {
-				log.WithFields(logrus.Fields{
-					"activationEpoch": status.Status.ActivationEpoch,
-				}).Info("Waiting to be activated")
-			}
+			log.WithFields(logrus.Fields{
+				"positionInActivationQueue": status.Status.PositionInActivationQueue,
+				"activationEpoch":           status.Status.ActivationEpoch,
+			}).Info("Waiting to be activated")
 		case ethpb.ValidatorStatus_ACTIVE:
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		case ethpb.ValidatorStatus_EXITED:

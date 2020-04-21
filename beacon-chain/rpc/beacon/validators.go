@@ -361,6 +361,94 @@ func (bs *Server) GetValidator(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
+
+	if featureconfig.Get().DisableNewStateMgmt {
+		return bs.getValidatorActiveSetChangesUsingOldArchival(ctx, req)
+	}
+
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+
+	var requestedEpoch uint64
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
+		requestedEpoch = 0
+	case *ethpb.GetValidatorActiveSetChangesRequest_Epoch:
+		requestedEpoch = q.Epoch
+	default:
+		requestedEpoch = currentEpoch
+	}
+	if requestedEpoch > currentEpoch {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
+	}
+
+	activatedIndices := make([]uint64, 0)
+	exitedIndices := make([]uint64, 0)
+	slashedIndices := make([]uint64, 0)
+	ejectedIndices := make([]uint64, 0)
+
+	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	}
+
+	activeValidatorCount, err := helpers.ActiveValidatorCount(requestedState, helpers.CurrentEpoch(requestedState))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
+	}
+	vs := requestedState.Validators()
+	activatedIndices = validators.ActivatedValidatorIndices(helpers.CurrentEpoch(requestedState), vs)
+	exitedIndices, err = validators.ExitedValidatorIndices(helpers.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
+	}
+	slashedIndices = validators.SlashedValidatorIndices(helpers.CurrentEpoch(requestedState), vs)
+	ejectedIndices, err = validators.EjectedValidatorIndices(helpers.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine ejected validator indices: %v", err)
+	}
+
+	// Retrieve public keys for the indices.
+	activatedKeys := make([][]byte, len(activatedIndices))
+	exitedKeys := make([][]byte, len(exitedIndices))
+	slashedKeys := make([][]byte, len(slashedIndices))
+	ejectedKeys := make([][]byte, len(ejectedIndices))
+	for i, idx := range activatedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		activatedKeys[i] = pubkey[:]
+	}
+	for i, idx := range exitedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		exitedKeys[i] = pubkey[:]
+	}
+	for i, idx := range slashedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		slashedKeys[i] = pubkey[:]
+	}
+	for i, idx := range ejectedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		ejectedKeys[i] = pubkey[:]
+	}
+	return &ethpb.ActiveSetChanges{
+		Epoch:               requestedEpoch,
+		ActivatedPublicKeys: activatedKeys,
+		ActivatedIndices:    activatedIndices,
+		ExitedPublicKeys:    exitedKeys,
+		ExitedIndices:       exitedIndices,
+		SlashedPublicKeys:   slashedKeys,
+		SlashedIndices:      slashedIndices,
+		EjectedPublicKeys:   ejectedKeys,
+		EjectedIndices:      ejectedIndices,
+	}, nil
+}
+
+func (bs *Server) getValidatorActiveSetChangesUsingOldArchival(
+	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
+) (*ethpb.ActiveSetChanges, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")

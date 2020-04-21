@@ -244,10 +244,10 @@ func TestReverse(t *testing.T) {
 		input  [][32]byte
 		output [][32]byte
 	}{
-		{[][32]byte{[32]byte{'A'}, [32]byte{'B'}, [32]byte{'C'}, [32]byte{'D'}, [32]byte{'E'}, [32]byte{'F'}, [32]byte{'G'}, [32]byte{'H'}},
-			[][32]byte{[32]byte{'H'}, [32]byte{'G'}, [32]byte{'F'}, [32]byte{'E'}, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'B'}, [32]byte{'A'}}},
-		{[][32]byte{[32]byte{1}, [32]byte{2}, [32]byte{3}, [32]byte{4}},
-			[][32]byte{[32]byte{4}, [32]byte{3}, [32]byte{2}, [32]byte{1}}},
+		{[][32]byte{{'A'}, {'B'}, {'C'}, {'D'}, {'E'}, {'F'}, {'G'}, {'H'}},
+			[][32]byte{{'H'}, {'G'}, {'F'}, {'E'}, {'D'}, {'C'}, {'B'}, {'A'}}},
+		{[][32]byte{{1}, {2}, {3}, {4}},
+			[][32]byte{{4}, {3}, {2}, {1}}},
 		{[][32]byte{}, [][32]byte{}},
 	}
 	for _, tt := range tests {
