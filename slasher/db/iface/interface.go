@@ -30,6 +30,7 @@ type ReadOnlyDatabase interface {
 	// MinMaxSpan related methods.
 	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, error)
 	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (detectionTypes.Span, error)
+	EpochsSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]detectionTypes.Span, error)
 
 	// ProposerSlashing related methods.
 	ProposalSlashingsByStatus(ctx context.Context, status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
@@ -66,6 +67,7 @@ type WriteAccessDatabase interface {
 	SaveCachedSpansMaps(ctx context.Context) error
 	DeleteEpochSpans(ctx context.Context, validatorIdx uint64) error
 	DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
+	SaveEpochsSpanByValidatorsIndices(ctx context.Context, epochsSpans map[uint64]map[uint64]detectionTypes.Span) error
 
 	// ProposerSlashing related methods.
 	DeleteProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error
