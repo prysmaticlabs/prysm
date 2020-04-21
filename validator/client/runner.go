@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -19,6 +20,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
+	WaitForSynced(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
@@ -45,11 +47,17 @@ type Validator interface {
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
 	defer v.Done()
-	if err := v.WaitForChainStart(ctx); err != nil {
-		log.Fatalf("Could not determine if beacon chain started: %v", err)
-	}
-	if err := v.WaitForSync(ctx); err != nil {
-		log.Fatalf("Could not determine if beacon node synced: %v", err)
+	if featureconfig.Get().WaitForSynced {
+		if err := v.WaitForSynced(ctx); err != nil {
+			log.Fatalf("Could not determine if chain started and beacon node is synced: %v", err)
+		}
+	} else {
+		if err := v.WaitForChainStart(ctx); err != nil {
+			log.Fatalf("Could not determine if beacon chain started: %v", err)
+		}
+		if err := v.WaitForSync(ctx); err != nil {
+			log.Fatalf("Could not determine if beacon node synced: %v", err)
+		}
 	}
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)

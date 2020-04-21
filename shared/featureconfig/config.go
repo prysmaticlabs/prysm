@@ -52,6 +52,7 @@ type Flags struct {
 	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
+	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -91,6 +92,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
+	if ctx.Bool(devModeFlag.Name) {
+		enableDevModeFlags(ctx)
+	}
 	delay := params.BeaconConfig().MinGenesisDelay
 	if ctx.IsSet(customGenesisDelayFlag.Name) {
 		delay = ctx.Uint64(customGenesisDelayFlag.Name)
@@ -224,6 +228,18 @@ func ConfigureValidator(ctx *cli.Context) {
 		cfg.EnableDomainDataCache = true
 	}
 	Init(cfg)
+}
+
+// enableDevModeFlags switches development mode features on.
+func enableDevModeFlags(ctx *cli.Context) {
+	log.Warn("Enabling development mode flags")
+	for _, f := range devModeFlags {
+		if !ctx.IsSet(f.Names()[0]) {
+			if err := ctx.Set(f.Names()[0], "true"); err != nil {
+				log.WithError(err).Debug("Error enabling development mode flag")
+			}
+		}
+	}
 }
 
 func complainOnDeprecatedFlags(ctx *cli.Context) {

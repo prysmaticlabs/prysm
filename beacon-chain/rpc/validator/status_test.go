@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestValidatorStatus_Deposited(t *testing.T) {
+func TestValidatorStatus_Unknown(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -63,6 +63,68 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_UNKNOWN_STATUS, resp.Status)
+	}
+	if resp.DepositInclusionSlot == 0 {
+		t.Errorf("Wanted 0, got %d", resp.DepositInclusionSlot)
+	}
+}
+
+func TestValidatorStatus_Deposited(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	pubKey1 := pubKey(1)
+	pubKey2 := pubKey(2)
+	depData := &ethpb.Deposit_Data{
+		PublicKey:             pubKey1,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+	}
+	deposit := &ethpb.Deposit{
+		Data: depData,
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not setup deposit trie: %v", err)
+	}
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
+			0: uint64(height),
+		},
+	}
+	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				PublicKey:                  pubKey2,
+				ActivationEligibilityEpoch: 1,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vs := &Server{
+		BeaconDB:       db,
+		DepositFetcher: depositCache,
+		BlockFetcher:   p,
+		HeadFetcher: &mockChain.ChainService{
+			State: stateObj,
+		},
+		Eth1InfoFetcher: p,
+	}
+	req := &ethpb.ValidatorStatusRequest{
+		PublicKey: pubKey2,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
@@ -226,9 +288,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 	}
 
 	expected := &ethpb.ValidatorStatusResponse{
-		Status:               ethpb.ValidatorStatus_ACTIVE,
-		ActivationEpoch:      5,
-		DepositInclusionSlot: 2218,
+		Status:          ethpb.ValidatorStatus_ACTIVE,
+		ActivationEpoch: 5,
 	}
 	if !proto.Equal(resp, expected) {
 		t.Errorf("Wanted %v, got %v", expected, resp)
@@ -495,7 +556,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3)}
+	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4)}
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -508,6 +569,11 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 				ActivationEpoch: 0,
 				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 				PublicKey:       pubKeys[1],
+			},
+			{
+				ActivationEligibilityEpoch: 700,
+				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+				PublicKey:                  pubKeys[3],
 			},
 		},
 	})
@@ -572,9 +638,14 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 			response[1].PublicKey)
 	}
 
-	if response[2].Status.Status != ethpb.ValidatorStatus_DEPOSITED {
-		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
+	if response[2].Status.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+		t.Errorf("Validator with pubkey %#x is not unknown and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
+	}
+
+	if response[3].Status.Status != ethpb.ValidatorStatus_DEPOSITED {
+		t.Errorf("Validator with pubkey %#x was not deposited and has this status: %s",
+			response[3].PublicKey, response[3].Status.Status.String())
 	}
 }
 
