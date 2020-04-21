@@ -510,7 +510,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 		attesterKeys[i] = make([]string, 0)
 	}
 	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
-	slotOffset := (slot / params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SlotsPerEpoch
+	slotOffset := helpers.StartSlot(helpers.SlotToEpoch(slot))
 
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
@@ -519,7 +519,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 		}
 
 		// Only interested in validators who are attesting/proposing.
-		// Note that SLASHING validators will have duties but their results are ignored so we don't bother with them.
+		// Note that SLASHING validators will have duties but their results are ignored by the network so we don't bother with them.
 		if duty.Status != ethpb.ValidatorStatus_ACTIVE && duty.Status != ethpb.ValidatorStatus_EXITING {
 			continue
 		}
