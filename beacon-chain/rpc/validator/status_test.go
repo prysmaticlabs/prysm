@@ -79,7 +79,6 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
-	pubKey2 := pubKey(2)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
 		Signature:             []byte("hi"),
@@ -103,7 +102,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
-				PublicKey:                  pubKey2,
+				PublicKey:                  pubKey1,
 				ActivationEligibilityEpoch: 1,
 			},
 		},
@@ -121,7 +120,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 		Eth1InfoFetcher: p,
 	}
 	req := &ethpb.ValidatorStatusRequest{
-		PublicKey: pubKey2,
+		PublicKey: pubKey1,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
