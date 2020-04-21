@@ -534,40 +534,42 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	}
 }
 
-func TestServer_mapAttestationToBlockRoot(t *testing.T) {
+func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 	ctx := context.Background()
 
 	count := uint64(100)
 	atts := make([]*ethpb.Attestation, count, count)
-	blockRoot1 := bytesutil.ToBytes32([]byte("root1"))
-	blockRoot2 := bytesutil.ToBytes32([]byte("root2"))
+	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
+	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
 	for i := uint64(0); i < count; i++ {
-		var blockRoot [32]byte
+		var targetRoot [32]byte
 		if i%2 == 0 {
-			blockRoot = blockRoot1
+			targetRoot = targetRoot1
 		} else {
-			blockRoot = blockRoot2
+			targetRoot = targetRoot2
 		}
 		atts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: blockRoot[:],
+				Target: &ethpb.Checkpoint{
+					Root: targetRoot[:],
+				},
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 
 	}
-	mappedAtts := mapAttestationsByBlockRoot(ctx, atts)
+	mappedAtts := mapAttestationsByTargetRoot(ctx, atts)
 	wantedMapLen := 2
 	wantedMapNumberOfElements := 50
 	if len(mappedAtts) != wantedMapLen {
 		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapLen, len(mappedAtts))
 	}
-	if len(mappedAtts[blockRoot1]) != wantedMapNumberOfElements {
-		t.Errorf("Expected number of attestations per block root to be: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[blockRoot1]))
+	if len(mappedAtts[targetRoot1]) != wantedMapNumberOfElements {
+		t.Errorf("Expected number of attestations per block root to be: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[targetRoot1]))
 	}
-	if len(mappedAtts[blockRoot2]) != wantedMapNumberOfElements {
-		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[blockRoot2]))
+	if len(mappedAtts[targetRoot2]) != wantedMapNumberOfElements {
+		t.Errorf("Expected maped attestation to be of length: %d got: %d", wantedMapNumberOfElements, len(mappedAtts[targetRoot2]))
 	}
 }
 
@@ -612,19 +614,19 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
-	blockRoot1 := bytesutil.ToBytes32([]byte("root"))
-	blockRoot2 := bytesutil.ToBytes32([]byte("root2"))
+	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
+	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	atts2 := make([]*ethpb.Attestation, 0, count)
 
 	for i := uint64(0); i < count; i++ {
-		var blockRoot [32]byte
+		var targetRoot [32]byte
 		if i%2 == 0 {
-			blockRoot = blockRoot1
+			targetRoot = targetRoot1
 		} else {
-			blockRoot = blockRoot2
+			targetRoot = targetRoot2
 		}
 		blockExample := &ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
@@ -632,9 +634,11 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: blockRoot[:],
-								Slot:            i,
-								CommitteeIndex:  0,
+								Target: &ethpb.Checkpoint{
+									Root: targetRoot[:],
+								},
+								Slot:           i,
+								CommitteeIndex: 0,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
 						},
@@ -697,25 +701,25 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
-		Root: blockRoot1[:],
+		Root: targetRoot1[:],
 		Slot: 1,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
-		Root: blockRoot2[:],
+		Root: targetRoot2[:],
 		Slot: 2,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot1[:])); err != nil {
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot1[:])); err != nil {
 		t.Fatal(err)
 	}
 	if err := state.SetSlot(state.Slot() + 1); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(blockRoot2[:])); err != nil {
+	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot2[:])); err != nil {
 		t.Fatal(err)
 	}
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
