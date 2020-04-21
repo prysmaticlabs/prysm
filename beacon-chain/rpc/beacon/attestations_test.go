@@ -616,6 +616,16 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	ctx := context.Background()
 	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
+	// Assert that feature is enabled.
+	if cfg := featureconfig.Get(); cfg.DisableNewStateMgmt {
+		cfg.DisableNewStateMgmt = false
+		featureconfig.Init(cfg)
+		defer func() {
+			cfg := featureconfig.Get()
+			cfg.DisableNewStateMgmt = true
+			featureconfig.Init(cfg)
+		}()
+	}
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
@@ -749,6 +759,16 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
+	// Assert that feature is enabled.
+	if cfg := featureconfig.Get(); cfg.DisableNewStateMgmt {
+		cfg.DisableNewStateMgmt = false
+		featureconfig.Init(cfg)
+		defer func() {
+			cfg := featureconfig.Get()
+			cfg.DisableNewStateMgmt = true
+			featureconfig.Init(cfg)
+		}()
+	}
 
 	blockRoot := bytesutil.ToBytes32([]byte("root"))
 	count := params.BeaconConfig().SlotsPerEpoch
