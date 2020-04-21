@@ -284,7 +284,7 @@ func (s *State) lastSavedState(ctx context.Context, slot uint64) (*state.BeaconS
 
 	lastSaved, err := s.beaconDB.HighestSlotStatesBelow(ctx, slot+1)
 	if err != nil {
-		return nil, errUnknownState
+		return nil, err
 	}
 
 	// Given this is used to query canonical state. There should only be one saved canonical block of a given slot.
