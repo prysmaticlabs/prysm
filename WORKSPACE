@@ -1686,3 +1686,9 @@ go_repository(
     sum = "h1:KU7oHjnv3XNWfa5COkzUifxZmxp1TyI7ImMXqFxLwvQ=",
     version = "v0.2.0",
 )
+
+go_repository(
+    name = "com_github_golang_gddo",
+    commit = "3c2cc9a6329d9842b3bbdaf307a8110d740cf94c",
+    importpath = "github.com/golang/gddo",
+)
