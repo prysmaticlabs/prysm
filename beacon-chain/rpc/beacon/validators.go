@@ -806,21 +806,20 @@ func (bs *Server) GetValidatorPerformance(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	
+
 	// Convert the list of validator public keys to list of validator indices.
 	// Also track missing validators using public keys.
 	for _, key := range req.PublicKeys {
 		pubkeyBytes := bytesutil.ToBytes48(key)
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		val, err := headState.ValidatorAtIndex(idx)
-
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not get validator")
+			// If the validator isn't active, no need to get its performance
+			return nil, errors.Wrap(err, "could not get validator")
 		}
-
 		if(!helpers.IsActiveValidator(val)) {
             continue
-         }
+        }
 
 		if !ok {
 			missingValidators = append(missingValidators, key)
