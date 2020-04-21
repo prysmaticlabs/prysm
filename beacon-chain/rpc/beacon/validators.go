@@ -813,11 +813,11 @@ func (bs *Server) GetValidatorPerformance(
 		pubkeyBytes := bytesutil.ToBytes48(key)
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		val, err := headState.ValidatorAtIndex(idx)
-		// If the validator isn't active, no need to get its performance
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get validator")
 		}
 		if !helpers.IsActiveValidator(val) {
+		// If the validator isn't active, no need to get its performance
 			continue
 		}
 
