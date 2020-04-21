@@ -140,7 +140,7 @@ func (s *Service) Start() {
 	}
 
 	if beaconState == nil {
-		if !featureconfig.Get().DisableNewStateMgmt {
+		if featureconfig.Get().NewStateMgmt {
 			beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
 			if err != nil {
 				log.Fatalf("Could not fetch beacon state by root: %v", err)
@@ -181,7 +181,7 @@ func (s *Service) Start() {
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
-		if featureconfig.Get().DisableNewStateMgmt {
+		if !featureconfig.Get().NewStateMgmt {
 			if finalizedCheckpoint.Epoch > 1 {
 				if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
 					log.WithError(err).Warn("Could not prune old states")
@@ -327,7 +327,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
 			return errors.Wrap(err, "could not save genesis state")
 		}
@@ -415,7 +415,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	var finalizedState *stateTrie.BeaconState
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
 		finalizedState, err = s.stateGen.Resume(ctx)
 		if err != nil {
