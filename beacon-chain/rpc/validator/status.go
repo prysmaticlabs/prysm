@@ -102,11 +102,13 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp
 		}
-
 		_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
 			return resp
 		}
+
+		// Mark a validator as DEPOSITED if their deposit is visible.
+		resp.Status = ethpb.ValidatorStatus_DEPOSITED
 
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
