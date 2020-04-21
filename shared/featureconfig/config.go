@@ -88,6 +88,7 @@ func Init(c *Flags) {
 
 // Copy returns copy of the config object.
 func (c *Flags) Copy() *Flags {
+
 	return &Flags{
 		MinimalConfig:                              c.MinimalConfig,
 		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
