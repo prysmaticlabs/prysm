@@ -90,7 +90,9 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 			traceutil.AnnotateError(span, err)
 			return resp
 		}
-		resp.ActivationEpoch = int64(val.ActivationEpoch)
+		if val.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
+			resp.ActivationEpoch = int64(val.ActivationEpoch)
+		}
 	}
 
 	switch resp.Status {
