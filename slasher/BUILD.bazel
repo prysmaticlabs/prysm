@@ -31,7 +31,10 @@ go_test(
     size = "small",
     srcs = ["usage_test.go"],
     embed = [":go_default_library"],
-    deps = ["@in_gopkg_urfave_cli_v2//:go_default_library"],
+    deps = [
+        "//shared/featureconfig:go_default_library",
+        "@in_gopkg_urfave_cli_v2//:go_default_library",
+    ],
 )
 
 go_image(
