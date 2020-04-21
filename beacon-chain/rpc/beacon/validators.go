@@ -811,6 +811,10 @@ func (bs *Server) GetValidatorPerformance(
 	for _, key := range req.PublicKeys {
 		pubkeyBytes := bytesutil.ToBytes48(key)
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
+
+		if(!helpers.IsActiveValidator(headState.ValidatorAtIndex())) {
+			continue
+	 	}
 		if !ok {
 			missingValidators = append(missingValidators, key)
 			continue
