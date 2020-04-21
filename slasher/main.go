@@ -8,6 +8,7 @@ import (
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
@@ -20,6 +21,7 @@ import (
 var log = logrus.WithField("prefix", "main")
 
 func startSlasher(ctx *cli.Context) error {
+	featureconfig.ConfigureSlasher(ctx)
 	verbosity := ctx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
@@ -55,10 +57,14 @@ var appFlags = []cli.Flag{
 	debug.TraceFlag,
 	flags.RPCPort,
 	flags.KeyFlag,
-	flags.UseSpanCacheFlag,
 	flags.RebuildSpanMapsFlag,
 	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
+}
+var allFlags []cli.Flag
+
+func init() {
+	allFlags = append(appFlags, featureconfig.DeprecatedFlags[:]...)
 }
 
 func main() {
@@ -66,7 +72,7 @@ func main() {
 	app.Name = "hash slinging slasher"
 	app.Usage = `launches an Ethereum Serenity slasher server that interacts with a beacon chain.`
 	app.Version = version.GetVersion()
-	app.Flags = appFlags
+	app.Flags = allFlags
 	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
 		format := ctx.String(cmd.LogFormat.Name)

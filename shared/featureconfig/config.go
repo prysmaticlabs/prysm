@@ -207,6 +207,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	Init(cfg)
 }
 
+// ConfigureSlasher sets the global config based
+// on what flags are enabled for the slasher client.
+func ConfigureSlasher(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
+}
+
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
@@ -243,7 +249,7 @@ func enableDevModeFlags(ctx *cli.Context) {
 }
 
 func complainOnDeprecatedFlags(ctx *cli.Context) {
-	for _, f := range deprecatedFlags {
+	for _, f := range DeprecatedFlags {
 		if ctx.IsSet(f.Names()[0]) {
 			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
 		}

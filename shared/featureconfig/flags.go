@@ -309,9 +309,17 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	// UseSpanCacheFlag enables the slasher to use span cache.
+	deprecatedUseSpanCacheFlag = &cli.BoolFlag{
+		Name:   "span-map-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
-var deprecatedFlags = []cli.Flag{
+// DeprecatedFlags list of old flags that are not being used in codebase
+// anymore.
+var DeprecatedFlags = []cli.Flag{
 	deprecatedEnableDynamicCommitteeSubnets,
 	deprecatedNoCustomConfigFlag,
 	deprecatedEnableInitSyncQueue,
@@ -341,10 +349,11 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedProtectProposerFlag,
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
+	deprecatedUseSpanCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
-var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
+var ValidatorFlags = append(DeprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	disableProtectAttesterFlag,
 	disableProtectProposerFlag,
@@ -359,7 +368,7 @@ var E2EValidatorFlags = []string{
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
-var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+var BeaconChainFlags = append(DeprecatedFlags, []cli.Flag{
 	devModeFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
