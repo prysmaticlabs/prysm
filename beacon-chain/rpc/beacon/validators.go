@@ -814,7 +814,8 @@ func (bs *Server) GetValidatorPerformance(
 
 		if(!helpers.IsActiveValidator(headState.ValidatorAtIndex())) {
 			continue
-	 	}
+		 }
+		 
 		if !ok {
 			missingValidators = append(missingValidators, key)
 			continue
