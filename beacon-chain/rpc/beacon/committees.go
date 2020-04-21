@@ -46,7 +46,7 @@ func (bs *Server) ListBeaconCommittees(
 	committees := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	activeIndices := make([]uint64, 0)
 	var err error
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		committees, activeIndices, err = bs.retrieveCommitteesForEpochUsingOldArchival(ctx, requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(
