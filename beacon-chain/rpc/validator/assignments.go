@@ -46,7 +46,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 
 	var committeeIDs []uint64
 	var nextCommitteeIDs []uint64
-	var validatorAssignments []*ethpb.DutiesResponse_Duty
+	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
@@ -58,14 +58,14 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 
 		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if ok {
+			assignment.ValidatorIndex = idx
+			assignment.Status = vs.assignmentStatus(idx, s)
+			assignment.ProposerSlots = proposerIndexToSlots[idx]
+
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
-				assignment.Status = vs.assignmentStatus(idx, s)
-				assignment.ValidatorIndex = idx
-				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
-				assignment.ProposerSlots = proposerIndexToSlots[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
 				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
@@ -74,13 +74,11 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			if ok {
 				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
 			}
-
 		} else {
-			vs := vs.validatorStatus(ctx, pubKey, s)
-			assignment.Status = vs.Status
+			// If the validator isn't in the beacon state, assume their status is unknown.
+			assignment.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
-
 	}
 
 	return &ethpb.DutiesResponse{

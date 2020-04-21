@@ -52,6 +52,7 @@ type Flags struct {
 	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
+	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.

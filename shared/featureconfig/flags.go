@@ -146,6 +146,10 @@ var (
 		Name:  "enable-state-ref-copy",
 		Usage: "Enables the usage of a new copying method for our state fields.",
 	}
+	waitForSyncedFlag = &cli.BoolFlag{
+		Name:  "wait-for-synced",
+		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -345,11 +349,13 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableProtectAttesterFlag,
 	disableProtectProposerFlag,
 	enableDomainDataCacheFlag,
+	waitForSyncedFlag,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--enable-domain-data-cache",
+	"--wait-for-synced",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -382,6 +388,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
 	enableStateRefCopy,
+	waitForSyncedFlag,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
