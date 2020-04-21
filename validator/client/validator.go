@@ -245,7 +245,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 				log.WithFields(logrus.Fields{
 					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
 					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
-				}).Info("Deposit for validator received but not processed into state")
+				}).Info("Deposit for validator received but not processed into the beacon state")
 			} else {
 				log.WithField(
 					"positionInActivationQueue", status.Status.PositionInActivationQueue,
