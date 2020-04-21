@@ -56,17 +56,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 		// Only migrate if current slot is equal to or greater than next archived point slot.
 		if stateSummary.Slot >= nextArchivedPointSlot {
 			if !s.beaconDB.HasState(ctx, r) {
-				recoveredArchivedState, err := s.ComputeStateUpToSlot(ctx, stateSummary.Slot)
-				if err != nil {
-					// For whatever reason if node fails to generate archived state of a certain slot,
-					// a node should just skip that slot rather than fail to whole process block routine.
-					// Missing an archived point of a certain slot is less of a deal than failing process block.
-					log.Warnf("Unable to generate archived state: %v", err)
-					continue
-				}
-				if err := s.beaconDB.SaveState(ctx, recoveredArchivedState.Copy(), r); err != nil {
-					return err
-				}
+				continue
 			}
 			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, archivedPointIndex); err != nil {
 				return err
