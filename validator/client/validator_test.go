@@ -834,7 +834,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 				},
 			},
-			log: "Waiting for deposit to be seen",
+			log: "Waiting for deposit to be observed by beacon node",
 		},
 		{
 			name: "DEPOSITED, deposit found",
@@ -846,7 +846,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					Eth1DepositBlockNumber: 400,
 				},
 			},
-			log: "Deposit for validator received but not processed into state\" eth1DepositBlockNumber=400 expectedInclusionSlot=50",
+			log: "Deposit for validator received but not processed into the beacon state\" eth1DepositBlockNumber=400 expectedInclusionSlot=50",
 		},
 		{
 			name: "DEPOSITED into state",
