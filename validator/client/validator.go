@@ -239,7 +239,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		}
 		switch status.Status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
-			log.Info("Waiting for deposit to be seen")
+			log.Info("Waiting for deposit to be observed by beacon node")
 		case ethpb.ValidatorStatus_DEPOSITED:
 			if status.Status.DepositInclusionSlot != 0 {
 				log.WithFields(logrus.Fields{
