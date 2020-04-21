@@ -22,7 +22,7 @@ func setupDB(t testing.TB, ctx *cli.Context) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{SpanCacheEnabled: true}
+	cfg := &Config{}
 	db, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
@@ -39,7 +39,7 @@ func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{SpanCacheEnabled: true, SpanCacheSize: cacheSize}
+	cfg := &Config{SpanCacheSize: cacheSize}
 	newDB, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)

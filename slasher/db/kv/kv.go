@@ -23,9 +23,8 @@ type Store struct {
 
 // Config options for the slasher db.
 type Config struct {
-	// SpanCacheEnabled uses span cache to detect surround slashing.
-	SpanCacheEnabled bool
-	SpanCacheSize    int
+	// SpanCacheSize determines the span map cache size.
+	SpanCacheSize int
 }
 
 // Close closes the underlying boltdb database.
