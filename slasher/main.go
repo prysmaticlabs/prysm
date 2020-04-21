@@ -43,7 +43,6 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	cmd.BootstrapNode,
 	flags.MonitoringPortFlag,
 	cmd.LogFileName,
 	cmd.LogFormat,
@@ -61,10 +60,9 @@ var appFlags = []cli.Flag{
 	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
 }
-var allFlags []cli.Flag
 
 func init() {
-	allFlags = append(appFlags, featureconfig.DeprecatedFlags[:]...)
+	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.SlasherFlags...))
 }
 
 func main() {
@@ -72,7 +70,7 @@ func main() {
 	app.Name = "hash slinging slasher"
 	app.Usage = `launches an Ethereum Serenity slasher server that interacts with a beacon chain.`
 	app.Version = version.GetVersion()
-	app.Flags = allFlags
+	app.Flags = appFlags
 	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
 		format := ctx.String(cmd.LogFormat.Name)

@@ -7,7 +7,7 @@ import (
 )
 
 func TestDeprecatedFlags(t *testing.T) {
-	for _, f := range DeprecatedFlags {
+	for _, f := range deprecatedFlags {
 		fv := reflect.ValueOf(f)
 		field := reflect.Indirect(fv).FieldByName("Hidden")
 		if !field.IsValid() || !field.Bool() {

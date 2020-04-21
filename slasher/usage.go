@@ -49,7 +49,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
-			cmd.BootstrapNode,
 			flags.MonitoringPortFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
