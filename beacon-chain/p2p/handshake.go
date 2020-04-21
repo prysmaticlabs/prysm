@@ -55,7 +55,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
-					log.WithError(err).Debug("Handshake failed")
+					log.WithError(err).Trace("Handshake failed")
 					if err.Error() == "protocol not supported" {
 						// This is only to ensure the smooth running of our testnets. This will not be
 						// used in production.
