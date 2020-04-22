@@ -64,7 +64,7 @@ function get_realpath() {
 # Complain if no arguments were provided.
 if [ "$#" -lt 1 ]; then
     color "31" "Usage: ./prysm.sh PROCESS FLAGS."
-    color "31" "PROCESS can be beacon-chain or validator."
+    color "31" "PROCESS can be beacon-chain, validator, or slasher."
     exit 1
 fi
 
@@ -83,7 +83,7 @@ case "$OSTYPE" in
   cygwin*)  system="windows" ;;
   *)        exit 1 ;;
 esac
-
+readonly system
 
 if [ "$system" == "windows" ]; then
 	arch="amd64.exe"
@@ -108,13 +108,13 @@ function get_prysm_version() {
 function verify() {
   file=$1
 
-  hash sha256sum 2>/dev/null || { echo >&2 "sha256sum is not available. Not verifying integrity of downloaded binary."; return 1; }
+  hash shasum 2>/dev/null || { echo >&2 "shasum is not available. Not verifying integrity of downloaded binary."; return 1; }
   hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; return 1; }
 
   color "37" "Verifying binary integrity."
 
-  gpg --recv-keys=$PRYLABS_SIGNING_KEY
-  (cd $wrapper_dir; sha256sum -c "${file}.sha256")
+  curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
+  (cd $wrapper_dir; shasum -a 256 -c "${file}.sha256")
   (cd $wrapper_dir; gpg -u $PRYLABS_SIGNING_KEY --verify "${file}.sig" $file)
 
   color "32;1" "Verified ${file} has been signed by Prysmatic Labs."
