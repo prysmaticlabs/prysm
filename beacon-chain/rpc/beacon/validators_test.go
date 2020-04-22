@@ -1257,9 +1257,10 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 }
 
 func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
-	fc := featureconfig.Get()
-	fc.DisableNewStateMgmt = true
-	featureconfig.Init(fc)
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
 
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1565,10 +1566,6 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 }
 
 func TestServer_GetValidatorParticipation_CannotRequestCurrentEpoch(t *testing.T) {
-	fc := featureconfig.Get()
-	fc.DisableNewStateMgmt = true
-	featureconfig.Init(fc)
-
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -1628,10 +1625,6 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 }
 
 func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
-	fc := featureconfig.Get()
-	fc.DisableNewStateMgmt = true
-	featureconfig.Init(fc)
-
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -1798,10 +1791,6 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 }
 
 func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.T) {
-	fc := featureconfig.Get()
-	fc.DisableNewStateMgmt = true
-	featureconfig.Init(fc)
-
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
