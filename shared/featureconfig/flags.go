@@ -309,6 +309,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedUseSpanCacheFlag = &cli.BoolFlag{
+		Name:   "span-map-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -341,6 +346,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedProtectProposerFlag,
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
+	deprecatedUseSpanCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -351,6 +357,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableDomainDataCacheFlag,
 	waitForSyncedFlag,
 }...)
+
+// SlasherFlags contains a list of all the feature flags that apply to the slasher client.
+var SlasherFlags = append(deprecatedFlags, []cli.Flag{}...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{

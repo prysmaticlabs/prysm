@@ -85,3 +85,8 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		Duties: validatorAssignments,
 	}, nil
 }
+
+// StreamDuties --
+func (vs *Server) StreamDuties(stream ethpb.BeaconNodeValidator_StreamDutiesServer) error {
+	return status.Error(codes.Unimplemented, "unimplemented")
+}
