@@ -174,12 +174,12 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
 		log.WithError(err).Error("Failed to get block number from timestamp")
-		return vs.randomETH1DataVote(ctx, slot)
+		return vs.randomETH1DataVote(ctx)
 	}
 	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
 	if err != nil {
 		log.WithError(err).Error("Failed to get eth1 data from block number")
-		return vs.randomETH1DataVote(ctx, slot)
+		return vs.randomETH1DataVote(ctx)
 	}
 
 	return eth1Data, nil
