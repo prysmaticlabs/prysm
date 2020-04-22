@@ -55,7 +55,6 @@ go_test(
         "//slasher/db/iface:go_default_library",
         "//slasher/db/types:go_default_library",
         "//slasher/detection/attestations/types:go_default_library",
-        "//slasher/flags:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",

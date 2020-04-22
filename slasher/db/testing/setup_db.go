@@ -23,7 +23,7 @@ func SetupSlasherDB(t testing.TB, spanCacheEnabled bool) *kv.Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &kv.Config{SpanCacheEnabled: spanCacheEnabled}
+	cfg := &kv.Config{}
 	db, err := slasherDB.NewDB(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
@@ -41,7 +41,7 @@ func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize in
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &kv.Config{SpanCacheEnabled: true}
+	cfg := &kv.Config{}
 	newDB, err := slasherDB.NewDB(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
