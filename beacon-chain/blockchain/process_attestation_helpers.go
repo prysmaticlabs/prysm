@@ -21,17 +21,8 @@ import (
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
-	s.checkpointStateLock.Lock()
-	defer s.checkpointStateLock.Unlock()
-	cachedState, err := s.checkpointState.StateByCheckpoint(c)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get cached checkpoint state")
-	}
-	if cachedState != nil {
-		return cachedState, nil
-	}
-
 	var baseState *stateTrie.BeaconState
+	var err error
 	if !featureconfig.Get().DisableNewStateMgmt {
 		if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root)) {
 			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
@@ -44,6 +35,16 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
 		}
 	} else {
+		s.checkpointStateLock.Lock()
+		defer s.checkpointStateLock.Unlock()
+		cachedState, err := s.checkpointState.StateByCheckpoint(c)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get cached checkpoint state")
+		}
+		if cachedState != nil {
+			return cachedState, nil
+		}
+
 		if featureconfig.Get().CheckHeadState {
 			headRoot, err := s.HeadRoot(ctx)
 			if err != nil {
