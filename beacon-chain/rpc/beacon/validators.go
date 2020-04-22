@@ -681,7 +681,7 @@ func (bs *Server) getValidatorParticipationUsingOldArchival(
 	participation.GlobalParticipationRate = float32(0)
 	// only divide if prevEpoch is non zero
 	if p.PrevEpoch != 0 {
-		participation.GlobalParticipationRate = float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch)
+		participation.GlobalParticipationRate = float32(float64(p.PrevEpochTargetAttesters) / float64(p.PrevEpoch))
 	}
 
 	return &ethpb.ValidatorParticipationResponse{
