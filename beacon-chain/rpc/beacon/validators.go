@@ -806,7 +806,7 @@ func (bs *Server) GetValidatorPerformance(
     if err != nil {    
         return nil, status.Errorf(codes.Internal, "could not get head state: %v", err)
     }
-
+ 
 	// Convert the list of validator public keys to list of validator indices.
 	// Also track missing validators using public keys.
 	for _, key := range req.PublicKeys {
