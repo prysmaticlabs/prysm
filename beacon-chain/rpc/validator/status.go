@@ -76,7 +76,8 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	defer span.End()
 
 	resp := &ethpb.ValidatorStatusResponse{
-		Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
+		Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,
+		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
 	vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
 	if err != nil && err != errPubkeyDoesNotExist {
@@ -90,9 +91,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 			traceutil.AnnotateError(span, err)
 			return resp
 		}
-		if val.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
-			resp.ActivationEpoch = int64(val.ActivationEpoch)
-		}
+		resp.ActivationEpoch = int64(val.ActivationEpoch)
 	}
 
 	switch resp.Status {
