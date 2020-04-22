@@ -25,8 +25,8 @@ func TestSaveColdState_NonArchivedPoint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := service.saveColdState(ctx, [32]byte{}, beaconState); err != errSlotNonArchivedPoint {
-		t.Error("Did not get wanted error")
+	if err := service.saveColdState(ctx, [32]byte{}, beaconState); err != nil {
+		t.Error(err)
 	}
 }
 
