@@ -65,7 +65,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
 	defer span.End()
 
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
 		// Loosen the check to HasBlock because state summary gets saved in batches
 		// during initial syncing. There's no risk given a state summary object is just a
@@ -283,7 +283,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		s.justifiedCheckpt = cpt
 	}
 
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
 		justifiedState := s.initSyncState[justifiedRoot]

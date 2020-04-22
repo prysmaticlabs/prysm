@@ -13,7 +13,7 @@ var historicalStateDeletedKey = []byte("historical-states-deleted")
 
 // HistoricalStatesDeleted verifies historical states exist in DB.
 func (kv *Store) HistoricalStatesDeleted(ctx context.Context) error {
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		return kv.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(newStateServiceCompatibleBucket)
 			return bkt.Put(historicalStateDeletedKey, []byte{0x01})
