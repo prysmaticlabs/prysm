@@ -23,7 +23,7 @@ import (
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
 	var baseState *stateTrie.BeaconState
 	var err error
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root)) {
 			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 				return nil, errors.Wrap(err, "could not save initial sync blocks")
@@ -34,6 +34,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
 		}
+
 	} else {
 		s.checkpointStateLock.Lock()
 		defer s.checkpointStateLock.Unlock()
@@ -75,21 +76,24 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
 
+	savedState := baseState.Copy()
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+		savedState, err = state.ProcessSlots(ctx, savedState, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
 	}
 
-	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-		Checkpoint: c,
-		State:      baseState.Copy(),
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+	if !featureconfig.Get().NewStateMgmt {
+		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+			Checkpoint: c,
+			State:      savedState.Copy(),
+		}); err != nil {
+			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		}
 	}
 
-	return baseState, nil
+	return savedState, nil
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
@@ -135,7 +139,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			// different seeds.
 			var aState *stateTrie.BeaconState
 			var err error
-			if !featureconfig.Get().DisableNewStateMgmt {
+			if featureconfig.Get().NewStateMgmt {
 				if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) {
 					if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 						return nil, errors.Wrap(err, "could not save initial sync blocks")
