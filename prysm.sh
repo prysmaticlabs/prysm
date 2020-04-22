@@ -111,6 +111,8 @@ function verify() {
   hash sha256sum 2>/dev/null || { echo >&2 "sha256sum is not available. Not verifying integrity of downloaded binary."; return 1; }
   hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; return 1; }
 
+  gpg --recv-keys=$PRYLABS_SIGNING_KEY
+
   color "37" "Verifying binary integrity."
 
   (cd $wrapper_dir; sha256sum -c "${file}.sha256")
