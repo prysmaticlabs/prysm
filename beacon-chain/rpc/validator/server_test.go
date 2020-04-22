@@ -204,7 +204,98 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 				},
 				{PublicKey: pubKey2,
 					Status: &ethpb.ValidatorStatusResponse{
-						ActivationEpoch: int64(params.BeaconConfig().FarFutureEpoch),
+						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+					},
+				},
+			},
+		},
+	).Return(nil)
+
+	if err := vs.WaitForActivation(req, mockChainStream); err != nil {
+		t.Fatalf("Could not setup wait for activation stream: %v", err)
+	}
+}
+
+func TestWaitForActivation_MultipleStatuses(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+
+	priv1 := bls.RandKey()
+	priv2 := bls.RandKey()
+	priv3 := bls.RandKey()
+
+	pubKey1 := priv1.PublicKey().Marshal()[:]
+	pubKey2 := priv2.PublicKey().Marshal()[:]
+	pubKey3 := priv3.PublicKey().Marshal()[:]
+
+	beaconState := &pbp2p.BeaconState{
+		Slot: 4000,
+		Validators: []*ethpb.Validator{
+			{
+				PublicKey:       pubKey1,
+				ActivationEpoch: 1,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			},
+			{
+				PublicKey:                  pubKey2,
+				ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+				ActivationEligibilityEpoch: 6,
+				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
+			},
+			{
+				PublicKey:                  pubKey3,
+				ActivationEpoch:            0,
+				ActivationEligibilityEpoch: 0,
+				ExitEpoch:                  0,
+			},
+		},
+	}
+	block := blk.NewGenesisBlock([]byte{})
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vs := &Server{
+		BeaconDB:           db,
+		Ctx:                context.Background(),
+		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+		ChainStartFetcher:  &mockPOW.POWChain{},
+		HeadFetcher:        &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+	}
+	req := &ethpb.ValidatorActivationRequest{
+		PublicKeys: [][]byte{pubKey1, pubKey2, pubKey3},
+	}
+	ctrl := gomock.NewController(t)
+
+	defer ctrl.Finish()
+	mockChainStream := internal.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	mockChainStream.EXPECT().Context().Return(context.Background())
+	mockChainStream.EXPECT().Send(
+		&ethpb.ValidatorActivationResponse{
+			Statuses: []*ethpb.ValidatorActivationResponse_Status{
+				{
+					PublicKey: pubKey1,
+					Status: &ethpb.ValidatorStatusResponse{
+						Status:          ethpb.ValidatorStatus_ACTIVE,
+						ActivationEpoch: 1,
+					},
+				},
+				{
+					PublicKey: pubKey2,
+					Status: &ethpb.ValidatorStatusResponse{
+						Status:                    ethpb.ValidatorStatus_PENDING,
+						ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
+						PositionInActivationQueue: 1,
+					},
+				},
+				{
+					PublicKey: pubKey3,
+					Status: &ethpb.ValidatorStatusResponse{
+						Status: ethpb.ValidatorStatus_EXITED,
 					},
 				},
 			},

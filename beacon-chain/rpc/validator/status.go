@@ -77,7 +77,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 
 	resp := &ethpb.ValidatorStatusResponse{
 		Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,
-		ActivationEpoch: int64(params.BeaconConfig().FarFutureEpoch),
+		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
 	vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
 	if err != nil && err != errPubkeyDoesNotExist {
@@ -91,7 +91,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 			traceutil.AnnotateError(span, err)
 			return resp
 		}
-		resp.ActivationEpoch = int64(val.ActivationEpoch)
+		resp.ActivationEpoch = val.ActivationEpoch
 	}
 
 	switch resp.Status {
@@ -116,7 +116,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		if err != nil {
 			return resp
 		}
-		resp.DepositInclusionSlot = int64(depositBlockSlot)
+		resp.DepositInclusionSlot = depositBlockSlot
 	// Deposited and Pending mean the validator has been put into the state.
 	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING:
 		var lastActivatedValidatorIdx uint64
@@ -132,7 +132,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		}
 		// Our position in the activation queue is the above index - our validator index.
 		if lastActivatedValidatorIdx < idx {
-			resp.PositionInActivationQueue = int64(idx - lastActivatedValidatorIdx)
+			resp.PositionInActivationQueue = idx - lastActivatedValidatorIdx
 		}
 	default:
 		return resp
