@@ -43,6 +43,7 @@ type HeadFetcher interface {
 	HeadState(ctx context.Context) (*state.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
+	HeadGenesisValidatorRoot() [32]byte
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
