@@ -180,6 +180,15 @@ func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
 	return helpers.Seed(s.headState(), epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
+// HeadGenesisValidatorRoot returns genesis validator root of the head state.
+func (s *Service) HeadGenesisValidatorRoot() [32]byte {
+	if !s.hasHeadState() {
+		return [32]byte{}
+	}
+
+	return s.headGenesisValidatorRoot()
+}
+
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
