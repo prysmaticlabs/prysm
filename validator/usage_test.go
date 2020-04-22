@@ -39,6 +39,5 @@ func doesFlagExist(flag cli.Flag, flags []cli.Flag) bool {
 			return true
 		}
 	}
-
 	return false
 }
