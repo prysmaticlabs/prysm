@@ -362,7 +362,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
 
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		return bs.getValidatorActiveSetChangesUsingOldArchival(ctx, req)
 	}
 
@@ -552,7 +552,7 @@ func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		return bs.getValidatorParticipationUsingOldArchival(ctx, req)
 	}
 

@@ -32,7 +32,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	}
 
 	var baseState *stateTrie.BeaconState
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root)) {
 			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 				return nil, errors.Wrap(err, "could not save initial sync blocks")
@@ -134,7 +134,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			// different seeds.
 			var aState *stateTrie.BeaconState
 			var err error
-			if !featureconfig.Get().DisableNewStateMgmt {
+			if featureconfig.Get().NewStateMgmt {
 				if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) {
 					if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 						return nil, errors.Wrap(err, "could not save initial sync blocks")

@@ -90,7 +90,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		hasStateSummaryDB := r.db.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot))
 		hasStateSummaryCache := r.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
 		if !hasStateSummaryDB && !hasStateSummaryCache {

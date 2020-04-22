@@ -574,6 +574,11 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 }
 
 func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T) {
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -581,10 +586,7 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 	ctx := context.Background()
 	numValidators := uint64(128)
 	state, _ := testutil.DeterministicGenesisState(t, numValidators)
-	config := &featureconfig.Flags{
-		DisableNewStateMgmt: true,
-	}
-	featureconfig.Init(config)
+
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{State: state},
@@ -1234,9 +1236,9 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 // assertNewStateMgmtIsEnabled asserts that state management feature is enabled.
 func assertNewStateMgmtIsEnabled() *featureconfig.Flags {
 	cfg := featureconfig.Get()
-	if cfg.DisableNewStateMgmt {
+	if cfg.NewStateMgmt {
 		cfgUpd := cfg.Copy()
-		cfgUpd.DisableNewStateMgmt = false
+		cfgUpd.NewStateMgmt = true
 		featureconfig.Init(cfgUpd)
 	}
 	return cfg
