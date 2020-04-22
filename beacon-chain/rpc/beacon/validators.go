@@ -804,7 +804,7 @@ func (bs *Server) GetValidatorPerformance(
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not get head state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
 	// Convert the list of validator public keys to list of validator indices.
