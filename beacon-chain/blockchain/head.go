@@ -202,6 +202,15 @@ func (s *Service) headState() *state.BeaconState {
 	return s.head.state.Copy()
 }
 
+// This returns the head state.
+// It does a full copy on head state for immutability.
+func (s *Service) headGenesisValidatorRoot() [32]byte {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+}
+
 // Returns true if head state exists.
 func (s *Service) hasHeadState() bool {
 	s.headLock.RLock()
