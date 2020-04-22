@@ -10,6 +10,8 @@ set -eu
 # Use USE_PRYSM_VERSION to specify a specific release version. 
 #   Example: USE_PRYSM_VERSION=v0.3.3 ./prysm.sh beacon-chain
 
+readonly PRYLABS_SIGNING_KEY=0AE0051D647BA3C1A917AF4072E33E4DF1A5036E 
+
 function color() {
       # Usage: color "31;5" "string"
       # Some valid values for color:
@@ -112,7 +114,7 @@ function verify() {
   color "37" "Verifying binary integrity."
 
   (cd $wrapper_dir; sha256sum -c "${file}.sha256")
-  (cd $wrapper_dir; gpg -u 0AE0051D647BA3C1A917AF4072E33E4DF1A5036E --verify "${file}.sig" $file)
+  (cd $wrapper_dir; gpg -u $PRYLABS_SIGNING_KEY --verify "${file}.sig" $file)
 
   color "32;1" "Verified ${file} has been signed by Prysmatic Labs."
 }
@@ -123,28 +125,47 @@ color "37" "Latest Prysm version is $prysm_version."
 
 BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
 VALIDATOR_REAL="${wrapper_dir}/validator-${prysm_version}-${system}-${arch}"
+SLASHER_REAL="${wrapper_dir}/slasher-${prysm_version}-${system}-${arch}"
 
-if [[ ! -x $BEACON_CHAIN_REAL ]]; then 
-    color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
-    file=beacon-chain-${prysm_version}-${system}-${arch}
-    curl -L "https://prysmaticlabs.com/releases/${file}" -o $BEACON_CHAIN_REAL
-    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
-    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
-    chmod +x $BEACON_CHAIN_REAL
-else
-    color "37" "Beacon chain is up to date."
+if [[ $1 == beacon-chain ]]; then 
+  if [[ ! -x $BEACON_CHAIN_REAL ]]; then 
+      color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
+      file=beacon-chain-${prysm_version}-${system}-${arch}
+      curl -L "https://prysmaticlabs.com/releases/${file}" -o $BEACON_CHAIN_REAL
+      curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
+      curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
+      chmod +x $BEACON_CHAIN_REAL
+  else
+      color "37" "Beacon chain is up to date."
+  fi
 fi
 
-if [[ ! -x $VALIDATOR_REAL ]]; then 
-    color "34" "Downloading validator@${prysm_version} to ${VALIDATOR_REAL} (${reason})"
+if  [[ $1 == validator ]]; then 
+  if [[ ! -x $VALIDATOR_REAL ]]; then 
+      color "34" "Downloading validator@${prysm_version} to ${VALIDATOR_REAL} (${reason})"
 
-    file=validator-${prysm_version}-${system}-${arch}
-    curl -L "https://prysmaticlabs.com/releases/${file}" -o $VALIDATOR_REAL
-    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
-    curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
-    chmod +x $VALIDATOR_REAL
-else
-    color "37" "Validator is up to date."
+      file=validator-${prysm_version}-${system}-${arch}
+      curl -L "https://prysmaticlabs.com/releases/${file}" -o $VALIDATOR_REAL
+      curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
+      curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
+      chmod +x $VALIDATOR_REAL
+  else
+      color "37" "Validator is up to date."
+  fi
+fi
+
+if [[ $1 == slasher ]]; then
+  if [[ ! -x $SLASHER_REAL ]]; then 
+      color "34" "Downloading slasher@${prysm_version} to ${SLASHER_REAL} (${reason})"
+
+      file=slasher-${prysm_version}-${system}-${arch}
+      curl -L "https://prysmaticlabs.com/releases/${file}" -o $SLASHER_REAL
+      curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
+      curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
+      chmod +x $SLASHER_REAL
+  else
+      color "37" "Slasher is up to date."
+  fi
 fi
 
 case $1 in
@@ -156,9 +177,13 @@ case $1 in
     readonly process=$VALIDATOR_REAL
     ;;
 
+  slasher)
+    readonly process=$SLASHER_REAL
+    ;;
+
   *)
     color "31" "Usage: ./prysm.sh PROCESS FLAGS."
-    color "31" "PROCESS can be beacon-chain or validator."
+    color "31" "PROCESS can be beacon-chain, validator, or slasher."
     ;;
 esac
 
