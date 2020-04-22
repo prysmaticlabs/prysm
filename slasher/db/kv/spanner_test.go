@@ -272,6 +272,7 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
+	db.spanCacheEnabled = false
 
 	for _, tt := range spanTests {
 		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
