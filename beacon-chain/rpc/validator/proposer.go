@@ -154,6 +154,9 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
 	}
@@ -169,11 +172,13 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get block number from timestamp")
+		log.WithError(err).Error("Failed to get block number from timestamp")
+		return vs.randomETH1DataVote(ctx, slot)
 	}
 	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get eth1 data from block number")
+		log.WithError(err).Error("Failed to get eth1 data from block number")
+		return vs.randomETH1DataVote(ctx, slot)
 	}
 
 	return eth1Data, nil
@@ -362,6 +367,9 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 // hash of eth1 block hash that is FOLLOW_DISTANCE back from its
 // latest block.
 func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)
