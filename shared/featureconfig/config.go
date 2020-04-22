@@ -246,6 +246,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	Init(cfg)
 }
 
+// ConfigureSlasher sets the global config based
+// on what flags are enabled for the slasher client.
+func ConfigureSlasher(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
+}
+
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
