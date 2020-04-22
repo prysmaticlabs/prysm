@@ -87,9 +87,10 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
-	fc := featureconfig.Get()
-	fc.DisableNewStateMgmt = true
-	featureconfig.Init(fc)
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
 
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -161,9 +162,10 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
-	fc := featureconfig.Get()
-	fc.DisableNewStateMgmt = true
-	featureconfig.Init(fc)
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
 
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
