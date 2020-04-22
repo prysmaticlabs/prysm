@@ -9,7 +9,7 @@ import (
 
 var (
 	// hotStateCacheSize defines the max number of hot state this can cache.
-	hotStateCacheSize = 32
+	hotStateCacheSize = 16
 	// Metrics
 	hotStateCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "hot_state_cache_hit",
