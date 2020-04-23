@@ -204,5 +204,5 @@ esac
 
 verify $process
 
-color "36" "Starting Prysm $1 ${@:2}"
+color "36" "Starting Prysm $1 ${*:2}"
 exec -a "$0" "${process}" "${@:2}"
