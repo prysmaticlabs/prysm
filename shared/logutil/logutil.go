@@ -5,6 +5,7 @@ package logutil
 import (
 	"io"
 	"os"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -22,4 +23,18 @@ func ConfigurePersistentLogging(logFileName string) error {
 
 	logrus.Info("File logging initialized")
 	return nil
+}
+func countdownToGenesis(genesisTime time.Time, minutesCount int) {
+	ticker := time.NewTicker(time.Duration(minutesCount) * time.Minute)
+
+	for {
+		select {
+		case <-time.NewTimer(genesisTime.Sub(time.Now())).C:
+			log.Infof("genesis time\n")
+			return
+
+		case <-ticker.C:
+			log.Infof("%02d minutes to genesis!\n", genesisTime.Sub(time.Now()).Round(time.Minute)/time.Minute+1)
+		}
+	}
 }
