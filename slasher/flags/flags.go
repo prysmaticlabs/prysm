@@ -43,9 +43,4 @@ var (
 		Name:  "rebuild-span-maps",
 		Usage: "Rebuild span maps from indexed attestations in db",
 	}
-	// UseSpanCacheFlag enables the slasher to use span cache.
-	UseSpanCacheFlag = &cli.BoolFlag{
-		Name:  "span-map-cache",
-		Usage: "Enable span map cache",
-	}
 )
