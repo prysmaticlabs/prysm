@@ -25,6 +25,7 @@ func SetupSlasherDB(t testing.TB, spanCacheEnabled bool) *kv.Store {
 	}
 	cfg := &kv.Config{}
 	db, err := slasherDB.NewDB(p, cfg)
+	db.EnableSpanCache(spanCacheEnabled)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
