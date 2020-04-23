@@ -125,7 +125,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		}
 		// Base rewards for getting source right
 		wanted := base*attestedBalance/totalBalance +
-			bp.PrevEpochHeadAttesters*attestedBalance/totalBalance +
+			bp.PrevEpochTargetAttesters*attestedBalance/totalBalance +
 			bp.PrevEpochHeadAttesters*attestedBalance/totalBalance
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
