@@ -59,36 +59,7 @@ type blockchainService interface {
 	blockchain.ForkFetcher
 	blockchain.AttestationReceiver
 	blockchain.TimeFetcher
-}
-
-// NewRegularSync service.
-func NewRegularSync(cfg *Config) *Service {
-	ctx, cancel := context.WithCancel(context.Background())
-	r := &Service{
-		ctx:                  ctx,
-		cancel:               cancel,
-		db:                   cfg.DB,
-		p2p:                  cfg.P2P,
-		attPool:              cfg.AttPool,
-		exitPool:             cfg.ExitPool,
-		slashingPool:         cfg.SlashingPool,
-		chain:                cfg.Chain,
-		initialSync:          cfg.InitialSync,
-		attestationNotifier:  cfg.AttestationNotifier,
-		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
-		seenPendingBlocks:    make(map[[32]byte]bool),
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		stateNotifier:        cfg.StateNotifier,
-		blockNotifier:        cfg.BlockNotifier,
-		stateSummaryCache:    cfg.StateSummaryCache,
-		stateGen:             cfg.StateGen,
-		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
-	}
-
-	r.registerRPCHandlers()
-	go r.registerSubscribers()
-
-	return r
+	blockchain.GenesisFetcher
 }
 
 // Service is responsible for handling all run time p2p related operations as the
@@ -128,13 +99,43 @@ type Service struct {
 	stateGen                  *stategen.State
 }
 
+// NewRegularSync service.
+func NewRegularSync(cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &Service{
+		ctx:                  ctx,
+		cancel:               cancel,
+		db:                   cfg.DB,
+		p2p:                  cfg.P2P,
+		attPool:              cfg.AttPool,
+		exitPool:             cfg.ExitPool,
+		slashingPool:         cfg.SlashingPool,
+		chain:                cfg.Chain,
+		initialSync:          cfg.InitialSync,
+		attestationNotifier:  cfg.AttestationNotifier,
+		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:    make(map[[32]byte]bool),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		stateNotifier:        cfg.StateNotifier,
+		blockNotifier:        cfg.BlockNotifier,
+		stateSummaryCache:    cfg.StateSummaryCache,
+		stateGen:             cfg.StateGen,
+		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
+	}
+
+	r.registerRPCHandlers()
+	go r.registerSubscribers()
+
+	return r
+}
+
 // Start the regular sync service.
 func (r *Service) Start() {
 	if err := r.initCaches(); err != nil {
 		panic(err)
 	}
 
-	r.p2p.AddConnectionHandler(r.reValidatePeer)
+	r.p2p.AddConnectionHandler(r.reValidatePeer, r.sendGenericGoodbyeMessage)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.p2p.AddPingMethod(r.sendPingRequest)
 	r.processPendingBlocksQueue()

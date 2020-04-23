@@ -32,6 +32,7 @@ type ChainService struct {
 	BlocksReceived              []*ethpb.SignedBeaconBlock
 	Balance                     *precompute.Balance
 	Genesis                     time.Time
+	ValidatorsRoot              [32]byte
 	Fork                        *pb.Fork
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
@@ -217,6 +218,11 @@ func (ms *ChainService) GenesisTime() time.Time {
 	return ms.Genesis
 }
 
+// GenesisValidatorRoot mocks the same method in the chain service.
+func (ms *ChainService) GenesisValidatorRoot() [32]byte {
+	return ms.ValidatorsRoot
+}
+
 // CurrentSlot mocks the same method in the chain service.
 func (ms *ChainService) CurrentSlot() uint64 {
 	return uint64(time.Now().Unix()-ms.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot
@@ -238,4 +244,9 @@ func (ms *ChainService) ClearCachedStates() {}
 // HasInitSyncBlock mocks the same method in the chain service.
 func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
 	return false
+}
+
+// HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
+func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
+	return [32]byte{}
 }

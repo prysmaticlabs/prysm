@@ -79,6 +79,11 @@ func (v *ReadOnlyValidator) Slashed() bool {
 	return v.validator.Slashed
 }
 
+// CopyValidator returns the copy of the read only validator.
+func (v *ReadOnlyValidator) CopyValidator() *ethpb.Validator {
+	return CopyValidator(v.validator)
+}
+
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
@@ -121,7 +126,7 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 // HasInnerState detects if the internal reference to the state data structure
 // is populated correctly. Returns false if nil.
 func (b *BeaconState) HasInnerState() bool {
-	return b.state != nil
+	return b != nil && b.state != nil
 }
 
 // GenesisTime of the beacon state as a uint64.
@@ -366,20 +371,7 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 		if val == nil {
 			continue
 		}
-		pubKey := make([]byte, len(val.PublicKey))
-		copy(pubKey, val.PublicKey)
-		withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
-		copy(withdrawalCreds, val.WithdrawalCredentials)
-		res[i] = &ethpb.Validator{
-			PublicKey:                  pubKey[:],
-			WithdrawalCredentials:      withdrawalCreds,
-			EffectiveBalance:           val.EffectiveBalance,
-			Slashed:                    val.Slashed,
-			ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
-			ActivationEpoch:            val.ActivationEpoch,
-			ExitEpoch:                  val.ExitEpoch,
-			WithdrawableEpoch:          val.WithdrawableEpoch,
-		}
+		res[i] = CopyValidator(val)
 	}
 	return res
 }

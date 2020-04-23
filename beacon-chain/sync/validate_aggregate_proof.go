@@ -141,7 +141,7 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, s *ethpb.Signe
 	a := s.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
-	hasStateSummary := !featureconfig.Get().DisableNewStateMgmt && r.db.HasStateSummary(ctx, blockRoot) || r.stateSummaryCache.Has(blockRoot)
+	hasStateSummary := featureconfig.Get().NewStateMgmt && r.db.HasStateSummary(ctx, blockRoot) || r.stateSummaryCache.Has(blockRoot)
 	hasState := r.db.HasState(ctx, blockRoot) || hasStateSummary
 	hasBlock := r.db.HasBlock(ctx, blockRoot)
 	if !(hasState && hasBlock) {
@@ -197,7 +197,7 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 func validateAggregateAttTime(attSlot uint64, genesisTime uint64) error {
 	// in milliseconds
 	attTime := 1000 * (genesisTime + (attSlot * params.BeaconConfig().SecondsPerSlot))
-	attSlotRange := attSlot + params.BeaconConfig().AttestationPropagationSlotRange
+	attSlotRange := attSlot + params.BeaconNetworkConfig().AttestationPropagationSlotRange
 	attTimeRange := 1000 * (genesisTime + (attSlotRange * params.BeaconConfig().SecondsPerSlot))
 	currentTimeInSec := roughtime.Now().Unix()
 	currentTime := 1000 * currentTimeInSec
@@ -206,7 +206,7 @@ func validateAggregateAttTime(attSlot uint64, genesisTime uint64) error {
 	currentSlot := (uint64(currentTimeInSec) - genesisTime) / params.BeaconConfig().SecondsPerSlot
 	if attTime-uint64(maximumGossipClockDisparity.Milliseconds()) > uint64(currentTime) ||
 		uint64(currentTime-maximumGossipClockDisparity.Milliseconds()) > attTimeRange {
-		return fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconConfig().AttestationPropagationSlotRange)
+		return fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconNetworkConfig().AttestationPropagationSlotRange)
 	}
 	return nil
 }

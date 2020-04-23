@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -336,7 +337,12 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	}
 }
 
-func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
+func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
@@ -549,11 +555,13 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
+			ValidatorsRoot:   [32]byte{'A'},
 			State:            beaconState,
 			ValidAttestation: true,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
+
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
 		stateSummaryCache:    cache.NewStateSummaryCache(),

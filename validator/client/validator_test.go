@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -161,6 +162,116 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	)
 	err := v.WaitForChainStart(context.Background())
 	want := "could not receive ChainStart from stream"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestWaitForSynced_SetsGenesisTime(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	genesis := uint64(time.Unix(1, 0).Unix())
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.SyncedResponse{
+			Synced:      true,
+			GenesisTime: genesis,
+		},
+		nil,
+	)
+	if err := v.WaitForSynced(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if v.genesisTime != genesis {
+		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
+	}
+	if v.ticker == nil {
+		t.Error("Expected ticker to be set, received nil")
+	}
+}
+
+func TestWaitForSynced_ContextCanceled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	genesis := uint64(time.Unix(0, 0).Unix())
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&ethpb.SyncedResponse{
+			Synced:      true,
+			GenesisTime: genesis,
+		},
+		nil,
+	)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := v.WaitForSynced(ctx)
+	want := cancelledCtx
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestWaitForSynced_StreamSetupFails(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, errors.New("failed stream"))
+	err := v.WaitForSynced(context.Background())
+	want := "could not setup beacon chain Synced streaming client"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestWaitForSynced_ReceiveErrorFromStream(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	clientStream := internal.NewMockBeaconNodeValidator_WaitForSyncedClient(ctrl)
+	client.EXPECT().WaitForSynced(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		nil,
+		errors.New("fails"),
+	)
+	err := v.WaitForSynced(context.Background())
+	want := "could not receive Synced from stream"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -326,14 +437,15 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		validatorClient: client,
 		genesisTime:     1,
 	}
-	resp := generateMockStatusResponse(publicKeys(v.keyManager))
+	publicKeys := publicKeys(v.keyManager)
+	resp := generateMockStatusResponse(publicKeys)
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	resp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
-			PublicKeys: publicKeys(v.keyManager),
+			PublicKeys: publicKeys,
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -697,5 +809,103 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	}
 	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != roleUnknown {
 		t.Errorf("Unexpected validator role. want: UNKNOWN")
+	}
+}
+
+func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
+	type statusTest struct {
+		name       string
+		status     *ethpb.ValidatorActivationResponse_Status
+		log        string
+		activeKeys [][]byte
+	}
+	pubKeys := [][]byte{
+		bytesutil.Uint64ToBytes(0),
+		bytesutil.Uint64ToBytes(1),
+		bytesutil.Uint64ToBytes(2),
+		bytesutil.Uint64ToBytes(3),
+	}
+	tests := []statusTest{
+		{
+			name: "UNKNOWN_STATUS, no deposit found yet",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
+				},
+			},
+			log: "Waiting for deposit to be observed by beacon node",
+		},
+		{
+			name: "DEPOSITED, deposit found",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                 ethpb.ValidatorStatus_DEPOSITED,
+					DepositInclusionSlot:   50,
+					Eth1DepositBlockNumber: 400,
+				},
+			},
+			log: "Deposit for validator received but not processed into the beacon state\" eth1DepositBlockNumber=400 expectedInclusionSlot=50",
+		},
+		{
+			name: "DEPOSITED into state",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                    ethpb.ValidatorStatus_DEPOSITED,
+					PositionInActivationQueue: 30,
+				},
+			},
+			log: "Deposit processed, entering activation queue after finalization\" positionInActivationQueue=30",
+		},
+		{
+			name: "PENDING",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                    ethpb.ValidatorStatus_PENDING,
+					ActivationEpoch:           60,
+					PositionInActivationQueue: 5,
+				},
+			},
+			log: "Waiting to be activated\" activationEpoch=60 positionInActivationQueue=5",
+		},
+		{
+			name: "EXITED",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_EXITED,
+				},
+			},
+			log: "Validator exited",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+			v := validator{
+				keyManager:      testKeyManager,
+				validatorClient: client,
+				duties: &ethpb.DutiesResponse{
+					Duties: []*ethpb.DutiesResponse_Duty{
+						{
+							CommitteeIndex: 1,
+						},
+					},
+				},
+			}
+
+			activeKeys := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
+			if !reflect.DeepEqual(activeKeys, test.activeKeys) {
+				t.Fatal("expected active keys to be equal")
+			}
+
+			testutil.AssertLogsContain(t, hook, test.log)
+		})
 	}
 }

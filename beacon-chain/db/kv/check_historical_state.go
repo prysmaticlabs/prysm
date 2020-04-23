@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -13,7 +13,7 @@ var historicalStateDeletedKey = []byte("historical-states-deleted")
 
 // HistoricalStatesDeleted verifies historical states exist in DB.
 func (kv *Store) HistoricalStatesDeleted(ctx context.Context) error {
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		return kv.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(newStateServiceCompatibleBucket)
 			return bkt.Put(historicalStateDeletedKey, []byte{0x01})
@@ -30,22 +30,8 @@ func (kv *Store) HistoricalStatesDeleted(ctx context.Context) error {
 		return err
 	}
 
-	regenHistoricalStatesConfirmed := false
-	var err error
 	if historicalStateDeleted {
-		actionText := "--disable-new-state-mgmt was previously used and historical states cannot be found. To proceed without using the flag, the db will need " +
-			"to generate and re-save historical states. This process may take a while, - do you want to proceed? (Y/N)"
-		deniedText := "Historical states will not be generated. Please continue using --disable-new-state-mgmt"
-
-		regenHistoricalStatesConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
-		if err != nil {
-			return err
-		}
-
-		if !regenHistoricalStatesConfirmed {
-			return errors.New("exiting... please use --disable-new-state-mgmt")
-		}
-
+		log.Warn("Regenerating and saving historical states. This may take a while.")
 		if err := kv.regenHistoricalStates(ctx); err != nil {
 			return errors.Wrap(err, "could not regenerate historical states, please retry")
 		}

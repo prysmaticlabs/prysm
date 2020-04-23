@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -31,6 +32,17 @@ func (s sortableAttestations) Len() int      { return len(s) }
 func (s sortableAttestations) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].Data.Slot < s[j].Data.Slot
+}
+
+func mapAttestationsByTargetRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
+	attsMap := make(map[[32]byte][]*ethpb.Attestation)
+	if len(atts) == 0 {
+		return attsMap
+	}
+	for _, att := range atts {
+		attsMap[bytesutil.ToBytes32(att.Data.Target.Root)] = append(attsMap[bytesutil.ToBytes32(att.Data.Target.Root)], att)
+	}
+	return attsMap
 }
 
 // ListAttestations retrieves attestations by block root, slot, or epoch.
@@ -91,13 +103,12 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
-// ListIndexedAttestations retrieves indexed attestations by target epoch.
-// IndexedAttestationsForEpoch are sorted by data slot by default. Either a target epoch filter
-// or a boolean filter specifying a request for genesis epoch attestations may be used.
+// ListIndexedAttestations retrieves indexed attestations by block root.
+// IndexedAttestationsForEpoch are sorted by data slot by default. Start-end epoch
+// filter is used to retrieve blocks with.
 //
 // The server may return an empty list when no attestations match the given
-// filter criteria. This RPC should not return NOT_FOUND. Only one filter
-// criteria should be used.
+// filter criteria. This RPC should not return NOT_FOUND.
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
@@ -117,13 +128,17 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	atts := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
+	if !featureconfig.Get().NewStateMgmt {
+		return nil, status.Error(codes.Internal, "New state management must be turned on to support historic attestation. Please run without --disable-new-state-mgmt flag")
+	}
+
+	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
-		atts = append(atts, block.Block.Body.Attestations...)
+		attsArray = append(attsArray, block.Block.Body.Attestations...)
 	}
 	// We sort attestations according to the Sortable interface.
-	sort.Sort(sortableAttestations(atts))
-	numAttestations := len(atts)
+	sort.Sort(sortableAttestations(attsArray))
+	numAttestations := len(attsArray)
 
 	// If there are no attestations, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 attestations below would result in an error.
@@ -134,44 +149,35 @@ func (bs *Server) ListIndexedAttestations(
 			NextPageToken:       strconv.Itoa(0),
 		}, nil
 	}
-
-	// We use the retrieved committees for the epoch to convert all attestations
+	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
-	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
-	for i := 0; i < len(atts); i++ {
-		att := atts[i]
-		epoch := helpers.SlotToEpoch(att.Data.Slot)
-		attState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+	mappedAttestations := mapAttestationsByTargetRoot(ctx, attsArray)
+	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations)
+	attIndex := 0
+	for targetRoot, atts := range mappedAttestations {
+		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
 				"Could not retrieve state for attestation data block root %v: %v",
-				att.Data.BeaconBlockRoot,
+				targetRoot,
 				err,
 			)
 		}
-		activeIndices, err := helpers.ActiveValidatorIndices(attState, epoch)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve active validator indices for epoch %d: %v",
-				epoch,
-				err,
-			)
+		for i := 0; i < len(atts); i++ {
+			att := atts[i]
+			committee, err := helpers.BeaconCommitteeFromState(attState, att.Data.Slot, att.Data.CommitteeIndex)
+			if err != nil {
+				return nil, status.Errorf(
+					codes.Internal,
+					"Could not retrieve committees from state %v",
+					err,
+				)
+			}
+			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
+			indexedAtts[attIndex] = idxAtt
+			attIndex++
 		}
-		seed, err := helpers.Seed(attState, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not seed for epoch %d: %v",
-				epoch,
-				err,
-			)
-		}
-		committeesBySlot, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, seed)
-		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
-		indexedAtts[i] = idxAtt
 	}
 
 	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(indexedAtts))

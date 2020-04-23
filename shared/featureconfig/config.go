@@ -46,11 +46,13 @@ type Flags struct {
 	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	DisableNewStateMgmt                        bool // NewStateMgmt disables the new state mgmt service.
+	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	DisableInitSyncQueue                       bool // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
+	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
+	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -84,12 +86,54 @@ func Init(c *Flags) {
 	featureConfig = c
 }
 
+// Copy returns copy of the config object.
+func (c *Flags) Copy() *Flags {
+	return &Flags{
+		MinimalConfig:                              c.MinimalConfig,
+		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
+		InitSyncNoVerify:                           c.InitSyncNoVerify,
+		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
+		SkipBLSVerify:                              c.SkipBLSVerify,
+		EnableBackupWebhook:                        c.EnableStateRefCopy,
+		PruneEpochBoundaryStates:                   c.PruneEpochBoundaryStates,
+		EnableSnappyDBCompression:                  c.EnableSnappyDBCompression,
+		ProtectProposer:                            c.ProtectProposer,
+		ProtectAttester:                            c.ProtectAttester,
+		DisableStrictAttestationPubsubVerification: c.DisableStrictAttestationPubsubVerification,
+		DisableUpdateHeadPerAttestation:            c.DisableUpdateHeadPerAttestation,
+		EnableByteMempool:                          c.EnableByteMempool,
+		EnableDomainDataCache:                      c.EnableDomainDataCache,
+		EnableStateGenSigVerify:                    c.EnableStateGenSigVerify,
+		CheckHeadState:                             c.CheckHeadState,
+		EnableNoise:                                c.EnableNoise,
+		DontPruneStateStartUp:                      c.DontPruneStateStartUp,
+		NewStateMgmt:                               c.NewStateMgmt,
+		DisableInitSyncQueue:                       c.DisableInitSyncQueue,
+		EnableFieldTrie:                            c.EnableFieldTrie,
+		EnableBlockHTR:                             c.EnableBlockHTR,
+		NoInitSyncBatchSaveBlocks:                  c.NoInitSyncBatchSaveBlocks,
+		EnableStateRefCopy:                         c.EnableStateRefCopy,
+		WaitForSynced:                              c.WaitForSynced,
+		DisableForkChoice:                          c.DisableForkChoice,
+		BroadcastSlashings:                         c.BroadcastSlashings,
+		EnableSSZCache:                             c.EnableSSZCache,
+		EnableEth1DataVoteCache:                    c.EnableEth1DataVoteCache,
+		EnableSlasherConnection:                    c.EnableSlasherConnection,
+		EnableBlockTreeCache:                       c.EnableBlockTreeCache,
+		KafkaBootstrapServers:                      c.KafkaBootstrapServers,
+		CustomGenesisDelay:                         c.CustomGenesisDelay,
+	}
+}
+
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
+	if ctx.Bool(devModeFlag.Name) {
+		enableDevModeFlags(ctx)
+	}
 	delay := params.BeaconConfig().MinGenesisDelay
 	if ctx.IsSet(customGenesisDelayFlag.Name) {
 		delay = ctx.Uint64(customGenesisDelayFlag.Name)
@@ -171,9 +215,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(disableNewStateMgmt.Name) {
-		log.Warn("Disabling state management service")
-		cfg.DisableNewStateMgmt = true
+	if ctx.Bool(enableNewStateMgmt.Name) {
+		log.Warn("Enabling state management service")
+		cfg.NewStateMgmt = true
 	}
 	if ctx.Bool(disableInitSyncQueue.Name) {
 		log.Warn("Disabled initial sync queue")
@@ -191,7 +235,21 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
 	}
+	if ctx.Bool(enableStateRefCopy.Name) {
+		log.Warn("Enabling state reference copy")
+		cfg.EnableStateRefCopy = true
+	}
+	if ctx.Bool(broadcastSlashingFlag.Name) {
+		log.Warn("Enabling broadcast slashing to p2p network")
+		cfg.BroadcastSlashings = true
+	}
 	Init(cfg)
+}
+
+// ConfigureSlasher sets the global config based
+// on what flags are enabled for the slasher client.
+func ConfigureSlasher(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
 }
 
 // ConfigureValidator sets the global config based
@@ -215,6 +273,18 @@ func ConfigureValidator(ctx *cli.Context) {
 		cfg.EnableDomainDataCache = true
 	}
 	Init(cfg)
+}
+
+// enableDevModeFlags switches development mode features on.
+func enableDevModeFlags(ctx *cli.Context) {
+	log.Warn("Enabling development mode flags")
+	for _, f := range devModeFlags {
+		if !ctx.IsSet(f.Names()[0]) {
+			if err := ctx.Set(f.Names()[0], "true"); err != nil {
+				log.WithError(err).Debug("Error enabling development mode flag")
+			}
+		}
+	}
 }
 
 func complainOnDeprecatedFlags(ctx *cli.Context) {

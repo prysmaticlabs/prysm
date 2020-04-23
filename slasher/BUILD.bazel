@@ -14,6 +14,7 @@ go_library(
     deps = [
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
         "//slasher/flags:go_default_library",
@@ -30,7 +31,10 @@ go_test(
     size = "small",
     srcs = ["usage_test.go"],
     embed = [":go_default_library"],
-    deps = ["@in_gopkg_urfave_cli_v2//:go_default_library"],
+    deps = [
+        "//shared/featureconfig:go_default_library",
+        "@in_gopkg_urfave_cli_v2//:go_default_library",
+    ],
 )
 
 go_image(
@@ -50,6 +54,7 @@ go_image(
     deps = [
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
         "//slasher/flags:go_default_library",

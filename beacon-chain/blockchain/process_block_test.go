@@ -19,7 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -299,6 +301,11 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -353,7 +360,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	_, err = service.verifyBlkPreState(ctx, b)
-	wanted := "provided block root does not have block saved in the db"
+	wanted := "could not reconstruct parent state"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
 	}
@@ -760,4 +767,14 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 		return nil, err
 	}
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
+}
+
+func TestCurrentSlot_HandlesOverflow(t *testing.T) {
+	svc := Service{genesisTime: roughtime.Now().Add(1 * time.Hour)}
+
+	slot := svc.CurrentSlot()
+
+	if slot != 0 {
+		t.Fatalf("Expected slot to be 0, got %d", slot)
+	}
 }

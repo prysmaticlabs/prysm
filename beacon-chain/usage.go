@@ -55,7 +55,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
-			cmd.MonitoringPortFlag,
+			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
 			cmd.ForceClearDB,
@@ -108,6 +108,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
 			cmd.P2PEncoding,
+			cmd.P2PPubsub,
 			flags.MinSyncPeers,
 		},
 	},
@@ -128,6 +129,15 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropGenesisStateFlag,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
+		},
+	},
+	{
+		Name: "archive",
+		Flags: []cli.Flag{
+			flags.ArchiveEnableFlag,
+			flags.ArchiveValidatorSetChangesFlag,
+			flags.ArchiveBlocksFlag,
+			flags.ArchiveAttestationsFlag,
 		},
 	},
 }

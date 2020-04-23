@@ -75,10 +75,10 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "e6a6c016b0663e06fa5fccf1cd8152eab8aa8180c583ec20c872f4f9953a7ac5",
+    sha256 = "142dd33e38b563605f0d20e89d9ef9eda0fc3cb539a14be1bdb1350de2eda659",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.22.1/rules_go-v0.22.1.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.22.1/rules_go-v0.22.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.22.2/rules_go-v0.22.2.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.22.2/rules_go-v0.22.2.tar.gz",
     ],
 )
 
@@ -289,7 +289,7 @@ http_archive(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "861ae1b1875c17d86a6a5d68118708ab2b099658",
+    commit = "0beb54b2147b3473a4c55e5ce6f02643ce403b14",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -1305,12 +1305,8 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "6607cc86ddb7c78acfe3b1f0dfb115489a96d46d",
+    commit = "4685995df20b6d7a926fb98778c940e380db33ee",
     importpath = "github.com/prysmaticlabs/ethereumapis",
-    patch_args = ["-p1"],
-    patches = [
-        "//third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
-    ],
 )
 
 go_repository(
@@ -1508,74 +1504,89 @@ go_repository(
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet",
-    commit = "6970d62e60d86fdae3c3e510e800e8a60d755a7d",
     importpath = "github.com/wealdtech/go-eth2-wallet",
+    sum = "h1:Hna/w4EKBJIs86VprIq7ez063A6kwk31d/O3Gs+MpYc=",
+    version = "v1.9.3",
 )
 
 go_repository(
-    name = "com_github_wealdtech_go_eth2_wallet_hd",
-    commit = "ce0a252a01c621687e9786a64899cfbfe802ba73",
-    importpath = "github.com/wealdtech/go-eth2-wallet-hd",
+    name = "com_github_wealdtech_go_eth2_wallet_hd_v2",
+    importpath = "github.com/wealdtech/go-eth2-wallet-hd/v2",
+    sum = "h1:kiCvdexK3zRC2GwZHSHq+hS+irVNtMs5pNADyumeeRM=",
+    version = "v2.0.1",
 )
 
 go_repository(
-    name = "com_github_wealdtech_go_eth2_wallet_nd",
-    commit = "12c8c41cdbd16797ff292e27f58e126bb89e9706",
-    importpath = "github.com/wealdtech/go-eth2-wallet-nd",
+    name = "com_github_wealdtech_go_eth2_wallet_nd_v2",
+    importpath = "github.com/wealdtech/go-eth2-wallet-nd/v2",
+    sum = "h1:4lB6GY5oHQn5xwn/Sxm1e9SeVCaxa7q/0hqXUQYUNwU=",
+    version = "v2.0.1",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_store_filesystem",
-    commit = "1eea6a48d75380047d2ebe7c8c4bd8985bcfdeca",
     importpath = "github.com/wealdtech/go-eth2-wallet-store-filesystem",
+    sum = "h1:Lc6wVTjIYeD+2hLAIzq1SugTWR527vEX4tEr5v3zxJc=",
+    version = "v1.7.2",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_store_s3",
-    commit = "1c821b5161f7bb0b3efa2030eff687eea5e70e53",
     importpath = "github.com/wealdtech/go-eth2-wallet-store-s3",
+    sum = "h1:xzyQDxbe5nr7xG0ByevTV2S8qkeOZvvjp+leBJcpxXQ=",
+    version = "v1.6.2",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",
-    commit = "0c11c07b9544eb662210fadded94f40f309d8c8f",
     importpath = "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4",
+    sum = "h1:IcpS4VpXhYz+TVupB5n6C6IQzaKwG+Rc8nvgCa/da4c=",
+    version = "v1.0.0",
 )
 
 go_repository(
-    name = "com_github_wealdtech_go_eth2_wallet_types",
-    commit = "af67d8101be61e7c4dd8126d2b3eba20cff5dab2",
-    importpath = "github.com/wealdtech/go-eth2-wallet-types",
+    name = "com_github_wealdtech_go_eth2_wallet_types_v2",
+    importpath = "github.com/wealdtech/go-eth2-wallet-types/v2",
+    sum = "h1:Ct3RrNJTapBiG2GxVl53Kfgy96f0GEUV7bediTu91u8=",
+    version = "v2.0.1",
 )
 
 go_repository(
-    name = "com_github_wealdtech_go_eth2_types",
-    commit = "f9c31ddf180537dd5712d5998a3d56c45864d71f",
-    importpath = "github.com/wealdtech/go-eth2-types",
+    name = "com_github_wealdtech_go_eth2_types_v2",
+    build_directives = [
+        "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
+    ],
+    importpath = "github.com/wealdtech/go-eth2-types/v2",
+    sum = "h1:qfmgaCBkH2N11LHCXsRWYz7OOxc+1QXrKHlS9yDnFsw=",
+    version = "v2.3.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_util",
-    commit = "326ebb1755651131bb8f4506ea9a23be6d9ad1dd",
     importpath = "github.com/wealdtech/go-eth2-util",
+    sum = "h1:MyM16V7Qhd9q2ZaRa0WteBg2bWb8UplIKjZr8aeBZP0=",
+    version = "v1.1.4",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_ecodec",
-    commit = "7473d835445a3490e61a5fcf48fe4e9755a37957",
     importpath = "github.com/wealdtech/go-ecodec",
+    sum = "h1:yggrTSckcPJRaxxOxQF7FPm21kgE8WA6+f5jdq5Kr8o=",
+    version = "v1.1.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_bytesutil",
-    commit = "e564d0ade555b9f97494f0f669196ddcc6bc531d",
     importpath = "github.com/wealdtech/go-bytesutil",
+    sum = "h1:ocEg3Ke2GkZ4vQw5lp46rmO+pfqCCTgq35gqOy8JKVc=",
+    version = "v1.1.1",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_indexer",
-    commit = "334862c32b1e3a5c6738a2618f5c0a8ebeb8cd51",
     importpath = "github.com/wealdtech/go-indexer",
+    sum = "h1:/S4rfWQbSOnnYmwnvuTVatDibZ8o1s9bmTCHO16XINg=",
+    version = "v1.0.0",
 )
 
 go_repository(
@@ -1670,4 +1681,10 @@ go_repository(
     importpath = "golang.org/x/mod",
     sum = "h1:KU7oHjnv3XNWfa5COkzUifxZmxp1TyI7ImMXqFxLwvQ=",
     version = "v0.2.0",
+)
+
+go_repository(
+    name = "com_github_golang_gddo",
+    commit = "3c2cc9a6329d9842b3bbdaf307a8110d740cf94c",
+    importpath = "github.com/golang/gddo",
 )

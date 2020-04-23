@@ -4,10 +4,12 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const attestationSubnetCount = 64
-const attSubnetEnrKey = "attnets"
+var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+
+var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
 
 func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
 	bitV := bitfield.NewBitvector64()

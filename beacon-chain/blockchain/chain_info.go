@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -19,12 +20,18 @@ import (
 type ChainInfoFetcher interface {
 	HeadFetcher
 	FinalizationFetcher
+	GenesisFetcher
 }
 
 // TimeFetcher retrieves the Eth2 data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time
 	CurrentSlot() uint64
+}
+
+// GenesisFetcher retrieves the eth2 data related to its genesis.
+type GenesisFetcher interface {
+	GenesisValidatorRoot() [32]byte
 }
 
 // HeadFetcher defines a common interface for methods in blockchain service which
@@ -36,6 +43,7 @@ type HeadFetcher interface {
 	HeadState(ctx context.Context) (*state.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
+	HeadGenesisValidatorRoot() [32]byte
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -173,9 +181,27 @@ func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
 	return helpers.Seed(s.headState(), epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
+// HeadGenesisValidatorRoot returns genesis validator root of the head state.
+func (s *Service) HeadGenesisValidatorRoot() [32]byte {
+	if !s.hasHeadState() {
+		return [32]byte{}
+	}
+
+	return s.headGenesisValidatorRoot()
+}
+
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
+}
+
+// GenesisValidatorRoot returns the genesis validator
+// root of the chain.
+func (s *Service) GenesisValidatorRoot() [32]byte {
+	if !s.hasHeadState() {
+		return [32]byte{}
+	}
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.

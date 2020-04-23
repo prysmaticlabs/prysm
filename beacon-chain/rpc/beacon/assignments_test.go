@@ -18,11 +18,17 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -46,6 +52,11 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 }
 
 func TestServer_ListAssignments_NoResults(t *testing.T) {
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -94,6 +105,11 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 }
 
 func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -430,6 +446,11 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 }
 
 func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testing.T) {
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 

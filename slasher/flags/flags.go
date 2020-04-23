@@ -5,22 +5,6 @@ import (
 )
 
 var (
-	// CertFlag defines a flag for the node's TLS certificate.
-	CertFlag = &cli.StringFlag{
-		Name:  "tls-cert",
-		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
-	}
-	// RPCPort defines a slasher node RPC port to open.
-	RPCPort = &cli.IntFlag{
-		Name:  "rpc-port",
-		Usage: "RPC port exposed by the slasher",
-		Value: 5000,
-	}
-	// KeyFlag defines a flag for the node's TLS key.
-	KeyFlag = &cli.StringFlag{
-		Name:  "tls-key",
-		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
-	}
 	// BeaconCertFlag defines a flag for the beacon api certificate.
 	BeaconCertFlag = &cli.StringFlag{
 		Name:  "beacon-tls-cert",
@@ -32,10 +16,27 @@ var (
 		Usage: "Beacon node RPC provider endpoint",
 		Value: "localhost:4000",
 	}
-	// UseSpanCacheFlag enables the slasher to use span cache.
-	UseSpanCacheFlag = &cli.BoolFlag{
-		Name:  "span-map-cache",
-		Usage: "Enable span map cache",
+	// CertFlag defines a flag for the node's TLS certificate.
+	CertFlag = &cli.StringFlag{
+		Name:  "tls-cert",
+		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
+	}
+	// KeyFlag defines a flag for the node's TLS key.
+	KeyFlag = &cli.StringFlag{
+		Name:  "tls-key",
+		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
+	}
+	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
+	MonitoringPortFlag = &cli.Int64Flag{
+		Name:  "monitoring-port",
+		Usage: "Port used to listening and respond metrics for prometheus.",
+		Value: 8082,
+	}
+	// RPCPort defines a slasher node RPC port to open.
+	RPCPort = &cli.IntFlag{
+		Name:  "rpc-port",
+		Usage: "RPC port exposed by the slasher",
+		Value: 5000,
 	}
 	// RebuildSpanMapsFlag iterate through all indexed attestations in db and update all validators span maps from scratch.
 	RebuildSpanMapsFlag = &cli.BoolFlag{

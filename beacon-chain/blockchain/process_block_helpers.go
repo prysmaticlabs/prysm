@@ -21,7 +21,12 @@ import (
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() uint64 {
-	return uint64(roughtime.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
+	now := roughtime.Now().Unix()
+	genesis := s.genesisTime.Unix()
+	if now < genesis {
+		return 0
+	}
+	return uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
@@ -60,10 +65,19 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
 	defer span.End()
 
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
-		if !s.stateGen.StateSummaryExists(ctx, parentRoot) {
-			return nil, errors.New("provided block root does not have block saved in the db")
+		// Loosen the check to HasBlock because state summary gets saved in batches
+		// during initial syncing. There's no risk given a state summary object is just a
+		// a subset of the block object.
+		if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
+			return nil, errors.New("could not reconstruct parent state")
+		}
+		if !s.stateGen.HasState(ctx, parentRoot) {
+			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+				return nil, errors.Wrap(err, "could not save initial sync blocks")
+			}
+			s.clearInitSyncBlocks()
 		}
 		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)
 		if err != nil {
@@ -196,7 +210,7 @@ func (s *Service) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot 
 	}
 
 	if err := s.beaconDB.DeleteStates(ctx, roots); err != nil {
-		return err
+		log.Warnf("Could not delete states: %v", err)
 	}
 
 	return nil
@@ -269,7 +283,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		s.justifiedCheckpt = cpt
 	}
 
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
 		justifiedState := s.initSyncState[justifiedRoot]

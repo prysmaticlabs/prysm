@@ -8,6 +8,7 @@ import (
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
@@ -20,6 +21,7 @@ import (
 var log = logrus.WithField("prefix", "main")
 
 func startSlasher(ctx *cli.Context) error {
+	featureconfig.ConfigureSlasher(ctx)
 	verbosity := ctx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
@@ -41,8 +43,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	cmd.BootstrapNode,
-	cmd.MonitoringPortFlag,
+	flags.MonitoringPortFlag,
 	cmd.LogFileName,
 	cmd.LogFormat,
 	cmd.ClearDB,
@@ -55,10 +56,13 @@ var appFlags = []cli.Flag{
 	debug.TraceFlag,
 	flags.RPCPort,
 	flags.KeyFlag,
-	flags.UseSpanCacheFlag,
 	flags.RebuildSpanMapsFlag,
 	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
+}
+
+func init() {
+	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.SlasherFlags...))
 }
 
 func main() {

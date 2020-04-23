@@ -40,6 +40,7 @@ type TestP2P struct {
 	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
 	DelaySend       bool
+	Digest          [4]byte
 	peers           *peers.Status
 	LocalMetadata   *pb.MetaData
 }
@@ -167,7 +168,8 @@ func (p *TestP2P) PeerID() peer.ID {
 }
 
 // AddConnectionHandler handles the connection with a newly connected peer.
-func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error) {
+func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) error,
+	g func(context.Context, peer.ID) error) {
 	p.Host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
@@ -257,7 +259,7 @@ func (p *TestP2P) RefreshENR(epoch uint64) {
 
 // ForkDigest mocks the p2p func.
 func (p *TestP2P) ForkDigest() ([4]byte, error) {
-	return [4]byte{}, nil
+	return p.Digest, nil
 }
 
 // Metadata mocks the peer's metadata.

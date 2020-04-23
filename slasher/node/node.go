@@ -55,6 +55,7 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 	); err != nil {
 		return nil, err
 	}
+
 	registry := shared.NewServiceRegistry()
 
 	slasher := &SlasherNode{
@@ -130,7 +131,7 @@ func (s *SlasherNode) Close() {
 
 func (s *SlasherNode) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", ctx.Int64(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
@@ -142,7 +143,7 @@ func (s *SlasherNode) startDB(ctx *cli.Context) error {
 	clearDB := ctx.Bool(cmd.ClearDB.Name)
 	forceClearDB := ctx.Bool(cmd.ForceClearDB.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &kv.Config{SpanCacheEnabled: ctx.Bool(flags.UseSpanCacheFlag.Name)}
+	cfg := &kv.Config{}
 	d, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err
