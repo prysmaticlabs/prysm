@@ -135,7 +135,7 @@ func (r *Service) Start() {
 		panic(err)
 	}
 
-	r.p2p.AddConnectionHandler(r.reValidatePeer)
+	r.p2p.AddConnectionHandler(r.reValidatePeer, r.sendGenericGoodbyeMessage)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.p2p.AddPingMethod(r.sendPingRequest)
 	r.processPendingBlocksQueue()
