@@ -201,6 +201,9 @@ func (db *Store) EpochsSpanByValidatorsIndices(ctx context.Context, validatorInd
 			valSpans := make(map[uint64]types.Span, len(validatorIndices))
 			for _, v := range validatorIndices {
 				enc := epochBucket.Get(bytesutil.Bytes8(v))
+				if enc == nil {
+					continue
+				}
 				value, err := unmarshalSpan(ctx, enc)
 				if err != nil {
 					return err
