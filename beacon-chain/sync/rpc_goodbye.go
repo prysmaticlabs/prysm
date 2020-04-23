@@ -56,6 +56,11 @@ func (r *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.I
 	return nil
 }
 
+// sends a goodbye message for a generic error
+func (r *Service) sendGenericGoodbyeMessage(ctx context.Context, id peer.ID) error {
+	return r.sendGoodByeMessage(ctx, codeGenericError, id)
+}
+
 func goodbyeMessage(num uint64) string {
 	reason, ok := goodByes[num]
 	if ok {

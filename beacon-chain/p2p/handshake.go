@@ -15,7 +15,7 @@ import (
 // newly added peer. It performs a handshake with that peer by sending a hello request
 // and validating the response from the peer.
 func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error,
-	goodbyeFunc func(ctx context.Context, code uint64, id peer.ID) error) {
+	goodbyeFunc func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			log := log.WithField("peer", conn.RemotePeer().Pretty())
@@ -30,7 +30,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 			if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
 				go func() {
 					log.WithField("reason", "at peer limit").Trace("Ignoring connection request")
-					if err := goodbyeFunc(context.Background(), 2, conn.RemotePeer()); err != nil {
+					if err := goodbyeFunc(context.Background(), conn.RemotePeer()); err != nil {
 						log.WithError(err).Error("Unable to send goodbye message to peer")
 					}
 					if err := s.Disconnect(conn.RemotePeer()); err != nil {
