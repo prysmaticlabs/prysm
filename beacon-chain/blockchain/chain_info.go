@@ -43,6 +43,7 @@ type HeadFetcher interface {
 	HeadState(ctx context.Context) (*state.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
+	HeadGenesisValidatorRoot() [32]byte
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -178,6 +179,15 @@ func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
 	}
 
 	return helpers.Seed(s.headState(), epoch, params.BeaconConfig().DomainBeaconAttester)
+}
+
+// HeadGenesisValidatorRoot returns genesis validator root of the head state.
+func (s *Service) HeadGenesisValidatorRoot() [32]byte {
+	if !s.hasHeadState() {
+		return [32]byte{}
+	}
+
+	return s.headGenesisValidatorRoot()
 }
 
 // GenesisTime returns the genesis time of beacon chain.
