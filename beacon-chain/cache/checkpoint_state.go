@@ -93,6 +93,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 		return nil, ErrNotCheckpointState
 	}
 
+	// Copy here is unnecessary since the return will only be used to verify attestation signature.
 	return info.State, nil
 }
 
