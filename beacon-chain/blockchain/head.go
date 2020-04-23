@@ -202,8 +202,7 @@ func (s *Service) headState() *state.BeaconState {
 	return s.head.state.Copy()
 }
 
-// This returns the head state.
-// It does a full copy on head state for immutability.
+// This returns the genesis validator root of the head state.
 func (s *Service) headGenesisValidatorRoot() [32]byte {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
