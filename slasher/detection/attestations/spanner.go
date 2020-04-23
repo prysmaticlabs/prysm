@@ -234,7 +234,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		//copy(valIndices, indices)
+		copy(valIndices, indices)
 		if !batchRead {
 			if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 				return err
