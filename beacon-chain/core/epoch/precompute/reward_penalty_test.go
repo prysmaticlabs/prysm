@@ -100,7 +100,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Add some variances to target and epoch balances.
+	// Add some variances to target and head balances.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5593
 	bp.PrevEpochTargetAttesters *= 4 / 5
 	bp.PrevEpochHeadAttesters *= 2 / 3
