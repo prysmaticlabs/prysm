@@ -106,11 +106,16 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		log.Errorf("Could not compute sign root for aggregate and proof: %v", err)
 		return
 	}
+	sig, err := v.keyManager.Sign(pubKey, signedRoot)
+	if err != nil {
+		log.Errorf("Could not sign aggregate and proof: %v", err)
+		return
+	}
 
 	_, err = v.validatorClient.SubmitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Message:   res.AggregateAndProof,
-			Signature: signedRoot[:],
+			Signature: sig.Marshal(),
 		},
 	})
 	if err != nil {
