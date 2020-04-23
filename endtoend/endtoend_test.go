@@ -77,6 +77,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		slasherPIDs := components.StartSlashers(t)
 		defer helpers.KillProcesses(t, slasherPIDs)
 	}
+	if config.TestDeposits {
+		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
+		valPid := components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
+		defer helpers.KillProcesses(t, []int{valPid})
+	}
 
 	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
