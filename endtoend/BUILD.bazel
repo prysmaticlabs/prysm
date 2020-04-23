@@ -19,7 +19,7 @@ go_test(
         "//tools/bootnode",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
-    shard_count = 4,
+    shard_count = 2,
     tags = [
         "block-network",
         "e2e",
