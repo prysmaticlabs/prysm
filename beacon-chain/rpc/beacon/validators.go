@@ -804,8 +804,9 @@ func (bs *Server) GetValidatorPerformance(
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+
 	// Convert the list of validator public keys to list of validator indices.
 	// Also track missing validators using public keys.
 	for _, key := range req.PublicKeys {
@@ -813,6 +814,14 @@ func (bs *Server) GetValidatorPerformance(
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			missingValidators = append(missingValidators, key)
+			continue
+		}
+		val, err := headState.ValidatorAtIndex(idx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
+		}
+		currentEpoch := helpers.CurrentEpoch(headState)
+		if !helpers.IsActiveValidator(val, currentEpoch) {
 			continue
 		}
 		if idx >= uint64(len(validatorSummary)) {
