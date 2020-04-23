@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/shared/logutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -117,7 +118,7 @@ func (s *Service) Start() {
 			genesis,
 		).Warn("Genesis time is in the future - waiting to start sync...")
 		time.Sleep(roughtime.Until(genesis))
-		countdownToGenesis(genesis, 300)
+		logutil.countdownToGenesis(genesis, 300)
 	}
 	s.chainStarted = true
 	currentSlot := helpers.SlotsSince(genesis)
