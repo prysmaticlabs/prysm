@@ -108,16 +108,30 @@ function get_prysm_version() {
 function verify() {
   file=$1
 
-  hash shasum 2>/dev/null || { echo >&2 "shasum is not available. Not verifying integrity of downloaded binary."; return 1; }
-  hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; return 1; }
+  hash shasum 2>/dev/null || { echo >&2 "shasum is not available. Not verifying integrity of downloaded binary."; return failed_verification; }
+  hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; return failed_verification; }
 
   color "37" "Verifying binary integrity."
 
   gpg --list-keys $PRYLABS_SIGNING_KEY >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
-  (cd $wrapper_dir; shasum -a 256 -c "${file}.sha256")
-  (cd $wrapper_dir; gpg -u $PRYLABS_SIGNING_KEY --verify "${file}.sig" $file)
+  (cd $wrapper_dir; shasum -a 256 -c "${file}.sha256" || failed_verification)
+  (cd $wrapper_dir; gpg -u $PRYLABS_SIGNING_KEY --verify "${file}.sig" $file || failed_verification)
 
   color "32;1" "Verified ${file} has been signed by Prysmatic Labs."
+}
+
+function failed_verification() {
+  skip=${PRYSM_ALLOW_UNVERIFIED_BINARIES-0}
+  if [[ $skip == 1 ]]; then
+    return 0
+  fi
+  color "31" "Failed to verify Prysm binary. Please erase downloads in the \
+dist directory and run this script again. Alternatively, you can use a \
+A prior version by specifying environment variable USE_PRYSM_VERSION \
+with the specific version, as desired. Example: USE_PRYSM_VERSION=v1.0.0-alpha.5 \
+If you must wish to continue running an unverified binary, specific the \
+environment variable PRYSM_ALLOW_UNVERIFIED_BINARIES=1"
+  exit 1
 }
 
 get_prysm_version
