@@ -194,24 +194,29 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
 	latestMinSpanDistanceObserved.Set(float64(att.Data.Target.Epoch - att.Data.Source.Epoch))
+
+	// the for loop tries to update min span using cache for as long as there
+	// is a relevant cached epoch. when there is no such epoch in cache batch
+	// db read and write is used.
 	spanMap := make(map[uint64]types.Span)
 	epochsSpansMap := make(map[uint64]map[uint64]types.Span)
 	epoch := source - 1
-	fromCache := true
-	batchRead := false
+	useCache := true
+	useDb := false
 	var err error
 	for ; epoch >= 0; epoch-- {
-		if !batchRead {
-			spanMap, fromCache, err = s.slasherDB.EpochSpansMap(ctx, epoch)
+		if useCache {
+			spanMap, useCache, err = s.slasherDB.EpochSpansMap(ctx, epoch)
 		}
-		if !fromCache && !batchRead {
+		// Should happen once when cache is exhausted.
+		if !useCache && !useDb {
 			epochsSpansMap, err = s.slasherDB.EpochsSpanByValidatorsIndices(ctx, valIndices, epoch)
-			batchRead = true
+			useDb = true
 		}
 		if err != nil {
 			return err
 		}
-		if batchRead {
+		if useDb {
 			spanMap = epochsSpansMap[epoch]
 			if spanMap == nil {
 				spanMap = make(map[uint64]types.Span)
@@ -235,16 +240,17 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 			}
 		}
 		copy(valIndices, indices)
-		if !batchRead {
+		if useCache {
 			if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 				return err
 			}
-		} else {
-			epochsSpansMap[epoch] = spanMap
 		}
 		if len(indices) == 0 || epoch == 0 {
-			if err := s.slasherDB.SaveEpochsSpanByValidatorsIndices(ctx, epochsSpansMap); err != nil {
-				return err
+			if useDb {
+				// should happen once when finishing update to all epochs and all indices.
+				if err := s.slasherDB.SaveEpochsSpanByValidatorsIndices(ctx, epochsSpansMap); err != nil {
+					return err
+				}
 			}
 			break
 		}
