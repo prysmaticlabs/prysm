@@ -29,7 +29,7 @@ func countdownToGenesis(genesisTime time.Time, minutesCount int) {
 
 	for {
 		select {
-		case <-time.NewTimer(genesisTime.Sub(time.Now())).C:
+		case <-time.NewTimer(genesisTime.Sub(time.Now()) + 1).C:
 			log.Infof("genesis time\n")
 			return
 
