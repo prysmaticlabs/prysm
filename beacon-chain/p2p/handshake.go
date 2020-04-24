@@ -31,7 +31,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				go func() {
 					log.WithField("reason", "at peer limit").Trace("Ignoring connection request")
 					if err := goodbyeFunc(context.Background(), conn.RemotePeer()); err != nil {
-						log.WithError(err).Error("Unable to send goodbye message to peer")
+						log.WithError(err).Trace("Unable to send goodbye message to peer")
 					}
 					if err := s.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Error("Unable to disconnect from peer")

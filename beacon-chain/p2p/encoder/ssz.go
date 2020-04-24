@@ -10,7 +10,6 @@ import (
 	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
 
 var _ = NetworkEncoding(&SszNetworkEncoder{})
@@ -192,10 +191,9 @@ func (e SszNetworkEncoder) MaxLength(length int) int {
 // Writes a bytes value through a snappy buffered writer.
 func writeSnappyBuffer(w io.Writer, b []byte) (int, error) {
 	bufWriter := snappy.NewBufferedWriter(w)
-	defer func() {
-		if err := bufWriter.Close(); err != nil {
-			logrus.WithError(err).Error("Failed to close snappy buffered writer")
-		}
-	}()
-	return bufWriter.Write(b)
+	num, err := bufWriter.Write(b)
+	if err != nil {
+		return 0, err
+	}
+	return num, bufWriter.Close()
 }
