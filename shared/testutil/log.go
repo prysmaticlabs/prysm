@@ -48,7 +48,7 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 func WaitForLog(t *testing.T, hook *test.Hook, want string, durationCount int) {
 	t.Logf("waiting for: %s", want)
 	match := false
-	timer := time.After(durationCount * time.Second)
+	timer := time.After(time.Duration(durationCount) * time.Second)
 
 	for {
 		select {
