@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -56,7 +57,10 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	cacheState, err := lru.New(int(params.BeaconConfig().SlotsPerEpoch) * 2)
+	// Using max possible size to avoid using DB to save and retrieve pre state (slow)
+	// The size is 80 because block at slot 43772 built on top of block at slot 43693.
+	// That is the worst case.
+	cacheState, err := lru.New(80)
 	if err != nil {
 		return err
 	}
@@ -124,6 +128,9 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 	// Flush the cache, the cached states never be used again.
 	cacheState.Purge()
+
+	// Manually garbage collect as previous cache will never be used again..
+	runtime.GC()
 
 	return nil
 }
