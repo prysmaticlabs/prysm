@@ -255,7 +255,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 				log.WithFields(logrus.Fields{
 					"positionInActivationQueue": status.Status.PositionInActivationQueue,
-				}).Info("Waiting to assigned activation epoch")
+				}).Info("Waiting to be assigned activation epoch")
 			} else {
 				log.WithFields(logrus.Fields{
 					"activationEpoch": status.Status.ActivationEpoch,
