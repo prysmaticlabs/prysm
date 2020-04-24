@@ -26,6 +26,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 	return nil
 }
 
+// Shared function to log the time remains until genesis time
 func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 	ticker := time.NewTicker(time.Duration(secondsCount) * time.Second)
 
@@ -33,12 +34,12 @@ func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 		select {
 		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1).C:
 			// Exit upon hitting the genesis time.
-			fmt.Printf("genesis time\n")
+			log.Infof("genesis time\n")
 			return
 
 		case <-ticker.C:
 			// Exit if we have already reached the genesis time, else log:
-			fmt.Printf("%02d minutes to genesis!\n", genesisTime.Sub(roughtime.Now()).Round(time.Minute)/time.Minute+1)
+			log.Infof("%02d minutes to genesis!\n", genesisTime.Sub(roughtime.Now()).Round(time.Minute)/time.Minute+1)
 		}
 	}
 }
