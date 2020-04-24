@@ -101,6 +101,9 @@ contract in order to activate the validator client`,
 						if featureconfig.Get().MinimalConfig {
 							log.Warn("Using Minimal Config")
 							params.UseMinimalConfig()
+						} else if featureconfig.Get().SchlesiTestnet {
+							log.Warn("Using Schlesi Testnet")
+							params.UseSchlesiTestnet()
 						}
 
 						if keystoreDir, _, err := accounts.CreateValidatorAccount(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name)); err != nil {
