@@ -34,6 +34,7 @@ func TestLifecycle_OK(t *testing.T) {
 		BlockReceiver:       chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
+		GenesisFetcher:      chainService,
 		GenesisTimeFetcher:  chainService,
 		POWChainService:     &mockPOW.POWChain{},
 		StateNotifier:       chainService.StateNotifier(),

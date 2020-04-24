@@ -58,6 +58,7 @@ type Service struct {
 	forkFetcher            blockchain.ForkFetcher
 	finalizationFetcher    blockchain.FinalizationFetcher
 	participationFetcher   blockchain.ParticipationFetcher
+	genesisFetcher         blockchain.GenesisFetcher
 	genesisTimeFetcher     blockchain.TimeFetcher
 	attestationReceiver    blockchain.AttestationReceiver
 	blockReceiver          blockchain.BlockReceiver
@@ -107,6 +108,7 @@ type Config struct {
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
 	ChainStartFetcher     powchain.ChainStartFetcher
+	GenesisFetcher        blockchain.GenesisFetcher
 	GenesisTimeFetcher    blockchain.TimeFetcher
 	MockEth1Votes         bool
 	AttestationsPool      attestations.Pool
@@ -137,6 +139,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		forkFetcher:           cfg.ForkFetcher,
 		finalizationFetcher:   cfg.FinalizationFetcher,
 		participationFetcher:  cfg.ParticipationFetcher,
+		genesisFetcher:        cfg.GenesisFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
@@ -254,6 +257,7 @@ func (s *Service) Start() {
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,
 		CanonicalStateChan:          s.canonicalStateChan,
+		GenesisFetcher:              s.genesisFetcher,
 		GenesisTimeFetcher:          s.genesisTimeFetcher,
 		StateNotifier:               s.stateNotifier,
 		BlockNotifier:               s.blockNotifier,

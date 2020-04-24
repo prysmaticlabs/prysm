@@ -23,3 +23,11 @@ func (bs *Server) GetBeaconConfig(ctx context.Context, _ *ptypes.Empty) (*ethpb.
 		Config: res,
 	}, nil
 }
+
+// GetGenesisValidatorsRoot fetches the genesis validators root, useful for signing
+func (bs *Server) GetGenesisValidatorsRoot(ctx context.Context, _ *ptypes.Empty) (*ethpb.GenesisValidatorsRoot, error) {
+	root := bs.GenesisFetcher.GenesisValidatorRoot()
+	return &ethpb.GenesisValidatorsRoot{
+		Root: root[:],
+	}, nil
+}
