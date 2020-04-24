@@ -19,6 +19,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// Using max possible size to avoid using DB to save and retrieve pre state (slow)
+// The size is 80 because block at slot 43772 built on top of block at slot 43693.
+// That is the worst case.
+const historicalStatesSize = 80
+
 func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "db.regenHistoricalStates")
 	defer span.End()
@@ -57,10 +62,8 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Using max possible size to avoid using DB to save and retrieve pre state (slow)
-	// The size is 80 because block at slot 43772 built on top of block at slot 43693.
-	// That is the worst case.
-	cacheState, err := lru.New(80)
+
+	cacheState, err := lru.New(historicalStatesSize)
 	if err != nil {
 		return err
 	}
