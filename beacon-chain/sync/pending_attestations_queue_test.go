@@ -150,11 +150,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	attesterDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, attesterDomain)
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,7 +165,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, domain)
+	selectionDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,11 +179,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		Aggregate:       att,
 		AggregatorIndex: 33,
 	}
-	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(aggregateAndProof, domain)
+	signingRoot, err := helpers.ComputeSigningRoot(aggregateAndProof, attesterDomain)
 	if err != nil {
 		t.Error(err)
 	}
