@@ -26,7 +26,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 	return nil
 }
 
-func countdownToGenesis(genesisTime time.Time, secondsCount int) {
+func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 	ticker := time.NewTicker(time.Duration(secondsCount) * time.Second)
 
 	for {
