@@ -96,26 +96,14 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		return
 	}
 
-	d, err := v.domainData(ctx, helpers.SlotToEpoch(res.AggregateAndProof.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
-	if err != nil {
-		log.Errorf("Could not get domain data to sign aggregate and proof: %v", err)
-		return
-	}
-	signedRoot, err := helpers.ComputeSigningRoot(res.AggregateAndProof, d.SignatureDomain)
-	if err != nil {
-		log.Errorf("Could not compute sign root for aggregate and proof: %v", err)
-		return
-	}
-	sig, err := v.keyManager.Sign(pubKey, signedRoot)
+	sig, err := v.aggregateAndProofSig(ctx, pubKey, res.AggregateAndProof)
 	if err != nil {
 		log.Errorf("Could not sign aggregate and proof: %v", err)
-		return
 	}
-
 	_, err = v.validatorClient.SubmitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Message:   res.AggregateAndProof,
-			Signature: sig.Marshal(),
+			Signature: sig,
 		},
 	})
 	if err != nil {
@@ -168,6 +156,25 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
 	time.Sleep(roughtime.Until(finalTime))
+}
+
+// This returns the signature of validator signing over aggregate and
+// proof object.
+func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, agg *ethpb.AggregateAttestationAndProof) ([]byte, error) {
+	d, err := v.domainData(ctx, helpers.SlotToEpoch(agg.Aggregate.Data.Slot), params.BeaconConfig().DomainAggregateAndProof[:])
+	if err != nil {
+		return nil, err
+	}
+	signedRoot, err := helpers.ComputeSigningRoot(agg, d.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := v.keyManager.Sign(pubKey, signedRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	return sig.Marshal(), nil
 }
 
 func (v *validator) addIndicesToLog(duty *ethpb.DutiesResponse_Duty) error {
