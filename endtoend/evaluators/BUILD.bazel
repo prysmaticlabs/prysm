@@ -5,6 +5,7 @@ go_library(
     testonly = True,
     srcs = [
         "finality.go",
+        "metrics.go",
         "node.go",
         "slashing.go",
         "validator.go",

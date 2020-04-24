@@ -25,6 +25,7 @@ func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
 			ev.HealthzCheck,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
+			ev.NoP2PSnappyErrors,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {
