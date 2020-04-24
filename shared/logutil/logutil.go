@@ -32,10 +32,12 @@ func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 	for {
 		select {
 		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1).C:
+			// Exit upon hitting the genesis time.
 			fmt.Printf("genesis time\n")
 			return
 
 		case <-ticker.C:
+			// Exit if we have already reached the genesis time, else log:
 			fmt.Printf("%02d minutes to genesis!\n", genesisTime.Sub(roughtime.Now()).Round(time.Minute)/time.Minute+1)
 		}
 	}
