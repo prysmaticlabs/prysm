@@ -102,8 +102,8 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 
 	// Add some variances to target and head balances.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5593
-	bp.PrevEpochTargetAttesters *= 4 / 5
-	bp.PrevEpochHeadAttesters *= 2 / 3
+	bp.PrevEpochTargetAttesters = bp.PrevEpochTargetAttesters / 2
+	bp.PrevEpochHeadAttesters = bp.PrevEpochHeadAttesters * 2 / 3
 	rewards, penalties, err := attestationDeltas(state, bp, vp)
 	if err != nil {
 		t.Fatal(err)
@@ -124,9 +124,9 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 			t.Errorf("Could not get base reward: %v", err)
 		}
 		// Base rewards for getting source right
-		wanted := base*attestedBalance/totalBalance +
-			bp.PrevEpochTargetAttesters*attestedBalance/totalBalance +
-			bp.PrevEpochHeadAttesters*attestedBalance/totalBalance
+		wanted := attestedBalance*base/totalBalance +
+			bp.PrevEpochTargetAttesters*base/totalBalance +
+			bp.PrevEpochHeadAttesters*base/totalBalance
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
