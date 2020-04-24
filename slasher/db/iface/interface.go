@@ -28,7 +28,7 @@ type ReadOnlyDatabase interface {
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 
 	// MinMaxSpan related methods.
-	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, error)
+	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, bool, error)
 	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (detectionTypes.Span, error)
 	EpochsSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]detectionTypes.Span, error)
 

@@ -93,7 +93,8 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 		return nil, ErrNotCheckpointState
 	}
 
-	return info.State.Copy(), nil
+	// Copy here is unnecessary since the return will only be used to verify attestation signature.
+	return info.State, nil
 }
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
