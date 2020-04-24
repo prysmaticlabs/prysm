@@ -129,7 +129,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	// Flush the cache, the cached states never be used again.
 	cacheState.Purge()
 
-	// Manually garbage collect as previous cache will never be used again..
+	// Manually garbage collect as previous cache will never be used again.
 	runtime.GC()
 
 	return nil
