@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 	"time"
-
 	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // ConfigurePersistentLogging adds a log-to-file writer. File content is identical to stdout.
@@ -31,12 +31,12 @@ func countdownToGenesis(genesisTime time.Time, secondsCount int) {
 
 	for {
 		select {
-		case <-time.NewTimer(genesisTime.Sub(time.Now()) + 1).C:
+		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1).C:
 			fmt.Printf("genesis time\n")
 			return
 
 		case <-ticker.C:
-			fmt.Printf("%02d minutes to genesis!\n", genesisTime.Sub(time.Now()).Round(time.Minute)/time.Minute+1)
+			fmt.Printf("%02d minutes to genesis!\n", genesisTime.Sub(roughtime.Now()).Round(time.Minute)/time.Minute+1)
 		}
 	}
 }
