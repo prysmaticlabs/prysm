@@ -86,7 +86,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
-		gomock.Any(), // epoch
+		&ethpb.DomainRequest{Epoch: 0, Domain: params.BeaconConfig().DomainAggregateAndProof[:]},
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	agg := &ethpb.AggregateAttestationAndProof{
