@@ -881,7 +881,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					PositionInActivationQueue: 5,
 				},
 			},
-			log: "Waiting to be activated\" activationEpoch=60",
+			log: "Waiting for activation\" activationEpoch=60",
 		},
 		{
 			name: "EXITED",

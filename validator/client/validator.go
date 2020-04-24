@@ -259,7 +259,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			} else {
 				log.WithFields(logrus.Fields{
 					"activationEpoch": status.Status.ActivationEpoch,
-				}).Info("Waiting to be activated")
+				}).Info("Waiting for activation")
 			}
 		case ethpb.ValidatorStatus_ACTIVE:
 			activatedKeys = append(activatedKeys, status.PublicKey)
