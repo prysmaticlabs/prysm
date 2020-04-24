@@ -110,8 +110,8 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		if t.Kind() == reflect.Ptr {
 			msg := reflect.New(t.Elem())
 			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
-				// Debug logs for goodbye errors
-				if strings.Contains(topic, p2p.RPCGoodByeTopic) {
+				// Debug logs for goodbye/status errors
+				if strings.Contains(topic, p2p.RPCGoodByeTopic) || strings.Contains(topic, p2p.RPCStatusTopic) {
 					log.WithError(err).Debug("Failed to decode goodbye stream message")
 					traceutil.AnnotateError(span, err)
 					return
