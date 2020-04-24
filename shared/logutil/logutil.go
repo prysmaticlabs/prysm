@@ -26,7 +26,7 @@ func ConfigurePersistentLogging(logFileName string) error {
 	return nil
 }
 
-// Shared function to log the time remains until genesis time
+// CountdownToGenesis logs the time remains until genesis time
 func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 	ticker := time.NewTicker(time.Duration(secondsCount) * time.Second)
 
