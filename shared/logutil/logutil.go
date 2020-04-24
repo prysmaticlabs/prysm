@@ -3,13 +3,14 @@
 package logutil
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"time"
 	"github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
+
+var log = logrus.WithField("prefix", "forkchoice_checker")
 
 // ConfigurePersistentLogging adds a log-to-file writer. File content is identical to stdout.
 func ConfigurePersistentLogging(logFileName string) error {
