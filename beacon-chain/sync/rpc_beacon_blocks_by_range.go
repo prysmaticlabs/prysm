@@ -76,9 +76,9 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(allowedBlocksPerSecond))
 
 		// TODO(3147): Update this with reasonable constraints.
-		if endSlot-startSlot > 1000 || m.Step == 0 {
-			r.writeErrorResponseToStream(responseCodeInvalidRequest, "invalid range or step", stream)
-			err := errors.New("invalid range or step")
+		if endSlot-startSlot > rangeLimit || m.Step == 0 {
+			r.writeErrorResponseToStream(responseCodeInvalidRequest, stepError, stream)
+			err := errors.New(stepError)
 			traceutil.AnnotateError(span, err)
 			return err
 		}
