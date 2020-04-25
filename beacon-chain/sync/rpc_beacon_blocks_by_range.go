@@ -53,7 +53,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
 		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
-	for startSlot > endReqSlot {
+	for startSlot <= endReqSlot {
 		remainingBucketCapacity = r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
 
 		if allowedBlocksPerSecond > uint64(remainingBucketCapacity) {
