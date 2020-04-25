@@ -91,6 +91,11 @@ elif [[ "$os_arch_suffix" == *"arm64"* ]]; then
   arch="arm64"
 fi
 
+if [[ "$arch" == "armv7l" ]]; then 
+  color "31" "32-bit ARM is not supported. Please install a 64-bit operating system."
+  exit 1
+fi
+
 mkdir -p $wrapper_dir
 
 function get_prysm_version() {
