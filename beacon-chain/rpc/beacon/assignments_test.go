@@ -257,6 +257,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 	if !reflect.DeepEqual(res.Assignments, wanted) {
@@ -348,6 +349,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 
@@ -437,6 +439,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 
@@ -520,6 +523,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 
@@ -555,6 +559,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 			AttesterSlot:     cAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 

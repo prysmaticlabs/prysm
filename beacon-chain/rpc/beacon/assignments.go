@@ -123,6 +123,7 @@ func (bs *Server) ListValidatorAssignments(
 			AttesterSlot:     comAssignment.AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        pubkey[:],
+			ValidatorIndex:   index,
 		}
 		res = append(res, assign)
 	}
@@ -256,6 +257,7 @@ func (bs *Server) listValidatorAssignmentsUsingOldArchival(
 			AttesterSlot:     comAssignment.AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        pubkey[:],
+			ValidatorIndex:   index,
 		}
 		res = append(res, assign)
 	}
