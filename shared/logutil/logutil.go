@@ -41,4 +41,4 @@ func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 			log.Infof("%02d minutes to genesis!\n", genesisTime.Sub(roughtime.Now()).Round(time.Minute)/time.Minute+1)
 		}
 	}
-}
+} 
