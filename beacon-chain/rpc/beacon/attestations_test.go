@@ -612,6 +612,12 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	cfg := assertNewStateMgmtIsEnabled()
 	defer featureconfig.Init(cfg)
 	db := dbTest.SetupDB(t)

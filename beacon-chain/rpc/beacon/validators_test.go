@@ -491,9 +491,118 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	}
 }
 
+func TestServer_ListValidatorBalances_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
+
+	epoch := uint64(0)
+	validators, balances := setupValidators(t, db, 100)
+
+	if err := db.SaveArchivedBalances(ctx, epoch, balances); err != nil {
+		t.Fatal(err)
+	}
+
+	newerBalances := make([]uint64, len(balances))
+	for i := 0; i < len(newerBalances); i++ {
+		newerBalances[i] = balances[i] * 2
+	}
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(params.BeaconConfig().SlotsPerEpoch * 3); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetBalances(newerBalances); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+	}
+
+	req := &ethpb.ListValidatorBalancesRequest{
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
+		Indices:     []uint64{uint64(1)},
+	}
+	res, err := bs.ListValidatorBalances(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We should expect a response containing the old balance from epoch 0,
+	// not the new balance from the current state.
+	want := []*ethpb.ValidatorBalances_Balance{
+		{
+			PublicKey: validators[1].PublicKey,
+			Index:     1,
+			Balance:   balances[1],
+		},
+	}
+	if !reflect.DeepEqual(want, res.Balances) {
+		t.Errorf("Wanted %v, received %v", want, res.Balances)
+	}
+}
+
+func TestServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
+
+	epoch := uint64(0)
+	_, balances := setupValidators(t, db, 100)
+
+	if err := db.SaveArchivedBalances(ctx, epoch, balances); err != nil {
+		t.Fatal(err)
+	}
+
+	newValidators, newBalances := setupValidators(t, db, 200)
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(params.BeaconConfig().SlotsPerEpoch * 3); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetValidators(newValidators); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetBalances(newBalances); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+	}
+
+	req := &ethpb.ListValidatorBalancesRequest{
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
+		Indices:     []uint64{1, 150, 161},
+	}
+	if _, err := bs.ListValidatorBalances(context.Background(), req); err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("Wanted out of range error for including newer validators in the arguments, received %v", err)
+	}
+}
+
 func TestServer_ListValidators_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
 
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
@@ -1060,6 +1169,11 @@ func TestServer_GetValidator(t *testing.T) {
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
 
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 8)
