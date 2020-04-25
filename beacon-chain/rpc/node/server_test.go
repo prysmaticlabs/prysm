@@ -48,6 +48,12 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	if err := db.SaveDepositContractAddress(ctx, addr); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveGenesisBlockRoot(ctx, addr); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, addr); err != nil {
+		t.Fatal(err)
+	}
 	ns := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},

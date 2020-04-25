@@ -47,9 +47,14 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
 	}
+	genState, err := ns.BeaconDB.
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get genesis state: %v", err)
+	}
 	return &ethpb.Genesis{
 		GenesisTime:            gt,
 		DepositContractAddress: contractAddr,
+		GenesisValidatorsRoot:  genState.GenesisValidatorRoot(),
 	}, nil
 }
 
