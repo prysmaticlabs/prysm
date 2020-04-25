@@ -20,13 +20,6 @@ var ValidatorsAreActive = types.Evaluator{
 	Evaluation: validatorsAreActive,
 }
 
-// ProcessesDepositedValidators ensures the expected amount of validators are active after their deposits are processed.
-var ProcessesDepositedValidators = types.Evaluator{
-	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     afterNthEpoch(8),
-	Evaluation: processesDepositedValidators,
-}
-
 // ValidatorsParticipating ensures the expected amount of validators are active.
 var ValidatorsParticipating = types.Evaluator{
 	Name:       "validators_participating_epoch_%d",
@@ -34,18 +27,18 @@ var ValidatorsParticipating = types.Evaluator{
 	Evaluation: validatorsParticipating,
 }
 
-// ValidatorsSlashed ensures the expected amount of validators are slashed.
-var ValidatorsSlashed = types.Evaluator{
-	Name:       "validators_slashed_epoch_%d",
-	Policy:     afterNthEpoch(0),
-	Evaluation: validatorsSlashed,
+// ProcessesDepositedValidators ensures the expected amount of validators are active after their deposits are processed.
+var ProcessesDepositedValidators = types.Evaluator{
+	Name:       "processes_deposit_validators_epoch_%d",
+	Policy:     afterNthEpoch(8),
+	Evaluation: processesDepositedValidators,
 }
 
-// SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
-var SlashedValidatorsLoseBalance = types.Evaluator{
-	Name:       "slashed_validators_lose_valance_epoch_%d",
-	Policy:     afterNthEpoch(0),
-	Evaluation: validatorsLoseBalance,
+// ProcessesDepositedValidators ensures the expected amount of validators are active after their deposits are processed.
+var DepositedValidatorsAreActive = types.Evaluator{
+	Name:       "deposited_validators_are_active_epoch_%d",
+	Policy:     afterNthEpoch(12),
+	Evaluation: depositedValidatorsAreActive,
 }
 
 // Not including first epoch because of issues with genesis.
@@ -168,11 +161,7 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 	activeEpoch13Count := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
-	fmt.Println(churnLimit)
 	for _, item := range validators.ValidatorList {
-		fmt.Println(item.Validator.ActivationEpoch)
-		fmt.Println(item.Validator.ExitEpoch)
-		fmt.Println(item.Validator.WithdrawableEpoch)
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
 			effBalanceLowCount++
 		}
@@ -216,48 +205,42 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func validatorsSlashed(conns ...*grpc.ClientConn) error {
+func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
-	req := &eth.GetValidatorActiveSetChangesRequest{}
-	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
+	validatorRequest := &eth.ListValidatorsRequest{
+		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
+		PageToken: "1",
+	}
+	validators, err := client.ListValidators(context.Background(), validatorRequest)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get validators")
 	}
-	if len(changes.SlashedIndices) != 2 && len(changes.SlashedIndices) != 4 {
-		return fmt.Errorf("expected 2 or 4 indices to be slashed, received %d", len(changes.SlashedIndices))
+
+	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount / uint64(e2e.TestParams.BeaconNodeCount)
+	receivedCount := uint64(len(validators.ValidatorList))
+	if expectedCount != receivedCount {
+		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
 	}
-	return nil
-}
 
-func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
-	conn := conns[0]
-	ctx := context.Background()
-	client := eth.NewBeaconChainClient(conn)
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get chain head")
+	}
 
-	for i, indice := range slashedIndices {
-		req := &eth.GetValidatorRequest{
-			QueryFilter: &eth.GetValidatorRequest_Index{
-				Index: indice,
-			},
+	inactiveCount := 0
+	for _, item := range validators.ValidatorList {
+		if !helpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
+			inactiveCount++
 		}
-		valResp, err := client.GetValidator(ctx, req)
-		if err != nil {
-			return err
-		}
+	}
 
-		slashedPenalty := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().MinSlashingPenaltyQuotient
-		slashedBal := params.BeaconConfig().MaxEffectiveBalance - slashedPenalty + params.BeaconConfig().EffectiveBalanceIncrement/10
-		if valResp.EffectiveBalance >= slashedBal {
-			return fmt.Errorf(
-				"expected slashed validator %d to balance less than %d, received %d",
-				i,
-				slashedBal,
-				valResp.EffectiveBalance,
-			)
-		}
-
+	if inactiveCount > 0 {
+		return fmt.Errorf(
+			"%d validators were not active, expected %d active validators from deposits",
+			inactiveCount,
+			params.BeaconConfig().MinGenesisActiveValidatorCount,
+		)
 	}
 	return nil
 }
