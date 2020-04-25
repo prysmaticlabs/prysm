@@ -1911,6 +1911,58 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 	}
 }
 
+func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
+	b.StopTimer()
+	db := dbTest.SetupDB(b)
+	defer dbTest.TeardownDB(b, db)
+
+	ctx := context.Background()
+	currentNumValidators := 1000
+	numOldBalances := 50
+	validators := make([]*ethpb.Validator, currentNumValidators)
+	oldBalances := make([]uint64, numOldBalances)
+	for i := 0; i < currentNumValidators; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+	}
+	for i := 0; i < numOldBalances; i++ {
+		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	// We archive old balances for epoch 50.
+	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
+		b.Fatal(err)
+	}
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(helpers.StartSlot(100 /* epoch 100 */)); err != nil {
+		b.Fatal(err)
+	}
+	if err := headState.SetValidators(validators); err != nil {
+		b.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := bs.ListValidatorBalances(
+			ctx,
+			&ethpb.ListValidatorBalancesRequest{
+				QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+					Epoch: 50,
+				},
+				PageSize: 100,
+			},
+		); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
 	ctx := context.Background()
 	balances := make([]uint64, count)
