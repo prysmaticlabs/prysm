@@ -113,7 +113,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
-	logutil.CountdownToGenesis(genesis, 300)
+	logutil.CountdownToGenesis(time.Unix(int64(v.genesisTime), 0), 300)
 	return nil
 }
 
