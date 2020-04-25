@@ -117,8 +117,8 @@ func (s *Service) Start() {
 			"genesis time",
 			genesis,
 		).Warn("Genesis time is in the future - waiting to start sync...")
+		logutil.CountdownToGenesis(genesis, 300 /* countdown interval */)
 		time.Sleep(roughtime.Until(genesis))
-		logutil.CountdownToGenesis(genesis, 300)
 	}
 	s.chainStarted = true
 	currentSlot := helpers.SlotsSince(genesis)

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-var log = logrus.WithField("prefix", "forkchoice_checker")
+var log = logrus.WithField("prefix", "logutil")
 
 // ConfigurePersistentLogging adds a log-to-file writer. File content is identical to stdout.
 func ConfigurePersistentLogging(logFileName string) error {
@@ -34,12 +34,10 @@ func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 	for {
 		select {
 		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1).C:
-			// Exit upon hitting the genesis time.
 			log.Infof("genesis time\n")
 			return
 
 		case <-ticker.C:
-			// Exit if we have already reached the genesis time, else log:
 			log.Infof("%02d minutes to genesis!\n", genesisTime.Sub(roughtime.Now()).Round(time.Minute)/time.Minute+1)
 		}
 	}
