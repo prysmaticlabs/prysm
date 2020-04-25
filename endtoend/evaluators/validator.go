@@ -27,14 +27,14 @@ var ValidatorsParticipating = types.Evaluator{
 	Evaluation: validatorsParticipating,
 }
 
-// ProcessesDepositedValidators ensures the expected amount of validators are active after their deposits are processed.
+// ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
 var ProcessesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     afterNthEpoch(8),
+	Policy:     betweenEpochs(8, 12),
 	Evaluation: processesDepositedValidators,
 }
 
-// ProcessesDepositedValidators ensures the expected amount of validators are active after their deposits are processed.
+// DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
 var DepositedValidatorsAreActive = types.Evaluator{
 	Name:       "deposited_validators_are_active_epoch_%d",
 	Policy:     afterNthEpoch(12),
@@ -45,6 +45,13 @@ var DepositedValidatorsAreActive = types.Evaluator{
 func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return currentEpoch > afterEpoch
+	}
+}
+
+// Not including first epoch because of issues with genesis.
+func betweenEpochs(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
+	return func(currentEpoch uint64) bool {
+		return fromEpoch < currentEpoch && currentEpoch > toEpoch
 	}
 }
 
