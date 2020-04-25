@@ -31,6 +31,10 @@ func (bs *Server) ListValidatorBalances(
 			req.PageSize, flags.Get().MaxPageSize)
 	}
 
+	if !featureconfig.Get().NewStateMgmt {
+		return bs.listValidatorsBalancesUsingOldArchival(ctx, req)
+	}
+
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 	switch q := req.QueryFilter.(type) {
@@ -147,6 +151,151 @@ func (bs *Server) ListValidatorBalances(
 
 	return &ethpb.ValidatorBalances{
 		Epoch:         requestedEpoch,
+		Balances:      res[start:end],
+		TotalSize:     int32(balancesCount),
+		NextPageToken: nextPageToken,
+	}, nil
+}
+
+func (bs *Server) listValidatorsBalancesUsingOldArchival(
+	ctx context.Context,
+	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
+	res := make([]*ethpb.ValidatorBalances_Balance, 0)
+	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
+
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
+	var requestingGenesis bool
+	var epoch uint64
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListValidatorBalancesRequest_Epoch:
+		epoch = q.Epoch
+	case *ethpb.ListValidatorBalancesRequest_Genesis:
+		requestingGenesis = q.Genesis
+	default:
+		epoch = helpers.CurrentEpoch(headState)
+	}
+
+	var balances []uint64
+	validators := headState.Validators()
+	if requestingGenesis || epoch < helpers.CurrentEpoch(headState) {
+		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
+		}
+		if balances == nil {
+			return nil, status.Errorf(
+				codes.NotFound,
+				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+				0,
+			)
+		}
+	} else if epoch == helpers.CurrentEpoch(headState) {
+		balances = headState.Balances()
+	} else {
+		// Otherwise, we are requesting data from the future and we return an error.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			helpers.CurrentEpoch(headState),
+			epoch,
+		)
+	}
+
+	balancesCount := len(balances)
+	for _, pubKey := range req.PublicKeys {
+		// Skip empty public key.
+		if len(pubKey) == 0 {
+			continue
+		}
+		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		index, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
+		if !ok {
+			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubkeyBytes)
+		}
+
+		filtered[index] = true
+
+		if int(index) >= len(balances) {
+			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
+				index, len(balances))
+		}
+
+		res = append(res, &ethpb.ValidatorBalances_Balance{
+			PublicKey: pubKey,
+			Index:     index,
+			Balance:   balances[index],
+		})
+		balancesCount = len(res)
+	}
+
+	for _, index := range req.Indices {
+		if int(index) >= len(balances) {
+			if epoch <= helpers.CurrentEpoch(headState) {
+				return nil, status.Errorf(codes.OutOfRange, "Validator index %d does not exist in historical balances",
+					index)
+			}
+			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
+				index, len(balances))
+		}
+
+		if !filtered[index] {
+			res = append(res, &ethpb.ValidatorBalances_Balance{
+				PublicKey: validators[index].PublicKey,
+				Index:     index,
+				Balance:   balances[index],
+			})
+		}
+		balancesCount = len(res)
+	}
+	// Depending on the indices and public keys given, results might not be sorted.
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Index < res[j].Index
+	})
+
+	// If there are no balances, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 balances below would result in an error.
+	if balancesCount == 0 {
+		return &ethpb.ValidatorBalances{
+			Epoch:         epoch,
+			Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
+
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not paginate results: %v",
+			err,
+		)
+	}
+
+	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
+		// Return everything.
+		for i := start; i < end; i++ {
+			pubkey := headState.PubkeyAtIndex(uint64(i))
+			res = append(res, &ethpb.ValidatorBalances_Balance{
+				PublicKey: pubkey[:],
+				Index:     uint64(i),
+				Balance:   balances[i],
+			})
+		}
+		return &ethpb.ValidatorBalances{
+			Epoch:         epoch,
+			Balances:      res,
+			TotalSize:     int32(balancesCount),
+			NextPageToken: nextPageToken,
+		}, nil
+	}
+
+	return &ethpb.ValidatorBalances{
+		Epoch:         epoch,
 		Balances:      res[start:end],
 		TotalSize:     int32(balancesCount),
 		NextPageToken: nextPageToken,
