@@ -10,8 +10,11 @@ import (
 
 func TestCountdownToGenesis(t *testing.T) {
 	hook := logTest.NewGlobal()
-	expectedStringResult := "01 minutes to genesis!\ngenesis time\n"
+	firstStringResult := "01 minutes to genesis!"
+	secondStringResult := "genesis time"
 	CountdownToGenesis(roughtime.Now().Add(2*time.Second), 1)
-	testutil.AssertLogsContain(t, hook, expectedStringResult)
-	testutil.WaitForLog(t, hook, expectedStringResult, 2)
+	testutil.AssertLogsContain(t, hook, firstStringResult)
+	testutil.WaitForLog(t, hook, firstStringResult, 1)
+	testutil.AssertLogsContain(t, hook, secondStringResult)
+	testutil.WaitForLog(t, hook, secondStringResult, 1)
 }
