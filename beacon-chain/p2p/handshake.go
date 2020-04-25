@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -15,7 +14,8 @@ import (
 // AddConnectionHandler adds a callback function which handles the connection with a
 // newly added peer. It performs a handshake with that peer by sending a hello request
 // and validating the response from the peer.
-func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error) {
+func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error,
+	goodbyeFunc func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			log := log.WithField("peer", conn.RemotePeer().Pretty())
@@ -28,10 +28,15 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 			}
 			s.peers.Add(nil /* ENR */, conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
 			if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
-				log.WithField("reason", "at peer limit").Trace("Ignoring connection request")
-				if err := s.Disconnect(conn.RemotePeer()); err != nil {
-					log.WithError(err).Error("Unable to disconnect from peer")
-				}
+				go func() {
+					log.WithField("reason", "at peer limit").Trace("Ignoring connection request")
+					if err := goodbyeFunc(context.Background(), conn.RemotePeer()); err != nil {
+						log.WithError(err).Trace("Unable to send goodbye message to peer")
+					}
+					if err := s.Disconnect(conn.RemotePeer()); err != nil {
+						log.WithError(err).Error("Unable to disconnect from peer")
+					}
+				}()
 				return
 			}
 			if s.peers.IsBad(conn.RemotePeer()) {
@@ -52,10 +57,8 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					"activePeers": len(s.peers.Active()),
 				})
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
-				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
-					log.WithError(err).Debug("Handshake failed")
+				if err := reqFunc(context.Background(), conn.RemotePeer()); err != nil && err != io.EOF {
+					log.WithError(err).Trace("Handshake failed")
 					if err.Error() == "protocol not supported" {
 						// This is only to ensure the smooth running of our testnets. This will not be
 						// used in production.

@@ -834,22 +834,22 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 				},
 			},
-			log: "Waiting for a deposit to be put into an eth1 block",
+			log: "Waiting for deposit to be observed by beacon node",
 		},
 		{
-			name: "UNKNOWN_STATUS, but deposit found",
+			name: "DEPOSITED, deposit found",
 			status: &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubKeys[0],
 				Status: &ethpb.ValidatorStatusResponse{
-					Status:                 ethpb.ValidatorStatus_UNKNOWN_STATUS,
+					Status:                 ethpb.ValidatorStatus_DEPOSITED,
 					DepositInclusionSlot:   50,
 					Eth1DepositBlockNumber: 400,
 				},
 			},
-			log: "Waiting for deposit to be processed by the beacon chain\" eth1DepositBlockNumber=400 expectedInclusionSlot=50",
+			log: "Deposit for validator received but not processed into the beacon state\" eth1DepositBlockNumber=400 expectedInclusionSlot=50",
 		},
 		{
-			name: "DEPOSITED",
+			name: "DEPOSITED into state",
 			status: &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubKeys[0],
 				Status: &ethpb.ValidatorStatusResponse{
@@ -865,11 +865,23 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				PublicKey: pubKeys[0],
 				Status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_PENDING,
+					ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
+					PositionInActivationQueue: 6,
+				},
+			},
+			log: "Waiting to be assigned activation epoch\" positionInActivationQueue=6",
+		},
+		{
+			name: "PENDING",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                    ethpb.ValidatorStatus_PENDING,
 					ActivationEpoch:           60,
 					PositionInActivationQueue: 5,
 				},
 			},
-			log: "Waiting to be activated\" activationEpoch=60 positionInActivationQueue=5",
+			log: "Waiting for activation\" activationEpoch=60",
 		},
 		{
 			name: "EXITED",

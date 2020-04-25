@@ -1305,12 +1305,8 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "6607cc86ddb7c78acfe3b1f0dfb115489a96d46d",
+    commit = "4685995df20b6d7a926fb98778c940e380db33ee",
     importpath = "github.com/prysmaticlabs/ethereumapis",
-    patch_args = ["-p1"],
-    patches = [
-        "//third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
-    ],
 )
 
 go_repository(
@@ -1685,4 +1681,10 @@ go_repository(
     importpath = "golang.org/x/mod",
     sum = "h1:KU7oHjnv3XNWfa5COkzUifxZmxp1TyI7ImMXqFxLwvQ=",
     version = "v0.2.0",
+)
+
+go_repository(
+    name = "com_github_golang_gddo",
+    commit = "3c2cc9a6329d9842b3bbdaf307a8110d740cf94c",
+    importpath = "github.com/golang/gddo",
 )

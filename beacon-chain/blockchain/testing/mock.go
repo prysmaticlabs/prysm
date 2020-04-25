@@ -245,3 +245,8 @@ func (ms *ChainService) ClearCachedStates() {}
 func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
 	return false
 }
+
+// HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
+func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
+	return [32]byte{}
+}

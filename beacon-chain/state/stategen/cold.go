@@ -18,7 +18,7 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	defer span.End()
 
 	if state.Slot()%s.slotsPerArchivedPoint != 0 {
-		return errSlotNonArchivedPoint
+		return nil
 	}
 
 	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {

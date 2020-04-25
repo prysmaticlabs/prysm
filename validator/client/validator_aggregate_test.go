@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -76,5 +77,28 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	currentTime = uint64(roughtime.Now().Unix())
 	if currentTime != twoThirdTime {
 		t.Errorf("Wanted %d time for slot two third but got %d", twoThirdTime, currentTime)
+	}
+}
+
+func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		&ethpb.DomainRequest{Epoch: 0, Domain: params.BeaconConfig().DomainAggregateAndProof[:]},
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	agg := &ethpb.AggregateAttestationAndProof{
+		AggregatorIndex: 0,
+		Aggregate:       &ethpb.Attestation{Data: &ethpb.AttestationData{}},
+		SelectionProof:  nil,
+	}
+	sig, err := validator.aggregateAndProofSig(context.Background(), validatorPubKey, agg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bls.SignatureFromBytes(sig); err != nil {
+		t.Fatal(err)
 	}
 }

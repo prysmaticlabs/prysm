@@ -362,7 +362,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
 
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		return bs.getValidatorActiveSetChangesUsingOldArchival(ctx, req)
 	}
 
@@ -552,7 +552,7 @@ func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
 
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		return bs.getValidatorParticipationUsingOldArchival(ctx, req)
 	}
 
@@ -681,7 +681,7 @@ func (bs *Server) getValidatorParticipationUsingOldArchival(
 	participation.GlobalParticipationRate = float32(0)
 	// only divide if prevEpoch is non zero
 	if p.PrevEpoch != 0 {
-		participation.GlobalParticipationRate = float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch)
+		participation.GlobalParticipationRate = float32(float64(p.PrevEpochTargetAttesters) / float64(p.PrevEpoch))
 	}
 
 	return &ethpb.ValidatorParticipationResponse{
@@ -804,8 +804,9 @@ func (bs *Server) GetValidatorPerformance(
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+
 	// Convert the list of validator public keys to list of validator indices.
 	// Also track missing validators using public keys.
 	for _, key := range req.PublicKeys {
@@ -813,6 +814,14 @@ func (bs *Server) GetValidatorPerformance(
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			missingValidators = append(missingValidators, key)
+			continue
+		}
+		val, err := headState.ValidatorAtIndex(idx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
+		}
+		currentEpoch := helpers.CurrentEpoch(headState)
+		if !helpers.IsActiveValidator(val, currentEpoch) {
 			continue
 		}
 		if idx >= uint64(len(validatorSummary)) {
