@@ -27,7 +27,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	setRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_range")
 
-	// ticker to stagger out large requests.
+	// Ticker to stagger out large requests.
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -36,7 +36,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
 
-	// the initial count for the first batch to be returned back.
+	// The initial count for the first batch to be returned back.
 	count := m.Count
 	if count > allowedBlocksPerSecond {
 		count = allowedBlocksPerSecond
@@ -45,7 +45,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	startSlot := m.StartSlot
 	endSlot := startSlot + (m.Step * (count - 1))
 
-	// final requested slot from remote peer.
+	// The final requested slot from remote peer.
 	endReqSlot := startSlot + (m.Step * (m.Count - 1))
 
 	remainingBucketCapacity := r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
@@ -87,7 +87,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			return err
 		}
 
-		// recalculate start and end slots for next batch to be returned to the remote peer.
+		// Recalculate start and end slots for the next batch to be returned to the remote peer.
 		startSlot = endSlot + m.Step
 		endSlot = startSlot + (m.Step * (allowedBlocksPerSecond - 1))
 		if endSlot > endReqSlot {
