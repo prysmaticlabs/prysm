@@ -33,7 +33,7 @@ func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
 
 	for {
 		select {
-		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1).C:
+		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1 //adding one to be able to print the last minute).C:
 			log.Infof("genesis time\n")
 			return
 
