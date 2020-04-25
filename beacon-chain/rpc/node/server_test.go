@@ -10,9 +10,11 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -48,10 +50,17 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	if err := db.SaveDepositContractAddress(ctx, addr); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveGenesisBlockRoot(ctx, addr); err != nil {
-		t.Fatal(err)
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Error(err)
 	}
-	if err := db.SaveState(ctx, addr); err != nil {
+	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Error(err)
+	}
+	st := testutil.NewBeaconState()
+	if err := db.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
 	ns := &Server{
@@ -71,6 +80,9 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	}
 	if !res.GenesisTime.Equal(pUnix) {
 		t.Errorf("Wanted GenesisTime() = %v, received %v", pUnix, res.GenesisTime)
+	}
+	if !bytes.Equal(st.GenesisValidatorRoot()[:], res.GenesisValidatorsRoot) {
+		t.Errorf("Wanted GenesisValidatorRoot() = %v, received %v", st.GenesisValidatorRoot(), res.GenesisValidatorsRoot)
 	}
 }
 
