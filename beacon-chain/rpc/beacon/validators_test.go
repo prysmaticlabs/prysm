@@ -91,6 +91,11 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
+	config := &featureconfig.Flags{
+		NewStateMgmt: true,
+	}
+	featureconfig.Init(config)
+
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	if err := st.SetSlot(0); err != nil {
@@ -1506,6 +1511,11 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
+
 	ctx := context.Background()
 	headState := testutil.NewBeaconState()
 	if err := headState.SetSlot(0); err != nil {
@@ -1536,6 +1546,12 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
+
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
+
 	epoch := uint64(4)
 	part := &ethpb.ValidatorParticipation{
 		GlobalParticipationRate: 1.0,
@@ -1702,6 +1718,12 @@ func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
+
+	config := &featureconfig.Flags{
+		NewStateMgmt: false,
+	}
+	featureconfig.Init(config)
+
 	part := &ethpb.ValidatorParticipation{
 		GlobalParticipationRate: 1.0,
 		VotedEther:              20,
