@@ -10,10 +10,10 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
@@ -50,22 +50,15 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	if err := db.SaveDepositContractAddress(ctx, addr); err != nil {
 		t.Fatal(err)
 	}
-	genesisStateRoot := [32]byte{}
-	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	if err := db.SaveBlock(ctx, genesis); err != nil {
-		t.Error(err)
-	}
-	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
-	if err != nil {
-		t.Error(err)
-	}
 	st := testutil.NewBeaconState()
-	if err := db.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
-		t.Fatal(err)
-	}
+	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},
+		GenesisFetcher: &mock.ChainService{
+			State:          st,
+			ValidatorsRoot: genValRoot,
+		},
 	}
 	res, err := ns.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {
@@ -81,8 +74,8 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	if !res.GenesisTime.Equal(pUnix) {
 		t.Errorf("Wanted GenesisTime() = %v, received %v", pUnix, res.GenesisTime)
 	}
-	if !bytes.Equal(st.GenesisValidatorRoot()[:], res.GenesisValidatorsRoot) {
-		t.Errorf("Wanted GenesisValidatorRoot() = %v, received %v", st.GenesisValidatorRoot(), res.GenesisValidatorsRoot)
+	if !bytes.Equal(genValRoot[:], res.GenesisValidatorsRoot) {
+		t.Errorf("Wanted GenesisValidatorsRoot = %v, received %v", genValRoot, res.GenesisValidatorsRoot)
 	}
 }
 
