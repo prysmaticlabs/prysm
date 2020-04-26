@@ -3,9 +3,11 @@
 set -eu
 
 # Use this script to download the latest Prysm release binary.
-# Usage: ./prysm.sh PROCESS FLAGS
+# Usage: ./prysm.sh PROCESS [--download-only] FLAGS
 #   PROCESS can be one of beacon-chain or validator.
 #   FLAGS are the flags or arguments passed to the PROCESS.
+#   If --download-only flag is passed, binaries are checked for updates,
+#   downloaded if necessary, no process is started.
 # Downloaded binaries are saved to ./dist.
 # Use USE_PRYSM_VERSION to specify a specific release version.
 #   Example: USE_PRYSM_VERSION=v0.3.3 ./prysm.sh beacon-chain
@@ -64,6 +66,7 @@ function get_realpath() {
 # Complain if no arguments were provided.
 if [ "$#" -lt 1 ]; then
     color "31" "Usage: ./prysm.sh PROCESS FLAGS."
+    color "31" "       ./prysm.sh PROCESS --download-only."
     color "31" "PROCESS can be beacon-chain, validator, or slasher."
     exit 1
 fi
@@ -220,11 +223,17 @@ slasher)
 
 *)
     color "31" "Usage: ./prysm.sh PROCESS FLAGS."
+    color "31" "       ./prysm.sh PROCESS --download-only."
     color "31" "PROCESS can be beacon-chain, validator, or slasher."
     ;;
 esac
 
 verify $process
+
+if [[ $2 == --download-only ]]; then
+    color "37" "Only download operation is requested, done."
+    exit 0
+fi
 
 color "36" "Starting Prysm $1 ${*:2}"
 exec -a "$0" "${process}" "${@:2}"
