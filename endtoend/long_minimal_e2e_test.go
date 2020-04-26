@@ -20,7 +20,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	var err error
 	if epochs, ok := os.LookupEnv("E2E_EPOCHS"); ok {
 		if !ok {
-			return
+			t.Skip("E2E EPOCHS not set")
 		}
 		epochsToRun, err = strconv.Atoi(epochs)
 		if err != nil {
