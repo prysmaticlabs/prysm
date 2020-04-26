@@ -16,7 +16,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
-	epochsToRun := 25
+	epochsToRun := 20
 	var err error
 	if epochs, ok := os.LookupEnv("E2E_EPOCHS"); ok {
 		if !ok {
@@ -32,7 +32,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=10"},
 		ValidatorFlags: []string{"--minimal-config"},
 		EpochsToRun:    uint64(epochsToRun),
-		TestSync:       true,
+		TestSync:       false,
 		TestDeposits:   true,
 		TestSlasher:    true,
 		Evaluators: []types.Evaluator{

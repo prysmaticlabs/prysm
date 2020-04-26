@@ -119,8 +119,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	conns = append(conns, syncConn)
 
-	// Sleep until the next epoch to give time for the newly started node to sync.
-	extraTimeToSync := (config.EpochsToRun+3)*epochSeconds + 60
+	// Sleep for a few epochs to give time for the newly started node to sync.
+	extraTimeToSync := (config.EpochsToRun+config.EpochsToRun/2)*epochSeconds + 60
 	genesisTime.Add(time.Duration(extraTimeToSync) * time.Second)
 	// Wait until middle of epoch to request to prevent conflicts.
 	time.Sleep(time.Until(genesisTime))
