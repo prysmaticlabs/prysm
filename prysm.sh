@@ -230,7 +230,7 @@ esac
 
 verify $process
 
-if [[ $2 == --download-only ]]; then
+if [[ "$#" -gt 1 ]] && [[ $2 == --download-only ]]; then
     color "37" "Only download operation is requested, done."
     exit 0
 fi
