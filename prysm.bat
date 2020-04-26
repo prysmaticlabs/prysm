@@ -89,6 +89,8 @@ if [%1]==[slasher] (
     )
 )
 
+
+
 if [%1]==[beacon-chain] ( set process=%BEACON_CHAIN_REAL%)
 if [%1]==[validator] ( set process=%VALIDATOR_REAL%) 
 if [%1]==[slasher] ( set process=%SLASHER_REAL%)
