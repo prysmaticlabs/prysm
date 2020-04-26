@@ -108,8 +108,13 @@ function get_prysm_version() {
 function verify() {
   file=$1
 
-  hash shasum 2>/dev/null || { echo >&2 "shasum is not available. Not verifying integrity of downloaded binary."; return failed_verification; }
-  hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; return failed_verification; }
+  skip=${PRYSM_ALLOW_UNVERIFIED_BINARIES-0}
+  if [[ $skip == 1 ]]; then
+    return 0
+  fi
+
+  hash shasum 2>/dev/null || { echo >&2 "shasum is not available. Not verifying integrity of downloaded binary."; exit 1; }
+  hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; exit 1; }
 
   color "37" "Verifying binary integrity."
 
@@ -121,16 +126,16 @@ function verify() {
 }
 
 function failed_verification() {
-  skip=${PRYSM_ALLOW_UNVERIFIED_BINARIES-0}
-  if [[ $skip == 1 ]]; then
-    return 0
-  fi
-  color "31" "Failed to verify Prysm binary. Please erase downloads in the \
-dist directory and run this script again. Alternatively, you can use a \
-A prior version by specifying environment variable USE_PRYSM_VERSION \
-with the specific version, as desired. Example: USE_PRYSM_VERSION=v1.0.0-alpha.5 \
-If you must wish to continue running an unverified binary, specific the \
-environment variable PRYSM_ALLOW_UNVERIFIED_BINARIES=1"
+MSG=$(cat <<-END
+Failed to verify Prysm binary. Please erase downloads in the
+dist directory and run this script again. Alternatively, you can use a
+A prior version by specifying environment variable USE_PRYSM_VERSION
+with the specific version, as desired. Example: USE_PRYSM_VERSION=v1.0.0-alpha.5
+If you must wish to continue running an unverified binary, specific the
+environment variable PRYSM_ALLOW_UNVERIFIED_BINARIES=1
+END
+)
+  color "31" "$MSG"
   exit 1
 }
 
