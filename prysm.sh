@@ -113,8 +113,8 @@ function verify() {
     return 0
   fi
 
-  hash shasum 2>/dev/null || { echo >&2 "shasum is not available. Not verifying integrity of downloaded binary."; exit 1; }
-  hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Not verifying integrity of downloaded binary."; exit 1; }
+  hash shasum 2>/dev/null || { echo >&2 "shasum is not available. Either install it or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."; exit 1; }
+  hash gpg 2>/dev/null || { echo >&2 "gpg is not available. Either install it or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."; exit 1; }
 
   color "37" "Verifying binary integrity."
 
