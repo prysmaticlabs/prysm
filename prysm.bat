@@ -66,7 +66,7 @@ if [%1]==[beacon-chain] (
     if exist %BEACON_CHAIN_REAL% (
         Beacon chain is up to date.
     ) else (
-        echo �[35mDownloading beacon chain %prysm_version% to %BEACON_CHAIN_REAL% %reason%�[0m
+        echo [35mDownloading beacon chain %prysm_version% to %BEACON_CHAIN_REAL% %reason%[0m
         curl -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch% -o %BEACON_CHAIN_REAL%
         curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sha256
         curl --silent -L https://prysmaticlabs.com/releases/beacon-chain-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\beacon-chain-%prysm_version%-%system%-%arch%.sig
