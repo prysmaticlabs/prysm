@@ -455,7 +455,7 @@ func (vs *Server) packAttestations(ctx context.Context, slot uint64) ([]*ethpb.A
 	atts := vs.AttPool.AggregatedAttestations()
 	atts, err = vs.filterAttestationsForBlockInclusion(ctx, st, atts)
 	if err != nil {
-		return nil, errors.Wrap( err, "could not filter attestations")
+		return nil, errors.Wrap(err, "could not filter attestations")
 	}
 
 	// If there is any room left in the block, consider unaggregated attestations as well.
