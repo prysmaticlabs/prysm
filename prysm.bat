@@ -4,29 +4,33 @@ SetLocal EnableDelayedExpansion & REM All variables are set local to this run & 
 
 set PRYLABS_SIGNING_KEY=0AE0051D647BA3C1A917AF4072E33E4DF1A5036E
 
-REM Complain if no arguments were provided.
-if (%1)==() (
-    echo [31mERROR: No process provided[0m
-    echo Usage: ./prysm.bat PROCESS FLAGS.
-    echo.
-    echo PROCESS can be beacon-chain, validator, or slasher.
-    echo FLAGS are the flags or arguments passed to the PROCESS.
-    echo. 
-    echo Use this script to download the latest Prysm release binaries.
-    echo Downloaded binaries are saved to .\dist
-    echo. 
-    echo To specify a specific release version:
-    echo  set USE_PRYSM_VERSION=v1.0.0-alpha3
-    echo  to resume using the latest release:
-    echo   set USE_PRYSM_VERSION=
-    echo. 
-    echo To automatically restart crashed processes:
-    echo  set autorestart=true^& .\prysm.bat beacon-chain
-    echo  to stop autorestart run:
-    echo   set autorestart=
-    echo. 
-    exit /B 1
+REM Complain if invalid arguments were provided.
+for %%a in (beacon-chain validator slasher) do (
+    if %1 equ %%a (
+        goto validprocess
+    )
 )
+echo [31mERROR: PROCESS missing or invalid[0m
+echo Usage: ./prysm.bat PROCESS FLAGS.
+echo.
+echo PROCESS can be beacon-chain, validator, or slasher.
+echo FLAGS are the flags or arguments passed to the PROCESS.
+echo. 
+echo Use this script to download the latest Prysm release binaries.
+echo Downloaded binaries are saved to .\dist
+echo. 
+echo To specify a specific release version:
+echo  set USE_PRYSM_VERSION=v1.0.0-alpha3
+echo  to resume using the latest release:
+echo   set USE_PRYSM_VERSION=
+echo. 
+echo To automatically restart crashed processes:
+echo  set PRYSM_AUTORESTART=true^& .\prysm.bat beacon-chain
+echo  to stop autorestart run:
+echo   set PRYSM_AUTORESTART=
+echo. 
+exit /B 1
+:validprocess
 
 REM Get full path to prysm.bat file (excluding filename)
 set wrapper_dir=%~dp1dist
@@ -134,11 +138,11 @@ set "processargs=!processargs:*%1=!" & REM remove process from the list of argum
 
 :ERROR
     Echo [91mERROR FAILED[0m
-    IF defined autorestart (
-        echo autorestart is set, restarting
+    IF defined PRYSM_AUTORESTART (
+        echo PRYSM_autorestart is set, restarting
         GOTO autorestart
     ) else (
-        echo an error has occured, set autorestart=1 to automatically restart
+        echo an error has occured, set PRYSM_AUTORESTART=1 to automatically restart
     )
 
 :end
