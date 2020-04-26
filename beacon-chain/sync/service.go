@@ -29,6 +29,7 @@ var _ = shared.Service(&Service{})
 
 const allowedBlocksPerSecond = 32.0
 const allowedBlocksBurst = 10 * allowedBlocksPerSecond
+const rangeLimit = 1000
 const seenBlockSize = 1000
 const seenAttSize = 10000
 const seenExitSize = 100
