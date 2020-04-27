@@ -23,8 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var blockBatchSize uint64
-
+const blockBatchSize = 32
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
 
@@ -91,7 +90,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			StartSlot: s.chain.HeadSlot() + 1,
-			Count:     mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, uint64(allowedBlocksPerSecond)),
+			Count:     mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, allowedBlocksPerSecond),
 			Step:      1,
 		}
 

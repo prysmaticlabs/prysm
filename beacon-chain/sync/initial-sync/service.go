@@ -31,9 +31,9 @@ type blockchainService interface {
 
 const (
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
-)
 
-var allowedBlocksPerSecond float64
+	allowedBlocksPerSecond = 32.0
+)
 
 // Config to set up the initial sync service.
 type Config struct {
@@ -61,10 +61,6 @@ type Service struct {
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *Service {
-	// Initialize Block Limits.
-	allowedBlocksPerSecond = float64(flags.Get().BlockBatchLimit)
-	blockBatchSize = uint64(flags.Get().BlockBatchLimit)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
 		ctx:               ctx,
@@ -74,7 +70,7 @@ func NewInitialSync(cfg *Config) *Service {
 		db:                cfg.DB,
 		stateNotifier:     cfg.StateNotifier,
 		blockNotifier:     cfg.BlockNotifier,
-		blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, int64(allowedBlocksPerSecond), false /* deleteEmptyBuckets */),
+		blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 	}
 }
 

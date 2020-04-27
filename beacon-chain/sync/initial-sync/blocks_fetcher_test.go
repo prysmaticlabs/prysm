@@ -496,7 +496,7 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 				blocks = resp.blocks
 			}
 		}
-		if len(blocks) != int(blockBatchSize) {
+		if len(blocks) != blockBatchSize {
 			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchSize, len(blocks))
 		}
 
@@ -548,7 +548,7 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	if err != nil {
 		t.Errorf("error: %v", err)
 	}
-	if len(blocks) != int(blockBatchSize) {
+	if len(blocks) != blockBatchSize {
 		t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchSize, len(blocks))
 	}
 

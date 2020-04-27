@@ -49,7 +49,7 @@ func init() {
 }
 
 func TestConstants(t *testing.T) {
-	if params.BeaconConfig().MaxPeersToSync*int(blockBatchSize) > 1000 {
+	if params.BeaconConfig().MaxPeersToSync*blockBatchSize > 1000 {
 		t.Fatal("rpc rejects requests over 1000 range slots")
 	}
 }
@@ -296,7 +296,7 @@ func TestRoundRobinSync(t *testing.T) {
 				db:                beaconDB,
 				synced:            false,
 				chainStarted:      true,
-				blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, int64(allowedBlocksPerSecond), false /* deleteEmptyBuckets */),
+				blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 			}
 			if err := s.roundRobinSync(makeGenesisTime(tt.currentSlot)); err != nil {
 				t.Error(err)
