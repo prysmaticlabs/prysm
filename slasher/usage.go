@@ -54,6 +54,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.LogFileName,
 			cmd.ForceClearDB,
 			cmd.ClearDB,
+			cmd.ConfigFileFlag,
 		},
 	},
 	{

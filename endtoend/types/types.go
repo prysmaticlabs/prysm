@@ -11,6 +11,7 @@ type E2EConfig struct {
 	EpochsToRun    uint64
 	TestSync       bool
 	TestSlasher    bool
+	TestDeposits   bool
 	Evaluators     []Evaluator
 }
 
