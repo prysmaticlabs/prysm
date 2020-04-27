@@ -103,8 +103,8 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.WithFields(logrus.Fields{
-				"blockSlot":    fmt.Sprintf("%d", block.Slot),
+			log.WithFields(log.Fields{
+				"blockSlot":    fmt.Sprintf("%d", block.Block.Slot),
 				"preStateSlot": fmt.Sprintf("%d", stateObj.Slot()),
 			}).Infof(
 				"Performing state transition with a block root of %#x and pre state root of %#x",
