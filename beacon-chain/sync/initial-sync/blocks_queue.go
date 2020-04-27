@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -136,7 +135,6 @@ func (q *blocksQueue) loop() {
 	}
 
 	startEpoch := helpers.SlotToEpoch(q.headFetcher.HeadSlot())
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 
 	// Define epoch states as finite state machines.
 	for i := startEpoch; i < startEpoch+lookaheadEpochs; i++ {
@@ -162,7 +160,7 @@ func (q *blocksQueue) loop() {
 			for _, state := range q.state.epochs {
 				data := &fetchRequestParams{
 					start: helpers.StartSlot(state.epoch),
-					count: slotsPerEpoch,
+					count: blockBatchSize,
 				}
 
 				// Trigger events on each epoch's state machine.

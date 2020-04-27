@@ -296,7 +296,7 @@ func TestRoundRobinSync(t *testing.T) {
 				db:                beaconDB,
 				synced:            false,
 				chainStarted:      true,
-				blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
+				blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, int64(allowedBlocksPerSecond), false /* deleteEmptyBuckets */),
 			}
 			if err := s.roundRobinSync(makeGenesisTime(tt.currentSlot)); err != nil {
 				t.Error(err)

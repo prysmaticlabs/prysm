@@ -23,7 +23,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const blockBatchSize = 32
+var blockBatchSize uint64
+
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
 

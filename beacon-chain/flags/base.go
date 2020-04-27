@@ -119,6 +119,6 @@ var (
 	BlockBatchLimit = &cli.IntFlag{
 		Name:  "block-batch-limit",
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
-		Value: 32,
+		Value: 64,
 	}
 )

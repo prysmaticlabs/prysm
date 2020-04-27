@@ -81,8 +81,8 @@ type fetchRequestResponse struct {
 func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
 	ctx, cancel := context.WithCancel(ctx)
 	rateLimiter := leakybucket.NewCollector(
-		allowedBlocksPerSecond, /* rate */
-		allowedBlocksPerSecond, /* capacity */
+		allowedBlocksPerSecond,        /* rate */
+		int64(allowedBlocksPerSecond), /* capacity */
 		false /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
@@ -259,7 +259,7 @@ func (f *blocksFetcher) collectPeerResponses(
 	}
 
 	// Spread load evenly among available peers.
-	perPeerCount := mathutil.Min(count/uint64(len(peers)), allowedBlocksPerSecond)
+	perPeerCount := mathutil.Min(count/uint64(len(peers)), uint64(allowedBlocksPerSecond))
 	remainder := int(count % uint64(len(peers)))
 	for i, pid := range peers {
 		start, step := start+uint64(i)*step, step*uint64(len(peers))
