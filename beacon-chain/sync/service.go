@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
@@ -27,8 +28,10 @@ import (
 
 var _ = shared.Service(&Service{})
 
-const allowedBlocksPerSecond = 32.0
-const allowedBlocksBurst = 10 * allowedBlocksPerSecond
+var allowedBlocksPerSecond float64
+var allowedBlocksBurst int64
+
+const rangeLimit = 1000
 const seenBlockSize = 1000
 const seenAttSize = 10000
 const seenExitSize = 100
@@ -101,6 +104,10 @@ type Service struct {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
+	// Intialize block limits.
+	allowedBlocksPerSecond = float64(flags.Get().BlockBatchLimit)
+	allowedBlocksBurst = int64(10 * allowedBlocksPerSecond)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
 		ctx:                  ctx,

@@ -40,6 +40,7 @@ var appFlags = []cli.Flag{
 	flags.SetGCPercent,
 	flags.UnsafeSync,
 	flags.DisableDiscv5,
+	flags.BlockBatchLimit,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,
