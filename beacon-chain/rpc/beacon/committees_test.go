@@ -29,8 +29,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
-	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
-	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:true})
+	defer resetCfg()
 
 	numValidators := 128
 	ctx := context.Background()
@@ -89,10 +89,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
-	config := &featureconfig.Flags{
-		NewStateMgmt: false,
-	}
-	featureconfig.Init(config)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:false})
+	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -164,10 +162,8 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
-	config := &featureconfig.Flags{
-		NewStateMgmt: false,
-	}
-	featureconfig.Init(config)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:false})
+	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
