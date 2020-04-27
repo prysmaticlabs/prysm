@@ -10,9 +10,8 @@ import (
 )
 
 func TestBlockRoot(t *testing.T) {
-	f := featureconfig.Get()
-	f.EnableBlockHTR = true
-	featureconfig.Init(f)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableBlockHTR: true})
+	defer resetCfg()
 	genState, keys := testutil.DeterministicGenesisState(t, 100)
 	blk, err := testutil.GenerateFullBlock(genState, keys, testutil.DefaultBlockGenConfig(), 10)
 	if err != nil {

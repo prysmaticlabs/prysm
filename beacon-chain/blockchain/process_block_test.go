@@ -301,10 +301,8 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
-	config := &featureconfig.Flags{
-		NewStateMgmt: true,
-	}
-	featureconfig.Init(config)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
 
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
@@ -345,6 +343,8 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
 
 	cfg := &Config{
 		BeaconDB: db,

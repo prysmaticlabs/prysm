@@ -35,6 +35,9 @@ func (bs *Server) ListValidatorBalances(
 		return bs.listValidatorsBalancesUsingOldArchival(ctx, req)
 	}
 
+	if bs.GenesisTimeFetcher == nil {
+		return nil, status.Errorf(codes.Internal, "Nil genesis time fetcher")
+	}
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 	switch q := req.QueryFilter.(type) {
@@ -163,6 +166,9 @@ func (bs *Server) listValidatorsBalancesUsingOldArchival(
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
 	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 
+	if bs.HeadFetcher == nil {
+		return nil, status.Error(codes.Internal, "Nil head state")
+	}
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
@@ -578,9 +584,15 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) getValidatorActiveSetChangesUsingOldArchival(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
+	if bs.HeadFetcher == nil {
+		return nil, status.Error(codes.Internal, "Nil head state")
+	}
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	if bs.BeaconDB == nil {
+		return nil, status.Error(codes.Internal, "Nil beacon DB")
 	}
 	currentEpoch := helpers.CurrentEpoch(headState)
 	requestedEpoch := currentEpoch
