@@ -613,10 +613,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
-	config := &featureconfig.Flags{
-		NewStateMgmt: true,
-	}
-	featureconfig.Init(config)
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 
 	cfg := assertNewStateMgmtIsEnabled()
 	defer featureconfig.Init(cfg)

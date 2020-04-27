@@ -91,10 +91,8 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	config := &featureconfig.Flags{
-		NewStateMgmt: true,
-	}
-	featureconfig.Init(config)
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
@@ -263,7 +261,10 @@ func pubKey(i uint64) []byte {
 func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 	ctx := context.Background()
+
 	setupValidators(t, db, 100)
 	headState, err := db.HeadState(context.Background())
 	if err != nil {
@@ -599,10 +600,8 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	config := &featureconfig.Flags{
-		NewStateMgmt: true,
-	}
-	featureconfig.Init(config)
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
@@ -1170,10 +1169,8 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	config := &featureconfig.Flags{
-		NewStateMgmt: true,
-	}
-	featureconfig.Init(config)
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 8)
@@ -1726,6 +1723,8 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 
 	ctx := context.Background()
 	validatorCount := uint64(100)
