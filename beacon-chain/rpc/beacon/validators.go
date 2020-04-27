@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 
@@ -958,7 +957,6 @@ func (bs *Server) GetValidatorPerformance(
 			missingValidators = append(missingValidators, key)
 			continue
 		}
-
 		if idx >= uint64(len(validatorSummary)) {
 			// Not listed in validator summary yet; treat it as missing.
 			missingValidators = append(missingValidators, key)
