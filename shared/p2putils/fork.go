@@ -42,3 +42,31 @@ func CreateForkDigest(
 	}
 	return digest, nil
 }
+
+// ForkDigest creates a fork digest from a target epoch and genesis
+// validators root, returns the active fork version in the node.
+func ForkDigest(
+	targetEpoch uint64,
+	genesisValidatorsRoot []byte,
+) ([4]byte, error) {
+	if len(genesisValidatorsRoot) == 0 {
+		return [4]byte{}, errors.New("genesis validators root is not set")
+	}
+
+	// We retrieve a list of scheduled forks by epoch.
+	// We loop through the keys in this map to determine the current
+	// fork version based on the requested epoch.
+	retrievedForkVersion := params.BeaconConfig().GenesisForkVersion
+	scheduledForks := params.BeaconConfig().ForkVersionSchedule
+	for epoch, forkVersion := range scheduledForks {
+		if epoch <= targetEpoch {
+			retrievedForkVersion = forkVersion
+		}
+	}
+
+	digest, err := helpers.ComputeForkDigest(retrievedForkVersion, genesisValidatorsRoot)
+	if err != nil {
+		return [4]byte{}, err
+	}
+	return digest, nil
+}
