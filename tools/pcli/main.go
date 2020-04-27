@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -40,17 +41,17 @@ func main() {
 		Usage:    "Subcommand to run manual state transitions",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "blockPath",
+				Name:        "block-path",
 				Usage:       "Path to block file(ssz)",
 				Destination: &blockPath,
 			},
 			&cli.StringFlag{
-				Name:        "preStatePath",
+				Name:        "pre-state-path",
 				Usage:       "Path to pre state file(ssz)",
 				Destination: &preStatePath,
 			},
 			&cli.StringFlag{
-				Name:        "expectedPostStatePath",
+				Name:        "expected-post-state-path",
 				Usage:       "Path to expected post state file(ssz)",
 				Destination: &expectedPostStatePath,
 			},
@@ -102,14 +103,20 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Infof("Performing State Transition with a block root of %#x and pre state root of %#x",
-				blkRoot, preStateRoot)
+			log.WithFields(logrus.Fields{
+				"blockSlot":    fmt.Sprintf("%d", block.Slot),
+				"preStateSlot": fmt.Sprintf("%d", stateObj.Slot()),
+			}).Infof(
+				"Performing state transition with a block root of %#x and pre state root of %#x",
+				blkRoot,
+				preStateRoot,
+			)
 			postState, err := state.ExecuteStateTransition(context.Background(), stateObj, block)
 			if err != nil {
 				log.Fatal(err)
 			}
 			postRoot, err := postState.HashTreeRoot(context.Background())
-			log.Infof("Finished Performing State Transition with Post state root of %#x", postRoot)
+			log.Infof("Finished state transition with post state root of %#x", postRoot)
 
 			// Diff the state if a post state is provided.
 			if expectedPostStatePath != "" {

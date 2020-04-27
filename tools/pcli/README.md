@@ -28,9 +28,9 @@ This is a utility to help users perform eth2 specific commands.
 
 
 *State Transition Flags:*
-   --blockPath value              Path to block file(ssz)
-   --preStatePath value           Path to pre state file(ssz)
-   --expectedPostStatePath value  Path to expected post state file(ssz)
+   --block-path value              Path to block file(ssz)
+   --pre-state-patch value           Path to pre state file(ssz)
+   --expected-post-state-path value  Path to expected post state file(ssz)
    --help, -h                     show help (default: false)
 
 
@@ -40,6 +40,6 @@ This is a utility to help users perform eth2 specific commands.
 To use pcli manual state transition:
 
 ```
-bazel run //tools/pcli:pcli -- state-transition --blockPath /path/to/block --preStatePath /path/to/state
+bazel run //tools/pcli:pcli -- state-transition --block-path /path/to/block.ssz --pre-state-path /path/to/state.ssz
 ```
 
