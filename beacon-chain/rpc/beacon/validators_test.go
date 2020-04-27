@@ -1458,6 +1458,10 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	if !reflect.DeepEqual(res.ActivationPublicKeys, wanted) {
 		t.Errorf("Wanted %v, received %v", wanted, res.ActivationPublicKeys)
 	}
+	wantedActiveIndices := []uint64{2, 1, 0}
+	if !reflect.DeepEqual(res.ActivationValidatorIndices, wantedActiveIndices) {
+		t.Errorf("wanted %v, received %v", wantedActiveIndices, res.ActivationValidatorIndices)
+	}
 }
 
 func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
@@ -1510,6 +1514,10 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	}
 	if !reflect.DeepEqual(res.ExitPublicKeys, wanted) {
 		t.Errorf("Wanted %v, received %v", wanted, res.ExitPublicKeys)
+	}
+	wantedExitIndices := []uint64{1}
+	if !reflect.DeepEqual(res.ExitValidatorIndices, wantedExitIndices) {
+		t.Errorf("wanted %v, received %v", wantedExitIndices, res.ExitValidatorIndices)
 	}
 
 	// Now, we move the state.slot past the exit epoch of the validator, and now
