@@ -1305,6 +1305,9 @@ func TestFilterAttestation_OK(t *testing.T) {
 	if err := state.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]); err != nil {
 		t.Fatal(err)
 	}
+	if err := state.SetSlot(1); err != nil {
+		t.Error(err)
+	}
 
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
@@ -1330,7 +1333,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 			Target:         &ethpb.Checkpoint{}},
 		}
 	}
-	received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), 1, atts)
+	received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1374,7 +1377,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 	}
 
-	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), 1, atts)
+	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), state, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
