@@ -38,8 +38,8 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 	// The initial count for the first batch to be returned back.
 	count := m.Count
-	if count > allowedBlocksPerSecond {
-		count = allowedBlocksPerSecond
+	if count > uint64(allowedBlocksPerSecond) {
+		count = uint64(allowedBlocksPerSecond)
 	}
 	// initial batch start and end slots to be returned to remote peer.
 	startSlot := m.StartSlot
@@ -60,7 +60,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	for startSlot <= endReqSlot {
 		remainingBucketCapacity = r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
 
-		if allowedBlocksPerSecond > uint64(remainingBucketCapacity) {
+		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
 			r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 			if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 				log.Debug("Disconnecting bad peer")
@@ -89,9 +89,14 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 		// Recalculate start and end slots for the next batch to be returned to the remote peer.
 		startSlot = endSlot + m.Step
-		endSlot = startSlot + (m.Step * (allowedBlocksPerSecond - 1))
+		endSlot = startSlot + (m.Step * (uint64(allowedBlocksPerSecond) - 1))
 		if endSlot > endReqSlot {
 			endSlot = endReqSlot
+		}
+
+		// do not wait if all blocks have already been sent.
+		if startSlot > endReqSlot {
+			break
 		}
 
 		// wait for ticker before resuming streaming blocks to remote peer.
