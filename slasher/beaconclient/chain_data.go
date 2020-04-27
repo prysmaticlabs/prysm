@@ -29,16 +29,16 @@ func (bs *Service) ChainHead(
 
 // ChainHead requests the latest beacon chain head
 // from a beacon node via gRPC.
-func (bs *Service) GenesisValidatorRoot(
+func (bs *Service) GenesisValidatorsRoot(
 	ctx context.Context,
-) (*ethpb.GenesisValidatorsRoot, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconclient.GenesisValidatorRoot")
+) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconclient.GenesisValidatorsRoot")
 	defer span.End()
 	res, err := bs.nodeClient.GetGenesis(ctx, &ptypes.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not retrieve genesis data")
 	}
-	return res, nil
+	return res.GenesisValidatorsRoot, nil
 }
 
 // Poll the beacon node every syncStatusPollingInterval until the node

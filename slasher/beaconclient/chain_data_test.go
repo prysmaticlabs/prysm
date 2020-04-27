@@ -1,6 +1,7 @@
 package beaconclient
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -33,6 +34,27 @@ func TestService_ChainHead(t *testing.T) {
 	}
 	if !proto.Equal(res, wanted) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestService_GenesisValidatorsRoot(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	client := mock.NewMockNodeClient(ctrl)
+	bs := Service{
+		nodeClient: client,
+	}
+	wanted := &ethpb.Genesis{
+		GenesisValidatorsRoot: []byte("I am genesis"),
+	}
+	client.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wanted, nil)
+	res, err := bs.GenesisValidatorsRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(res, wanted.GenesisValidatorsRoot) {
+		t.Errorf("Wanted %#x, received %#x", wanted.GenesisValidatorsRoot, res)
 	}
 }
 
