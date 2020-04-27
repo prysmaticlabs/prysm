@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	bolt "go.etcd.io/bbolt"
-	"github.com/sirupsen/logrus"
 )
 
 var _ = iface.Database(&Store{})
@@ -50,7 +49,6 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	log.Infof(".db & validator keys dir is: %v", dirPath)
 	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
 	if err != nil {
