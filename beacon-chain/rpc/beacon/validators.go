@@ -778,9 +778,11 @@ func (bs *Server) GetValidatorQueue(
 	}
 
 	return &ethpb.ValidatorQueue{
-		ChurnLimit:           churnLimit,
-		ActivationPublicKeys: activationQueueKeys,
-		ExitPublicKeys:       exitQueueKeys,
+		ChurnLimit:                 churnLimit,
+		ActivationPublicKeys:       activationQueueKeys,
+		ExitPublicKeys:             exitQueueKeys,
+		ActivationValidatorIndices: activationQ,
+		ExitValidatorIndices:       exitQueueIndices,
 	}, nil
 }
 

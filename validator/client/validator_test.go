@@ -865,11 +865,23 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				PublicKey: pubKeys[0],
 				Status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_PENDING,
+					ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
+					PositionInActivationQueue: 6,
+				},
+			},
+			log: "Waiting to be assigned activation epoch\" positionInActivationQueue=6",
+		},
+		{
+			name: "PENDING",
+			status: &ethpb.ValidatorActivationResponse_Status{
+				PublicKey: pubKeys[0],
+				Status: &ethpb.ValidatorStatusResponse{
+					Status:                    ethpb.ValidatorStatus_PENDING,
 					ActivationEpoch:           60,
 					PositionInActivationQueue: 5,
 				},
 			},
-			log: "Waiting to be activated\" activationEpoch=60 positionInActivationQueue=5",
+			log: "Waiting for activation\" activationEpoch=60",
 		},
 		{
 			name: "EXITED",

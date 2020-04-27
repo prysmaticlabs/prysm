@@ -118,10 +118,10 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 
 	log.WithFields(logrus.Fields{
 		"epoch":                          (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
-		"attestationInclusionPercentage": fmt.Sprintf("%.2f", float64(included)/float64(len(resp.InclusionSlots)*100)),
-		"correctlyVotedSourcePercentage": fmt.Sprintf("%.2f", float64(votedSource)/float64(len(resp.CorrectlyVotedSource)*100)),
-		"correctlyVotedTargetPercentage": fmt.Sprintf("%.2f", float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)*100)),
-		"correctlyVotedHeadPercentage":   fmt.Sprintf("%.2f", float64(votedHead)/float64(len(resp.CorrectlyVotedHead)*100)),
+		"attestationInclusionPercentage": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
+		"correctlyVotedSourcePercentage": fmt.Sprintf("%.0f%%", (float64(votedSource)/float64(len(resp.CorrectlyVotedSource)))*100),
+		"correctlyVotedTargetPercentage": fmt.Sprintf("%.0f%%", (float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
+		"correctlyVotedHeadPercentage":   fmt.Sprintf("%.0f%%", (float64(votedHead)/float64(len(resp.CorrectlyVotedHead)))*100),
 	}).Info("Previous epoch aggregated voting summary")
 
 	return nil
