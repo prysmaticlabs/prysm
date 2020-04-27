@@ -119,6 +119,9 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
+		headFetcher: &mock.ChainService{
+			State: testutil.NewBeaconState(),
+		},
 	}
 	for _, test := range tests {
 		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
@@ -167,6 +170,9 @@ func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
+		headFetcher: &mock.ChainService{
+			State: testutil.NewBeaconState(),
+		},
 	}
 	for _, test := range tests {
 		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
