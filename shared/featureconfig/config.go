@@ -86,6 +86,15 @@ func Init(c *Flags) {
 	featureConfig = c
 }
 
+// InitWithReset sets the global config and returns function that is used to reset configuration.
+func InitWithReset(c *Flags) func() {
+	resetFunc := func() {
+		Init(&Flags{})
+	}
+	Init(c)
+	return resetFunc
+}
+
 // Copy returns copy of the config object.
 func (c *Flags) Copy() *Flags {
 	return &Flags{

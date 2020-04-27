@@ -338,10 +338,8 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 }
 
 func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
-	config := &featureconfig.Flags{
-		NewStateMgmt: true,
-	}
-	featureconfig.Init(config)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
 
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)

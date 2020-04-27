@@ -251,7 +251,7 @@ func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 }
 
 // CheckpointRoot computes the HashTreeRoot Merkleization of
-// a Checkpoint struct value according to the eth2
+// a InitWithReset struct value according to the eth2
 // Simple Serialize specification.
 func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][]byte, 2)

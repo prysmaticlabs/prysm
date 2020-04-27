@@ -574,10 +574,8 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 }
 
 func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T) {
-	config := &featureconfig.Flags{
-		NewStateMgmt: false,
-	}
-	featureconfig.Init(config)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:false})
+	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -612,8 +610,8 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
-	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:true})
+	defer resetCfg()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
@@ -749,8 +747,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
-	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:true})
+	defer resetCfg()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()

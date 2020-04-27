@@ -23,9 +23,8 @@ import (
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
-	fc := featureconfig.Get()
-	fc.DisableDynamicCommitteeSubnets = true
-	featureconfig.Init(fc)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableDynamicCommitteeSubnets: true})
+	defer resetCfg()
 
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)

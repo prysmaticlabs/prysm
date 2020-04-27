@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"gopkg.in/urfave/cli.v2"
+	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
 var log = logrus.WithField("prefix", "main")
@@ -48,6 +49,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFormat,
 	cmd.ClearDB,
 	cmd.ForceClearDB,
+	cmd.ConfigFileFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
@@ -73,6 +75,16 @@ func main() {
 	app.Flags = appFlags
 	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
+		// Load any flags from file, if specified.
+		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
+			if err := altsrc.InitInputSourceWithContext(
+				appFlags,
+				altsrc.NewYamlSourceFromFlagFunc(
+					cmd.ConfigFileFlag.Name))(ctx); err != nil {
+				return err
+			}
+		}
+
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":

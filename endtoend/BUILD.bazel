@@ -6,6 +6,7 @@ go_test(
     testonly = True,
     srcs = [
         "endtoend_test.go",
+        "long_minimal_e2e_test.go",
         "minimal_antiflake_e2e_1_test.go",
         "minimal_antiflake_e2e_2_test.go",
         "minimal_e2e_test.go",
