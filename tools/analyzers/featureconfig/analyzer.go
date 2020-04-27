@@ -53,19 +53,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				reportUnhandledReset(pass, stmt.Call.Lparen)
 			}
 		case *ast.AssignStmt:
-			if len(stmt.Rhs) == 1 {
-				if ce, ok := stmt.Rhs[0].(*ast.CallExpr); ok && isPkgDot(ce.Fun, "featureconfig", "InitWithReset") {
-					for i := 0; i < len(stmt.Lhs); i++ {
-						if id, ok := stmt.Lhs[i].(*ast.Ident); ok {
-							if id.Name == "_" {
-								reportUnhandledReset(pass, id.NamePos)
-							}
+			if ce, ok := stmt.Rhs[0].(*ast.CallExpr); ok && isPkgDot(ce.Fun, "featureconfig", "InitWithReset") {
+				for i := 0; i < len(stmt.Lhs); i++ {
+					if id, ok := stmt.Lhs[i].(*ast.Ident); ok {
+						if id.Name == "_" {
+							reportUnhandledReset(pass, id.NamePos)
 						}
 					}
 				}
-			} else {
-				pass.Reportf(node.Pos(), "featureconfig.InitWithReset return signature is " +
-					"incorrect.")
 			}
 		default:
 		}
