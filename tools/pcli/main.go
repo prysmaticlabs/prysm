@@ -111,7 +111,7 @@ func main() {
 			postRoot, err := postState.HashTreeRoot(context.Background())
 			log.Infof("Finished Performing State Transition with Post state root of %#x", postRoot)
 
-			// diff the state if a post state is provided
+			// Diff the state if a post state is provided.
 			if expectedPostStatePath != "" {
 				expectedState := &pb.BeaconState{}
 				if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
