@@ -29,6 +29,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 
 	numValidators := 128
 	ctx := context.Background()

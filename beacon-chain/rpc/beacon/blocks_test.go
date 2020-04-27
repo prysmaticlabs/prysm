@@ -194,6 +194,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
+	t.Skip("re-init")
 
 	count := uint64(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
