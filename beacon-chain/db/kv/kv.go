@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	bolt "go.etcd.io/bbolt"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = iface.Database(&Store{})

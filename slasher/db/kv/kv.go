@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	bolt "go.etcd.io/bbolt"
+	"github.com/sirupsen/logrus"
 )
 
 var databaseFileName = "slasher.db"

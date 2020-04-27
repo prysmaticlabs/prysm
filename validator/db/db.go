@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/iface"
 	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "db")
