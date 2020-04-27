@@ -1,0 +1,70 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/pcli",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/version:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+        "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
+        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+        "@in_gopkg_urfave_cli_v2//:go_default_library",
+    ],
+)
+
+go_image(
+    name = "image",
+    srcs = ["main.go"],
+    base = "//tools:cc_image",
+    goarch = "amd64",
+    goos = "linux",
+    importpath = "github.com/prysmaticlabs/prysm/tools/pcli",
+    race = "off",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/version:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+        "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
+        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+        "@in_gopkg_urfave_cli_v2//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "pcli",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+container_bundle(
+    name = "image_bundle",
+    images = {
+        "gcr.io/prysmaticlabs/prysm/pcli:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/pcli:{DOCKER_TAG}": ":image",
+    },
+    tags = ["manual"],
+)
+
+docker_push(
+    name = "push_images",
+    bundle = ":image_bundle",
+    tags = ["manual"],
+)
