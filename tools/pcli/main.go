@@ -132,7 +132,7 @@ func main() {
 	}
 }
 
-// fetch data and unmarshal to provided data structure from file
+// dataFetcher fetches and unmarshals data from file to provided data structure.
 func dataFetcher(fPath string, data interface{}) error {
 	rawFile, err := ioutil.ReadFile(fPath)
 	if err != nil {
