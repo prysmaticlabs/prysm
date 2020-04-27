@@ -47,7 +47,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
 		HeadFetcher: &mock.ChainService{
-			State: testutil.NewBeaconState(),
+			State: st,
 		},
 		BeaconDB: db,
 	}
