@@ -77,7 +77,10 @@ func main() {
 	app.Before = func(ctx *cli.Context) error {
 		// Load any flags from file, if specified.
 		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
-			if err := altsrc.InitInputSourceWithContext(appFlags, altsrc.NewYamlSourceFromFlagFunc(cmd.ConfigFileFlag.Name))(ctx); err != nil {
+			if err := altsrc.InitInputSourceWithContext(
+				appFlags,
+				altsrc.NewYamlSourceFromFlagFunc(
+					cmd.ConfigFileFlag.Name))(ctx); err != nil {
 				return err
 			}
 		}
