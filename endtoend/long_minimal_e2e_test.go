@@ -1,6 +1,8 @@
 package endtoend
 
 import (
+	"os"
+	"strconv"
 	"testing"
 
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
@@ -10,15 +12,28 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_MinimalConfig(t *testing.T) {
+func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseMinimalConfig()
+
+	epochsToRun := 20
+	var err error
+	epochStr, ok := os.LookupEnv("E2E_EPOCHS")
+	if ok {
+		epochsToRun, err = strconv.Atoi(epochStr)
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		t.Skip("E2E_EPOCHS not set")
+	}
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=10"},
 		ValidatorFlags: []string{"--minimal-config"},
-		EpochsToRun:    6,
-		TestSync:       true,
+		EpochsToRun:    uint64(epochsToRun),
+		TestSync:       false,
+		TestDeposits:   true,
 		TestSlasher:    true,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
@@ -26,6 +41,8 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
+			ev.ProcessesDepositedValidators,
+			ev.DepositedValidatorsAreActive,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {
