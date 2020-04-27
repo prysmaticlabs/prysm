@@ -449,9 +449,15 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) getValidatorActiveSetChangesUsingOldArchival(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
+	if bs.HeadFetcher == nil {
+		return nil, status.Error(codes.Internal, "Nil head state")
+	}
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	if bs.BeaconDB == nil {
+		return nil, status.Error(codes.Internal, "Nil beacon DB")
 	}
 	currentEpoch := helpers.CurrentEpoch(headState)
 	requestedEpoch := currentEpoch

@@ -37,12 +37,20 @@ func init() {
 }
 
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	if err := st.SetSlot(0); err != nil {
 		t.Fatal(err)
 	}
-	bs := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	bs := &Server{
+		GenesisTimeFetcher: &mock.ChainService{},
+		HeadFetcher: &mock.ChainService{
+			State: testutil.NewBeaconState(),
+		},
+		BeaconDB: db,
+	}
 
 	wanted := "Cannot retrieve information about an epoch in the future"
 	if _, err := bs.GetValidatorActiveSetChanges(
@@ -1147,6 +1155,8 @@ func TestServer_GetValidator(t *testing.T) {
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	featureconfig.Init(&featureconfig.Flags{NewStateMgmt: true})
+	defer featureconfig.Init(&featureconfig.Flags{NewStateMgmt: false})
 
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 8)
