@@ -59,6 +59,7 @@ type Service struct {
 	finalizationFetcher    blockchain.FinalizationFetcher
 	participationFetcher   blockchain.ParticipationFetcher
 	genesisTimeFetcher     blockchain.TimeFetcher
+	genesisFetcher         blockchain.GenesisFetcher
 	attestationReceiver    blockchain.AttestationReceiver
 	blockReceiver          blockchain.BlockReceiver
 	powChainService        powchain.Chain
@@ -108,6 +109,7 @@ type Config struct {
 	POWChainService       powchain.Chain
 	ChainStartFetcher     powchain.ChainStartFetcher
 	GenesisTimeFetcher    blockchain.TimeFetcher
+	GenesisFetcher        blockchain.GenesisFetcher
 	MockEth1Votes         bool
 	AttestationsPool      attestations.Pool
 	ExitPool              *voluntaryexits.Pool
@@ -138,6 +140,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		finalizationFetcher:   cfg.FinalizationFetcher,
 		participationFetcher:  cfg.ParticipationFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
+		genesisFetcher:        cfg.GenesisFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
 		p2p:                   cfg.Broadcaster,
@@ -241,6 +244,7 @@ func (s *Service) Start() {
 		SyncChecker:        s.syncService,
 		GenesisTimeFetcher: s.genesisTimeFetcher,
 		PeersFetcher:       s.peersFetcher,
+		GenesisFetcher:     s.genesisFetcher,
 	}
 	beaconChainServer := &beacon.Server{
 		Ctx:                         s.ctx,
