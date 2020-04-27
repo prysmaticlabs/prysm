@@ -32,7 +32,7 @@ func main() {
 
 	app := cli.App{}
 	app.Name = "pcli"
-	app.Usage = "A command line utility to run eth2 specific actions"
+	app.Usage = "A command line utility to run eth2 specific commands"
 	app.Version = version.GetVersion()
 	app.Commands = []*cli.Command{{
 		Name:     "state-transition",

@@ -26,11 +26,10 @@ go_library(
 go_image(
     name = "image",
     srcs = ["main.go"],
-    base = "//tools:go_image",
+    base = "//tools:cc_image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/pcli",
-    pure = "on",
     race = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
