@@ -10,7 +10,7 @@ import (
 )
 
 // Doc explaining the tool.
-const Doc = "TODO"
+const Doc = "Enforce usage of featureconfig.InitWithReset to prevent leaking globals in tests."
 
 // Analyzer runs static analysis.
 var Analyzer = &analysis.Analyzer{
