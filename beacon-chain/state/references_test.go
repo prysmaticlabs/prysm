@@ -51,16 +51,8 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 }
 
 func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
-	// Assert that feature is enabled.
-	if cfg := featureconfig.Get(); !cfg.EnableStateRefCopy {
-		cfg.EnableStateRefCopy = true
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableStateRefCopy = false
-			featureconfig.Init(cfg)
-		}()
-	}
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableStateRefCopy: true})
+	defer resetCfg()
 
 	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{})
 	if err != nil {
@@ -164,16 +156,8 @@ func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
 }
 
 func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
-	// Assert that feature is enabled.
-	if cfg := featureconfig.Get(); !cfg.EnableStateRefCopy {
-		cfg.EnableStateRefCopy = true
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableStateRefCopy = false
-			featureconfig.Init(cfg)
-		}()
-	}
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableStateRefCopy: true})
+	defer resetCfg()
 
 	root1, root2 := bytesutil.ToBytes32([]byte("foo")), bytesutil.ToBytes32([]byte("bar"))
 	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{
@@ -263,16 +247,8 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 }
 
 func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
-	// Assert that feature is enabled.
-	if cfg := featureconfig.Get(); !cfg.EnableStateRefCopy {
-		cfg.EnableStateRefCopy = true
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableStateRefCopy = false
-			featureconfig.Init(cfg)
-		}()
-	}
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableStateRefCopy: true})
+	defer resetCfg()
 
 	val1, val2 := []byte("foo"), []byte("bar")
 	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{
@@ -331,16 +307,8 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 }
 
 func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
-	// Assert that feature is enabled.
-	if cfg := featureconfig.Get(); !cfg.EnableStateRefCopy {
-		cfg.EnableStateRefCopy = true
-		featureconfig.Init(cfg)
-		defer func() {
-			cfg := featureconfig.Get()
-			cfg.EnableStateRefCopy = false
-			featureconfig.Init(cfg)
-		}()
-	}
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableStateRefCopy: true})
+	defer resetCfg()
 
 	assertAttFound := func(vals []*p2ppb.PendingAttestation, val uint64) {
 		for i := range vals {

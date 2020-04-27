@@ -71,13 +71,8 @@ func TestServer_SubmitProposerSlashing(t *testing.T) {
 
 func TestServer_SubmitProposerSlashingBroadcast(t *testing.T) {
 	ctx := context.Background()
-	cfg := featureconfig.Get()
-	cfg.BroadcastSlashings = true
-	featureconfig.Init(cfg)
-	defer func() {
-		cfg.BroadcastSlashings = false
-		featureconfig.Init(cfg)
-	}()
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{BroadcastSlashings:true})
+	defer resetCfg()
 
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
@@ -175,13 +170,8 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 
 func TestServer_SubmitAttesterSlashingBroadcast(t *testing.T) {
 	ctx := context.Background()
-	cfg := featureconfig.Get()
-	cfg.BroadcastSlashings = true
-	featureconfig.Init(cfg)
-	defer func() {
-		cfg.BroadcastSlashings = false
-		featureconfig.Init(cfg)
-	}()
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{BroadcastSlashings:true})
+	defer resetCfg()
 	// We mark the validators at index 5, 6 as already slashed.
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
