@@ -159,9 +159,9 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		if text = strings.Replace(text, "\n", "", -1); text != "" {
 			path = text
 		}
-		if err := NewValidatorAccount(path, passphrase); err != nil {
-			return "", "", errors.Wrapf(err, "could not initialize validator account")
-		}
+	}
+	if err := NewValidatorAccount(path, passphrase); err != nil {
+		return "", "", errors.Wrapf(err, "could not initialize validator account")
 	}
 	return path, passphrase, nil
 }
