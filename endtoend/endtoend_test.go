@@ -32,7 +32,7 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	keystorePath, eth1PID := components.StartEth1Node(t)
 	bootnodeENR, _ := components.StartBootnode(t)
 	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
-	valProcessIDs := components.StartValidators(t, config, keystorePath)
+	valProcessIDs := components.StartValidatorClients(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
 	processIDs = append(processIDs, eth1PID)
 	defer helpers.LogOutput(t, config)
@@ -77,6 +77,12 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		slasherPIDs := components.StartSlashers(t)
 		defer helpers.KillProcesses(t, slasherPIDs)
 	}
+	if config.TestDeposits {
+		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
+		valPid := components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
+		defer helpers.KillProcesses(t, []int{valPid})
+		components.SendAndMineDeposits(t, keystorePath, valCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
+	}
 
 	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
@@ -113,8 +119,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	conns = append(conns, syncConn)
 
-	// Sleep until the next epoch to give time for the newly started node to sync.
-	extraTimeToSync := (config.EpochsToRun+3)*epochSeconds + 60
+	// Sleep for a few epochs to give time for the newly started node to sync.
+	extraTimeToSync := (config.EpochsToRun+config.EpochsToRun/2)*epochSeconds + 60
 	genesisTime.Add(time.Duration(extraTimeToSync) * time.Second)
 	// Wait until middle of epoch to request to prevent conflicts.
 	time.Sleep(time.Until(genesisTime))
