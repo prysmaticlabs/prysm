@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"reflect"
 	"sort"
 
@@ -27,7 +28,7 @@ type Server struct {
 	ctx          context.Context
 	detector     *detection.Service
 	slasherDB    db.Database
-	beaconClient ethpb.BeaconChainClient
+	beaconClient *beaconclient.Service
 }
 
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
@@ -69,12 +70,12 @@ func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttest
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
-		return errors.New("nil or missing indexed attestation data")
+		return false, errors.New("nil or missing indexed attestation data")
 	}
 	indices := indexedAtt.AttestingIndices
 
 	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
+		return false, fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}
 
 	set := make(map[uint64]bool)
@@ -93,39 +94,35 @@ func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttest
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 
-	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, .GenesisValidatorRoot())
 	if err != nil {
-		return false, err
+		return err
 	}
-	var pubkey *bls.PublicKey
+	pubkeys := []*bls.PublicKey{}
 	if len(indices) > 0 {
-		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[0])
-		pubkey, err = bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-		if err != nil {
-			return false, errors.Wrap(err, "could not deserialize validator public key")
-		}
-		for i := 1; i < len(indices); i++ {
-			pubkeyAtIdx = beaconState.PubkeyAtIndex(indices[i])
+		for i := 0; i < len(indices); i++ {
+			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 			if err != nil {
-				return false, errors.Wrap(err, "could not deserialize validator public key")
+				return errors.Wrap(err, "could not deserialize validator public key")
 			}
-			pubkey.Aggregate(pk)
+			pubkeys = append(pubkeys, pk)
 		}
 	}
 
-	messageHash, err := ssz.HashTreeRoot(indexedAtt.Data)
+	messageHash, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain)
 	if err != nil {
-		return false, errors.Wrap(err, "could not tree hash att data")
+		return errors.Wrap(err, "could not get signing root of object")
 	}
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
 	if err != nil {
-		return false, errors.Wrap(err, "could not convert bytes to signature")
+		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 
 	voted := len(indices) > 0
-	if voted && !sig.Verify(messageHash[:], pubkey, domain) {
-		return false, ErrSigFailedToVerify
+	if voted && !sig.FastAggregateVerify(pubkeys, messageHash) {
+		return helpers.ErrSigFailedToVerify
 	}
+	return nil
 }
