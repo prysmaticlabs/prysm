@@ -27,6 +27,7 @@ type Server struct {
 	BeaconDB           db.ReadOnlyDatabase
 	PeersFetcher       p2p.PeersProvider
 	GenesisTimeFetcher blockchain.TimeFetcher
+	GenesisFetcher     blockchain.GenesisFetcher
 }
 
 // GetSyncStatus checks the current network sync status of the node.
@@ -47,9 +48,11 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
 	}
+	genValRoot := ns.GenesisFetcher.GenesisValidatorRoot()
 	return &ethpb.Genesis{
 		GenesisTime:            gt,
 		DepositContractAddress: contractAddr,
+		GenesisValidatorsRoot:  genValRoot[:],
 	}, nil
 }
 
