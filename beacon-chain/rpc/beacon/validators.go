@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 
@@ -822,8 +823,11 @@ func (bs *Server) GetValidatorPerformance(
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
 		if !helpers.IsActiveValidator(val, currentEpoch) {
+			// Inactive validator; treat it as missing.
+			missingValidators = append(missingValidators, key)
 			continue
 		}
+
 		if idx >= uint64(len(validatorSummary)) {
 			// Not listed in validator summary yet; treat it as missing.
 			missingValidators = append(missingValidators, key)
