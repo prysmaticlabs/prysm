@@ -116,4 +116,9 @@ var (
 		Name:  "disable-discv5",
 		Usage: "Does not run the discoveryV5 dht.",
 	}
+	BlockBatchLimit = &cli.IntFlag{
+		Name:  "block-batch-limit",
+		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
+		Value: 32,
+	}
 )
