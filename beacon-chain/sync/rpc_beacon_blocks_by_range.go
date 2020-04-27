@@ -94,6 +94,11 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			endSlot = endReqSlot
 		}
 
+		// do not wait if all blocks have already been sent.
+		if startSlot > endReqSlot {
+			break
+		}
+
 		// wait for ticker before resuming streaming blocks to remote peer.
 		<-ticker.C
 	}
