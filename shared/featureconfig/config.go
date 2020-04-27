@@ -86,11 +86,10 @@ func Init(c *Flags) {
 	featureConfig = c
 }
 
-// InitWithReset sets the global config and returns function that is used to reset configuration back.
+// InitWithReset sets the global config and returns function that is used to reset configuration.
 func InitWithReset(c *Flags) func() {
-	origConfig := featureConfig
 	resetFunc := func() {
-		Init(origConfig)
+		Init(&Flags{})
 	}
 	Init(c)
 	return resetFunc
