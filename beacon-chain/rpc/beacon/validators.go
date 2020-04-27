@@ -965,6 +965,8 @@ func (bs *Server) GetValidatorPerformance(
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
 		if !helpers.IsActiveValidator(val, currentEpoch) {
+			// Inactive validator; treat it as missing.
+			missingValidators = append(missingValidators, key)
 			continue
 		}
 		if idx >= uint64(len(validatorSummary)) {
