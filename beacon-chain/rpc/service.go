@@ -270,7 +270,9 @@ func (s *Service) Start() {
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	ethpb.RegisterDebugServer(s.grpcServer, beaconChainServer)
+	if featureconfig.Get().EnableDebugRPCEndpoints {
+		pbrpc.RegisterDebugServer(s.grpcServer, beaconChainServer)
+	}
 	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
 	// Register reflection service on gRPC server.

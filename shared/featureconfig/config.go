@@ -68,8 +68,9 @@ type Flags struct {
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 
-	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
+	KafkaBootstrapServers   string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	CustomGenesisDelay      uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
+	EnableDebugRPCEndpoints bool   // Enables the debug rpc service, providing utilities such as /v1/beacon/state.
 }
 
 var featureConfig *Flags
@@ -132,6 +133,7 @@ func (c *Flags) Copy() *Flags {
 		EnableBlockTreeCache:                       c.EnableBlockTreeCache,
 		KafkaBootstrapServers:                      c.KafkaBootstrapServers,
 		CustomGenesisDelay:                         c.CustomGenesisDelay,
+		EnableDebugRPCEndpoints:                    c.EnableDebugRPCEndpoints,
 	}
 }
 
@@ -252,6 +254,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(broadcastSlashingFlag.Name) {
 		log.Warn("Enabling broadcast slashing to p2p network")
 		cfg.BroadcastSlashings = true
+	}
+	if ctx.Bool(enableDebugRPCEndpoints.Name) {
+		log.Warn("Enabling debug RPC endpoints")
+		cfg.EnableDebugRPCEndpoints = true
 	}
 	Init(cfg)
 }
