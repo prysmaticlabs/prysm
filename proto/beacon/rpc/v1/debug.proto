@@ -14,17 +14,20 @@ service Debug {
     // Returns a beacon state by filter criteria from the beacon node.
     rpc GetBeaconState(BeaconStateRequest) returns (ethereum.beacon.p2p.v1.BeaconState) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/debug/state"
+            get: "/eth/v1alpha1/beacon/state"
         };
     }
 }
 
 message BeaconStateRequest {
     oneof query_filter {
+        // The slot corresponding to a desired beacon state.
+        uint64 slot = 1;
+
         // The block root corresponding to a desired beacon state.
-        bytes block_root = 1;
+        bytes block_root = 2;
 
         // The state root corresponding to a desired beacon state.
-        bytes state_root = 2;
+        bytes state_root = 3;
     }
 }
