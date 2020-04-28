@@ -101,7 +101,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
 			return nil, err
 		}
-		log.WithField("path", dataDir).Info("databasePath")
+		log.WithField("databasePath", dataDir).Info("Checking DB")
 	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
