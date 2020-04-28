@@ -1654,8 +1654,8 @@ go_repository(
     name = "com_github_wealdtech_eth2_signer_api",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/wealdtech/eth2-signer-api",
-    sum = "h1:fqJYjKwG/FeUAJYYiZblIP6agiz3WWB+Hxpw85Fnr5I=",
-    version = "v1.0.1",
+    sum = "h1:Fs0GfrdhboBKW7zaMvIvUHJaOB1ibpAmRG3lkB53in4=",
+    version = "v1.3.0",
 )
 
 go_repository(
