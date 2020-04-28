@@ -13,7 +13,7 @@ go_library(
 )
 
 go_binary(
-    name = "update-state-genesis",
+    name = "update-genesis-time",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
