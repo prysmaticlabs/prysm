@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
@@ -17,6 +16,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -157,6 +157,14 @@ func (r *Service) Start() {
 // Stop the regular sync service.
 func (r *Service) Stop() error {
 	defer r.cancel()
+
+	for _, pid := range r.p2p.Peers().Active() {
+		err := r.sendShutdownGoodbyeMessage(r.ctx, pid)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

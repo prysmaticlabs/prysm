@@ -61,6 +61,11 @@ func (r *Service) sendGenericGoodbyeMessage(ctx context.Context, id peer.ID) err
 	return r.sendGoodByeMessage(ctx, codeGenericError, id)
 }
 
+// sends a goodbye message indicating that this node is shutting down
+func (r *Service) sendShutdownGoodbyeMessage(ctx context.Context, id peer.ID) error {
+	return r.sendGoodByeMessage(ctx, codeClientShutdown, id)
+}
+
 func goodbyeMessage(num uint64) string {
 	reason, ok := goodByes[num]
 	if ok {
