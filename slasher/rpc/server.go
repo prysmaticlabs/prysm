@@ -3,17 +3,17 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"reflect"
 	"sort"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
 	log "github.com/sirupsen/logrus"
@@ -36,10 +36,19 @@ type Server struct {
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
-	pubMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, req.AttestingIndices)
+	pkMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, req.AttestingIndices)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve public key for validators")
 		return nil, status.Errorf(codes.Internal, "Could not retrieve public keys for validators: %v: %v", req.AttestingIndices, err)
+	}
+	valid, err := ss.verifySig(ctx, req, pkMap)
+	if err != nil {
+		log.WithError(err).Error("Failed to verify indexed attestation signature")
+		return nil, status.Errorf(codes.Internal, "Could not verify indexed attestation signature: %v: %v", req, err)
+	}
+	if !valid {
+		log.Warning("Indexed attestation signature failed to verify")
+		return nil, status.Errorf(codes.Unauthenticated, "Indexed attestation signature failed to verify: %v", req)
 	}
 
 	if err := ss.slasherDB.SaveIndexedAttestation(ctx, req); err != nil {
@@ -66,7 +75,7 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	return nil, errors.New("unimplemented")
 }
 
-func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation) (bool, error) {
+func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubMap map[uint64][]byte) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
@@ -91,38 +100,43 @@ func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttest
 		return setIndices[i] < setIndices[j]
 	})
 	if !reflect.DeepEqual(setIndices, indices) {
-		return errors.New("attesting indices is not uniquely sorted")
+		return false, errors.New("attesting indices is not uniquely sorted")
 	}
-
-	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, .GenesisValidatorRoot())
+	gvr, err := ss.beaconClient.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return err
+		return false, err
+	}
+	fork, err := p2putils.Fork(indexedAtt.Data.Target.Epoch, gvr)
+	if err != nil {
+		return false, err
+	}
+	domain, err := helpers.Domain(fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, gvr)
+	if err != nil {
+		return false, err
 	}
 	pubkeys := []*bls.PublicKey{}
-	if len(indices) > 0 {
-		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
-			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-			if err != nil {
-				return errors.Wrap(err, "could not deserialize validator public key")
-			}
-			pubkeys = append(pubkeys, pk)
+
+	for _, pkBytes := range pubMap {
+		pk, err := bls.PublicKeyFromBytes(pkBytes[:])
+		if err != nil {
+			return false, errors.Wrap(err, "could not deserialize validator public key")
 		}
+		pubkeys = append(pubkeys, pk)
 	}
 
 	messageHash, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain)
 	if err != nil {
-		return errors.Wrap(err, "could not get signing root of object")
+		return false, errors.Wrap(err, "could not get signing root of object")
 	}
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
+		return false, errors.Wrap(err, "could not convert bytes to signature")
 	}
 
 	voted := len(indices) > 0
 	if voted && !sig.FastAggregateVerify(pubkeys, messageHash) {
-		return helpers.ErrSigFailedToVerify
+		return false, helpers.ErrSigFailedToVerify
 	}
-	return nil
+	return true, nil
 }

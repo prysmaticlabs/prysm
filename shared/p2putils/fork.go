@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -43,30 +44,35 @@ func CreateForkDigest(
 	return digest, nil
 }
 
-// ForkDigest creates a fork digest from a target epoch and genesis
-// validators root, returns the active fork version in the node.
-func ForkDigest(
+// Fork given a target epoch and genesis validators root,
+// returns the active fork version in the node.
+func Fork(
 	targetEpoch uint64,
 	genesisValidatorsRoot []byte,
-) ([4]byte, error) {
+) (*pb.Fork, error) {
 	if len(genesisValidatorsRoot) == 0 {
-		return [4]byte{}, errors.New("genesis validators root is not set")
+		return &pb.Fork{}, errors.New("genesis validators root is not set")
 	}
 
 	// We retrieve a list of scheduled forks by epoch.
 	// We loop through the keys in this map to determine the current
 	// fork version based on the requested epoch.
 	retrievedForkVersion := params.BeaconConfig().GenesisForkVersion
+	previousForkVersion := params.BeaconConfig().GenesisForkVersion
 	scheduledForks := params.BeaconConfig().ForkVersionSchedule
+	forkEpoch := uint64(0)
 	for epoch, forkVersion := range scheduledForks {
 		if epoch <= targetEpoch {
+			previousForkVersion = retrievedForkVersion
 			retrievedForkVersion = forkVersion
+			forkEpoch = epoch
+
 		}
 	}
 
-	digest, err := helpers.ComputeForkDigest(retrievedForkVersion, genesisValidatorsRoot)
-	if err != nil {
-		return [4]byte{}, err
-	}
-	return digest, nil
+	return &pb.Fork{
+		PreviousVersion: previousForkVersion,
+		CurrentVersion:  retrievedForkVersion,
+		Epoch:           forkEpoch,
+	}, nil
 }
