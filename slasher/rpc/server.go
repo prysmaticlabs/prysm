@@ -36,12 +36,7 @@ type Server struct {
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
-	pkMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, req.AttestingIndices)
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve public key for validators")
-		return nil, status.Errorf(codes.Internal, "Could not retrieve public keys for validators: %v: %v", req.AttestingIndices, err)
-	}
-	valid, err := ss.verifySig(ctx, req, pkMap)
+	valid, err := ss.verifyIndexedAttestationSig(ctx, req)
 	if err != nil {
 		log.WithError(err).Error("Failed to verify indexed attestation signature")
 		return nil, status.Errorf(codes.Internal, "Could not verify indexed attestation signature: %v: %v", req, err)
@@ -75,8 +70,8 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	return nil, errors.New("unimplemented")
 }
 
-func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubMap map[uint64][]byte) (bool, error) {
-	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
+func (ss *Server) verifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "core.verifyIndexedAttestationSig")
 	defer span.End()
 	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
 		return false, errors.New("nil or missing indexed attestation data")
@@ -102,6 +97,10 @@ func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttest
 	if !reflect.DeepEqual(setIndices, indices) {
 		return false, errors.New("attesting indices is not uniquely sorted")
 	}
+	pkMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, indices)
+	if err != nil {
+		return false, err
+	}
 	gvr, err := ss.beaconClient.GenesisValidatorsRoot(ctx)
 	if err != nil {
 		return false, err
@@ -116,7 +115,7 @@ func (ss *Server) verifySig(ctx context.Context, indexedAtt *ethpb.IndexedAttest
 	}
 	pubkeys := []*bls.PublicKey{}
 
-	for _, pkBytes := range pubMap {
+	for _, pkBytes := range pkMap {
 		pk, err := bls.PublicKeyFromBytes(pkBytes[:])
 		if err != nil {
 			return false, errors.Wrap(err, "could not deserialize validator public key")

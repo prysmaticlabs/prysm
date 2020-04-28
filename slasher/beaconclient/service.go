@@ -67,6 +67,8 @@ type Config struct {
 	SlasherDB             db.Database
 	ProposerSlashingsFeed *event.Feed
 	AttesterSlashingsFeed *event.Feed
+	BeaconClient          ethpb.BeaconChainClient
+	NodeClient            ethpb.NodeClient
 }
 
 // NewBeaconClientService instantiation.
@@ -93,6 +95,8 @@ func NewBeaconClientService(ctx context.Context, cfg *Config) (*Service, error) 
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 		publicKeyCache:              publicKeyCache,
+		beaconClient:                cfg.BeaconClient,
+		nodeClient:                  cfg.NodeClient,
 	}, nil
 }
 
