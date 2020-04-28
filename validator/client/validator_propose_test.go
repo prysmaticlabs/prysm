@@ -33,11 +33,11 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	}
 
 	validator := &validator{
-		db:                             valDB,
-		validatorClient:                m.validatorClient,
-		keyManager:                     testKeyManager,
-		graffiti:                       []byte{},
-		attLogs:                        make(map[[32]byte]*attSubmitted),
+		db:              valDB,
+		validatorClient: m.validatorClient,
+		keyManager:      testKeyManager,
+		graffiti:        []byte{},
+		attLogs:         make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 	}
 
@@ -119,7 +119,8 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -156,7 +157,8 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -194,7 +196,8 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -233,7 +236,8 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()

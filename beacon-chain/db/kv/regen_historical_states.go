@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -17,6 +18,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// Using max possible size to avoid using DB to save and retrieve pre state (slow)
+// The size is 80 because block at slot 43772 built on top of block at slot 43693.
+// That is the worst case.
+const historicalStatesSize = 80
 
 func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "db.regenHistoricalStates")
@@ -56,7 +62,8 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	cacheState, err := lru.New(int(params.BeaconConfig().SlotsPerEpoch) * 2)
+
+	cacheState, err := lru.New(historicalStatesSize)
 	if err != nil {
 		return err
 	}
@@ -124,6 +131,9 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 	// Flush the cache, the cached states never be used again.
 	cacheState.Purge()
+
+	// Manually garbage collect as previous cache will never be used again.
+	runtime.GC()
 
 	return nil
 }
