@@ -300,14 +300,6 @@ func (s *Service) Start() {
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
 	defer s.cancel()
-
-	for _, pid := range s.Peers().Active() {
-		_, err := s.Send(s.ctx, RPCTopicMappings[RPCGoodByeTopic], RPCGoodByeTopic, pid)
-		if err != nil {
-			log.Errorf("Could not send goodbye to peer %s: %v", pid, err)
-		}
-	}
-
 	s.started = false
 	if s.dv5Listener != nil {
 		s.dv5Listener.Close()

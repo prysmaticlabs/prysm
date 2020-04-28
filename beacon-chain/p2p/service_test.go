@@ -100,49 +100,6 @@ func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
 	}
 }
 
-func TestService_Stop_SendGoodbyeToAllPeers(t *testing.T) {
-	h1, _, _ := createHost(t, 5000)
-	defer func() {
-		if err := h1.Close(); err != nil {
-			t.Log(err)
-		}
-	}()
-
-	cfg := &Config{
-		TCPPort: 5000,
-		UDPPort: 5000,
-	}
-	s, err := NewService(cfg)
-
-	h2, _, ipaddr := createHost(t, 5001)
-	defer func() {
-		if err := h2.Close(); err != nil {
-			t.Log(err)
-		}
-	}()
-
-	h2Addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipaddr, 5001, h2.ID()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	addrInfo, err := peer.AddrInfoFromP2pAddr(h2Addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.host.Connect(context.Background(), *addrInfo); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := s.Stop(); err != nil {
-		t.Fatal(err)
-	}
-
-	conns := h2.Network().ConnsToPeer(h1.ID())
-	if len(conns) > 0 {
-		t.Error("Peer is still not disconnected despite sending a goodbye message")
-	}
-}
-
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
