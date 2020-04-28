@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/iface"
 	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 )
 
 var log = logrus.WithField("prefix", "db")
@@ -69,8 +68,6 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	log.WithField("database-path", dirPath).Info("Checking DB")
-	log.WithField("validator-keys-path", cmd.DataDirFlag.Name).Info("Checking Validator Keys")
 	datafile := filepath.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
