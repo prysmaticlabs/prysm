@@ -76,11 +76,8 @@ func TestFuzzverifySigningRoot_10000(t *testing.T) {
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		if err := VerifySigningRoot(state, pubkey[:], sig[:], domain[:]); err != nil {
-			t.Log(err)
-		}
-		if err := VerifySigningRoot(state, p, s, d); err != nil {
-			t.Log(err)
-		}
+		err := VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
+		err = VerifySigningRoot(state, p, s, d)
+		_ = err
 	}
 }
