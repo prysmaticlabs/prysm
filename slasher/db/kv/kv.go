@@ -77,7 +77,6 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	logrus.Infof(".db & validator keys dir is: %v", dirPath)
 	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
