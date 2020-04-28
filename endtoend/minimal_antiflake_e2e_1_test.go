@@ -17,7 +17,7 @@ func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=10"},
 		ValidatorFlags: []string{"--minimal-config"},
-		EpochsToRun:    4,
+		EpochsToRun:    3,
 		TestSync:       false,
 		TestSlasher:    false,
 		Evaluators: []types.Evaluator{
@@ -25,7 +25,7 @@ func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
 			ev.HealthzCheck,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
-			ev.NoP2PSnappyErrors,
+			ev.MetricsCheck,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {
