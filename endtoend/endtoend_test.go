@@ -30,11 +30,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
 	keystorePath, eth1PID := components.StartEth1Node(t)
-	bootnodeENR, _ := components.StartBootnode(t)
+	bootnodeENR, bootnodePID := components.StartBootnode(t)
 	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
 	valProcessIDs := components.StartValidatorClients(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
-	processIDs = append(processIDs, eth1PID)
+	processIDs = append(processIDs, []int{eth1PID, bootnodePID}...)
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
 
