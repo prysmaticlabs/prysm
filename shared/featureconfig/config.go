@@ -12,7 +12,8 @@ The process for implementing new features using this package is as follows:
 	cfg := &featureconfig.Flags{
 		VerifyAttestationSigs: true,
 	}
-	featureconfig.Init(cfg)
+	resetCfg := featureconfig.InitWithReset(cfg)
+	defer resetCfg()
 	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
 	and E2EBeaconChainFlags.
 */
