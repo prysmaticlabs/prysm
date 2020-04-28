@@ -99,9 +99,8 @@ func TestHashProtoFuzz(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		msg := &pb.AddressBook{}
 		f.Fuzz(msg)
-		if _, err := hashutil.HashProto(msg); err != nil {
-			t.Log(err)
-		}
+		_, err := hashutil.HashProto(msg)
+		_ = err
 	}
 }
 
