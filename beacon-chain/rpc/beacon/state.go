@@ -7,7 +7,6 @@ import (
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
