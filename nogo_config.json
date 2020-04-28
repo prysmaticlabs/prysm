@@ -84,5 +84,10 @@
       ".*/.*mock\\.go": "Mocks are OK",
       ".*/testmain\\.go": "Test runner generated code"
     }
+  },
+  "featureconfig": {
+    "only_files": {
+      ".*_test\\.go":  "Only tests"
+    }
   }
 }
