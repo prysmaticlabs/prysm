@@ -45,7 +45,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 	if opts.Path == "" {
 		opts.Path = accounts.DefaultValidatorDir()
 	}
-	log.WithField("path", opts.Path).Info("Checking validator keystore path")
+	log.WithField("path", opts.Path).Info("keystorePath")
 
 	exists, err := accounts.Exists(opts.Path)
 	if err != nil {
