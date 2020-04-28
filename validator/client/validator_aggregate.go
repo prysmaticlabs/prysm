@@ -165,11 +165,7 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [48]byte, a
 	if err != nil {
 		return nil, err
 	}
-	signedRoot, err := helpers.ComputeSigningRoot(agg, d.SignatureDomain)
-	if err != nil {
-		return nil, err
-	}
-	sig, err := v.keyManager.Sign(pubKey, signedRoot)
+	sig, err := v.signObject(pubKey, agg, d.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}

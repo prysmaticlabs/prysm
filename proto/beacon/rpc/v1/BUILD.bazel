@@ -1,0 +1,50 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+# gazelle:ignore
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+go_proto_library(
+    name = "go_grpc_gateway_library",
+    compilers = [
+        "@io_bazel_rules_go//proto:go_grpc",
+        "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway",
+    proto = ":v1_proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
+        "@com_github_golang_protobuf//descriptor:go_default_library",
+    ],
+)
+
+go_proto_library(
+    name = "v1_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1",
+    proto = ":v1_proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
+    ],
+)
+
+go_library(
+    name = "go_default_library",
+    embed = [":v1_go_proto"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1",
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "v1_proto",
+    srcs = ["debug.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:v1_proto",
+        "@go_googleapis//google/api:annotations_proto",
+    ],
+)
