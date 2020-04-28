@@ -30,6 +30,7 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
+	EnableDebugRPCEndpoints                    bool // Enables the debug rpc service, providing utilities such as /v1/beacon/state.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -68,9 +69,8 @@ type Flags struct {
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 
-	KafkaBootstrapServers   string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	CustomGenesisDelay      uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
-	EnableDebugRPCEndpoints bool   // Enables the debug rpc service, providing utilities such as /v1/beacon/state.
+	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 }
 
 var featureConfig *Flags
