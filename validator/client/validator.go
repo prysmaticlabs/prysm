@@ -306,6 +306,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		return nil
 	}
 	// Set deadline to end of epoch.
+	parentCtx := ctx
 	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(helpers.StartSlot(helpers.SlotToEpoch(slot)+1)))
 	defer cancel()
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
@@ -330,73 +331,81 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 	v.duties = resp
 	v.logDuties(slot, v.duties.Duties)
-	subscribeSlots := make([]uint64, 0, len(validatingKeys))
-	subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
-	subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
-	alreadySubscribed := make(map[[64]byte]bool)
+	go func() {
+		// Create a new context as the existing one will be canceled when the parent function exits.
+		ctx, cancel := context.WithDeadline(parentCtx, v.SlotDeadline(helpers.StartSlot(helpers.SlotToEpoch(slot)+1)))
+		defer cancel()
 
-	for _, duty := range v.duties.Duties {
-		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
-			attesterSlot := duty.AttesterSlot
-			committeeIndex := duty.CommitteeIndex
+		subscribeSlots := make([]uint64, 0, len(validatingKeys))
+		subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
+		subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
+		alreadySubscribed := make(map[[64]byte]bool)
 
-			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
-			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
-				continue
+		for _, duty := range v.duties.Duties {
+			if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
+				attesterSlot := duty.AttesterSlot
+				committeeIndex := duty.CommitteeIndex
+
+				alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
+				if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
+					continue
+				}
+
+				aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					log.WithError(err).Warn("could not check if a validator is an aggregator")
+					continue
+				}
+				if aggregator {
+					alreadySubscribed[alreadySubscribedKey] = true
+				}
+
+				subscribeSlots = append(subscribeSlots, attesterSlot)
+				subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+				subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 			}
-
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
-			if err != nil {
-				return errors.Wrap(err, "could not check if a validator is an aggregator")
-			}
-			if aggregator {
-				alreadySubscribed[alreadySubscribedKey] = true
-			}
-
-			subscribeSlots = append(subscribeSlots, attesterSlot)
-			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
-			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
 		}
-	}
 
-	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
-	req.Epoch++
-	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	for _, duty := range dutiesNextEpoch.Duties {
-		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
-			attesterSlot := duty.AttesterSlot
-			committeeIndex := duty.CommitteeIndex
-
-			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
-			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
-				continue
-			}
-
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
-			if err != nil {
-				return errors.Wrap(err, "could not check if a validator is an aggregator")
-			}
-			if aggregator {
-				alreadySubscribed[alreadySubscribedKey] = true
-			}
-
-			subscribeSlots = append(subscribeSlots, attesterSlot)
-			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
-			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+		// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
+		req.Epoch++
+		dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
+		if err != nil {
+			log.WithError(err).Warn("Failed to obtain duties")
+			return
 		}
-	}
+		for _, duty := range dutiesNextEpoch.Duties {
+			if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
+				attesterSlot := duty.AttesterSlot
+				committeeIndex := duty.CommitteeIndex
 
-	_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
-		Slots:        subscribeSlots,
-		CommitteeIds: subscribeCommitteeIDs,
-		IsAggregator: subscribeIsAggregator,
-	})
+				alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
+				if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
+					continue
+				}
 
-	return err
+				aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+				if err != nil {
+					log.WithError(err).Warn("could not check if a validator is an aggregator")
+					continue
+				}
+				if aggregator {
+					alreadySubscribed[alreadySubscribedKey] = true
+				}
+
+				subscribeSlots = append(subscribeSlots, attesterSlot)
+				subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+				subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+			}
+		}
+
+		_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
+			Slots:        subscribeSlots,
+			CommitteeIds: subscribeCommitteeIDs,
+			IsAggregator: subscribeIsAggregator,
+		})
+	}()
+
+	return nil
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
