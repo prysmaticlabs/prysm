@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -81,7 +80,6 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 
 	// In the case that we receive an attestation request after a newer state/block has been processed.
 	if headState.Slot() > req.Slot {
-		fmt.Println(headState.Slot(), req.Slot)
 		headRoot, err = helpers.BlockRootAtSlot(headState, req.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get historical head root: %v", err)
