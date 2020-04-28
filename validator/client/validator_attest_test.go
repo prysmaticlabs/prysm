@@ -132,7 +132,8 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	config := &featureconfig.Flags{
 		ProtectAttester: true,
 	}
-	featureconfig.Init(config)
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -173,7 +174,8 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	config := &featureconfig.Flags{
 		ProtectAttester: true,
 	}
-	featureconfig.Init(config)
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -224,7 +226,8 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	config := &featureconfig.Flags{
 		ProtectAttester: true,
 	}
-	featureconfig.Init(config)
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
