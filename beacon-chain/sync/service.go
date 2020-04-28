@@ -161,7 +161,7 @@ func (r *Service) Stop() error {
 	for _, pid := range r.p2p.Peers().Active() {
 		err := r.sendShutdownGoodbyeMessage(r.ctx, pid)
 		if err != nil {
-			return err
+			log.WithError(err).Errorf("Failed to send goodbye message to peer %v", pid)
 		}
 	}
 
