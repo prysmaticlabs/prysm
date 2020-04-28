@@ -27,8 +27,8 @@ func (bs *Service) ChainHead(
 	return res, nil
 }
 
-// ChainHead requests the latest beacon chain head
-// from a beacon node via gRPC.
+// GenesisValidatorsRoot requests the beacon chain genesis validators
+// root via gRPC.
 func (bs *Service) GenesisValidatorsRoot(
 	ctx context.Context,
 ) ([]byte, error) {
