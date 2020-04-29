@@ -34,7 +34,7 @@ func (bs *Service) querySyncStatus(ctx context.Context) {
 	if err != nil {
 		log.WithError(err).Error("Could not fetch sync status")
 	}
-	if !status.Syncing {
+	if status != nil && !status.Syncing {
 		log.Info("Beacon node is fully synced, starting slashing detection")
 		return
 	}
