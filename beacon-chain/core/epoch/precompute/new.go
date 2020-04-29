@@ -1,3 +1,6 @@
+// Package precompute provides gathering of nicely-structured
+// data important to feed into epoch processing, such as attesting
+// records and balances, for faster computation.
 package precompute
 
 import (
