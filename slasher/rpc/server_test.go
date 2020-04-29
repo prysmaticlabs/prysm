@@ -73,7 +73,7 @@ func Test_DetectionFlow(t *testing.T) {
 	cfg := &detection.Config{
 		SlasherDB: db,
 	}
-	fork, err := p2putils.Fork(incomingAtt.Data.Target.Epoch, wantedGenesis.GenesisValidatorsRoot)
+	fork, err := p2putils.Fork(incomingAtt.Data.Target.Epoch)
 	if err != nil {
 		t.Fatal(err)
 	}

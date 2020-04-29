@@ -105,7 +105,7 @@ func (ss *Server) verifyIndexedAttestationSig(ctx context.Context, indexedAtt *e
 	if err != nil {
 		return false, err
 	}
-	fork, err := p2putils.Fork(indexedAtt.Data.Target.Epoch, gvr)
+	fork, err := p2putils.Fork(indexedAtt.Data.Target.Epoch)
 	if err != nil {
 		return false, err
 	}

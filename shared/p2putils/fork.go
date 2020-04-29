@@ -44,15 +44,11 @@ func CreateForkDigest(
 	return digest, nil
 }
 
-// Fork given a target epoch and genesis validators root,
-// returns the active fork version in the node.
+// Fork given a target epoch,
+// returns the active fork version during this epoch.
 func Fork(
 	targetEpoch uint64,
-	genesisValidatorsRoot []byte,
 ) (*pb.Fork, error) {
-	if len(genesisValidatorsRoot) == 0 {
-		return &pb.Fork{}, errors.New("genesis validators root is not set")
-	}
 
 	// We retrieve a list of scheduled forks by epoch.
 	// We loop through the keys in this map to determine the current
