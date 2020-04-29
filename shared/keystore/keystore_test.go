@@ -155,7 +155,6 @@ func TestGetSymlinkedKeys(t *testing.T) {
 		if !bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()) {
 			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
 		}
-
 	}
 
 	if err := os.RemoveAll(tmpdir); err != nil {
