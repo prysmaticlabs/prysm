@@ -119,7 +119,6 @@ func finishedSyncing(conns ...*grpc.ClientConn) error {
 }
 
 func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
-	headRoots := make([][]byte, len(conns))
 	headEpochs := make([]uint64, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
@@ -130,7 +129,6 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		headRoots[i] = chainHead.HeadBlockRoot
 		headEpochs[i] = chainHead.HeadEpoch
 		justifiedRoots[i] = chainHead.JustifiedBlockRoot
 		prevJustifiedRoots[i] = chainHead.PreviousJustifiedBlockRoot
@@ -147,14 +145,6 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 				i,
 				headEpochs[0],
 				headEpochs[i],
-			)
-		}
-		if !bytes.Equal(headRoots[0], headRoots[i]) {
-			return fmt.Errorf(
-				"received conflicting head block roots on node %d, expected %#x, received %#x",
-				i,
-				headRoots[0],
-				headRoots[i],
 			)
 		}
 		if !bytes.Equal(justifiedRoots[0], justifiedRoots[i]) {
