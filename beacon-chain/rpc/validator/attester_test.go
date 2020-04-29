@@ -488,6 +488,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	blockRoots[1] = blockRoot[:]
 	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	blockRoots[3*params.BeaconConfig().SlotsPerEpoch] = blockRoot2[:]
 	if err := beaconState.SetBlockRoots(blockRoots); err != nil {
 		t.Fatal(err)
 	}
