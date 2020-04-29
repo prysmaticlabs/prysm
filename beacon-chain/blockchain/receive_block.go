@@ -121,6 +121,9 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
 
+	// Log sync status.
+	logSyncStatus(blockCopy.Block, root, s.finalizedCheckpt)
+
 	return nil
 }
 
@@ -170,6 +173,9 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
+
+	// Log sync status.
+	logSyncStatus(blockCopy.Block, root, s.finalizedCheckpt)
 
 	s.epochParticipationLock.Lock()
 	defer s.epochParticipationLock.Unlock()
