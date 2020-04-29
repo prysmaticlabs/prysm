@@ -54,7 +54,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	// Add metrics for block arrival time subtract slot start time.
+	// Add metrics for block arrival time subtracts slot start time.
 	blockSlotStartTime := uint64(r.chain.GenesisTime().Unix()) + blk.Block.Slot*params.BeaconConfig().SecondsPerSlot
 	switch diff := uint64(roughtime.Now().Unix()) - blockSlotStartTime; {
 	case diff == 0 || diff == 1:
