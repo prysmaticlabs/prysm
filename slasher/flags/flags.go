@@ -1,3 +1,5 @@
+// Package flags contains all configuration runtime flags for
+// the slasher service.
 package flags
 
 import (

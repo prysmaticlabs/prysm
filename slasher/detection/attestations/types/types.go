@@ -1,3 +1,5 @@
+// Package types includes important type definitions for
+// slashable objects detected by slasher.
 package types
 
 import "github.com/prysmaticlabs/prysm/shared/bytesutil"

@@ -1,3 +1,5 @@
+// Package helpers defines helper functions to peer into
+// end to end processes and kill processes as needed.
 package helpers
 
 import (

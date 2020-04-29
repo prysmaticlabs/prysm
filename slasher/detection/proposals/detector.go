@@ -1,3 +1,5 @@
+// Package proposals defines an implementation of a double-propose
+// detector in the slasher runtime.
 package proposals
 
 import (

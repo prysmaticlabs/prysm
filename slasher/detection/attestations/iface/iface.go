@@ -1,3 +1,4 @@
+// Package iface defines an interface for a slashable attestation detector struct.
 package iface
 
 import (
