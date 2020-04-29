@@ -67,6 +67,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		}
 		return
 	}
+	if len(duty.Committee) == 0 {
+		log.Debug("Empty committee for validator duty, not attesting")
+		return
+	}
 
 	v.waitToSlotOneThird(ctx, slot)
 

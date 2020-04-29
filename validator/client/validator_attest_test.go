@@ -31,7 +31,23 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
-func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
+func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	validator, _, finish := setup(t)
+	defer finish()
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 0,
+			Committee:      make([]uint64, 0),
+			ValidatorIndex: 0,
+		}}}
+	validator.SubmitAttestation(context.Background(), 0, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Empty committee")
+}
+
+func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
