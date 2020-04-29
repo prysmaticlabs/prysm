@@ -119,6 +119,7 @@ func finishedSyncing(conns ...*grpc.ClientConn) error {
 }
 
 func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
+	headRoots := make([][]byte, len(conns))
 	headEpochs := make([]uint64, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
@@ -129,6 +130,7 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
+		headRoots[i] = chainHead.HeadBlockRoot
 		headEpochs[i] = chainHead.HeadEpoch
 		justifiedRoots[i] = chainHead.JustifiedBlockRoot
 		prevJustifiedRoots[i] = chainHead.PreviousJustifiedBlockRoot
@@ -138,43 +140,45 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 		}
 	}
 
-	for i, epoch := range headEpochs {
-		if headEpochs[0] != epoch {
+	for i := 0; i < len(conns); i++ {
+		if headEpochs[0] != headEpochs[i] {
 			return fmt.Errorf(
 				"received conflicting head epochs on node %d, expected %d, received %d",
 				i,
 				headEpochs[0],
-				epoch,
+				headEpochs[i],
 			)
 		}
-	}
-	for i, root := range justifiedRoots {
-		if !bytes.Equal(justifiedRoots[0], root) {
+		if !bytes.Equal(headRoots[0], headRoots[i]) {
+			return fmt.Errorf(
+				"received conflicting head block roots on node %d, expected %#x, received %#x",
+				i,
+				headRoots[0],
+				headRoots[i],
+			)
+		}
+		if !bytes.Equal(justifiedRoots[0], justifiedRoots[i]) {
 			return fmt.Errorf(
 				"received conflicting justified block roots on node %d, expected %#x, received %#x",
 				i,
 				justifiedRoots[0],
-				root,
+				justifiedRoots[i],
 			)
 		}
-	}
-	for i, root := range prevJustifiedRoots {
-		if !bytes.Equal(prevJustifiedRoots[0], root) {
+		if !bytes.Equal(prevJustifiedRoots[0], prevJustifiedRoots[i]) {
 			return fmt.Errorf(
 				"received conflicting previous justified block roots on node %d, expected %#x, received %#x",
 				i,
 				prevJustifiedRoots[0],
-				root,
+				prevJustifiedRoots[i],
 			)
 		}
-	}
-	for i, root := range finalizedRoots {
-		if !bytes.Equal(finalizedRoots[0], root) {
+		if !bytes.Equal(finalizedRoots[0], finalizedRoots[i]) {
 			return fmt.Errorf(
 				"received conflicting finalized epoch roots on node %d, expected %#x, received %#x",
 				i,
 				finalizedRoots[0],
-				root,
+				finalizedRoots[i],
 			)
 		}
 	}

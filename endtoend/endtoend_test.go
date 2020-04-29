@@ -71,7 +71,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	// Small offset so evaluators perform in the middle of an epoch.
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
+	// Adding a half slot here to ensure the requests are in the middle of an epoch.
+	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2+(params.BeaconConfig().SecondsPerSlot/2)), 0)
 
 	if config.TestSlasher {
 		slasherPIDs := components.StartSlashers(t)

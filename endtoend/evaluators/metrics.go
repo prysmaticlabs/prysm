@@ -95,14 +95,25 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 			return err
 		}
 
-		beaconClient := eth.NewNodeClient(conns[i])
-		genesis, err := beaconClient.GetGenesis(context.Background(), &ptypes.Empty{})
+		genesis, err := eth.NewNodeClient(conns[i]).GetGenesis(context.Background(), &ptypes.Empty{})
 		if err != nil {
 			return err
 		}
 		forkDigest, err := p2putils.CreateForkDigest(time.Unix(genesis.GenesisTime.Seconds, 0), genesis.GenesisValidatorsRoot)
 		if err != nil {
 			return err
+		}
+
+		chainHead, err := eth.NewBeaconChainClient(conns[i]).GetChainHead(context.Background(), &ptypes.Empty{})
+		if err != nil {
+			return err
+		}
+		timeSlot, err := getValueOfTopic(pageContent, "beacon_clock_time_slot")
+		if err != nil {
+			return err
+		}
+		if chainHead.HeadSlot != uint64(timeSlot) {
+			return fmt.Errorf("expected metrics slot to equal chain head slot, expected %d, received %d", chainHead.HeadSlot, timeSlot)
 		}
 
 		for _, test := range metricLessThanTests {
