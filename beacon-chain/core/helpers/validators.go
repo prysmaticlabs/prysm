@@ -179,10 +179,62 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
-	return ComputeProposerIndex(state.Validators(), indices, seedWithSlotHash)
+	return ComputeProposerIndex(state, indices, seedWithSlotHash)
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
+//
+//	This method is more efficient than ComputeProposerIndexWithValidators as it uses the read only validator
+//	abstraction to retrieve validator related data. Whereas the other method requires a whole copy of the validator
+//	set.
+//
+// Spec pseudocode definition:
+//  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
+//    """
+//    Return from ``indices`` a random index sampled by effective balance.
+//    """
+//    assert len(indices) > 0
+//    MAX_RANDOM_BYTE = 2**8 - 1
+//    i = 0
+//    while True:
+//        candidate_index = indices[compute_shuffled_index(ValidatorIndex(i % len(indices)), len(indices), seed)]
+//        random_byte = hash(seed + int_to_bytes(i // 32, length=8))[i % 32]
+//        effective_balance = state.validators[candidate_index].effective_balance
+//        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
+//            return ValidatorIndex(candidate_index)
+//        i += 1
+func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64, seed [32]byte) (uint64, error) {
+	length := uint64(len(activeIndices))
+	if length == 0 {
+		return 0, errors.New("empty active indices list")
+	}
+	maxRandomByte := uint64(1<<8 - 1)
+	hashFunc := hashutil.CustomSHA256Hasher()
+
+	for i := uint64(0); ; i++ {
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
+		if err != nil {
+			return 0, err
+		}
+		candidateIndex = activeIndices[candidateIndex]
+		if int(candidateIndex) >= bState.NumValidators() {
+			return 0, errors.New("active index out of range")
+		}
+		b := append(seed[:], bytesutil.Bytes8(i/32)...)
+		randomByte := hashFunc(b)[i%32]
+		v, err := bState.ValidatorAtIndexReadOnly(candidateIndex)
+		if err != nil {
+			return 0, nil
+		}
+		effectiveBal := v.EffectiveBalance()
+
+		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
+			return candidateIndex, nil
+		}
+	}
+}
+
+// ComputeProposerIndexWithValidators returns the index sampled by effective balance, which is used to calculate proposer.
 //
 // Note: This method signature deviates slightly from the spec recommended definition. The full
 // state object is not required to compute the proposer index.
@@ -202,7 +254,8 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
+// Deprecated: Prefer using the beacon state with ComputeProposerIndex to avoid an unnecessary copy of the validator set.
+func ComputeProposerIndexWithValidators(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
 	length := uint64(len(activeIndices))
 	if length == 0 {
 		return 0, errors.New("empty active indices list")
