@@ -294,6 +294,32 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 	}
 }
 
+func TestStreamDuties_ContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	vs := &Server{
+		Ctx:         ctx,
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mockChain.ChainService{
+			Genesis: time.Now(),
+		},
+		StateNotifier: &mockChain.MockStateNotifier{},
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
+	exitRoutine := make(chan bool)
+	go func(tt *testing.T) {
+		want := "context canceled"
+		if err := vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream); err == nil || !strings.Contains(err.Error(), want) {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
 func TestStreamDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
@@ -343,6 +369,8 @@ func TestStreamDuties_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
+	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
 	if err := vs.StreamDuties(req, mockStream); err != nil {
 		t.Fatal(err)
 	}
