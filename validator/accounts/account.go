@@ -149,18 +149,17 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 
 	if path == "" {
 		path = DefaultValidatorDir()
+		log.Infof("Please specify a keystore path to save your private keys (default: %q):", path)
+		reader := bufio.NewReader(os.Stdin)
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+			return path, passphrase, err
+		}
+		if text = strings.Replace(text, "\n", "", -1); text != "" {
+			path = text
+		}
 	}
-	log.Infof("Keystore path to save your private keys (default: %q):", path)
-	reader := bufio.NewReader(os.Stdin)
-	text, err := reader.ReadString('\n')
-	if err != nil {
-		log.Fatal(err)
-		return path, passphrase, err
-	}
-	if text = strings.Replace(text, "\n", "", -1); text != "" {
-		path = text
-	}
-
 	if err := NewValidatorAccount(path, passphrase); err != nil {
 		return "", "", errors.Wrapf(err, "could not initialize validator account")
 	}
