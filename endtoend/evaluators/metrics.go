@@ -43,7 +43,7 @@ var metricLessThanTests = []equalityTest{
 	{
 		name:  "memory usage",
 		topic: "go_memstats_alloc_bytes",
-		value: 100000000,
+		value: 100000000, // 100 Mb
 	},
 }
 
