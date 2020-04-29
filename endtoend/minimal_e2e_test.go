@@ -26,6 +26,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
+			ev.MetricsCheck,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {

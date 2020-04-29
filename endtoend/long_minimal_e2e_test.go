@@ -41,6 +41,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
+			ev.MetricsCheck,
 			ev.ProcessesDepositedValidators,
 			ev.DepositedValidatorsAreActive,
 		},
