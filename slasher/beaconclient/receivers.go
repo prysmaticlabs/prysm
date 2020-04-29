@@ -134,10 +134,6 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 		case att := <-bs.receivedAttestationsBuffer:
 			atts = append(atts, att)
 		case collectedAtts := <-bs.collectedAttestationsBuffer:
-			if err := ctx.Err(); err != nil {
-				log.WithError(err).Error("Context failed, exiting goroutine")
-				return
-			}
 			if err := bs.slasherDB.SaveIndexedAttestations(ctx, collectedAtts); err != nil {
 				log.WithError(err).Error("Could not save indexed attestation")
 				continue
