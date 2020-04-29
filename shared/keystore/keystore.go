@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -96,6 +97,15 @@ func (ks Store) GetKeys(directory, fileprefix, password string, warnOnFail bool)
 		n := f.Name()
 		filePath := filepath.Join(directory, n)
 		filePath = filepath.Clean(filePath)
+		if f.Mode()&os.ModeSymlink == os.ModeSymlink {
+			if targetFilePath, err := filepath.EvalSymlinks(filePath); err == nil {
+				filePath = targetFilePath
+				// Override link stats with target file's stats.
+				if f, err = os.Stat(filePath); err != nil {
+					return nil, err
+				}
+			}
+		}
 		cp := strings.Contains(n, strings.TrimPrefix(fileprefix, "/"))
 		if f.Mode().IsRegular() && cp {
 			// #nosec G304
