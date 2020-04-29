@@ -150,10 +150,6 @@ var (
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
 	}
-	enableDebugRPCEndpoints = &cli.BoolFlag{
-		Name:  "enable-debug-rpc-endpoints",
-		Usage: "Enables the debug rpc service, containing utility endpoints such as /v1/beacon/state. Requires --new-state-mgmt",
-	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -402,7 +398,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableInitSyncBatchSaveBlocks,
 	enableStateRefCopy,
 	waitForSyncedFlag,
-	enableDebugRPCEndpoints,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

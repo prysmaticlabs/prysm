@@ -30,7 +30,6 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
-	EnableDebugRPCEndpoints                    bool // Enables the debug rpc service, providing utilities such as /v1/beacon/state.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -133,7 +132,6 @@ func (c *Flags) Copy() *Flags {
 		EnableBlockTreeCache:                       c.EnableBlockTreeCache,
 		KafkaBootstrapServers:                      c.KafkaBootstrapServers,
 		CustomGenesisDelay:                         c.CustomGenesisDelay,
-		EnableDebugRPCEndpoints:                    c.EnableDebugRPCEndpoints,
 	}
 }
 
@@ -254,10 +252,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(broadcastSlashingFlag.Name) {
 		log.Warn("Enabling broadcast slashing to p2p network")
 		cfg.BroadcastSlashings = true
-	}
-	if ctx.Bool(enableDebugRPCEndpoints.Name) {
-		log.Warn("Enabling debug RPC endpoints")
-		cfg.EnableDebugRPCEndpoints = true
 	}
 	Init(cfg)
 }
