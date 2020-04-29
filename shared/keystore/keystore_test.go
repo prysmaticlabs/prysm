@@ -124,10 +124,12 @@ func TestEncryptDecryptKey(t *testing.T) {
 }
 
 func TestGetSymlinkedKeys(t *testing.T) {
-	tmpdir := testutil.TempDir() + "/keystore"
-	if err := os.RemoveAll(tmpdir); err != nil {
-		t.Errorf("unable to remove temporary files %v", err)
-	}
+	tmpdir := testutil.TempDir() + "/symlinked-keystore"
+	defer func() {
+		if err := os.RemoveAll(tmpdir); err != nil {
+			t.Logf("unable to remove temporary files: %v", err)
+		}
+	}()
 	ks := &Store{
 		scryptN: LightScryptN,
 		scryptP: LightScryptP,
@@ -157,9 +159,5 @@ func TestGetSymlinkedKeys(t *testing.T) {
 		if !bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()) {
 			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
 		}
-	}
-
-	if err := os.RemoveAll(tmpdir); err != nil {
-		t.Errorf("unable to remove temporary files %v", err)
 	}
 }
