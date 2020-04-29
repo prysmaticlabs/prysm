@@ -68,6 +68,11 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 		return err
 	}
 	for i := lastArchivedIndex; i <= lastSavedBlockArchivedIndex; i++ {
+		// This is an expensive operation, so we check if the context was canceled
+		// at any point in the iteration.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		targetSlot := startSlot + slotsPerArchivedPoint
 		filter := filters.NewFilter().SetStartSlot(startSlot + 1).SetEndSlot(targetSlot)
 		blocks, err := kv.Blocks(ctx, filter)
