@@ -604,7 +604,17 @@ func (b *BeaconNode) registerGRPCGateway(ctx *cli.Context) error {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", ctx.Int(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
 		allowedOrigins := strings.Split(ctx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-		return b.services.RegisterService(gateway.New(context.Background(), selfAddress, gatewayAddress, nil /*optional mux*/, allowedOrigins))
+		enableDebugRPCEndpoints := ctx.Bool(flags.EnableDebugRPCEndpoints.Name)
+		return b.services.RegisterService(
+			gateway.New(
+				context.Background(),
+				selfAddress,
+				gatewayAddress,
+				nil, /*optional mux*/
+				allowedOrigins,
+				enableDebugRPCEndpoints,
+			),
+		)
 	}
 	return nil
 }
