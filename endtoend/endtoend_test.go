@@ -123,8 +123,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	conns = append(conns, syncConn)
 
 	// Sleep for 15 seconds each epoch that needs to be synced for the newly started node.
-	extraTimeToSync := (config.EpochsToRun)*epochSeconds + (15 * config.EpochsToRun)
-	waitForSync := tickingStartTime.Add(time.Duration(extraTimeToSync) * time.Second)
+	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (10 * config.EpochsToRun)
+	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
 	time.Sleep(time.Until(waitForSync))
 
 	syncLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index)))
