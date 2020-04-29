@@ -1,3 +1,5 @@
+// Package memorypool includes useful tools for creating common
+// data structures in eth2 with optimal memory allocation.
 package memorypool
 
 import (

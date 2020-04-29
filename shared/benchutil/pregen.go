@@ -1,3 +1,5 @@
+// Package benchutil contains useful helpers
+// for pregenerating filled data structures such as blocks/states for benchmarks.
 package benchutil
 
 import (

@@ -1,3 +1,5 @@
+// Package evaluators defines functions which can peer into end to end
+// tests to determine if a chain is running as required.
 package evaluators
 
 import (

@@ -1,3 +1,5 @@
+// Package keystore contains useful functions for dealing
+// with eth2 deposit inputs leveraging go-ethereum's own keystore package.
 package keystore
 
 import (
