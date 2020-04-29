@@ -179,7 +179,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
-	return ComputeProposerIndexWithState(state, indices, seedWithSlotHash)
+	return ComputeProposerIndex(state, indices, seedWithSlotHash)
 }
 
 // ComputeProposerIndexWithState returns the index sampled by effective balance, which is used to calculate proposer.
@@ -200,7 +200,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func ComputeProposerIndexWithState(bState *stateTrie.BeaconState, activeIndices []uint64, seed [32]byte) (uint64, error) {
+func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64, seed [32]byte) (uint64, error) {
 	length := uint64(len(activeIndices))
 	if length == 0 {
 		return 0, errors.New("empty active indices list")
@@ -231,7 +231,7 @@ func ComputeProposerIndexWithState(bState *stateTrie.BeaconState, activeIndices 
 	}
 }
 
-// ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
+// ComputeProposerIndexWithValidators returns the index sampled by effective balance, which is used to calculate proposer.
 //
 // Note: This method signature deviates slightly from the spec recommended definition. The full
 // state object is not required to compute the proposer index.
@@ -251,7 +251,7 @@ func ComputeProposerIndexWithState(bState *stateTrie.BeaconState, activeIndices 
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
+func ComputeProposerIndexWithValidators(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
 	length := uint64(len(activeIndices))
 	if length == 0 {
 		return 0, errors.New("empty active indices list")

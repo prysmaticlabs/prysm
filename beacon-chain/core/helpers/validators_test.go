@@ -547,7 +547,7 @@ func TestComputeProposerIndex(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			got, err := ComputeProposerIndexWithState(stTrie, tt.args.indices, tt.args.seed)
+			got, err := ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ComputeProposerIndex() error = %v, wantErr %v", err, tt.wantErr)
 				return
