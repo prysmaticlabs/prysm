@@ -1,3 +1,6 @@
+// Package main defines slasher server implementation for eth2. A slasher
+// listens for all broadcasted messages using a running beacon node in order
+// to detect malicious attestations and block proposals.
 package main
 
 import (

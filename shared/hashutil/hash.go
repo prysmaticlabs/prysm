@@ -1,3 +1,4 @@
+// Package hashutil includes all hash-function related helpers for Prysm.
 package hashutil
 
 import (

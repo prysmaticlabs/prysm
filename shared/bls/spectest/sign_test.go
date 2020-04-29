@@ -1,3 +1,5 @@
+// Package spectest includes tests to ensure conformity with the eth2
+// bls cryptography specification.
 package spectest
 
 import (

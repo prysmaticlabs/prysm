@@ -1,3 +1,4 @@
+// Package trieutil defines utilities for sparse merkle tries for eth2.
 package trieutil
 
 import (
