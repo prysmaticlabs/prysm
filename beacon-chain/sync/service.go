@@ -1,3 +1,7 @@
+// Package sync includes all chain-synchronization logic for the beacon node,
+// including gossip-sub validators for blocks, attestations, and other p2p
+// messages, as well as ability to process and respond to block requests
+// by peers.
 package sync
 
 import (
@@ -5,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
@@ -17,6 +20,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"

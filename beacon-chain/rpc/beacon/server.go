@@ -1,3 +1,6 @@
+// Package beacon defines a gRPC beacon service implementation, providing
+// useful endpoints for checking fetching chain-specific data such as
+// blocks, committees, validators, assignments, and more.
 package beacon
 
 import (

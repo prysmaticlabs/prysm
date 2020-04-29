@@ -1,3 +1,5 @@
+// Package testing includes useful utilities for mocking
+// a beacon node's p2p service for unit tests.
 package testing
 
 import (

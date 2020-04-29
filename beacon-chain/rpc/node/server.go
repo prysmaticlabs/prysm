@@ -1,3 +1,6 @@
+// Package node defines a gRPC node service implementation, providing
+// useful endpoints for checking a node's sync status, peer info,
+// genesis data, and version information.
 package node
 
 import (

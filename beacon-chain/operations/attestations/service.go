@@ -1,3 +1,6 @@
+// Package attestations defines an attestation pool
+// service implementation which is used to manage the lifecycle
+// of aggregated, unaggregated, and fork-choice attestations.
 package attestations
 
 import (

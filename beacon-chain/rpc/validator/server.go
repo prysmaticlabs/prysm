@@ -1,3 +1,6 @@
+// Package validator defines a gRPC validator service implementation, providing
+// critical endpoints for validator clients to submit blocks/attestations to the
+// beacon node, receive assignments, and more.
 package validator
 
 import (

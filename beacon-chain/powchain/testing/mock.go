@@ -1,3 +1,5 @@
+// Package testing provides useful mocks for an eth1 powchain
+// service as needed by unit tests for the beacon node.
 package testing
 
 import (

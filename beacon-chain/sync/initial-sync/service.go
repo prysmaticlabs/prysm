@@ -1,3 +1,6 @@
+// Package initialsync includes all initial block download and processing
+// logic for the beacon node, using a round robin strategy and a finite-state-machine
+// to handle edge-cases in a beacon node's sync status.
 package initialsync
 
 import (

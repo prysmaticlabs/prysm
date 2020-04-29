@@ -1,4 +1,5 @@
-// Package rpc defines the services that the beacon-chain uses to communicate via gRPC.
+// Package rpc defines a gRPC server implementing the eth2 API as needed
+// by validator clients and consumers of chain data.
 package rpc
 
 import (

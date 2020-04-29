@@ -1,3 +1,5 @@
+// Package stateutil defines utility functions to compute state roots
+// using advanced merkle branch caching techniques.
 package stateutil
 
 import (
