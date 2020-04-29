@@ -1,3 +1,5 @@
+// Package types includes important database-related types for
+// slasher-specific logic.
 package types
 
 // SlashingStatus enum like structure.

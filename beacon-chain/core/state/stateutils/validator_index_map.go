@@ -1,3 +1,6 @@
+// Package stateutils contains useful tools for faster computation
+// of state transitions using maps to represent validators instead
+// of slices.
 package stateutils
 
 import (

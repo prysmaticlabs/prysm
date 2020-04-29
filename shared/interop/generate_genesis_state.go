@@ -1,3 +1,5 @@
+// Package interop contains deterministic utilities for generating
+// genesis states and keys.
 package interop
 
 import (

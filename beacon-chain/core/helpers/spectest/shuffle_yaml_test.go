@@ -1,3 +1,5 @@
+// Package spectest contains all conformity specification tests
+// for validator shuffling logic according to the eth2 beacon spec.
 package spectest
 
 import (

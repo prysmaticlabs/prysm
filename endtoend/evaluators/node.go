@@ -1,3 +1,5 @@
+// Package evaluators defines functions which can peer into end to end
+// tests to determine if a chain is running as required.
 package evaluators
 
 import (
@@ -138,43 +140,37 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 		}
 	}
 
-	for i, epoch := range headEpochs {
-		if headEpochs[0] != epoch {
+	for i := 0; i < len(conns); i++ {
+		if headEpochs[0] != headEpochs[i] {
 			return fmt.Errorf(
 				"received conflicting head epochs on node %d, expected %d, received %d",
 				i,
 				headEpochs[0],
-				epoch,
+				headEpochs[i],
 			)
 		}
-	}
-	for i, root := range justifiedRoots {
-		if !bytes.Equal(justifiedRoots[0], root) {
+		if !bytes.Equal(justifiedRoots[0], justifiedRoots[i]) {
 			return fmt.Errorf(
 				"received conflicting justified block roots on node %d, expected %#x, received %#x",
 				i,
 				justifiedRoots[0],
-				root,
+				justifiedRoots[i],
 			)
 		}
-	}
-	for i, root := range prevJustifiedRoots {
-		if !bytes.Equal(prevJustifiedRoots[0], root) {
+		if !bytes.Equal(prevJustifiedRoots[0], prevJustifiedRoots[i]) {
 			return fmt.Errorf(
 				"received conflicting previous justified block roots on node %d, expected %#x, received %#x",
 				i,
 				prevJustifiedRoots[0],
-				root,
+				prevJustifiedRoots[i],
 			)
 		}
-	}
-	for i, root := range finalizedRoots {
-		if !bytes.Equal(finalizedRoots[0], root) {
+		if !bytes.Equal(finalizedRoots[0], finalizedRoots[i]) {
 			return fmt.Errorf(
 				"received conflicting finalized epoch roots on node %d, expected %#x, received %#x",
 				i,
 				finalizedRoots[0],
-				root,
+				finalizedRoots[i],
 			)
 		}
 	}

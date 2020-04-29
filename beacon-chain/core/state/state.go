@@ -1,6 +1,6 @@
 // Package state implements the whole state transition
-// function which consists of per slot, per-epoch transitions.
-// It also bootstraps the genesis beacon state for slot 0.
+// function which consists of per slot, per-epoch transitions, and
+// bootstrapping the genesis state according to the eth2 spec.
 package state
 
 import (

@@ -122,3 +122,42 @@ func TestEncryptDecryptKey(t *testing.T) {
 	}
 
 }
+
+func TestGetSymlinkedKeys(t *testing.T) {
+	tmpdir := testutil.TempDir() + "/symlinked-keystore"
+	defer func() {
+		if err := os.RemoveAll(tmpdir); err != nil {
+			t.Logf("unable to remove temporary files: %v", err)
+		}
+	}()
+	ks := &Store{
+		scryptN: LightScryptN,
+		scryptP: LightScryptP,
+	}
+
+	key, err := NewKey()
+	if err != nil {
+		t.Fatalf("key generation failed %v", err)
+	}
+
+	if err := ks.StoreKey(tmpdir+"/files/test-1", key, "password"); err != nil {
+		t.Fatalf("unable to store key %v", err)
+	}
+
+	if err := os.Symlink(tmpdir+"/files/test-1", tmpdir+"/test-1"); err != nil {
+		t.Fatalf("unable to create symlink: %v", err)
+	}
+
+	newkeys, err := ks.GetKeys(tmpdir, "test", "password", false)
+	if err != nil {
+		t.Fatalf("unable to get key %v", err)
+	}
+	if len(newkeys) != 1 {
+		t.Errorf("unexpected number of keys returned, want: %d, got: %d", 1, len(newkeys))
+	}
+	for _, s := range newkeys {
+		if !bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()) {
+			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
+		}
+	}
+}

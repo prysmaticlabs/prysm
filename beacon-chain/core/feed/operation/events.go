@@ -1,3 +1,6 @@
+// Package operation contains types for block operation-specific events fired
+// during the runtime of a beacon node such as attestations, voluntary
+// exits, and slashings.
 package operation
 
 import (

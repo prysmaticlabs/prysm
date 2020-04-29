@@ -1,3 +1,4 @@
+// Package p2putils contains useful helpers for eth2 fork-related functionality.
 package p2putils
 
 import (
