@@ -36,7 +36,6 @@ go_library(
         ],
         ":kafka_disabled": [],
     }),
-    gc_goopts = ["-d=libfuzzer"],
 )
 
 go_test(

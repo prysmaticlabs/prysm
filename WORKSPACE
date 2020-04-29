@@ -60,10 +60,6 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    patch_args = ["-p1"],
-    patches = [
-        "//third_party:bazel-gazelle.patch",  # Temporary hack to apply libfuzz gc_opts to all external deps.
-    ],
     sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
     urls = [
         "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
