@@ -1,6 +1,6 @@
-// Package blockchain defines the life-cycle and status of the beacon chain
-// as well as the Ethereum Serenity beacon chain fork-choice rule based on
-// Casper Proof of Stake finality.
+// Package blockchain defines the life-cycle of the blockchain at the core of
+// eth2, including processing of new blocks and attestations using casper
+// proof of stake.
 package blockchain
 
 import (

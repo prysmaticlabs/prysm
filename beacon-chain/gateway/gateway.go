@@ -1,3 +1,5 @@
+// Package gateway defines a gRPC gateway to serve HTTP-JSON
+// traffic as a proxy and forward it to a beacon node's gRPC service.
 package gateway
 
 import (

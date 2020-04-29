@@ -1,4 +1,6 @@
-// Package node defines the services that a beacon chain node would perform.
+// Package node is the main service which launches a beacon node and manages
+// the lifecycle of all its associated services at runtime, such as p2p, RPC, sync,
+// gracefully closing them if the process ends.
 package node
 
 import (

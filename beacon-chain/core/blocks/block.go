@@ -1,6 +1,5 @@
-// Package blocks contains block processing libraries. These libraries
-// process and verify block specific messages such as PoW receipt root,
-// RANDAO, validator deposits, exits and slashing proofs.
+// Package blocks contains block processing libraries according to
+// the eth2spec.
 package blocks
 
 import (

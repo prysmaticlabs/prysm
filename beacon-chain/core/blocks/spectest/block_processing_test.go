@@ -1,3 +1,5 @@
+// Package spectest contains all comformity specification tests
+// for block processing according to the eth2 spec.
 package spectest
 
 import (

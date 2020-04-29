@@ -1,3 +1,7 @@
+// Package depositcache is the source of validator deposits maintained
+// in-memory by the beacon node – deposits processed from the
+// eth1 powchain are then stored in this cache to be accessed by
+// any other service during a beacon node's runtime.
 package depositcache
 
 import (

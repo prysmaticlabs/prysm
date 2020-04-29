@@ -1,3 +1,5 @@
+// Package block contains types for block-specific events fired
+// during the runtime of a beacon node.
 package block
 
 import (

@@ -1,3 +1,5 @@
+// Package flags defines beacon-node specific runtime flags for
+// setting important values such as ports, eth1 endpoints, and more.
 package flags
 
 import (

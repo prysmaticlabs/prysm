@@ -1,4 +1,5 @@
-// Package helpers contains helper functions outlined in ETH2.0 spec beacon chain spec
+// Package helpers contains helper functions outlined in the eth2 beacon chain spec, such as
+// computing committees, randao, rewards/penalties, and more.
 package helpers
 
 import (

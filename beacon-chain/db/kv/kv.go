@@ -1,3 +1,5 @@
+// Package kv defines a bolt-db, key-value store implementation
+// of the Database interface defined by a Prysm beacon node.
 package kv
 
 import (

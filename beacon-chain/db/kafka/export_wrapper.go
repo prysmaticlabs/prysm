@@ -1,3 +1,5 @@
+// Package kafka defines an implementation of Database interface
+// which exports streaming data using Kafka for data analysis.
 package kafka
 
 import (

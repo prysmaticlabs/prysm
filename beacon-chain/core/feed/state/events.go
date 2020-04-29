@@ -1,3 +1,6 @@
+// Package state contains types for state operation-specific events fired
+// during the runtime of a beacon node such state initialization, state updates,
+// and chain start.
 package state
 
 import "time"

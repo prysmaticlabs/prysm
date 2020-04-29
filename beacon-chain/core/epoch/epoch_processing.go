@@ -1,6 +1,6 @@
-// Package epoch contains epoch processing libraries. These libraries
-// process new balance for the validators, justify and finalize new
-// check points, shuffle and reassign validators to different slots and
+// Package epoch contains epoch processing libraries according to spec, able to
+// process new balance for validators, justify and finalize new
+// check points, and shuffle validators to different slots and
 // shards.
 package epoch
 

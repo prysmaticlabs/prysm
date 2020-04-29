@@ -1,4 +1,6 @@
-// Package iface exists to prevent circular dependencies when implementing the database interface.
+// Package iface defines the actual database interface used
+// by a Prysm beacon node, also containing useful, scoped interfaces such as
+// a ReadOnlyDatabase.
 package iface
 
 import (
