@@ -788,6 +788,9 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return errors.New("nil or missing indexed attestation data")
 	}
 	indices := indexedAtt.AttestingIndices
+	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
+		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
+	}
 	pubkeys := []*bls.PublicKey{}
 	if len(indices) > 0 {
 		for i := 0; i < len(indices); i++ {
