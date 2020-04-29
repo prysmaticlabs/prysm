@@ -93,7 +93,7 @@ func (ds *Service) Start() {
 	// our gRPC client to keep detecting slashable offenses.
 	go ds.detectIncomingBlocks(ds.ctx, ds.blocksChan)
 	go ds.detectIncomingAttestations(ds.ctx, ds.attsChan)
-	go ds.detectHistoricalChainData(ds.ctx)
+	//go ds.detectHistoricalChainData(ds.ctx)
 }
 
 func (ds *Service) detectHistoricalChainData(ctx context.Context) {
