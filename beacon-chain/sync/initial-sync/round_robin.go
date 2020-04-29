@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -179,6 +181,11 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 		rate = 1
 	}
 	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
+	blockRoot := "unknown"
+	root, err := stateutil.BlockRoot(blk)
+	if err == nil {
+		blockRoot = fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8])
+	}
 	log.WithField(
 		"peers",
 		len(s.p2p.Peers().Connected()),
@@ -186,7 +193,8 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 		"blocksPerSecond",
 		fmt.Sprintf("%.1f", rate),
 	).Infof(
-		"Processing block %d/%d - estimated time remaining %s",
+		"Processing block %s %d/%d - estimated time remaining %s",
+		blockRoot,
 		blk.Slot,
 		helpers.SlotsSince(genesis),
 		timeRemaining,

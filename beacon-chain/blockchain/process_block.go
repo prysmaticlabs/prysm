@@ -77,7 +77,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	log.WithFields(logrus.Fields{
 		"slot": b.Slot,
 		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
-	}).Info("Executing state transition on block")
+	}).Debug("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
