@@ -1,3 +1,5 @@
+// Package main allows for creation of an HTTP-JSON to gRPC
+// gateway as a binary go process.
 package main
 
 import (
@@ -17,7 +19,7 @@ var (
 	beaconRPC      = flag.String("beacon-rpc", "localhost:4000", "Beacon chain gRPC endpoint")
 	port           = flag.Int("port", 8000, "Port to serve on")
 	debug          = flag.Bool("debug", false, "Enable debug logging")
-	allowedOrigins = flag.String("corsdomain", "", "A comma separated list of CORS domains to allow.")
+	allowedOrigins = flag.String("corsdomain", "", "A comma separated list of CORS domains to allow")
 )
 
 func init() {
