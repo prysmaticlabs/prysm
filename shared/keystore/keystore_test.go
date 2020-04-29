@@ -125,7 +125,9 @@ func TestEncryptDecryptKey(t *testing.T) {
 
 func TestGetSymlinkedKeys(t *testing.T) {
 	tmpdir := testutil.TempDir() + "/keystore"
-	t.Log(tmpdir)
+	if err := os.RemoveAll(tmpdir); err != nil {
+		t.Errorf("unable to remove temporary files %v", err)
+	}
 	ks := &Store{
 		scryptN: LightScryptN,
 		scryptP: LightScryptP,
