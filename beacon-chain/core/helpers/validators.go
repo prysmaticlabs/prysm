@@ -234,26 +234,7 @@ func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64,
 	}
 }
 
-// ComputeProposerIndexWithValidators returns the index sampled by effective balance, which is used to calculate proposer.
-//
-// Note: This method signature deviates slightly from the spec recommended definition. The full
-// state object is not required to compute the proposer index.
-//
-// Spec pseudocode definition:
-//  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
-//    """
-//    Return from ``indices`` a random index sampled by effective balance.
-//    """
-//    assert len(indices) > 0
-//    MAX_RANDOM_BYTE = 2**8 - 1
-//    i = 0
-//    while True:
-//        candidate_index = indices[compute_shuffled_index(ValidatorIndex(i % len(indices)), len(indices), seed)]
-//        random_byte = hash(seed + int_to_bytes(i // 32, length=8))[i % 32]
-//        effective_balance = state.validators[candidate_index].effective_balance
-//        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
-//            return ValidatorIndex(candidate_index)
-//        i += 1
+// Deprecated: Prefer using the beacon state with ComputeProposerIndex to avoid an unnecessary copy of the validator set.
 func ComputeProposerIndexWithValidators(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
 	length := uint64(len(activeIndices))
 	if length == 0 {
