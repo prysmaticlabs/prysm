@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
+	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"google.golang.org/grpc"
 )
 
@@ -38,11 +40,6 @@ type comparisonTest struct {
 }
 
 var metricLessThanTests = []equalityTest{
-	//{
-	//	name:  "",
-	//	topic: "p2p_message_failed_validation_total{topic=\"/eth2/%s/beacon_aggregate_and_proof/ssz_snappy\"}",
-	//	value: "0",
-	//},
 	{
 		name:  "memory usage",
 		topic: "go_memstats_alloc_bytes",
@@ -51,6 +48,24 @@ var metricLessThanTests = []equalityTest{
 }
 
 var metricComparisonTests = []comparisonTest{
+	{
+		name:               "beacon aggregate and proof",
+		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/beacon_aggregate_and_proof/ssz_snappy\"}",
+		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/beacon_aggregate_and_proof/ssz_snappy\"}",
+		expectedComparison: 0.8,
+	},
+	{
+		name:               "committee index 0 beacon attestation",
+		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/committee_index0_beacon_attestation/ssz_snappy\"}",
+		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/committee_index0_beacon_attestation/ssz_snappy\"}",
+		expectedComparison: 0.1,
+	},
+	{
+		name:               "committee index 1 beacon attestation",
+		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/committee_index1_beacon_attestation/ssz_snappy\"}",
+		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/committee_index1_beacon_attestation/ssz_snappy\"}",
+		expectedComparison: 0.1,
+	},
 	{
 		name:               "committee cache",
 		topic1:             "committee_cache_miss",
@@ -76,7 +91,6 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 			return err
 		}
 		pageContent := string(dataInBytes)
-		fmt.Println(pageContent)
 		if err := response.Body.Close(); err != nil {
 			return err
 		}
@@ -86,17 +100,30 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-
-		if genesis != nil {
-			return fmt.Errorf("%#x", genesis.GenesisValidatorsRoot)
+		forkDigest, err := p2putils.CreateForkDigest(time.Unix(genesis.GenesisTime.Seconds, 0), genesis.GenesisValidatorsRoot)
+		if err != nil {
+			return err
 		}
+
 		for _, test := range metricLessThanTests {
-			if err := metricCheckLessThan(pageContent, test.topic, test.value); err != nil {
+			topic := test.topic
+			if strings.Contains(topic, "%x") {
+				topic = fmt.Sprintf(topic, forkDigest)
+			}
+			if err := metricCheckLessThan(pageContent, topic, test.value); err != nil {
 				return errors.Wrapf(err, "failed %s check", test.name)
 			}
 		}
 		for _, test := range metricComparisonTests {
-			if err := metricCheckComparison(pageContent, test.topic1, test.topic2, test.expectedComparison); err != nil {
+			topic1 := test.topic1
+			if strings.Contains(topic1, "%x") {
+				topic1 = fmt.Sprintf(topic1, forkDigest)
+			}
+			topic2 := test.topic2
+			if strings.Contains(topic2, "%x") {
+				topic2 = fmt.Sprintf(topic2, forkDigest)
+			}
+			if err := metricCheckComparison(pageContent, topic1, topic2, test.expectedComparison); err != nil {
 				return err
 			}
 		}
@@ -109,7 +136,6 @@ func metricCheckLessThan(pageContent string, topic string, value int) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(topicValue)
 	if topicValue >= value {
 		return fmt.Errorf(
 			"unexpected result for metric %s, expected less than %d, received %d",
@@ -122,18 +148,19 @@ func metricCheckLessThan(pageContent string, topic string, value int) error {
 }
 
 func metricCheckComparison(pageContent string, topic1 string, topic2 string, comparison float64) error {
-	topic1Value, err := getValueOfTopic(pageContent, topic1)
-	if err != nil {
-		return err
-	}
 	topic2Value, err := getValueOfTopic(pageContent, topic2)
 	if err != nil {
 		return err
 	}
-	fmt.Println(topic1Value)
-	fmt.Println(topic2Value)
+	topic1Value, err := getValueOfTopic(pageContent, topic1)
+	// If we can't find the first topic (error metrics), then assume the test passes.
+	if topic1Value == -1 && topic2Value != -1 {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 	topicComparison := float64(topic1Value) / float64(topic2Value)
-	fmt.Println(topicComparison)
 	if topicComparison >= comparison {
 		return fmt.Errorf(
 			"unexpected result for comparison between metric %s and metric %s, expected comparison to be %.2f, received %.2f",
