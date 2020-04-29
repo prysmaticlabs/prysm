@@ -356,9 +356,14 @@ func TestStreamDuties_OK(t *testing.T) {
 	}
 
 	vs := &Server{
+		Ctx:         context.Background(),
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mockChain.ChainService{
+			Genesis: time.Now(),
+		},
+		StateNotifier: &mockChain.MockStateNotifier{},
 	}
 
 	// Test the first validator in registry.
@@ -369,7 +374,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
-	mockStream.EXPECT().Context().Return(context.Background())
+	//mockChainStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
 	if err := vs.StreamDuties(req, mockStream); err != nil {
 		t.Fatal(err)

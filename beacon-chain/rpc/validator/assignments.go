@@ -4,15 +4,14 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // GetDuties returns the duties assigned to a list of validators specified
@@ -31,16 +30,13 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	if vs.SyncChecker.Syncing() {
 		return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	epochTicker := slotutil.GetSlotTicker(vs.GenesisTimeFetcher.GenesisTime(), secondsPerEpoch)
-
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
-		case <-epochTicker.C():
+		case <-vs.EpochTicker.C():
 			res, err := vs.duties(stream.Context(), req)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)

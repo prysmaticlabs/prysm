@@ -35,6 +35,7 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -212,6 +213,9 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	epochTicker := slotutil.GetSlotTicker(s.genesisTimeFetcher.GenesisTime(), secondsPerEpoch)
+
 	validatorServer := &validator.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
@@ -238,6 +242,7 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		SlashingsPool:          s.slashingsPool,
 		StateGen:               s.stateGen,
+		EpochTicker:            epochTicker,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -270,7 +275,7 @@ func (s *Service) Start() {
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
+	//ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
