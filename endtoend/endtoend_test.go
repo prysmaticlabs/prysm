@@ -1,3 +1,7 @@
+// Package endtoend performs full a end-to-end test for Prysm,
+// including spinning up an ETH1 dev chain, sending deposits to the deposit
+// contract, and making sure the beacon node and validators are running and
+// performing properly for a few epochs.
 package endtoend
 
 import (

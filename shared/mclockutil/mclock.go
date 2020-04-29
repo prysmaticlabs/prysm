@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package mclockutil is a wrapper for a monotonic clock source
+// Package mclockutil is a wrapper for a monotonic clock source.
 package mclockutil
 
 import (

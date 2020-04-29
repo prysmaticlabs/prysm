@@ -1,5 +1,6 @@
-// Package node defines a validator client which connects to a
-// full beacon node as part of the Ethereum Serenity specification.
+// Package node is the main process which handles the lifecycle of
+// the runtime services in a validator client process, gracefully shutting
+// everything down upon close.
 package node
 
 import (

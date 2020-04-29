@@ -1,3 +1,5 @@
+// Package messagehandler contains useful helpers for recovering
+// from panic conditions at runtime and logging their trace.
 package messagehandler
 
 import (
