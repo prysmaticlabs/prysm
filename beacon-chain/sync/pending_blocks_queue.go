@@ -130,7 +130,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		log.WithFields(logrus.Fields{
 			"slot":      s,
 			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blkRoot[:])),
-		}).Info("Processed pending block and cleared it in cache")
+		}).Debug("Processed pending block and cleared it in cache")
 
 		span.End()
 	}
