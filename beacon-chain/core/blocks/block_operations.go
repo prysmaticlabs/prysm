@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -789,31 +788,6 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return errors.New("nil or missing indexed attestation data")
 	}
 	indices := indexedAtt.AttestingIndices
-
-	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
-	}
-
-	set := make(map[uint64]bool)
-	setIndices := make([]uint64, 0, len(indices))
-	for _, i := range indices {
-		if ok := set[i]; ok {
-			continue
-		}
-		setIndices = append(setIndices, i)
-		set[i] = true
-	}
-	sort.SliceStable(setIndices, func(i, j int) bool {
-		return setIndices[i] < setIndices[j]
-	})
-	if !reflect.DeepEqual(setIndices, indices) {
-		return errors.New("attesting indices is not uniquely sorted")
-	}
-
-	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
-	if err != nil {
-		return err
-	}
 	pubkeys := []*bls.PublicKey{}
 	if len(indices) > 0 {
 		for i := 0; i < len(indices); i++ {
@@ -825,22 +799,8 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 			pubkeys = append(pubkeys, pk)
 		}
 	}
+	return attestationutil.VerifyIndexedAttestation(ctx, indexedAtt, pubkeys, beaconState.GenesisValidatorRoot(), beaconState.Fork())
 
-	messageHash, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root of object")
-	}
-
-	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
-	}
-
-	voted := len(indices) > 0
-	if voted && !sig.FastAggregateVerify(pubkeys, messageHash) {
-		return helpers.ErrSigFailedToVerify
-	}
-	return nil
 }
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies

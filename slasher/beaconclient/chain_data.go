@@ -38,6 +38,9 @@ func (bs *Service) GenesisValidatorsRoot(
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not retrieve genesis data")
 	}
+	if res == nil {
+		return nil, errors.Wrap(err, " genesis data")
+	}
 	return res.GenesisValidatorsRoot, nil
 }
 

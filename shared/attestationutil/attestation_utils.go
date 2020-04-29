@@ -2,7 +2,16 @@ package attestationutil
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"sort"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -65,4 +74,76 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
 		}
 	}
 	return indices
+}
+
+// VerifyIndexedAttestation determines the validity of an indexed attestation.
+//
+// Spec pseudocode definition:
+//  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+//    """
+//    Check if ``indexed_attestation`` has valid indices and signature.
+//    """
+//    indices = indexed_attestation.attesting_indices
+//
+//    # Verify max number of indices
+//    if not len(indices) <= MAX_VALIDATORS_PER_COMMITTEE:
+//        return False
+//    # Verify indices are sorted and unique
+//        if not indices == sorted(set(indices)):
+//    # Verify aggregate signature
+//    if not bls_verify(
+//        pubkey=bls_aggregate_pubkeys([state.validators[i].pubkey for i in indices]),
+//        message_hash=hash_tree_root(indexed_attestation.data),
+//        signature=indexed_attestation.signature,
+//        domain=get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch),
+//    ):
+//        return False
+//    return True
+func VerifyIndexedAttestation(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []*bls.PublicKey, genesisValidatorsRoot []byte, fork *pb.Fork) error {
+	ctx, span := trace.StartSpan(ctx, "core.verifyIndexedAttestationSig")
+	defer span.End()
+	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
+		return errors.New("nil or missing indexed attestation data")
+	}
+	indices := indexedAtt.AttestingIndices
+
+	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
+		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
+	}
+
+	set := make(map[uint64]bool)
+	setIndices := make([]uint64, 0, len(indices))
+	for _, i := range indices {
+		if ok := set[i]; ok {
+			continue
+		}
+		setIndices = append(setIndices, i)
+		set[i] = true
+	}
+	sort.SliceStable(setIndices, func(i, j int) bool {
+		return setIndices[i] < setIndices[j]
+	})
+	if !reflect.DeepEqual(setIndices, indices) {
+		return errors.New("attesting indices is not uniquely sorted")
+	}
+	domain, err := helpers.Domain(fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, genesisValidatorsRoot)
+	if err != nil {
+		return err
+	}
+
+	messageHash, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root of object")
+	}
+
+	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
+
+	voted := len(indices) > 0
+	if voted && !sig.FastAggregateVerify(pubKeys, messageHash) {
+		return helpers.ErrSigFailedToVerify
+	}
+	return nil
 }
