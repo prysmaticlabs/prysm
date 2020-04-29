@@ -1,3 +1,4 @@
+// Package slotutil includes ticker and timer-related functions for eth2.
 package slotutil
 
 import (

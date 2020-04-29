@@ -1,3 +1,4 @@
+// Package testing includes useful mocks for slot tickers in unit tests.
 package testing
 
 // MockTicker defines a useful struct for mocking the Ticker interface

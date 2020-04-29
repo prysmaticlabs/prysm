@@ -1,3 +1,6 @@
+// Package iface defines an interface for the slasher database,
+// providing more advanced interfaces such as a
+// ReadOnlyDatabase.
 package iface
 
 import (

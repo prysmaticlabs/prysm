@@ -1,3 +1,4 @@
+// Package db defines a persistent backend for the slasher service.
 package db
 
 import (
