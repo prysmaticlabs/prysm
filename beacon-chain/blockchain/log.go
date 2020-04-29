@@ -22,7 +22,7 @@ func logStateTransitionData(b *ethpb.BeaconBlock) {
 		"attesterSlashings": len(b.Body.AttesterSlashings),
 		"proposerSlashings": len(b.Body.ProposerSlashings),
 		"voluntaryExits":    len(b.Body.VoluntaryExits),
-	}).Debug("Finished applying state transition")
+	}).Info("Finished applying state transition")
 }
 
 func logSyncStatus(block *ethpb.BeaconBlock, blockRoot [32]byte, finalized *ethpb.Checkpoint) {
