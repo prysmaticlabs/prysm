@@ -182,7 +182,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	return ComputeProposerIndex(state, indices, seedWithSlotHash)
 }
 
-// ComputeProposerIndexWithState returns the index sampled by effective balance, which is used to calculate proposer.
+// ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
 //
 //
 // Spec pseudocode definition:
