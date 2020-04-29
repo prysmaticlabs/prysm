@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package ethereum.beacon.rpc.v1;
+
+import "proto/beacon/p2p/v1/types.proto";
+import "google/api/annotations.proto";
+
+// Debug service API
+//
+// The debug service in Prysm provides API access to various utilities
+// for debugging the beacon node's functionality at runtime, such as being able
+// to retrieve the beacon state by block root or state root from the node directly.
+service Debug {
+    // Returns a beacon state by filter criteria from the beacon node.
+    rpc GetBeaconState(BeaconStateRequest) returns (ethereum.beacon.p2p.v1.BeaconState) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/state"
+        };
+    }
+}
+
+message BeaconStateRequest {
+    oneof query_filter {
+        // The slot corresponding to a desired beacon state.
+        uint64 slot = 1;
+
+        // The block root corresponding to a desired beacon state.
+        bytes block_root = 2;
+
+        // The state root corresponding to a desired beacon state.
+        bytes state_root = 3;
+    }
+}

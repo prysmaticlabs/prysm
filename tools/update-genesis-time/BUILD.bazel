@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/update-genesis-time",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/roughtime:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "update-genesis-time",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
