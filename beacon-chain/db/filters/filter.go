@@ -1,5 +1,5 @@
 // Package filters specifies utilities for building a set of data attribute
-// filters to be used  when filtering data through database queries in practice.
+// filters to be used when filtering data through database queries in practice.
 // For example, one can specify a filter query for data by start epoch + end epoch + shard
 // for attestations, build a filter as follows, and respond to it accordingly:
 //

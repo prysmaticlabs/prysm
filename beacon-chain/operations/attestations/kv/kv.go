@@ -1,3 +1,6 @@
+// Package kv includes a key-value store implementation
+// of an attestation cache used to satisfy important use-cases
+// such as aggregation in a beacon node runtime.
 package kv
 
 import (
