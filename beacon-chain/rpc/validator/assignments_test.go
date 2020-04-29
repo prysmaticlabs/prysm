@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -276,6 +278,93 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
 	}
+}
+
+func TestStreamDuties_SyncNotReady(t *testing.T) {
+	vs := &Server{
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	if err := vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream); err == nil || strings.Contains(
+		err.Error(), "syncing to latest head",
+	) {
+		t.Error("Did not get wanted error")
+	}
+}
+
+func TestStreamDuties_OK(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Could not setup genesis bs: %v", err)
+	}
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
+	}
+
+	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	for i, pk := range pubKeys {
+		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+	}
+
+	vs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+
+	// Test the first validator in registry.
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+		Epoch:      0,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	if err := vs.StreamDuties(req, mockStream); err != nil {
+		t.Fatal(err)
+	}
+	//if res.Duties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch { t.Errorf("Assigned slot %d can't be higher than %d",
+	//		res.Duties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
+	//}
+	//ctrl := gomock.NewController(t)
+	//defer ctrl.Finish()
+	//mockChainStream := mockRPC.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	//mockChainStream.EXPECT().Context().Return(context.Background())
+	//mockChainStream.EXPECT().Send(gomock.Any()).Return(nil)
+	//mockChainStream.EXPECT().Context().Return(context.Background())
+	//exitRoutine := make(chan bool)
+	//go func(tt *testing.T) {
+	//	want := "context canceled"
+	//	if err := vs.WaitForActivation(req, mockChainStream); err == nil || !strings.Contains(err.Error(), want) {
+	//		tt.Errorf("Could not call RPC method: %v", err)
+	//	}
+	//	<-exitRoutine
+	//}(t)
+	//cancel()
+	//exitRoutine <- true
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
