@@ -1,3 +1,6 @@
+// Package main defines a validator client, a critical actor in eth2 which manages
+// a keystore of private keys, connects to a beacon node to receive assignments,
+// and submits blocks/attestations as needed.
 package main
 
 import (
