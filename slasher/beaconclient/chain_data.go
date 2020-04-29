@@ -21,8 +21,8 @@ func (bs *Service) ChainHead(
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ChainHead")
 	defer span.End()
 	res, err := bs.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not retrieve chain head")
+	if err != nil || res == nil {
+		return nil, errors.Wrap(err, "Could not retrieve chain head or got nil chain head")
 	}
 	return res, nil
 }
