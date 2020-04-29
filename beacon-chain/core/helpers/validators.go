@@ -184,6 +184,9 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
 //
+//	This method is more efficient than ComputeProposerIndexWithValidators as it uses the read only validator
+//	abstraction to retrieve validator related data. Whereas the other method requires a whole copy of the validator
+//	set.
 //
 // Spec pseudocode definition:
 //  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
