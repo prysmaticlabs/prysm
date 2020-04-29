@@ -69,6 +69,42 @@ var (
 			Help: "Count the number of times attestation not recovered and pruned because of missing block",
 		},
 	)
+	OneSecondReceivedBlockCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blocks_received_in_one_second_total",
+			Help: "Count the number of blocks received in one second",
+		},
+	)
+	TwoSecondReceivedBlockCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blocks_received_in_two_second_total",
+			Help: "Count the number of blocks received in two seconds",
+		},
+	)
+	ThreeSecondReceivedBlockCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blocks_received_in_three_second_total",
+			Help: "Count the number of blocks received in three seconds",
+		},
+	)
+	FourSecondReceivedBlockCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blocks_received_in_four_second_total",
+			Help: "Count the number of blocks received in four seconds",
+		},
+	)
+	FiveSecondReceivedBlockCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blocks_received_in_five_second_total",
+			Help: "Count the number of blocks received in five second",
+		},
+	)
+	SixSecondReceivedBlockCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blocks_received_in_six_second_total",
+			Help: "Count the number of blocks received in six second",
+		},
+	)
 )
 
 func (r *Service) updateMetrics() {

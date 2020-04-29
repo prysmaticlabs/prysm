@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -51,6 +53,24 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if blk.Block == nil {
 		return false
 	}
+
+	// Add metrics for block arrival time subtract slot start time.
+	blockSlotStartTime := uint64(r.chain.GenesisTime().Unix()) + blk.Block.Slot*params.BeaconConfig().SecondsPerSlot
+	switch diff := uint64(roughtime.Now().Unix()) - blockSlotStartTime; {
+	case diff == 0 || diff == 1:
+		OneSecondReceivedBlockCounter.Inc()
+	case diff == 2:
+		TwoSecondReceivedBlockCounter.Inc()
+	case diff == 3:
+		ThreeSecondReceivedBlockCounter.Inc()
+	case diff == 4:
+		FourSecondReceivedBlockCounter.Inc()
+	case diff == 5:
+		FiveSecondReceivedBlockCounter.Inc()
+	default:
+		SixSecondReceivedBlockCounter.Inc()
+	}
+
 	// Verify the block is the first block received for the proposer for the slot.
 	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return false
