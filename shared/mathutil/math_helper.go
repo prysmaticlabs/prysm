@@ -1,3 +1,4 @@
+// Package mathutil includes important helpers for eth2 such as fast integer square roots.
 package mathutil
 
 import (

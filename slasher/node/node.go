@@ -1,3 +1,6 @@
+// Package node is the main process which handles the lifecycle of
+// the runtime services in a slasher process, gracefully shutting
+// everything down upon close.
 package node
 
 import (

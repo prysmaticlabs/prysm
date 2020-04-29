@@ -1,3 +1,5 @@
+// Package testing allows for spinning up a real bolt-db
+// instance for unit tests throughout the Prysm repo.
 package testing
 
 import (

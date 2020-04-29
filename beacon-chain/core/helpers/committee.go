@@ -1,4 +1,5 @@
-// Package helpers contains helper functions outlined in ETH2.0 spec beacon chain spec
+// Package helpers contains helper functions outlined in the eth2 beacon chain spec, such as
+// computing committees, randao, rewards/penalties, and more.
 package helpers
 
 import (
@@ -372,11 +373,10 @@ func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uin
 		return nil, errors.Wrap(err, "could not generate seed")
 	}
 	slot := StartSlot(e)
-	vals := state.Validators()
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot+i)...)
 		seedWithSlotHash := hashFunc(seedWithSlot)
-		index, err := ComputeProposerIndex(vals, activeIndices, seedWithSlotHash)
+		index, err := ComputeProposerIndex(state, activeIndices, seedWithSlotHash)
 		if err != nil {
 			return nil, err
 		}
