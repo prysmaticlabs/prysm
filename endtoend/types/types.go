@@ -23,19 +23,6 @@ type Evaluator struct {
 	Evaluation func(conn ...*grpc.ClientConn) error
 }
 
-type MetricEqualityTest struct {
-	Topic    string
-	Value    string
-	TestFunc func(string) error
-}
-
-type MetricComparisonTest struct {
-	Topic1          string
-	Topic2          string
-	RelativePercent float64
-	TestFunc        func(string) error
-}
-
 // BeaconNodeInfo contains the info of ports and other required information
 // needed to communicate with the beacon node it represents.
 type BeaconNodeInfo struct {
