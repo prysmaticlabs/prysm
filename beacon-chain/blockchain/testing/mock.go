@@ -1,3 +1,5 @@
+// Package testing includes useful mocks for writing unit
+// tests which depend on logic from the blockchain package.
 package testing
 
 import (
