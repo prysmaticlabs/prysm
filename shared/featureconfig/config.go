@@ -30,6 +30,7 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
+	SchlesiTestnet                             bool // SchlesiTestnet preconfigured spec.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -100,6 +101,7 @@ func InitWithReset(c *Flags) func() {
 func (c *Flags) Copy() *Flags {
 	return &Flags{
 		MinimalConfig:                              c.MinimalConfig,
+		SchlesiTestnet:                             c.SchlesiTestnet,
 		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
 		InitSyncNoVerify:                           c.InitSyncNoVerify,
 		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
@@ -310,6 +312,10 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		params.UseMinimalConfig()
+	} else if ctx.Bool(schlesiTestnetFlag.Name) {
+		log.Warn("Using schlesi testnet config")
+		cfg.SchlesiTestnet = true
+		params.UseSchlesiTestnet()
 	} else {
 		log.Warn("Using default mainnet config")
 	}
