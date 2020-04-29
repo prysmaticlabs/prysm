@@ -541,7 +541,13 @@ func TestComputeProposerIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ComputeProposerIndex(tt.args.validators, tt.args.indices, tt.args.seed)
+			bState := &pb.BeaconState{Validators: tt.args.validators}
+			stTrie, err := beaconstate.InitializeFromProtoUnsafe(bState)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			got, err := ComputeProposerIndexWithState(stTrie, tt.args.indices, tt.args.seed)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ComputeProposerIndex() error = %v, wantErr %v", err, tt.wantErr)
 				return
