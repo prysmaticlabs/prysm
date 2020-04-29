@@ -71,38 +71,38 @@ var (
 	)
 	OneSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blocks_received_in_one_second_total",
-			Help: "Count the number of blocks received in one second",
+			Name: "blocks_received_one_second_total",
+			Help: "Count the number of blocks received less than one second",
 		},
 	)
 	TwoSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blocks_received_in_two_second_total",
-			Help: "Count the number of blocks received in two seconds",
+			Name: "blocks_received_two_second_total",
+			Help: "Count the number of blocks received between one to two seconds",
 		},
 	)
 	ThreeSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blocks_received_in_three_second_total",
-			Help: "Count the number of blocks received in three seconds",
+			Name: "blocks_received_three_second_total",
+			Help: "Count the number of blocks received between two to three seconds",
 		},
 	)
 	FourSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blocks_received_in_four_second_total",
-			Help: "Count the number of blocks received in four seconds",
+			Name: "blocks_received_four_second_total",
+			Help: "Count the number of blocks received between three to four seconds",
 		},
 	)
 	FiveSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blocks_received_in_five_second_total",
-			Help: "Count the number of blocks received in five second",
+			Name: "blocks_received_five_second_total",
+			Help: "Count the number of blocks received between four to five seconds",
 		},
 	)
 	SixSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blocks_received_in_six_second_total",
-			Help: "Count the number of blocks received in six second",
+			Name: "blocks_received_six_second_total",
+			Help: "Count the number of blocks received equal or greater than six seconds",
 		},
 	)
 )
