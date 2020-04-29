@@ -74,10 +74,6 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Message.Aggregate) {
-		return false
-	}
-
 	r.setAggregatorIndexSlotSeen(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
@@ -129,9 +125,11 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	}
 
 	// Verify aggregated attestation has a valid signature.
-	if err := blocks.VerifyAttestation(ctx, s, signed.Message.Aggregate); err != nil {
-		traceutil.AnnotateError(span, err)
-		return false
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
+		if err := blocks.VerifyAttestation(ctx, s, signed.Message.Aggregate); err != nil {
+			traceutil.AnnotateError(span, err)
+			return false
+		}
 	}
 
 	return true
@@ -229,7 +227,7 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
-	domain, err := helpers.Domain(s.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
+	domain, err := helpers.Domain(s.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainSelectionProof, s.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}

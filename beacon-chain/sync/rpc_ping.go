@@ -18,7 +18,7 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	_, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 

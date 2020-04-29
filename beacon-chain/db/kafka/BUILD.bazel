@@ -7,6 +7,7 @@ go_library(
         "passthrough.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kafka",
+    tags = ["manual"],
     visibility = ["//beacon-chain/db:__pkg__"],
     deps = [
         "//beacon-chain/db/filters:go_default_library",

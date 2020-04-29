@@ -1,15 +1,14 @@
+// Package validator defines a gRPC validator service implementation, providing
+// critical endpoints for validator clients to submit blocks/attestations to the
+// beacon node, receive assignments, and more.
 package validator
 
 import (
 	"context"
-	"errors"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -25,8 +24,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -131,11 +133,8 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
-	s, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), s.GenesisValidatorRoot())
+	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
+	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
 	if err != nil {
 		return nil, err
 	}

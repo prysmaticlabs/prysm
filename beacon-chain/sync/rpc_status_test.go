@@ -384,7 +384,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCStatusRequest)
+	p1.AddConnectionHandler(r.sendRPCStatusRequest, r.sendGenericGoodbyeMessage)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {

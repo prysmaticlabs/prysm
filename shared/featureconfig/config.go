@@ -12,7 +12,8 @@ The process for implementing new features using this package is as follows:
 	cfg := &featureconfig.Flags{
 		VerifyAttestationSigs: true,
 	}
-	featureconfig.Init(cfg)
+	resetCfg := featureconfig.InitWithReset(cfg)
+	defer resetCfg()
 	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
 	and E2EBeaconChainFlags.
 */
@@ -84,6 +85,15 @@ func Get() *Flags {
 // Init sets the global config equal to the config that is passed in.
 func Init(c *Flags) {
 	featureConfig = c
+}
+
+// InitWithReset sets the global config and returns function that is used to reset configuration.
+func InitWithReset(c *Flags) func() {
+	resetFunc := func() {
+		Init(&Flags{})
+	}
+	Init(c)
+	return resetFunc
 }
 
 // Copy returns copy of the config object.
@@ -244,6 +254,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.BroadcastSlashings = true
 	}
 	Init(cfg)
+}
+
+// ConfigureSlasher sets the global config based
+// on what flags are enabled for the slasher client.
+func ConfigureSlasher(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
 }
 
 // ConfigureValidator sets the global config based

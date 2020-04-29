@@ -1,9 +1,14 @@
 package cache
 
-import "github.com/prysmaticlabs/prysm/shared/featureconfig"
+import (
+	"os"
+	"testing"
 
-func init() {
-	featureconfig.Init(&featureconfig.Flags{
-		EnableEth1DataVoteCache: true,
-	})
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+)
+
+func TestMain(m *testing.M) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableEth1DataVoteCache: true})
+	defer resetCfg()
+	os.Exit(m.Run())
 }

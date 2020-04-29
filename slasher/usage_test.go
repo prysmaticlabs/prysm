@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -15,6 +16,8 @@ func TestAllFlagsExistInHelp(t *testing.T) {
 	for _, group := range appHelpFlagGroups {
 		helpFlags = append(helpFlags, group.Flags...)
 	}
+	helpFlags = featureconfig.ActiveFlags(helpFlags)
+	appFlags = featureconfig.ActiveFlags(appFlags)
 
 	for _, flag := range appFlags {
 		if !doesFlagExist(flag, helpFlags) {
@@ -32,10 +35,9 @@ func TestAllFlagsExistInHelp(t *testing.T) {
 
 func doesFlagExist(flag cli.Flag, flags []cli.Flag) bool {
 	for _, f := range flags {
-		if f == flag {
+		if f.String() == flag.String() {
 			return true
 		}
 	}
-
 	return false
 }

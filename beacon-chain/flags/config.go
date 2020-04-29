@@ -18,6 +18,7 @@ type GlobalFlags struct {
 	MinimumSyncPeers                  int
 	MaxPageSize                       int
 	DeploymentBlock                   int
+	BlockBatchLimit                   int
 }
 
 var globalConfig *GlobalFlags
@@ -57,6 +58,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	if ctx.Bool(DisableDiscv5.Name) {
 		cfg.DisableDiscv5 = true
 	}
+	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.MaxPageSize = ctx.Int(RPCMaxPageSize.Name)
 	cfg.DeploymentBlock = ctx.Int(ContractDeploymentBlock.Name)
 	configureMinimumPeers(ctx, cfg)

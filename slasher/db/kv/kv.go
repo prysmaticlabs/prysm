@@ -1,3 +1,5 @@
+// Package kv defines a bolt-db, key-value store implementation of
+// the slasher database interface.
 package kv
 
 import (
@@ -23,9 +25,8 @@ type Store struct {
 
 // Config options for the slasher db.
 type Config struct {
-	// SpanCacheEnabled uses span cache to detect surround slashing.
-	SpanCacheEnabled bool
-	SpanCacheSize    int
+	// SpanCacheSize determines the span map cache size.
+	SpanCacheSize int
 }
 
 // Close closes the underlying boltdb database.
@@ -85,7 +86,8 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		}
 		return nil, err
 	}
-	kv := &Store{db: boltDB, databasePath: datafile, spanCacheEnabled: cfg.SpanCacheEnabled}
+	kv := &Store{db: boltDB, databasePath: datafile}
+	kv.EnableSpanCache(true)
 	spanCache, err := cache.NewEpochSpansCache(cfg.SpanCacheSize, persistSpanMapsOnEviction(kv))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new cache")

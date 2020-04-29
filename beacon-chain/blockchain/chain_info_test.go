@@ -201,3 +201,20 @@ func TestCurrentFork_CanRetrieve(t *testing.T) {
 		t.Error("Received incorrect fork version")
 	}
 }
+
+func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
+	// Should not panic if head state is nil.
+	c := &Service{}
+	if c.GenesisValidatorRoot() != [32]byte{} {
+		t.Error("Did not get correct genesis validator root")
+	}
+
+	s, err := state.InitializeFromProto(&pb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.head = &head{state: s}
+	if c.GenesisValidatorRoot() != [32]byte{'a'} {
+		t.Error("Did not get correct genesis validator root")
+	}
+}

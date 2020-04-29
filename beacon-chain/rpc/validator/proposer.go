@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -29,6 +30,8 @@ import (
 
 // eth1DataNotification is a latch to stop flooding logs with the same warning.
 var eth1DataNotification bool
+
+const eth1dataTimeout = 2 * time.Second
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
@@ -58,20 +61,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts := vs.AttPool.AggregatedAttestations()
-	atts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
+	atts, err := vs.packAttestations(ctx, req.Slot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
-	}
-
-	// If there is any room left in the block, consider unaggregated attestations as well.
-	if len(atts) < int(params.BeaconConfig().MaxAttestations) {
-		uAtts := vs.AttPool.UnaggregatedAttestations()
-		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, uAtts)
-		if len(uAtts)+len(atts) > int(params.BeaconConfig().MaxAttestations) {
-			uAtts = uAtts[:int(params.BeaconConfig().MaxAttestations)-len(atts)]
-		}
-		atts = append(atts, uAtts...)
+		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -154,6 +146,9 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 //  - Subtract that eth1block.number by ETH1_FOLLOW_DISTANCE.
 //  - This is the eth1block to use for the block proposal.
 func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, error) {
+	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
+	defer cancel()
+
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
 	}
@@ -169,11 +164,13 @@ func (vs *Server) eth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data, e
 	// Look up most recent block up to timestamp
 	blockNumber, err := vs.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, eth1VotingPeriodStartTime)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get block number from timestamp")
+		log.WithError(err).Error("Failed to get block number from timestamp")
+		return vs.randomETH1DataVote(ctx)
 	}
 	eth1Data, err := vs.defaultEth1DataResponse(ctx, blockNumber)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get eth1 data from block number")
+		log.WithError(err).Error("Failed to get eth1 data from block number")
+		return vs.randomETH1DataVote(ctx)
 	}
 
 	return eth1Data, nil
@@ -362,6 +359,9 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 // hash of eth1 block hash that is FOLLOW_DISTANCE back from its
 // latest block.
 func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *big.Int) (*ethpb.Eth1Data, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, ancestorHeight)
@@ -381,24 +381,12 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state *stateTrie.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
-
-	bState, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, errors.New("could not head state from DB")
-	}
-
-	if bState.Slot() < slot {
-		bState, err = state.ProcessSlots(ctx, bState, slot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", slot)
-		}
-	}
 
 	// TODO(3916): Insert optimizations to sort out the most profitable attestations
 	for i, att := range atts {
@@ -406,7 +394,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 			break
 		}
 
-		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
+		if _, err := blocks.ProcessAttestation(ctx, state, att); err != nil {
 			inValidAtts = append(inValidAtts, att)
 			continue
 
@@ -448,4 +436,36 @@ func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *e
 	// property changes during a state transition after a voting period.
 	deposit.Proof = proof
 	return deposit, nil
+}
+
+func (vs *Server) packAttestations(ctx context.Context, slot uint64) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "validatorServer.packAttestations")
+	defer span.End()
+	st, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could fetch head state")
+	}
+	if st.Slot() < slot {
+		st, err = state.ProcessSlots(ctx, st, slot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not advance state")
+		}
+	}
+
+	atts := vs.AttPool.AggregatedAttestations()
+	atts, err = vs.filterAttestationsForBlockInclusion(ctx, st, atts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not filter attestations")
+	}
+
+	// If there is any room left in the block, consider unaggregated attestations as well.
+	if len(atts) < int(params.BeaconConfig().MaxAttestations) {
+		uAtts := vs.AttPool.UnaggregatedAttestations()
+		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, st, uAtts)
+		if len(uAtts)+len(atts) > int(params.BeaconConfig().MaxAttestations) {
+			uAtts = uAtts[:int(params.BeaconConfig().MaxAttestations)-len(atts)]
+		}
+		atts = append(atts, uAtts...)
+	}
+	return atts, nil
 }

@@ -8,6 +8,7 @@ go_library(
         "committee.go",
         "committee_ids.go",
         "common.go",
+        "doc.go",
         "eth1_data.go",
         "hot_state_cache.go",
         "skip_slot_cache.go",

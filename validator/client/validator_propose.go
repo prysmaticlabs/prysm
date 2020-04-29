@@ -193,10 +193,11 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 			return nil, errors.Wrap(err, "could not get signing root")
 		}
 		blockHeader := &ethpb.BeaconBlockHeader{
-			Slot:       b.Slot,
-			StateRoot:  b.StateRoot,
-			ParentRoot: b.ParentRoot,
-			BodyRoot:   bodyRoot[:],
+			Slot:          b.Slot,
+			ProposerIndex: b.ProposerIndex,
+			StateRoot:     b.StateRoot,
+			ParentRoot:    b.ParentRoot,
+			BodyRoot:      bodyRoot[:],
 		}
 		sig, err = protectingKeymanager.SignProposal(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), blockHeader)
 		if err != nil {

@@ -37,7 +37,8 @@ func TestCancelledContext_WaitsForSynced(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		WaitForSynced: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.WaitForSyncedCalled {

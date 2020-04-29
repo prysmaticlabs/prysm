@@ -1,3 +1,4 @@
+// Package accounts defines tools to manage an encrypted validator keystore.
 package accounts
 
 import (
@@ -6,6 +7,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -132,28 +136,61 @@ func Exists(keystorePath string) (bool, error) {
 // CreateValidatorAccount creates a validator account from the given cli context.
 func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
 	if passphrase == "" {
-		reader := bufio.NewReader(os.Stdin)
 		log.Info("Create a new validator account for eth2")
 		log.Info("Enter a password:")
 		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			log.Fatalf("Could not read account password: %v", err)
+			return path, passphrase, err
 		}
 		text := string(bytePassword)
 		passphrase = strings.Replace(text, "\n", "", -1)
-		log.Infof("Keystore path to save your private keys (leave blank for default %s):", path)
-		text, err = reader.ReadString('\n')
+
+	}
+
+	if path == "" {
+		path = DefaultValidatorDir()
+		log.Infof("Please specify a keystore path to save your private keys (default: %q):", path)
+		reader := bufio.NewReader(os.Stdin)
+		text, err := reader.ReadString('\n')
 		if err != nil {
 			log.Fatal(err)
+			return path, passphrase, err
 		}
-		text = strings.Replace(text, "\n", "", -1)
-		if text != "" {
+		if text = strings.Replace(text, "\n", "", -1); text != "" {
 			path = text
 		}
 	}
-
 	if err := NewValidatorAccount(path, passphrase); err != nil {
 		return "", "", errors.Wrapf(err, "could not initialize validator account")
 	}
 	return path, passphrase, nil
+}
+
+// DefaultValidatorDir returns OS-specific default keystore directory.
+func DefaultValidatorDir() string {
+	// Try to place the data folder in the user's home dir
+	home := homeDir()
+	if home != "" {
+		if runtime.GOOS == "darwin" {
+			return filepath.Join(home, "Library", "Eth2Validators")
+		} else if runtime.GOOS == "windows" {
+			return filepath.Join(home, "AppData", "Roaming", "Eth2Validators")
+		} else {
+			return filepath.Join(home, ".eth2validators")
+		}
+	}
+	// As we cannot guess a stable location, return empty and handle later
+	return ""
+}
+
+// homeDir returns home directory path.
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
 }

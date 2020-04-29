@@ -13,6 +13,8 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -48,9 +50,15 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	if err := db.SaveDepositContractAddress(ctx, addr); err != nil {
 		t.Fatal(err)
 	}
+	st := testutil.NewBeaconState()
+	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},
+		GenesisFetcher: &mock.ChainService{
+			State:          st,
+			ValidatorsRoot: genValRoot,
+		},
 	}
 	res, err := ns.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {
@@ -65,6 +73,9 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	}
 	if !res.GenesisTime.Equal(pUnix) {
 		t.Errorf("Wanted GenesisTime() = %v, received %v", pUnix, res.GenesisTime)
+	}
+	if !bytes.Equal(genValRoot[:], res.GenesisValidatorsRoot) {
+		t.Errorf("Wanted GenesisValidatorsRoot = %v, received %v", genValRoot, res.GenesisValidatorsRoot)
 	}
 }
 

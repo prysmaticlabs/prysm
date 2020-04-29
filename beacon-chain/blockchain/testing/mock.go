@@ -1,3 +1,5 @@
+// Package testing includes useful mocks for writing unit
+// tests which depend on logic from the blockchain package.
 package testing
 
 import (
@@ -244,4 +246,9 @@ func (ms *ChainService) ClearCachedStates() {}
 // HasInitSyncBlock mocks the same method in the chain service.
 func (ms *ChainService) HasInitSyncBlock(root [32]byte) bool {
 	return false
+}
+
+// HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
+func (ms *ChainService) HeadGenesisValidatorRoot() [32]byte {
+	return [32]byte{}
 }

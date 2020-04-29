@@ -1,3 +1,6 @@
+// Package node is the main process which handles the lifecycle of
+// the runtime services in a slasher process, gracefully shutting
+// everything down upon close.
 package node
 
 import (
@@ -55,6 +58,7 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 	); err != nil {
 		return nil, err
 	}
+
 	registry := shared.NewServiceRegistry()
 
 	slasher := &SlasherNode{
@@ -142,7 +146,7 @@ func (s *SlasherNode) startDB(ctx *cli.Context) error {
 	clearDB := ctx.Bool(cmd.ClearDB.Name)
 	forceClearDB := ctx.Bool(cmd.ForceClearDB.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &kv.Config{SpanCacheEnabled: ctx.Bool(flags.UseSpanCacheFlag.Name)}
+	cfg := &kv.Config{}
 	d, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err

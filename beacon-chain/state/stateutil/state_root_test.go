@@ -1,6 +1,7 @@
 package stateutil_test
 
 import (
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -15,11 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func init() {
-	config := &featureconfig.Flags{
-		EnableSSZCache: true,
-	}
-	featureconfig.Init(config)
+func TestMain(m *testing.M) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableSSZCache: true})
+	defer resetCfg()
+	os.Exit(m.Run())
 }
 
 func TestState_FieldCount(t *testing.T) {

@@ -1,5 +1,4 @@
-// Package params defines important constants that are essential to the
-// Ethereum 2.0 services.
+// Package params defines important constants that are essential to eth2 services.
 package params
 
 import (

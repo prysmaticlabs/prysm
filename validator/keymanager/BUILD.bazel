@@ -39,6 +39,7 @@ go_test(
         "direct_interop_test.go",
         "direct_test.go",
         "opts_test.go",
+        "remote_internal_test.go",
         "remote_test.go",
         "wallet_test.go",
     ],

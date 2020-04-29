@@ -19,8 +19,5 @@ func TestFuzzFinalUpdates_10000(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err = ProcessFinalUpdates(s)
-		if err != nil {
-			t.Log(err)
-		}
 	}
 }
