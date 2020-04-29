@@ -18,7 +18,7 @@ var (
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
 	schlesiTestnetFlag = &cli.BoolFlag{
-		Name:  "schlesi-config",
+		Name:  "schlesi-testnet",
 		Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
 	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
