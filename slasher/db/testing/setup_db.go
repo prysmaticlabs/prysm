@@ -1,3 +1,5 @@
+// Package testing defines useful helper functions for unit tests with
+// the slasher database.
 package testing
 
 import (
