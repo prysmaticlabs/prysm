@@ -49,7 +49,6 @@ func CreateForkDigest(
 func Fork(
 	targetEpoch uint64,
 ) (*pb.Fork, error) {
-
 	// We retrieve a list of scheduled forks by epoch.
 	// We loop through the keys in this map to determine the current
 	// fork version based on the requested epoch.
