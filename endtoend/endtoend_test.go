@@ -51,6 +51,17 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 		return
 	}
 
+	if config.TestSlasher {
+		slasherPIDs := components.StartSlashers(t)
+		defer helpers.KillProcesses(t, slasherPIDs)
+	}
+	if config.TestDeposits {
+		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
+		valPid := components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
+		defer helpers.KillProcesses(t, []int{valPid})
+		components.SendAndMineDeposits(t, keystorePath, valCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
+	}
+
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < len(conns); i++ {
 		conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.BeaconNodeRPCPort+i), grpc.WithInsecure())
@@ -69,23 +80,14 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Small offset so evaluators perform in the middle of an epoch.
+
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	// Adding a half slot here to ensure the requests are in the middle of an epoch.
-	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2+(params.BeaconConfig().SecondsPerSlot/2)), 0)
+	middleOfEpoch := int64(epochSeconds/2 + (params.BeaconConfig().SecondsPerSlot / 2))
+	// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
+	tickingStartTime := time.Unix(genesis.GenesisTime.Seconds+middleOfEpoch, 0)
 
-	if config.TestSlasher {
-		slasherPIDs := components.StartSlashers(t)
-		defer helpers.KillProcesses(t, slasherPIDs)
-	}
-	if config.TestDeposits {
-		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
-		valPid := components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
-		defer helpers.KillProcesses(t, []int{valPid})
-		components.SendAndMineDeposits(t, keystorePath, valCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
-	}
-
-	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
+	ticker := helpers.GetEpochTicker(tickingStartTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.

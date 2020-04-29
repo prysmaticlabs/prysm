@@ -16,7 +16,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
-	epochsToRun := 20
+	epochsToRun := 100
 	var err error
 	epochStr, ok := os.LookupEnv("E2E_EPOCHS")
 	if ok {

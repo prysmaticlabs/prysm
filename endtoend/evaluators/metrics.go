@@ -191,14 +191,12 @@ func getValueOfTopic(pageContent string, topic string) (int, error) {
 		return -1, fmt.Errorf("did not find requested text %s in %s", topic, pageContent)
 	}
 	endOfTopic := startIdx + len(topic)
-	fmt.Println(pageContent[startIdx:endOfTopic])
 	// Adding 1 to skip the space after the topic name.
 	startOfValue := endOfTopic + 1
 	endOfValue := strings.Index(pageContent[startOfValue:], "\n")
 	if endOfValue == -1 {
 		return -1, fmt.Errorf("could not find next space in %s", pageContent[startOfValue:])
 	}
-	fmt.Println(pageContent[startOfValue : startOfValue+endOfValue])
 	metricValue := pageContent[startOfValue : startOfValue+endOfValue]
 	floatResult, err := strconv.ParseFloat(metricValue, 64)
 	if err != nil {
