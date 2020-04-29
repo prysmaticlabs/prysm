@@ -1,3 +1,5 @@
+// Package attestations defines an implementation of a
+// slashable attestation detector using min-max surround vote checking.
 package attestations
 
 import (

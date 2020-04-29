@@ -1,3 +1,4 @@
+// Package iface defines an interface for a double-proposal detector struct.
 package iface
 
 import (
