@@ -19,7 +19,7 @@ type ValidatorDB interface {
 	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
 	DeleteProposalHistory(ctx context.Context, publicKey []byte) error
 	// Attester protection related methods.
-	AttestationHistory(ctx context.Context, publicKey []byte) (*slashpb.AttestationHistory, error)
-	SaveAttestationHistory(ctx context.Context, publicKey []byte, history *slashpb.AttestationHistory) error
+	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
+	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
 	DeleteAttestationHistory(ctx context.Context, publicKey []byte) error
 }
