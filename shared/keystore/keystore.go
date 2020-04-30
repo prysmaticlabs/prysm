@@ -98,14 +98,14 @@ func (ks Store) GetKeys(directory, filePrefix, password string, warnOnFail bool)
 		cp := strings.Contains(n, strings.TrimPrefix(filePrefix, "/"))
 		if f.Mode().IsRegular() && cp {
 			// #nosec G304
-			keyjson, err := ioutil.ReadFile(filePath)
+			keyJSON, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				return nil, err
 			}
-			key, err := DecryptKey(keyjson, password)
+			key, err := DecryptKey(keyJSON, password)
 			if err != nil {
 				if warnOnFail {
-					log.WithError(err).WithField("keyfile", string(keyjson)).Warn("Failed to decrypt key")
+					log.WithError(err).WithField("keyfile", string(keyJSON)).Warn("Failed to decrypt key")
 				}
 				continue
 			}
@@ -132,7 +132,7 @@ func (ks Store) JoinPath(filename string) string {
 	return filepath.Join(ks.keysDirPath, filename)
 }
 
-// EncryptKey encrypts a key using the specified scrypt parameters into a json
+// EncryptKey encrypts a key using the specified scrypt parameters into a JSON
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error) {
 	authArray := []byte(password)
@@ -188,7 +188,7 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 	return json.Marshal(encryptedJSON)
 }
 
-// DecryptKey decrypts a key from a json blob, returning the private key itself.
+// DecryptKey decrypts a key from a JSON blob, returning the private key itself.
 func DecryptKey(keyJSON []byte, password string) (*Key, error) {
 	var keyBytes, keyID []byte
 	var err error

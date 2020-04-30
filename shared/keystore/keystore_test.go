@@ -29,13 +29,13 @@ func TestStoreAndGetKey(t *testing.T) {
 		t.Fatalf("unable to store key %v", err)
 	}
 
-	newkey, err := ks.GetKey(tempDir, "password")
+	decryptedKey, err := ks.GetKey(tempDir, "password")
 	if err != nil {
 		t.Fatalf("unable to get key %v", err)
 	}
 
-	if !bytes.Equal(newkey.SecretKey.Marshal(), key.SecretKey.Marshal()) {
-		t.Fatalf("retrieved secret keys are not equal %v , %v", newkey.SecretKey.Marshal(), key.SecretKey.Marshal())
+	if !bytes.Equal(decryptedKey.SecretKey.Marshal(), key.SecretKey.Marshal()) {
+		t.Fatalf("retrieved secret keys are not equal %v , %v", decryptedKey.SecretKey.Marshal(), key.SecretKey.Marshal())
 	}
 }
 
@@ -63,11 +63,11 @@ func TestStoreAndGetKeys(t *testing.T) {
 	if err := ks.StoreKey(tempDir+"/test-2", key2, "password"); err != nil {
 		t.Fatalf("unable to store key %v", err)
 	}
-	newkeys, err := ks.GetKeys(tempDir, "test", "password", false)
+	decryptedKeys, err := ks.GetKeys(tempDir, "test", "password", false)
 	if err != nil {
 		t.Fatalf("unable to get key %v", err)
 	}
-	for _, s := range newkeys {
+	for _, s := range decryptedKeys {
 		if !bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()) && !bytes.Equal(s.SecretKey.Marshal(), key2.SecretKey.Marshal()) {
 			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
 		}
@@ -91,23 +91,23 @@ func TestEncryptDecryptKey(t *testing.T) {
 		PublicKey: pk.PublicKey(),
 	}
 
-	keyjson, err := EncryptKey(key, password, LightScryptN, LightScryptP)
+	keyJSON, err := EncryptKey(key, password, LightScryptN, LightScryptP)
 	if err != nil {
 		t.Fatalf("unable to encrypt key %v", err)
 	}
 
-	newkey, err := DecryptKey(keyjson, password)
+	decryptedKey, err := DecryptKey(keyJSON, password)
 	if err != nil {
 		t.Fatalf("unable to decrypt keystore %v", err)
 	}
 
-	if !bytes.Equal(newkey.ID, newID) {
-		t.Fatalf("decrypted key's uuid doesn't match %v", newkey.ID)
+	if !bytes.Equal(decryptedKey.ID, newID) {
+		t.Fatalf("decrypted key's uuid doesn't match %v", decryptedKey.ID)
 	}
 
 	expected := pk.Marshal()
-	if !bytes.Equal(newkey.SecretKey.Marshal(), expected) {
-		t.Fatalf("decrypted key's value is not equal %v", newkey.SecretKey.Marshal())
+	if !bytes.Equal(decryptedKey.SecretKey.Marshal(), expected) {
+		t.Fatalf("decrypted key's value is not equal %v", decryptedKey.SecretKey.Marshal())
 	}
 }
 
@@ -132,14 +132,14 @@ func TestGetSymlinkedKeys(t *testing.T) {
 		t.Fatalf("unable to create symlink: %v", err)
 	}
 
-	newkeys, err := ks.GetKeys(tempDir, "test", "password", false)
+	decryptedKeys, err := ks.GetKeys(tempDir, "test", "password", false)
 	if err != nil {
 		t.Fatalf("unable to get key %v", err)
 	}
-	if len(newkeys) != 1 {
-		t.Errorf("unexpected number of keys returned, want: %d, got: %d", 1, len(newkeys))
+	if len(decryptedKeys) != 1 {
+		t.Errorf("unexpected number of keys returned, want: %d, got: %d", 1, len(decryptedKeys))
 	}
-	for _, s := range newkeys {
+	for _, s := range decryptedKeys {
 		if !bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()) {
 			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
 		}
