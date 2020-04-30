@@ -34,7 +34,7 @@ type Server struct {
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
-	err := attestationutil.IsValidAttestationIndices(req)
+	err := attestationutil.IsValidAttestationIndices(ctx, req)
 	if err != nil {
 		return nil, err
 	}
