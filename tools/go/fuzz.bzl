@@ -87,6 +87,17 @@ def go_fuzz_test(
         visibility = ["//visibility:private"],
     )
     go_binary(
+        name = name + "_binary",
+        srcs = [name + "_libfuzz_main"],
+        deps = [name + "_lib_with_fuzzer"],
+        linkmode = LINKMODE_C_ARCHIVE,
+        cgo = True,
+        tags = ["manual"] + tags,
+        visibility = ["//visibility:private"],
+        gc_goopts = ["-d=libfuzzer"],
+        testonly = 1,
+    )
+    go_binary(
         # For inclusion in beacon fuzz project.
         name = name + "_c_shared",
         srcs = [name + "_libfuzz_main"],
