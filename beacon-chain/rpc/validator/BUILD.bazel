@@ -96,6 +96,7 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
+        "//shared/slotutil/testing:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

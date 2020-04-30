@@ -21,6 +21,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	mockSlotUtil "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -355,8 +356,9 @@ func TestStreamDuties_OK(t *testing.T) {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	vs := &Server{
-		Ctx:         context.Background(),
+		Ctx:         ctx,
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
@@ -364,6 +366,9 @@ func TestStreamDuties_OK(t *testing.T) {
 			Genesis: time.Now(),
 		},
 		StateNotifier: &mockChain.MockStateNotifier{},
+		EpochTicker: &mockSlotUtil.MockTicker{
+			Channel: make(chan uint64),
+		},
 	}
 
 	// Test the first validator in registry.
@@ -374,11 +379,17 @@ func TestStreamDuties_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
-	//mockChainStream.EXPECT().Context().Return(context.Background())
-	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
-	if err := vs.StreamDuties(req, mockStream); err != nil {
-		t.Fatal(err)
-	}
+	mockStream.EXPECT().Context().Return(context.Background())
+	exitRoutine := make(chan bool)
+	go func(tt *testing.T) {
+		want := "context canceled"
+		if err := vs.StreamDuties(req, mockStream); err == nil || !strings.Contains(err.Error(), want) {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
 	//if res.Duties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch { t.Errorf("Assigned slot %d can't be higher than %d",
 	//		res.Duties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	//}
