@@ -38,11 +38,11 @@ func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys []
 				attestationHistory = &slashpb.AttestationHistory{
 					TargetToSource: newMap,
 				}
-				return nil
-			}
-			attestationHistory, err := unmarshalAttestationHistory(enc)
-			if err != nil {
-				return err
+			} else {
+				attestationHistory, err = unmarshalAttestationHistory(enc)
+				if err != nil {
+					return err
+				}
 			}
 			attestationHistoryForVals[key] = attestationHistory
 		}

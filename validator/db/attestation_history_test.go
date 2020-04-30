@@ -198,7 +198,7 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get attestation history: %v", err)
 	}
-	savedHistory := savedHistories
+	savedHistory := savedHistories[pubkey]
 	if savedHistory == nil || !reflect.DeepEqual(savedHistory, history) {
 		t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", savedHistory, history)
 	}
@@ -207,7 +207,7 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	}
 
 	// Check after deleting from DB.
-	savedHistory, err = db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubkey})
+	savedHistories, err = db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubkey})
 	if err != nil {
 		t.Fatalf("Failed to get attestation history: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	clean := &slashpb.AttestationHistory{
 		TargetToSource: cleanMap,
 	}
-	if !reflect.DeepEqual(savedHistory, clean) {
-		t.Fatalf("Expected attestation history to be %v, received %v", clean, savedHistory)
+	if !reflect.DeepEqual(savedHistories[pubkey], clean) {
+		t.Fatalf("Expected attestation history to be %v, received %v", clean, savedHistories[pubkey])
 	}
 }

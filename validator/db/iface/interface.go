@@ -15,11 +15,11 @@ type ValidatorDB interface {
 	DatabasePath() string
 	ClearDB() error
 	// Proposer protection related methods.
-	ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error)
-	SaveProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64, history bitfield.Bitlist) error
+	ProposalHistoriesForEpoch(ctx context.Context, publicKeys [][48]byte, epoch uint64) (map[[48]byte]bitfield.Bitlist, error)
+	SaveProposalHistoriesForEpoch(ctx context.Context, epoch uint64, histories map[[48]byte]bitfield.Bitlist) error
 	DeleteProposalHistory(ctx context.Context, publicKey []byte) error
 	// Attester protection related methods.
-	AttestationHistory(ctx context.Context, publicKey []byte) (*slashpb.AttestationHistory, error)
-	SaveAttestationHistory(ctx context.Context, publicKey []byte, history *slashpb.AttestationHistory) error
+	AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error)
+	SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKey map[[48]byte]*slashpb.AttestationHistory) error
 	DeleteAttestationHistory(ctx context.Context, publicKey []byte) error
 }
