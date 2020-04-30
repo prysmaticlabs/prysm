@@ -25,6 +25,10 @@ func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys []
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistory")
 	defer span.End()
 
+	if len(publicKeys) == 0 {
+		return make(map[[48]byte]*slashpb.AttestationHistory), nil
+	}
+
 	var err error
 	attestationHistoryForVals := make(map[[48]byte]*slashpb.AttestationHistory)
 	err = db.view(func(tx *bolt.Tx) error {
