@@ -1,3 +1,6 @@
+// Package stategen defines functions to regenerate beacon chain states
+// by replaying blocks from a stored state checkpoint, useful for
+// optimization and reducing a beacon node's resource consumption.
 package stategen
 
 import (

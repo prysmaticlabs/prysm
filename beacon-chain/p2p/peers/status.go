@@ -1,4 +1,4 @@
-// Package peers provides information about peers at the Ethereum protocol level.
+// Package peers provides information about peers at the eth2 protocol level.
 // "Protocol level" is the level above the network level, so this layer never sees or interacts with (for example) hosts that are
 // uncontactable due to being down, firewalled, etc.  Instead, this works with peers that are contactable but may or may not be of
 // the correct fork version, not currently required due to the number of current connections, etc.
