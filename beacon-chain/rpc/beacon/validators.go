@@ -934,20 +934,50 @@ func (bs *Server) GetValidatorPerformance(
 ) (*ethpb.ValidatorPerformanceResponse, error) {
 	validatorSummary := state.ValidatorSummary
 
-	reqPubKeysCount := len(req.PublicKeys)
-	beforeTransitionBalances := make([]uint64, 0, reqPubKeysCount)
-	afterTransitionBalances := make([]uint64, 0, reqPubKeysCount)
-	effectiveBalances := make([]uint64, 0, reqPubKeysCount)
-	inclusionSlots := make([]uint64, 0, reqPubKeysCount)
-	inclusionDistances := make([]uint64, 0, reqPubKeysCount)
-	correctlyVotedSource := make([]bool, 0, reqPubKeysCount)
-	correctlyVotedTarget := make([]bool, 0, reqPubKeysCount)
-	correctlyVotedHead := make([]bool, 0, reqPubKeysCount)
-	missingValidators := make([][]byte, 0, reqPubKeysCount)
+	responseCap := len(req.Indices) + len(req.PublicKeys)
+	beforeTransitionBalances := make([]uint64, 0, responseCap)
+	afterTransitionBalances := make([]uint64, 0, responseCap)
+	effectiveBalances := make([]uint64, 0, responseCap)
+	inclusionSlots := make([]uint64, 0, responseCap)
+	inclusionDistances := make([]uint64, 0, responseCap)
+	correctlyVotedSource := make([]bool, 0, responseCap)
+	correctlyVotedTarget := make([]bool, 0, responseCap)
+	correctlyVotedHead := make([]bool, 0, responseCap)
+	missingValidators := make([][]byte, 0, responseCap)
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	// Get performance based on provided validator indices.
+	// Also track missing validators using public keys.
+	for _, idx := range req.Indices {
+		val, err := headState.ValidatorAtIndex(idx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
+		}
+		if idx >= uint64(len(validatorSummary)) {
+			// Not listed in validator summary yet; treat it as missing.
+			missingValidators = append(missingValidators, val.PublicKey)
+			continue
+		}
+		currentEpoch := helpers.CurrentEpoch(headState)
+		if !helpers.IsActiveValidator(val, currentEpoch) {
+			// Inactive validator; treat it as missing.
+			missingValidators = append(missingValidators, val.PublicKey)
+			continue
+		}
+
+		summary := validatorSummary[idx]
+		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
+		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
+		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
+		inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
+		inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
+		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
+		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
+		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
 	}
 
 	// Convert the list of validator public keys to list of validator indices.
@@ -959,9 +989,15 @@ func (bs *Server) GetValidatorPerformance(
 			missingValidators = append(missingValidators, key)
 			continue
 		}
+
 		val, err := headState.ValidatorAtIndex(idx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
+		}
+		if idx >= uint64(len(validatorSummary)) {
+			// Not listed in validator summary yet; treat it as missing.
+			missingValidators = append(missingValidators, key)
+			continue
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
 		if !helpers.IsActiveValidator(val, currentEpoch) {
@@ -969,20 +1005,16 @@ func (bs *Server) GetValidatorPerformance(
 			missingValidators = append(missingValidators, key)
 			continue
 		}
-		if idx >= uint64(len(validatorSummary)) {
-			// Not listed in validator summary yet; treat it as missing.
-			missingValidators = append(missingValidators, key)
-			continue
-		}
 
-		effectiveBalances = append(effectiveBalances, validatorSummary[idx].CurrentEpochEffectiveBalance)
-		beforeTransitionBalances = append(beforeTransitionBalances, validatorSummary[idx].BeforeEpochTransitionBalance)
-		afterTransitionBalances = append(afterTransitionBalances, validatorSummary[idx].AfterEpochTransitionBalance)
-		inclusionSlots = append(inclusionSlots, validatorSummary[idx].InclusionSlot)
-		inclusionDistances = append(inclusionDistances, validatorSummary[idx].InclusionDistance)
-		correctlyVotedSource = append(correctlyVotedSource, validatorSummary[idx].IsPrevEpochAttester)
-		correctlyVotedTarget = append(correctlyVotedTarget, validatorSummary[idx].IsPrevEpochTargetAttester)
-		correctlyVotedHead = append(correctlyVotedHead, validatorSummary[idx].IsPrevEpochHeadAttester)
+		summary := validatorSummary[idx]
+		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
+		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
+		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
+		inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
+		inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
+		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
+		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
+		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
