@@ -60,7 +60,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
 	baseState, err := s.getAttPreState(ctx, att.Data.Target)
 	if err != nil {
-		log.WithError(err).Error("Failed to validate attestation")
+		log.WithError(err).Error("Failed to get attestation pre state")
 		return false
 	}
 
@@ -91,7 +91,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
 				var hasState bool
-				if !featureconfig.Get().DisableNewStateMgmt {
+				if featureconfig.Get().NewStateMgmt {
 					hasState = s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				} else {
 					hasState = s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))

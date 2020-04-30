@@ -1,3 +1,6 @@
+// Package p2p defines the network protocol implementation for eth2
+// used by beacon nodes, including peer discovery using discv5, gossip-sub
+// using libp2p, and handing peer lifecycles + handshakes.
 package p2p
 
 import (
@@ -456,7 +459,8 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 				}
 				s.peers.Add(node.Record(), info.ID, multiAddr, network.DirUnknown)
 				if err := s.connectWithPeer(*info); err != nil {
-					log.WithError(err).Debugf("Could not connect with peer %s", info.String())
+					log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+					continue
 				}
 				exists = true
 			}
@@ -530,7 +534,7 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
 			if err := s.connectWithPeer(info); err != nil {
-				log.WithError(err).Debugf("Could not connect with peer %s", info.String())
+				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
 			}
 		}(info)
 	}

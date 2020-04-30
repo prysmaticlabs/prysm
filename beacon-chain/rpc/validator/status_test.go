@@ -22,14 +22,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestValidatorStatus_Unknown(t *testing.T) {
+func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := pubKey(1)
+	pubKey1 := pubKey(1)
 	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey,
+		PublicKey:             pubKey1,
 		Signature:             []byte("hi"),
 		WithdrawalCredentials: []byte("hey"),
 	}
@@ -62,17 +62,14 @@ func TestValidatorStatus_Unknown(t *testing.T) {
 		Eth1InfoFetcher: p,
 	}
 	req := &ethpb.ValidatorStatusRequest{
-		PublicKey: pubKey,
+		PublicKey: pubKey1,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
-		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_UNKNOWN_STATUS, resp.Status)
-	}
-	if resp.DepositInclusionSlot == 0 {
-		t.Errorf("Wanted 0, got %d", resp.DepositInclusionSlot)
+	if resp.Status != ethpb.ValidatorStatus_DEPOSITED {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_DEPOSITED, resp.Status)
 	}
 }
 
@@ -82,7 +79,6 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
-	pubKey2 := pubKey(2)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey1,
 		Signature:             []byte("hi"),
@@ -106,7 +102,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
-				PublicKey:                  pubKey2,
+				PublicKey:                  pubKey1,
 				ActivationEligibilityEpoch: 1,
 			},
 		},
@@ -124,7 +120,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 		Eth1InfoFetcher: p,
 	}
 	req := &ethpb.ValidatorStatusRequest{
-		PublicKey: pubKey2,
+		PublicKey: pubKey1,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
@@ -638,7 +634,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 			response[1].PublicKey)
 	}
 
-	if response[2].Status.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+	if response[2].Status.Status != ethpb.ValidatorStatus_DEPOSITED {
 		t.Errorf("Validator with pubkey %#x is not unknown and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}

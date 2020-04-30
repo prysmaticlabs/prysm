@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -88,7 +89,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "parent block root does not have a state",
 			blk:           &ethpb.BeaconBlock{},
 			s:             st.Copy(),
-			wantErrString: "could not reconstruct parent state",
+			wantErrString: "provided block root does not have block saved in the db",
 		},
 		{
 			name:          "block is from the feature",
@@ -300,6 +301,9 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -339,6 +343,8 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
 
 	cfg := &Config{
 		BeaconDB: db,

@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "content_negotiation.go",
         "logrus_collector.go",
         "service.go",
         "simple_server.go",
@@ -11,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//shared:go_default_library",
+        "@com_github_golang_gddo//httputil:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promhttp:go_default_library",

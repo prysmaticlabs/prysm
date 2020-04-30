@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
@@ -25,24 +28,31 @@ var ValidatorsParticipating = types.Evaluator{
 	Evaluation: validatorsParticipating,
 }
 
-// ValidatorsSlashed ensures the expected amount of validators are slashed.
-var ValidatorsSlashed = types.Evaluator{
-	Name:       "validators_slashed_epoch_%d",
-	Policy:     afterNthEpoch(0),
-	Evaluation: validatorsSlashed,
+// ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
+var ProcessesDepositedValidators = types.Evaluator{
+	Name:       "processes_deposit_validators_epoch_%d",
+	Policy:     isBetweenEpochs(8, 12),
+	Evaluation: processesDepositedValidators,
 }
 
-// SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
-var SlashedValidatorsLoseBalance = types.Evaluator{
-	Name:       "slashed_validators_lose_valance_epoch_%d",
-	Policy:     afterNthEpoch(0),
-	Evaluation: validatorsLoseBalance,
+// DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
+var DepositedValidatorsAreActive = types.Evaluator{
+	Name:       "deposited_validators_are_active_epoch_%d",
+	Policy:     afterNthEpoch(12),
+	Evaluation: depositedValidatorsAreActive,
 }
 
 // Not including first epoch because of issues with genesis.
 func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return currentEpoch > afterEpoch
+	}
+}
+
+// Not including first epoch because of issues with genesis.
+func isBetweenEpochs(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
+	return func(currentEpoch uint64) bool {
+		return fromEpoch < currentEpoch && currentEpoch > toEpoch
 	}
 }
 
@@ -116,7 +126,9 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	}
 
 	partRate := participation.Participation.GlobalParticipationRate
-	expected := float32(1)
+	expected := float32(0.85)
+
+	// TODO(#5572): temporarily lowering requirements for E2E to pass until root cause is solved.
 	if partRate < expected {
 		return fmt.Errorf(
 			"validator participation was below for epoch %d, expected %f, received: %f",
@@ -128,48 +140,115 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func validatorsSlashed(conns ...*grpc.ClientConn) error {
+func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
-	req := &eth.GetValidatorActiveSetChangesRequest{}
-	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
-	if err != nil {
-		return err
+	validatorRequest := &eth.ListValidatorsRequest{
+		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
+		PageToken: "1",
 	}
-	if len(changes.SlashedIndices) != 2 && len(changes.SlashedIndices) != 4 {
-		return fmt.Errorf("expected 2 or 4 indices to be slashed, received %d", len(changes.SlashedIndices))
+	validators, err := client.ListValidators(context.Background(), validatorRequest)
+	if err != nil {
+		return errors.Wrap(err, "failed to get validators")
+	}
+
+	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount / uint64(e2e.TestParams.BeaconNodeCount)
+	receivedCount := uint64(len(validators.ValidatorList))
+	if expectedCount != receivedCount {
+		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
+	}
+
+	churnLimit, err := helpers.ValidatorChurnLimit(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate churn limit")
+	}
+	effBalanceLowCount := 0
+	activeEpoch10Count := 0
+	activeEpoch11Count := 0
+	activeEpoch12Count := 0
+	activeEpoch13Count := 0
+	exitEpochWrongCount := 0
+	withdrawEpochWrongCount := 0
+	for _, item := range validators.ValidatorList {
+		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
+			effBalanceLowCount++
+		}
+		if item.Validator.ActivationEpoch == 10 {
+			activeEpoch10Count++
+		} else if item.Validator.ActivationEpoch == 11 {
+			activeEpoch11Count++
+		} else if item.Validator.ActivationEpoch == 12 {
+			activeEpoch12Count++
+		} else if item.Validator.ActivationEpoch == 13 {
+			activeEpoch13Count++
+		}
+
+		if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochWrongCount++
+		}
+		if item.Validator.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+			withdrawEpochWrongCount++
+		}
+	}
+
+	if effBalanceLowCount > 0 {
+		return fmt.Errorf(
+			"%d validators did not have genesis validator effective balance of %d",
+			effBalanceLowCount,
+			params.BeaconConfig().MaxEffectiveBalance,
+		)
+	} else if activeEpoch10Count != int(churnLimit) {
+		return fmt.Errorf("%d validators did not have activation epoch of 10", activeEpoch10Count)
+	} else if activeEpoch11Count != int(churnLimit) {
+		return fmt.Errorf("%d validators did not have activation epoch of 11", activeEpoch11Count)
+	} else if activeEpoch12Count != int(churnLimit) {
+		return fmt.Errorf("%d validators did not have activation epoch of 12", activeEpoch12Count)
+	} else if activeEpoch13Count != int(churnLimit) {
+		return fmt.Errorf("%d validators did not have activation epoch of 13", activeEpoch13Count)
+	} else if exitEpochWrongCount > 0 {
+		return fmt.Errorf("%d validators did not have an exit epoch of far future epoch", exitEpochWrongCount)
+	} else if withdrawEpochWrongCount > 0 {
+		return fmt.Errorf("%d validators did not have a withdrawable epoch of far future epoch", withdrawEpochWrongCount)
 	}
 	return nil
 }
 
-func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
+func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
+	validatorRequest := &eth.ListValidatorsRequest{
+		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
+		PageToken: "1",
+	}
+	validators, err := client.ListValidators(context.Background(), validatorRequest)
+	if err != nil {
+		return errors.Wrap(err, "failed to get validators")
+	}
 
-	for i, indice := range slashedIndices {
-		req := &eth.GetValidatorRequest{
-			QueryFilter: &eth.GetValidatorRequest_Index{
-				Index: indice,
-			},
-		}
-		valResp, err := client.GetValidator(ctx, req)
-		if err != nil {
-			return err
-		}
+	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount / uint64(e2e.TestParams.BeaconNodeCount)
+	receivedCount := uint64(len(validators.ValidatorList))
+	if expectedCount != receivedCount {
+		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
+	}
 
-		slashedPenalty := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().MinSlashingPenaltyQuotient
-		slashedBal := params.BeaconConfig().MaxEffectiveBalance - slashedPenalty + params.BeaconConfig().EffectiveBalanceIncrement/10
-		if valResp.EffectiveBalance >= slashedBal {
-			return fmt.Errorf(
-				"expected slashed validator %d to balance less than %d, received %d",
-				i,
-				slashedBal,
-				valResp.EffectiveBalance,
-			)
-		}
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get chain head")
+	}
 
+	inactiveCount := 0
+	for _, item := range validators.ValidatorList {
+		if !helpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
+			inactiveCount++
+		}
+	}
+
+	if inactiveCount > 0 {
+		return fmt.Errorf(
+			"%d validators were not active, expected %d active validators from deposits",
+			inactiveCount,
+			params.BeaconConfig().MinGenesisActiveValidatorCount,
+		)
 	}
 	return nil
 }

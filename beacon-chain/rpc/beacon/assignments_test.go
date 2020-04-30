@@ -18,11 +18,15 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -46,6 +50,9 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 }
 
 func TestServer_ListAssignments_NoResults(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -94,6 +101,9 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 }
 
 func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -241,6 +251,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 	if !reflect.DeepEqual(res.Assignments, wanted) {
@@ -252,6 +263,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
 
 	ctx := context.Background()
 	count := 500
@@ -332,6 +345,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 
@@ -350,6 +364,8 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
 
 	ctx := context.Background()
 	count := 100
@@ -421,6 +437,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 
@@ -430,6 +447,9 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 }
 
 func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -499,6 +519,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 			AttesterSlot:     committeeAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 
@@ -534,6 +555,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 			AttesterSlot:     cAssignments[index].AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
 			PublicKey:        val.PublicKey,
+			ValidatorIndex:   index,
 		})
 	}
 

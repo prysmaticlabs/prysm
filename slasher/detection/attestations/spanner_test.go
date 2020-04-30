@@ -825,7 +825,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 				t.Fatal(err)
 			}
 			for epoch := range tt.want {
-				sm, err := sd.slasherDB.EpochSpansMap(ctx, uint64(epoch))
+				sm, _, err := sd.slasherDB.EpochSpansMap(ctx, uint64(epoch))
 				if err != nil {
 					t.Fatalf("Failed to read from slasherDB: %v", err)
 				}

@@ -28,3 +28,15 @@ func TestBeaconState_SlotDataRace(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestNilState_NoPanic(t *testing.T) {
+	var st *BeaconState
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Method panicked when it was not supposed to: %v", r)
+		}
+	}()
+	// retrieve elements from nil state
+	_ = st.GenesisValidatorRoot()
+	_ = st.Eth1Data()
+}

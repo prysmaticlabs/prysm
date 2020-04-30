@@ -179,9 +179,8 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		if err := verifyOperationLengths(state, bb); err != nil {
-			t.Log(err)
-		}
+		err := verifyOperationLengths(state, bb)
+		_ = err
 	}
 }
 

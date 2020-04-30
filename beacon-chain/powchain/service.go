@@ -1,4 +1,6 @@
-// Package powchain defines the services that interact with the ETH1.0 of Ethereum.
+// Package powchain defines a runtime service which is tasked with
+// communicating with an eth1 endpoint, processing logs from a deposit
+// contract, and the latest eth1 data headers for usage in the beacon node.
 package powchain
 
 import (
@@ -163,7 +165,7 @@ type Web3ServiceConfig struct {
 // NewService sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
 func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error) {
-	if !strings.HasPrefix(config.ETH1Endpoint, "ws") && !strings.HasPrefix(config.ETH1Endpoint, "ipc") {
+	if !strings.HasPrefix(config.ETH1Endpoint, "ws") && !strings.HasSuffix(config.ETH1Endpoint, "ipc") {
 		return nil, fmt.Errorf(
 			"powchain service requires either an IPC or WebSocket endpoint, provided %s",
 			config.ETH1Endpoint,

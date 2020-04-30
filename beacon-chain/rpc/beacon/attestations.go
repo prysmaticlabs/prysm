@@ -128,7 +128,7 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	if featureconfig.Get().DisableNewStateMgmt {
+	if !featureconfig.Get().NewStateMgmt {
 		return nil, status.Error(codes.Internal, "New state management must be turned on to support historic attestation. Please run without --disable-new-state-mgmt flag")
 	}
 

@@ -1,3 +1,5 @@
+// Package flags contains all configuration runtime flags for
+// the slasher service.
 package flags
 
 import (
@@ -42,10 +44,5 @@ var (
 	RebuildSpanMapsFlag = &cli.BoolFlag{
 		Name:  "rebuild-span-maps",
 		Usage: "Rebuild span maps from indexed attestations in db",
-	}
-	// UseSpanCacheFlag enables the slasher to use span cache.
-	UseSpanCacheFlag = &cli.BoolFlag{
-		Name:  "span-map-cache",
-		Usage: "Enable span map cache",
 	}
 )

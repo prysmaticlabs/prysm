@@ -1,3 +1,5 @@
+// Package flags defines beacon-node specific runtime flags for
+// setting important values such as ports, eth1 endpoints, and more.
 package flags
 
 import (
@@ -115,5 +117,11 @@ var (
 	DisableDiscv5 = &cli.BoolFlag{
 		Name:  "disable-discv5",
 		Usage: "Does not run the discoveryV5 dht.",
+	}
+	// BlockBatchLimit specifies the requested block batch size.
+	BlockBatchLimit = &cli.IntFlag{
+		Name:  "block-batch-limit",
+		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
+		Value: 64,
 	}
 )

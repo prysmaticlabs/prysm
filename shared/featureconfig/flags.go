@@ -122,9 +122,9 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	disableNewStateMgmt = &cli.BoolFlag{
-		Name:  "disable-new-state-mgmt",
-		Usage: "This disables the usage of state mgmt service across Prysm",
+	enableNewStateMgmt = &cli.BoolFlag{
+		Name:  "enable-new-state-mgmt",
+		Usage: "This enable the usage of state mgmt service across Prysm",
 	}
 	disableInitSyncQueue = &cli.BoolFlag{
 		Name:  "disable-init-sync-queue",
@@ -309,6 +309,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedUseSpanCacheFlag = &cli.BoolFlag{
+		Name:   "span-map-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -341,6 +346,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedProtectProposerFlag,
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
+	deprecatedUseSpanCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -351,6 +357,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableDomainDataCacheFlag,
 	waitForSyncedFlag,
 }...)
+
+// SlasherFlags contains a list of all the feature flags that apply to the slasher client.
+var SlasherFlags = append(deprecatedFlags, []cli.Flag{}...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
@@ -382,7 +391,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
-	disableNewStateMgmt,
+	enableNewStateMgmt,
 	disableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,
@@ -400,4 +409,5 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
+	"--enable-new-state-mgmt",
 }

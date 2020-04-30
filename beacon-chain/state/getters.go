@@ -126,7 +126,7 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 // HasInnerState detects if the internal reference to the state data structure
 // is populated correctly. Returns false if nil.
 func (b *BeaconState) HasInnerState() bool {
-	return b.state != nil
+	return b != nil && b.state != nil
 }
 
 // GenesisTime of the beacon state as a uint64.
@@ -451,7 +451,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
 func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
 	b.lock.RLock()
-	b.lock.RUnlock()
+	defer b.lock.RUnlock()
 	idx, ok := b.valIdxMap[key]
 	return idx, ok
 }

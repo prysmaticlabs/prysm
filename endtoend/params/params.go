@@ -1,3 +1,5 @@
+// Package params defines all custom parameter configurations
+// for running end to end tests.
 package params
 
 import (

@@ -65,7 +65,7 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if !featureconfig.Get().DisableNewStateMgmt {
+		if featureconfig.Get().NewStateMgmt {
 			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
 			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
 			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
@@ -96,7 +96,7 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if !featureconfig.Get().DisableNewStateMgmt {
+		if featureconfig.Get().NewStateMgmt {
 			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
 			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
 			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil

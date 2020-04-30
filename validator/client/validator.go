@@ -234,28 +234,33 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			"status": status.Status.Status.String(),
 		})
 		if v.emitAccountMetrics {
-			fmtKey := fmt.Sprintf("%#x", status.PublicKey[:])
+			fmtKey := fmt.Sprintf("%#x", status.PublicKey)
 			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
 		}
 		switch status.Status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
+			log.Info("Waiting for deposit to be observed by beacon node")
+		case ethpb.ValidatorStatus_DEPOSITED:
 			if status.Status.DepositInclusionSlot != 0 {
 				log.WithFields(logrus.Fields{
 					"expectedInclusionSlot":  status.Status.DepositInclusionSlot,
 					"eth1DepositBlockNumber": status.Status.Eth1DepositBlockNumber,
-				}).Info("Waiting for deposit to be processed by the beacon chain")
+				}).Info("Deposit for validator received but not processed into the beacon state")
 			} else {
-				log.Info("Waiting for a deposit to be put into an eth1 block")
+				log.WithField(
+					"positionInActivationQueue", status.Status.PositionInActivationQueue,
+				).Info("Deposit processed, entering activation queue after finalization")
 			}
-		case ethpb.ValidatorStatus_DEPOSITED:
-			log.WithField(
-				"positionInActivationQueue", status.Status.PositionInActivationQueue,
-			).Info("Deposit processed, entering activation queue after finalization")
 		case ethpb.ValidatorStatus_PENDING:
-			log.WithFields(logrus.Fields{
-				"positionInActivationQueue": status.Status.PositionInActivationQueue,
-				"activationEpoch":           status.Status.ActivationEpoch,
-			}).Info("Waiting to be activated")
+			if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+				log.WithFields(logrus.Fields{
+					"positionInActivationQueue": status.Status.PositionInActivationQueue,
+				}).Info("Waiting to be assigned activation epoch")
+			} else {
+				log.WithFields(logrus.Fields{
+					"activationEpoch": status.Status.ActivationEpoch,
+				}).Info("Waiting for activation")
+			}
 		case ethpb.ValidatorStatus_ACTIVE:
 			activatedKeys = append(activatedKeys, status.PublicKey)
 		case ethpb.ValidatorStatus_EXITED:
@@ -324,33 +329,16 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	}
 
 	v.duties = resp
+	v.logDuties(slot, v.duties.Duties)
 	subscribeSlots := make([]uint64, 0, len(validatingKeys))
 	subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
 	subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range v.duties.Duties {
-		lFields := logrus.Fields{
-			"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
-			"validatorIndex": duty.ValidatorIndex,
-			"committeeIndex": duty.CommitteeIndex,
-			"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
-			"status":         duty.Status,
-		}
-
-		if v.emitAccountMetrics {
-			fmtKey := fmt.Sprintf("%#x", duty.PublicKey[:])
-			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
-		}
-
-		if duty.Status == ethpb.ValidatorStatus_ACTIVE {
+		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
-
-			if len(duty.ProposerSlots) > 0 {
-				lFields["proposerSlots"] = duty.ProposerSlots
-			}
-			lFields["attesterSlot"] = attesterSlot
 
 			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
 			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
@@ -364,10 +352,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 			if aggregator {
 				alreadySubscribed[alreadySubscribedKey] = true
 			}
+
 			subscribeSlots = append(subscribeSlots, attesterSlot)
 			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
-			log.WithFields(lFields).Info("New assignment")
 		}
 	}
 
@@ -379,7 +367,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		return err
 	}
 	for _, duty := range dutiesNextEpoch.Duties {
-		if duty.Status == ethpb.ValidatorStatus_ACTIVE {
+		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
 
@@ -519,6 +507,54 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 	}
 
 	return res, nil
+}
+
+func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) {
+	attesterKeys := make([][]string, params.BeaconConfig().SlotsPerEpoch)
+	for i := range attesterKeys {
+		attesterKeys[i] = make([]string, 0)
+	}
+	proposerKeys := make([]string, params.BeaconConfig().SlotsPerEpoch)
+	slotOffset := helpers.StartSlot(helpers.SlotToEpoch(slot))
+
+	for _, duty := range duties {
+		if v.emitAccountMetrics {
+			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
+			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+		}
+
+		// Only interested in validators who are attesting/proposing.
+		// Note that SLASHING validators will have duties but their results are ignored by the network so we don't bother with them.
+		if duty.Status != ethpb.ValidatorStatus_ACTIVE && duty.Status != ethpb.ValidatorStatus_EXITING {
+			continue
+		}
+
+		validatorKey := fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey))
+		attesterIndex := duty.AttesterSlot - slotOffset
+		if attesterIndex >= params.BeaconConfig().SlotsPerEpoch {
+			log.WithField("duty", duty).Warn("Invalid attester slot")
+		} else {
+			attesterKeys[duty.AttesterSlot-slotOffset] = append(attesterKeys[duty.AttesterSlot-slotOffset], validatorKey)
+		}
+
+		for _, proposerSlot := range duty.ProposerSlots {
+			proposerIndex := proposerSlot - slotOffset
+			if proposerIndex >= params.BeaconConfig().SlotsPerEpoch {
+				log.WithField("duty", duty).Warn("Invalid proposer slot")
+			} else {
+				proposerKeys[proposerIndex] = validatorKey
+			}
+		}
+	}
+
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		if len(attesterKeys[i]) > 0 {
+			log.WithField("slot", slotOffset+i).WithField("attesters", len(attesterKeys[i])).WithField("pubKeys", attesterKeys[i]).Info("Attestation schedule")
+		}
+		if proposerKeys[i] != "" {
+			log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
+		}
+	}
 }
 
 // This constructs a validator subscribed key, it's used to track

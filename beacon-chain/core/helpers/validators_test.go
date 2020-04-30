@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -181,6 +183,62 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 				result,
 			)
 		}
+	}
+}
+
+func TestComputeProposerIndex_Compatibility(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	indices, err := ActiveValidatorIndices(state, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var proposerIndices []uint64
+	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+		proposerIndices = append(proposerIndices, index)
+	}
+
+	var wantedProposerIndices []uint64
+	seed, err = Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		index, err := ComputeProposerIndexWithValidators(state.Validators(), indices, seedWithSlotHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantedProposerIndices = append(wantedProposerIndices, index)
+	}
+
+	if !reflect.DeepEqual(wantedProposerIndices, proposerIndices) {
+		t.Error("Wanted proposer indices from ComputeProposerIndexWithValidators does not match")
 	}
 }
 
@@ -541,7 +599,13 @@ func TestComputeProposerIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ComputeProposerIndex(tt.args.validators, tt.args.indices, tt.args.seed)
+			bState := &pb.BeaconState{Validators: tt.args.validators}
+			stTrie, err := beaconstate.InitializeFromProtoUnsafe(bState)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			got, err := ComputeProposerIndex(stTrie, tt.args.indices, tt.args.seed)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ComputeProposerIndex() error = %v, wantErr %v", err, tt.wantErr)
 				return

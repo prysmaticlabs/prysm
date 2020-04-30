@@ -59,7 +59,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		if !s.stateGen.StateSummaryExists(ctx, headRoot) {
 			return nil
 		}
@@ -81,7 +81,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// Get the new head state from cached state or DB.
 	var newHeadState *state.BeaconState
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		newHeadState, err = s.stateGen.StateByRoot(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
@@ -121,7 +121,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 
 	var headState *state.BeaconState
 	var err error
-	if !featureconfig.Get().DisableNewStateMgmt {
+	if featureconfig.Get().NewStateMgmt {
 		headState, err = s.stateGen.StateByRoot(ctx, r)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
@@ -200,6 +200,14 @@ func (s *Service) headState() *state.BeaconState {
 	defer s.headLock.RUnlock()
 
 	return s.head.state.Copy()
+}
+
+// This returns the genesis validator root of the head state.
+func (s *Service) headGenesisValidatorRoot() [32]byte {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
 }
 
 // Returns true if head state exists.

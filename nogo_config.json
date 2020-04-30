@@ -85,6 +85,11 @@
       ".*/testmain\\.go": "Test runner generated code"
     }
   },
+  "featureconfig": {
+    "only_files": {
+      ".*_test\\.go":  "Only tests"
+    }
+  },
   "pkgfact": {
     "exclude_files": {
       "external/.*": "Third party code"

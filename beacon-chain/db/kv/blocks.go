@@ -263,7 +263,7 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
-		if !featureconfig.Get().DisableNewStateMgmt {
+		if featureconfig.Get().NewStateMgmt {
 			hasStateSummaryInCache := k.stateSummaryCache.Has(blockRoot)
 			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
 			hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil

@@ -1,3 +1,6 @@
+// Package iface defines an interface for the slasher database,
+// providing more advanced interfaces such as a
+// ReadOnlyDatabase.
 package iface
 
 import (
@@ -28,8 +31,9 @@ type ReadOnlyDatabase interface {
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 
 	// MinMaxSpan related methods.
-	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, error)
+	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, bool, error)
 	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (detectionTypes.Span, error)
+	EpochsSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]detectionTypes.Span, error)
 
 	// ProposerSlashing related methods.
 	ProposalSlashingsByStatus(ctx context.Context, status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
@@ -64,6 +68,7 @@ type WriteAccessDatabase interface {
 	SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]detectionTypes.Span) error
 	SaveValidatorEpochSpan(ctx context.Context, validatorIdx uint64, epoch uint64, spans detectionTypes.Span) error
 	SaveCachedSpansMaps(ctx context.Context) error
+	SaveEpochsSpanByValidatorsIndices(ctx context.Context, epochsSpans map[uint64]map[uint64]detectionTypes.Span) error
 	DeleteEpochSpans(ctx context.Context, validatorIdx uint64) error
 	DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
 

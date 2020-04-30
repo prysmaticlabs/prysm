@@ -12,7 +12,8 @@ The process for implementing new features using this package is as follows:
 	cfg := &featureconfig.Flags{
 		VerifyAttestationSigs: true,
 	}
-	featureconfig.Init(cfg)
+	resetCfg := featureconfig.InitWithReset(cfg)
+	defer resetCfg()
 	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
 	and E2EBeaconChainFlags.
 */
@@ -46,7 +47,7 @@ type Flags struct {
 	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
-	DisableNewStateMgmt                        bool // NewStateMgmt disables the new state mgmt service.
+	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	DisableInitSyncQueue                       bool // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
@@ -84,6 +85,54 @@ func Get() *Flags {
 // Init sets the global config equal to the config that is passed in.
 func Init(c *Flags) {
 	featureConfig = c
+}
+
+// InitWithReset sets the global config and returns function that is used to reset configuration.
+func InitWithReset(c *Flags) func() {
+	resetFunc := func() {
+		Init(&Flags{})
+	}
+	Init(c)
+	return resetFunc
+}
+
+// Copy returns copy of the config object.
+func (c *Flags) Copy() *Flags {
+	return &Flags{
+		MinimalConfig:                              c.MinimalConfig,
+		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
+		InitSyncNoVerify:                           c.InitSyncNoVerify,
+		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
+		SkipBLSVerify:                              c.SkipBLSVerify,
+		EnableBackupWebhook:                        c.EnableStateRefCopy,
+		PruneEpochBoundaryStates:                   c.PruneEpochBoundaryStates,
+		EnableSnappyDBCompression:                  c.EnableSnappyDBCompression,
+		ProtectProposer:                            c.ProtectProposer,
+		ProtectAttester:                            c.ProtectAttester,
+		DisableStrictAttestationPubsubVerification: c.DisableStrictAttestationPubsubVerification,
+		DisableUpdateHeadPerAttestation:            c.DisableUpdateHeadPerAttestation,
+		EnableByteMempool:                          c.EnableByteMempool,
+		EnableDomainDataCache:                      c.EnableDomainDataCache,
+		EnableStateGenSigVerify:                    c.EnableStateGenSigVerify,
+		CheckHeadState:                             c.CheckHeadState,
+		EnableNoise:                                c.EnableNoise,
+		DontPruneStateStartUp:                      c.DontPruneStateStartUp,
+		NewStateMgmt:                               c.NewStateMgmt,
+		DisableInitSyncQueue:                       c.DisableInitSyncQueue,
+		EnableFieldTrie:                            c.EnableFieldTrie,
+		EnableBlockHTR:                             c.EnableBlockHTR,
+		NoInitSyncBatchSaveBlocks:                  c.NoInitSyncBatchSaveBlocks,
+		EnableStateRefCopy:                         c.EnableStateRefCopy,
+		WaitForSynced:                              c.WaitForSynced,
+		DisableForkChoice:                          c.DisableForkChoice,
+		BroadcastSlashings:                         c.BroadcastSlashings,
+		EnableSSZCache:                             c.EnableSSZCache,
+		EnableEth1DataVoteCache:                    c.EnableEth1DataVoteCache,
+		EnableSlasherConnection:                    c.EnableSlasherConnection,
+		EnableBlockTreeCache:                       c.EnableBlockTreeCache,
+		KafkaBootstrapServers:                      c.KafkaBootstrapServers,
+		CustomGenesisDelay:                         c.CustomGenesisDelay,
+	}
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -176,9 +225,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(disableNewStateMgmt.Name) {
-		log.Warn("Disabling state management service")
-		cfg.DisableNewStateMgmt = true
+	if ctx.Bool(enableNewStateMgmt.Name) {
+		log.Warn("Enabling state management service")
+		cfg.NewStateMgmt = true
 	}
 	if ctx.Bool(disableInitSyncQueue.Name) {
 		log.Warn("Disabled initial sync queue")
@@ -205,6 +254,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.BroadcastSlashings = true
 	}
 	Init(cfg)
+}
+
+// ConfigureSlasher sets the global config based
+// on what flags are enabled for the slasher client.
+func ConfigureSlasher(ctx *cli.Context) {
+	complainOnDeprecatedFlags(ctx)
 }
 
 // ConfigureValidator sets the global config based

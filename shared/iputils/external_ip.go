@@ -1,3 +1,4 @@
+// Package iputils contains useful functions for ip address formatting.
 package iputils
 
 import (

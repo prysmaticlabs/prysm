@@ -1,3 +1,5 @@
+// Package prometheus defines a service which is used for metrics collection
+// and health of a node in Prysm.
 package prometheus
 
 import (
@@ -52,39 +54,49 @@ func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry, addi
 	return s
 }
 
-func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
-	// Call all services in the registry.
-	// if any are not OK, write 500
-	// print the statuses of all services.
+func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
+	response := generatedResponse{}
 
-	statuses := s.svcRegistry.Statuses()
-	hasError := false
-	var buf bytes.Buffer
-	for k, v := range statuses {
-		var status string
-		if v == nil {
-			status = "OK"
-		} else {
-			hasError = true
-			status = "ERROR " + v.Error()
+	type serviceStatus struct {
+		Name   string `json:"service"`
+		Status bool   `json:"status"`
+		Err    string `json:"error"`
+	}
+	var statuses []serviceStatus
+	for k, v := range s.svcRegistry.Statuses() {
+		s := serviceStatus{
+			Name:   fmt.Sprintf("%s", k),
+			Status: true,
 		}
+		if v != nil {
+			s.Status = false
+			s.Err = v.Error()
+		}
+		statuses = append(statuses, s)
+	}
+	response.Data = statuses
 
-		if _, err := buf.WriteString(fmt.Sprintf("%s: %s\n", k, status)); err != nil {
-			hasError = true
+	// Handle plain text content.
+	if contentType := negotiateContentType(r); contentType == contentTypePlainText {
+		var buf bytes.Buffer
+		for _, s := range statuses {
+			var status string
+			if s.Status {
+				status = "OK"
+			} else {
+				status = "ERROR " + s.Err
+			}
+
+			if _, err := buf.WriteString(fmt.Sprintf("%s: %s\n", s.Name, status)); err != nil {
+				response.Err = err.Error()
+				break
+			}
 		}
+		response.Data = buf
 	}
 
-	// Write status header
-	if hasError {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.WithField("statuses", buf.String()).Warn("Node is unhealthy!")
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
-
-	// Write http body
-	if _, err := w.Write(buf.Bytes()); err != nil {
-		log.Errorf("Could not write healthz body %v", err)
+	if err := writeResponse(w, r, response); err != nil {
+		log.Errorf("Error writing response: %v", err)
 	}
 }
 

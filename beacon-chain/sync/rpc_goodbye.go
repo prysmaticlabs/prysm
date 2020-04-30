@@ -6,6 +6,8 @@ import (
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
 const (
@@ -39,6 +41,24 @@ func (r *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	log.WithField("peer", stream.Conn().RemotePeer()).Info("Peer has sent a goodbye message")
 	// closes all streams with the peer
 	return r.p2p.Disconnect(stream.Conn().RemotePeer())
+}
+
+func (r *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	stream, err := r.p2p.Send(ctx, &code, p2p.RPCGoodByeTopic, id)
+	if err != nil {
+		return err
+	}
+	log := log.WithField("Reason", goodbyeMessage(code))
+	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Sending Goodbye message to peer")
+	return nil
+}
+
+// sends a goodbye message for a generic error
+func (r *Service) sendGenericGoodbyeMessage(ctx context.Context, id peer.ID) error {
+	return r.sendGoodByeMessage(ctx, codeGenericError, id)
 }
 
 func goodbyeMessage(num uint64) string {

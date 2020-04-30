@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -100,7 +101,7 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	data := &ethpb.AttestationData{}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,7 +337,10 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	}
 }
 
-func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
+func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
@@ -376,11 +380,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	attesterDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, attesterDomain)
 	if err != nil {
 		t.Error(err)
 	}
@@ -391,7 +395,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, domain)
+	selectionDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,11 +412,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
-	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, domain)
+	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
 	if err != nil {
 		t.Error(err)
 	}
@@ -497,11 +505,11 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 		t.Error(err)
 	}
 	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
+	attesterDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, attesterDomain)
 	if err != nil {
 		t.Error(err)
 	}
@@ -512,7 +520,11 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, domain)
+	selectionDomain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainSelectionProof, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, selectionDomain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,11 +537,11 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
-	domain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
+	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
-	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, domain)
+	signingRoot, err := helpers.ComputeSigningRoot(signedAggregateAndProof.Message, attesterDomain)
 	if err != nil {
 		t.Error(err)
 	}

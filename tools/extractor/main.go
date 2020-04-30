@@ -19,13 +19,9 @@ var (
 	state = flag.Uint("state", 0, "Extract state at this slot.")
 )
 
-func init() {
-	fc := featureconfig.Get()
-	fc.WriteSSZStateTransitions = true
-	featureconfig.Init(fc)
-}
-
 func main() {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{WriteSSZStateTransitions: true})
+	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")
 	d, err := db.NewDB(*datadir, cache.NewStateSummaryCache())

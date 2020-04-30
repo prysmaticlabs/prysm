@@ -2,6 +2,7 @@ package evaluators
 
 import (
 	"context"
+	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -22,6 +23,20 @@ var InjectDoubleVote = types.Evaluator{
 	Evaluation: insertDoubleAttestationIntoPool,
 }
 
+// ValidatorsSlashed ensures the expected amount of validators are slashed.
+var ValidatorsSlashed = types.Evaluator{
+	Name:       "validators_slashed_epoch_%d",
+	Policy:     afterNthEpoch(0),
+	Evaluation: validatorsSlashed,
+}
+
+// SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
+var SlashedValidatorsLoseBalance = types.Evaluator{
+	Name:       "slashed_validators_lose_valance_epoch_%d",
+	Policy:     afterNthEpoch(0),
+	Evaluation: validatorsLoseBalance,
+}
+
 var slashedIndices []uint64
 
 // Not including first epoch because of issues with genesis.
@@ -29,6 +44,52 @@ func beforeEpoch(epoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
 		return currentEpoch < epoch
 	}
+}
+
+func validatorsSlashed(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	ctx := context.Background()
+	client := eth.NewBeaconChainClient(conn)
+	req := &eth.GetValidatorActiveSetChangesRequest{}
+	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
+	if err != nil {
+		return err
+	}
+	if len(changes.SlashedIndices) != 2 && len(changes.SlashedIndices) != 4 {
+		return fmt.Errorf("expected 2 or 4 indices to be slashed, received %d", len(changes.SlashedIndices))
+	}
+	return nil
+}
+
+func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	ctx := context.Background()
+	client := eth.NewBeaconChainClient(conn)
+
+	for i, indice := range slashedIndices {
+		req := &eth.GetValidatorRequest{
+			QueryFilter: &eth.GetValidatorRequest_Index{
+				Index: indice,
+			},
+		}
+		valResp, err := client.GetValidator(ctx, req)
+		if err != nil {
+			return err
+		}
+
+		slashedPenalty := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().MinSlashingPenaltyQuotient
+		slashedBal := params.BeaconConfig().MaxEffectiveBalance - slashedPenalty + params.BeaconConfig().EffectiveBalanceIncrement/10
+		if valResp.EffectiveBalance >= slashedBal {
+			return fmt.Errorf(
+				"expected slashed validator %d to balance less than %d, received %d",
+				i,
+				slashedBal,
+				valResp.EffectiveBalance,
+			)
+		}
+
+	}
+	return nil
 }
 
 func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {

@@ -34,7 +34,7 @@ func (r *Service) maintainPeerStatuses() {
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
 					if err := r.reValidatePeer(r.ctx, id); err != nil {
-						log.WithField("peer", id).WithError(err).Error("Failed to reValidate peer")
+						log.WithField("peer", id).WithError(err).Error("Failed to revalidate peer")
 					}
 				}
 			}(pid)
