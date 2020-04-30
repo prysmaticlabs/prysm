@@ -1,15 +1,13 @@
 package fuzz
 
 import (
+	"os"
 	"strings"
 
 	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
-
-const PanicOnError = "false"
-const ReturnSSZPostState = false
 
 func init() {
 	featureconfig.Init(&featureconfig.Flags{
@@ -18,15 +16,21 @@ func init() {
 }
 
 func fail(err error) ([]byte, bool) {
-	if strings.ToLower(PanicOnError) == "true" {
+	shouldPanic := true
+	if val, ok := os.LookupEnv("PANIC_ON_ERROR"); ok {
+		shouldPanic = strings.ToLower(val) == "true"
+	}
+	if shouldPanic {
 		panic(err)
 	}
 	return nil, false
 }
 
 func success(post *stateTrie.BeaconState) ([]byte, bool) {
-	if !ReturnSSZPostState {
-		return nil, true
+	if val, ok := os.LookupEnv("RETURN_SSZ_POST_STATE"); ok {
+		if strings.ToLower(val) != "true" {
+			return nil, true
+		}
 	}
 
 	result, err := ssz.Marshal(post.InnerStateUnsafe())
