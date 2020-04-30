@@ -53,7 +53,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 	// Verify this is the first aggregate received from the aggregator with index and slot.
-	if r.hasSeenAggregatorIndexEpoch(helpers.SlotToEpoch(m.Message.Aggregate.Data.Slot), m.Message.AggregatorIndex) {
+	if r.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
 		return false
 	}
 
@@ -74,7 +74,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	r.setAggregatorIndexEpochSeen(helpers.SlotToEpoch(m.Message.Aggregate.Data.Slot), m.Message.AggregatorIndex)
+	r.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
 
@@ -150,7 +150,7 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, s *ethpb.Signe
 	return true
 }
 
-// Returns true if the node has received aggregate for the aggregator with index and epoch.
+// Returns true if the node has received aggregate for the aggregator with index and target epoch.
 func (r *Service) hasSeenAggregatorIndexEpoch(epoch uint64, aggregatorIndex uint64) bool {
 	r.seenAttestationLock.RLock()
 	defer r.seenAttestationLock.RUnlock()
@@ -159,7 +159,7 @@ func (r *Service) hasSeenAggregatorIndexEpoch(epoch uint64, aggregatorIndex uint
 	return seen
 }
 
-// Set aggregate's aggregator index epoch as seen.
+// Set aggregate's aggregator index target epoch as seen.
 func (r *Service) setAggregatorIndexEpochSeen(epoch uint64, aggregatorIndex uint64) {
 	r.seenAttestationLock.Lock()
 	defer r.seenAttestationLock.Unlock()

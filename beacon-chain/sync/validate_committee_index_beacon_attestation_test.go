@@ -99,7 +99,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  1,
-					Slot:            62,
+					Slot:            63,
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
