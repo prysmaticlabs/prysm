@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// BeaconFuzzVoluntaryExit implements libfuzzer and beacon fuzz interface.
 func BeaconFuzzVoluntaryExit(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputVoluntaryExitWrapper{}

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// BeaconFuzzDeposit implements libfuzzer and beacon fuzz interface.
 func BeaconFuzzProposerSlashing(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputProposerSlashingWrapper{}

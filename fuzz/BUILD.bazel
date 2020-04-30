@@ -169,7 +169,6 @@ go_library(
         "deposit_fuzz.go",
         "inputs.go",
         "rpc_status_fuzz.go",
-        "shuffle_fuzz.go",
         "ssz_cache_fuzz.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/fuzz",

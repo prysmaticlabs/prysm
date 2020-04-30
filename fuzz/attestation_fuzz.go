@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// BeaconFuzzAttestation implements libfuzzer and beacon fuzz interface.
 func BeaconFuzzAttestation(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputAttestationWrapper{}

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// BeaconFuzzAttesterSlashing implements libfuzzer and beacon fuzz interface.
 func BeaconFuzzAttesterSlashing(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputAttesterSlashingWrapper{}
