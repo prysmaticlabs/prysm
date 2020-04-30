@@ -142,17 +142,17 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeExit(arg0, arg1 inte
 }
 
 // StreamDuties mocks base method
-func (m *MockBeaconNodeValidatorServer) StreamDuties(arg0 eth.BeaconNodeValidator_StreamDutiesServer) error {
+func (m *MockBeaconNodeValidatorServer) StreamDuties(arg0 *eth.DutiesRequest, arg1 eth.BeaconNodeValidator_StreamDutiesServer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamDuties", arg0)
+	ret := m.ctrl.Call(m, "StreamDuties", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StreamDuties indicates an expected call of StreamDuties
-func (mr *MockBeaconNodeValidatorServerMockRecorder) StreamDuties(arg0 interface{}) *gomock.Call {
+func (mr *MockBeaconNodeValidatorServerMockRecorder) StreamDuties(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamDuties", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).StreamDuties), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamDuties", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).StreamDuties), arg0, arg1)
 }
 
 // SubmitAggregateSelectionProof mocks base method
@@ -664,21 +664,6 @@ func (m *MockBeaconNodeValidator_StreamDutiesServer) Context() context.Context {
 func (mr *MockBeaconNodeValidator_StreamDutiesServerMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconNodeValidator_StreamDutiesServer)(nil).Context))
-}
-
-// Recv mocks base method
-func (m *MockBeaconNodeValidator_StreamDutiesServer) Recv() (*eth.DutiesRequest, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*eth.DutiesRequest)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Recv indicates an expected call of Recv
-func (mr *MockBeaconNodeValidator_StreamDutiesServerMockRecorder) Recv() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockBeaconNodeValidator_StreamDutiesServer)(nil).Recv))
 }
 
 // RecvMsg mocks base method
