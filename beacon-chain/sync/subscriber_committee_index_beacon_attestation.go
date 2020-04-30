@@ -24,7 +24,7 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	if a.Data == nil {
 		return errors.New("nil attestation")
 	}
-	r.setSeenCommitteeIndicesEpoch(helpers.SlotToEpoch(a.Data.Slot), a.Data.CommitteeIndex, a.AggregationBits)
+	r.setSeenCommitteeIndicesSlot(a.Data.Slot, a.Data.CommitteeIndex, a.AggregationBits)
 
 	exists, err := r.attPool.HasAggregatedAttestation(a)
 	if err != nil {
