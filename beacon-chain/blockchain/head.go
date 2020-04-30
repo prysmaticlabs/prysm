@@ -112,7 +112,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 
-	// A chain re-org occurred, so we fire an event notifying the rest of the repo.
+	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	if newHeadState.Slot() < currentHeadSlot {
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
