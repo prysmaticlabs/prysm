@@ -950,59 +950,38 @@ func (bs *Server) GetValidatorPerformance(
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	// Get performance based on provided validator indices.
-	// Also track missing validators using public keys.
-	for _, idx := range req.Indices {
-		val, err := headState.ValidatorAtIndex(idx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
-		}
-		if idx >= uint64(len(validatorSummary)) {
-			// Not listed in validator summary yet; treat it as missing.
-			missingValidators = append(missingValidators, val.PublicKey)
-			continue
-		}
-		currentEpoch := helpers.CurrentEpoch(headState)
-		if !helpers.IsActiveValidator(val, currentEpoch) {
-			// Inactive validator; treat it as missing.
-			missingValidators = append(missingValidators, val.PublicKey)
-			continue
-		}
-
-		summary := validatorSummary[idx]
-		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
-		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
-		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
-		inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
-		inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
-		correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
-		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
-		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
-	}
-
-	// Convert the list of validator public keys to list of validator indices.
-	// Also track missing validators using public keys.
+	validatorIndices := make(map[uint64]bool)
+	// Convert the list of validator public keys to validator indices and add to the indices set.
 	for _, key := range req.PublicKeys {
 		pubkeyBytes := bytesutil.ToBytes48(key)
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
+			// Validator index not found, track as missing.
 			missingValidators = append(missingValidators, key)
 			continue
 		}
-
+		validatorIndices[idx] = true
+	}
+	// Add provided indices to the indices set.
+	for _, idx := range req.Indices {
+		validatorIndices[idx] = true
+	}
+	// Append performance summaries
+	// Also track missing validators using public keys.
+	for idx := range validatorIndices {
 		val, err := headState.ValidatorAtIndex(idx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
 		}
 		if idx >= uint64(len(validatorSummary)) {
 			// Not listed in validator summary yet; treat it as missing.
-			missingValidators = append(missingValidators, key)
+			missingValidators = append(missingValidators, val.PublicKey)
 			continue
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
 		if !helpers.IsActiveValidator(val, currentEpoch) {
 			// Inactive validator; treat it as missing.
-			missingValidators = append(missingValidators, key)
+			missingValidators = append(missingValidators, val.PublicKey)
 			continue
 		}
 
