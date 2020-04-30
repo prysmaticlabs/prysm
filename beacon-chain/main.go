@@ -154,7 +154,7 @@ func main() {
 			}
 			conf := params.BeaconConfig()
 			if err := yaml.Unmarshal(yamlFile, conf); err != nil {
-				log.WithError(err).Error("Failed to parse chain config yaml file.")
+				log.WithError(err).Error("Failed to parse chain config YAML file.")
 			}
 			params.OverrideBeaconConfig(conf)
 		}
