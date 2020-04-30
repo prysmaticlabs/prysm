@@ -1,6 +1,6 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
-load("//tools:fuzz.bzl", "go_fuzz_test")
+load("//tools/go:fuzz.bzl", "go_fuzz_test")
 load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 ssz_gen_marshal(
