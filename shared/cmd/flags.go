@@ -171,7 +171,7 @@ var (
 	}
 	// ConfigFileFlag specifies the filepath to load flag values.
 	ConfigFileFlag = &cli.StringFlag{
-		Name:  "flag-config-file",
+		Name:  "config-file",
 		Usage: "The filepath to a yaml file with flag values",
 	}
 	// ChainConfigFileFlag specifies the filepath to load flag values.
