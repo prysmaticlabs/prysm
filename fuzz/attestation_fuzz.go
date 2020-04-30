@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	prylabs_testing "github.com/prysmaticlabs/prysm/beacon-chain/testing"
+	prylabs_testing "github.com/prysmaticlabs/prysm/fuzz/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -16,8 +16,8 @@ func BeaconFuzzAttestation(b []byte) ([]byte, bool) {
 	if err := ssz.Unmarshal(b, input); err != nil {
 		return fail(err)
 	}
-	s := prylabs_testing.GetBeaconFuzzState(input.StateID)
-	if s == nil {
+	s, err := prylabs_testing.GetBeaconFuzzState(input.StateID)
+	if err != nil || s == nil {
 		return nil, false
 	}
 	st, err := stateTrie.InitializeFromProto(s)
