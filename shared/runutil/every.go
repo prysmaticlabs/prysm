@@ -1,3 +1,4 @@
+// Package runutil includes helpers for scheduling runnable, periodic functions.
 package runutil
 
 import (

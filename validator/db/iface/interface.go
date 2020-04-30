@@ -1,4 +1,4 @@
-// Package iface exists to prevent circular dependencies when implementing the database interface.
+// Package iface defines an interface for the validator database.
 package iface
 
 import (

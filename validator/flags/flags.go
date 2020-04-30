@@ -1,3 +1,5 @@
+// Package flags contains all configuration runtime flags for
+// the validator service.
 package flags
 
 import (

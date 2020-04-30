@@ -291,7 +291,7 @@ func archivedValidatorCommittee(
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		seedWithSlot := append(proposerSeed[:], bytesutil.Bytes8(slot)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
-		i, err := helpers.ComputeProposerIndex(activeVals, activeIndices, seedWithSlotHash)
+		i, err := helpers.ComputeProposerIndexWithValidators(activeVals, activeIndices, seedWithSlotHash)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not check proposer at slot %d", slot)
 		}

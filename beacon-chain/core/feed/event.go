@@ -1,3 +1,5 @@
+// Package feed defines event feed types for inter-service communication
+// during a beacon node's runtime.
 package feed
 
 // How to add a new event to the feed:

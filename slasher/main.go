@@ -1,3 +1,6 @@
+// Package main defines slasher server implementation for eth2. A slasher
+// listens for all broadcasted messages using a running beacon node in order
+// to detect malicious attestations and block proposals.
 package main
 
 import (
@@ -21,15 +24,14 @@ import (
 
 var log = logrus.WithField("prefix", "main")
 
-func startSlasher(ctx *cli.Context) error {
-	featureconfig.ConfigureSlasher(ctx)
-	verbosity := ctx.String(cmd.VerbosityFlag.Name)
+func startSlasher(cliCtx *cli.Context) error {
+	verbosity := cliCtx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
 		return err
 	}
 	logrus.SetLevel(level)
-	slasher, err := node.NewSlasherNode(ctx)
+	slasher, err := node.NewSlasherNode(cliCtx)
 	if err != nil {
 		return err
 	}

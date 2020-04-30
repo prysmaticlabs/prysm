@@ -1,3 +1,4 @@
+// Package traceutil includes useful functions for opentracing annotations.
 package traceutil
 
 import (
