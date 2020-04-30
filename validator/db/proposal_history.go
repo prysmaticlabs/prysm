@@ -13,55 +13,48 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ProposalHistoriesForEpoch accepts an array of validator public keys with an epoch and returns the corresponding proposal histories.
+// ProposalHistoryForEpoch accepts a validator public key and returns the corresponding proposal history.
 // Returns nil if there is no proposal history for the validator.
-func (db *Store) ProposalHistoriesForEpoch(ctx context.Context, publicKeys [][48]byte, epoch uint64) (map[[48]byte]bitfield.Bitlist, error) {
+func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForEpoch")
 	defer span.End()
 
 	var err error
-	proposalHistoriesForEpoch := make(map[[48]byte]bitfield.Bitlist)
 	// Using 5 here since a bitfield length of 32 is always 5 bytes long.
+	slotBitlist := make(bitfield.Bitlist, 5)
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		for _, pubKey := range publicKeys {
-			valBucket := bucket.Bucket(pubKey[:])
-			if valBucket == nil {
-				return fmt.Errorf("validator history empty for public key %#x", pubKey)
-			}
-			slotBits := valBucket.Get(bytesutil.Bytes8(epoch))
-
-			slotBitlist := make(bitfield.Bitlist, params.BeaconConfig().SlotsPerEpoch/8+1)
-			if slotBits == nil || len(slotBits) == 0 {
-				slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
-			} else {
-				copy(slotBitlist, slotBits)
-			}
-			proposalHistoriesForEpoch[pubKey] = slotBitlist
+		valBucket := bucket.Bucket(publicKey)
+		if valBucket == nil {
+			return fmt.Errorf("validator history empty for public key %#x", publicKey)
 		}
+		slotBits := valBucket.Get(bytesutil.Bytes8(epoch))
+		if slotBits == nil || len(slotBits) == 0 {
+			slotBitlist = bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch)
+			return nil
+		}
+		copy(slotBitlist, slotBits)
 		return nil
 	})
-	return proposalHistoriesForEpoch, err
+	return slotBitlist, err
 }
 
-// SaveProposalHistoriesForEpoch saves the provided proposal histories to the indicated validator public keys.
-func (db *Store) SaveProposalHistoriesForEpoch(ctx context.Context, epoch uint64, proposalHistoriesForEpoch map[[48]byte]bitfield.Bitlist) error {
+// SaveProposalHistoryForEpoch returns the proposal history for the requested validator public key.
+func (db *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte, epoch uint64, slotBits bitfield.Bitlist) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
 	err := db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		for pubKey, history := range proposalHistoriesForEpoch {
-			valBucket := bucket.Bucket(pubKey[:])
-			if valBucket == nil {
-				return fmt.Errorf("validator history is empty for validator %#x", pubKey)
-			}
-			if err := valBucket.Put(bytesutil.Bytes8(epoch), history); err != nil {
-				return err
-			}
-			if err := pruneProposalHistory(valBucket, epoch); err != nil {
-				return err
-			}
+		valBucket := bucket.Bucket(pubKey)
+		if valBucket == nil {
+			return fmt.Errorf("validator history is empty for validator %#x", pubKey)
+		}
+		if err := valBucket.Put(bytesutil.Bytes8(epoch), slotBits); err != nil {
+			return err
+		}
+		if err := pruneProposalHistory(valBucket, epoch); err != nil {
+			return err
 		}
 		return nil
 	})
