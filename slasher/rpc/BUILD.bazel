@@ -9,10 +9,12 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/slasher/rpc",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//proto/slashing:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/p2putils:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/traceutil:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db:go_default_library",
