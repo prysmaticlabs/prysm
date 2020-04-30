@@ -9,7 +9,7 @@ import (
 
 const fileBase = "0-11-0/mainnet/beaconstate"
 
-// Returns a beacon state by ID using the beacon-fuzz corpora.
+// GetBeaconFuzzState returns a beacon state by ID using the beacon-fuzz corpora.
 func GetBeaconFuzzState(ID uint16) (*pb.BeaconState, error) {
 	b, err := testutil.BazelFileBytes(fileBase, strconv.Itoa(int(ID)))
 	if err != nil {
