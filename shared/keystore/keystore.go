@@ -52,17 +52,6 @@ type Store struct {
 	scryptP     int
 }
 
-// RetrievePubKey retrieves the public key from the keystore.
-func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
-	ks := Store{
-		keysDirPath: directory,
-		scryptN:     StandardScryptN,
-		scryptP:     StandardScryptP,
-	}
-	key, err := ks.GetKey(ks.keysDirPath, password)
-	return key.PublicKey, err
-}
-
 // NewKeystore from a directory.
 func NewKeystore(directory string) Store {
 	return Store{
@@ -141,12 +130,6 @@ func (ks Store) JoinPath(filename string) string {
 		return filename
 	}
 	return filepath.Join(ks.keysDirPath, filename)
-}
-
-// StoreRandomKey generates a key, encrypts with 'auth' and stores in the given directory
-func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
-	err := storeNewRandomKey(Store{dir, scryptN, scryptP}, password)
-	return err
 }
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
