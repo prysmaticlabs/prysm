@@ -7,7 +7,7 @@ filegroup(
 
 # See: https://github.com/sigp/beacon-fuzz-corpora
 
-current_version = "0_9_4"
+current_version = "0_11_0"
 
 alias(
     name = "current_mainnet_attestation",
@@ -35,26 +35,26 @@ alias(
 )
 
 filegroup(
-    name = "0_9_4_mainnet_attestation",
-    srcs = glob(["0-9-4/mainnet/attestation/*"]),
+    name = "0_11_0_mainnet_attestation",
+    srcs = glob(["0-11-0/mainnet/attestation/*"]),
 )
 
 filegroup(
-    name = "0_9_4_mainnet_attester_slashing",
-    srcs = glob(["0-9-4/mainnet/attester_slashing/*"]),
+    name = "0_11_0_mainnet_attester_slashing",
+    srcs = glob(["0-11-0/mainnet/attester_slashing/*"]),
 )
 
 filegroup(
-    name = "0_9_4_mainnet_block_header",
-    srcs = glob(["0-9-4/mainnet/block_header/*"]),
+    name = "0_11_0_mainnet_block_header",
+    srcs = glob(["0-11-0/mainnet/block_header/*"]),
 )
 
 filegroup(
-    name = "0_9_4_mainnet_beaconstate",
-    srcs = glob(["0-9-4/mainnet/beaconstate/*"]),
+    name = "0_11_0_mainnet_beaconstate",
+    srcs = glob(["0-11-0/mainnet/beaconstate/*"]),
 )
 
 filegroup(
-    name = "0_9_4_mainnet_proposer_slashing",
-    srcs = glob(["0-9-4/mainnet/proposer_slashing/*"]),
+    name = "0_11_0_mainnet_proposer_slashing",
+    srcs = glob(["0-11-0/mainnet/proposer_slashing/*"]),
 )

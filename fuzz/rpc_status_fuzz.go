@@ -78,6 +78,10 @@ func FuzzP2PRPCStatus(b []byte) {
 	if s == nil {
 		panic("nil stream")
 	}
-	defer s.Close()
-	s.Write(b)
+	defer func() {
+		err := s.Close()
+		_ = err
+	}()
+	_, err = s.Write(b)
+	_ = err
 }

@@ -36,6 +36,10 @@ func main() {
 	}
 	statePaths := os.Args[2:]
 
+	if len(statePaths) > 15 {
+		statePaths = statePaths[:15]
+	}
+
 	m := make(map[int][]byte, len(statePaths))
 	for _, p := range statePaths {
 		ID, err := strconv.Atoi(filepath.Base(p))

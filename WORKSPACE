@@ -148,7 +148,8 @@ go_rules_dependencies()
 
 go_register_toolchains(nogo = "@//:nogo")
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@prysm//tools/go:def.bzl", "go_repository")
 
 gazelle_dependencies()
 
@@ -297,9 +298,11 @@ http_archive(
 http_archive(
     name = "sigp_beacon_fuzz_corpora",
     build_file = "//third_party:beacon-fuzz/corpora.BUILD",
-    sha256 = "72c947b6b92df0db7275189be77733209f12af2aa931b81917b952c8d93e4c9f",
-    strip_prefix = "beacon-fuzz-corpora-c6d956ce22bd91f0d2929eb6401e40adfd7a8c89",
-    urls = ["https://github.com/sigp/beacon-fuzz-corpora/archive/c6d956ce22bd91f0d2929eb6401e40adfd7a8c89.tar.gz"],
+    sha256 = "42993d0901a316afda45b4ba6d53c7c21f30c551dcec290a4ca131c24453d1ef",
+    strip_prefix = "beacon-fuzz-corpora-bac24ad78d45cc3664c0172241feac969c1ac29b",
+    urls = [
+        "https://github.com/sigp/beacon-fuzz-corpora/archive/bac24ad78d45cc3664c0172241feac969c1ac29b.tar.gz",
+    ],
 )
 
 # External dependencies
@@ -1624,6 +1627,7 @@ go_repository(
     name = "com_github_ferranbt_fastssz",
     commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     importpath = "github.com/ferranbt/fastssz",
+    nofuzz = True,
 )
 
 http_archive(

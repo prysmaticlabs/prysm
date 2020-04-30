@@ -58,7 +58,7 @@ go_fuzz_test(
     name = "attestation_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_attestation",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/attestation",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/attestation",
     func = "BeaconFuzzAttestation",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
@@ -68,7 +68,7 @@ go_fuzz_test(
     name = "attester_slashing_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_attester_slashing",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/attester_slashing",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/attester_slashing",
     func = "BeaconFuzzAttesterSlashing",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
@@ -78,7 +78,7 @@ go_fuzz_test(
     name = "block_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_block_header",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/block_header",
     func = "BeaconFuzzBlock",
     importpath = IMPORT_PATH,
     input_size = 302,
@@ -89,7 +89,7 @@ go_fuzz_test(
     name = "block_header_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_block_header",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/block_header",
     func = "BeaconFuzzBlockHeader",
     importpath = IMPORT_PATH,
     input_size = 302,
@@ -110,7 +110,7 @@ go_fuzz_test(
     name = "proposer_slashing_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_proposer_slashing",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/proposer_slashing",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/proposer_slashing",
     func = "BeaconFuzzProposerSlashing",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
@@ -129,8 +129,8 @@ go_fuzz_test(
 go_fuzz_test(
     name = "ssz_cache_fuzz_test",
     srcs = SRCS,
-    corpus = "@sigp_beacon_fuzz_corpora//:0_9_4_mainnet_beaconstate",
-    corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/beaconstate",
+    corpus = "@sigp_beacon_fuzz_corpora//:0_11_0_mainnet_beaconstate",
+    corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/beaconstate",
     func = "FuzzSSZCache",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
@@ -144,19 +144,6 @@ go_fuzz_test(
     func = "BeaconFuzzVoluntaryExit",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
-)
-
-# gazelle:resolve go github.com/prysmaticlabs/prysm/fuzz //fuzz:block_header_fuzz_lib_with_fuzzer
-
-go_test(
-    name = "go_default_test",
-    srcs = ["regression_test.go"],
-    data = glob(["regression_data/*.ssz"]),
-    embed = [":go_default_library"],
-    deps = [
-        "//fuzz:block_header_fuzz_lib_with_fuzzer",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
-    ],
 )
 
 go_library(
