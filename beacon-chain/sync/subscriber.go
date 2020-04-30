@@ -243,10 +243,9 @@ func (r *Service) subscribeDynamicWithSubnets(
 				// Resize as appropriate.
 				r.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
 
+				// subscribe desired aggregator subnets.
 				for _, idx := range wantedSubs {
-					if _, exists := subscriptions[idx]; !exists {
-						r.subscribeMissingSubnet(subscriptions, idx, base, digest, validate, handle)
-					}
+					r.subscribeAggregatorSubnet(subscriptions, idx, base, digest, validate, handle)
 				}
 				// find desired subs for attesters
 				attesterSubs := r.attesterCommitteeIndices(currentSlot)
@@ -332,30 +331,28 @@ func (r *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 }
 
 // subscribe missing subnets for our aggregators.
-func (r *Service) subscribeMissingSubnet(subscriptions map[uint64]*pubsub.Subscription, idx uint64,
+func (r *Service) subscribeAggregatorSubnet(subscriptions map[uint64]*pubsub.Subscription, idx uint64,
 	base proto.Message, digest [4]byte, validate pubsub.Validator, handle subHandler) {
 	// do not subscribe if we have no peers in the same
 	// subnet
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
+	// check if subscription exists and if not subscribe the relevant subnet.
+	if _, exists := subscriptions[idx]; !exists {
+		subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
+	}
 	if !r.validPeersExist(subnetTopic, idx) {
 		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
 			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		go func(idx uint64) {
-			peerExists, err := r.p2p.FindPeersWithSubnet(idx)
+			_, err := r.p2p.FindPeersWithSubnet(idx)
 			if err != nil {
 				log.Errorf("Could not search for peers: %v", err)
 				return
 			}
-			// do not subscribe if we couldn't find a connected peer.
-			if !peerExists {
-				return
-			}
-			subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
 		}(idx)
 		return
 	}
-	subscriptions[idx] = r.subscribeWithBase(base, subnetTopic, validate, handle)
 }
 
 // lookup peers for attester specific subnets.
