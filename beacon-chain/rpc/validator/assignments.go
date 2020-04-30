@@ -30,6 +30,17 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	if vs.SyncChecker.Syncing() {
 		return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+
+	// We compute duties the very first time the endpoint is called.
+	res, err := vs.duties(stream.Context(), req)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
+	}
+	if err := stream.Send(res); err != nil {
+		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
+	}
+
+	// We start a for loop which ticks on every epoch or a chain reorg.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
