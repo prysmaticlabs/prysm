@@ -5,6 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -100,12 +102,25 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.New("cannot save nil head state")
 	}
 
+	currentHeadSlot := s.headSlot()
+
 	// Cache the new head info.
 	s.setHead(headRoot, newHeadBlock, newHeadState)
 
 	// Save the new head root to DB.
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
+	}
+
+	// A chain re-org occurred, so we fire an event notifying the rest of the services.
+	if newHeadState.Slot() < currentHeadSlot {
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{
+				NewSlot: newHeadState.Slot(),
+				OldSlot: currentHeadSlot,
+			},
+		})
 	}
 
 	return nil
