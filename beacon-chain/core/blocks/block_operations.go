@@ -758,7 +758,7 @@ func ProcessAttestationNoVerify(
 	return beaconState, nil
 }
 
-// VerifyIndexedAttestationSig determines the validity of an indexed attestation.
+// VerifyIndexedAttestation determines the validity of an indexed attestation.
 //
 // Spec pseudocode definition:
 //  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
