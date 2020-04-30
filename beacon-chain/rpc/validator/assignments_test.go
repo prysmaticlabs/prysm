@@ -14,6 +14,8 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
@@ -295,32 +297,6 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 	}
 }
 
-func TestStreamDuties_ContextCanceled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	vs := &Server{
-		Ctx:         ctx,
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now(),
-		},
-		StateNotifier: &mockChain.MockStateNotifier{},
-	}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
-	mockStream.EXPECT().Context().Return(ctx)
-	exitRoutine := make(chan bool)
-	go func(tt *testing.T) {
-		want := "context canceled"
-		if err := vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream); err == nil || !strings.Contains(err.Error(), want) {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	cancel()
-	exitRoutine <- true
-}
-
 func TestStreamDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
@@ -376,39 +352,110 @@ func TestStreamDuties_OK(t *testing.T) {
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
 		Epoch:      0,
 	}
+	wantedRes, err := vs.duties(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
-	mockStream.EXPECT().Context().Return(context.Background())
 	exitRoutine := make(chan bool)
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
-		want := "context canceled"
-		if err := vs.StreamDuties(req, mockStream); err == nil || !strings.Contains(err.Error(), want) {
+		if err := vs.StreamDuties(req, mockStream); err != nil && !strings.Contains(err.Error(), "context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
-		<-exitRoutine
 	}(t)
+	<-exitRoutine
 	cancel()
-	exitRoutine <- true
-	//if res.Duties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch { t.Errorf("Assigned slot %d can't be higher than %d",
-	//		res.Duties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
-	//}
-	//ctrl := gomock.NewController(t)
-	//defer ctrl.Finish()
-	//mockChainStream := mockRPC.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
-	//mockChainStream.EXPECT().Context().Return(context.Background())
-	//mockChainStream.EXPECT().Send(gomock.Any()).Return(nil)
-	//mockChainStream.EXPECT().Context().Return(context.Background())
-	//exitRoutine := make(chan bool)
-	//go func(tt *testing.T) {
-	//	want := "context canceled"
-	//	if err := vs.WaitForActivation(req, mockChainStream); err == nil || !strings.Contains(err.Error(), want) {
-	//		tt.Errorf("Could not call RPC method: %v", err)
-	//	}
-	//	<-exitRoutine
-	//}(t)
-	//cancel()
-	//exitRoutine <- true
+}
+
+func TestStreamDuties_OK_ChainReorg(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Could not setup genesis bs: %v", err)
+	}
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
+	}
+
+	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	for i, pk := range pubKeys {
+		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	vs := &Server{
+		Ctx:         ctx,
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mockChain.ChainService{
+			Genesis: time.Now(),
+		},
+		StateNotifier: &mockChain.MockStateNotifier{},
+		EpochTicker: &mockSlotUtil.MockTicker{
+			Channel: make(chan uint64),
+		},
+	}
+
+	// Test the first validator in registry.
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+		Epoch:      0,
+	}
+	wantedRes, err := vs.duties(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exitRoutine := make(chan bool)
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream.EXPECT().Send(wantedRes).Return(nil)
+	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+	go func(tt *testing.T) {
+		if err := vs.StreamDuties(req, mockStream); err != nil && !strings.Contains(err.Error(), "context canceled") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+	}(t)
+	// Fire a reorg event. Send in a loop to ensure it is
+	// delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{Slot: 0, BlockRoot: [32]byte{}},
+		})
+	}
+	<-exitRoutine
+	cancel()
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
