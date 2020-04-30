@@ -1,3 +1,4 @@
+// Package accounts defines tools to manage an encrypted validator keystore.
 package accounts
 
 import (

@@ -1,3 +1,5 @@
+// Package mputil contains useful helpers for converting
+// multi-processor computation.
 package mputil
 
 import (

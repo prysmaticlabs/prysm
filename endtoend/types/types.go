@@ -1,3 +1,5 @@
+// Package types includes important structs used by end to end tests, such
+// as a configuration type, an evaluator type, and more.
 package types
 
 import (

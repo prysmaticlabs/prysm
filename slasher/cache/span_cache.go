@@ -1,3 +1,6 @@
+// Package cache contains critical caches necessary for the runtime
+// of the slasher service, being able to keep attestation spans by epoch
+// for the validators active in the beacon chain.
 package cache
 
 import (

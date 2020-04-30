@@ -1,3 +1,5 @@
+// Package testing includes useful mocks for testing initial
+// sync status in unit tests.
 package testing
 
 // Sync defines a mock for the sync service.

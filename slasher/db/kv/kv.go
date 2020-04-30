@@ -1,3 +1,5 @@
+// Package kv defines a bolt-db, key-value store implementation of
+// the slasher database interface.
 package kv
 
 import (

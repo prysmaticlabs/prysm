@@ -1,3 +1,4 @@
+// Package pagination contains useful pagination-related helpers.
 package pagination
 
 import (

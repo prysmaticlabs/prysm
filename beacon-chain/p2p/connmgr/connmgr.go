@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// Package connmgr : This file is forked from github.com/libp2p/go-libp2p-core/connmgr/connmgr.go
+// Package connmgr is forked from github.com/libp2p/go-libp2p-core/connmgr/connmgr.go
 package connmgr
 
 import (

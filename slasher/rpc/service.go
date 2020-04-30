@@ -1,3 +1,6 @@
+// Package rpc defines an implementation of a gRPC slasher service,
+// providing endpoints for determining whether or not a block/attestation
+// is slashable based on slasher's evidence.
 package rpc
 
 import (
