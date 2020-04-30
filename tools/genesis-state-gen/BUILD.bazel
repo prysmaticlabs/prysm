@@ -25,7 +25,11 @@ go_binary(
 go_image(
     name = "image",
     srcs = ["main.go"],
-    base = "//tools:go_image",
+    base = select({
+        "//tools:base_image_alpine": "//tools:alpine_cc_image",
+        "//tools:base_image_cc": "//tools:cc_image",
+        "//conditions:default": "//tools:cc_image",
+    }),
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/genesis-state-gen",
