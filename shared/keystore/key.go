@@ -62,11 +62,11 @@ type Key struct {
 }
 
 type keyStore interface {
-	// Loads and decrypts the key from disk.
+	// GetKey loads and decrypts the key from disk.
 	GetKey(filename string, password string) (*Key, error)
-	// Writes and encrypts the key.
+	// StoreKey writes and encrypts the key.
 	StoreKey(filename string, k *Key, auth string) error
-	// Joins filename with the key directory unless it is already absolute.
+	// JoinPath joins filename with the key directory unless it is already absolute.
 	JoinPath(filename string) string
 }
 
@@ -95,7 +95,7 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
-// MarshalJSON marshalls a key struct into a JSON blob.
+// MarshalJSON marshals a key struct into a JSON blob.
 func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.PublicKey.Marshal()),
