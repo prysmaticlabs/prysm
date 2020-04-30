@@ -2,6 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 load("//tools/go:fuzz.bzl", "go_fuzz_test")
 load("@com_github_prysmaticlabs_ethereumapis//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 
 ssz_gen_marshal(
     name = "ssz_generated_files",
@@ -18,6 +19,27 @@ ssz_gen_marshal(
         "InputVoluntaryExitWrapper",
         "InputProposerSlashingWrapper",
     ],
+)
+
+container_image(
+    name = "prysm_fuzzit",
+    base = "@fuzzit_base//image",
+    directory = "/beacon_states",
+    env = {
+        "BEACONSTATES_PATH": "/beacon_states",
+    },
+    files = [
+        "@sigp_beacon_fuzz_corpora//:current_mainnet_beaconstate",
+    ],
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":prysm_fuzzit",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm-fuzzit",
+    tag = "v0.11.0",
 )
 
 FUZZ_DEPS = [

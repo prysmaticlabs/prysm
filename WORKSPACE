@@ -138,6 +138,13 @@ container_pull(
     repository = "frolvlad/alpine-glibc",
 )
 
+container_pull(
+    name = "fuzzit_base",
+    digest = "sha256:24a39a4360b07b8f0121eb55674a2e757ab09f0baff5569332fefd227ee4338f",
+    registry = "gcr.io",
+    repository = "fuzzit-public/stretch-llvm8",
+)
+
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
