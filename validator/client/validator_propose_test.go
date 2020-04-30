@@ -8,7 +8,6 @@ import (
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -40,7 +39,6 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		proposerHistoryBits:            bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch),
 	}
 
 	return validator, m, ctrl.Finish

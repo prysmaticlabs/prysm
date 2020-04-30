@@ -20,7 +20,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -62,7 +61,6 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
-	proposerHistoryBits                bitfield.Bitlist
 	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
 }
 
@@ -453,18 +451,6 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 		if duty == nil {
 			continue
 		}
-		if len(duty.ProposerSlots) > 0 {
-			for _, proposerSlot := range duty.ProposerSlots {
-				if proposerSlot != 0 && proposerSlot == slot {
-					slotBits, err := v.db.ProposalHistoryForEpoch(ctx, duty.PublicKey[:], helpers.SlotToEpoch(slot))
-					if err != nil {
-						return errors.Wrapf(err, "could not get proposer history for epoch %d", helpers.SlotToEpoch(slot))
-					}
-					v.proposerHistoryBits = slotBits
-					break
-				}
-			}
-		}
 		if duty.AttesterSlot == slot {
 			attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
 		}
@@ -482,20 +468,6 @@ func (v *validator) SaveProtections(ctx context.Context, slot uint64) error {
 	if err := v.db.SaveAttestationHistoryForPubKeys(ctx, v.attesterHistoryByPubKey); err != nil {
 		return errors.Wrap(err, "could not save attester history")
 	}
-	for _, duty := range v.duties.Duties {
-		if duty == nil {
-			continue
-		}
-		for _, proposerSlot := range duty.ProposerSlots {
-			if proposerSlot != 0 && proposerSlot == slot {
-				epoch := helpers.SlotToEpoch(slot)
-				if err := v.db.SaveProposalHistoryForEpoch(ctx, duty.PublicKey[:], epoch, v.proposerHistoryBits); err != nil {
-					return errors.Wrap(err, "could not save proposer history")
-				}
-			}
-		}
-	}
-	v.proposerHistoryBits = bitfield.NewBitlist(0)
 	v.attesterHistoryByPubKey = make(map[[48]byte]*slashpb.AttestationHistory)
 	return nil
 }
