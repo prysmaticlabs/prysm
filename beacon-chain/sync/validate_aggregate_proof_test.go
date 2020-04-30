@@ -468,7 +468,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	}
 }
 
-func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
+func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
@@ -590,6 +590,22 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	if !r.validateAggregateAndProof(context.Background(), "", msg) {
 		t.Fatal("Validated status is false")
 	}
+
+	// Should fail with another attestation in the same epoch.
+	signedAggregateAndProof.Message.Aggregate.Data.Slot++
+	buf = new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+		t.Fatal(err)
+	}
+	msg = &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
+			},
+		},
+	}
+
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
 	if r.validateAggregateAndProof(context.Background(), "", msg) {
 		t.Fatal("Validated status is true")
