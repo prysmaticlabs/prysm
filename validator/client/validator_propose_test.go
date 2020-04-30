@@ -8,6 +8,7 @@ import (
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,12 +34,13 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	}
 
 	validator := &validator{
-		db:              valDB,
-		validatorClient: m.validatorClient,
-		keyManager:      testKeyManager,
-		graffiti:        []byte{},
-		attLogs:         make(map[[32]byte]*attSubmitted),
+		db:                             valDB,
+		validatorClient:                m.validatorClient,
+		keyManager:                     testKeyManager,
+		graffiti:                       []byte{},
+		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
+		proposerHistoryBits:            bitfield.NewBitlist(params.BeaconConfig().SlotsPerEpoch),
 	}
 
 	return validator, m, ctrl.Finish
@@ -146,10 +148,11 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
-	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
+	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
-	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
 }
 
