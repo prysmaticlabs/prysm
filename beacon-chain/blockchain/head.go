@@ -102,16 +102,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.New("cannot save nil head state")
 	}
 
-	// A chain re-org occurred, so we fire an event notifying the rest of the repo.
-	if newHeadState.Slot() < s.headSlot() {
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{
-				Slot:      newHeadState.Slot(),
-				BlockRoot: headRoot,
-			},
-		})
-	}
+	currentHeadSlot := s.headSlot()
 
 	// Cache the new head info.
 	s.setHead(headRoot, newHeadBlock, newHeadState)
@@ -119,6 +110,17 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Save the new head root to DB.
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
+	}
+
+	// A chain re-org occurred, so we fire an event notifying the rest of the repo.
+	if newHeadState.Slot() < currentHeadSlot {
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{
+				NewSlot: newHeadState.Slot(),
+				OldSlot: currentHeadSlot,
+			},
+		})
 	}
 
 	return nil

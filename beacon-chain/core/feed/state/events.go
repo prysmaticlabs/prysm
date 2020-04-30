@@ -51,8 +51,8 @@ type InitializedData struct {
 
 // ReorgData is the data alongside a reorg event.
 type ReorgData struct {
-	// Slot is the slot of new state after the reorg.
-	Slot uint64
-	// BlockRoot of the processed block which led to the reorg.
-	BlockRoot [32]byte
+	// NewSlot is the slot of new state after the reorg.
+	NewSlot uint64
+	// OldSlot is the slot of the head state before the reorg.
+	OldSlot uint64
 }

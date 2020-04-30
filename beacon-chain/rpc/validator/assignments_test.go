@@ -16,6 +16,7 @@ import (
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
@@ -446,12 +447,20 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 	}(t)
-	// Fire a reorg event. Send in a loop to ensure it is
-	// delivered (busy wait for the service to subscribe to the state feed).
+	// Fire a reorg event within the same epoch. This should NOT
+	// trigger a recomputation not resending of duties over the stream.
 	for sent := 0; sent == 0; {
 		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{Slot: 0, BlockRoot: [32]byte{}},
+			Data: &statefeed.ReorgData{OldSlot: 0, NewSlot: 0},
+		})
+	}
+	// Fire a reorg event across epoch boundaries. This needs to trigger
+	// a recomputation and resending of duties over the stream.
+	for sent := 0; sent == 0; {
+		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{OldSlot: helpers.StartSlot(1), NewSlot: 0},
 		})
 	}
 	<-exitRoutine
