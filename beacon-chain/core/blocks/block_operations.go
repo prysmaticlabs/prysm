@@ -782,7 +782,7 @@ func ProcessAttestationNoVerify(
 //        return False
 //    return True
 func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestationSig")
+	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
 	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
