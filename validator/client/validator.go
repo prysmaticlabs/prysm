@@ -62,6 +62,7 @@ type validator struct {
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
+	attesterHistoryByPubKeyLock        sync.Mutex
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(

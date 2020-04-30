@@ -146,7 +146,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	if featureconfig.Get().ProtectAttester {
 		attesterHistory = markAttestationForTargetEpoch(attesterHistory, data.Source.Epoch, data.Target.Epoch)
+		v.attesterHistoryByPubKeyLock.Lock()
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		v.attesterHistoryByPubKeyLock.Unlock()
 	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
