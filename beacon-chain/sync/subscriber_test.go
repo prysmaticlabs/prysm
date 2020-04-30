@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -23,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
@@ -269,4 +272,48 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
+}
+
+func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	hook := logTest.NewGlobal()
+	r := Service{
+		ctx: context.Background(),
+		chain: &mockChain.ChainService{
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		},
+		p2p: p,
+	}
+	digest, err := r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
+
+	defaultTopic := "/eth2/testing/%#x/committee%d"
+	// committee index 1
+	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.p2p.Encoding().ProtocolSuffix()
+	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriptions[1], err = r.p2p.PubSub().Subscribe(fullTopic)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// committee index 2
+	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.p2p.Encoding().ProtocolSuffix()
+	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriptions[2], err = r.p2p.PubSub().Subscribe(fullTopic)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
+	testutil.AssertLogsDoNotContain(t, hook, "Failed to unregister topic validator")
 }
