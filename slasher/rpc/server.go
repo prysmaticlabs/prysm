@@ -2,13 +2,18 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"sort"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
@@ -32,14 +37,41 @@ type Server struct {
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
-	if req == nil {
-		return nil, errors.New("nil indexed attestation")
+	if req == nil || req.Data == nil || req.Data.Target == nil {
+		return nil, errors.New("nil or missing indexed attestation data")
 	}
 	indices := req.AttestingIndices
+	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
+		return nil, fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
+	}
+	set := make(map[uint64]bool)
+	setIndices := make([]uint64, 0, len(indices))
+	for _, i := range indices {
+		if ok := set[i]; ok {
+			continue
+		}
+		setIndices = append(setIndices, i)
+		set[i] = true
+	}
+	sort.SliceStable(setIndices, func(i, j int) bool {
+		return setIndices[i] < setIndices[j]
+	})
+	if !reflect.DeepEqual(setIndices, indices) {
+		return nil, errors.New("attesting indices is not uniquely sorted")
+	}
+	gvr, err := ss.beaconClient.GenesisValidatorsRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
 	fork, err := p2putils.Fork(req.Data.Target.Epoch)
 	if err != nil {
 		return nil, err
 	}
+	domain, err := helpers.Domain(fork, req.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, gvr)
+	if err != nil {
+		return nil, err
+	}
+
 	pkMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, indices)
 	if err != nil {
 		return nil, err
@@ -52,11 +84,8 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		pubkeys = append(pubkeys, pk)
 	}
-	gvr, err := ss.beaconClient.GenesisValidatorsRoot(ctx)
-	if err != nil {
-		return nil, err
-	}
-	err = attestationutil.VerifyIndexedAttestation(ctx, req, pubkeys, gvr, fork)
+
+	err = attestationutil.VerifyIndexedAttestation(ctx, req, pubkeys, domain)
 	if err != nil {
 		log.WithError(err).Error("Failed to verify indexed attestation signature")
 		return nil, status.Errorf(codes.Internal, "Could not verify indexed attestation signature: %v: %v", req, err)

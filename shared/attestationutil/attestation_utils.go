@@ -2,17 +2,13 @@ package attestationutil
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -35,7 +31,7 @@ import (
 //        signature=attestation.signature,
 //    )
 func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) *ethpb.IndexedAttestation {
-	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
+	ctx, span := trace.StartSpan(ctx, "attestationutil.ConvertToIndexed")
 	defer span.End()
 
 	attIndices := AttestingIndices(attestation.AggregationBits, committee)
@@ -74,7 +70,9 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
 	return indices
 }
 
-// VerifyIndexedAttestation determines the validity of an indexed attestation.
+// VerifyIndexedAttestation this helper function performs the last part of the
+// spec indexed attestation validation starting at Verify aggregate signature
+// comment.
 //
 // Spec pseudocode definition:
 //  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
@@ -97,38 +95,10 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []*bls.PublicKey, genesisValidatorsRoot []byte, fork *pb.Fork) error {
-	ctx, span := trace.StartSpan(ctx, "core.verifyIndexedAttestationSig")
+func VerifyIndexedAttestation(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []*bls.PublicKey, domain []byte) error {
+	ctx, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestation")
 	defer span.End()
-	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
-		return errors.New("nil or missing indexed attestation data")
-	}
 	indices := indexedAtt.AttestingIndices
-
-	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
-	}
-
-	set := make(map[uint64]bool)
-	setIndices := make([]uint64, 0, len(indices))
-	for _, i := range indices {
-		if ok := set[i]; ok {
-			continue
-		}
-		setIndices = append(setIndices, i)
-		set[i] = true
-	}
-	sort.SliceStable(setIndices, func(i, j int) bool {
-		return setIndices[i] < setIndices[j]
-	})
-	if !reflect.DeepEqual(setIndices, indices) {
-		return errors.New("attesting indices is not uniquely sorted")
-	}
-	domain, err := helpers.Domain(fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, genesisValidatorsRoot)
-	if err != nil {
-		return err
-	}
-
 	messageHash, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of object")
