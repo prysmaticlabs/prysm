@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
