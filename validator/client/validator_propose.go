@@ -9,7 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -86,19 +85,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	var slotBits bitfield.Bitlist
 	if featureconfig.Get().ProtectProposer {
-		slotBits, err = v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
-		if err != nil {
-			log.WithError(err).Error("Failed to get proposal history")
-			if v.emitAccountMetrics {
-				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-
 		// If the bit for the current slot is marked, do not propose.
-		if slotBits.BitAt(slot % params.BeaconConfig().SlotsPerEpoch) {
+		if v.proposerHistoryBits.BitAt(slot % params.BeaconConfig().SlotsPerEpoch) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
 			if v.emitAccountMetrics {
 				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
@@ -132,14 +121,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	if featureconfig.Get().ProtectProposer {
-		slotBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
-		if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
-			log.WithError(err).Error("Failed to save updated proposal history")
-			if v.emitAccountMetrics {
-				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
+		v.proposerHistoryBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
+		//if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
+		//	log.WithError(err).Error("Failed to save updated proposal history")
+		//	if v.emitAccountMetrics {
+		//		validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		//	}
+		//	return
+		//}
 	}
 
 	if v.emitAccountMetrics {

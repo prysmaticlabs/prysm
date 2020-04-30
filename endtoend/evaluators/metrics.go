@@ -165,7 +165,7 @@ func metricCheckComparison(pageContent string, topic1 string, topic2 string, com
 	}
 	topic1Value, err := getValueOfTopic(pageContent, topic1)
 	// If we can't find the first topic (error metrics), then assume the test passes.
-	if topic1Value == -1 && topic2Value != -1 {
+	if topic1Value == -1 || topic2Value != -1 {
 		return nil
 	}
 	if err != nil {

@@ -63,7 +63,7 @@ type validator struct {
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	proposerHistoryBits                bitfield.Bitlist
-	attesterHistoryByPubKey            map[[48]byte]slashpb.AttestationHistory
+	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(
@@ -458,7 +458,7 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 				if proposerSlot != 0 && proposerSlot == slot {
 					slotBits, err := v.db.ProposalHistoryForEpoch(ctx, duty.PublicKey[:], helpers.SlotToEpoch(slot))
 					if err != nil {
-						return errors.Wrapf(err, "could not get proposer history for epoch %d")
+						return errors.Wrapf(err, "could not get proposer history for epoch %d", helpers.SlotToEpoch(slot))
 					}
 					v.proposerHistoryBits = slotBits
 					break
@@ -474,6 +474,29 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 		return errors.Wrap(err, "could not get attester history")
 	}
 	v.attesterHistoryByPubKey = attHistoryByPubKey
+	return nil
+}
+
+// SaveProtections saves the attestation and proposal information made for the slot.
+func (v *validator) SaveProtections(ctx context.Context, slot uint64) error {
+	if err := v.db.SaveAttestationHistoryForPubKeys(ctx, v.attesterHistoryByPubKey); err != nil {
+		return errors.Wrap(err, "could not save attester history")
+	}
+	for _, duty := range v.duties.Duties {
+		if duty == nil {
+			continue
+		}
+		for _, proposerSlot := range duty.ProposerSlots {
+			if proposerSlot != 0 && proposerSlot == slot {
+				epoch := helpers.SlotToEpoch(slot)
+				if err := v.db.SaveProposalHistoryForEpoch(ctx, duty.PublicKey[:], epoch, v.proposerHistoryBits); err != nil {
+					return errors.Wrap(err, "could not save attester history")
+				}
+			}
+		}
+	}
+	v.proposerHistoryBits = bitfield.NewBitlist(0)
+	v.attesterHistoryByPubKey = make(map[[48]byte]*slashpb.AttestationHistory)
 	return nil
 }
 
