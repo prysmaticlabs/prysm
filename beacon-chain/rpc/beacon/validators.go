@@ -935,6 +935,7 @@ func (bs *Server) GetValidatorPerformance(
 	validatorSummary := state.ValidatorSummary
 
 	responseCap := len(req.Indices) + len(req.PublicKeys)
+	validatorIndices := make([]uint64, 0, responseCap)
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
 	afterTransitionBalances := make([]uint64, 0, responseCap)
 	effectiveBalances := make([]uint64, 0, responseCap)
@@ -950,25 +951,39 @@ func (bs *Server) GetValidatorPerformance(
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	validatorIndices := make(map[uint64]bool)
+	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 	// Convert the list of validator public keys to validator indices and add to the indices set.
-	for _, key := range req.PublicKeys {
-		pubkeyBytes := bytesutil.ToBytes48(key)
+	for _, pubKey := range req.PublicKeys {
+		// Skip empty public key.
+		if len(pubKey) == 0 {
+			continue
+		}
+		pubkeyBytes := bytesutil.ToBytes48(pubKey)
 		idx, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			// Validator index not found, track as missing.
-			missingValidators = append(missingValidators, key)
+			missingValidators = append(missingValidators, pubKey)
 			continue
 		}
-		validatorIndices[idx] = true
+		if !filtered[idx] {
+			validatorIndices = append(validatorIndices, idx)
+			filtered[idx] = true
+		}
 	}
 	// Add provided indices to the indices set.
 	for _, idx := range req.Indices {
-		validatorIndices[idx] = true
+		if !filtered[idx] {
+			validatorIndices = append(validatorIndices, idx)
+			filtered[idx] = true
+		}
 	}
+	// Depending on the indices and public keys given, results might not be sorted.
+	sort.Slice(validatorIndices, func(i, j int) bool {
+		return validatorIndices[i] < validatorIndices[j]
+	})
 	// Append performance summaries
 	// Also track missing validators using public keys.
-	for idx := range validatorIndices {
+	for _, idx := range validatorIndices {
 		val, err := headState.ValidatorAtIndex(idx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
