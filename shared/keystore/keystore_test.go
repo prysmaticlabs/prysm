@@ -2,7 +2,11 @@ package keystore
 
 import (
 	"bytes"
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -12,8 +16,8 @@ import (
 )
 
 func TestStoreAndGetKey(t *testing.T) {
-	tempDir := testutil.TempDir() + "/keystore"
-	defer teardownTempKeystore(t, tempDir)
+	tempDir, teardown := setupTempKeystoreDir(t)
+	defer teardown()
 	ks := &Store{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
@@ -40,8 +44,8 @@ func TestStoreAndGetKey(t *testing.T) {
 }
 
 func TestStoreAndGetKeys(t *testing.T) {
-	tempDir := testutil.TempDir() + "/keystore"
-	defer teardownTempKeystore(t, tempDir)
+	tempDir, teardown := setupTempKeystoreDir(t)
+	defer teardown()
 	ks := &Store{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
@@ -112,8 +116,8 @@ func TestEncryptDecryptKey(t *testing.T) {
 }
 
 func TestGetSymlinkedKeys(t *testing.T) {
-	tempDir := testutil.TempDir() + "/keystore"
-	defer teardownTempKeystore(t, tempDir)
+	tempDir, teardown := setupTempKeystoreDir(t)
+	defer teardown()
 	ks := &Store{
 		scryptN: LightScryptN,
 		scryptP: LightScryptP,
@@ -146,9 +150,17 @@ func TestGetSymlinkedKeys(t *testing.T) {
 	}
 }
 
-// teardownTempKeystore removes temporary directory used for keystore testing.
-func teardownTempKeystore(t *testing.T, tempDir string) {
-	if err := os.RemoveAll(tempDir); err != nil {
-		t.Logf("unable to remove temporary files: %v", err)
+// setupTempKeystoreDir creates temporary directory for storing keystore files.
+func setupTempKeystoreDir(t *testing.T) (string, func()) {
+	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		t.Fatalf("could not generate random file path: %v", err)
+	}
+	tempDir := path.Join(testutil.TempDir(), fmt.Sprintf("%d", randPath), "keystore")
+
+	return tempDir, func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			t.Logf("unable to remove temporary files: %v", err)
+		}
 	}
 }

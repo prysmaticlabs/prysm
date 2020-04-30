@@ -8,7 +8,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestMarshalAndUnmarshal(t *testing.T) {
@@ -41,8 +40,8 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 }
 
 func TestStoreRandomKey(t *testing.T) {
-	tempDir := testutil.TempDir() + "/keystore"
-	defer teardownTempKeystore(t, tempDir)
+	tempDir, teardown := setupTempKeystoreDir(t)
+	defer teardown()
 	ks := &Store{
 		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
@@ -78,8 +77,8 @@ func TestNewKeyFromBLS(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	tempDir := testutil.TempDir() + "/keystore"
-	defer teardownTempKeystore(t, tempDir)
+	tempDir, teardown := setupTempKeystoreDir(t)
+	defer teardown()
 
 	testKeystore := []byte{'t', 'e', 's', 't'}
 
