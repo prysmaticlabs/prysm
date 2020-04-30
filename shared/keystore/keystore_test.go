@@ -12,10 +12,10 @@ import (
 )
 
 func TestStoreAndGetKey(t *testing.T) {
-	tmpdir := testutil.TempDir()
-	filedir := tmpdir + "/keystore"
+	tempDir := testutil.TempDir() + "/keystore"
+	defer teardownTempKeystore(t, tempDir)
 	ks := &Store{
-		keysDirPath: filedir,
+		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
 	}
@@ -25,11 +25,11 @@ func TestStoreAndGetKey(t *testing.T) {
 		t.Fatalf("key generation failed %v", err)
 	}
 
-	if err := ks.StoreKey(filedir, key, "password"); err != nil {
+	if err := ks.StoreKey(tempDir, key, "password"); err != nil {
 		t.Fatalf("unable to store key %v", err)
 	}
 
-	newkey, err := ks.GetKey(filedir, "password")
+	newkey, err := ks.GetKey(tempDir, "password")
 	if err != nil {
 		t.Fatalf("unable to get key %v", err)
 	}
@@ -37,17 +37,13 @@ func TestStoreAndGetKey(t *testing.T) {
 	if !bytes.Equal(newkey.SecretKey.Marshal(), key.SecretKey.Marshal()) {
 		t.Fatalf("retrieved secret keys are not equal %v , %v", newkey.SecretKey.Marshal(), key.SecretKey.Marshal())
 	}
-
-	if err := os.RemoveAll(filedir); err != nil {
-		t.Errorf("unable to remove temporary files %v", err)
-	}
 }
 
 func TestStoreAndGetKeys(t *testing.T) {
-	tmpdir := testutil.TempDir()
-	filePrefix := "/keystore"
+	tempDir := testutil.TempDir() + "/keystore"
+	defer teardownTempKeystore(t, tempDir)
 	ks := &Store{
-		keysDirPath: tmpdir,
+		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
 	}
@@ -57,17 +53,17 @@ func TestStoreAndGetKeys(t *testing.T) {
 		t.Fatalf("key generation failed %v", err)
 	}
 
-	if err := ks.StoreKey(tmpdir+filePrefix+"/test-1", key, "password"); err != nil {
+	if err := ks.StoreKey(tempDir+"/test-1", key, "password"); err != nil {
 		t.Fatalf("unable to store key %v", err)
 	}
 	key2, err := NewKey()
 	if err != nil {
 		t.Fatalf("key generation failed %v", err)
 	}
-	if err := ks.StoreKey(tmpdir+filePrefix+"/test-2", key2, "password"); err != nil {
+	if err := ks.StoreKey(tempDir+"/test-2", key2, "password"); err != nil {
 		t.Fatalf("unable to store key %v", err)
 	}
-	newkeys, err := ks.GetKeys(tmpdir+filePrefix, "test", "password", false)
+	newkeys, err := ks.GetKeys(tempDir, "test", "password", false)
 	if err != nil {
 		t.Fatalf("unable to get key %v", err)
 	}
@@ -76,13 +72,6 @@ func TestStoreAndGetKeys(t *testing.T) {
 			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
 		}
 
-	}
-
-	if err := os.RemoveAll(tmpdir + filePrefix + "-2"); err != nil {
-		t.Errorf("unable to remove temporary files %v", err)
-	}
-	if err := os.RemoveAll(tmpdir + filePrefix + "-1"); err != nil {
-		t.Errorf("unable to remove temporary files %v", err)
 	}
 }
 
@@ -120,16 +109,11 @@ func TestEncryptDecryptKey(t *testing.T) {
 	if !bytes.Equal(newkey.SecretKey.Marshal(), expected) {
 		t.Fatalf("decrypted key's value is not equal %v", newkey.SecretKey.Marshal())
 	}
-
 }
 
 func TestGetSymlinkedKeys(t *testing.T) {
-	tmpdir := testutil.TempDir() + "/symlinked-keystore"
-	defer func() {
-		if err := os.RemoveAll(tmpdir); err != nil {
-			t.Logf("unable to remove temporary files: %v", err)
-		}
-	}()
+	tempDir := testutil.TempDir() + "/keystore"
+	defer teardownTempKeystore(t, tempDir)
 	ks := &Store{
 		scryptN: LightScryptN,
 		scryptP: LightScryptP,
@@ -140,15 +124,15 @@ func TestGetSymlinkedKeys(t *testing.T) {
 		t.Fatalf("key generation failed %v", err)
 	}
 
-	if err := ks.StoreKey(tmpdir+"/files/test-1", key, "password"); err != nil {
+	if err := ks.StoreKey(tempDir+"/files/test-1", key, "password"); err != nil {
 		t.Fatalf("unable to store key %v", err)
 	}
 
-	if err := os.Symlink(tmpdir+"/files/test-1", tmpdir+"/test-1"); err != nil {
+	if err := os.Symlink(tempDir+"/files/test-1", tempDir+"/test-1"); err != nil {
 		t.Fatalf("unable to create symlink: %v", err)
 	}
 
-	newkeys, err := ks.GetKeys(tmpdir, "test", "password", false)
+	newkeys, err := ks.GetKeys(tempDir, "test", "password", false)
 	if err != nil {
 		t.Fatalf("unable to get key %v", err)
 	}
@@ -159,5 +143,12 @@ func TestGetSymlinkedKeys(t *testing.T) {
 		if !bytes.Equal(s.SecretKey.Marshal(), key.SecretKey.Marshal()) {
 			t.Fatalf("retrieved secret keys are not equal %v ", s.SecretKey.Marshal())
 		}
+	}
+}
+
+// teardownTempKeystore removes temporary directory used for keystore testing.
+func teardownTempKeystore(t *testing.T, tempDir string) {
+	if err := os.RemoveAll(tempDir); err != nil {
+		t.Logf("unable to remove temporary files: %v", err)
 	}
 }
