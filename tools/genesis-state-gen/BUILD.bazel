@@ -29,7 +29,7 @@ go_image(
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/genesis-state-gen",
-    pure = "on",
+    pure = "off",
     race = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
