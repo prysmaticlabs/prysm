@@ -245,6 +245,10 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		}
 	}
 
+	hysteresisInc := params.BeaconConfig().EffectiveBalanceIncrement / params.BeaconConfig().HysteresisQuotient
+	downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
+	upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
+
 	bals := state.Balances()
 	checker := func(idx int, val *ethpb.Validator) (bool, error) {
 		if val == nil {
@@ -254,9 +258,6 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
 		balance := bals[idx]
-		hysteresisInc := params.BeaconConfig().EffectiveBalanceIncrement / params.BeaconConfig().HysteresisQuotient
-		downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
-		upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
 			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
@@ -269,9 +270,6 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 	// Update effective balances with hysteresis.
 	updateEffectiveBalances := func(idx int, val *ethpb.Validator) error {
 		balance := bals[idx]
-		hysteresisInc := params.BeaconConfig().EffectiveBalanceIncrement / params.BeaconConfig().HysteresisQuotient
-		downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
-		upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
 			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
