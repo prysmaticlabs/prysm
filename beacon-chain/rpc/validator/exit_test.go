@@ -171,11 +171,6 @@ func TestProposeExit_NoPanic(t *testing.T) {
 
 	_, err = server.ProposeExit(context.Background(), req)
 	if err == nil {
-		t.Fatal("Expected error for no signature existing existing")
-	}
-
-	_, err = server.ProposeExit(context.Background(), req)
-	if err == nil {
 		t.Fatal("Expected error for no signature exists")
 	}
 	req.Signature = bytesutil.FromBytes48([48]byte{})
