@@ -20,7 +20,7 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 	if a.Message.Aggregate == nil || a.Message.Aggregate.Data == nil {
 		return errors.New("nil aggregate")
 	}
-	r.setAggregatorIndexSlotSeen(a.Message.Aggregate.Data.Slot, a.Message.AggregatorIndex)
+	r.setAggregatorIndexEpochSeen(a.Message.Aggregate.Data.Target.Epoch, a.Message.AggregatorIndex)
 
 	return r.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }
