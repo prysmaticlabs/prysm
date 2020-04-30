@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -759,7 +758,7 @@ func ProcessAttestationNoVerify(
 	return beaconState, nil
 }
 
-// VerifyIndexedAttestation determines the validity of an indexed attestation.
+// VerifyIndexedAttestationSig determines the validity of an indexed attestation.
 //
 // Spec pseudocode definition:
 //  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
@@ -783,36 +782,16 @@ func ProcessAttestationNoVerify(
 //        return False
 //    return True
 func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
+	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestationSig")
 	defer span.End()
-	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
-		return errors.New("nil or missing indexed attestation data")
-	}
-	indices := indexedAtt.AttestingIndices
 
-	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
-	}
-
-	set := make(map[uint64]bool)
-	setIndices := make([]uint64, 0, len(indices))
-	for _, i := range indices {
-		if ok := set[i]; ok {
-			continue
-		}
-		setIndices = append(setIndices, i)
-		set[i] = true
-	}
-	sort.SliceStable(setIndices, func(i, j int) bool {
-		return setIndices[i] < setIndices[j]
-	})
-	if !reflect.DeepEqual(setIndices, indices) {
-		return errors.New("attesting indices is not uniquely sorted")
+	if err := attestationutil.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
 	}
 	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
+	indices := indexedAtt.AttestingIndices
 	pubkeys := []*bls.PublicKey{}
 	if len(indices) > 0 {
 		for i := 0; i < len(indices); i++ {
@@ -824,7 +803,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 			pubkeys = append(pubkeys, pk)
 		}
 	}
-	return attestationutil.VerifyIndexedAttestation(ctx, indexedAtt, pubkeys, domain)
+	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
 
 }
 
