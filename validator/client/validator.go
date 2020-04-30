@@ -490,7 +490,7 @@ func (v *validator) SaveProtections(ctx context.Context, slot uint64) error {
 			if proposerSlot != 0 && proposerSlot == slot {
 				epoch := helpers.SlotToEpoch(slot)
 				if err := v.db.SaveProposalHistoryForEpoch(ctx, duty.PublicKey[:], epoch, v.proposerHistoryBits); err != nil {
-					return errors.Wrap(err, "could not save attester history")
+					return errors.Wrap(err, "could not save proposer history")
 				}
 			}
 		}
