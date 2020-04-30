@@ -147,13 +147,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if featureconfig.Get().ProtectAttester {
 		attesterHistory = markAttestationForTargetEpoch(attesterHistory, data.Source.Epoch, data.Target.Epoch)
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory
-		//if err := v.db.SaveAttestationHistory(ctx, pubKey[:], history); err != nil {
-		//	log.Errorf("Could not save attestation history to DB: %v", err)
-		//	if v.emitAccountMetrics {
-		//		validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-		//	}
-		//	return
-		//}
 	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {

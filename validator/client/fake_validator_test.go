@@ -88,7 +88,7 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) SaveProtections(_ context.Context, slot uint64) error {
+func (fv *fakeValidator) SaveProtections(_ context.Context) error {
 	fv.SaveProtectionsCalled = true
 	return nil
 }

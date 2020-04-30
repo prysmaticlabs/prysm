@@ -463,10 +463,10 @@ func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	return nil
 }
 
-// SaveProtections saves the attestation and proposal information made for the slot.
-func (v *validator) SaveProtections(ctx context.Context, slot uint64) error {
+// SaveProtections saves the attestation information currently in validator state.
+func (v *validator) SaveProtections(ctx context.Context) error {
 	if err := v.db.SaveAttestationHistoryForPubKeys(ctx, v.attesterHistoryByPubKey); err != nil {
-		return errors.Wrap(err, "could not save attester history")
+		return errors.Wrap(err, "could not save attester history to DB")
 	}
 	v.attesterHistoryByPubKey = make(map[[48]byte]*slashpb.AttestationHistory)
 	return nil

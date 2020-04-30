@@ -33,7 +33,7 @@ type Validator interface {
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
-	SaveProtections(ctx context.Context, slot uint64) error
+	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 }
 
@@ -139,7 +139,7 @@ func run(ctx context.Context, v Validator) {
 			go func() {
 				wg.Wait()
 				v.LogAttestationsSubmitted()
-				if err := v.SaveProtections(ctx, slot); err != nil {
+				if err := v.SaveProtections(ctx); err != nil {
 					log.WithError(err).Error("Could not save validator protection")
 				}
 				span.End()
