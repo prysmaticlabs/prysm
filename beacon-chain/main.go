@@ -3,9 +3,12 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
+
+	"gopkg.in/yaml.v2"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log"
@@ -16,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	gologging "github.com/whyrusleeping/go-logging"
@@ -86,6 +90,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFileName,
 	cmd.EnableUPnPFlag,
 	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
 }
 
 func init() {
@@ -141,7 +146,18 @@ func main() {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
-
+		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
+			chainConfigFileName := ctx.String(cmd.ChainConfigFileFlag.Name)
+			yamlFile, err := ioutil.ReadFile(chainConfigFileName)
+			if err != nil {
+				log.WithError(err).Error("Failed to read chain config file.")
+			}
+			conf := params.BeaconConfig()
+			if err := yaml.Unmarshal(yamlFile, conf); err != nil {
+				log.WithError(err).Error("Failed to parse chain config yaml file.")
+			}
+			params.OverrideBeaconConfig(conf)
+		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}

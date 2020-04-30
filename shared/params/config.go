@@ -16,9 +16,9 @@ type BeaconChainConfig struct {
 	MinGenesisDelay          uint64 `yaml:"MIN_GENESIS_DELAY"`           // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
 
 	// Misc constants.
-	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"` // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
-	MaxCommitteesPerSlot           uint64 // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
+	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`              // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxValidatorsPerCommittee      uint64 `yaml:"MAX_VALIDATORS_PER_COMMITTEE"`       // MaxValidatorsPerCommittee defines the upper bound of the size of a committee.
+	MaxCommitteesPerSlot           uint64 `yaml:"MAX_COMMITTEES_PER_SLOT"`            // MaxCommitteesPerSlot defines the max amount of committee in a single slot.
 	MinPerEpochChurnLimit          uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT"`          // MinPerEpochChurnLimit is the minimum amount of churn allotted for validator rotations.
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
