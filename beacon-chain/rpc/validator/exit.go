@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -21,6 +22,12 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	if req.Exit == nil {
+		return nil, status.Error(codes.InvalidArgument, "voluntary exit does not exist")
+	}
+	if req.Signature == nil || len(req.Signature) != params.BeaconConfig().BLSSignatureLength {
+		return nil, status.Error(codes.InvalidArgument, "invalid signature provided")
 	}
 
 	// Confirm the validator is eligible to exit with the parameters provided.
