@@ -21,7 +21,7 @@ func TestBeaconAggregateProofSubscriber_CanSave(t *testing.T) {
 		seenAttestationCache: c,
 	}
 
-	a := &ethpb.SignedAggregateAttestationAndProof{Message: &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0x07}}, AggregatorIndex: 100}}
+	a := &ethpb.SignedAggregateAttestationAndProof{Message: &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, AggregationBits: bitfield.Bitlist{0x07}}, AggregatorIndex: 100}}
 	if err := r.beaconAggregateProofSubscriber(context.Background(), a); err != nil {
 		t.Fatal(err)
 	}
