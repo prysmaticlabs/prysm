@@ -3,13 +3,11 @@ package keystore
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestMarshalAndUnmarshal(t *testing.T) {
@@ -42,20 +40,16 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 }
 
 func TestStoreRandomKey(t *testing.T) {
-	tmpdir := testutil.TempDir()
-	filedir := tmpdir + "/keystore"
+	tempDir, teardown := setupTempKeystoreDir(t)
+	defer teardown()
 	ks := &Store{
-		keysDirPath: filedir,
+		keysDirPath: tempDir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
 	}
 
 	if err := storeNewRandomKey(ks, "password"); err != nil {
 		t.Fatalf("storage of random key unsuccessful %v", err)
-	}
-
-	if err := os.RemoveAll(filedir); err != nil {
-		t.Errorf("unable to remove temporary files %v", err)
 	}
 }
 
@@ -83,26 +77,22 @@ func TestNewKeyFromBLS(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	tmpdir := testutil.TempDir()
-	filedir := tmpdir + "/keystore"
+	tempDir, teardown := setupTempKeystoreDir(t)
+	defer teardown()
 
 	testKeystore := []byte{'t', 'e', 's', 't'}
 
-	err := writeKeyFile(filedir, testKeystore)
+	err := writeKeyFile(tempDir, testKeystore)
 	if err != nil {
 		t.Fatalf("unable to write file %v", err)
 	}
 
-	keystore, err := ioutil.ReadFile(filedir)
+	keystore, err := ioutil.ReadFile(tempDir)
 	if err != nil {
 		t.Fatalf("unable to retrieve file %v", err)
 	}
 
 	if !bytes.Equal(keystore, testKeystore) {
 		t.Fatalf("retrieved keystore is not the same %v", keystore)
-	}
-
-	if err := os.RemoveAll(filedir); err != nil {
-		t.Errorf("unable to remove temporary files %v", err)
 	}
 }
