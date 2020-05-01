@@ -52,6 +52,7 @@ func TestSigningRoot_Compatibility(t *testing.T) {
 		ProposerIndex: 20,
 		ParentRoot:    parRoot[:],
 		StateRoot:     stateRoot[:],
+		Body:          &ethpb.BeaconBlockBody{},
 	}
 	root, err := ComputeSigningRoot(blk, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {
