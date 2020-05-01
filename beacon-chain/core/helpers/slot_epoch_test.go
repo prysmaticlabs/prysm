@@ -43,7 +43,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 		if tt.epoch != CurrentEpoch(state) {
-			t.Errorf("CurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
+			t.Errorf("ActiveCurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
 		}
 	}
 }
@@ -63,7 +63,7 @@ func TestPrevEpoch_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 		if tt.epoch != PrevEpoch(state) {
-			t.Errorf("PrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
+			t.Errorf("ActivePrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
 		}
 	}
 }
