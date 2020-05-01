@@ -1,3 +1,5 @@
+// Package version executes and returns the version string
+// for the currently running process.
 package version
 
 import (

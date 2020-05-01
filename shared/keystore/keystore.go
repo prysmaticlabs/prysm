@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -51,17 +52,6 @@ type Store struct {
 	scryptP     int
 }
 
-// RetrievePubKey retrieves the public key from the keystore.
-func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
-	ks := Store{
-		keysDirPath: directory,
-		scryptN:     StandardScryptN,
-		scryptP:     StandardScryptP,
-	}
-	key, err := ks.GetKey(ks.keysDirPath, password)
-	return key.PublicKey, err
-}
-
 // NewKeystore from a directory.
 func NewKeystore(directory string) Store {
 	return Store{
@@ -75,16 +65,16 @@ func NewKeystore(directory string) Store {
 func (ks Store) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
-	keyjson, err := ioutil.ReadFile(filename)
+	keyJSON, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	return DecryptKey(keyjson, password)
+	return DecryptKey(keyJSON, password)
 }
 
 // GetKeys from directory using the prefix to filter relevant files
 // and a decryption password.
-func (ks Store) GetKeys(directory, fileprefix, password string, warnOnFail bool) (map[string]*Key, error) {
+func (ks Store) GetKeys(directory, filePrefix, password string, warnOnFail bool) (map[string]*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	files, err := ioutil.ReadDir(directory)
@@ -96,17 +86,26 @@ func (ks Store) GetKeys(directory, fileprefix, password string, warnOnFail bool)
 		n := f.Name()
 		filePath := filepath.Join(directory, n)
 		filePath = filepath.Clean(filePath)
-		cp := strings.Contains(n, strings.TrimPrefix(fileprefix, "/"))
+		if f.Mode()&os.ModeSymlink == os.ModeSymlink {
+			if targetFilePath, err := filepath.EvalSymlinks(filePath); err == nil {
+				filePath = targetFilePath
+				// Override link stats with target file's stats.
+				if f, err = os.Stat(filePath); err != nil {
+					return nil, err
+				}
+			}
+		}
+		cp := strings.Contains(n, strings.TrimPrefix(filePrefix, "/"))
 		if f.Mode().IsRegular() && cp {
 			// #nosec G304
-			keyjson, err := ioutil.ReadFile(filePath)
+			keyJSON, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				return nil, err
 			}
-			key, err := DecryptKey(keyjson, password)
+			key, err := DecryptKey(keyJSON, password)
 			if err != nil {
 				if warnOnFail {
-					log.WithError(err).WithField("keyfile", string(keyjson)).Warn("Failed to decrypt key")
+					log.WithError(err).WithField("keyfile", string(keyJSON)).Warn("Failed to decrypt key")
 				}
 				continue
 			}
@@ -118,11 +117,11 @@ func (ks Store) GetKeys(directory, fileprefix, password string, warnOnFail bool)
 
 // StoreKey in filepath and encrypt it with a password.
 func (ks Store) StoreKey(filename string, key *Key, auth string) error {
-	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
+	keyJSON, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
 	}
-	return writeKeyFile(filename, keyjson)
+	return writeKeyFile(filename, keyJSON)
 }
 
 // JoinPath joins the filename with the keystore directory path.
@@ -133,13 +132,7 @@ func (ks Store) JoinPath(filename string) string {
 	return filepath.Join(ks.keysDirPath, filename)
 }
 
-// StoreRandomKey generates a key, encrypts with 'auth' and stores in the given directory
-func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
-	err := storeNewRandomKey(Store{dir, scryptN, scryptP}, password)
-	return err
-}
-
-// EncryptKey encrypts a key using the specified scrypt parameters into a json
+// EncryptKey encrypts a key using the specified scrypt parameters into a JSON
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error) {
 	authArray := []byte(password)
@@ -195,13 +188,13 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 	return json.Marshal(encryptedJSON)
 }
 
-// DecryptKey decrypts a key from a json blob, returning the private key itself.
-func DecryptKey(keyjson []byte, password string) (*Key, error) {
+// DecryptKey decrypts a key from a JSON blob, returning the private key itself.
+func DecryptKey(keyJSON []byte, password string) (*Key, error) {
 	var keyBytes, keyID []byte
 	var err error
 
 	k := new(encryptedKeyJSON)
-	if err := json.Unmarshal(keyjson, k); err != nil {
+	if err := json.Unmarshal(keyJSON, k); err != nil {
 		return nil, err
 	}
 

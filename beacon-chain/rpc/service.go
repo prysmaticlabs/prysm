@@ -1,4 +1,5 @@
-// Package rpc defines the services that the beacon-chain uses to communicate via gRPC.
+// Package rpc defines a gRPC server implementing the eth2 API as needed
+// by validator clients and consumers of chain data.
 package rpc
 
 import (
@@ -31,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -51,80 +53,82 @@ func init() {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	beaconDB               db.HeadAccessDatabase
-	headFetcher            blockchain.HeadFetcher
-	forkFetcher            blockchain.ForkFetcher
-	finalizationFetcher    blockchain.FinalizationFetcher
-	participationFetcher   blockchain.ParticipationFetcher
-	genesisTimeFetcher     blockchain.TimeFetcher
-	genesisFetcher         blockchain.GenesisFetcher
-	attestationReceiver    blockchain.AttestationReceiver
-	blockReceiver          blockchain.BlockReceiver
-	powChainService        powchain.Chain
-	chainStartFetcher      powchain.ChainStartFetcher
-	mockEth1Votes          bool
-	attestationsPool       attestations.Pool
-	exitPool               *voluntaryexits.Pool
-	slashingsPool          *slashings.Pool
-	syncService            sync.Checker
-	host                   string
-	port                   string
-	listener               net.Listener
-	withCert               string
-	withKey                string
-	grpcServer             *grpc.Server
-	canonicalStateChan     chan *pbp2p.BeaconState
-	incomingAttestation    chan *ethpb.Attestation
-	credentialError        error
-	p2p                    p2p.Broadcaster
-	peersFetcher           p2p.PeersProvider
-	depositFetcher         depositcache.DepositFetcher
-	pendingDepositFetcher  depositcache.PendingDepositsFetcher
-	stateNotifier          statefeed.Notifier
-	blockNotifier          blockfeed.Notifier
-	operationNotifier      opfeed.Notifier
-	slasherConn            *grpc.ClientConn
-	slasherProvider        string
-	slasherCert            string
-	slasherCredentialError error
-	slasherClient          slashpb.SlasherClient
-	stateGen               *stategen.State
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	beaconDB                db.HeadAccessDatabase
+	headFetcher             blockchain.HeadFetcher
+	forkFetcher             blockchain.ForkFetcher
+	finalizationFetcher     blockchain.FinalizationFetcher
+	participationFetcher    blockchain.ParticipationFetcher
+	genesisTimeFetcher      blockchain.TimeFetcher
+	genesisFetcher          blockchain.GenesisFetcher
+	attestationReceiver     blockchain.AttestationReceiver
+	blockReceiver           blockchain.BlockReceiver
+	powChainService         powchain.Chain
+	chainStartFetcher       powchain.ChainStartFetcher
+	mockEth1Votes           bool
+	enableDebugRPCEndpoints bool
+	attestationsPool        attestations.Pool
+	exitPool                *voluntaryexits.Pool
+	slashingsPool           *slashings.Pool
+	syncService             sync.Checker
+	host                    string
+	port                    string
+	listener                net.Listener
+	withCert                string
+	withKey                 string
+	grpcServer              *grpc.Server
+	canonicalStateChan      chan *pbp2p.BeaconState
+	incomingAttestation     chan *ethpb.Attestation
+	credentialError         error
+	p2p                     p2p.Broadcaster
+	peersFetcher            p2p.PeersProvider
+	depositFetcher          depositcache.DepositFetcher
+	pendingDepositFetcher   depositcache.PendingDepositsFetcher
+	stateNotifier           statefeed.Notifier
+	blockNotifier           blockfeed.Notifier
+	operationNotifier       opfeed.Notifier
+	slasherConn             *grpc.ClientConn
+	slasherProvider         string
+	slasherCert             string
+	slasherCredentialError  error
+	slasherClient           slashpb.SlasherClient
+	stateGen                *stategen.State
 }
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Host                  string
-	Port                  string
-	CertFlag              string
-	KeyFlag               string
-	BeaconDB              db.HeadAccessDatabase
-	HeadFetcher           blockchain.HeadFetcher
-	ForkFetcher           blockchain.ForkFetcher
-	FinalizationFetcher   blockchain.FinalizationFetcher
-	ParticipationFetcher  blockchain.ParticipationFetcher
-	AttestationReceiver   blockchain.AttestationReceiver
-	BlockReceiver         blockchain.BlockReceiver
-	POWChainService       powchain.Chain
-	ChainStartFetcher     powchain.ChainStartFetcher
-	GenesisTimeFetcher    blockchain.TimeFetcher
-	GenesisFetcher        blockchain.GenesisFetcher
-	MockEth1Votes         bool
-	AttestationsPool      attestations.Pool
-	ExitPool              *voluntaryexits.Pool
-	SlashingsPool         *slashings.Pool
-	SyncService           sync.Checker
-	Broadcaster           p2p.Broadcaster
-	PeersFetcher          p2p.PeersProvider
-	DepositFetcher        depositcache.DepositFetcher
-	PendingDepositFetcher depositcache.PendingDepositsFetcher
-	SlasherProvider       string
-	SlasherCert           string
-	StateNotifier         statefeed.Notifier
-	BlockNotifier         blockfeed.Notifier
-	OperationNotifier     opfeed.Notifier
-	StateGen              *stategen.State
+	Host                    string
+	Port                    string
+	CertFlag                string
+	KeyFlag                 string
+	BeaconDB                db.HeadAccessDatabase
+	HeadFetcher             blockchain.HeadFetcher
+	ForkFetcher             blockchain.ForkFetcher
+	FinalizationFetcher     blockchain.FinalizationFetcher
+	ParticipationFetcher    blockchain.ParticipationFetcher
+	AttestationReceiver     blockchain.AttestationReceiver
+	BlockReceiver           blockchain.BlockReceiver
+	POWChainService         powchain.Chain
+	ChainStartFetcher       powchain.ChainStartFetcher
+	GenesisTimeFetcher      blockchain.TimeFetcher
+	GenesisFetcher          blockchain.GenesisFetcher
+	EnableDebugRPCEndpoints bool
+	MockEth1Votes           bool
+	AttestationsPool        attestations.Pool
+	ExitPool                *voluntaryexits.Pool
+	SlashingsPool           *slashings.Pool
+	SyncService             sync.Checker
+	Broadcaster             p2p.Broadcaster
+	PeersFetcher            p2p.PeersProvider
+	DepositFetcher          depositcache.DepositFetcher
+	PendingDepositFetcher   depositcache.PendingDepositsFetcher
+	SlasherProvider         string
+	SlasherCert             string
+	StateNotifier           statefeed.Notifier
+	BlockNotifier           blockfeed.Notifier
+	OperationNotifier       opfeed.Notifier
+	StateGen                *stategen.State
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -132,40 +136,41 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
-		beaconDB:              cfg.BeaconDB,
-		headFetcher:           cfg.HeadFetcher,
-		forkFetcher:           cfg.ForkFetcher,
-		finalizationFetcher:   cfg.FinalizationFetcher,
-		participationFetcher:  cfg.ParticipationFetcher,
-		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
-		genesisFetcher:        cfg.GenesisFetcher,
-		attestationReceiver:   cfg.AttestationReceiver,
-		blockReceiver:         cfg.BlockReceiver,
-		p2p:                   cfg.Broadcaster,
-		peersFetcher:          cfg.PeersFetcher,
-		powChainService:       cfg.POWChainService,
-		chainStartFetcher:     cfg.ChainStartFetcher,
-		mockEth1Votes:         cfg.MockEth1Votes,
-		attestationsPool:      cfg.AttestationsPool,
-		exitPool:              cfg.ExitPool,
-		slashingsPool:         cfg.SlashingsPool,
-		syncService:           cfg.SyncService,
-		host:                  cfg.Host,
-		port:                  cfg.Port,
-		withCert:              cfg.CertFlag,
-		withKey:               cfg.KeyFlag,
-		depositFetcher:        cfg.DepositFetcher,
-		pendingDepositFetcher: cfg.PendingDepositFetcher,
-		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
-		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		stateNotifier:         cfg.StateNotifier,
-		blockNotifier:         cfg.BlockNotifier,
-		operationNotifier:     cfg.OperationNotifier,
-		slasherProvider:       cfg.SlasherProvider,
-		slasherCert:           cfg.SlasherCert,
-		stateGen:              cfg.StateGen,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		beaconDB:                cfg.BeaconDB,
+		headFetcher:             cfg.HeadFetcher,
+		forkFetcher:             cfg.ForkFetcher,
+		finalizationFetcher:     cfg.FinalizationFetcher,
+		participationFetcher:    cfg.ParticipationFetcher,
+		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
+		genesisFetcher:          cfg.GenesisFetcher,
+		attestationReceiver:     cfg.AttestationReceiver,
+		blockReceiver:           cfg.BlockReceiver,
+		p2p:                     cfg.Broadcaster,
+		peersFetcher:            cfg.PeersFetcher,
+		powChainService:         cfg.POWChainService,
+		chainStartFetcher:       cfg.ChainStartFetcher,
+		mockEth1Votes:           cfg.MockEth1Votes,
+		attestationsPool:        cfg.AttestationsPool,
+		exitPool:                cfg.ExitPool,
+		slashingsPool:           cfg.SlashingsPool,
+		syncService:             cfg.SyncService,
+		host:                    cfg.Host,
+		port:                    cfg.Port,
+		withCert:                cfg.CertFlag,
+		withKey:                 cfg.KeyFlag,
+		depositFetcher:          cfg.DepositFetcher,
+		pendingDepositFetcher:   cfg.PendingDepositFetcher,
+		canonicalStateChan:      make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation:     make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		stateNotifier:           cfg.StateNotifier,
+		blockNotifier:           cfg.BlockNotifier,
+		operationNotifier:       cfg.OperationNotifier,
+		slasherProvider:         cfg.SlasherProvider,
+		slasherCert:             cfg.SlasherCert,
+		stateGen:                cfg.StateGen,
+		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
 	}
 }
 
@@ -269,6 +274,10 @@ func (s *Service) Start() {
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	if s.enableDebugRPCEndpoints {
+		log.Info("Enabled debug RPC endpoints")
+		pbrpc.RegisterDebugServer(s.grpcServer, beaconChainServer)
+	}
 	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
 	// Register reflection service on gRPC server.

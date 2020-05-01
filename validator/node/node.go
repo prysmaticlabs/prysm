@@ -1,5 +1,6 @@
-// Package node defines a validator client which connects to a
-// full beacon node as part of the Ethereum Serenity specification.
+// Package node is the main process which handles the lifecycle of
+// the runtime services in a validator client process, gracefully shutting
+// everything down upon close.
 package node
 
 import (
@@ -89,12 +90,12 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 
 	clearFlag := ctx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := ctx.Bool(cmd.ForceClearDB.Name)
+	dataDir := ctx.String(cmd.DataDirFlag.Name)
 	if clearFlag || forceClearFlag {
 		pubkeys, err := keyManager.FetchValidatingKeys()
 		if err != nil {
 			return nil, err
 		}
-		dataDir := ctx.String(cmd.DataDirFlag.Name)
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
 		}
@@ -102,6 +103,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
+	log.WithField("databasePath", dataDir).Info("Checking DB")
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err

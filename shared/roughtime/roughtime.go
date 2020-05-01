@@ -1,4 +1,4 @@
-// Package roughtime is a wrapper for a roughtime clock source
+// Package roughtime is a wrapper for a roughtime clock source.
 package roughtime
 
 import (

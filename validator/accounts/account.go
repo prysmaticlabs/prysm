@@ -1,3 +1,4 @@
+// Package accounts defines tools to manage an encrypted validator keystore.
 package accounts
 
 import (
@@ -158,6 +159,16 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		}
 		if text = strings.Replace(text, "\n", "", -1); text != "" {
 			path = text
+		}
+	}
+	// Forces user to create directory if using non-default path.
+	if path != DefaultValidatorDir() {
+		exists, err := Exists(path)
+		if err != nil {
+			return path, passphrase, err
+		}
+		if !exists {
+			return path, passphrase, fmt.Errorf("path %q does not exist", path)
 		}
 	}
 	if err := NewValidatorAccount(path, passphrase); err != nil {
