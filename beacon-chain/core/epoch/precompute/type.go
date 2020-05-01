@@ -40,21 +40,21 @@ type Validator struct {
 // Balance stores the pre computation of the total participated balances for a given epoch
 // Pre computing and storing such record is essential for process epoch optimizations.
 type Balance struct {
-	// CurrentEpoch is the total effective balance of all active validators during current epoch.
-	CurrentEpoch uint64
-	// PrevEpoch is the total effective balance of all active validators during prev epoch.
-	PrevEpoch uint64
-	// CurrentEpochAttesters is the total effective balance of all validators who attested during current epoch.
-	CurrentEpochAttesters uint64
-	// CurrentEpochTargetAttesters is the total effective balance of all validators who attested
+	// ActiveCurrentEpoch is the total effective balance of all active validators during current epoch.
+	ActiveCurrentEpoch uint64
+	// ActivePrevEpoch is the total effective balance of all active validators during prev epoch.
+	ActivePrevEpoch uint64
+	// CurrentEpochAttested is the total effective balance of all validators who attested during current epoch.
+	CurrentEpochAttested uint64
+	// CurrentEpochTargetAttested is the total effective balance of all validators who attested
 	// for epoch boundary block during current epoch.
-	CurrentEpochTargetAttesters uint64
-	// PrevEpochAttesters is the total effective balance of all validators who attested during prev epoch.
-	PrevEpochAttesters uint64
-	// PrevEpochTargetAttesters is the total effective balance of all validators who attested
+	CurrentEpochTargetAttested uint64
+	// PrevEpochAttested is the total effective balance of all validators who attested during prev epoch.
+	PrevEpochAttested uint64
+	// PrevEpochTargetAttested is the total effective balance of all validators who attested
 	// for epoch boundary block during prev epoch.
-	PrevEpochTargetAttesters uint64
-	// PrevEpochHeadAttesters is the total effective balance of all validators who attested
+	PrevEpochTargetAttested uint64
+	// PrevEpochHeadAttested is the total effective balance of all validators who attested
 	// correctly for head block during prev epoch.
-	PrevEpochHeadAttesters uint64
+	PrevEpochHeadAttested uint64
 }
