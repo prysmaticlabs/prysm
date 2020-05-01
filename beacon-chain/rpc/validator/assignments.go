@@ -4,15 +4,16 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetDuties returns the duties assigned to a list of validators specified
@@ -46,8 +47,19 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	epochTicker := slotutil.GetSlotTicker(vs.GenesisTimeFetcher.GenesisTime(), secondsPerEpoch)
 	for {
 		select {
+		// Ticks every epoch to submit assignments to connected validator clients.
+		case <-epochTicker.C():
+			res, err := vs.duties(stream.Context(), req)
+			if err != nil {
+				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
+			}
+			if err := stream.Send(res); err != nil {
+				return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
+			}
 		case ev := <-stateChannel:
 			// If a reorg occurred, we recompute duties for the connected validator clients
 			// and send another response over the server stream right away.
@@ -61,23 +73,6 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 				// We only send out new duties if a reorg across epochs occurred, otherwise
 				// validator shufflings would not have changed as a result of a reorg.
 				if newSlotEpoch >= oldSlotEpoch {
-					continue
-				}
-				res, err := vs.duties(stream.Context(), req)
-				if err != nil {
-					return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
-				}
-				if err := stream.Send(res); err != nil {
-					return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
-				}
-			}
-			if ev.Type == statefeed.BlockProcessed {
-				data, ok := ev.Data.(*statefeed.BlockProcessedData)
-				if !ok {
-					return status.Errorf(codes.Internal, "Received incorrect data type over reorg feed: %v", data)
-				}
-				// If this is not a new epoch, we do not update duties.
-				if data != nil && data.Slot%params.BeaconConfig().SlotsPerEpoch != 0 {
 					continue
 				}
 				res, err := vs.duties(stream.Context(), req)
