@@ -2,6 +2,9 @@ package cache
 
 import (
 	"sync"
+	"time"
+
+	"github.com/patrickmn/go-cache"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -9,10 +12,11 @@ import (
 )
 
 type committeeIDs struct {
-	attester       *lru.Cache
-	attesterLock   sync.RWMutex
-	aggregator     *lru.Cache
-	aggregatorLock sync.RWMutex
+	attester          *lru.Cache
+	attesterLock      sync.RWMutex
+	aggregator        *lru.Cache
+	aggregatorLock    sync.RWMutex
+	persistentSubnets *cache.Cache
 }
 
 // CommitteeIDs for attester and aggregator.
@@ -30,7 +34,10 @@ func newCommitteeIDs() *committeeIDs {
 	if err != nil {
 		panic(err)
 	}
-	return &committeeIDs{attester: attesterCache, aggregator: aggregatorCache}
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	subLength := epochDuration * time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
+	persistentCache := cache.New(subLength*time.Second, epochDuration*time.Second)
+	return &committeeIDs{attester: attesterCache, aggregator: aggregatorCache, persistentSubnets: persistentCache}
 }
 
 // AddAttesterCommiteeID adds committee ID for subscribing subnet for the attester of a given slot.
@@ -85,3 +92,5 @@ func (c *committeeIDs) GetAggregatorCommitteeIDs(slot uint64) []uint64 {
 	}
 	return val.([]uint64)
 }
+
+func (c *committeeIDs) AddPersistentCommittee()
