@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -152,10 +151,16 @@ func (r *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
 }
 
 // This captures metrics for block arrival time by subtracts slot start time.
-func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) {
+func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) error {
+	startTime, err := helpers.SlotToTime(genesisTime, currentSlot)
+	if err != nil {
+		return err
+	}
+	diff := uint64(roughtime.Now().UnixNano() - startTime.UnixNano())
+
 	// Denominate everything in milliseconds.
-	blockSlotStartTime := 1000 * (genesisTime + currentSlot*params.BeaconConfig().SecondsPerSlot)
-	currentTime := 1000 * uint64(roughtime.Now().UnixNano())
-	diff := currentTime - blockSlotStartTime
-	arrivalBlockPropagationHistogram.Observe(float64(diff))
+	diffInMs := diff * 1000
+	arrivalBlockPropagationHistogram.Observe(float64(diffInMs))
+
+	return nil
 }
