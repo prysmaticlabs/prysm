@@ -131,11 +131,15 @@ func proposerDeltaPrecompute(state *stateTrie.BeaconState, bp *Balance, vp []*Va
 
 	totalBalance := bp.CurrentEpoch
 
+	baseRewardFactor := params.BeaconConfig().BaseRewardFactor
+	balanceSqrt := mathutil.IntegerSquareRoot(totalBalance)
+	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
+	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
 	for _, v := range vp {
 		if v.IsPrevEpochAttester {
 			vBalance := v.CurrentEpochEffectiveBalance
-			baseReward := vBalance * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
-			proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
+			baseReward := vBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
+			proposerReward := baseReward / proposerRewardQuotient
 			rewards[v.ProposerIndex] += proposerReward
 		}
 	}
