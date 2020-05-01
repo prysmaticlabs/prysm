@@ -92,7 +92,7 @@ func TestStore_OnBlock(t *testing.T) {
 			wantErrString: "provided block root does not have block saved in the db",
 		},
 		{
-			name:          "block is from the feature",
+			name:          "block is from the future",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:], Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             st.Copy(),
 			wantErrString: "could not process slot from the future",
