@@ -35,11 +35,14 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 //    )
 //    return hash_tree_root(domain_wrapped_object)
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
+	// utilise generic ssz library
 	return signingRoot(func() ([32]byte, error) {
 		return ssz.HashTreeRoot(object)
 	}, domain)
 }
 
+// computes the signing root by utilising the provided root function and then
+// returning the signing root of the cotainer object.
 func signingRoot(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
 	if err != nil {
@@ -83,6 +86,7 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	root, err := signingRoot(func() ([32]byte, error) {
+		// utilize custom block hashing function
 		return stateutil.BlockRoot(blk)
 	}, domain)
 	if err != nil {
