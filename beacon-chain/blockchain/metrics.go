@@ -83,42 +83,6 @@ var (
 		Name: "total_voted_target_balances",
 		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
-	OneSecondSentBlockCounter = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "blocks_sent_one_second_total",
-			Help: "Count the number of blocks sent less than one second",
-		},
-	)
-	TwoSecondSentBlockCounter = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "blocks_sent_two_second_total",
-			Help: "Count the number of blocks sent between one to two seconds",
-		},
-	)
-	ThreeSecondSentBlockCounter = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "blocks_sent_three_second_total",
-			Help: "Count the number of blocks sent between two to three seconds",
-		},
-	)
-	FourSecondSentBlockCounter = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "blocks_sent_four_second_total",
-			Help: "Count the number of blocks sent between three to four seconds",
-		},
-	)
-	FiveSecondSentBlockCounter = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "blocks_sent_five_second_total",
-			Help: "Count the number of blocks sent between four to five seconds",
-		},
-	)
-	SixSecondSentBlockCounter = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "blocks_sent_six_second_total",
-			Help: "Count the number of blocks sent equal or greater than six seconds",
-		},
-	)
 )
 
 // reportSlotMetrics reports slot related metrics.

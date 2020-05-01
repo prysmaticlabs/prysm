@@ -15,8 +15,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -53,23 +51,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
-
-	// Add metrics for block arrival time subtracts slot start time.
-	blockSlotStartTime := uint64(s.GenesisTime().Unix()) + block.Block.Slot*params.BeaconConfig().SecondsPerSlot
-	switch diff := uint64(roughtime.Now().Unix()) - blockSlotStartTime; {
-	case diff == 0 || diff == 1:
-		OneSecondSentBlockCounter.Inc()
-	case diff == 2:
-		TwoSecondSentBlockCounter.Inc()
-	case diff == 3:
-		ThreeSecondSentBlockCounter.Inc()
-	case diff == 4:
-		FourSecondSentBlockCounter.Inc()
-	case diff == 5:
-		FiveSecondSentBlockCounter.Inc()
-	default:
-		SixSecondSentBlockCounter.Inc()
-	}
 
 	if err := s.ReceiveBlockNoPubsub(ctx, block); err != nil {
 		return err
