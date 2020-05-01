@@ -161,6 +161,16 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 			path = text
 		}
 	}
+	// Forces user to create directory if using non-default path.
+	if path != DefaultValidatorDir() {
+		exists, err := Exists(path)
+		if err != nil {
+			return path, passphrase, nil
+		}
+		if !exists {
+			return path, passphrase, fmt.Errorf("path %q does not exist", path)
+		}
+	}
 	if err := NewValidatorAccount(path, passphrase); err != nil {
 		return "", "", errors.Wrapf(err, "could not initialize validator account")
 	}
