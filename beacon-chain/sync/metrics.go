@@ -69,37 +69,37 @@ var (
 			Help: "Count the number of times attestation not recovered and pruned because of missing block",
 		},
 	)
-	OneSecondReceivedBlockCounter = promauto.NewCounter(
+	oneSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "blocks_received_one_second_total",
 			Help: "Count the number of blocks received less than one second",
 		},
 	)
-	TwoSecondReceivedBlockCounter = promauto.NewCounter(
+	twoSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "blocks_received_two_second_total",
 			Help: "Count the number of blocks received between one to two seconds",
 		},
 	)
-	ThreeSecondReceivedBlockCounter = promauto.NewCounter(
+	threeSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "blocks_received_three_second_total",
 			Help: "Count the number of blocks received between two to three seconds",
 		},
 	)
-	FourSecondReceivedBlockCounter = promauto.NewCounter(
+	fourSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "blocks_received_four_second_total",
 			Help: "Count the number of blocks received between three to four seconds",
 		},
 	)
-	FiveSecondReceivedBlockCounter = promauto.NewCounter(
+	fiveSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "blocks_received_five_second_total",
 			Help: "Count the number of blocks received between four to five seconds",
 		},
 	)
-	SixSecondReceivedBlockCounter = promauto.NewCounter(
+	sixSecondReceivedBlockCounter = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "blocks_received_six_second_total",
 			Help: "Count the number of blocks received equal or greater than six seconds",

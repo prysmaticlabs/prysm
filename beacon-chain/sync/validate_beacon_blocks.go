@@ -156,16 +156,16 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) {
 	blockSlotStartTime := genesisTime + currentSlot*params.BeaconConfig().SecondsPerSlot
 	switch diff := uint64(roughtime.Now().Unix()) - blockSlotStartTime; {
 	case diff == 0 || diff == 1:
-		OneSecondReceivedBlockCounter.Inc()
+		oneSecondReceivedBlockCounter.Inc()
 	case diff == 2:
-		TwoSecondReceivedBlockCounter.Inc()
+		twoSecondReceivedBlockCounter.Inc()
 	case diff == 3:
-		ThreeSecondReceivedBlockCounter.Inc()
+		threeSecondReceivedBlockCounter.Inc()
 	case diff == 4:
-		FourSecondReceivedBlockCounter.Inc()
+		fourSecondReceivedBlockCounter.Inc()
 	case diff == 5:
-		FiveSecondReceivedBlockCounter.Inc()
+		fiveSecondReceivedBlockCounter.Inc()
 	default:
-		SixSecondReceivedBlockCounter.Inc()
+		sixSecondReceivedBlockCounter.Inc()
 	}
 }
