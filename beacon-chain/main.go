@@ -54,6 +54,7 @@ var appFlags = []cli.Flag{
 	flags.ArchiveBlocksFlag,
 	flags.ArchiveAttestationsFlag,
 	flags.SlotsPerArchivedPoint,
+	flags.EnableDebugRPCEndpoints,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
