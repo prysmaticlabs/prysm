@@ -80,6 +80,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 	currentEpoch := helpers.CurrentEpoch(state)
 	vals := state.Validators()
 	var err error
+	ejectionBal := params.BeaconConfig().EjectionBalance
 	for idx, validator := range vals {
 		// Process the validators for activation eligibility.
 		if helpers.IsEligibleForActivationQueue(validator) {
@@ -91,7 +92,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 
 		// Process the validators for ejection.
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
-		belowEjectionBalance := validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance
+		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
 		if isActive && belowEjectionBalance {
 			state, err = validators.InitiateValidatorExit(state, uint64(idx))
 			if err != nil {
@@ -178,11 +179,11 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
+	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	err = state.ApplyToEveryValidator(checker, func(idx int, val *ethpb.Validator) error {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
-			increment := params.BeaconConfig().EffectiveBalanceIncrement
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
@@ -245,7 +246,9 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		}
 	}
 
-	hysteresisInc := params.BeaconConfig().EffectiveBalanceIncrement / params.BeaconConfig().HysteresisQuotient
+	effBalanceInc := params.BeaconConfig().EffectiveBalanceIncrement
+	maxEffBalance := params.BeaconConfig().MaxEffectiveBalance
+	hysteresisInc := effBalanceInc / params.BeaconConfig().HysteresisQuotient
 	downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
 	upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
 
@@ -260,8 +263,8 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-			if val.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
+			val.EffectiveBalance = maxEffBalance
+			if val.EffectiveBalance > balance-balance%effBalanceInc {
 				return true, nil
 			}
 		}
@@ -272,9 +275,9 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-			if val.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
-				val.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
+			val.EffectiveBalance = maxEffBalance
+			if val.EffectiveBalance > balance-balance%effBalanceInc {
+				val.EffectiveBalance = balance - balance%effBalanceInc
 			}
 			return nil
 		}
