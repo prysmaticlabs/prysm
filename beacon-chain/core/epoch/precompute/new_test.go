@@ -53,8 +53,8 @@ func TestNew(t *testing.T) {
 	}
 
 	wantedBalances := &precompute.Balance{
-		CurrentEpoch: 100,
-		PrevEpoch:    200,
+		ActiveCurrentEpoch: 100,
+		ActivePrevEpoch:    200,
 	}
 	if !reflect.DeepEqual(b, wantedBalances) {
 		t.Error("Incorrect wanted balance")
