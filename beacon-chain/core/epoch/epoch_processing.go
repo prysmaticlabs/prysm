@@ -80,10 +80,12 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 	currentEpoch := helpers.CurrentEpoch(state)
 	vals := state.Validators()
 	var err error
+	ejectionBal := params.BeaconConfig().EjectionBalance
+	activationEligibilityEpoch := helpers.CurrentEpoch(state) + 1
 	for idx, validator := range vals {
 		// Process the validators for activation eligibility.
 		if helpers.IsEligibleForActivationQueue(validator) {
-			validator.ActivationEligibilityEpoch = helpers.CurrentEpoch(state) + 1
+			validator.ActivationEligibilityEpoch = activationEligibilityEpoch
 			if err := state.UpdateValidatorAtIndex(uint64(idx), validator); err != nil {
 				return nil, err
 			}
@@ -91,7 +93,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 
 		// Process the validators for ejection.
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
-		belowEjectionBalance := validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance
+		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
 		if isActive && belowEjectionBalance {
 			state, err = validators.InitiateValidatorExit(state, uint64(idx))
 			if err != nil {
@@ -127,12 +129,13 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		limit = int(churnLimit)
 	}
 
+	activationExitEpoch := helpers.ActivationExitEpoch(currentEpoch)
 	for _, index := range activationQ[:limit] {
 		validator, err := state.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, err
 		}
-		validator.ActivationEpoch = helpers.ActivationExitEpoch(currentEpoch)
+		validator.ActivationEpoch = activationExitEpoch
 		if err := state.UpdateValidatorAtIndex(index, validator); err != nil {
 			return nil, err
 		}
@@ -170,11 +173,11 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
+	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
-			increment := params.BeaconConfig().EffectiveBalanceIncrement
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
@@ -237,6 +240,12 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		}
 	}
 
+	effBalanceInc := params.BeaconConfig().EffectiveBalanceIncrement
+	maxEffBalance := params.BeaconConfig().MaxEffectiveBalance
+	hysteresisInc := effBalanceInc / params.BeaconConfig().HysteresisQuotient
+	downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
+	upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
+
 	bals := state.Balances()
 	// Update effective balances with hysteresis.
 	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
@@ -247,14 +256,11 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 			return false, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
 		balance := bals[idx]
-		hysteresisInc := params.BeaconConfig().EffectiveBalanceIncrement / params.BeaconConfig().HysteresisQuotient
-		downwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisDownwardMultiplier
-		upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-			if val.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
-				val.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
+			val.EffectiveBalance = maxEffBalance
+			if val.EffectiveBalance > balance-balance%effBalanceInc {
+				val.EffectiveBalance = balance - balance%effBalanceInc
 			}
 			return true, nil
 		}
