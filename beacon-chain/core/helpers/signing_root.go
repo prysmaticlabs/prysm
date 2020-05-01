@@ -2,7 +2,9 @@ package helpers
 
 import (
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -33,7 +35,16 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 //    )
 //    return hash_tree_root(domain_wrapped_object)
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
-	objRoot, err := ssz.HashTreeRoot(object)
+	// utilise generic ssz library
+	return signingRoot(func() ([32]byte, error) {
+		return ssz.HashTreeRoot(object)
+	}, domain)
+}
+
+// Computes the signing root by utilising the provided root function and then
+// returning the signing root of the container object.
+func signingRoot(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
+	objRoot, err := rootFunc()
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -55,6 +66,29 @@ func VerifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []b
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	root, err := ComputeSigningRoot(obj, domain)
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing root")
+	}
+	if !sig.Verify(root[:], publicKey) {
+		return ErrSigFailedToVerify
+	}
+	return nil
+}
+
+// VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
+func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte, domain []byte) error {
+	publicKey, err := bls.PublicKeyFromBytes(pub)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to public key")
+	}
+	sig, err := bls.SignatureFromBytes(signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
+	root, err := signingRoot(func() ([32]byte, error) {
+		// utilize custom block hashing function
+		return stateutil.BlockRoot(blk)
+	}, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
