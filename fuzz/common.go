@@ -16,7 +16,7 @@ func init() {
 }
 
 func fail(err error) ([]byte, bool) {
-	shouldPanic := true
+	shouldPanic := false
 	if val, ok := os.LookupEnv("PANIC_ON_ERROR"); ok {
 		shouldPanic = strings.ToLower(val) == "true"
 	}
