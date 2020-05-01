@@ -41,7 +41,7 @@ func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 	}, domain)
 }
 
-// computes the signing root by utilising the provided root function and then
+// Computes the signing root by utilising the provided root function and then
 // returning the signing root of the container object.
 func signingRoot(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
