@@ -10,7 +10,7 @@ import (
 
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
 // This is an optimized version by passing in precomputed total epoch balances.
-func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, p *Balance) error {
+func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) error {
 	currentEpoch := helpers.CurrentEpoch(state)
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 
@@ -20,14 +20,15 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, p *Balance) error 
 	for _, slashing := range slashings {
 		totalSlashing += slashing
 	}
-	minSlashing := mathutil.Min(totalSlashing*3, p.CurrentEpoch)
+
+	minSlashing := mathutil.Min(totalSlashing*3, pBal.ActiveCurrentEpoch)
 	epochToWithdraw := currentEpoch + exitLength/2
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
 		correctEpoch := epochToWithdraw == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
-			penalty := penaltyNumerator / p.CurrentEpoch * increment
+			penalty := penaltyNumerator / pBal.ActiveCurrentEpoch * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
 				return false, err
 			}

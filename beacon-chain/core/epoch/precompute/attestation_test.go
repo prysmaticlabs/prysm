@@ -59,15 +59,15 @@ func TestUpdateBalance(t *testing.T) {
 		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100},
 		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
 	}
-	wantedBp := &precompute.Balance{
-		CurrentEpochAttesters:       200,
-		CurrentEpochTargetAttesters: 200,
-		PrevEpochAttesters:          300,
-		PrevEpochTargetAttesters:    100,
-		PrevEpochHeadAttesters:      200,
+	wantedPBal := &precompute.Balance{
+		CurrentEpochAttested:       200,
+		CurrentEpochTargetAttested: 200,
+		PrevEpochAttested:          300,
+		PrevEpochTargetAttested:    100,
+		PrevEpochHeadAttested:      200,
 	}
-	bp := precompute.UpdateBalance(vp, &precompute.Balance{})
-	if !reflect.DeepEqual(bp, wantedBp) {
+	pBal := precompute.UpdateBalance(vp, &precompute.Balance{})
+	if !reflect.DeepEqual(pBal, wantedPBal) {
 		t.Error("Incorrect balance calculations")
 	}
 }
@@ -231,12 +231,12 @@ func TestProcessAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vp := make([]*precompute.Validator, validators)
-	for i := 0; i < len(vp); i++ {
-		vp[i] = &precompute.Validator{CurrentEpochEffectiveBalance: 100}
+	pVals := make([]*precompute.Validator, validators)
+	for i := 0; i < len(pVals); i++ {
+		pVals[i] = &precompute.Validator{CurrentEpochEffectiveBalance: 100}
 	}
-	bp := &precompute.Balance{}
-	vp, bp, err = precompute.ProcessAttestations(context.Background(), beaconState, vp, bp)
+	pBal := &precompute.Balance{}
+	pVals, pBal, err = precompute.ProcessAttestations(context.Background(), beaconState, pVals, pBal)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestProcessAttestations(t *testing.T) {
 	}
 	indices := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	for _, i := range indices {
-		if !vp[i].IsPrevEpochAttester {
+		if !pVals[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")
 		}
 	}
@@ -257,10 +257,10 @@ func TestProcessAttestations(t *testing.T) {
 	}
 	indices = attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	for _, i := range indices {
-		if !vp[i].IsPrevEpochAttester {
+		if !pVals[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")
 		}
-		if !vp[i].IsPrevEpochHeadAttester {
+		if !pVals[i].IsPrevEpochHeadAttester {
 			t.Error("Not a prev epoch head attester")
 		}
 	}
