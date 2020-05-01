@@ -4,14 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
