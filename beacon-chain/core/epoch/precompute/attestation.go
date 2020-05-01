@@ -23,7 +23,7 @@ func ProcessAttestations(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	vp []*Validator,
-	bp *Balance,
+	pBal *Balance,
 ) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
@@ -51,10 +51,10 @@ func ProcessAttestations(
 		vp = UpdateValidator(vp, v, indices, a, a.Data.Slot)
 	}
 
-	bp = UpdateBalance(vp, bp)
-	Balances = bp
+	pBal = UpdateBalance(vp, pBal)
+	Balances = pBal
 
-	return vp, bp, nil
+	return vp, pBal, nil
 }
 
 // AttestedCurrentEpoch returns true if attestation `a` attested once in current epoch and/or epoch boundary block.
