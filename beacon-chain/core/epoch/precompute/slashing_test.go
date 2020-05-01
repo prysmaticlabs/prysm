@@ -21,8 +21,8 @@ func TestProcessSlashingsPrecompute_NotSlashed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bp := &precompute.Balance{CurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
-	if err := precompute.ProcessSlashingsPrecompute(s, bp); err != nil {
+	pBal := &precompute.Balance{ActiveCurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
+	if err := precompute.ProcessSlashingsPrecompute(s, pBal); err != nil {
 		t.Fatal(err)
 	}
 
@@ -110,14 +110,14 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 				}
 				ab += b
 			}
-			bp := &precompute.Balance{CurrentEpoch: ab}
+			pBal := &precompute.Balance{ActiveCurrentEpoch: ab}
 
 			original := proto.Clone(tt.state)
 			state, err := beaconstate.InitializeFromProto(tt.state)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := precompute.ProcessSlashingsPrecompute(state, bp); err != nil {
+			if err := precompute.ProcessSlashingsPrecompute(state, pBal); err != nil {
 				t.Fatal(err)
 			}
 
