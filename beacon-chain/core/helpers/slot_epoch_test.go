@@ -283,7 +283,7 @@ func TestVerifySlotTime(t *testing.T) {
 		{
 			name: "within tolerance",
 			args: args{
-				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Add(250 * time.Millisecond).Unix(),
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Add(20 * time.Millisecond).Unix(),
 				slot:        5,
 			},
 			wantErr: false,
