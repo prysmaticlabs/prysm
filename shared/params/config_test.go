@@ -17,7 +17,6 @@ func TestOverrideBeaconConfig(t *testing.T) {
 
 func TestOverrideBeaconConfigWithReset(t *testing.T) {
 	cfg := params.BeaconConfig().Copy()
-
 	origSlotsPerEpoch := cfg.SlotsPerEpoch
 	newSlotsPerEpoch := origSlotsPerEpoch + 42
 
