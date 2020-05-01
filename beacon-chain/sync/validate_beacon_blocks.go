@@ -75,7 +75,9 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	r.pendingQueueLock.RUnlock()
 
 	// Add metrics for block arrival time subtracts slot start time.
-	captureArrivalTimeMetric(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot)
+	if captureArrivalTimeMetric(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot) != nil {
+		return false
+	}
 
 	if err := helpers.VerifySlotTime(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot, maximumGossipClockDisparity); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejecting incoming block.")
