@@ -4,6 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -123,6 +127,25 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 		traceutil.AnnotateError(span, err)
 		return err
+	}
+	// handle genesis case
+	if startSlot == 0 {
+		genBlock, err := r.db.GenesisBlock(ctx)
+		if err != nil {
+			log.WithError(err).Error("Failed to retrieve genesis block")
+			r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		genRoot, err := stateutil.BlockRoot(genBlock.Block)
+		if err != nil {
+			log.WithError(err).Error("Failed to hash genesis block")
+			r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		blks = append([]*ethpb.SignedBeaconBlock{genBlock}, blks...)
+		roots = append([][32]byte{genRoot}, roots...)
 	}
 	checkpoint, err := r.db.FinalizedCheckpoint(ctx)
 	if err != nil {
