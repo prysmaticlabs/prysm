@@ -222,7 +222,7 @@ func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, block *ethpb
 	if err != nil {
 		return err
 	}
-	return helpers.VerifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain)
+	return helpers.VerifyBlockSigningRoot(block.Block, proposer.PublicKey, block.Signature, domain)
 }
 
 // ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
