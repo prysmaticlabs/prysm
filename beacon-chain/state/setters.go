@@ -332,8 +332,6 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	b.AddDirtyIndices(validators, changedVals)
 
 	return nil
-
-	return nil
 }
 
 // UpdateValidatorAtIndex for the beacon state. This PR updates the randao mixes
