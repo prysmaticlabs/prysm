@@ -1,3 +1,4 @@
+// Package initialsyncold is deprecated, it includes old logic for initial chain sync.
 package initialsyncold
 
 import (

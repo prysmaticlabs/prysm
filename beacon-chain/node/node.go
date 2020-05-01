@@ -1,4 +1,6 @@
-// Package node defines the services that a beacon chain node would perform.
+// Package node is the main service which launches a beacon node and manages
+// the lifecycle of all its associated services at runtime, such as p2p, RPC, sync,
+// gracefully closing them if the process ends.
 package node
 
 import (
@@ -536,38 +538,40 @@ func (b *BeaconNode) registerRPCService() error {
 	slasherCert := b.cliCtx.String(flags.SlasherCertFlag.Name)
 	slasherProvider := b.cliCtx.String(flags.SlasherProviderFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
+	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
-		Host:                  host,
-		Port:                  port,
-		CertFlag:              cert,
-		KeyFlag:               key,
-		BeaconDB:              b.db,
-		Broadcaster:           p2pService,
-		PeersFetcher:          p2pService,
-		HeadFetcher:           chainService,
-		ForkFetcher:           chainService,
-		FinalizationFetcher:   chainService,
-		ParticipationFetcher:  chainService,
-		BlockReceiver:         chainService,
-		AttestationReceiver:   chainService,
-		GenesisTimeFetcher:    chainService,
-		GenesisFetcher:        chainService,
-		AttestationsPool:      b.attestationPool,
-		ExitPool:              b.exitPool,
-		SlashingsPool:         b.slashingsPool,
-		POWChainService:       web3Service,
-		ChainStartFetcher:     chainStartFetcher,
-		MockEth1Votes:         mockEth1DataVotes,
-		SyncService:           syncService,
-		DepositFetcher:        depositFetcher,
-		PendingDepositFetcher: b.depositCache,
-		BlockNotifier:         b,
-		StateNotifier:         b,
-		OperationNotifier:     b,
-		SlasherCert:           slasherCert,
-		SlasherProvider:       slasherProvider,
-		StateGen:              b.stateGen,
+		Host:                    host,
+		Port:                    port,
+		CertFlag:                cert,
+		KeyFlag:                 key,
+		BeaconDB:                b.db,
+		Broadcaster:             p2pService,
+		PeersFetcher:            p2pService,
+		HeadFetcher:             chainService,
+		ForkFetcher:             chainService,
+		FinalizationFetcher:     chainService,
+		ParticipationFetcher:    chainService,
+		BlockReceiver:           chainService,
+		AttestationReceiver:     chainService,
+		GenesisTimeFetcher:      chainService,
+		GenesisFetcher:          chainService,
+		AttestationsPool:        b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingsPool:           b.slashingsPool,
+		POWChainService:         web3Service,
+		ChainStartFetcher:       chainStartFetcher,
+		MockEth1Votes:           mockEth1DataVotes,
+		SyncService:             syncService,
+		DepositFetcher:          depositFetcher,
+		PendingDepositFetcher:   b.depositCache,
+		BlockNotifier:           b,
+		StateNotifier:           b,
+		OperationNotifier:       b,
+		SlasherCert:             slasherCert,
+		SlasherProvider:         slasherProvider,
+		StateGen:                b.stateGen,
+		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -608,6 +612,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", b.cliCtx.Int(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
 		allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+		enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 		return b.services.RegisterService(
 			gateway.New(
 				b.ctx,
@@ -615,6 +620,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 				gatewayAddress,
 				nil, /*optional mux*/
 				allowedOrigins,
+				enableDebugRPCEndpoints,
 			),
 		)
 	}

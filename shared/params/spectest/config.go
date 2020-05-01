@@ -1,3 +1,5 @@
+// Package spectest allows for easy switching of chain
+// configuration parameters in spec conformity unit tests.
 package spectest
 
 import (

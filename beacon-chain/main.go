@@ -1,4 +1,4 @@
-// Package beacon-chain defines all the utilities needed for a beacon chain node.
+// Package beacon-chain defines the entire runtime of an eth2 beacon node.
 package main
 
 import (
@@ -50,6 +50,7 @@ var appFlags = []cli.Flag{
 	flags.ArchiveBlocksFlag,
 	flags.ArchiveAttestationsFlag,
 	flags.SlotsPerArchivedPoint,
+	flags.EnableDebugRPCEndpoints,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,

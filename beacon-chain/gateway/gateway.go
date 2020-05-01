@@ -1,3 +1,5 @@
+// Package gateway defines a gRPC gateway to serve HTTP-JSON
+// traffic as a proxy and forward it to a beacon node's gRPC service.
 package gateway
 
 import (
@@ -9,6 +11,7 @@ import (
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway"
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -19,16 +22,16 @@ var _ = shared.Service(&Gateway{})
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward
 // it to the beacon-chain gRPC server.
 type Gateway struct {
-	conn           *grpc.ClientConn
-	ctx            context.Context
-	cancel         context.CancelFunc
-	gatewayAddr    string
-	remoteAddr     string
-	server         *http.Server
-	mux            *http.ServeMux
-	allowedOrigins []string
-
-	startFailure error
+	conn                    *grpc.ClientConn
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	gatewayAddr             string
+	remoteAddr              string
+	server                  *http.Server
+	mux                     *http.ServeMux
+	allowedOrigins          []string
+	startFailure            error
+	enableDebugRPCEndpoints bool
 }
 
 // Start the gateway service. This serves the HTTP JSON traffic on the specified
@@ -48,12 +51,21 @@ func (g *Gateway) Start() {
 
 	g.conn = conn
 
-	gwmux := gwruntime.NewServeMux(gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.JSONPb{OrigName: false, EmitDefaults: true}))
-	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
+	gwmux := gwruntime.NewServeMux(
+		gwruntime.WithMarshalerOption(
+			gwruntime.MIMEWildcard,
+			&gwruntime.JSONPb{OrigName: false, EmitDefaults: true},
+		),
+	)
+	handlers := []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 		ethpb.RegisterNodeHandler,
 		ethpb.RegisterBeaconChainHandler,
 		ethpb.RegisterBeaconNodeValidatorHandler,
-	} {
+	}
+	if g.enableDebugRPCEndpoints {
+		handlers = append(handlers, pbrpc.RegisterDebugHandler)
+	}
+	for _, f := range handlers {
 		if err := f(ctx, gwmux, conn); err != nil {
 			log.WithError(err).Error("Failed to start gateway")
 			g.startFailure = err
@@ -106,17 +118,25 @@ func (g *Gateway) Stop() error {
 
 // New returns a new gateway server which translates HTTP into gRPC.
 // Accepts a context and optional http.ServeMux.
-func New(ctx context.Context, remoteAddress, gatewayAddress string, mux *http.ServeMux, allowedOrigins []string) *Gateway {
+func New(
+	ctx context.Context,
+	remoteAddress,
+	gatewayAddress string,
+	mux *http.ServeMux,
+	allowedOrigins []string,
+	enableDebugRPCEndpoints bool,
+) *Gateway {
 	if mux == nil {
 		mux = http.NewServeMux()
 	}
 
 	return &Gateway{
-		remoteAddr:     remoteAddress,
-		gatewayAddr:    gatewayAddress,
-		ctx:            ctx,
-		mux:            mux,
-		allowedOrigins: allowedOrigins,
+		remoteAddr:              remoteAddress,
+		gatewayAddr:             gatewayAddress,
+		ctx:                     ctx,
+		mux:                     mux,
+		allowedOrigins:          allowedOrigins,
+		enableDebugRPCEndpoints: enableDebugRPCEndpoints,
 	}
 }
 

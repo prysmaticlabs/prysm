@@ -1,3 +1,5 @@
+// Package flags defines beacon-node specific runtime flags for
+// setting important values such as ports, eth1 endpoints, and more.
 package flags
 
 import (
@@ -121,5 +123,10 @@ var (
 		Name:  "block-batch-limit",
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
+	}
+	// EnableDebugRPCEndpoints as /v1/beacon/state.
+	EnableDebugRPCEndpoints = &cli.BoolFlag{
+		Name:  "enable-debug-rpc-endpoints",
+		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state. Requires --new-state-mgmt",
 	}
 )
