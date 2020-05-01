@@ -218,7 +218,7 @@ func TestSlotToTime(t *testing.T) {
 			name: "slot_0",
 			args: args{
 				genesisTimeSec: 0,
-				slot: 0,
+				slot:           0,
 			},
 			want: time.Unix(0, 0),
 		},
@@ -226,7 +226,7 @@ func TestSlotToTime(t *testing.T) {
 			name: "slot_1",
 			args: args{
 				genesisTimeSec: 0,
-				slot: 1,
+				slot:           1,
 			},
 			want: time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
 		},
@@ -234,7 +234,7 @@ func TestSlotToTime(t *testing.T) {
 			name: "slot_12",
 			args: args{
 				genesisTimeSec: 500,
-				slot: 12,
+				slot:           12,
 			},
 			want: time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
 		},
@@ -263,7 +263,7 @@ func TestVerifySlotTime(t *testing.T) {
 			name: "Past slot",
 			args: args{
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
-				slot: 3,
+				slot:        3,
 			},
 			wantErr: false,
 		},
@@ -271,7 +271,7 @@ func TestVerifySlotTime(t *testing.T) {
 			name: "within tolerance",
 			args: args{
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Add(250 * time.Millisecond).Unix(),
-				slot: 5,
+				slot:        5,
 			},
 			wantErr: false,
 		},
@@ -279,7 +279,7 @@ func TestVerifySlotTime(t *testing.T) {
 			name: "future slot",
 			args: args{
 				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
-				slot: 6,
+				slot:        6,
 			},
 			wantErr: true,
 		},
