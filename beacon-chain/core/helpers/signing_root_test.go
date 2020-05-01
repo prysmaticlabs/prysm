@@ -6,7 +6,9 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -34,6 +36,36 @@ func TestComputeDomain_OK(t *testing.T) {
 		if !bytes.Equal(domain(tt.domainType, params.BeaconConfig().ZeroHash[:]), tt.domain) {
 			t.Errorf("wanted domain version: %d, got: %d", tt.domain, domain(tt.domainType, params.BeaconConfig().ZeroHash[:]))
 		}
+	}
+}
+
+func TestSigningRoot_Compatibility(t *testing.T) {
+	featureFlags := new(featureconfig.Flags)
+	featureFlags.EnableBlockHTR = true
+	reset := featureconfig.InitWithReset(featureFlags)
+	defer reset()
+
+	parRoot := [32]byte{'A'}
+	stateRoot := [32]byte{'B'}
+	blk := &ethpb.BeaconBlock{
+		Slot:          20,
+		ProposerIndex: 20,
+		ParentRoot:    parRoot[:],
+		StateRoot:     stateRoot[:],
+		Body:          &ethpb.BeaconBlockBody{},
+	}
+	root, err := ComputeSigningRoot(blk, params.BeaconConfig().DomainBeaconProposer[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	newRoot, err := signingRoot(func() ([32]byte, error) {
+		return stateutil.BlockRoot(blk)
+	}, params.BeaconConfig().DomainBeaconProposer[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root != newRoot {
+		t.Errorf("Wanted root of %#x but got %#x", root, newRoot)
 	}
 }
 
