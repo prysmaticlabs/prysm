@@ -299,8 +299,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(checker func(idx int, val *ethpb.Validator) (bool, error),
-	mutator func(idx int, val *ethpb.Validator) error) error {
+func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, error)) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -308,35 +307,21 @@ func (b *BeaconState) ApplyToEveryValidator(checker func(idx int, val *ethpb.Val
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		if featureconfig.Get().EnableStateRefCopy {
-			v = make([]*ethpb.Validator, len(b.state.Validators))
-			copy(v, b.state.Validators)
-		} else {
-			v = b.Validators()
-		}
+		v = b.Validators()
+
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
-	var changedVals []uint64
+	changedVals := []uint64{}
 	for i, val := range v {
-		changed, err := checker(i, val)
+		changed, err := f(i, val)
 		if err != nil {
 			return err
 		}
-		if !changed {
-			continue
+		if changed {
+			changedVals = append(changedVals, uint64(i))
 		}
-		if featureconfig.Get().EnableStateRefCopy {
-			// copy if changing a reference
-			val = CopyValidator(val)
-		}
-		err = mutator(i, val)
-		if err != nil {
-			return err
-		}
-		changedVals = append(changedVals, uint64(i))
-		v[i] = val
 	}
 
 	b.lock.Lock()
@@ -363,12 +348,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		if featureconfig.Get().EnableStateRefCopy {
-			v = make([]*ethpb.Validator, len(b.state.Validators))
-			copy(v, b.state.Validators)
-		} else {
-			v = b.Validators()
-		}
+		v = b.Validators()
 
 		ref.MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
@@ -677,12 +657,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.RLock()
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			vals = make([]*ethpb.Validator, len(b.state.Validators))
-			copy(vals, b.state.Validators)
-		} else {
-			vals = b.Validators()
-		}
+		vals = b.Validators()
 		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}

@@ -26,8 +26,5 @@ message BeaconStateRequest {
 
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;
-
-        // The state root corresponding to a desired beacon state.
-        bytes state_root = 3;
     }
 }
