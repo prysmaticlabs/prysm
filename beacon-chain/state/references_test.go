@@ -6,7 +6,6 @@ import (
 	"runtime/debug"
 	"testing"
 
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -47,111 +46,6 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 	}
 	if b.sharedFieldReferences[randaoMixes].refs != 1 || a.sharedFieldReferences[randaoMixes].refs != 1 {
 		t.Error("Expected 1 shared reference to randao mix for both a and b")
-	}
-}
-
-func TestStateReferenceCopy_NoUnexpectedValidatorMutation(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableStateRefCopy: true})
-	defer resetCfg()
-
-	a, err := InitializeFromProtoUnsafe(&p2ppb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assertRefCount(t, a, validators, 1)
-
-	// Add validator before copying state (so that a and b have shared data).
-	pubKey1, pubKey2 := [48]byte{29}, [48]byte{31}
-	err = a.AppendValidator(&eth.Validator{
-		PublicKey: pubKey1[:],
-	})
-	if len(a.state.GetValidators()) != 1 {
-		t.Error("No validators found")
-	}
-
-	// Copy, increases reference count.
-	b := a.Copy()
-	assertRefCount(t, a, validators, 2)
-	assertRefCount(t, b, validators, 2)
-	if len(b.state.GetValidators()) != 1 {
-		t.Error("No validators found")
-	}
-
-	hasValidatorWithPubKey := func(state *p2ppb.BeaconState, key [48]byte) bool {
-		for _, val := range state.GetValidators() {
-			if reflect.DeepEqual(val.PublicKey, key[:]) {
-				return true
-			}
-		}
-		return false
-	}
-
-	err = a.AppendValidator(&eth.Validator{
-		PublicKey: pubKey2[:],
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Copy on write happened, reference counters are reset.
-	assertRefCount(t, a, validators, 1)
-	assertRefCount(t, b, validators, 1)
-
-	valsA := a.state.GetValidators()
-	valsB := b.state.GetValidators()
-	if len(valsA) != 2 {
-		t.Errorf("Unexpected number of validators, want: %v, got: %v", 2, len(valsA))
-	}
-	// Both validators are known to a.
-	if !hasValidatorWithPubKey(a.state, pubKey1) {
-		t.Errorf("Expected validator not found, want: %v", pubKey1)
-	}
-	if !hasValidatorWithPubKey(a.state, pubKey2) {
-		t.Errorf("Expected validator not found, want: %v", pubKey2)
-	}
-	// Only one validator is known to b.
-	if !hasValidatorWithPubKey(b.state, pubKey1) {
-		t.Errorf("Expected validator not found, want: %v", pubKey1)
-	}
-	if hasValidatorWithPubKey(b.state, pubKey2) {
-		t.Errorf("Unexpected validator found: %v", pubKey2)
-	}
-	if len(valsA) == len(valsB) {
-		t.Error("Unexpected state mutation")
-	}
-
-	// Make sure that function applied to all validators in one state, doesn't affect another.
-	changedBalance := uint64(1)
-	for i, val := range valsA {
-		if val.EffectiveBalance == changedBalance {
-			t.Errorf("Unexpected effective balance, want: %v, got: %v", 0, valsA[i].EffectiveBalance)
-		}
-	}
-	for i, val := range valsB {
-		if val.EffectiveBalance == changedBalance {
-			t.Errorf("Unexpected effective balance, want: %v, got: %v", 0, valsB[i].EffectiveBalance)
-		}
-	}
-	// Applied to a, a and b share reference to the first validator, which shouldn't cause issues.
-	err = a.ApplyToEveryValidator(func(idx int, val *eth.Validator) (b bool, err error) {
-		return true, nil
-	}, func(idx int, val *eth.Validator) error {
-		val.EffectiveBalance = 1
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i, val := range valsA {
-		if val.EffectiveBalance != changedBalance {
-			t.Errorf("Unexpected effective balance, want: %v, got: %v", changedBalance, valsA[i].EffectiveBalance)
-		}
-	}
-	for i, val := range valsB {
-		if val.EffectiveBalance == changedBalance {
-			t.Errorf("Unexpected mutation of effective balance, want: %v, got: %v", 0, valsB[i].EffectiveBalance)
-		}
 	}
 }
 
