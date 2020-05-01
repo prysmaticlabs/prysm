@@ -71,8 +71,8 @@ var (
 	)
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Name:    "blocks_arrival_in_seconds_histogram",
-			Help:    "Captures blocks propagation time. Blocks arrival in seconds distribution",
+			Name:    "block_arrival_latency_milliseconds",
+			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
 			Buckets: []float64{1, 2, 3, 4, 5, 6},
 		},
 	)
