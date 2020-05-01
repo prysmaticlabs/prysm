@@ -94,6 +94,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SlotsPerArchivedPoint,
 			flags.DisableDiscv5,
 			flags.BlockBatchLimit,
+			flags.EnableDebugRPCEndpoints,
 		},
 	},
 	{
