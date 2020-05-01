@@ -155,7 +155,7 @@ func (r *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
 func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) {
 	// Denominate everything in milliseconds.
 	blockSlotStartTime := 1000 * (genesisTime + currentSlot*params.BeaconConfig().SecondsPerSlot)
-	currentTime := 1000 * uint64(roughtime.Now().Unix())
+	currentTime := 1000 * uint64(roughtime.Now().UnixNano())
 	diff := currentTime - blockSlotStartTime
 	arrivalBlockPropagationHistogram.Observe(float64(diff))
 }
