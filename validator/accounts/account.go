@@ -165,7 +165,7 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 	if path != DefaultValidatorDir() {
 		exists, err := Exists(path)
 		if err != nil {
-			return path, passphrase, nil
+			return path, passphrase, err
 		}
 		if !exists {
 			return path, passphrase, fmt.Errorf("path %q does not exist", path)
