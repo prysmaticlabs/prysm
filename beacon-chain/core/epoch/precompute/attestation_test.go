@@ -60,11 +60,11 @@ func TestUpdateBalance(t *testing.T) {
 		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
 	}
 	wantedBp := &precompute.Balance{
-		CurrentEpochAttesters:       200,
-		CurrentEpochTargetAttesters: 200,
-		PrevEpochAttesters:          300,
-		PrevEpochTargetAttesters:    100,
-		PrevEpochHeadAttesters:      200,
+		CurrentEpochAttested:       200,
+		CurrentEpochTargetAttested: 200,
+		PrevEpochAttested:          300,
+		PrevEpochTargetAttested:    100,
+		PrevEpochHeadAttested:      200,
 	}
 	bp := precompute.UpdateBalance(vp, &precompute.Balance{})
 	if !reflect.DeepEqual(bp, wantedBp) {

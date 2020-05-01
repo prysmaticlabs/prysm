@@ -123,9 +123,9 @@ func (s *Service) archiveParticipation(ctx context.Context, epoch uint64) error 
 	participation := &ethpb.ValidatorParticipation{}
 	if p != nil {
 		participation = &ethpb.ValidatorParticipation{
-			EligibleEther:           p.PrevEpoch,
-			VotedEther:              p.PrevEpochTargetAttesters,
-			GlobalParticipationRate: float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch),
+			EligibleEther:           p.ActivePrevEpoch,
+			VotedEther:              p.PrevEpochTargetAttested,
+			GlobalParticipationRate: float32(p.PrevEpochTargetAttested) / float32(p.ActivePrevEpoch),
 		}
 	}
 	return s.beaconDB.SaveArchivedValidatorParticipation(ctx, epoch, participation)

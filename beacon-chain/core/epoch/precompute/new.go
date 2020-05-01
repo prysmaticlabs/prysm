@@ -36,12 +36,12 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 		// Was validator active current epoch
 		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			p.IsActiveCurrentEpoch = true
-			bp.CurrentEpoch += val.EffectiveBalance()
+			bp.ActiveCurrentEpoch += val.EffectiveBalance()
 		}
 		// Was validator active previous epoch
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			p.IsActivePrevEpoch = true
-			bp.PrevEpoch += val.EffectiveBalance()
+			bp.ActivePrevEpoch += val.EffectiveBalance()
 		}
 		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
 		// with the lower values

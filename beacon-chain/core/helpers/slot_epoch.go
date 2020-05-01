@@ -21,7 +21,7 @@ func SlotToEpoch(slot uint64) uint64 {
 	return slot / params.BeaconConfig().SlotsPerEpoch
 }
 
-// CurrentEpoch returns the current epoch number calculated from
+// ActiveCurrentEpoch returns the current epoch number calculated from
 // the slot number stored in beacon state.
 //
 // Spec pseudocode definition:
@@ -34,7 +34,7 @@ func CurrentEpoch(state *stateTrie.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot())
 }
 
-// PrevEpoch returns the previous epoch number calculated from
+// ActivePrevEpoch returns the previous epoch number calculated from
 // the slot number stored in beacon state. It alswo checks for
 // underflow condition.
 //

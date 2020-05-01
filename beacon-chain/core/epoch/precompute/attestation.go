@@ -156,25 +156,25 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb
 }
 
 // UpdateBalance updates pre computed balance store.
-func UpdateBalance(vp []*Validator, bp *Balance) *Balance {
+func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
 	for _, v := range vp {
 		if !v.IsSlashed {
 			if v.IsCurrentEpochAttester {
-				bp.CurrentEpochAttesters += v.CurrentEpochEffectiveBalance
+				bBal.CurrentEpochAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsCurrentEpochTargetAttester {
-				bp.CurrentEpochTargetAttesters += v.CurrentEpochEffectiveBalance
+				bBal.CurrentEpochTargetAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochAttester {
-				bp.PrevEpochAttesters += v.CurrentEpochEffectiveBalance
+				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochTargetAttester {
-				bp.PrevEpochTargetAttesters += v.CurrentEpochEffectiveBalance
+				bBal.PrevEpochTargetAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochHeadAttester {
-				bp.PrevEpochHeadAttesters += v.CurrentEpochEffectiveBalance
+				bBal.PrevEpochHeadAttested += v.CurrentEpochEffectiveBalance
 			}
 		}
 	}
-	return bp
+	return bBal
 }

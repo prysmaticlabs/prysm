@@ -188,7 +188,7 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bp.CurrentEpoch = 0 // Could cause a divide by zero panic.
+	bp.ActiveCurrentEpoch = 0 // Could cause a divide by zero panic.
 
 	_, _, err = attestationDeltas(state, bp, vp)
 	if err != nil {
