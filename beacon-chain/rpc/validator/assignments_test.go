@@ -24,7 +24,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	mockSlotUtil "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -343,9 +342,6 @@ func TestStreamDuties_OK(t *testing.T) {
 			Genesis: time.Now(),
 		},
 		StateNotifier: &mockChain.MockStateNotifier{},
-		EpochTicker: &mockSlotUtil.MockTicker{
-			Channel: make(chan uint64),
-		},
 	}
 
 	// Test the first validator in registry.
@@ -419,9 +415,6 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 			Genesis: time.Now(),
 		},
 		StateNotifier: &mockChain.MockStateNotifier{},
-		EpochTicker: &mockSlotUtil.MockTicker{
-			Channel: make(chan uint64),
-		},
 	}
 
 	// Test the first validator in registry.

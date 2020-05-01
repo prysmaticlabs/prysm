@@ -217,9 +217,6 @@ func (s *Service) Start() {
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
-	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	epochTicker := slotutil.GetSlotTicker(s.genesisTimeFetcher.GenesisTime(), secondsPerEpoch)
-
 	validatorServer := &validator.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
@@ -246,7 +243,6 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		SlashingsPool:          s.slashingsPool,
 		StateGen:               s.stateGen,
-		EpochTicker:            epochTicker,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
