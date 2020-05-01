@@ -73,7 +73,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
 			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
-			Buckets: []float64{1, 2, 3, 4, 5, 6},
+			Buckets: []float64{1000, 2000, 3000, 4000, 5000, 6000},
 		},
 	)
 )
