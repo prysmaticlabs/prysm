@@ -811,18 +811,18 @@ func (bs *Server) getValidatorParticipationUsingOldArchival(
 		)
 	}
 
-	p := bs.ParticipationFetcher.Participation(requestedEpoch)
-	if p == nil {
-		p = &precompute.Balance{}
+	pBal := bs.ParticipationFetcher.Participation(requestedEpoch)
+	if pBal == nil {
+		pBal = &precompute.Balance{}
 	}
 	participation := &ethpb.ValidatorParticipation{
-		EligibleEther: p.ActivePrevEpoch,
-		VotedEther:    p.PrevEpochTargetAttested,
+		EligibleEther: pBal.ActivePrevEpoch,
+		VotedEther:    pBal.PrevEpochTargetAttested,
 	}
 	participation.GlobalParticipationRate = float32(0)
 	// only divide if prevEpoch is non zero
-	if p.ActivePrevEpoch != 0 {
-		participation.GlobalParticipationRate = float32(float64(p.PrevEpochTargetAttested) / float64(p.ActivePrevEpoch))
+	if pBal.ActivePrevEpoch != 0 {
+		participation.GlobalParticipationRate = float32(float64(pBal.PrevEpochTargetAttested) / float64(pBal.ActivePrevEpoch))
 	}
 
 	return &ethpb.ValidatorParticipationResponse{
