@@ -1,7 +1,7 @@
 package testing
 
 import (
-
+	"fmt"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"os"
@@ -18,6 +18,13 @@ func GetBeaconFuzzState(ID uint16) (*pb.BeaconState, error) {
 	// executable was uploaded (without the runfiles). i.e. fuzzit's platform.
 	if p, ok := os.LookupEnv(fileBaseENV); ok {
 		base = p
+	}
+	ok, err := testutil.BazelDirectoryNonEmpty(base)
+	if err != nil {
+		panic(err)
+	}
+	if !ok {
+		panic(fmt.Sprintf("Beacon states directory (%s) does not exist or has no files.", base))
 	}
 	b, err := testutil.BazelFileBytes(base, strconv.Itoa(int(ID)))
 	if err != nil {
