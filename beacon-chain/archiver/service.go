@@ -121,7 +121,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *state.
 func (s *Service) archiveParticipation(ctx context.Context, epoch uint64) error {
 	pBal := s.participationFetcher.Participation(epoch)
 	participation := &ethpb.ValidatorParticipation{}
-	if p != nil {
+	if pBal != nil {
 		participation = &ethpb.ValidatorParticipation{
 			EligibleEther:           pBal.ActivePrevEpoch,
 			VotedEther:              pBal.PrevEpochTargetAttested,
