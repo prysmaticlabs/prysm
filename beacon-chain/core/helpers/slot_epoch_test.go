@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -213,6 +214,7 @@ func TestSlotToTime(t *testing.T) {
 		name string
 		args args
 		want time.Time
+		wantErr bool
 	}{
 		{
 			name: "slot_0",
@@ -221,6 +223,7 @@ func TestSlotToTime(t *testing.T) {
 				slot:           0,
 			},
 			want: time.Unix(0, 0),
+			wantErr: false,
 		},
 		{
 			name: "slot_1",
@@ -229,6 +232,7 @@ func TestSlotToTime(t *testing.T) {
 				slot:           1,
 			},
 			want: time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
+			wantErr: false,
 		},
 		{
 			name: "slot_12",
@@ -237,11 +241,20 @@ func TestSlotToTime(t *testing.T) {
 				slot:           12,
 			},
 			want: time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
+			wantErr: false,
+		},
+		{
+			name: "overflow",
+			args: args{
+				genesisTimeSec: 500,
+				slot:           math.MaxUint64,
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); !reflect.DeepEqual(got, tt.want) {
+			if got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); (err != nil ) != tt.wantErr && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SlotToTime() = %v, want %v", got, tt.want)
 			}
 		})

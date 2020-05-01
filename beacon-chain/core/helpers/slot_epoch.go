@@ -95,10 +95,10 @@ const TimeShiftTolerance = 500 * time.Millisecond // ms
 
 // VerifySlotTime validates the input slot is not from the future.
 func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration) error {
-	if slot >= math.MaxInt64 {
-		return fmt.Errorf("slot (%d) is in the far distant future", slot)
+	slotTime, err := SlotToTime(genesisTime, slot)
+	if err != nil {
+		return err
 	}
-	slotTime := SlotToTime(genesisTime, slot)
 	currentTime := roughtime.Now()
 	diff := slotTime.Sub(currentTime)
 
@@ -109,9 +109,12 @@ func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration
 }
 
 // SlotToTime takes the given slot and genesis time to determine the start time of the slot.
-func SlotToTime(genesisTimeSec uint64, slot uint64) time.Time {
+func SlotToTime(genesisTimeSec uint64, slot uint64) (time.Time, error) {
+	if slot >= math.MaxInt64 {
+		return time.Unix(0, 0), fmt.Errorf("slot (%d) is in the far distant future", slot)
+	}
 	timeSinceGenesis := slot * params.BeaconConfig().SecondsPerSlot
-	return time.Unix(int64(genesisTimeSec+timeSinceGenesis), 0)
+	return time.Unix(int64(genesisTimeSec+timeSinceGenesis), 0), nil
 }
 
 // SlotsSince computes the number of time slots that have occurred since the given timestamp.
