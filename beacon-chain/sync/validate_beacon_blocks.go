@@ -54,9 +54,6 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	// Add metrics for block arrival time subtracts slot start time.
-	captureArrivalTimeMetric(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot)
-
 	// Verify the block is the first block received for the proposer for the slot.
 	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return false
@@ -76,6 +73,9 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 	r.pendingQueueLock.RUnlock()
+
+	// Add metrics for block arrival time subtracts slot start time.
+	captureArrivalTimeMetric(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot)
 
 	if err := helpers.VerifySlotTime(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot, maximumGossipClockDisparity); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejecting incoming block.")
@@ -154,18 +154,6 @@ func (r *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
 // This captures metrics for block arrival time by subtracts slot start time.
 func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) {
 	blockSlotStartTime := genesisTime + currentSlot*params.BeaconConfig().SecondsPerSlot
-	switch diff := uint64(roughtime.Now().Unix()) - blockSlotStartTime; {
-	case diff == 0 || diff == 1:
-		oneSecondReceivedBlockCounter.Inc()
-	case diff == 2:
-		twoSecondReceivedBlockCounter.Inc()
-	case diff == 3:
-		threeSecondReceivedBlockCounter.Inc()
-	case diff == 4:
-		fourSecondReceivedBlockCounter.Inc()
-	case diff == 5:
-		fiveSecondReceivedBlockCounter.Inc()
-	default:
-		sixSecondReceivedBlockCounter.Inc()
-	}
+	diff := uint64(roughtime.Now().Unix()) - blockSlotStartTime
+	arrivalBlockPropagationHistogram.Observe(float64(diff))
 }
