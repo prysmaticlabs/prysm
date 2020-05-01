@@ -1,7 +1,10 @@
 package helpers
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"reflect"
 	"testing"
+	"time"
 
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -198,5 +201,94 @@ func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 		if tt.roundedUpSlot != RoundUpToNearestEpoch(tt.startSlot) {
 			t.Errorf("RoundUpToNearestEpoch(%d) = %d, wanted: %d", tt.startSlot, RoundUpToNearestEpoch(tt.startSlot), tt.roundedUpSlot)
 		}
+	}
+}
+
+func TestSlotToTime(t *testing.T) {
+	type args struct {
+		genesisTimeSec uint64
+		slot           uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want time.Time
+	}{
+		{
+			name: "slot_0",
+			args: args{
+				genesisTimeSec: 0,
+				slot: 0,
+			},
+			want: time.Unix(0, 0),
+		},
+		{
+			name: "slot_1",
+			args: args{
+				genesisTimeSec: 0,
+				slot: 1,
+			},
+			want: time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
+		},
+		{
+			name: "slot_12",
+			args: args{
+				genesisTimeSec: 500,
+				slot: 12,
+			},
+			want: time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SlotToTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVerifySlotTime(t *testing.T) {
+	type args struct {
+		genesisTime   int64
+		slot          uint64
+		timeTolerance time.Duration
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Past slot",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
+				slot: 3,
+			},
+			wantErr: false,
+		},
+		{
+			name: "within tolerance",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Add(250 * time.Millisecond).Unix(),
+				slot: 5,
+			},
+			wantErr: false,
+		},
+		{
+			name: "future slot",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
+				slot: 6,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := VerifySlotTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance); (err != nil) != tt.wantErr {
+				t.Errorf("VerifySlotTime() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
