@@ -16,18 +16,21 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, p *Balance) error 
 
 	// Compute the sum of state slashings
 	slashings := state.Slashings()
-	totalSlashing := uint64(0)
+	totalSlashingBal := uint64(0)
 	for _, slashing := range slashings {
-		totalSlashing += slashing
+		totalSlashingBal += slashing
 	}
-
+	increment := params.BeaconConfig().EffectiveBalanceIncrement
+	totalActiveBal, err := helpers.TotalActiveBalance(state)
+	if err != nil {
+		return err
+	}
+	minSlashing := mathutil.Min(totalSlashingBal*3, totalActiveBal)
 	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
-			minSlashing := mathutil.Min(totalSlashing*3, p.CurrentEpoch)
-			increment := params.BeaconConfig().EffectiveBalanceIncrement
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
-			penalty := penaltyNumerator / p.CurrentEpoch * increment
+			penalty := penaltyNumerator / totalActiveBal * increment
 			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
 				return false, err
 			}
