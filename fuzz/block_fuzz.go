@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// BeaconFuzz using the corpora from sigp/beacon-fuzz.
+// BeaconFuzzBlock using the corpora from sigp/beacon-fuzz.
 func BeaconFuzzBlock(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputBlockHeader{}
