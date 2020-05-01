@@ -124,4 +124,9 @@ var (
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
 	}
+	// EnableDebugRPCEndpoints as /v1/beacon/state.
+	EnableDebugRPCEndpoints = &cli.BoolFlag{
+		Name:  "enable-debug-rpc-endpoints",
+		Usage: "Enables the debug rpc service, containing utility endpoints such as /eth/v1alpha1/beacon/state. Requires --new-state-mgmt",
+	}
 )

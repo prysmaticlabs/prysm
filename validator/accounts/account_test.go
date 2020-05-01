@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -14,7 +15,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	directory := testutil.TempDir() + "/testkeystore"
 	defer func() {
 		if err := os.RemoveAll(directory); err != nil {
-			t.Log(err)
+			t.Logf("Could not remove directory: %v", err)
 		}
 	}()
 	validatorKey, err := keystore.NewKey()
@@ -38,7 +39,13 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 			t.Errorf("%v\n", f.Name())
 		}
 	}
-	if err := os.RemoveAll(directory); err != nil {
-		t.Fatalf("Could not remove directory: %v", err)
+}
+
+func TestNewValidatorAccount_CreateValidatorAccount(t *testing.T) {
+	directory := "foobar"
+	_, _, err := CreateValidatorAccount(directory, "foobar")
+	wantErrString := fmt.Sprintf("path %q does not exist", directory)
+	if err == nil || err.Error() != wantErrString {
+		t.Errorf("expected error not thrown, want: %v, got: %v", wantErrString, err)
 	}
 }
