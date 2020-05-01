@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -156,11 +157,8 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) error {
 	if err != nil {
 		return err
 	}
-	diff := uint64(roughtime.Now().UnixNano() - startTime.UnixNano())
-
-	// Denominate everything in milliseconds.
-	diffInMs := diff * 1000
-	arrivalBlockPropagationHistogram.Observe(float64(diffInMs))
+	diffMs := roughtime.Now().Sub(startTime) / time.Millisecond
+	arrivalBlockPropagationHistogram.Observe(float64(diffMs))
 
 	return nil
 }
