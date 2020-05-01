@@ -156,7 +156,7 @@ go_fuzz_test(
     srcs = SRCS,
     corpus = "rpc_status_corpus",
     corpus_path = "fuzz/rpc_status_corpus",
-    func = "FuzzP2PRPCStatus",
+    func = "BeaconFuzzP2PRPCStatus",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
 )
@@ -166,7 +166,7 @@ go_fuzz_test(
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:0_11_0_mainnet_beaconstate",
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-11-0/mainnet/beaconstate",
-    func = "FuzzSSZCache",
+    func = "BeaconFuzzSSZCache",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
 )

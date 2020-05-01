@@ -66,8 +66,8 @@ func init() {
 	})
 }
 
-// FuzzP2PRPCStatus implements libfuzzer and beacon fuzz interface.
-func FuzzP2PRPCStatus(b []byte) {
+// BeaconFuzzP2PRPCStatus implements libfuzzer and beacon fuzz interface.
+func BeaconFuzzP2PRPCStatus(b []byte) {
 	s, err := h.NewStream(context.Background(), p.PeerID(), "/eth2/beacon_chain/req/status/1/ssz")
 	if err != nil {
 		// libp2p ¯\_(ツ)_/¯
