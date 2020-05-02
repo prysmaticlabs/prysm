@@ -62,19 +62,6 @@ func NewValidatorAccount(directory string, password string) error {
 	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
-	// If the keystore does not exists at the path, we create a new one for the validator.
-	shardWithdrawalKey, err := keystore.NewKey()
-	if err != nil {
-		return err
-	}
-	shardWithdrawalKeyFile = shardWithdrawalKeyFile + hex.EncodeToString(shardWithdrawalKey.PublicKey.Marshal())[:12]
-	if err := ks.StoreKey(shardWithdrawalKeyFile, shardWithdrawalKey, password); err != nil {
-		return errors.Wrap(err, "unable to store key")
-	}
-	log.WithField(
-		"path",
-		shardWithdrawalKeyFile,
-	).Info("Keystore generated for shard withdrawals at path")
 	validatorKey, err := keystore.NewKey()
 	if err != nil {
 		return err
@@ -87,6 +74,20 @@ func NewValidatorAccount(directory string, password string) error {
 		"path",
 		validatorKeyFile,
 	).Info("Keystore generated for validator signatures at path")
+
+	// If the keystore does not exists at the path, we create a new one for the validator.
+	shardWithdrawalKey, err := keystore.NewKey()
+	if err != nil {
+		return err
+	}
+	shardWithdrawalKeyFile = shardWithdrawalKeyFile + hex.EncodeToString(validatorKey.PublicKey.Marshal())[:12]
+	if err := ks.StoreKey(shardWithdrawalKeyFile, shardWithdrawalKey, password); err != nil {
+		return errors.Wrap(err, "unable to store key")
+	}
+	log.WithField(
+		"path",
+		shardWithdrawalKeyFile,
+	).Info("Keystore generated for shard withdrawals at path")
 
 	data, depositRoot, err := keystore.DepositInput(validatorKey, shardWithdrawalKey, params.BeaconConfig().MaxEffectiveBalance)
 	if err != nil {
