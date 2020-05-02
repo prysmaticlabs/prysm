@@ -31,14 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	flags.Init(&flags.GlobalFlags{
-		MaxPageSize: 250,
-	})
-}
-
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
