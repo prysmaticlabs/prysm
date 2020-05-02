@@ -194,7 +194,6 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
-	t.Skip("Re-check after PR#5650 is merged")
 
 	count := uint64(100)
 	blks := make([]*ethpb.SignedBeaconBlock, count)
