@@ -130,7 +130,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 
-	originalBeaconConfig := params.BeaconConfig()
+	resetCfg := params.OverrideBeaconConfigWithReset(params.BeaconConfig())
+	defer resetCfg()
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
@@ -138,7 +139,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
-		c := params.BeaconConfig()
+		c := params.BeaconConfig().Copy()
 		nextForkEpoch := uint64(i)
 		c.NextForkEpoch = nextForkEpoch
 		params.OverrideBeaconConfig(c)
@@ -178,7 +179,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	params.OverrideBeaconConfig(originalBeaconConfig)
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -199,8 +199,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 }
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
-	c := params.BeaconConfig()
-	originalConfig := c
+	c := params.BeaconConfig().Copy()
 	c.ForkVersionSchedule = map[uint64][]byte{
 		0: params.BeaconConfig().GenesisForkVersion,
 		1: {0, 0, 0, 1},
@@ -209,8 +208,8 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	nextForkVersion := []byte{0, 0, 0, 1}
 	c.NextForkEpoch = nextForkEpoch
 	c.NextForkVersion = nextForkVersion
-	params.OverrideBeaconConfig(c)
-	defer params.OverrideBeaconConfig(originalConfig)
+	resetCfg := params.OverrideBeaconConfigWithReset(c)
+	defer resetCfg()
 
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)

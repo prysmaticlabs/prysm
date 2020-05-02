@@ -121,9 +121,10 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
 	ClearCache()
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	c.MinGenesisActiveValidatorCount = 16384
-	params.OverrideBeaconConfig(c)
+	resetCfg := params.OverrideBeaconConfigWithReset(c)
+	defer resetCfg()
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{

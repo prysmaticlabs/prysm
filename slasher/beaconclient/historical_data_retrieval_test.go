@@ -47,9 +47,10 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 	// obtain 10 pages of indexed attestations from the server.
 	numPages := 100
 	perPage := numAtts / numPages
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.DefaultPageSize = perPage
-	params.OverrideBeaconConfig(cfg)
+	resetCfg := params.OverrideBeaconConfigWithReset(cfg)
+	defer resetCfg()
 
 	// We expect there to be numPages calls to ListIndexedAttestations
 	// to retrieve all attestations for epoch 0.

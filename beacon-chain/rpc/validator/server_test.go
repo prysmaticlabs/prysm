@@ -124,8 +124,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
+	defer resetCfg()
 	ctx := context.Background()
 
 	priv1 := bls.RandKey()

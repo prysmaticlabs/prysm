@@ -237,9 +237,10 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 }
 
 func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
-	conf := params.BeaconConfig()
+	conf := params.BeaconConfig().Copy()
 	conf.MaxAttesterSlashings = 2
-	params.OverrideBeaconConfig(conf)
+	resetCfg := params.OverrideBeaconConfigWithReset(conf)
+	defer resetCfg()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 2)
 	slashings := make([]*ethpb.AttesterSlashing, 2)
@@ -423,9 +424,10 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	type fields struct {
 		pending []*PendingAttesterSlashing
 	}
-	conf := params.BeaconConfig()
+	conf := params.BeaconConfig().Copy()
 	conf.MaxAttesterSlashings = 1
-	params.OverrideBeaconConfig(conf)
+	resetCfg := params.OverrideBeaconConfigWithReset(conf)
+	defer resetCfg()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
@@ -482,9 +484,10 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 }
 
 func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
-	conf := params.BeaconConfig()
+	conf := params.BeaconConfig().Copy()
 	conf.MaxAttesterSlashings = 2
-	params.OverrideBeaconConfig(conf)
+	resetCfg := params.OverrideBeaconConfigWithReset(conf)
+	defer resetCfg()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 3)
 	slashings := make([]*ethpb.AttesterSlashing, 3)

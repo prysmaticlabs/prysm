@@ -7,9 +7,10 @@ import (
 )
 
 func TestOverrideBeaconConfig(t *testing.T) {
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.SlotsPerEpoch = 5
-	params.OverrideBeaconConfig(cfg)
+	resetCfg := params.OverrideBeaconConfigWithReset(cfg)
+	defer resetCfg()
 	if c := params.BeaconConfig(); c.SlotsPerEpoch != 5 {
 		t.Errorf("Shardcount in BeaconConfig incorrect. Wanted %d, got %d", 5, c.SlotsPerEpoch)
 	}
