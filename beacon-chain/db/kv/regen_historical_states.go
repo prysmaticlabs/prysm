@@ -122,7 +122,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 		if len(blocks) > 0 {
 			// Save the historical root, state and highest index to the DB.
-			if helpers.IsEpochStart(currentState.Slot()) && currentState.Slot()%slotsPerArchivedPoint == 0 && blocks[len(blocks)-1].Block.Slot&slotsPerArchivedPoint == 0 {
+			if helpers.IsEpochStart(currentState.Slot()) && currentState.Slot()%slotsPerArchivedPoint == 0 {
 				if err := kv.saveArchivedInfo(ctx, currentState.Copy(), blocks, i); err != nil {
 					return err
 				}
