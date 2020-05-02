@@ -213,8 +213,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
+	defer resetCfg()
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -455,8 +455,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
+	defer resetCfg()
 	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {

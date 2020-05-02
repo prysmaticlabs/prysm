@@ -32,11 +32,6 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
 func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
