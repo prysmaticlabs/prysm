@@ -179,7 +179,7 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 	currentEth1DataDepositCount.Set(float64(state.Eth1Data().DepositCount))
 
 	if precompute.Balances != nil {
-		totalEligibleBalances.Set(float64(precompute.Balances.PrevEpoch))
-		totalVotedTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttesters))
+		totalEligibleBalances.Set(float64(precompute.Balances.ActivePrevEpoch))
+		totalVotedTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttested))
 	}
 }

@@ -1018,7 +1018,8 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
-	params.UseMainnetConfig()
+	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
+	defer resetCfg()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	exitRoutine := make(chan bool)
