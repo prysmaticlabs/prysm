@@ -22,9 +22,11 @@ type SSZRoots struct {
 }
 
 func runSSZStaticTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	resetCfg, err := spectest.SetConfig(config)
+	if err != nil {
 		t.Fatal(err)
 	}
+	defer resetCfg()
 
 	testFolders, _ := testutil.TestFolders(t, config, "ssz_static")
 	for _, folder := range testFolders {

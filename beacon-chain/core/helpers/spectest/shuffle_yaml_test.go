@@ -25,9 +25,11 @@ func TestShufflingMainnet(t *testing.T) {
 }
 
 func runShuffleTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	resetCfg, err := spectest.SetConfig(config)
+	if err != nil {
 		t.Fatal(err)
 	}
+	defer resetCfg()
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "shuffling/core/shuffle")
 	for _, folder := range testFolders {
