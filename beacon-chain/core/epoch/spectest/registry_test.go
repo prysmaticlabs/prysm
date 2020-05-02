@@ -11,9 +11,11 @@ import (
 )
 
 func runRegistryUpdatesTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	resetCfg, err := spectest.SetConfig(config)
+	if err != nil {
 		t.Fatal(err)
 	}
+	defer resetCfg()
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "epoch_processing/registry_updates/pyspec_tests")
 	for _, folder := range testFolders {

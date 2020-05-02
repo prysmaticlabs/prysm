@@ -10,19 +10,18 @@ import (
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.
-func SetConfig(config string) error {
+// Provides reset function allowing to get back to the previous configuration at the end of a test.
+func SetConfig(config string) (func(), error) {
 	switch config {
 	case "minimal":
-		newConfig := params.MinimalSpecConfig()
-		params.OverrideBeaconConfig(newConfig)
-		return nil
+		resetFunc := params.OverrideBeaconConfigWithReset(params.MinimalSpecConfig().Copy())
+		return resetFunc, nil
 	case "mainnet":
-		newConfig := params.MainnetConfig()
-		params.OverrideBeaconConfig(newConfig)
-		return nil
+		resetFunc := params.OverrideBeaconConfigWithReset(params.MainnetConfig().Copy())
+		return resetFunc, nil
 	case "":
-		return errors.New("no config provided")
+		return nil, errors.New("no config provided")
 	default:
-		return fmt.Errorf("did not receive a valid config, instead received this %s", config)
+		return nil, fmt.Errorf("did not receive a valid config, instead received this %s", config)
 	}
 }

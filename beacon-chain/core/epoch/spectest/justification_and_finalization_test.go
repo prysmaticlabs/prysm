@@ -12,9 +12,11 @@ import (
 )
 
 func runJustificationAndFinalizationTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	resetCfg, err := spectest.SetConfig(config)
+	if err != nil {
 		t.Fatal(err)
 	}
+	defer resetCfg()
 
 	testPath := "epoch_processing/justification_and_finalization/pyspec_tests"
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, testPath)
