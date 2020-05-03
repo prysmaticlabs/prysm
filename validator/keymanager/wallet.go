@@ -54,6 +54,14 @@ var walletOptsHelp = `The wallet key manager stores keys in a local encrypted st
   - passphrase This is the passphrase used to encrypt the accounts when they
     were created.  Multiple passphrases can be supplied if required.
 
+DYNAMICALLY ADDING ACCOUNTS:
+if an account's file is added while the validator runs, it's corresponding account will be added dynamically.
+
+DYNAMICALLY DELETING ACCOUNTS:
+if an account's file is deleted while the validator runs, it's corresponding account will be deleted dynamically.
+
+** DO NOT DELETE A WALLET DIRECTORY WITHOUT DELETING ITS ACCOUNTS!!
+
 An sample keymanager options file (with annotations; these should be removed if
 using this as a template) is:
 
@@ -226,6 +234,14 @@ func (jw *jsonWallet) addWalletWatcher(wallet e2wtypes.Wallet, specifier *regexp
 }
 
 func (jw *jsonWallet) handleChange(path string, action string) {
+	// keys need to be deleted one-by-one so to identify their ID and remove them from the list.
+	// if an entire wallet gets deleted without deleting individual keys, its keys will continue to exist.
+	if action == "remove_wallet" {
+		err := fmt.Errorf("wallet deleted from key manager")
+		log.WithError(err).Warn("Wallet was deleted from key manager, unless keys were deleted one by one they will still exist in keymanager")
+		return
+	}
+
 	walletIDStr, accountIDStr := filepath.Split(path)
 	walletIDStr = strings.Trim(walletIDStr, string(filepath.Separator))
 	accountID, err := uuid.Parse(accountIDStr)
@@ -233,9 +249,10 @@ func (jw *jsonWallet) handleChange(path string, action string) {
 		// Commonly an index, sometimes a backup file; ignore.
 		return
 	}
+
 	walletScan, exists := jw.scans[walletIDStr]
 	if !exists {
-		log.WithError(err).Warn("Failed to detect wallet change; wallet not found")
+		log.WithError(nil).Warn("Failed to detect wallet change; wallet not found")
 		return
 	}
 
@@ -246,6 +263,7 @@ func (jw *jsonWallet) handleChange(path string, action string) {
 				log.WithField("pubKey", fmt.Sprintf("%#x", k)).Info("removed key from wallet, ")
 			}
 		}
+		return
 	}
 
 	if action == "add_account" {
@@ -292,14 +310,22 @@ func (jw *jsonWallet) listenToChanges () {
 				//	// new account has been added
 				//	jw.handleChange(path, "add_account")
 				//}
-				if event.Op&fsnotify.Create == fsnotify.Create {
+				if event.Op&fsnotify.Create == fsnotify.Create { // in case adding a new account
 					// new account has been added
 					jw.handleChange(path, "add_account")
 				}
-				if event.Op&fsnotify.Rename == fsnotify.Rename  || event.Op&fsnotify.Remove == fsnotify.Remove{
-					// account has been removed
-					jw.handleChange(path, "remove_account")
+				if event.Op&fsnotify.Rename == fsnotify.Rename { // in case a specific account was deleted
+					if event.Op&fsnotify.Remove == fsnotify.Remove {
+						path = strings.TrimPrefix(path, "/")
+						path = path + "/" // to parse wallet id correctly
+						jw.handleChange(path, "remove_wallet")
+					} else {
+						// account has been removed
+						jw.handleChange(path, "remove_account")
+					}
 				}
+
+
 			case err, ok := <-jw.watcher.Errors:
 				if !ok {
 					return
