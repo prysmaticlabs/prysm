@@ -27,6 +27,9 @@ func setupDB(t testing.TB, ctx *cli.Context) *Store {
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
+	t.Cleanup(func() {
+		teardownDB(t, db)
+	})
 	return db
 }
 
@@ -44,6 +47,9 @@ func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
+	t.Cleanup(func() {
+		teardownDB(t, newDB)
+	})
 	return newDB
 }
 
