@@ -10,7 +10,7 @@ import (
 )
 
 func TestClearDB(t *testing.T) {
-	// Setting up manually, as SetupDB() will also register a teardown procedure.
+	// Setting up manually is required, since SetupDB() will also register a teardown procedure.
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
