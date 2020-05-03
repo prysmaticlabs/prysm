@@ -1689,3 +1689,10 @@ go_repository(
     commit = "3c2cc9a6329d9842b3bbdaf307a8110d740cf94c",
     importpath = "github.com/golang/gddo",
 )
+
+go_repository(
+     name = "com_github_fsnotify_fsnotify",
+     importpath = "github.com/fsnotify/fsnotify",
+     sum = "h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=",
+     version = "v1.4.9",
+)
