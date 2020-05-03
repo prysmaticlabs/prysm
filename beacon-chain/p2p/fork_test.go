@@ -131,8 +131,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	}
 
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.BeaconConfig())
-
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
