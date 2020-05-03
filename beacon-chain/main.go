@@ -8,8 +8,6 @@ import (
 	"runtime"
 	runtimeDebug "runtime/debug"
 
-	"gopkg.in/yaml.v2"
-
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log"
 	joonix "github.com/joonix/log"
@@ -27,8 +25,10 @@ import (
 	_ "go.uber.org/automaxprocs"
 	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
+	"gopkg.in/yaml.v2"
 )
 
+var log *logrus.Entry
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.Web3ProviderFlag,
@@ -95,10 +95,10 @@ var appFlags = []cli.Flag{
 
 func init() {
 	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.BeaconChainFlags...))
+	log = logrus.WithField("prefix", "main")
 }
 
 func main() {
-	log := logrus.WithField("prefix", "main")
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
@@ -148,15 +148,7 @@ func main() {
 		}
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			chainConfigFileName := ctx.String(cmd.ChainConfigFileFlag.Name)
-			yamlFile, err := ioutil.ReadFile(chainConfigFileName)
-			if err != nil {
-				log.WithError(err).Error("Failed to read chain config file.")
-			}
-			conf := params.BeaconConfig()
-			if err := yaml.Unmarshal(yamlFile, conf); err != nil {
-				log.WithError(err).Error("Failed to parse chain config yaml file.")
-			}
-			params.OverrideBeaconConfig(conf)
+			loadChainConfigFile(chainConfigFileName)
 		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
@@ -176,6 +168,18 @@ func main() {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
+}
+
+func loadChainConfigFile(chainConfigFileName string) {
+	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
+	if err != nil {
+		log.WithError(err).Error("Failed to read chain config file.")
+	}
+	conf := params.BeaconConfig()
+	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
+		log.WithError(err).Error("Failed to parse chain config yaml file.")
+	}
+	params.OverrideBeaconConfig(conf)
 }
 
 func startNode(ctx *cli.Context) error {

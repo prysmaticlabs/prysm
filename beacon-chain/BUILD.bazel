@@ -144,9 +144,15 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = ["usage_test.go"],
+    data = glob(["*.yaml"]) + [
+            "@eth2_spec_tests_mainnet//:test_data",
+        "@eth2_spec_tests_minimal//:test_data",
+        ],
     embed = [":go_default_library"],
     deps = [
         "//shared/featureconfig:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
         "@in_gopkg_urfave_cli_v2//:go_default_library",
     ],
 )

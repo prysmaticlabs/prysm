@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -41,4 +43,31 @@ func doesFlagExist(flag cli.Flag, flags []cli.Flag) bool {
 	}
 
 	return false
+}
+
+func TestLoadConfigFile(t *testing.T) {
+	mainnetConfigFile := testutil.ConfigFilePath(t, "mainnet")
+	loadChainConfigFile(mainnetConfigFile)
+	if params.BeaconConfig().MaxCommitteesPerSlot != params.MainnetConfig().MaxCommitteesPerSlot {
+		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+			params.MainnetConfig().MaxCommitteesPerSlot,
+			params.BeaconConfig().MaxCommitteesPerSlot)
+	}
+	if params.BeaconConfig().SecondsPerSlot != params.MainnetConfig().SecondsPerSlot {
+		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+			params.MainnetConfig().SecondsPerSlot,
+			params.BeaconConfig().SecondsPerSlot)
+	}
+	minimalConfigFile := testutil.ConfigFilePath(t, "minimal")
+	loadChainConfigFile(minimalConfigFile)
+	if params.BeaconConfig().MaxCommitteesPerSlot != params.MinimalSpecConfig().MaxCommitteesPerSlot {
+		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+			params.MinimalSpecConfig().MaxCommitteesPerSlot,
+			params.BeaconConfig().MaxCommitteesPerSlot)
+	}
+	if params.BeaconConfig().SecondsPerSlot != params.MinimalSpecConfig().SecondsPerSlot {
+		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+			params.MinimalSpecConfig().SecondsPerSlot,
+			params.BeaconConfig().SecondsPerSlot)
+	}
 }

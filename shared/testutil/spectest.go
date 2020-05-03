@@ -56,6 +56,18 @@ func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo,
 	return testFolders, testsFolderPath
 }
 
+// ConfigFilePath sets the proper config and returns the relevant
+// config file path from eth2-spec-tests directory.
+func ConfigFilePath(t *testing.T, config string) string {
+	configFolderPath := path.Join("tests", config)
+	filepath, err := bazel.Runfile(configFolderPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configFilePath := path.Join(filepath, "config.yaml")
+	return configFilePath
+}
+
 // BazelFileBytes returns the byte array of the bazel file path given.
 func BazelFileBytes(filePaths ...string) ([]byte, error) {
 	filepath, err := bazel.Runfile(path.Join(filePaths...))
