@@ -284,12 +284,11 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 			t.Errorf("Wanted span map to be equal to: %v , received span map: %v ", spanTests[0].spanMap, res[1])
 		}
 	}
-	teardownDB(t, db)
-	db = setupDB(t, cli.NewContext(&app, set, nil))
-	if err := db.SaveEpochsSpanByValidatorsIndices(ctx, res); err != nil {
+	db1 := setupDB(t, cli.NewContext(&app, set, nil))
+	if err := db1.SaveEpochsSpanByValidatorsIndices(ctx, res); err != nil {
 		t.Fatal(err)
 	}
-	res, err = db.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
+	res, err = db1.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
 	if err != nil {
 		t.Fatal(err)
 	}

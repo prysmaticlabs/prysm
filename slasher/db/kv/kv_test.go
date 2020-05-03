@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/slasher/db/iface"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -28,7 +27,12 @@ func setupDB(t testing.TB, ctx *cli.Context) *Store {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
 	t.Cleanup(func() {
-		teardownDB(t, db)
+		if err := db.Close(); err != nil {
+			t.Fatalf("Failed to close database: %v", err)
+		}
+		if err := os.RemoveAll(db.DatabasePath()); err != nil {
+			t.Fatalf("Failed to remove directory: %v", err)
+		}
 	})
 	return db
 }
@@ -43,21 +47,17 @@ func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
 	cfg := &Config{SpanCacheSize: cacheSize}
-	newDB, err := NewKVStore(p, cfg)
+	db, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
 	t.Cleanup(func() {
-		teardownDB(t, newDB)
+		if err := db.Close(); err != nil {
+			t.Fatalf("Failed to close database: %v", err)
+		}
+		if err := os.RemoveAll(db.DatabasePath()); err != nil {
+			t.Fatalf("Failed to remove directory: %v", err)
+		}
 	})
-	return newDB
-}
-
-func teardownDB(t testing.TB, db iface.Database) {
-	if err := db.Close(); err != nil {
-		t.Fatalf("Failed to close database: %v", err)
-	}
-	if err := os.RemoveAll(db.DatabasePath()); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
+	return db
 }
