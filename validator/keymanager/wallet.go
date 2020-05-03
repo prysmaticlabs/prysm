@@ -26,7 +26,6 @@ type walletOpts struct {
 
 // Wallet is a key manager that loads keys from a local Ethereum 2 wallet.
 type Wallet struct {
-	//accounts map[[48]byte]e2wtypes.Account
 	jsonWallet *jsonWallet
 }
 
@@ -104,7 +103,6 @@ func NewWallet(input string) (KeyManager, string, error) {
 	}
 
 	km := &Wallet{
-		//accounts: make(map[[48]byte]e2wtypes.Account),
 		jsonWallet: jsonwallet,
 	}
 
@@ -306,10 +304,6 @@ func (jw *jsonWallet) listenToChanges () {
 				}
 
 				path := strings.TrimPrefix(event.Name, jw.opts.Location)
-				//if event.Op&fsnotify.Write == fsnotify.Write {
-				//	// new account has been added
-				//	jw.handleChange(path, "add_account")
-				//}
 				if event.Op&fsnotify.Create == fsnotify.Create { // in case adding a new account
 					// new account has been added
 					jw.handleChange(path, "add_account")
