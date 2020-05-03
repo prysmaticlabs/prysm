@@ -213,10 +213,10 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 }
 
 func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
-	conf := params.BeaconConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 2
-	resetCfg := params.OverrideBeaconConfigWithReset(conf)
-	defer resetCfg()
+	params.OverrideBeaconConfig(conf)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	slashings := make([]*ethpb.ProposerSlashing, 2)
 	for i := 0; i < 2; i++ {

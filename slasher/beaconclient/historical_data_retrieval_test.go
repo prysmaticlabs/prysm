@@ -16,6 +16,7 @@ import (
 )
 
 func TestService_RequestHistoricalAttestations(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -47,10 +48,9 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 	// obtain 10 pages of indexed attestations from the server.
 	numPages := 100
 	perPage := numAtts / numPages
-	cfg := params.BeaconConfig().Copy()
+	cfg := params.BeaconConfig()
 	cfg.DefaultPageSize = perPage
-	resetCfg := params.OverrideBeaconConfigWithReset(cfg)
-	defer resetCfg()
+	params.OverrideBeaconConfig(cfg)
 
 	// We expect there to be numPages calls to ListIndexedAttestations
 	// to retrieve all attestations for epoch 0.

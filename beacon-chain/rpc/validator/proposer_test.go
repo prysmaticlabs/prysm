@@ -41,8 +41,8 @@ func TestGetBlock_OK(t *testing.T) {
 	ctx := context.Background()
 
 	testutil.ResetCache()
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -149,8 +149,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -273,8 +273,8 @@ func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
@@ -322,8 +322,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -1288,8 +1288,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)

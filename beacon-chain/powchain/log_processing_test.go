@@ -289,10 +289,10 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bConfig := params.MinimalSpecConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
-	resetCfg := params.OverrideBeaconConfigWithReset(bConfig)
-	defer resetCfg()
+	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
 	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
@@ -374,10 +374,10 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bConfig := params.MinimalSpecConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
-	resetBeaconCfg := params.OverrideBeaconConfigWithReset(bConfig)
-	defer resetBeaconCfg()
+	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
 	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
@@ -496,10 +496,10 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	web3Service.httpLogger = testAcc.Backend
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.latestEth1Data.BlockHeight = 0
-	bConfig := params.MinimalSpecConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
-	resetCfg := params.OverrideBeaconConfigWithReset(bConfig)
-	defer resetCfg()
+	params.OverrideBeaconConfig(bConfig)
 	flags.Get().DeploymentBlock = 0
 
 	testAcc.Backend.Commit()
@@ -598,10 +598,10 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 	web3Service.httpLogger = testAcc.Backend
-	bConfig := params.MinimalSpecConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
-	resetCfg := params.OverrideBeaconConfigWithReset(bConfig)
-	defer resetCfg()
+	params.OverrideBeaconConfig(bConfig)
 
 	testAcc.Backend.Commit()
 	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
@@ -790,10 +790,10 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
 	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}
 	web3Service.logger = &goodLogger{backend: eth1Backend.Backend}
-	bConfig := params.MinimalSpecConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
-	resetCfg := params.OverrideBeaconConfigWithReset(bConfig)
-	defer resetCfg()
+	params.OverrideBeaconConfig(bConfig)
 	web3Service.headerChan = make(chan *gethTypes.Header)
 	return web3Service
 }

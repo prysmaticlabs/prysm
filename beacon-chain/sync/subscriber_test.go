@@ -93,8 +93,8 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		if err := r.attesterSlashingSubscriber(ctx, msg); err != nil {
 			t.Fatal(err)
@@ -157,8 +157,8 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		if err := r.proposerSlashingSubscriber(ctx, msg); err != nil {
 			t.Fatal(err)

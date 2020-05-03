@@ -5,23 +5,25 @@ package spectest
 import (
 	"errors"
 	"fmt"
+	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.
 // Provides reset function allowing to get back to the previous configuration at the end of a test.
-func SetConfig(config string) (func(), error) {
+func SetConfig(t *testing.T, config string) error {
+	params.SetupTestConfigCleanup(t)
 	switch config {
 	case "minimal":
-		resetFunc := params.OverrideBeaconConfigWithReset(params.MinimalSpecConfig().Copy())
-		return resetFunc, nil
+		params.OverrideBeaconConfig(params.MinimalSpecConfig())
+		return nil
 	case "mainnet":
-		resetFunc := params.OverrideBeaconConfigWithReset(params.MainnetConfig().Copy())
-		return resetFunc, nil
+		params.OverrideBeaconConfig(params.MainnetConfig())
+		return nil
 	case "":
-		return nil, errors.New("no config provided")
+		return errors.New("no config provided")
 	default:
-		return nil, fmt.Errorf("did not receive a valid config, instead received this %s", config)
+		return fmt.Errorf("did not receive a valid config, instead received this %s", config)
 	}
 }

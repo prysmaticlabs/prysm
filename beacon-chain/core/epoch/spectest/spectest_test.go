@@ -8,11 +8,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	prevConfig := params.BeaconConfig().Copy()
+	c := params.BeaconConfig()
 	// TODO(2312): remove this and use the mainnet count.
-	c := params.BeaconConfig().Copy()
 	c.MinGenesisActiveValidatorCount = 16384
-	reset := params.OverrideBeaconConfigWithReset(c)
+	params.OverrideBeaconConfig(c)
+
 	retVal := m.Run()
-	reset()
+	params.OverrideBeaconConfig(prevConfig)
 	os.Exit(retVal)
 }

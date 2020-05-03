@@ -321,16 +321,16 @@ func OverrideBeaconConfig(c *BeaconChainConfig) {
 // SetupTestConfigCleanup preserves configurations allowing to modify them within tests without any
 // restrictions, everything is restored after the test.
 func SetupTestConfigCleanup(t *testing.T) {
-	prevDefaultBeaconConfig := defaultBeaconConfig.copy()
-	prevBeaconConfig := beaconConfig.copy()
+	prevDefaultBeaconConfig := defaultBeaconConfig.Copy()
+	prevBeaconConfig := beaconConfig.Copy()
 	t.Cleanup(func() {
 		defaultBeaconConfig = prevDefaultBeaconConfig
 		beaconConfig = prevBeaconConfig
 	})
 }
 
-// copy returns copy of the config object.
-func (c *BeaconChainConfig) copy() *BeaconChainConfig {
+// Copy returns Copy of the config object.
+func (c *BeaconChainConfig) Copy() *BeaconChainConfig {
 	config, ok := deepcopy.Copy(*c).(BeaconChainConfig)
 	if !ok {
 		config = *defaultBeaconConfig

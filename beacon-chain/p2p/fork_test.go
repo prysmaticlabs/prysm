@@ -130,8 +130,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 
-	resetCfg := params.OverrideBeaconConfigWithReset(params.BeaconConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.BeaconConfig())
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
@@ -139,7 +139,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
-		c := params.BeaconConfig().Copy()
+		c := params.BeaconConfig()
 		nextForkEpoch := uint64(i)
 		c.NextForkEpoch = nextForkEpoch
 		params.OverrideBeaconConfig(c)
@@ -199,7 +199,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 }
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
-	c := params.BeaconConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconConfig()
 	c.ForkVersionSchedule = map[uint64][]byte{
 		0: params.BeaconConfig().GenesisForkVersion,
 		1: {0, 0, 0, 1},
@@ -208,8 +209,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	nextForkVersion := []byte{0, 0, 0, 1}
 	c.NextForkEpoch = nextForkEpoch
 	c.NextForkVersion = nextForkVersion
-	resetCfg := params.OverrideBeaconConfigWithReset(c)
-	defer resetCfg()
+	params.OverrideBeaconConfig(c)
 
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)

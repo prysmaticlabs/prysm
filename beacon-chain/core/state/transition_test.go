@@ -885,10 +885,10 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	}
 	blk.Signature = sig.Marshal()
 
-	config := params.BeaconConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
 	config.MinAttestationInclusionDelay = 0
-	resetCfg := params.OverrideBeaconConfigWithReset(config)
-	defer resetCfg()
+	params.OverrideBeaconConfig(config)
 
 	if _, err := state.ProcessBlock(context.Background(), s, blk); err != nil {
 		t.Fatal(err)

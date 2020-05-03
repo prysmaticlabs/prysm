@@ -241,10 +241,10 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	// Ensure HistoricalRootsLimit matches scenario
-	cfg := params.MainnetConfig().Copy()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig()
 	cfg.HistoricalRootsLimit = 8192
-	resetCfg := params.OverrideBeaconConfigWithReset(cfg)
-	defer resetCfg()
+	params.OverrideBeaconConfig(cfg)
 
 	block := &ethpb.BeaconBlock{
 		Slot: 10000,
