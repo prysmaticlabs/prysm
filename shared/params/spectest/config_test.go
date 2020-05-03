@@ -14,10 +14,6 @@ func TestConfig(t *testing.T) {
 		t.Errorf("Expected minimal config to be set, but got %d slots per epoch", params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	if params.BeaconConfig().SlotsPerEpoch == 8 {
-		t.Errorf("Expected mainnet config to be set, but got %d slots per epoch", params.BeaconConfig().SlotsPerEpoch)
-	}
-
 	if err := SetConfig(t, "mainnet"); err != nil {
 		t.Fatal(err)
 	}
