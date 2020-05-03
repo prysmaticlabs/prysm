@@ -69,6 +69,13 @@ var (
 			Help: "Count the number of times attestation not recovered and pruned because of missing block",
 		},
 	)
+	arrivalBlockPropagationHistogram = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "block_arrival_latency_milliseconds",
+			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
+			Buckets: []float64{1000, 2000, 3000, 4000, 5000, 6000},
+		},
+	)
 )
 
 func (r *Service) updateMetrics() {

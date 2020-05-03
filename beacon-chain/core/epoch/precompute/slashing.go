@@ -10,7 +10,7 @@ import (
 
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
 // This is an optimized version by passing in precomputed total epoch balances.
-func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, p *Balance) error {
+func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, pBal *Balance) error {
 	currentEpoch := helpers.CurrentEpoch(state)
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 
@@ -21,28 +21,21 @@ func ProcessSlashingsPrecompute(state *stateTrie.BeaconState, p *Balance) error 
 		totalSlashing += slashing
 	}
 
-	checker := func(idx int, val *ethpb.Validator) (bool, error) {
-		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
+	minSlashing := mathutil.Min(totalSlashing*3, pBal.ActiveCurrentEpoch)
+	epochToWithdraw := currentEpoch + exitLength/2
+	increment := params.BeaconConfig().EffectiveBalanceIncrement
+	validatorFunc := func(idx int, val *ethpb.Validator) (bool, error) {
+		correctEpoch := epochToWithdraw == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
+			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
+			penalty := penaltyNumerator / pBal.ActiveCurrentEpoch * increment
+			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
+				return false, err
+			}
 			return true, nil
 		}
 		return false, nil
 	}
 
-	updateEffectiveBalances := func(idx int, val *ethpb.Validator) error {
-		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
-		if val.Slashed && correctEpoch {
-			minSlashing := mathutil.Min(totalSlashing*3, p.CurrentEpoch)
-			increment := params.BeaconConfig().EffectiveBalanceIncrement
-			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
-			penalty := penaltyNumerator / p.CurrentEpoch * increment
-			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
-				return err
-			}
-			return nil
-		}
-		return nil
-	}
-
-	return state.ApplyToEveryValidator(checker, updateEffectiveBalances)
+	return state.ApplyToEveryValidator(validatorFunc)
 }
