@@ -54,12 +54,12 @@ var walletOptsHelp = `The wallet key manager stores keys in a local encrypted st
     were created.  Multiple passphrases can be supplied if required.
 
 DYNAMICALLY ADDING ACCOUNTS:
-if an account's file is added while the validator runs, it's corresponding account will be added dynamically.
+if an account's file is added while the validator runs, its corresponding account will be added dynamically.
 
 DYNAMICALLY DELETING ACCOUNTS:
-if an account's file is deleted while the validator runs, it's corresponding account will be deleted dynamically.
+if an account's file is deleted while the validator runs, its corresponding account will be deleted dynamically.
 
-** DO NOT DELETE A WALLET DIRECTORY WITHOUT DELETING ITS ACCOUNTS!!
+** DO NOT DELETE A WALLET DIRECTORY WITHOUT DELETING ITS ACCOUNTS FIRST **
 
 An sample keymanager options file (with annotations; these should be removed if
 using this as a template) is:
@@ -99,7 +99,7 @@ func NewWallet(input string) (KeyManager, string, error) {
 	// generate json wallet with watcher for changes
 	jsonwallet, error := newJsonWallet(opts, store)
 	if error != nil {
-		return nil, walletOptsHelp, err
+		return nil, walletOptsHelp, error
 	}
 
 	km := &Wallet{
