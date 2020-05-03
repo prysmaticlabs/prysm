@@ -37,7 +37,6 @@ func (m *mockNotifier) ClientReadyFeed() *event.Feed {
 func TestService_DetectIncomingBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := testDB.SetupSlasherDB(t, false)
-	defer testDB.TeardownSlasherDB(t, db)
 	ds := Service{
 		notifier:          &mockNotifier{},
 		proposalsDetector: proposals.NewProposeDetector(db),
