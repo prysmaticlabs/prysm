@@ -56,12 +56,12 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 		},
 	}
 
+	params.SetupTestConfigCleanup(t)
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			c := params.BeaconConfig().Copy()
+			c := params.BeaconConfig()
 			c.EpochsPerEth1VotingPeriod = tt.votingPeriodLength
-			resetCfg := params.OverrideBeaconConfigWithReset(c)
-			defer resetCfg()
+			params.OverrideBeaconConfig(c)
 
 			s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 				Eth1DataVotes: tt.stateVotes,
