@@ -6,29 +6,29 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// Test cases can be executed in an arbitrary order. TestOverrideBeaconConfigTestTeardown checks
+// that there's no state mutation leak from the previous test, therefore we need a sentinel flag,
+// to make sure that previous test case has already been completed and check can be run.
+var testOverrideBeaconConfigExecuted bool
+
 func TestOverrideBeaconConfig(t *testing.T) {
-	cfg := params.BeaconConfig().Copy()
+	// Ensure that param modifications are safe.
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
 	cfg.SlotsPerEpoch = 5
-	resetCfg := params.OverrideBeaconConfigWithReset(cfg)
-	defer resetCfg()
+	params.OverrideBeaconConfig(cfg)
 	if c := params.BeaconConfig(); c.SlotsPerEpoch != 5 {
 		t.Errorf("Shardcount in BeaconConfig incorrect. Wanted %d, got %d", 5, c.SlotsPerEpoch)
 	}
+	testOverrideBeaconConfigExecuted = true
 }
 
-func TestOverrideBeaconConfigWithReset(t *testing.T) {
-	cfg := params.BeaconConfig().Copy()
-	origSlotsPerEpoch := cfg.SlotsPerEpoch
-	newSlotsPerEpoch := origSlotsPerEpoch + 42
-
-	cfg.SlotsPerEpoch = newSlotsPerEpoch
-	resetFunc := params.OverrideBeaconConfigWithReset(cfg)
-	if c := params.BeaconConfig(); c.SlotsPerEpoch != newSlotsPerEpoch {
-		t.Errorf("Config value is incorrect, want: %d, got %d", newSlotsPerEpoch, c.SlotsPerEpoch)
+func TestOverrideBeaconConfigTestTeardown(t *testing.T) {
+	if !testOverrideBeaconConfigExecuted {
+		t.Skip("State leak can occur only if state mutating test has already completed")
 	}
-
-	resetFunc()
-	if c := params.BeaconConfig(); c.SlotsPerEpoch != origSlotsPerEpoch {
-		t.Errorf("Config value is incorrect, want: %d, got %d", origSlotsPerEpoch, c.SlotsPerEpoch)
+	cfg := params.BeaconConfig()
+	if cfg.SlotsPerEpoch == 5 {
+		t.Fatal("Parameter update has been leaked out of previous test")
 	}
 }
