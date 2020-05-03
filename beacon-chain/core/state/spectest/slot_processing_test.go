@@ -20,11 +20,9 @@ func init() {
 }
 
 func runSlotProcessingTests(t *testing.T, config string) {
-	resetCfg, err := spectest.SetConfig(config)
-	if err != nil {
+	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
-	defer resetCfg()
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "sanity/slots/pyspec_tests")
 

@@ -12,11 +12,9 @@ import (
 )
 
 func runDepositTest(t *testing.T, config string) {
-	resetCfg, err := spectest.SetConfig(config)
-	if err != nil {
+	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
-	defer resetCfg()
 
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "operations/deposit/pyspec_tests")
 	for _, folder := range testFolders {
