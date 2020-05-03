@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -41,4 +42,17 @@ func ConfirmAction(actionText string, deniedText string) (bool, error) {
 	}
 
 	return confirmed, nil
+}
+
+func EnterPassword() (string, error) {
+	var passphrase string
+	log.Info("Enter a password:")
+	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		log.Fatalf("Could not read account password: %v", err)
+		return passphrase, err
+	}
+	text := string(bytePassword)
+	passphrase = strings.Replace(text, "\n", "", -1)
+	return passphrase, nil
 }

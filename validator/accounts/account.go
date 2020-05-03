@@ -14,10 +14,10 @@ import (
 
 	"github.com/pkg/errors"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var log = logrus.WithField("prefix", "accounts")
@@ -136,16 +136,13 @@ func Exists(keystorePath string) (bool, error) {
 // CreateValidatorAccount creates a validator account from the given cli context.
 func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
 	if passphrase == "" {
-		log.Info("Create a new validator account for eth2")
-		log.Info("Enter a password:")
-		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+		log.Info("Creating a new validator account for eth2")
+		enteredPassphrase, err := cmd.EnterPassword()
 		if err != nil {
-			log.Fatalf("Could not read account password: %v", err)
-			return path, passphrase, err
+			log.Fatal(err)
+			return path, enteredPassphrase, err
 		}
-		text := string(bytePassword)
-		passphrase = strings.Replace(text, "\n", "", -1)
-
+		passphrase = enteredPassphrase
 	}
 
 	if path == "" {
