@@ -44,6 +44,8 @@ func ConfirmAction(actionText string, deniedText string) (bool, error) {
 	return confirmed, nil
 }
 
+// EnterPassword queries the user for their password through the terminal, in order to make sure it is
+// not passed in a visible way to the terminal.
 func EnterPassword() (string, error) {
 	var passphrase string
 	log.Info("Enter a password:")
