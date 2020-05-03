@@ -145,9 +145,9 @@ go_test(
     size = "small",
     srcs = ["usage_test.go"],
     data = glob(["*.yaml"]) + [
-            "@eth2_spec_tests_mainnet//:test_data",
+        "@eth2_spec_tests_mainnet//:test_data",
         "@eth2_spec_tests_minimal//:test_data",
-        ],
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/featureconfig:go_default_library",
