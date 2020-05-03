@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
+	"github.com/google/uuid"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,6 +22,25 @@ type walletOpts struct {
 	Location    string   `json:"location"`
 	Accounts    []string `json:"accounts"`
 	Passphrases []string `json:"passphrases"`
+}
+
+// Wallet is a key manager that loads keys from a local Ethereum 2 wallet.
+type Wallet struct {
+	//accounts map[[48]byte]e2wtypes.Account
+	jsonWallet *jsonWallet
+}
+
+type jsonWallet struct {
+	mu          sync.RWMutex
+	opts     	*walletOpts
+	watcher  	*fsnotify.Watcher
+	scans    	map[string]*walletScan
+	accounts 	map[[48]byte]e2wtypes.Account
+}
+
+type walletScan struct {
+	wallet  e2wtypes.Wallet
+	regexes []*regexp.Regexp
 }
 
 var walletOptsHelp = `The wallet key manager stores keys in a local encrypted store.  The options are:
@@ -56,10 +79,6 @@ func NewWallet(input string) (KeyManager, string, error) {
 		return nil, walletOptsHelp, errors.New("at least one passphrase is required to decrypt accounts")
 	}
 
-	km := &Wallet{
-		accounts: make(map[[48]byte]e2wtypes.Account),
-	}
-
 	if strings.Contains(opts.Location, "$") || strings.Contains(opts.Location, "~") || strings.Contains(opts.Location, "%") {
 		log.WithField("path", opts.Location).Warn("Keystore path contains unexpanded shell expansion characters")
 	}
@@ -69,14 +88,70 @@ func NewWallet(input string) (KeyManager, string, error) {
 	} else {
 		store = filesystem.New(filesystem.WithLocation(opts.Location))
 	}
+
+	// generate json wallet with watcher for changes
+	jsonwallet, error := newJsonWallet(opts, store)
+	if error != nil {
+		return nil, walletOptsHelp, err
+	}
+
+	km := &Wallet{
+		//accounts: make(map[[48]byte]e2wtypes.Account),
+		jsonWallet: jsonwallet,
+	}
+
+	return km, walletOptsHelp, nil
+}
+
+// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
+func (km *Wallet) FetchValidatingKeys() ([][48]byte, error) {
+	accounts := km.jsonWallet.getAccounts()
+	res := make([][48]byte, 0, len(accounts))
+	for pubKey := range accounts {
+		res = append(res, pubKey)
+	}
+	return res, nil
+}
+
+// Sign signs a message for the validator to broadcast.
+func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error) {
+	accounts := km.jsonWallet.getAccounts()
+
+	account, exists := accounts[pubKey]
+	if !exists {
+		return nil, ErrNoSuchKey
+	}
+	// TODO(#4817) Update with new library to remove domain here.
+	sig, err := account.Sign(root[:])
+	if err != nil {
+		return nil, err
+	}
+	return bls.SignatureFromBytes(sig.Marshal())
+}
+
+
+// json file
+func newJsonWallet(opts *walletOpts, store e2wtypes.Store) (*jsonWallet,error) {
+	watcher, error := fsnotify.NewWatcher()
+	if error != nil {
+		return nil, error
+	}
+
+	jsonwallet := &jsonWallet{
+		accounts: make(map[[48]byte]e2wtypes.Account),
+		opts:    opts,
+		watcher: watcher,
+		scans:   make(map[string]*walletScan),
+	}
+
 	for _, path := range opts.Accounts {
 		parts := strings.Split(path, "/")
 		if len(parts[0]) == 0 {
-			return nil, walletOptsHelp, fmt.Errorf("did not understand account specifier %q", path)
+			return nil, fmt.Errorf("did not understand account specifier %q", path)
 		}
 		wallet, err := e2wallet.OpenWallet(parts[0], e2wallet.WithStore(store))
 		if err != nil {
-			return nil, walletOptsHelp, err
+			return nil, err
 		}
 		accountSpecifier := "^.*$"
 		if len(parts) > 1 && len(parts[1]) > 0 {
@@ -88,11 +163,11 @@ func NewWallet(input string) (KeyManager, string, error) {
 			if re.Match([]byte(account.Name())) {
 				pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
 				unlocked := false
-				for _, passphrase := range opts.Passphrases {
+				for _, passphrase := range opts.Passphrases { // important if several accounts have the same passphrase
 					if err := account.Unlock([]byte(passphrase)); err != nil {
 						log.WithError(err).Trace("Failed to unlock account with one of the supplied passphrases")
 					} else {
-						km.accounts[pubKey] = account
+						jsonwallet.accounts[pubKey] = account
 						unlocked = true
 						break
 					}
@@ -100,37 +175,138 @@ func NewWallet(input string) (KeyManager, string, error) {
 				if !unlocked {
 					log.Warn("Failed to unlock account with any supplied passphrase; cannot validate with this key")
 				}
+			} else {
+				// not in account specifier
+			}
+		}
+
+		err = jsonwallet.addWalletWatcher(wallet, re)
+		if err != nil {
+			log.WithError(err).Warn("Failed to add wallet directory; dynamic updates to validator keys disabled")
+		}
+	}
+
+	jsonwallet.listenToChanges()
+
+	return jsonwallet, nil
+}
+
+func (jw *jsonWallet) getAccounts() map[[48]byte]e2wtypes.Account {
+	jw.mu.RLock()
+	defer jw.mu.RUnlock()
+
+	ret := make(map[[48]byte]e2wtypes.Account)
+	for k,v := range jw.accounts {
+		ret[k] = v
+	}
+
+	return ret
+}
+
+func (jw *jsonWallet) addWalletWatcher(wallet e2wtypes.Wallet, specifier *regexp.Regexp) error {
+	// add wallet and specifier for later identifying relevant accounts
+	id := wallet.ID().String()
+	scan, exists := jw.scans[id]
+	if !exists {
+		scan = &walletScan{
+			wallet:  wallet,
+			regexes: []*regexp.Regexp{},
+		}
+
+		jw.scans[id] = scan
+	}
+	scan.regexes = append(scan.regexes, specifier)
+
+
+	// add wallet folder to watcher
+	if err := jw.watcher.Add(filepath.Join(jw.opts.Location, wallet.ID().String())); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (jw *jsonWallet) handleChange(path string, action string) {
+	walletIDStr, accountIDStr := filepath.Split(path)
+	walletIDStr = strings.Trim(walletIDStr, string(filepath.Separator))
+	accountID, err := uuid.Parse(accountIDStr)
+	if err != nil {
+		// Commonly an index, sometimes a backup file; ignore.
+		return
+	}
+	walletScan, exists := jw.scans[walletIDStr]
+	if !exists {
+		log.WithError(err).Warn("Failed to detect wallet change; wallet not found")
+		return
+	}
+
+	if action == "remove_account" {
+		for k,v := range jw.accounts {
+			if v.ID().String() == accountIDStr {
+				delete(jw.accounts, k)
+				log.WithField("pubKey", fmt.Sprintf("%#x", k)).Info("removed key from wallet, ")
 			}
 		}
 	}
 
-	return km, walletOptsHelp, nil
+	if action == "add_account" {
+		account, err := walletScan.wallet.AccountByID(accountID)
+		if err != nil {
+			log.WithError(err).Warn("Failed to detect wallet change; account not found")
+			return
+		}
+
+		pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
+
+		// make sure keymanager file includes this account
+		for _, re := range walletScan.regexes {
+			if re.Match([]byte(account.Name())) {
+				for _, passphrase := range jw.opts.Passphrases { // unlock
+					if err := account.Unlock([]byte(passphrase)); err != nil {
+						log.WithError(err).Trace("Failed to unlock account with one of the supplied passphrases")
+					} else {
+						jw.accounts[pubKey] = account
+						log.WithField("pubKey", fmt.Sprintf("%#x", pubKey)).Info("added new key to wallet, ")
+						break
+					}
+				}
+				break
+			}
+		}
+	}
+
+
 }
 
-// Wallet is a key manager that loads keys from a local Ethereum 2 wallet.
-type Wallet struct {
-	accounts map[[48]byte]e2wtypes.Account
+// look for changes in wallet json files and handle those changes (delete, add, change)
+func (jw *jsonWallet) listenToChanges () {
+	go func() {
+		for {
+			select {
+			case event, ok := <-jw.watcher.Events:
+				if !ok {
+					return
+				}
+
+				path := strings.TrimPrefix(event.Name, jw.opts.Location)
+				//if event.Op&fsnotify.Write == fsnotify.Write {
+				//	// new account has been added
+				//	jw.handleChange(path, "add_account")
+				//}
+				if event.Op&fsnotify.Create == fsnotify.Create {
+					// new account has been added
+					jw.handleChange(path, "add_account")
+				}
+				if event.Op&fsnotify.Rename == fsnotify.Rename  || event.Op&fsnotify.Remove == fsnotify.Remove{
+					// account has been removed
+					jw.handleChange(path, "remove_account")
+				}
+			case err, ok := <-jw.watcher.Errors:
+				if !ok {
+					return
+				}
+				log.WithError(err).Debug("watcher error")
+			}
+		}
+	}()
 }
 
-// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
-func (km *Wallet) FetchValidatingKeys() ([][48]byte, error) {
-	res := make([][48]byte, 0, len(km.accounts))
-	for pubKey := range km.accounts {
-		res = append(res, pubKey)
-	}
-	return res, nil
-}
-
-// Sign signs a message for the validator to broadcast.
-func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error) {
-	account, exists := km.accounts[pubKey]
-	if !exists {
-		return nil, ErrNoSuchKey
-	}
-	// TODO(#4817) Update with new library to remove domain here.
-	sig, err := account.Sign(root[:])
-	if err != nil {
-		return nil, err
-	}
-	return bls.SignatureFromBytes(sig.Marshal())
-}
