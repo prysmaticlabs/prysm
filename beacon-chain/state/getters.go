@@ -461,7 +461,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
 
 func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
 	if b == nil || b.valIdxMap == nil {
-		return nil
+		return map[[48]byte]uint64{}
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
