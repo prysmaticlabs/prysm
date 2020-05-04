@@ -72,7 +72,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
@@ -140,7 +139,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		Genesis:        time.Now(),
 	}
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 	c, err := lru.New(10)
 	if err != nil {
 		t.Fatal(err)

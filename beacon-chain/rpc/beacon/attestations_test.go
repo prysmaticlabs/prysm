@@ -38,9 +38,8 @@ import (
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
@@ -71,9 +70,8 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 
 func TestServer_ListAttestations_Genesis(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot: 0,
 	})
@@ -150,7 +148,6 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(8)
@@ -198,7 +195,6 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 
 func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	someRoot := []byte{1, 2, 3}
@@ -312,7 +308,6 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 
 func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
@@ -427,7 +422,6 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 
 func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(1)
@@ -485,7 +479,6 @@ func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 
 func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(params.BeaconConfig().DefaultPageSize)
@@ -580,7 +573,6 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	numValidators := uint64(128)
 	state, _ := testutil.DeterministicGenesisState(t, numValidators)
@@ -613,7 +605,6 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
 	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
@@ -750,7 +741,6 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
 
@@ -989,8 +979,6 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 }
 
 func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	chainService := &mock.ChainService{}
@@ -1021,7 +1009,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1159,8 +1146,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 }
 
 func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -1189,8 +1174,6 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

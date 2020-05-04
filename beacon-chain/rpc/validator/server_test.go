@@ -34,7 +34,6 @@ import (
 
 func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
@@ -63,7 +62,6 @@ func TestValidatorIndex_OK(t *testing.T) {
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	beaconState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -117,7 +115,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -213,7 +210,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	priv1 := bls.RandKey()
 	priv2 := bls.RandKey()
@@ -304,7 +300,6 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -335,7 +330,6 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
 	trie := testutil.NewBeaconState()
@@ -375,7 +369,6 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	hook := logTest.NewGlobal()
 	chainService := &mockChain.ChainService{}
@@ -421,7 +414,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 func TestWaitForSynced_ContextClosed(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -452,7 +444,6 @@ func TestWaitForSynced_ContextClosed(t *testing.T) {
 
 func TestWaitForSynced_AlreadySynced(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
 	trie := testutil.NewBeaconState()
@@ -493,7 +484,6 @@ func TestWaitForSynced_AlreadySynced(t *testing.T) {
 
 func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	hook := logTest.NewGlobal()
 	chainService := &mockChain.ChainService{}

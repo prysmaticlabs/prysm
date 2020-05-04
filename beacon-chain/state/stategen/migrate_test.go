@@ -18,7 +18,6 @@ func TestMigrateToCold_NoBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -33,7 +32,6 @@ func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
@@ -48,7 +46,6 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2

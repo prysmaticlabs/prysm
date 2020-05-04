@@ -12,7 +12,6 @@ import (
 
 func TestHeadSlot_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB: db,
 	}
@@ -26,7 +25,6 @@ func TestHeadSlot_DataRace(t *testing.T) {
 
 func TestHeadRoot_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB: db,
 		head:     &head{root: [32]byte{'A'}},
@@ -44,7 +42,6 @@ func TestHeadRoot_DataRace(t *testing.T) {
 
 func TestHeadBlock_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB: db,
 		head:     &head{block: &ethpb.SignedBeaconBlock{}},
@@ -62,7 +59,6 @@ func TestHeadBlock_DataRace(t *testing.T) {
 
 func TestHeadState_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB: db,
 		stateGen: stategen.New(db, cache.NewStateSummaryCache()),

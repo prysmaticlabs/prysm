@@ -44,7 +44,6 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -119,7 +118,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -193,7 +191,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		BeaconDB:        beaconDB,
@@ -273,7 +270,6 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -359,7 +355,6 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -477,7 +472,6 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	kvStore := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, kvStore)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -582,7 +576,6 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -700,7 +693,6 @@ func TestConsistentGenesisState(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, beaconDB)
 	web3Service := newPowchainService(t, testAcc, beaconDB)
 
 	testAcc.Backend.Commit()
@@ -748,11 +740,8 @@ func TestConsistentGenesisState(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 
-	// Tearing down to prevent registration error.
-	testDB.TeardownDB(t, beaconDB)
-
+	// New db to prevent registration error.
 	newBeaconDB := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, newBeaconDB)
 
 	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
 	go newWeb3Service.run(ctx.Done())
