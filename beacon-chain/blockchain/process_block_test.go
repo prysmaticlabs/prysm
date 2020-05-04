@@ -28,7 +28,6 @@ import (
 func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{
 		BeaconDB: db,
@@ -92,10 +91,10 @@ func TestStore_OnBlock(t *testing.T) {
 			wantErrString: "provided block root does not have block saved in the db",
 		},
 		{
-			name:          "block is from the feature",
+			name:          "block is from the future",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:], Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             st.Copy(),
-			wantErrString: "could not process slot from the future",
+			wantErrString: "far distant future",
 		},
 		{
 			name:          "could not get finalized block",
@@ -130,7 +129,6 @@ func TestStore_OnBlock(t *testing.T) {
 func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -210,7 +208,6 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -261,7 +258,6 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -306,7 +302,6 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{
 		BeaconDB: db,
@@ -342,7 +337,6 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -388,7 +382,6 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -436,7 +429,6 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -487,7 +479,6 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -541,7 +532,6 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 func TestPersistCache_CanSave(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -583,7 +573,6 @@ func TestPersistCache_CanSave(t *testing.T) {
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -637,7 +626,6 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)

@@ -15,7 +15,6 @@ import (
 
 func TestSaveHead_Same(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := setupBeaconChain(t, db)
 
 	r := [32]byte{'A'}
@@ -36,7 +35,6 @@ func TestSaveHead_Same(t *testing.T) {
 
 func TestSaveHead_Different(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := setupBeaconChain(t, db)
 
 	oldRoot := [32]byte{'A'}
