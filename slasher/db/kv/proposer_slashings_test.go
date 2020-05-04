@@ -17,7 +17,6 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	ps := &ethpb.ProposerSlashing{Header_1: &ethpb.SignedBeaconBlockHeader{Header: &ethpb.BeaconBlockHeader{ProposerIndex: 1}}}
@@ -42,7 +41,6 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -96,7 +94,6 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -156,7 +153,6 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	ps := []*ethpb.ProposerSlashing{

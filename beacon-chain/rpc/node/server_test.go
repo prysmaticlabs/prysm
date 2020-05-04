@@ -44,7 +44,6 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 
 func TestNodeServer_GetGenesis(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	addr := common.Address{1, 2, 3}
 	if err := db.SaveDepositContractAddress(ctx, addr); err != nil {
