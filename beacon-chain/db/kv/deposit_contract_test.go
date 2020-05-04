@@ -9,7 +9,6 @@ import (
 
 func TestStore_DepositContract(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	contractAddress := common.Address{1, 2, 3}
 	retrieved, err := db.DepositContractAddress(ctx)
