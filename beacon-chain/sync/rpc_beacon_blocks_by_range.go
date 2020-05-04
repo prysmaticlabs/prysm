@@ -128,16 +128,9 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	}
 	// handle genesis case
 	if startSlot == 0 {
-		genBlock, err := r.db.GenesisBlock(ctx)
+		genBlock, genRoot, err := r.retrieveGenesisBlock(ctx)
 		if err != nil {
 			log.WithError(err).Error("Failed to retrieve genesis block")
-			r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-		genRoot, err := stateutil.BlockRoot(genBlock.Block)
-		if err != nil {
-			log.WithError(err).Error("Failed to hash genesis block")
 			r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
 			traceutil.AnnotateError(span, err)
 			return err
@@ -179,4 +172,16 @@ func (r *Service) writeErrorResponseToStream(responseCode byte, reason string, s
 			log.WithError(err).Errorf("Failed to write to stream")
 		}
 	}
+}
+
+func (r *Service) retrieveGenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, [32]byte, error) {
+	genBlock, err := r.db.GenesisBlock(ctx)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	genRoot, err := stateutil.BlockRoot(genBlock.Block)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	return genBlock, genRoot, nil
 }
