@@ -33,7 +33,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -97,7 +96,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -139,7 +137,6 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -181,7 +178,6 @@ func TestBlockExists_ValidHash(t *testing.T) {
 
 func TestBlockExists_InvalidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -199,7 +195,6 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -238,7 +233,6 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 
 func TestBlockNumberByTimestamp(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     beaconDB,
