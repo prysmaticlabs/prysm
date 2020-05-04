@@ -19,7 +19,6 @@ import (
 
 func Test_DetectionFlow(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, false)
-	defer testDB.TeardownSlasherDB(t, db)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	bClient := mock.NewMockBeaconChainClient(ctrl)
