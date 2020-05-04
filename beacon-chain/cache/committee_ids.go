@@ -99,6 +99,9 @@ func (c *committeeIDs) GetPersistentCommittee(pubkey []byte) (uint64, bool, time
 	defer c.subnetsLock.RUnlock()
 
 	id, duration, ok := c.persistentSubnets.GetWithExpiration(string(pubkey))
+	if !ok {
+		return 0, ok, time.Time{}
+	}
 	return id.(uint64), ok, duration
 }
 

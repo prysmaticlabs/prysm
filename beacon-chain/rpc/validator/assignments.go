@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -104,7 +106,7 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	}
 
 	_, ok, expTime := cache.CommitteeIDs.GetPersistentCommittee(pubkey)
-	if ok && expTime.After(time.Now()) {
+	if ok && expTime.After(roughtime.Now()) {
 		return
 	}
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
