@@ -22,7 +22,6 @@ var _ = ForkFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	c := setupBeaconChain(t, db)
 	if !bytes.Equal(c.FinalizedCheckpt().Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
@@ -31,7 +30,6 @@ func TestFinalizedCheckpt_Nil(t *testing.T) {
 
 func TestHeadRoot_Nil(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	c := setupBeaconChain(t, db)
 	headRoot, err := c.HeadRoot(context.Background())
 	if err != nil {
@@ -44,7 +42,6 @@ func TestHeadRoot_Nil(t *testing.T) {
 
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: []byte("foo")}
 	c := setupBeaconChain(t, db)
@@ -57,7 +54,6 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
@@ -72,7 +68,6 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: []byte("foo")}
 	c := setupBeaconChain(t, db)
@@ -85,7 +80,6 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 
 func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
@@ -100,7 +94,6 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: []byte("foo")}
 	c := setupBeaconChain(t, db)
@@ -113,7 +106,6 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 
 func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	genesisRoot := [32]byte{'C'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}

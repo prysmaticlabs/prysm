@@ -18,23 +18,21 @@ func setupDB(t testing.TB) *Store {
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
 	}
-	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-	if err := os.RemoveAll(path); err != nil {
+	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
+	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewKVStore(path, cache.NewStateSummaryCache())
+	db, err := NewKVStore(p, cache.NewStateSummaryCache())
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Fatalf("Failed to close database: %v", err)
+		}
+		if err := os.RemoveAll(db.DatabasePath()); err != nil {
+			t.Fatalf("Failed to remove directory: %v", err)
+		}
+	})
 	return db
-}
-
-// teardownDB cleans up a test Store instance.
-func teardownDB(t testing.TB, db *Store) {
-	if err := db.Close(); err != nil {
-		t.Fatalf("Failed to close database: %v", err)
-	}
-	if err := os.RemoveAll(db.DatabasePath()); err != nil {
-		t.Fatalf("Failed to remove directory: %v", err)
-	}
 }
