@@ -10,7 +10,6 @@ import (
 
 func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	chainService := setupBeaconChain(t, db)
 	chainService.genesisTime = time.Now()

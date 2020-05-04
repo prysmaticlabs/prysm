@@ -12,7 +12,6 @@ import (
 
 func Test_DetectionFlow(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, false)
-	defer testDB.TeardownSlasherDB(t, db)
 
 	savedAttestation := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{3},

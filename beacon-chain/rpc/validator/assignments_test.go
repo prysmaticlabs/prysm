@@ -35,7 +35,6 @@ func pubKey(i uint64) []byte {
 }
 func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
@@ -73,7 +72,6 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 
 func TestGetDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -159,7 +157,6 @@ func TestGetDuties_OK(t *testing.T) {
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -214,7 +211,6 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
@@ -462,7 +458,6 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
 	db := dbutil.SetupDB(b)
-	defer dbutil.TeardownDB(b, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(8192 * 2)
