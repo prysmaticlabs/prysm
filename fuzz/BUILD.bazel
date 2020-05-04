@@ -71,6 +71,7 @@ test_suite(
         ":ssz_cache_fuzz_test_with_libfuzzer",
         ":voluntary_exit_fuzz_test_with_libfuzzer",
     ],
+    tags = ["manual"],
 )
 
 go_fuzz_test(

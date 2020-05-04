@@ -7,7 +7,6 @@ load(
 load(
     "@io_bazel_rules_go//go/private:mode.bzl",
     "LINKMODE_C_ARCHIVE",
-    "LINKMODE_C_SHARED",
 )
 load(
     "@io_bazel_rules_go//go:def.bzl",
@@ -91,18 +90,6 @@ def go_fuzz_test(
         srcs = [name + "_libfuzz_main"],
         deps = [name + "_lib_with_fuzzer"],
         linkmode = LINKMODE_C_ARCHIVE,
-        cgo = True,
-        tags = ["manual"] + tags,
-        visibility = ["//visibility:private"],
-        gc_goopts = ["-d=libfuzzer"],
-        testonly = 1,
-    )
-    go_binary(
-        # For inclusion in beacon fuzz project.
-        name = name + "_c_shared",
-        srcs = [name + "_libfuzz_main"],
-        deps = [name + "_lib_with_fuzzer"],
-        linkmode = LINKMODE_C_SHARED,
         cgo = True,
         tags = ["manual"] + tags,
         visibility = ["//visibility:private"],
