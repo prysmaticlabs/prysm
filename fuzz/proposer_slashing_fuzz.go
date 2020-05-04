@@ -17,7 +17,6 @@ func BeaconFuzzProposerSlashing(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputProposerSlashingWrapper{}
 	if err := input.UnmarshalSSZ(b); err != nil {
-		//if err := ssz.Unmarshal(b, input); err != nil {
 		return fail(err)
 	}
 	s, err := prylabs_testing.GetBeaconFuzzState(input.StateID)
