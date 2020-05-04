@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
