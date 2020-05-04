@@ -1,5 +1,3 @@
-// +build libfuzzer
-
 package fuzz
 
 import (
