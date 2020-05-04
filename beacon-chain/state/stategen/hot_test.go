@@ -21,7 +21,6 @@ func TestSaveHotState_AlreadyHas(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -50,7 +49,6 @@ func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -77,7 +75,6 @@ func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -114,7 +111,6 @@ func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
 func TestLoadHoteStateByRoot_Cached(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -135,7 +131,6 @@ func TestLoadHoteStateByRoot_Cached(t *testing.T) {
 func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -180,7 +175,6 @@ func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
 func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -218,7 +212,6 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 func TestLoadHoteStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -249,7 +242,6 @@ func TestLoadHoteStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 func TestLastAncestorState_CanGet(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	service := New(db, cache.NewStateSummaryCache())
 
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'a'}}

@@ -51,7 +51,6 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
@@ -68,7 +67,6 @@ func TestStore_SaveSpans(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -98,7 +96,6 @@ func TestStore_SaveCachedSpans(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -130,7 +127,6 @@ func TestStore_DeleteEpochSpans(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	db.spanCacheEnabled = false
 	for _, tt := range spanTests {
@@ -166,7 +162,6 @@ func TestValidatorSpanMap_DeletesOnCacheSavesToDB(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -205,7 +200,6 @@ func TestValidatorSpanMap_DeletesOnCacheSavesToDB(t *testing.T) {
 
 func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 	db := setupDBDiffCacheSize(t, 5)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tsm := &spanMapTestStruct{
@@ -240,7 +234,6 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
@@ -270,7 +263,6 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	db.spanCacheEnabled = false
 
@@ -292,12 +284,11 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 			t.Errorf("Wanted span map to be equal to: %v , received span map: %v ", spanTests[0].spanMap, res[1])
 		}
 	}
-	teardownDB(t, db)
-	db = setupDB(t, cli.NewContext(&app, set, nil))
-	if err := db.SaveEpochsSpanByValidatorsIndices(ctx, res); err != nil {
+	db1 := setupDB(t, cli.NewContext(&app, set, nil))
+	if err := db1.SaveEpochsSpanByValidatorsIndices(ctx, res); err != nil {
 		t.Fatal(err)
 	}
-	res, err = db.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
+	res, err = db1.EpochsSpanByValidatorsIndices(ctx, []uint64{1, 2, 3}, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,5 +300,4 @@ func TestStore_ReadWriteEpochsSpanByValidatorsIndices(t *testing.T) {
 			t.Errorf("Wanted span map to be equal to: %v , received span map: %v ", spanTests[0].spanMap, res[1])
 		}
 	}
-
 }

@@ -11,7 +11,6 @@ import (
 
 func TestStateSummary_CanSaveRretrieve(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	r1 := bytesutil.ToBytes32([]byte{'A'})
 	r2 := bytesutil.ToBytes32([]byte{'B'})
