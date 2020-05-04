@@ -163,7 +163,6 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 func TestChainStartStop_Uninitialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, db)
 
 	// Listen for state events.
@@ -219,7 +218,6 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	chainService := setupBeaconChain(t, db)
 
@@ -264,7 +262,6 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
 	bc := setupBeaconChain(t, db)
@@ -319,7 +316,6 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 
 func TestChainService_InitializeChainInfo(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
@@ -400,7 +396,6 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 
 func TestChainService_SaveHeadNoDB(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &Service{
 		beaconDB: db,
@@ -431,7 +426,6 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 
 func TestChainService_PruneOldStates(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &Service{
 		beaconDB: db,
@@ -480,7 +474,6 @@ func TestChainService_PruneOldStates(t *testing.T) {
 func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
 		finalizedCheckpt: &ethpb.Checkpoint{},
@@ -511,7 +504,6 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 
 func BenchmarkHasBlockDB(b *testing.B) {
 	db := testDB.SetupDB(b)
-	defer testDB.TeardownDB(b, db)
 	ctx := context.Background()
 	s := &Service{
 		beaconDB: db,
@@ -536,7 +528,6 @@ func BenchmarkHasBlockDB(b *testing.B) {
 func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 	ctx := context.Background()
 	db := testDB.SetupDB(b)
-	defer testDB.TeardownDB(b, db)
 	s := &Service{
 		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
 		finalizedCheckpt: &ethpb.Checkpoint{},

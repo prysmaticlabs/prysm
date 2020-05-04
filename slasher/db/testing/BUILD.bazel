@@ -18,4 +18,9 @@ go_test(
     name = "go_default_test",
     srcs = ["setup_db_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "//shared/testutil:go_default_library",
+        "//slasher/db:go_default_library",
+        "//slasher/db/kv:go_default_library",
+    ],
 )

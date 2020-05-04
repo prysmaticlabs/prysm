@@ -7,7 +7,6 @@ import (
 
 func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	i1 := uint64(100)
 	r1 := [32]byte{'A'}
@@ -28,7 +27,6 @@ func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 
 func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	i, err := db.LastArchivedIndex(ctx)
 	if err != nil {
