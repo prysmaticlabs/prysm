@@ -23,8 +23,6 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
-
 	r := &Service{
 		db:  d,
 		p2p: p1,
@@ -69,8 +67,6 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
-
 	r := &Service{
 		db:  d,
 		p2p: p1,

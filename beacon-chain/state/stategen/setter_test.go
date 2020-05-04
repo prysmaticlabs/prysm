@@ -16,7 +16,6 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
@@ -49,7 +48,6 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
@@ -78,7 +76,6 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
