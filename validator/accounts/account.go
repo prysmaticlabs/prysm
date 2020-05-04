@@ -111,7 +111,7 @@ func NewValidatorAccount(directory string, password string) error {
 ===================================================================
 `, tx.Data())
 	publicKey := validatorKey.PublicKey.Marshal()[:]
-	log.Infof("Deposit data displayed for public key %#x", publicKey)
+	log.Infof("Deposit data displayed for public key: %#x", publicKey)
 	return nil
 }
 
