@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 )
 
-// BeaconFuzz using the corpora from sigp/beacon-fuzz.
+// BeaconFuzzBlockHeader using the corpora from sigp/beacon-fuzz.
 func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputBlockHeader{}
