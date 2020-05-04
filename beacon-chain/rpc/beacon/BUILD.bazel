@@ -65,6 +65,7 @@ go_test(
     srcs = [
         "assignments_test.go",
         "attestations_test.go",
+        "beacon_test.go",
         "blocks_test.go",
         "committees_test.go",
         "config_test.go",
