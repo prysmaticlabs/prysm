@@ -81,7 +81,6 @@ func TestBeaconBlocksRPCHandler_ReturnsGenesisBlock(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 0,
