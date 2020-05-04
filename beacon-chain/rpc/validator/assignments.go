@@ -2,11 +2,15 @@ package validator
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -74,6 +78,9 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			if ok {
 				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
 			}
+			// assign relevant validator to subnet
+			assignValidatorToSubnet(pubKey, assignment.Status)
+
 		} else {
 			// If the validator isn't in the beacon state, assume their status is unknown.
 			assignment.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -89,4 +96,23 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 // StreamDuties --
 func (vs *Server) StreamDuties(stream ethpb.BeaconNodeValidator_StreamDutiesServer) error {
 	return status.Error(codes.Unimplemented, "unimplemented")
+}
+
+func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
+	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
+		return
+	}
+
+	_, ok, expTime := cache.CommitteeIDs.GetPersistentCommittee(pubkey)
+	if ok && expTime.After(time.Now()) {
+		return
+	}
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+
+	assignedIndex := rand.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
+	assignedDuration := rand.Intn(int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription))
+	assignedDuration += int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
+
+	totalDuration := epochDuration * time.Duration(assignedDuration)
+	cache.CommitteeIDs.AddPersistentCommittee(pubkey, uint64(assignedIndex), totalDuration*time.Second)
 }

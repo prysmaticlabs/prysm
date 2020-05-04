@@ -17,6 +17,7 @@ type committeeIDs struct {
 	aggregator        *lru.Cache
 	aggregatorLock    sync.RWMutex
 	persistentSubnets *cache.Cache
+	subnetsLock       sync.RWMutex
 }
 
 // CommitteeIDs for attester and aggregator.
@@ -93,4 +94,33 @@ func (c *committeeIDs) GetAggregatorCommitteeIDs(slot uint64) []uint64 {
 	return val.([]uint64)
 }
 
-func (c *committeeIDs) AddPersistentCommittee()
+func (c *committeeIDs) GetPersistentCommittee(pubkey []byte) (uint64, bool, time.Time) {
+	c.subnetsLock.RLock()
+	defer c.subnetsLock.RUnlock()
+
+	id, duration, ok := c.persistentSubnets.GetWithExpiration(string(pubkey))
+	return id.(uint64), ok, duration
+}
+
+func (c *committeeIDs) GetAllCommittees() []uint64 {
+	c.subnetsLock.RLock()
+	defer c.subnetsLock.RUnlock()
+
+	itemsMap := c.persistentSubnets.Items()
+	committees := []uint64{}
+
+	for _, v := range itemsMap {
+		if v.Expired() {
+			continue
+		}
+		committees = append(committees, v.Object.(uint64))
+	}
+	return sliceutil.SetUint64(committees)
+}
+
+func (c *committeeIDs) AddPersistentCommittee(pubkey []byte, comIndex uint64, duration time.Duration) {
+	c.subnetsLock.Lock()
+	defer c.subnetsLock.Unlock()
+
+	c.persistentSubnets.Set(string(pubkey), comIndex, duration)
+}
