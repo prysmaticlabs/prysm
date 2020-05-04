@@ -11,7 +11,6 @@ import (
 
 func TestStore_ProposerSlashing_CRUD(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	prop := &ethpb.ProposerSlashing{
 		Header_1: &ethpb.SignedBeaconBlockHeader{
@@ -67,7 +66,6 @@ func TestStore_ProposerSlashing_CRUD(t *testing.T) {
 
 func TestStore_AttesterSlashing_CRUD(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	att := &ethpb.AttesterSlashing{
 		Attestation_1: &ethpb.IndexedAttestation{
