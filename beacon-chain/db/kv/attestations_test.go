@@ -17,7 +17,6 @@ import (
 
 func TestStore_AttestationCRUD(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	att := &ethpb.Attestation{
 		Data:            &ethpb.AttestationData{Slot: 10},
 		AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
@@ -57,7 +56,6 @@ func TestStore_AttestationCRUD(t *testing.T) {
 
 func TestStore_AttestationsBatchDelete(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	numAtts := 10
 	totalAtts := make([]*ethpb.Attestation, numAtts)
@@ -111,7 +109,6 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 
 func TestStore_BoltDontPanic(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	var wg sync.WaitGroup
 
 	for i := 0; i <= 100; i++ {
@@ -167,7 +164,6 @@ func TestStore_BoltDontPanic(t *testing.T) {
 
 func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	someRoot := [32]byte{1, 2, 3}
 	otherRoot := [32]byte{4, 5, 6}
 	atts := []*ethpb.Attestation{
@@ -269,7 +265,6 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 
 func TestStore_DuplicatedAttestations_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	someRoot := [32]byte{1, 2, 3}
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -416,7 +411,6 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			defer teardownDB(t, db)
 			ctx := context.Background()
 			if err := db.SaveAttestations(ctx, tt.input); err != nil {
 				t.Fatal(err)

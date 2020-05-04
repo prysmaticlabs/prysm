@@ -23,7 +23,6 @@ import (
 func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -87,7 +86,6 @@ func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
 func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -161,7 +159,6 @@ func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 func TestPruneOldStates_AlreadyFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -200,7 +197,6 @@ func TestPruneOldStates_AlreadyFinalized(t *testing.T) {
 func TestPruneNonBoundary_CanPrune(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -238,7 +234,6 @@ func TestPruneNonBoundary_CanPrune(t *testing.T) {
 
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())}
 	service, err := NewService(context.Background(), cfg)
 	if err != nil {

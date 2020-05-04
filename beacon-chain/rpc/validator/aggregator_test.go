@@ -29,7 +29,6 @@ func init() {
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	s := &beaconstate.BeaconState{}
@@ -49,7 +48,6 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -76,7 +74,6 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -119,7 +116,6 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -183,7 +179,6 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
