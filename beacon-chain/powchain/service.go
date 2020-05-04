@@ -567,46 +567,50 @@ func (s *Service) initPOWService() ethereum.Subscription {
 		s.runError = nil
 	}
 
-	// run in a loop to retry in the event of any failures.
+	// run in a select loop to retry in the event of any failures.
 	for {
-		err := s.initDataFromContract()
-		if err != nil {
-			log.Errorf("Unable to retrieve data from deposit contract %v", err)
-			retryETH1Node(err)
-			continue
-		}
+		select {
+		case <-s.ctx.Done():
+			return headSub
+		default:
+			err := s.initDataFromContract()
+			if err != nil {
+				log.Errorf("Unable to retrieve data from deposit contract %v", err)
+				retryETH1Node(err)
+				continue
+			}
 
-		headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
-		if err != nil {
-			log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
-			retryETH1Node(err)
-			continue
-		}
+			headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
+			if err != nil {
+				log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
+				retryETH1Node(err)
+				continue
+			}
 
-		if headSub == nil {
-			log.Errorf("Nil head subscription received: %v", err)
-			retryETH1Node(err)
-			continue
-		}
+			if headSub == nil {
+				log.Errorf("Nil head subscription received: %v", err)
+				retryETH1Node(err)
+				continue
+			}
 
-		header, err := s.blockFetcher.HeaderByNumber(context.Background(), nil)
-		if err != nil {
-			log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
-			retryETH1Node(err)
-			continue
-		}
+			header, err := s.blockFetcher.HeaderByNumber(context.Background(), nil)
+			if err != nil {
+				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
+				retryETH1Node(err)
+				continue
+			}
 
-		s.latestEth1Data.BlockHeight = header.Number.Uint64()
-		s.latestEth1Data.BlockHash = header.Hash().Bytes()
+			s.latestEth1Data.BlockHeight = header.Number.Uint64()
+			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 
-		if err := s.processPastLogs(context.Background()); err != nil {
-			log.Errorf("Unable to process past logs %v", err)
-			retryETH1Node(err)
-			continue
+			if err := s.processPastLogs(context.Background()); err != nil {
+				log.Errorf("Unable to process past logs %v", err)
+				retryETH1Node(err)
+				continue
+			}
+			return headSub
 		}
-		break
 	}
-	return headSub
 }
 
 // run subscribes to all the services for the ETH1.0 chain.
