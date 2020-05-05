@@ -285,6 +285,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
@@ -368,6 +369,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
@@ -488,6 +490,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	web3Service.httpLogger = testAcc.Backend
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.latestEth1Data.BlockHeight = 0
+	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
@@ -588,6 +591,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 	web3Service.httpLogger = testAcc.Backend
+	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
@@ -775,6 +779,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
 	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}
 	web3Service.logger = &goodLogger{backend: eth1Backend.Backend}
+	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)

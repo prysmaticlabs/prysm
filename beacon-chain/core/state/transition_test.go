@@ -885,6 +885,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	}
 	blk.Signature = sig.Marshal()
 
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.MinAttestationInclusionDelay = 0
 	params.OverrideBeaconConfig(config)

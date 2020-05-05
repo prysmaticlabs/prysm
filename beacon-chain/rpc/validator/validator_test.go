@@ -1,10 +1,9 @@
-package beacon
+package validator
 
 import (
 	"os"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -12,9 +11,6 @@ func TestMain(m *testing.M) {
 	// Use minimal config to reduce test setup time.
 	prevConfig := params.BeaconConfig().Copy()
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	flags.Init(&flags.GlobalFlags{
-		MaxPageSize: 250,
-	})
 
 	retVal := m.Run()
 
