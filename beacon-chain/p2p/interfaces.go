@@ -55,7 +55,7 @@ type PubSubProvider interface {
 type PeerManager interface {
 	Disconnect(peer.ID) error
 	PeerID() peer.ID
-	RefreshENR(epoch uint64)
+	RefreshENR()
 	FindPeersWithSubnet(index uint64) (bool, error)
 	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
 }

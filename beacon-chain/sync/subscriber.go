@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -238,8 +239,14 @@ func (r *Service) subscribeDynamicWithSubnets(
 				if r.chainStarted && r.initialSync.Syncing() {
 					continue
 				}
+
+				// Persistent subscriptions from validators
+				persistentSubs := r.persistentCommitteeIndices()
 				// Update desired topic indices for aggregator
 				wantedSubs := r.aggregatorCommitteeIndices(currentSlot)
+
+				// Combine subscriptions to get all requested subscriptions
+				wantedSubs = sliceutil.SetUint64(append(persistentSubs, wantedSubs...))
 				// Resize as appropriate.
 				r.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
 
