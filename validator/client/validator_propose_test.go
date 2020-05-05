@@ -33,11 +33,11 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	}
 
 	validator := &validator{
-		db:              valDB,
-		validatorClient: m.validatorClient,
-		keyManager:      testKeyManager,
-		graffiti:        []byte{},
-		attLogs:         make(map[[32]byte]*attSubmitted),
+		db:                             valDB,
+		validatorClient:                m.validatorClient,
+		keyManager:                     testKeyManager,
+		graffiti:                       []byte{},
+		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 	}
 

@@ -1,11 +1,12 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"math"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -211,9 +212,9 @@ func TestSlotToTime(t *testing.T) {
 		slot           uint64
 	}
 	tests := []struct {
-		name string
-		args args
-		want time.Time
+		name    string
+		args    args
+		want    time.Time
 		wantErr bool
 	}{
 		{
@@ -222,7 +223,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 0,
 				slot:           0,
 			},
-			want: time.Unix(0, 0),
+			want:    time.Unix(0, 0),
 			wantErr: false,
 		},
 		{
@@ -231,7 +232,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 0,
 				slot:           1,
 			},
-			want: time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
+			want:    time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
 			wantErr: false,
 		},
 		{
@@ -240,7 +241,7 @@ func TestSlotToTime(t *testing.T) {
 				genesisTimeSec: 500,
 				slot:           12,
 			},
-			want: time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
+			want:    time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
 			wantErr: false,
 		},
 		{
@@ -254,7 +255,7 @@ func TestSlotToTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); (err != nil ) != tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+			if got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); (err != nil) != tt.wantErr && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SlotToTime() = %v, want %v", got, tt.want)
 			}
 		})

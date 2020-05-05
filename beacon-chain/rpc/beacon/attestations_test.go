@@ -13,9 +13,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -104,7 +104,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	},
 	}
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -567,7 +567,7 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 }
 
 func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:false})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
@@ -602,7 +602,7 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:true})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
@@ -738,7 +738,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:true})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
@@ -1020,7 +1020,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

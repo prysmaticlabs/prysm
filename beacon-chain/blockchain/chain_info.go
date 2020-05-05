@@ -6,10 +6,10 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -134,7 +134,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 		return params.BeaconConfig().ZeroHash[:], nil
 	}
 
-	r, err := ssz.HashTreeRoot(b.Block)
+	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		return nil, err
 	}

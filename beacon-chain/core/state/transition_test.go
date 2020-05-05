@@ -288,7 +288,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		exits = append(exits, &ethpb.SignedVoluntaryExit{})
 	}
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -222,7 +223,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 
 	genesisBlk := b.NewGenesisBlock([]byte{})
-	blkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
+	blkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +320,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +340,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err := headState.SetGenesisValidatorRoot(params.BeaconConfig().ZeroHash[:]); err != nil {
 		t.Fatal(err)
 	}
-	headRoot, err := ssz.HashTreeRoot(headBlock.Block)
+	headRoot, err := stateutil.BlockRoot(headBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +437,7 @@ func TestChainService_PruneOldStates(t *testing.T) {
 		if err := s.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
 			t.Fatal(err)
 		}
-		r, err := ssz.HashTreeRoot(block)
+		r, err := stateutil.BlockRoot(block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -480,7 +481,7 @@ func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
 		beaconDB:         db,
 	}
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
-	r, err := ssz.HashTreeRoot(block.Block)
+	r, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -512,7 +513,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	if err := s.beaconDB.SaveBlock(ctx, block); err != nil {
 		b.Fatal(err)
 	}
-	r, err := ssz.HashTreeRoot(block.Block)
+	r, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -534,7 +535,7 @@ func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
 		beaconDB:         db,
 	}
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
-	r, err := ssz.HashTreeRoot(block.Block)
+	r, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		b.Fatal(err)
 	}
