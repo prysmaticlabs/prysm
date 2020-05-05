@@ -361,6 +361,11 @@ func (s *Service) Disconnect(pid peer.ID) error {
 	return s.host.Network().ClosePeer(pid)
 }
 
+// Connect to a specific peer.
+func (s *Service) Connect(pi peer.AddrInfo) error {
+	return s.host.Connect(s.ctx, pi)
+}
+
 // Peers returns the peer status interface.
 func (s *Service) Peers() *peers.Status {
 	return s.peers

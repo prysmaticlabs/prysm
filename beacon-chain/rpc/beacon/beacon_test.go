@@ -10,11 +10,15 @@ import (
 
 func TestMain(m *testing.M) {
 	// Use minimal config to reduce test setup time.
-	reset := params.OverrideBeaconConfigWithReset(params.MinimalSpecConfig())
+	prevConfig := params.BeaconConfig().Copy()
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	flags.Init(&flags.GlobalFlags{
 		MaxPageSize: 250,
 	})
+
 	retVal := m.Run()
-	reset()
+
+	// Reset configuration.
+	params.OverrideBeaconConfig(prevConfig)
 	os.Exit(retVal)
 }

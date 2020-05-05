@@ -237,6 +237,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 }
 
 func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 2
 	params.OverrideBeaconConfig(conf)
@@ -423,6 +424,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	type fields struct {
 		pending []*PendingAttesterSlashing
 	}
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 1
 	params.OverrideBeaconConfig(conf)
@@ -482,6 +484,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 }
 
 func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 2
 	params.OverrideBeaconConfig(conf)

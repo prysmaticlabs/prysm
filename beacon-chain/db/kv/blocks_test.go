@@ -8,8 +8,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -62,7 +62,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 			ParentRoot: []byte{1, 2, 3},
 		},
 	}
-	blockRoot, err := ssz.HashTreeRoot(block.Block)
+	blockRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 		}
 
 		if i%2 == 0 {
-			r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
+			r, err := stateutil.BlockRoot(totalBlocks[i].Block)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -155,7 +155,7 @@ func TestStore_GenesisBlock(t *testing.T) {
 			ParentRoot: []byte{1, 2, 3},
 		},
 	}
-	blockRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	blockRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 			ParentRoot: []byte{1, 2, 3},
 		},
 	}
-	blockRoot, err := ssz.HashTreeRoot(block.Block)
+	blockRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,7 +491,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", block3, highestAt)
 	}
 
-	r3, err := ssz.HashTreeRoot(block3.Block)
+	r3, err := stateutil.BlockRoot(block3.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -513,7 +513,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 	ctx := context.Background()
 
 	genesisBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	genesisRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -626,7 +626,7 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 	}
 
 	b51 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 51}}
-	r51, err := ssz.HashTreeRoot(b51.Block)
+	r51, err := stateutil.BlockRoot(b51.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -668,7 +668,7 @@ func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 				Slot:       uint64(i),
 			},
 		}
-		r[i], err = ssz.HashTreeRoot(b[i].Block)
+		r[i], err = stateutil.BlockRoot(b[i].Block)
 		if err != nil {
 			t.Error(err)
 		}

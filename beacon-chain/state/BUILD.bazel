@@ -1,4 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -13,6 +14,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
         "//shared/benchutil:__pkg__",
         "//shared/testutil:__pkg__",
         "//tools/benchmark-files-gen:__pkg__",

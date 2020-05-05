@@ -91,7 +91,7 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return false
 	}
 
-	s, err := r.chain.HeadState(ctx)
+	s, err := r.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return false
