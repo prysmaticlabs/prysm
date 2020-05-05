@@ -174,4 +174,9 @@ var (
 		Name:  "config-file",
 		Usage: "The filepath to a yaml file with flag values",
 	}
+	// ChainConfigFileFlag specifies the filepath to load flag values.
+	ChainConfigFileFlag = &cli.StringFlag{
+		Name:  "chain-config-file",
+		Usage: "The path to a YAML file with chain config values",
+	}
 )

@@ -87,6 +87,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFileName,
 	cmd.EnableUPnPFlag,
 	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
 }
 
 func init() {
