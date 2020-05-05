@@ -1,4 +1,3 @@
-
 package fuzz
 
 import (
@@ -33,4 +32,3 @@ func BeaconFuzzBlock(b []byte) ([]byte, bool) {
 	}
 	return success(post)
 }
-

@@ -93,6 +93,11 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+		params.LoadChainConfigFile(chainConfigFileName)
+	}
+
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
 	registry := shared.NewServiceRegistry()

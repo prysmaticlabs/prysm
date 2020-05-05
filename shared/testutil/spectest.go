@@ -56,7 +56,6 @@ func TestFolders(t *testing.T, config string, folderPath string) ([]os.FileInfo,
 	return testFolders, testsFolderPath
 }
 
-
 // BazelDirectoryNonEmpty returns true if directory exists and is not empty.
 func BazelDirectoryNonEmpty(filePath string) (bool, error) {
 	p, err := bazel.Runfile(filePath)
