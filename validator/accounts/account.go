@@ -152,7 +152,6 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		reader := bufio.NewReader(os.Stdin)
 		text, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal(err)
 			return path, passphrase, err
 		}
 		if text = strings.Replace(text, "\n", "", -1); text != "" {
