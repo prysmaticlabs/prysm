@@ -59,8 +59,6 @@ if an account's file is added while the validator runs, its corresponding accoun
 DYNAMICALLY DELETING ACCOUNTS:
 if an account's file is deleted while the validator runs, its corresponding account will be deleted dynamically.
 
-** DO NOT DELETE A WALLET DIRECTORY WITHOUT DELETING ITS ACCOUNTS FIRST **
-
 An sample keymanager options file (with annotations; these should be removed if
 using this as a template) is:
 
@@ -167,13 +165,12 @@ func newJsonWallet(opts *walletOpts, store e2wtypes.Store) (*jsonWallet,error) {
 		for account := range wallet.Accounts() {
 			log := log.WithField("account", fmt.Sprintf("%s/%s", wallet.Name(), account.Name()))
 			if re.Match([]byte(account.Name())) {
-				pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
 				unlocked := false
 				for _, passphrase := range opts.Passphrases { // important if several accounts have the same passphrase
 					if err := account.Unlock([]byte(passphrase)); err != nil {
 						log.WithError(err).Trace("Failed to unlock account with one of the supplied passphrases")
 					} else {
-						jsonwallet.accounts[pubKey] = account
+						jsonwallet.addAccounts([]e2wtypes.Account{account})
 						unlocked = true
 						break
 					}
@@ -209,6 +206,17 @@ func (jw *jsonWallet) getAccounts() map[[48]byte]e2wtypes.Account {
 	return ret
 }
 
+func (jw *jsonWallet) addAccounts(accounts []e2wtypes.Account) {
+	jw.mu.RLock()
+	defer jw.mu.RUnlock()
+
+	for i := range accounts {
+		account := accounts[i]
+		pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
+		jw.accounts[pubKey] = account
+	}
+}
+
 func (jw *jsonWallet) addWalletWatcher(wallet e2wtypes.Wallet, specifier *regexp.Regexp) error {
 	// add wallet and specifier for later identifying relevant accounts
 	id := wallet.ID().String()
@@ -231,66 +239,39 @@ func (jw *jsonWallet) addWalletWatcher(wallet e2wtypes.Wallet, specifier *regexp
 	return nil
 }
 
-func (jw *jsonWallet) handleChange(path string, action string) {
-	// keys need to be deleted one-by-one so to identify their ID and remove them from the list.
-	// if an entire wallet gets deleted without deleting individual keys, its keys will continue to exist.
-	if action == "remove_wallet" {
-		err := fmt.Errorf("wallet deleted from key manager")
-		log.WithError(err).Warn("Wallet was deleted from key manager, unless keys were deleted one by one they will still exist in keymanager")
-		return
+func (jw *jsonWallet) handleRemoveAccountChange(accountID string) {
+	for k,v := range jw.accounts {
+		if v.ID().String() == accountID {
+			delete(jw.accounts, k)
+			log.WithField("pubKey", fmt.Sprintf("%#x", k)).Info("removed key from wallet, ")
+		}
 	}
+}
 
-	walletIDStr, accountIDStr := filepath.Split(path)
-	walletIDStr = strings.Trim(walletIDStr, string(filepath.Separator))
-	accountID, err := uuid.Parse(accountIDStr)
+func (jw *jsonWallet) handleAddAccountChange(walletScan *walletScan, accountID uuid.UUID) {
+	account, err := walletScan.wallet.AccountByID(accountID)
 	if err != nil {
-		// Commonly an index, sometimes a backup file; ignore.
+		log.WithError(err).Warn("Failed to detect wallet change; account not found")
 		return
 	}
 
-	walletScan, exists := jw.scans[walletIDStr]
-	if !exists {
-		log.WithError(nil).Warn("Failed to detect wallet change; wallet not found")
-		return
-	}
+	// make sure keymanager file includes this account
+	for _, re := range walletScan.regexes {
+		if re.Match([]byte(account.Name())) {
+			for _, passphrase := range jw.opts.Passphrases { // unlock
+				if err := account.Unlock([]byte(passphrase)); err != nil {
+					log.WithError(err).Trace("Failed to unlock account with one of the supplied passphrases")
+				} else {
+					jw.addAccounts([]e2wtypes.Account{account})
 
-	if action == "remove_account" {
-		for k,v := range jw.accounts {
-			if v.ID().String() == accountIDStr {
-				delete(jw.accounts, k)
-				log.WithField("pubKey", fmt.Sprintf("%#x", k)).Info("removed key from wallet, ")
-			}
-		}
-		return
-	}
-
-	if action == "add_account" {
-		account, err := walletScan.wallet.AccountByID(accountID)
-		if err != nil {
-			log.WithError(err).Warn("Failed to detect wallet change; account not found")
-			return
-		}
-
-		pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
-
-		// make sure keymanager file includes this account
-		for _, re := range walletScan.regexes {
-			if re.Match([]byte(account.Name())) {
-				for _, passphrase := range jw.opts.Passphrases { // unlock
-					if err := account.Unlock([]byte(passphrase)); err != nil {
-						log.WithError(err).Trace("Failed to unlock account with one of the supplied passphrases")
-					} else {
-						jw.accounts[pubKey] = account
-						log.WithField("pubKey", fmt.Sprintf("%#x", pubKey)).Info("added new key to wallet, ")
-						break
-					}
+					pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
+					log.WithField("pubKey", fmt.Sprintf("%#x", pubKey)).Info("added new key to wallet, ")
+					break
 				}
-				break
 			}
+			break
 		}
 	}
-
-
 }
 
 // look for changes in wallet json files and handle those changes (delete, add, change)
@@ -300,29 +281,41 @@ func (jw *jsonWallet) listenToChanges () {
 			select {
 			case event, ok := <-jw.watcher.Events:
 				if !ok {
+					log.Warn("wallet stoped listening for changes in keys...")
 					return
 				}
+				if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+					// nothing to do
+					continue
+				}
 
+				// parse wallet and account ids
 				path := strings.TrimPrefix(event.Name, jw.opts.Location)
+				walletIDStr, accountIDStr := filepath.Split(path)
+				walletIDStr = strings.Trim(walletIDStr, string(filepath.Separator))
+				accountID, err := uuid.Parse(accountIDStr)
+				if err != nil {
+					// Commonly an index, sometimes a backup file; ignore.
+					continue
+				}
+				walletScan, exists := jw.scans[walletIDStr]
+				if !exists {
+					log.Warn("Failed to detect wallet change; wallet not found")
+					continue
+				}
+
 				if event.Op&fsnotify.Create == fsnotify.Create { // in case adding a new account
 					// new account has been added
-					jw.handleChange(path, "add_account")
+					jw.handleAddAccountChange(walletScan, accountID)
 				}
-				if event.Op&fsnotify.Rename == fsnotify.Rename { // in case a specific account was deleted
-					if event.Op&fsnotify.Remove == fsnotify.Remove {
-						path = strings.TrimPrefix(path, "/")
-						path = path + "/" // to parse wallet id correctly
-						jw.handleChange(path, "remove_wallet")
-					} else {
-						// account has been removed
-						jw.handleChange(path, "remove_account")
-					}
+				if event.Op&fsnotify.Remove == fsnotify.Remove || event.Op&fsnotify.Rename == fsnotify.Rename { // in case a specific account was deleted
+					jw.handleRemoveAccountChange(accountIDStr)
 				}
-
 
 			case err, ok := <-jw.watcher.Errors:
 				if !ok {
-					return
+					log.WithError(err).Warn("watcher warn")
+					continue
 				}
 				log.WithError(err).Debug("watcher error")
 			}

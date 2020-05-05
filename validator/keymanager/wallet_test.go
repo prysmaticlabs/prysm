@@ -15,11 +15,12 @@ import (
 	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
 )
 
-func SetupWallet(t *testing.T) (string, types.Wallet) {
+func setup(t *testing.T) (string, types.Wallet) {
 	path, err := ioutil.TempDir("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	store := filesystem.New(filesystem.WithLocation(path))
 	encryptor := keystorev4.New()
 
@@ -53,6 +54,18 @@ func removeAccount(wallet types.Wallet, account types.Account, path string) erro
 	return os.Remove(finalpath)
 }
 
+func moveAccountToTmp(wallet types.Wallet, account types.Account, path string) error {
+	oldpath := path + "/" + wallet.ID().String() + "/" + account.ID().String()
+	newPath := path + "/tmp_" + account.ID().String()
+	return os.Rename(oldpath, newPath)
+}
+
+func moveAccountFromTmp(wallet types.Wallet, account types.Account, path string) error {
+	oldpath := path + "/tmp_" + account.ID().String()
+	newPath := path + "/" + wallet.ID().String() + "/" + account.ID().String()
+	return os.Rename(oldpath, newPath)
+}
+
 func wallet(t *testing.T, opts string) keymanager.KeyManager {
 	km, _, err := keymanager.NewWallet(opts)
 	if err != nil {
@@ -62,7 +75,7 @@ func wallet(t *testing.T, opts string) keymanager.KeyManager {
 }
 
 func TestMultiplePassphrases(t *testing.T) {
-	path,_ := SetupWallet(t)
+	path,_ := setup(t)
 	//defer os.RemoveAll(path)
 	tests := []struct {
 		name     string
@@ -109,9 +122,69 @@ func TestMultiplePassphrases(t *testing.T) {
 	}
 }
 
+func TestMovingBackAccountsDynamically(t *testing.T) {
+	t.Run("Remove account dynamically", func(t *testing.T) {
+		path, ndWallet := setup(t)
+		wallet := wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["foo","bar"]}`, path))
+
+		accountToDelete := <-ndWallet.Accounts()
+		err := moveAccountToTmp(ndWallet, accountToDelete,path)
+		if err != nil {
+			t.Error(err)
+		}
+		err = moveAccountFromTmp(ndWallet, accountToDelete,path)
+		if err != nil {
+			t.Error(err)
+		}
+
+		time.Sleep(100 * time.Millisecond) // necessary to ensure wallet has enough time to fetch new accounts
+		keys, err := wallet.FetchValidatingKeys()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if len(keys) != 2 {
+			t.Errorf("Found %d keys; expected %d", len(keys), 2)
+		}
+
+		err = os.RemoveAll(path)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestMovingAccountsDynamically(t *testing.T) {
+	t.Run("Remove account dynamically", func(t *testing.T) {
+		path, ndWallet := setup(t)
+		wallet := wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["foo","bar"]}`, path))
+
+		accountToDelete := <-ndWallet.Accounts()
+		err := moveAccountToTmp(ndWallet, accountToDelete,path)
+		if err != nil {
+			t.Error(err)
+		}
+
+		time.Sleep(100 * time.Millisecond) // necessary to ensure wallet has enough time to fetch new accounts
+		keys, err := wallet.FetchValidatingKeys()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if len(keys) != 1 {
+			t.Errorf("Found %d keys; expected %d", len(keys), 1)
+		}
+
+		err = os.RemoveAll(path)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func TestRemovingAccountsDynamically(t *testing.T) {
 	t.Run("Remove account dynamically", func(t *testing.T) {
-		path, ndWallet := SetupWallet(t)
+		path, ndWallet := setup(t)
 		wallet := wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["foo","bar"]}`, path))
 
 		accountToDelete := <-ndWallet.Accounts()
@@ -170,7 +243,7 @@ func TestAddingAccountsDynamically(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			path, ndWallet := SetupWallet(t)
+			path, ndWallet := setup(t)
 			wallet := wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["foo","bar"]}`, path))
 
 			// add new existingAccounts
