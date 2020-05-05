@@ -79,7 +79,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			if ok {
 				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
 			}
-			// assign relevant validator to subnet
+			// Assign relevant validator to subnet.
 			assignValidatorToSubnet(pubKey, assignment.Status)
 
 		} else {
