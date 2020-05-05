@@ -620,6 +620,10 @@ func (s *Service) run(done <-chan struct{}) {
 	s.runError = nil
 
 	headSub := s.initPOWService()
+	if headSub == nil {
+		log.Error("Received a nil head subscription, exiting service")
+		return
+	}
 
 	ticker := time.NewTicker(1 * time.Second)
 	defer headSub.Unsubscribe()
