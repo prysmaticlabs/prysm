@@ -141,7 +141,6 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		log.Info("Creating a new validator account for eth2")
 		enteredPassphrase, err := cmd.EnterPassword()
 		if err != nil {
-			log.Fatal(err)
 			return path, enteredPassphrase, err
 		}
 		passphrase = enteredPassphrase
