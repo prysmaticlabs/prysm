@@ -134,10 +134,6 @@ var (
 		Name:  "enable-state-field-trie",
 		Usage: "Enables the usage of state field tries to compute the state root",
 	}
-	enableCustomBlockHTR = &cli.BoolFlag{
-		Name:  "enable-custom-block-htr",
-		Usage: "Enables the usage of a custom hashing method for our block",
-	}
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
@@ -314,6 +310,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableCustomBlockHTR = &cli.BoolFlag{
+		Name:  "enable-custom-block-htr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -347,6 +348,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
 	deprecatedUseSpanCacheFlag,
+	deprecatedEnableCustomBlockHTR,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -394,7 +396,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNewStateMgmt,
 	disableInitSyncQueue,
 	enableFieldTrie,
-	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
 	enableStateRefCopy,
 	waitForSyncedFlag,
@@ -410,5 +411,4 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
-	"--enable-custom-block-htr",
 }
