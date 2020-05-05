@@ -225,6 +225,7 @@ slasher)
     color "31" "Usage: ./prysm.sh PROCESS FLAGS."
     color "31" "       ./prysm.sh PROCESS --download-only."
     color "31" "PROCESS can be beacon-chain, validator, or slasher."
+    exit 1
     ;;
 esac
 
