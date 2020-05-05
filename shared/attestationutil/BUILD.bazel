@@ -6,6 +6,10 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/attestationutil",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",

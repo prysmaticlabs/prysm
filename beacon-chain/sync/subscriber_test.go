@@ -12,7 +12,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -175,7 +175,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating proposer slashing")
 	}
-	root, err := ssz.HashTreeRoot(proposerSlashing.Header_1.Header)
+	root, err := stateutil.BlockHeaderRoot(proposerSlashing.Header_1.Header)
 	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
 		t.Fatal(err)
 	}

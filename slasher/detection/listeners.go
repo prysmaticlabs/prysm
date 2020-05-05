@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"go.opencensus.io/trace"
 )
 
@@ -83,7 +83,7 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 }
 
 func signedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
-	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
+	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
