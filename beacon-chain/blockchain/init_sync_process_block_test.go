@@ -13,6 +13,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -242,7 +243,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 
 	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +273,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genRoot, err := ssz.HashTreeRoot(genesisBlock)
+	genRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +298,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 		}
 		lastBlock = block
 	}
-	root, err := ssz.HashTreeRoot(lastBlock.Block)
+	root, err := stateutil.BlockRoot(lastBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

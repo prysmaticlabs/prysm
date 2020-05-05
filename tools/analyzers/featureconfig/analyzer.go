@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go/ast"
 	"go/token"
+
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
@@ -41,7 +42,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 		switch stmt := node.(type) {
 		case *ast.ExprStmt:
-			if call, ok := stmt.X.(*ast.CallExpr); ok&& isPkgDot(call.Fun, "featureconfig", "InitWithReset"){
+			if call, ok := stmt.X.(*ast.CallExpr); ok && isPkgDot(call.Fun, "featureconfig", "InitWithReset") {
 				reportUnhandledReset(pass, call.Lparen)
 			}
 		case *ast.GoStmt:
@@ -70,13 +71,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
 }
 
 func reportForbiddenUsage(pass *analysis.Pass, pos token.Pos) {
-	pass.Reportf(pos, "Use of featureconfig.Init is forbidden in test code. Please use " +
+	pass.Reportf(pos, "Use of featureconfig.Init is forbidden in test code. Please use "+
 		"featureconfig.InitWithReset and call reset in the same test function.")
 }
 
 func reportUnhandledReset(pass *analysis.Pass, pos token.Pos) {
-	pass.Reportf(pos, "Unhandled reset featureconfig not found in test " +
-		"method. Be sure to call the returned reset function from featureconfig.InitWithReset " +
+	pass.Reportf(pos, "Unhandled reset featureconfig not found in test "+
+		"method. Be sure to call the returned reset function from featureconfig.InitWithReset "+
 		"within this test method.")
 }
 
