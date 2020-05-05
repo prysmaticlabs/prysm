@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -272,6 +274,26 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
 	}
+}
+
+func TestAssignValidatorToSubnet(t *testing.T) {
+	k := pubKey(3)
+
+	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
+	coms, ok, exp := cache.CommitteeIDs.GetPersistentCommittees(k)
+	if !ok {
+		t.Fatal("No cache entry found for validator")
+	}
+	if uint64(len(coms)) != params.BeaconNetworkConfig().RandomSubnetsPerValidator {
+		t.Errorf("Only %d committees subscribed when %d was needed.", len(coms), params.BeaconNetworkConfig().RandomSubnetsPerValidator)
+	}
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
+	receivedTime := exp.Round(time.Second).Sub(time.Now())
+	if receivedTime < totalTime {
+		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
+	}
+
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {

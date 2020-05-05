@@ -104,7 +104,7 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 		return
 	}
 
-	_, ok, expTime := cache.CommitteeIDs.GetPersistentCommittee(pubkey)
+	_, ok, expTime := cache.CommitteeIDs.GetPersistentCommittees(pubkey)
 	if ok && expTime.After(roughtime.Now()) {
 		return
 	}
