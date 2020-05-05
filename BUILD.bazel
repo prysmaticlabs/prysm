@@ -4,6 +4,7 @@ load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
 load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 load("@io_bazel_rules_go//go:def.bzl", "nogo")
 load("@graknlabs_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
+load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
@@ -12,6 +13,7 @@ exports_files([
 ])
 
 # gazelle:prefix github.com/prysmaticlabs/prysm
+# gazelle:map_kind go_library go_library @prysm//tools/go:def.bzl
 gazelle(
     name = "gazelle",
     prefix = prefix,
@@ -119,4 +121,13 @@ toolchain(
     name = "built_cmake_toolchain",
     toolchain = "@rules_foreign_cc//tools/build_defs/native_tools:built_cmake",
     toolchain_type = "@rules_foreign_cc//tools/build_defs:cmake_toolchain",
+)
+
+string_setting(
+    name = "gotags",
+    build_setting_default = "",
+    values = [
+        "",
+        "libfuzzer",
+    ],
 )
