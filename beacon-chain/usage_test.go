@@ -54,19 +54,19 @@ func TestLoadConfigFile(t *testing.T) {
 			params.BeaconConfig().MaxCommitteesPerSlot)
 	}
 	if params.BeaconConfig().SecondsPerSlot != params.MainnetConfig().SecondsPerSlot {
-		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+		t.Errorf("Expected SecondsPerSlot to be set to mainnet value: %d found: %d",
 			params.MainnetConfig().SecondsPerSlot,
 			params.BeaconConfig().SecondsPerSlot)
 	}
 	minimalConfigFile := testutil.ConfigFilePath(t, "minimal")
 	loadChainConfigFile(minimalConfigFile)
 	if params.BeaconConfig().MaxCommitteesPerSlot != params.MinimalSpecConfig().MaxCommitteesPerSlot {
-		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+		t.Errorf("Expected MaxCommitteesPerSlot to be set to minimal value: %d found: %d",
 			params.MinimalSpecConfig().MaxCommitteesPerSlot,
 			params.BeaconConfig().MaxCommitteesPerSlot)
 	}
 	if params.BeaconConfig().SecondsPerSlot != params.MinimalSpecConfig().SecondsPerSlot {
-		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+		t.Errorf("Expected SecondsPerSlot to be set to minimal value: %d found: %d",
 			params.MinimalSpecConfig().SecondsPerSlot,
 			params.BeaconConfig().SecondsPerSlot)
 	}

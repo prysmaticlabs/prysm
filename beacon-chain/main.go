@@ -178,11 +178,10 @@ func loadChainConfigFile(chainConfigFileName string) {
 	if err != nil {
 		log.WithError(err).Error("Failed to read chain config file.")
 	}
+	// convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
-
 	for i, line := range lines {
-		if strings.Contains(line, "0x") {
-
+		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
 			parts := strings.Split(line, "0x")
 			b, err := hex.DecodeString(parts[1])
 			if err != nil {
