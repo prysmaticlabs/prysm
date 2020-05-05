@@ -1691,8 +1691,8 @@ go_repository(
 )
 
 go_repository(
-     name = "com_github_fsnotify_fsnotify",
-     importpath = "github.com/fsnotify/fsnotify",
-     sum = "h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=",
-     version = "v1.4.9",
+    name = "com_github_fsnotify_fsnotify",
+    importpath = "github.com/fsnotify/fsnotify",
+    sum = "h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=",
+    version = "v1.4.9",
 )
