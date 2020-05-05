@@ -20,8 +20,10 @@ go_library(
         "//fuzz:__pkg__",
         "//proto/testing:__subpackages__",
         "//shared/testutil:__subpackages__",
+        "//slasher:__subpackages__",
         "//tools/blocktree:__pkg__",
         "//tools/pcli:__pkg__",
+        "//validator/client:__pkg__",
     ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
