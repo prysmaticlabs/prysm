@@ -14,6 +14,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -46,7 +47,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, err := ssz.HashTreeRoot(b0.Block)
+	b0Root, err := stateutil.BlockRoot(b0.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,12 +57,12 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	}
 	// Incomplete block link
 	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
-	b1Root, err := ssz.HashTreeRoot(b1.Block)
+	b1Root, err := stateutil.BlockRoot(b1.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}}
-	b2Root, err := ssz.HashTreeRoot(b1.Block)
+	b2Root, err := stateutil.BlockRoot(b1.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +146,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, err := ssz.HashTreeRoot(b0.Block)
+	b0Root, err := stateutil.BlockRoot(b0.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +154,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
 		t.Fatal(err)
 	}
-	b1Root, err := ssz.HashTreeRoot(b1.Block)
+	b1Root, err := stateutil.BlockRoot(b1.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +258,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, err := ssz.HashTreeRoot(b0.Block)
+	b0Root, err := stateutil.BlockRoot(b0.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +266,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
 		t.Fatal(err)
 	}
-	b1Root, err := ssz.HashTreeRoot(b1.Block)
+	b1Root, err := stateutil.BlockRoot(b1.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
