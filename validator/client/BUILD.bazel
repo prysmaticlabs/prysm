@@ -17,6 +17,7 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/slashing:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
