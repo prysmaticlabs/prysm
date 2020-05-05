@@ -3,7 +3,6 @@ package stateutil_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -17,7 +16,7 @@ func TestBlockRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedRoot, err := ssz.HashTreeRoot(blk.Block)
+	expectedRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +31,7 @@ func TestBlockRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedRoot, err = ssz.HashTreeRoot(blk.Block)
+	expectedRoot, err = stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
