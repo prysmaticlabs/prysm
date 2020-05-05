@@ -38,6 +38,41 @@ build:release --compilation_mode=opt
 # LLVM compiler for building C/C++ dependencies.
 build:llvm --crosstool_top=@llvm_toolchain//:toolchain
 build:llvm --define compiler=llvm
+build:llvm --copt -fno-sanitize=vptr,function
+build:llvm --linkopt -fno-sanitize=vptr,function
+
+build:asan --copt -fsanitize=address,undefined
+build:asan --copt -fno-omit-frame-pointer
+build:asan --linkopt -fsanitize=address,undefined
+build:asan --copt -fno-sanitize=vptr,function
+build:asan --linkopt -fno-sanitize=vptr,function
+build:asan --copt -DADDRESS_SANITIZER=1
+build:asan --copt -D__SANITIZE_ADDRESS__
+build:asan --linkopt -ldl
+
+build:llvm-asan --config=llvm
+build:llvm-asan --config=asan
+build:llvm-asan --linkopt -fuse-ld=ld.lld
+
+build:fuzz --define=gotags=libfuzzer
+build:fuzz --config=llvm-asan
+build:fuzz --copt=-fsanitize=fuzzer-no-link
+build:fuzz --linkopt=-fsanitize=fuzzer
+build:fuzz --copt=-fno-omit-frame-pointer
+build:fuzz --define=FUZZING_ENGINE=libfuzzer
+build:fuzz --copt=-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+build:fuzz --linkopt -Wl,--no-as-needed
+build:fuzz --define=gc_goopts=-d=libfuzzer
+build:fuzz --run_under=//tools:fuzz_wrapper
+build:fuzz --compilation_mode=opt
+
+test:fuzz --local_test_jobs="HOST_CPUS*.5"
+
+test:fuzzit --config=fuzz
+test:fuzzit --test_env=FUZZIT_API_KEY
+test:fuzzit --test_env=PRYSM_BUILD_IMAGE=gcr.io/prysmaticlabs/prysm-fuzzit:v0.11.0
+test:fuzzit --test_timeout=1200
+test:fuzzit --run_under=//tools:fuzzit_wrapper
 
 # Build binary with cgo symbolizer for debugging / profiling.
 build:cgo_symbolizer --config=llvm
