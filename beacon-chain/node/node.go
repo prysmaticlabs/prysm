@@ -6,6 +6,7 @@ package node
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -50,6 +51,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/urfave/cli.v2"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -91,6 +93,11 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		cliCtx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
+	}
+
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+		loadChainConfigFile(chainConfigFileName)
 	}
 
 	featureconfig.ConfigureBeaconChain(cliCtx)
@@ -661,4 +668,80 @@ func (b *BeaconNode) registerArchiverService() error {
 		StateNotifier:        b,
 	})
 	return b.services.RegisterService(svc)
+}
+
+func loadChainConfigFile(chainConfigFileName string) {
+	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
+	if err != nil {
+		log.WithError(err).Error("Failed to read chain config file.")
+	}
+	// convert 0x hex inputs to fixed bytes arrays
+	lines := strings.Split(string(yamlFile), "\n")
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
+			parts := strings.Split(line, "0x")
+			b, err := hex.DecodeString(parts[1])
+			if err != nil {
+				log.WithError(err).Error("Failed to decode hex string.")
+			}
+			switch l := len(b); {
+			case l > 0 && l <= 4:
+				var arr [4]byte
+				copy(arr[:], b)
+				fixedByte, err := yaml.Marshal(arr)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal config file.")
+				}
+				parts[1] = string(fixedByte)
+			case l > 4 && l <= 8:
+				var arr [8]byte
+				copy(arr[:], b)
+				fixedByte, err := yaml.Marshal(arr)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal config file.")
+				}
+				parts[1] = string(fixedByte)
+			case l > 8 && l <= 32:
+				var arr [32]byte
+				copy(arr[:], b)
+				fixedByte, err := yaml.Marshal(arr)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal config file.")
+				}
+				parts[1] = string(fixedByte)
+			case l > 32 && l <= 48:
+				var arr [48]byte
+				copy(arr[:], b)
+				fixedByte, err := yaml.Marshal(arr)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal config file.")
+				}
+				parts[1] = string(fixedByte)
+			case l > 48 && l <= 64:
+				var arr [48]byte
+				copy(arr[:], b)
+				fixedByte, err := yaml.Marshal(arr)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal config file.")
+				}
+				parts[1] = string(fixedByte)
+			case l > 64 && l <= 96:
+				var arr [48]byte
+				copy(arr[:], b)
+				fixedByte, err := yaml.Marshal(arr)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal config file.")
+				}
+				parts[1] = string(fixedByte)
+			}
+
+			lines[i] = strings.Join(parts, "\n")
+		}
+	}
+	yamlFile = []byte(strings.Join(lines, "\n"))
+	conf := params.BeaconConfig()
+	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
+		log.WithError(err).Error("Failed to parse chain config yaml file.")
+	}
+	params.OverrideBeaconConfig(conf)
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"gopkg.in/urfave/cli.v2"
@@ -46,5 +47,32 @@ func TestNodeClose_OK(t *testing.T) {
 
 	if err := os.RemoveAll(tmp); err != nil {
 		t.Log(err)
+	}
+}
+
+func TestLoadConfigFile(t *testing.T) {
+	mainnetConfigFile := testutil.ConfigFilePath(t, "mainnet")
+	loadChainConfigFile(mainnetConfigFile)
+	if params.BeaconConfig().MaxCommitteesPerSlot != params.MainnetConfig().MaxCommitteesPerSlot {
+		t.Errorf("Expected MaxCommitteesPerSlot to be set to mainnet value: %d found: %d",
+			params.MainnetConfig().MaxCommitteesPerSlot,
+			params.BeaconConfig().MaxCommitteesPerSlot)
+	}
+	if params.BeaconConfig().SecondsPerSlot != params.MainnetConfig().SecondsPerSlot {
+		t.Errorf("Expected SecondsPerSlot to be set to mainnet value: %d found: %d",
+			params.MainnetConfig().SecondsPerSlot,
+			params.BeaconConfig().SecondsPerSlot)
+	}
+	minimalConfigFile := testutil.ConfigFilePath(t, "minimal")
+	loadChainConfigFile(minimalConfigFile)
+	if params.BeaconConfig().MaxCommitteesPerSlot != params.MinimalSpecConfig().MaxCommitteesPerSlot {
+		t.Errorf("Expected MaxCommitteesPerSlot to be set to minimal value: %d found: %d",
+			params.MinimalSpecConfig().MaxCommitteesPerSlot,
+			params.BeaconConfig().MaxCommitteesPerSlot)
+	}
+	if params.BeaconConfig().SecondsPerSlot != params.MinimalSpecConfig().SecondsPerSlot {
+		t.Errorf("Expected SecondsPerSlot to be set to minimal value: %d found: %d",
+			params.MinimalSpecConfig().SecondsPerSlot,
+			params.BeaconConfig().SecondsPerSlot)
 	}
 }

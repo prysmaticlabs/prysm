@@ -2,13 +2,10 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
-	"strings"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log"
@@ -19,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	gologging "github.com/whyrusleeping/go-logging"
@@ -27,7 +23,6 @@ import (
 	_ "go.uber.org/automaxprocs"
 	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
-	"gopkg.in/yaml.v2"
 )
 
 var log *logrus.Entry
@@ -149,10 +144,6 @@ func main() {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
-		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
-			chainConfigFileName := ctx.String(cmd.ChainConfigFileFlag.Name)
-			loadChainConfigFile(chainConfigFileName)
-		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}
@@ -171,82 +162,6 @@ func main() {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
-}
-
-func loadChainConfigFile(chainConfigFileName string) {
-	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
-	if err != nil {
-		log.WithError(err).Error("Failed to read chain config file.")
-	}
-	// convert 0x hex inputs to fixed bytes arrays
-	lines := strings.Split(string(yamlFile), "\n")
-	for i, line := range lines {
-		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
-			parts := strings.Split(line, "0x")
-			b, err := hex.DecodeString(parts[1])
-			if err != nil {
-				log.WithError(err).Error("Failed to decode hex string.")
-			}
-			switch l := len(b); {
-			case l > 0 && l <= 4:
-				var arr [4]byte
-				copy(arr[:], b)
-				fixedByte, err := yaml.Marshal(arr)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshal config file.")
-				}
-				parts[1] = string(fixedByte)
-			case l > 4 && l <= 8:
-				var arr [8]byte
-				copy(arr[:], b)
-				fixedByte, err := yaml.Marshal(arr)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshal config file.")
-				}
-				parts[1] = string(fixedByte)
-			case l > 8 && l <= 32:
-				var arr [32]byte
-				copy(arr[:], b)
-				fixedByte, err := yaml.Marshal(arr)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshal config file.")
-				}
-				parts[1] = string(fixedByte)
-			case l > 32 && l <= 48:
-				var arr [48]byte
-				copy(arr[:], b)
-				fixedByte, err := yaml.Marshal(arr)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshal config file.")
-				}
-				parts[1] = string(fixedByte)
-			case l > 48 && l <= 64:
-				var arr [48]byte
-				copy(arr[:], b)
-				fixedByte, err := yaml.Marshal(arr)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshal config file.")
-				}
-				parts[1] = string(fixedByte)
-			case l > 64 && l <= 96:
-				var arr [48]byte
-				copy(arr[:], b)
-				fixedByte, err := yaml.Marshal(arr)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshal config file.")
-				}
-				parts[1] = string(fixedByte)
-			}
-
-			lines[i] = strings.Join(parts, "\n")
-		}
-	}
-	yamlFile = []byte(strings.Join(lines, "\n"))
-	conf := params.BeaconConfig()
-	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
-		log.WithError(err).Error("Failed to parse chain config yaml file.")
-	}
-	params.OverrideBeaconConfig(conf)
 }
 
 func startNode(ctx *cli.Context) error {
