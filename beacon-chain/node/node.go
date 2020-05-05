@@ -684,6 +684,8 @@ func loadChainConfigFile(chainConfigFileName string) {
 		}
 	}
 	yamlFile = []byte(strings.Join(lines, "\n"))
+	lines = strings.Split(string(yamlFile), "\n")
+	log.Info(lines)
 	conf := params.BeaconConfig()
 	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
 		log.WithError(err).Fatal("Failed to parse chain config yaml file.")
@@ -700,13 +702,14 @@ func replaceHexStringWithYAMLFormat(line string) []string {
 	}
 	switch l := len(b); {
 	case l == 1:
-		var arr [1]byte
-		copy(arr[:], b)
-		fixedByte, err := yaml.Marshal(arr)
+		var byte byte
+		copy(b, b)
+		fixedByte, err := yaml.Marshal(byte)
 		if err != nil {
 			log.WithError(err).Error("Failed to marshal config file.")
 		}
-		parts[1] = string(fixedByte)
+		parts[0] = parts[0] + string(fixedByte)
+		parts = parts[:1]
 	case l > 1 && l <= 4:
 		var arr [4]byte
 		copy(arr[:], b)
