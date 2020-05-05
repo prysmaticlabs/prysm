@@ -52,6 +52,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
 
+	if err := captureSentTimeMetric(uint64(s.genesisTime.Unix()), block.Block.Slot); err != nil {
+		// If a node fails to capture metric, this shouldn't cause the block processing to fail.
+		log.Warnf("Could not capture block sent time metric: %v", err)
+	}
+
 	if err := s.ReceiveBlockNoPubsub(ctx, block); err != nil {
 		return err
 	}
