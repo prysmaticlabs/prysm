@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
