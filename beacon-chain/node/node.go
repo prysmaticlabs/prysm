@@ -703,7 +703,7 @@ func replaceHexStringWithYAMLFormat(line string) []string {
 	switch l := len(b); {
 	case l == 1:
 		var byte byte
-		copy(b, b)
+		byte = b[0]
 		fixedByte, err := yaml.Marshal(byte)
 		if err != nil {
 			log.WithError(err).Error("Failed to marshal config file.")
