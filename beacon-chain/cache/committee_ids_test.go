@@ -62,19 +62,19 @@ func TestCommitteeIDs_PersistentCommitteeRoundtrip(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		pubkey := [48]byte{byte(i)}
 		pubkeySet = append(pubkeySet, pubkey)
-		c.AddPersistentCommittee(pubkey[:], uint64(i), 0)
+		c.AddPersistentCommittee(pubkey[:], []uint64{uint64(i)}, 0)
 	}
 
 	for i := 0; i < 20; i++ {
 		pubkey := [48]byte{byte(i)}
 
-		idx, ok, _ := c.GetPersistentCommittee(pubkey[:])
+		idxs, ok, _ := c.GetPersistentCommittees(pubkey[:])
 		if !ok {
 			t.Errorf("Couldn't find entry in cache for pubkey %#x", pubkey)
 			continue
 		}
-		if int(idx) != i {
-			t.Fatalf("Wanted index of %d but got %d", i, idx)
+		if int(idxs[0]) != i {
+			t.Fatalf("Wanted index of %d but got %d", i, idxs[0])
 		}
 	}
 	coms := c.GetAllCommittees()

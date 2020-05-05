@@ -94,17 +94,17 @@ func (c *committeeIDs) GetAggregatorCommitteeIDs(slot uint64) []uint64 {
 	return val.([]uint64)
 }
 
-// GetPersistentCommittee retrieves the persistent committee and expiration time of that validator's
+// GetPersistentCommittees retrieves the persistent committee and expiration time of that validator's
 // subscription.
-func (c *committeeIDs) GetPersistentCommittee(pubkey []byte) (uint64, bool, time.Time) {
+func (c *committeeIDs) GetPersistentCommittees(pubkey []byte) ([]uint64, bool, time.Time) {
 	c.subnetsLock.RLock()
 	defer c.subnetsLock.RUnlock()
 
 	id, duration, ok := c.persistentSubnets.GetWithExpiration(string(pubkey))
 	if !ok {
-		return 0, ok, time.Time{}
+		return []uint64{}, ok, time.Time{}
 	}
-	return id.(uint64), ok, duration
+	return id.([]uint64), ok, duration
 }
 
 // GetAllCommittees retrieves all the subscribed committees of all the validators
@@ -120,14 +120,14 @@ func (c *committeeIDs) GetAllCommittees() []uint64 {
 		if v.Expired() {
 			continue
 		}
-		committees = append(committees, v.Object.(uint64))
+		committees = append(committees, v.Object.([]uint64)...)
 	}
 	return sliceutil.SetUint64(committees)
 }
 
 // AddPersistentCommittee adds the relevant committee for that particular validator along with its
 // expiration period.
-func (c *committeeIDs) AddPersistentCommittee(pubkey []byte, comIndex uint64, duration time.Duration) {
+func (c *committeeIDs) AddPersistentCommittee(pubkey []byte, comIndex []uint64, duration time.Duration) {
 	c.subnetsLock.Lock()
 	defer c.subnetsLock.Unlock()
 
