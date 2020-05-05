@@ -95,7 +95,7 @@ func NewWallet(input string) (KeyManager, string, error) {
 	}
 
 	// generate json wallet with watcher for changes
-	jsonwallet, error := newJsonWallet(opts, store)
+	jsonwallet, error := newJSONWallet(opts, store)
 	if error != nil {
 		return nil, walletOptsHelp, error
 	}
@@ -135,7 +135,7 @@ func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error) {
 
 
 // json file
-func newJsonWallet(opts *walletOpts, store e2wtypes.Store) (*jsonWallet,error) {
+func newJSONWallet(opts *walletOpts, store e2wtypes.Store) (*jsonWallet,error) {
 	watcher, error := fsnotify.NewWatcher()
 	if error != nil {
 		return nil, error
