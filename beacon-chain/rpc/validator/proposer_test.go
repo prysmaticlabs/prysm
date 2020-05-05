@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 func TestGetBlock_OK(t *testing.T) {
@@ -54,7 +55,7 @@ func TestGetBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	parentRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -161,7 +162,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	parentRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -281,7 +282,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +333,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	parentRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -1298,7 +1299,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		t.Error(err)
 	}
 
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1591,7 +1592,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := s.deleteAttsInPool(append(aa, unaggregatedAtts...)); err != nil {
+	if err := s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)); err != nil {
 		t.Fatal(err)
 	}
 	if len(s.AttPool.AggregatedAttestations()) != 0 {
