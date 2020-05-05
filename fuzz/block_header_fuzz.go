@@ -1,11 +1,11 @@
 package fuzz
 
 import (
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prylabs_testing "github.com/prysmaticlabs/prysm/fuzz/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 // BeaconFuzzBlockHeader using the corpora from sigp/beacon-fuzz.
