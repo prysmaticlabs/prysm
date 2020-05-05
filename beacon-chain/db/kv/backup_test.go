@@ -13,7 +13,6 @@ import (
 
 func TestStore_Backup(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	head := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 5000}}

@@ -20,8 +20,6 @@ func TestServer_GetBeaconState(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	slot := uint64(100)

@@ -23,6 +23,14 @@ func SetupDB(t testing.TB, pubkeys [][48]byte) *Store {
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Fatalf("Failed to close database: %v", err)
+		}
+		if err := db.ClearDB(); err != nil {
+			t.Fatalf("Failed to clear database: %v", err)
+		}
+	})
 	return db
 }
 
@@ -35,14 +43,4 @@ func TempDir() string {
 		return os.TempDir()
 	}
 	return d
-}
-
-// TeardownDB cleans up a test DB instance.
-func TeardownDB(t testing.TB, db *Store) {
-	if err := db.Close(); err != nil {
-		t.Fatalf("Failed to close database: %v", err)
-	}
-	if err := db.ClearDB(); err != nil {
-		t.Fatalf("Failed to clear database: %v", err)
-	}
 }

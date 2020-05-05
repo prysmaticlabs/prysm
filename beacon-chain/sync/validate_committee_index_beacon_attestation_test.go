@@ -27,7 +27,6 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	chain := &mockChain.ChainService{
 		Genesis:          time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
 		ValidatorsRoot:   [32]byte{'A'},

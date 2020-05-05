@@ -28,7 +28,6 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	s, sKeys := testutil.DeterministicGenesisState(t, 64 /*validators*/)
 	if err := s.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)

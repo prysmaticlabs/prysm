@@ -16,7 +16,6 @@ var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 
 func TestStore_IsFinalizedBlock(t *testing.T) {
 	slotsPerEpoch := int(params.BeaconConfig().SlotsPerEpoch)
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {
@@ -89,7 +88,6 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 	blocks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[len(blocks1)-1])))
 
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {

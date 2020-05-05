@@ -12,7 +12,6 @@ import (
 
 func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	activated := []uint64{3, 4, 5}
 	exited := []uint64{6, 7, 8}
@@ -106,7 +105,6 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 
 func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	someSeed := [32]byte{1, 2, 3}
 	info := &pbp2p.ArchivedCommitteeInfo{
@@ -128,7 +126,6 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 
 func TestStore_ArchivedBalances(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	balances := []uint64{2, 3, 4, 5, 6, 7}
 	epoch := uint64(10)
@@ -146,7 +143,6 @@ func TestStore_ArchivedBalances(t *testing.T) {
 
 func TestStore_ArchivedValidatorParticipation(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	epoch := uint64(10)
 	part := &ethpb.ValidatorParticipation{
