@@ -698,7 +698,15 @@ func replaceHexStringWithYAMLFormat(line string) []string {
 		log.WithError(err).Error("Failed to decode hex string.")
 	}
 	switch l := len(b); {
-	case l > 0 && l <= 4:
+	case l == 1:
+		var arr [1]byte
+		copy(arr[:], b)
+		fixedByte, err := yaml.Marshal(arr)
+		if err != nil {
+			log.WithError(err).Error("Failed to marshal config file.")
+		}
+		parts[1] = string(fixedByte)
+	case l > 1 && l <= 4:
 		var arr [4]byte
 		copy(arr[:], b)
 		fixedByte, err := yaml.Marshal(arr)

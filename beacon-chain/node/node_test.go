@@ -85,6 +85,10 @@ func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
 		wanted string
 	}{
 		{
+			line:   "ONE_BYTE: 0x41",
+			wanted: "ONE_BYTE: \n- 65\n",
+		},
+		{
 			line:   "FOUR_BYTES: 0x41414141",
 			wanted: "FOUR_BYTES: \n- 65\n- 65\n- 65\n- 65\n",
 		},
