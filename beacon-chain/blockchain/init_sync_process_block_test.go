@@ -13,6 +13,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,7 +24,6 @@ import (
 func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -87,7 +87,6 @@ func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
 func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -161,7 +160,6 @@ func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 func TestPruneOldStates_AlreadyFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -200,7 +198,6 @@ func TestPruneOldStates_AlreadyFinalized(t *testing.T) {
 func TestPruneNonBoundary_CanPrune(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -238,7 +235,6 @@ func TestPruneNonBoundary_CanPrune(t *testing.T) {
 
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())}
 	service, err := NewService(context.Background(), cfg)
 	if err != nil {
@@ -247,7 +243,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 
 	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +273,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genRoot, err := ssz.HashTreeRoot(genesisBlock)
+	genRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,7 +298,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 		}
 		lastBlock = block
 	}
-	root, err := ssz.HashTreeRoot(lastBlock.Block)
+	root, err := stateutil.BlockRoot(lastBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -297,7 +297,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 	blockSig := priv.Sign(signingRoot[:])
 	block.Signature = blockSig.Marshal()[:]
-	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
+	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}

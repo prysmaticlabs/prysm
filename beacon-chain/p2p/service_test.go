@@ -17,7 +17,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -101,8 +100,6 @@ func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
@@ -153,8 +150,6 @@ func TestService_Status_NotRunning(t *testing.T) {
 
 func TestListenForNewNodes(t *testing.T) {
 	// Setup bootnode.
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	cfg := &Config{}
 	port := 2000
 	cfg.UDPPort = uint(port)

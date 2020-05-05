@@ -1,7 +1,12 @@
 package helpers
 
 import (
+	"math"
+	"reflect"
 	"testing"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -43,7 +48,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 		if tt.epoch != CurrentEpoch(state) {
-			t.Errorf("CurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
+			t.Errorf("ActiveCurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
 		}
 	}
 }
@@ -63,7 +68,7 @@ func TestPrevEpoch_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 		if tt.epoch != PrevEpoch(state) {
-			t.Errorf("PrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
+			t.Errorf("ActivePrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
 		}
 	}
 }
@@ -198,5 +203,106 @@ func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 		if tt.roundedUpSlot != RoundUpToNearestEpoch(tt.startSlot) {
 			t.Errorf("RoundUpToNearestEpoch(%d) = %d, wanted: %d", tt.startSlot, RoundUpToNearestEpoch(tt.startSlot), tt.roundedUpSlot)
 		}
+	}
+}
+
+func TestSlotToTime(t *testing.T) {
+	type args struct {
+		genesisTimeSec uint64
+		slot           uint64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    time.Time
+		wantErr bool
+	}{
+		{
+			name: "slot_0",
+			args: args{
+				genesisTimeSec: 0,
+				slot:           0,
+			},
+			want:    time.Unix(0, 0),
+			wantErr: false,
+		},
+		{
+			name: "slot_1",
+			args: args{
+				genesisTimeSec: 0,
+				slot:           1,
+			},
+			want:    time.Unix(int64(1*params.BeaconConfig().SecondsPerSlot), 0),
+			wantErr: false,
+		},
+		{
+			name: "slot_12",
+			args: args{
+				genesisTimeSec: 500,
+				slot:           12,
+			},
+			want:    time.Unix(500+int64(12*params.BeaconConfig().SecondsPerSlot), 0),
+			wantErr: false,
+		},
+		{
+			name: "overflow",
+			args: args{
+				genesisTimeSec: 500,
+				slot:           math.MaxUint64,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got, err := SlotToTime(tt.args.genesisTimeSec, tt.args.slot); (err != nil) != tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SlotToTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVerifySlotTime(t *testing.T) {
+	type args struct {
+		genesisTime   int64
+		slot          uint64
+		timeTolerance time.Duration
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Past slot",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
+				slot:        3,
+			},
+			wantErr: false,
+		},
+		{
+			name: "within tolerance",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Add(20 * time.Millisecond).Unix(),
+				slot:        5,
+			},
+			wantErr: false,
+		},
+		{
+			name: "future slot",
+			args: args{
+				genesisTime: roughtime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
+				slot:        6,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := VerifySlotTime(uint64(tt.args.genesisTime), tt.args.slot, tt.args.timeTolerance); (err != nil) != tt.wantErr {
+				t.Errorf("VerifySlotTime() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

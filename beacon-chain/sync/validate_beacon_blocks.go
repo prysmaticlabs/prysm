@@ -2,15 +2,17 @@ package sync
 
 import (
 	"context"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -51,12 +53,13 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if blk.Block == nil {
 		return false
 	}
+
 	// Verify the block is the first block received for the proposer for the slot.
 	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return false
 	}
 
-	blockRoot, err := ssz.HashTreeRoot(blk.Block)
+	blockRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		return false
 	}
@@ -70,6 +73,11 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 	r.pendingQueueLock.RUnlock()
+
+	// Add metrics for block arrival time subtracts slot start time.
+	if captureArrivalTimeMetric(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot) != nil {
+		return false
+	}
 
 	if err := helpers.VerifySlotTime(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot, maximumGossipClockDisparity); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Rejecting incoming block.")
@@ -143,4 +151,16 @@ func (r *Service) setSeenBlockIndexSlot(slot uint64, proposerIdx uint64) {
 	defer r.seenBlockLock.Unlock()
 	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(proposerIdx)...)
 	r.seenBlockCache.Add(string(b), true)
+}
+
+// This captures metrics for block arrival time by subtracts slot start time.
+func captureArrivalTimeMetric(genesisTime uint64, currentSlot uint64) error {
+	startTime, err := helpers.SlotToTime(genesisTime, currentSlot)
+	if err != nil {
+		return err
+	}
+	diffMs := roughtime.Now().Sub(startTime) / time.Millisecond
+	arrivalBlockPropagationHistogram.Observe(float64(diffMs))
+
+	return nil
 }

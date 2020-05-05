@@ -1,7 +1,6 @@
 package stateutil_test
 
 import (
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -11,16 +10,9 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-func TestMain(m *testing.M) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableSSZCache: true})
-	defer resetCfg()
-	os.Exit(m.Run())
-}
 
 func TestState_FieldCount(t *testing.T) {
 	count := 21

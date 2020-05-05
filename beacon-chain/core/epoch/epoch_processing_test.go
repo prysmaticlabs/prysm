@@ -13,13 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func init() {
-	// TODO(2312): remove this and use the mainnet count.
-	c := params.BeaconConfig()
-	c.MinGenesisActiveValidatorCount = 16384
-	params.OverrideBeaconConfig(c)
-}
-
 func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)

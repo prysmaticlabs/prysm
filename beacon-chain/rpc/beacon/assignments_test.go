@@ -18,6 +18,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,8 +29,6 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	bs := &Server{
 		BeaconDB:           db,
@@ -54,8 +53,6 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 
@@ -63,7 +60,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,8 +102,6 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	setupValidators(t, db, 1)
 	headState, err := db.HeadState(ctx)
@@ -118,7 +113,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,8 +158,6 @@ func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.T) {
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	count := 500
 	validators := make([]*ethpb.Validator, 0, count)
@@ -262,7 +255,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testing.T) {
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -363,7 +355,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) {
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -451,8 +442,6 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)

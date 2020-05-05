@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -28,7 +29,6 @@ import (
 func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{
 		BeaconDB: db,
@@ -44,7 +44,7 @@ func TestStore_OnBlock(t *testing.T) {
 	if err := db.SaveBlock(ctx, genesis); err != nil {
 		t.Error(err)
 	}
-	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	validGenesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,7 +60,7 @@ func TestStore_OnBlock(t *testing.T) {
 	if err := db.SaveBlock(ctx, random); err != nil {
 		t.Error(err)
 	}
-	randomParentRoot, err := ssz.HashTreeRoot(random.Block)
+	randomParentRoot, err := stateutil.BlockRoot(random.Block)
 	if err != nil {
 		t.Error(err)
 	}
@@ -92,10 +92,10 @@ func TestStore_OnBlock(t *testing.T) {
 			wantErrString: "provided block root does not have block saved in the db",
 		},
 		{
-			name:          "block is from the feature",
+			name:          "block is from the future",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:], Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             st.Copy(),
-			wantErrString: "could not process slot from the future",
+			wantErrString: "far distant future",
 		},
 		{
 			name:          "could not get finalized block",
@@ -130,7 +130,6 @@ func TestStore_OnBlock(t *testing.T) {
 func TestRemoveStateSinceLastFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -150,7 +149,7 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 				Slot: uint64(i),
 			},
 		}
-		r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
+		r, err := stateutil.BlockRoot(totalBlocks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -210,7 +209,6 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -230,12 +228,12 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	}
 
 	lastJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}}
-	lastJustifiedRoot, err := ssz.HashTreeRoot(lastJustifiedBlk.Block)
+	lastJustifiedRoot, err := stateutil.BlockRoot(lastJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 	newJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: lastJustifiedRoot[:]}}
-	newJustifiedRoot, err := ssz.HashTreeRoot(newJustifiedBlk.Block)
+	newJustifiedRoot, err := stateutil.BlockRoot(newJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +259,6 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -271,12 +268,12 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 		t.Fatal(err)
 	}
 	lastJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}}
-	lastJustifiedRoot, err := ssz.HashTreeRoot(lastJustifiedBlk.Block)
+	lastJustifiedRoot, err := stateutil.BlockRoot(lastJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 	newJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: lastJustifiedRoot[:]}}
-	newJustifiedRoot, err := ssz.HashTreeRoot(newJustifiedBlk.Block)
+	newJustifiedRoot, err := stateutil.BlockRoot(newJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,7 +303,6 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{
 		BeaconDB: db,
@@ -342,7 +338,6 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -388,7 +383,6 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -436,7 +430,6 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -448,7 +441,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	if err := db.SaveBlock(ctx, signedBlock); err != nil {
 		t.Fatal(err)
 	}
-	r, err := ssz.HashTreeRoot(signedBlock.Block)
+	r, err := stateutil.BlockRoot(signedBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -487,7 +480,6 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -496,12 +488,12 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	}
 
 	fBlock := &ethpb.BeaconBlock{}
-	fRoot, err := ssz.HashTreeRoot(fBlock)
+	fRoot, err := stateutil.BlockRoot(fBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
 	hBlock := &ethpb.BeaconBlock{Slot: 1}
-	headRoot, err := ssz.HashTreeRoot(hBlock)
+	headRoot, err := stateutil.BlockRoot(hBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +533,6 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 func TestPersistCache_CanSave(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -583,7 +574,6 @@ func TestPersistCache_CanSave(t *testing.T) {
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -598,7 +588,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	if err := db.SaveBlock(ctx, genesis); err != nil {
 		t.Error(err)
 	}
-	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	validGenesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Error(err)
 	}
@@ -637,7 +627,6 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -653,7 +642,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err := db.SaveBlock(ctx, genesis); err != nil {
 		t.Error(err)
 	}
-	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	validGenesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Error(err)
 	}
@@ -668,7 +657,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b63); err != nil {
 		t.Fatal(err)
 	}
-	r63, err := ssz.HashTreeRoot(b63.Block)
+	r63, err := stateutil.BlockRoot(b63.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -676,7 +665,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b64); err != nil {
 		t.Fatal(err)
 	}
-	r64, err := ssz.HashTreeRoot(b64.Block)
+	r64, err := stateutil.BlockRoot(b64.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

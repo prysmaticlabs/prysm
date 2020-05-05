@@ -110,6 +110,8 @@ func NewValidatorAccount(directory string, password string) error {
 
 ===================================================================
 `, tx.Data())
+	publicKey := validatorKey.PublicKey.Marshal()[:]
+	log.Infof("Deposit data displayed for public key: %#x", publicKey)
 	return nil
 }
 
@@ -159,6 +161,16 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		}
 		if text = strings.Replace(text, "\n", "", -1); text != "" {
 			path = text
+		}
+	}
+	// Forces user to create directory if using non-default path.
+	if path != DefaultValidatorDir() {
+		exists, err := Exists(path)
+		if err != nil {
+			return path, passphrase, err
+		}
+		if !exists {
+			return path, passphrase, fmt.Errorf("path %q does not exist", path)
 		}
 	}
 	if err := NewValidatorAccount(path, passphrase); err != nil {

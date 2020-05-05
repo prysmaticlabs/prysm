@@ -11,7 +11,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -36,7 +36,6 @@ import (
 func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       1,
@@ -83,7 +82,6 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	p := p2ptest.NewTestP2P(t)
@@ -131,7 +129,6 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -144,7 +141,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	if err := db.SaveBlock(ctx, parentBlock); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(parentBlock.Block)
+	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +223,6 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
@@ -273,7 +269,6 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
@@ -324,7 +319,6 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	p := p2ptest.NewTestP2P(t)
@@ -379,7 +373,6 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -392,7 +385,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	if err := db.SaveBlock(ctx, parentBlock); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(parentBlock.Block)
+	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -465,14 +458,13 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 
 	parent := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(context.Background(), parent); err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, err := ssz.HashTreeRoot(parent.Block)
+	parentRoot, err := stateutil.BlockRoot(parent.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

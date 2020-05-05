@@ -8,11 +8,11 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
@@ -106,7 +106,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 					return errors.Wrap(err, "could not regenerate historical state transition")
 				}
 
-				r, err := ssz.HashTreeRoot(blocks[i].Block)
+				r, err := stateutil.BlockRoot(blocks[i].Block)
 				if err != nil {
 					return err
 				}
@@ -122,7 +122,7 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 		if len(blocks) > 0 {
 			// Save the historical root, state and highest index to the DB.
-			if helpers.IsEpochStart(currentState.Slot()) && currentState.Slot()%slotsPerArchivedPoint == 0 && blocks[len(blocks)-1].Block.Slot&slotsPerArchivedPoint == 0 {
+			if helpers.IsEpochStart(currentState.Slot()) && currentState.Slot()%slotsPerArchivedPoint == 0 {
 				if err := kv.saveArchivedInfo(ctx, currentState.Copy(), blocks, i); err != nil {
 					return err
 				}
@@ -225,7 +225,7 @@ func (kv *Store) saveArchivedInfo(ctx context.Context,
 	currentState *stateTrie.BeaconState,
 	blocks []*ethpb.SignedBeaconBlock,
 	archivedIndex uint64) error {
-	lastBlocksRoot, err := ssz.HashTreeRoot(blocks[len(blocks)-1].Block)
+	lastBlocksRoot, err := stateutil.BlockRoot(blocks[len(blocks)-1].Block)
 	if err != nil {
 		return nil
 	}
