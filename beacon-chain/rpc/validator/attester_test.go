@@ -28,11 +28,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
 func TestProposeAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
@@ -242,11 +237,9 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// This test breaks if it doesnt use mainnet config
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
-
 	// Ensure HistoricalRootsLimit matches scenario
-	cfg := params.BeaconConfig()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig()
 	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 

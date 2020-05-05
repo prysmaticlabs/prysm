@@ -23,6 +23,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -33,21 +34,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
-
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
 
 func TestGetBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	testutil.ResetCache()
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -153,8 +148,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -276,8 +271,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
@@ -324,8 +319,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -1288,8 +1283,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)

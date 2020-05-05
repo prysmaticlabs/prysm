@@ -2,8 +2,10 @@
 package params
 
 import (
+	"testing"
 	"time"
 
+	"github.com/mohae/deepcopy"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -308,7 +310,7 @@ func UseMinimalConfig() {
 
 // UseMainnetConfig for beacon chain services.
 func UseMainnetConfig() {
-	beaconConfig = defaultBeaconConfig
+	beaconConfig = MainnetConfig()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
@@ -319,94 +321,22 @@ func OverrideBeaconConfig(c *BeaconChainConfig) {
 	beaconConfig = c
 }
 
-// OverrideBeaconConfigWithReset replaces config and returns reset function
-// that helps returning back to the previous state. Useful in tests.
-func OverrideBeaconConfigWithReset(c *BeaconChainConfig) func() {
-	origConfig := beaconConfig.Copy()
-	OverrideBeaconConfig(c)
-	return func() {
-		OverrideBeaconConfig(origConfig)
-	}
+// SetupTestConfigCleanup preserves configurations allowing to modify them within tests without any
+// restrictions, everything is restored after the test.
+func SetupTestConfigCleanup(t *testing.T) {
+	prevDefaultBeaconConfig := defaultBeaconConfig.Copy()
+	prevBeaconConfig := beaconConfig.Copy()
+	t.Cleanup(func() {
+		defaultBeaconConfig = prevDefaultBeaconConfig
+		beaconConfig = prevBeaconConfig
+	})
 }
 
-// Copy returns copy of the config object.
+// Copy returns Copy of the config object.
 func (c *BeaconChainConfig) Copy() *BeaconChainConfig {
-	return &BeaconChainConfig{
-		FarFutureEpoch:                   c.FarFutureEpoch,
-		BaseRewardsPerEpoch:              c.BaseRewardsPerEpoch,
-		DepositContractTreeDepth:         c.DepositContractTreeDepth,
-		MinGenesisDelay:                  c.MinGenesisDelay,
-		TargetCommitteeSize:              c.TargetCommitteeSize,
-		MaxValidatorsPerCommittee:        c.MaxValidatorsPerCommittee,
-		MaxCommitteesPerSlot:             c.MaxCommitteesPerSlot,
-		MinPerEpochChurnLimit:            c.MinPerEpochChurnLimit,
-		ChurnLimitQuotient:               c.ChurnLimitQuotient,
-		ShuffleRoundCount:                c.ShuffleRoundCount,
-		MinGenesisActiveValidatorCount:   c.MinGenesisActiveValidatorCount,
-		MinGenesisTime:                   c.MinGenesisTime,
-		TargetAggregatorsPerCommittee:    c.TargetAggregatorsPerCommittee,
-		HysteresisQuotient:               c.HysteresisQuotient,
-		HysteresisDownwardMultiplier:     c.HysteresisDownwardMultiplier,
-		HysteresisUpwardMultiplier:       c.HysteresisUpwardMultiplier,
-		MinDepositAmount:                 c.MinDepositAmount,
-		MaxEffectiveBalance:              c.MaxEffectiveBalance,
-		EjectionBalance:                  c.EjectionBalance,
-		EffectiveBalanceIncrement:        c.EffectiveBalanceIncrement,
-		BLSWithdrawalPrefixByte:          c.BLSWithdrawalPrefixByte,
-		ZeroHash:                         c.ZeroHash,
-		MinAttestationInclusionDelay:     c.MinAttestationInclusionDelay,
-		SecondsPerSlot:                   c.SecondsPerSlot,
-		SlotsPerEpoch:                    c.SlotsPerEpoch,
-		MinSeedLookahead:                 c.MinSeedLookahead,
-		MaxSeedLookahead:                 c.MaxSeedLookahead,
-		EpochsPerEth1VotingPeriod:        c.EpochsPerEth1VotingPeriod,
-		SlotsPerHistoricalRoot:           c.SlotsPerHistoricalRoot,
-		MinValidatorWithdrawabilityDelay: c.MinValidatorWithdrawabilityDelay,
-		PersistentCommitteePeriod:        c.PersistentCommitteePeriod,
-		MinEpochsToInactivityPenalty:     c.MinEpochsToInactivityPenalty,
-		Eth1FollowDistance:               c.Eth1FollowDistance,
-		SafeSlotsToUpdateJustified:       c.SafeSlotsToUpdateJustified,
-		SecondsPerETH1Block:              c.SecondsPerETH1Block,
-		EpochsPerHistoricalVector:        c.EpochsPerHistoricalVector,
-		EpochsPerSlashingsVector:         c.EpochsPerSlashingsVector,
-		HistoricalRootsLimit:             c.HistoricalRootsLimit,
-		ValidatorRegistryLimit:           c.ValidatorRegistryLimit,
-		BaseRewardFactor:                 c.BaseRewardFactor,
-		WhistleBlowerRewardQuotient:      c.WhistleBlowerRewardQuotient,
-		ProposerRewardQuotient:           c.ProposerRewardQuotient,
-		InactivityPenaltyQuotient:        c.InactivityPenaltyQuotient,
-		MinSlashingPenaltyQuotient:       c.MinSlashingPenaltyQuotient,
-		MaxProposerSlashings:             c.MaxProposerSlashings,
-		MaxAttesterSlashings:             c.MaxAttesterSlashings,
-		MaxAttestations:                  c.MaxAttestations,
-		MaxDeposits:                      c.MaxDeposits,
-		MaxVoluntaryExits:                c.MaxVoluntaryExits,
-		DomainBeaconProposer:             c.DomainBeaconProposer,
-		DomainRandao:                     c.DomainRandao,
-		DomainBeaconAttester:             c.DomainBeaconAttester,
-		DomainDeposit:                    c.DomainDeposit,
-		DomainVoluntaryExit:              c.DomainVoluntaryExit,
-		DomainSelectionProof:             c.DomainSelectionProof,
-		DomainAggregateAndProof:          c.DomainAggregateAndProof,
-		GweiPerEth:                       c.GweiPerEth,
-		LogBlockDelay:                    c.LogBlockDelay,
-		BLSSecretKeyLength:               c.BLSSecretKeyLength,
-		BLSPubkeyLength:                  c.BLSPubkeyLength,
-		BLSSignatureLength:               c.BLSSignatureLength,
-		DefaultBufferSize:                c.DefaultBufferSize,
-		ValidatorPrivkeyFileName:         c.ValidatorPrivkeyFileName,
-		WithdrawalPrivkeyFileName:        c.WithdrawalPrivkeyFileName,
-		RPCSyncCheck:                     c.RPCSyncCheck,
-		GoerliBlockTime:                  c.GoerliBlockTime,
-		EmptySignature:                   c.EmptySignature,
-		DefaultPageSize:                  c.DefaultPageSize,
-		MaxPeersToSync:                   c.MaxPeersToSync,
-		SlotsPerArchivedPoint:            c.SlotsPerArchivedPoint,
-		WeakSubjectivityPeriod:           c.WeakSubjectivityPeriod,
-		PruneSlasherStoragePeriod:        c.PruneSlasherStoragePeriod,
-		GenesisForkVersion:               c.GenesisForkVersion,
-		NextForkVersion:                  c.NextForkVersion,
-		NextForkEpoch:                    c.NextForkEpoch,
-		ForkVersionSchedule:              c.ForkVersionSchedule,
+	config, ok := deepcopy.Copy(*c).(BeaconChainConfig)
+	if !ok {
+		config = *defaultBeaconConfig
 	}
+	return &config
 }

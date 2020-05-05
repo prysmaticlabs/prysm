@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -27,6 +26,7 @@ import (
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -569,10 +569,10 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	db := dbTest.SetupDB(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 	numValidators := uint64(128)
 	state, _ := testutil.DeterministicGenesisState(t, numValidators)
@@ -600,10 +600,10 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 }
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
@@ -736,10 +736,10 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 }
 
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
-	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
@@ -1006,8 +1006,8 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

@@ -96,45 +96,6 @@ func InitWithReset(c *Flags) func() {
 	return resetFunc
 }
 
-// Copy returns copy of the config object.
-func (c *Flags) Copy() *Flags {
-	return &Flags{
-		MinimalConfig:                              c.MinimalConfig,
-		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
-		InitSyncNoVerify:                           c.InitSyncNoVerify,
-		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
-		SkipBLSVerify:                              c.SkipBLSVerify,
-		EnableBackupWebhook:                        c.EnableStateRefCopy,
-		PruneEpochBoundaryStates:                   c.PruneEpochBoundaryStates,
-		EnableSnappyDBCompression:                  c.EnableSnappyDBCompression,
-		ProtectProposer:                            c.ProtectProposer,
-		ProtectAttester:                            c.ProtectAttester,
-		DisableStrictAttestationPubsubVerification: c.DisableStrictAttestationPubsubVerification,
-		DisableUpdateHeadPerAttestation:            c.DisableUpdateHeadPerAttestation,
-		EnableByteMempool:                          c.EnableByteMempool,
-		EnableDomainDataCache:                      c.EnableDomainDataCache,
-		EnableStateGenSigVerify:                    c.EnableStateGenSigVerify,
-		CheckHeadState:                             c.CheckHeadState,
-		EnableNoise:                                c.EnableNoise,
-		DontPruneStateStartUp:                      c.DontPruneStateStartUp,
-		NewStateMgmt:                               c.NewStateMgmt,
-		DisableInitSyncQueue:                       c.DisableInitSyncQueue,
-		EnableFieldTrie:                            c.EnableFieldTrie,
-		EnableBlockHTR:                             c.EnableBlockHTR,
-		NoInitSyncBatchSaveBlocks:                  c.NoInitSyncBatchSaveBlocks,
-		EnableStateRefCopy:                         c.EnableStateRefCopy,
-		WaitForSynced:                              c.WaitForSynced,
-		DisableForkChoice:                          c.DisableForkChoice,
-		BroadcastSlashings:                         c.BroadcastSlashings,
-		EnableSSZCache:                             c.EnableSSZCache,
-		EnableEth1DataVoteCache:                    c.EnableEth1DataVoteCache,
-		EnableSlasherConnection:                    c.EnableSlasherConnection,
-		EnableBlockTreeCache:                       c.EnableBlockTreeCache,
-		KafkaBootstrapServers:                      c.KafkaBootstrapServers,
-		CustomGenesisDelay:                         c.CustomGenesisDelay,
-	}
-}
-
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
