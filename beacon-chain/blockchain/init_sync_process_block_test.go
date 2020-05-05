@@ -278,7 +278,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genRoot, err := stateutil.BlockRoot(genesisBlock)
+	genRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

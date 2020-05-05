@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 func init() {
@@ -1602,7 +1603,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := s.deleteAttsInPool(ctx, append(aa, unaggregatedAtts...)); err != nil {
+	if err := s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)); err != nil {
 		t.Fatal(err)
 	}
 	if len(s.AttPool.AggregatedAttestations()) != 0 {

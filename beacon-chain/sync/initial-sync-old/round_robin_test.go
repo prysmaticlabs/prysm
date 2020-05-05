@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 type testCache struct {
