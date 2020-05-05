@@ -12,7 +12,6 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -26,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 type testCache struct {
@@ -228,7 +228,7 @@ func TestRoundRobinSync(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			gRoot, err := ssz.HashTreeRoot(gBlock.Block)
+			gRoot, err := stateutil.BlockRoot(gBlock.Block)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -334,7 +334,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 					blk.Block.ParentRoot = newRoot[:]
 				}
 				ret = append(ret, blk)
-				currRoot, err := ssz.HashTreeRoot(blk.Block)
+				currRoot, err := stateutil.BlockRoot(blk.Block)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -402,7 +402,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 	genesisBlock := &eth.BeaconBlock{
 		Slot: 0,
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesisBlock)
+	genesisRoot, err := stateutil.BlockRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,7 +413,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 			Slot:       slot,
 			ParentRoot: parentRoot[:],
 		}
-		parentRoot, err = ssz.HashTreeRoot(currentBlock)
+		parentRoot, err = stateutil.BlockRoot(currentBlock)
 		if err != nil {
 			t.Fatal(err)
 		}
