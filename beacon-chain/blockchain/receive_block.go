@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -39,7 +38,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 
-	root, err := ssz.HashTreeRoot(block.Block)
+	root, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}

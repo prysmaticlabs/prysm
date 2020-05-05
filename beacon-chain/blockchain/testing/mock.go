@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -133,7 +132,7 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 		return err
 	}
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
+	signingRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		return err
 	}

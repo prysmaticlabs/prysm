@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -262,7 +261,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 	if lastSaved[0] == nil || lastSaved[0].Block == nil {
 		return [32]byte{}, 0, nil
 	}
-	r, err := ssz.HashTreeRoot(lastSaved[0].Block)
+	r, err := stateutil.BlockRoot(lastSaved[0].Block)
 	if err != nil {
 		return [32]byte{}, 0, err
 	}
@@ -304,5 +303,5 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return ssz.HashTreeRoot(b.Block)
+	return stateutil.BlockRoot(b.Block)
 }

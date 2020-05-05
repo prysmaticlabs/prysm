@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -63,7 +62,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(b.Block)
+	bRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +83,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err = ssz.HashTreeRoot(b.Block)
+	bRoot, err = stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

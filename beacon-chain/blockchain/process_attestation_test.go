@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -45,7 +45,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithOutStateRoot, err := ssz.HashTreeRoot(BlkWithOutState.Block)
+	BlkWithOutStateRoot, err := stateutil.BlockRoot(BlkWithOutState.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithStateBadAttRoot, err := ssz.HashTreeRoot(BlkWithStateBadAtt.Block)
+	BlkWithStateBadAttRoot, err := stateutil.BlockRoot(BlkWithStateBadAtt.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	BlkWithValidStateRoot, err := ssz.HashTreeRoot(BlkWithValidState.Block)
+	BlkWithValidStateRoot, err := stateutil.BlockRoot(BlkWithValidState.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +440,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	r, err := ssz.HashTreeRoot(b.Block)
+	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -467,7 +467,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	r, err := ssz.HashTreeRoot(b.Block)
+	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

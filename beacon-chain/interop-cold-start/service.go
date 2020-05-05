@@ -161,7 +161,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}

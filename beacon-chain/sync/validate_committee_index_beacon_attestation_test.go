@@ -61,7 +61,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	validBlockRoot, err := ssz.HashTreeRoot(blk.Block)
+	validBlockRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

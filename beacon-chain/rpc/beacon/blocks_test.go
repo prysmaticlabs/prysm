@@ -12,7 +12,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -100,7 +100,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 			ParentRoot: parentRoot[:],
 		},
 	}
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 			ParentRoot: parentRoot[:],
 		},
 	}
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 				Slot: i,
 			},
 		}
-		root, err := ssz.HashTreeRoot(b.Block)
+		root, err := stateutil.BlockRoot(b.Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -204,7 +204,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				Slot: i,
 			},
 		}
-		root, err := ssz.HashTreeRoot(b.Block)
+		root, err := stateutil.BlockRoot(b.Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -219,7 +219,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		BeaconDB: db,
 	}
 
-	root6, err := ssz.HashTreeRoot(blks[6].Block)
+	root6, err := stateutil.BlockRoot(blks[6].Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +416,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
 		t.Fatal(err)
 	}
-	fRoot, err := ssz.HashTreeRoot(finalizedBlock.Block)
+	fRoot, err := stateutil.BlockRoot(finalizedBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +424,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	jRoot, err := ssz.HashTreeRoot(justifiedBlock.Block)
+	jRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +432,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	pjRoot, err := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	pjRoot, err := stateutil.BlockRoot(prevJustifiedBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,7 +535,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
 		t.Fatal(err)
 	}
-	fRoot, err := ssz.HashTreeRoot(finalizedBlock.Block)
+	fRoot, err := stateutil.BlockRoot(finalizedBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -543,7 +543,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	jRoot, err := ssz.HashTreeRoot(justifiedBlock.Block)
+	jRoot, err := stateutil.BlockRoot(justifiedBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +551,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
 		t.Fatal(err)
 	}
-	pjRoot, err := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	pjRoot, err := stateutil.BlockRoot(prevJustifiedBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -567,7 +567,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
-	hRoot, err := ssz.HashTreeRoot(b.Block)
+	hRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

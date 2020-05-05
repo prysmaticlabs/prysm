@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -77,7 +76,7 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +112,7 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

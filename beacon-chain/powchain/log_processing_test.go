@@ -350,7 +350,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 }
 
 func TestProcessETH2GenesisLog(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{CustomGenesisDelay:0})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{CustomGenesisDelay: 0})
 	defer resetCfg()
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()

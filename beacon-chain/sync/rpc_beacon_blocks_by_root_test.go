@@ -88,11 +88,11 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	blockA := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 111}}
 	blockB := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 40}}
 	// Set up a head state with data we expect.
-	blockARoot, err := ssz.HashTreeRoot(blockA.Block)
+	blockARoot, err := stateutil.BlockRoot(blockA.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blockBRoot, err := ssz.HashTreeRoot(blockB.Block)
+	blockBRoot, err := stateutil.BlockRoot(blockB.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

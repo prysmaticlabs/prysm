@@ -106,7 +106,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	},
 	}
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1033,7 +1033,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

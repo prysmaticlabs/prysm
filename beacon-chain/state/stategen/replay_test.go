@@ -26,7 +26,7 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +378,7 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	if savedSlot != s.splitInfo.slot+20 {
 		t.Error("Did not save correct slot")
 	}
-	wantedRoot, err := ssz.HashTreeRoot(b3.Block)
+	wantedRoot, err := stateutil.BlockRoot(b3.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -467,7 +467,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -504,7 +504,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
-	b2Root, err := ssz.HashTreeRoot(b2.Block)
+	b2Root, err := stateutil.BlockRoot(b2.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

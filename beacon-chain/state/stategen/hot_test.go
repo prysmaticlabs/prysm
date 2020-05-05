@@ -89,7 +89,7 @@ func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +225,7 @@ func TestLoadHoteStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

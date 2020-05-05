@@ -7,7 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -142,7 +142,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 				ParentRoot: []byte("parent"),
 			},
 		}
-		r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
+		r, err := stateutil.BlockRoot(totalBlocks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -222,7 +222,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	finalizedBlockRoot, err := ssz.HashTreeRoot(blk.Block)
+	finalizedBlockRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	headBlockRoot, err := ssz.HashTreeRoot(blk.Block)
+	headBlockRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 	defer teardownDB(t, db)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, err := ssz.HashTreeRoot(b.Block)
+	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 	s0 := st.InnerStateUnsafe()
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 999}}
-	r1, err := ssz.HashTreeRoot(b.Block)
+	r1, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +332,7 @@ func TestStore_SaveDeleteState_CanGetHighest(t *testing.T) {
 	}
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
-	r2, err := ssz.HashTreeRoot(b.Block)
+	r2, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,7 +388,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	defer teardownDB(t, db)
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, err := ssz.HashTreeRoot(b.Block)
+	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +405,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	}
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
-	r1, err := ssz.HashTreeRoot(b.Block)
+	r1, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +430,7 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	}
 
 	b = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1000}}
-	r2, err := ssz.HashTreeRoot(b.Block)
+	r2, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -486,7 +486,7 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 	}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, err := ssz.HashTreeRoot(b.Block)
+	r, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

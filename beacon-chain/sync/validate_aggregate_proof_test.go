@@ -13,7 +13,6 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -180,7 +179,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,7 +274,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -352,7 +351,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -480,7 +479,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
