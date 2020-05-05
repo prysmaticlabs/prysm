@@ -4,9 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrickmn/go-cache"
-
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
