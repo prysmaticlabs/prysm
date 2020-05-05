@@ -18,6 +18,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -53,7 +54,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(head.Block)
+	root, err := stateutil.BlockRoot(head.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,15 +134,15 @@ func TestGetAttestationData_OK(t *testing.T) {
 	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
-	blockRoot, err := ssz.HashTreeRoot(block)
+	blockRoot, err := stateutil.BlockRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedRoot, err := ssz.HashTreeRoot(justifiedBlock)
+	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for justified block: %v", err)
 	}
-	targetRoot, err := ssz.HashTreeRoot(targetBlock)
+	targetRoot, err := stateutil.BlockRoot(targetBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
@@ -258,15 +259,15 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
 	}
-	blockRoot, err := ssz.HashTreeRoot(block)
+	blockRoot, err := stateutil.BlockRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedBlockRoot, err := ssz.HashTreeRoot(justifiedBlock)
+	justifiedBlockRoot, err := stateutil.BlockRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
-	epochBoundaryRoot, err := ssz.HashTreeRoot(epochBoundaryBlock)
+	epochBoundaryRoot, err := stateutil.BlockRoot(epochBoundaryBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
@@ -439,7 +440,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
-	blockRoot, err := ssz.HashTreeRoot(block)
+	blockRoot, err := stateutil.BlockRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
@@ -450,11 +451,11 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block2}); err != nil {
 		t.Fatal(err)
 	}
-	justifiedRoot, err := ssz.HashTreeRoot(justifiedBlock)
+	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for justified block: %v", err)
 	}
-	targetRoot, err := ssz.HashTreeRoot(targetBlock)
+	targetRoot, err := stateutil.BlockRoot(targetBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
@@ -560,15 +561,15 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.HashTreeRoot(block)
+	blockRoot, err := stateutil.BlockRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedRoot, err := ssz.HashTreeRoot(justifiedBlock)
+	justifiedRoot, err := stateutil.BlockRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for justified block: %v", err)
 	}
-	targetRoot, err := ssz.HashTreeRoot(targetBlock)
+	targetRoot, err := stateutil.BlockRoot(targetBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}

@@ -6,7 +6,6 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -58,7 +57,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := ssz.HashTreeRoot(b.Block)
+			root, err := stateutil.BlockRoot(b.Block)
 			if err != nil {
 				return nil, err
 			}
@@ -85,7 +84,7 @@ func (bs *Server) ListBlocks(
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
-		root, err := ssz.HashTreeRoot(blk.Block)
+		root, err := stateutil.BlockRoot(blk.Block)
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +120,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := ssz.HashTreeRoot(b.Block)
+			root, err := stateutil.BlockRoot(b.Block)
 			if err != nil {
 				return nil, err
 			}
@@ -144,7 +143,7 @@ func (bs *Server) ListBlocks(
 		if genBlk == nil {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		root, err := ssz.HashTreeRoot(genBlk.Block)
+		root, err := stateutil.BlockRoot(genBlk.Block)
 		if err != nil {
 			return nil, err
 		}

@@ -5,7 +5,6 @@ import (
 
 	"github.com/protolambda/zssz/merkle"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,7 +32,7 @@ func BenchmarkBlockHTR(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			if _, err := ssz.HashTreeRoot(blk.Block); err != nil {
+			if _, err := stateutil.BlockRoot(blk.Block); err != nil {
 				b.Fatal(err)
 			}
 		}

@@ -6,10 +6,11 @@ package testing
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	metadata "google.golang.org/grpc/metadata"
-	reflect "reflect"
 )
 
 // MockBeaconNodeValidator_WaitForSyncedServer is a mock of BeaconNodeValidator_WaitForSyncedServer interface.
