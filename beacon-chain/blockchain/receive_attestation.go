@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -22,6 +23,7 @@ import (
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
 	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
+	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are preformed on
@@ -58,7 +60,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 // IsValidAttestation returns true if the attestation can be verified against its pre-state.
 func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
-	baseState, err := s.getAttPreState(ctx, att.Data.Target)
+	baseState, err := s.AttestationPreState(ctx, att)
 	if err != nil {
 		log.WithError(err).Error("Failed to get attestation pre state")
 		return false
@@ -70,6 +72,11 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 	}
 
 	return true
+}
+
+// AttestationPreState returns the pre state of attestation.
+func (s *Service) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error) {
+	return s.getAttPreState(ctx, att.Data.Target)
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
