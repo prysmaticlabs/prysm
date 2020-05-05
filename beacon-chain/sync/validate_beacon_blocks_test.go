@@ -11,7 +11,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -141,7 +141,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	if err := db.SaveBlock(ctx, parentBlock); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(parentBlock.Block)
+	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +385,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	if err := db.SaveBlock(ctx, parentBlock); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(parentBlock.Block)
+	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -464,7 +464,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), parent); err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, err := ssz.HashTreeRoot(parent.Block)
+	parentRoot, err := stateutil.BlockRoot(parent.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
