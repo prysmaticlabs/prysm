@@ -43,7 +43,6 @@ func init() {
 
 func TestGetBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	testutil.ResetCache()
@@ -152,7 +151,6 @@ func TestGetBlock_OK(t *testing.T) {
 
 func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -277,7 +275,6 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -325,7 +322,6 @@ func TestProposeBlock_OK(t *testing.T) {
 
 func TestComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -1238,7 +1234,6 @@ func TestEth1Data(t *testing.T) {
 
 func TestEth1Data_MockEnabled(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	// If a mock eth1 data votes is specified, we use the following for the
 	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
 	//
@@ -1291,7 +1286,6 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 
 func TestFilterAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	params.OverrideBeaconConfig(params.MainnetConfig())

@@ -34,7 +34,6 @@ import (
 
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	if err := st.SetSlot(0); err != nil {
@@ -63,9 +62,8 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 
 func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	st := testutil.NewBeaconState()
 	if err := st.SetSlot(0); err != nil {
 		t.Fatal(err)
@@ -93,7 +91,6 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 
 func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -146,9 +143,8 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 
 func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	numItems := 100
 	validators := make([]*ethpb.Validator, numItems)
 	balances := make([]uint64, numItems)
@@ -212,7 +208,6 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 
 func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	setupValidators(t, db, 3)
 	st := testutil.NewBeaconState()
@@ -269,7 +264,6 @@ func pubKey(i uint64) []byte {
 
 func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	setupValidators(t, db, 100)
@@ -364,8 +358,8 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 
 func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
+
 	count := 1000
 	setupValidators(t, db, count)
 	headState, err := db.HeadState(context.Background())
@@ -444,7 +438,6 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 
 func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 	ctx := context.Background()
@@ -483,9 +476,8 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 
 func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	st := testutil.NewBeaconState()
 	if err := st.SetSlot(0); err != nil {
 		t.Fatal(err)
@@ -512,7 +504,6 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 
 func TestServer_ListValidatorBalances_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
@@ -570,7 +561,6 @@ func TestServer_ListValidatorBalances_FromArchive(t *testing.T) {
 
 func TestServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
@@ -612,7 +602,6 @@ func TestServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testin
 
 func TestServer_ListValidators_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
@@ -651,10 +640,8 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 }
 
 func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	count := 100
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, count)
@@ -713,7 +700,6 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 
 func TestServer_ListValidators_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 100)
 	want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
@@ -751,7 +737,6 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 
 func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 100)
 	indicesWanted := []uint64{2, 7, 11, 17}
@@ -804,7 +789,6 @@ func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 
 func TestServer_ListValidators_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	count := 100
 	setupValidators(t, db, count)
@@ -944,7 +928,6 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 
 func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	count := 1
 	validators, _ := setupValidators(t, db, count)
@@ -984,7 +967,6 @@ func TestServer_ListValidators_ExceedsMaxPageSize(t *testing.T) {
 
 func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	validators, _ := setupValidators(t, db, 1000)
 	want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
@@ -1024,9 +1006,6 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	numEpochs := 30
 	validators := make([]*ethpb.Validator, numEpochs)
 	for i := 0; i < numEpochs; i++ {
@@ -1085,9 +1064,6 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 }
 
 func TestServer_GetValidator(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	count := 30
 	validators := make([]*ethpb.Validator, count)
 	for i := 0; i < count; i++ {
@@ -1181,7 +1157,6 @@ func TestServer_GetValidator(t *testing.T) {
 
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -1298,8 +1273,8 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
+
 	validators := make([]*ethpb.Validator, 8)
 	headState := testutil.NewBeaconState()
 	if err := headState.SetSlot(helpers.StartSlot(100)); err != nil {
@@ -1610,9 +1585,8 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_CannotRequestCurrentEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	headState := testutil.NewBeaconState()
 	if err := headState.SetSlot(helpers.StartSlot(2)); err != nil {
 		t.Fatal(err)
@@ -1639,7 +1613,6 @@ func TestServer_GetValidatorParticipation_CannotRequestCurrentEpoch(t *testing.T
 
 func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
@@ -1672,7 +1645,6 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 
 func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
@@ -1737,7 +1709,6 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -1803,7 +1774,6 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	headState := testutil.NewBeaconState()
@@ -1844,7 +1814,6 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
@@ -1990,9 +1959,8 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 func BenchmarkListValidatorBalances(b *testing.B) {
 	b.StopTimer()
 	db := dbTest.SetupDB(b)
-	defer dbTest.TeardownDB(b, db)
-
 	ctx := context.Background()
+
 	count := 1000
 	setupValidators(b, db, count)
 
@@ -2019,9 +1987,8 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
 	b.StopTimer()
 	db := dbTest.SetupDB(b)
-	defer dbTest.TeardownDB(b, db)
-
 	ctx := context.Background()
+
 	currentNumValidators := 1000
 	numOldBalances := 50
 	validators := make([]*ethpb.Validator, currentNumValidators)

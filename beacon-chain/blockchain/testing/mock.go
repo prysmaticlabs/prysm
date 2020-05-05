@@ -202,6 +202,11 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 	return nil
 }
 
+// AttestationPreState mocks AttestationPreState method in chain service.
+func (ms *ChainService) AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*stateTrie.BeaconState, error) {
+	return ms.State, nil
+}
+
 // HeadValidatorsIndices mocks the same method in the chain service.
 func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 	if ms.State == nil {

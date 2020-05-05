@@ -29,7 +29,6 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 
 	var blkRoots [][32]byte
 	// Populate the database with blocks that would match the request.

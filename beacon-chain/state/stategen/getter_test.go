@@ -17,7 +17,6 @@ import (
 func TestStateByRoot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
@@ -59,7 +58,6 @@ func TestStateByRoot_ColdState(t *testing.T) {
 func TestStateByRoot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -113,7 +111,6 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 func TestStateByRoot_HotStateCached(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -138,7 +135,6 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 func TestStateBySlot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
@@ -190,7 +186,6 @@ func TestStateBySlot_ColdState(t *testing.T) {
 func TestStateBySlot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -223,7 +218,6 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 

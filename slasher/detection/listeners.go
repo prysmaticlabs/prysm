@@ -26,13 +26,18 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case sblk := <-ch:
+		case signedBlock := <-ch:
 			log.Debug("Running detection on block...")
-			sbh, err := signedBeaconBlockHeaderFromBlock(sblk)
+			signedBlkHdr, err := signedBeaconBlockHeaderFromBlock(signedBlock)
 			if err != nil {
-				log.WithError(err)
+				log.WithError(err).Error("Could not get block header from block")
+				continue
 			}
-			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, sbh)
+			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, signedBlkHdr)
+			if err != nil {
+				log.WithError(err).Error("Could not perform detection on block header")
+				continue
+			}
 			ds.submitProposerSlashing(ctx, slashing)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
@@ -80,7 +85,7 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 func signedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
 	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get signing root of block")
+		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
 	return &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{

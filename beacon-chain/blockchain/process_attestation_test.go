@@ -24,7 +24,6 @@ import (
 func TestStore_OnAttestation(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{
 		BeaconDB:        db,
@@ -164,7 +163,6 @@ func TestStore_OnAttestation(t *testing.T) {
 func TestStore_SaveCheckpointState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{
 		BeaconDB: db,
@@ -285,7 +283,6 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 func TestStore_UpdateCheckpointState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{
 		BeaconDB: db,
@@ -350,7 +347,6 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -370,7 +366,6 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -390,7 +385,6 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -411,7 +405,6 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -428,7 +421,6 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -455,7 +447,6 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 func TestVerifyBeaconBlock_OK(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)

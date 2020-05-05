@@ -28,9 +28,8 @@ import (
 
 func TestServer_ListBlocks_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	bs := &Server{
 		BeaconDB: db,
 	}
@@ -76,9 +75,8 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 
 func TestServer_ListBlocks_Genesis(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	bs := &Server{
 		BeaconDB: db,
 	}
@@ -135,9 +133,8 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 
 func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
+
 	bs := &Server{
 		BeaconDB: db,
 	}
@@ -192,7 +189,6 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	count := uint64(100)
@@ -296,7 +292,6 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 
 func TestServer_ListBlocks_Errors(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	bs := &Server{BeaconDB: db}
@@ -368,7 +363,6 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 
 func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
@@ -410,7 +404,6 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 
 func TestServer_GetChainHead(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	finalizedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}}
 	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
@@ -501,7 +494,6 @@ func TestServer_GetChainHead(t *testing.T) {
 
 func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -529,7 +521,6 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 
 func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 
 	finalizedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}}
 	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
@@ -626,7 +617,6 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 
 func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	chainService := &mock.ChainService{}
@@ -653,9 +643,6 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	b := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot: 1,

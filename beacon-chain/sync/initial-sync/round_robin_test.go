@@ -314,7 +314,6 @@ func TestRoundRobinSync(t *testing.T) {
 			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
-			dbtest.TeardownDB(t, beaconDB)
 		})
 	}
 }

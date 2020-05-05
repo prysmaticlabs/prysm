@@ -35,7 +35,6 @@ func init() {
 
 func TestProposeAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	attesterServer := &Server{
@@ -100,7 +99,6 @@ func TestProposeAttestation_OK(t *testing.T) {
 
 func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
@@ -126,7 +124,6 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 func TestGetAttestationData_OK(t *testing.T) {
 	ctx := context.Background()
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	block := &ethpb.BeaconBlock{
 		Slot: 3*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -244,7 +241,6 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
 	// This test breaks if it doesnt use mainnet config
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -432,7 +428,6 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	// See: https://github.com/prysmaticlabs/prysm/issues/5164
 	ctx := context.Background()
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	block := &ethpb.BeaconBlock{
@@ -555,7 +550,6 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	ctx := context.Background()
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	slot := uint64(5)
 	block := &ethpb.BeaconBlock{

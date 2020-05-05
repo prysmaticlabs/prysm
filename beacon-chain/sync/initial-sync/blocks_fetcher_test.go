@@ -24,7 +24,7 @@ import (
 )
 
 func TestBlocksFetcherInitStartStop(t *testing.T) {
-	mc, p2p, beaconDB := initializeTestServices(t, []uint64{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -84,8 +84,6 @@ func TestBlocksFetcherInitStartStop(t *testing.T) {
 		cancel()
 		fetcher.stop()
 	})
-
-	dbtest.TeardownDB(t, beaconDB)
 }
 
 func TestBlocksFetcherRoundRobin(t *testing.T) {
@@ -411,8 +409,6 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
-
-			dbtest.TeardownDB(t, beaconDB)
 		})
 	}
 }
@@ -451,8 +447,7 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 		},
 	}
 
-	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-	defer dbtest.TeardownDB(t, beaconDB)
+	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -531,7 +526,7 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	}
 
 	hook := logTest.NewGlobal()
-	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -578,8 +573,6 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	if err == nil || err.Error() != "context canceled" {
 		t.Errorf("expected context closed error, got: %v", err)
 	}
-
-	dbtest.TeardownDB(t, beaconDB)
 }
 
 func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
@@ -681,8 +674,7 @@ func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
 		},
 	}
 
-	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-	defer dbtest.TeardownDB(t, beaconDB)
+	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

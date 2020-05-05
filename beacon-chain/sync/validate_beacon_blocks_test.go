@@ -36,7 +36,6 @@ import (
 func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	msg := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       1,
@@ -83,7 +82,6 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	ctx := context.Background()
 
 	p := p2ptest.NewTestP2P(t)
@@ -131,7 +129,6 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -226,7 +223,6 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
@@ -273,7 +269,6 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	b := []byte("sk")
@@ -324,7 +319,6 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	b := []byte("sk")
 	b32 := bytesutil.ToBytes32(b)
 	p := p2ptest.NewTestP2P(t)
@@ -379,7 +373,6 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 
 func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
@@ -465,7 +458,6 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 
 	parent := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}

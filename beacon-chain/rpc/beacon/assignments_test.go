@@ -29,8 +29,6 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	bs := &Server{
 		BeaconDB:           db,
@@ -55,8 +53,6 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 
@@ -106,8 +102,6 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	setupValidators(t, db, 1)
 	headState, err := db.HeadState(ctx)
@@ -164,8 +158,6 @@ func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.T) {
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	count := 500
 	validators := make([]*ethpb.Validator, 0, count)
@@ -263,7 +255,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testing.T) {
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -364,7 +355,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) {
 	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -452,8 +442,6 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
 	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
