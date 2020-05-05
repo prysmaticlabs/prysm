@@ -32,11 +32,6 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
 func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
@@ -121,8 +116,8 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	// This test breaks if it doesnt use mainnet config
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
 	priv1 := bls.RandKey()

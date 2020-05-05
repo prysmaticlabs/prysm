@@ -36,18 +36,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
 func TestGetBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	testutil.ResetCache()
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -153,8 +148,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -276,8 +271,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
@@ -324,8 +319,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -1288,8 +1283,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
