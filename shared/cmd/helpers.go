@@ -47,7 +47,7 @@ func ConfirmAction(actionText string, deniedText string) (bool, error) {
 
 // EnterPassword queries the user for their password through the terminal, in order to make sure it is
 // not passed in a visible way to the terminal.
-// TODO(#5749) This function is untested, would be a good candidate for a unit test.
+// TODO(#5749): This function is untested and should be tested.
 func EnterPassword() (string, error) {
 	var passphrase string
 	log.Info("Enter a password:")
