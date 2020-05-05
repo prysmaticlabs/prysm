@@ -25,7 +25,6 @@ import (
 	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
-var log *logrus.Entry
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.Web3ProviderFlag,
@@ -93,10 +92,10 @@ var appFlags = []cli.Flag{
 
 func init() {
 	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.BeaconChainFlags...))
-	log = logrus.WithField("prefix", "main")
 }
 
 func main() {
+	log := logrus.WithField("prefix", "main")
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
