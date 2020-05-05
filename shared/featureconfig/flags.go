@@ -154,9 +154,10 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableByteMempool,
+	enableCustomBlockHTR,
 	enableStateRefCopy,
 	enableFieldTrie,
+	enableNewStateMgmt,
 }
 
 // Deprecated flags list.
