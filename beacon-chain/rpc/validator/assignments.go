@@ -99,6 +99,8 @@ func (vs *Server) StreamDuties(stream ethpb.BeaconNodeValidator_StreamDutiesServ
 	return status.Error(codes.Unimplemented, "unimplemented")
 }
 
+// assignValidatorToSubnet checks the status and pubkey of a particular validator
+// to discern whether persistent subnets need to be registered for them.
 func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
 		return
