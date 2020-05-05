@@ -143,6 +143,7 @@ func main() {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
+
 		if ctx.IsSet(flags.SetGCPercent.Name) {
 			runtimeDebug.SetGCPercent(ctx.Int(flags.SetGCPercent.Name))
 		}
