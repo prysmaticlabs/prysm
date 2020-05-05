@@ -80,8 +80,8 @@ func init() {
 func main() {
 	app := cli.App{}
 	app.Name = "validator"
-	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain,
-				 starts proposer services, shardp2p connections, and more`
+	app.Usage = `launches an Ethereum 2.0 validator client that interacts with a beacon chain,
+				 starts proposer and attester services, p2p connections, and more`
 	app.Version = version.GetVersion()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
@@ -92,22 +92,26 @@ func main() {
 			Subcommands: []*cli.Command{
 				{
 					Name: "create",
-					Description: `creates a new validator account keystore containing private keys for Ethereum Serenity -
+					Description: `creates a new validator account keystore containing private keys for Ethereum 2.0 -
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
 					Flags: []cli.Flag{
 						flags.KeystorePathFlag,
 						flags.PasswordFlag,
 					},
-					Action: func(ctx *cli.Context) error {
-						featureconfig.ConfigureValidator(ctx)
+					Action: func(cliCtx *cli.Context) error {
+						featureconfig.ConfigureValidator(cliCtx)
 						if featureconfig.Get().MinimalConfig {
 							log.Warn("Using Minimal Config")
 							params.UseMinimalConfig()
 						}
 
-						if keystoreDir, _, err := accounts.CreateValidatorAccount(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name)); err != nil {
-							log.WithError(err).Fatalf("Could not create validator at path: %s", keystoreDir)
+						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx)
+						if err != nil {
+							log.WithError(err).Error("Could not list keys")
+						}
+						if _, _, err := accounts.CreateValidatorAccount(keystorePath, passphrase); err != nil {
+							log.WithError(err).Fatalf("Could not create validator at path: %s", keystorePath)
 						}
 						return nil
 					},
@@ -119,19 +123,13 @@ contract in order to activate the validator client`,
 						flags.KeystorePathFlag,
 						flags.PasswordFlag,
 					},
-					Action: func(ctx *cli.Context) error {
-						if ctx.String(flags.KeystorePathFlag.Name) == "" {
-							log.Fatalf("%s is required", flags.KeystorePathFlag.Name)
-						}
-						if ctx.String(flags.PasswordFlag.Name) == "" {
-							log.Fatalf("%s is required", flags.PasswordFlag.Name)
-						}
-						keystores, err := accounts.DecryptKeysFromKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
+					Action: func(cliCtx *cli.Context) error {
+						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx)
 						if err != nil {
-							log.WithError(err).Fatalf("Failed to decrypt keystore keys at path %s", ctx.String(flags.KeystorePathFlag.Name))
+							log.WithError(err).Error("Could not list keys")
 						}
-						for _, v := range keystores {
-							fmt.Printf("Public key: %#x private key: %#x\n", v.PublicKey.Marshal(), v.SecretKey.Marshal())
+						if err := accounts.LogOutPublicAndPrivateKeys(keystorePath, passphrase); err != nil {
+							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
 						}
 						return nil
 					},
