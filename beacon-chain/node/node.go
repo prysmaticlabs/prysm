@@ -701,7 +701,15 @@ func loadChainConfigFile(chainConfigFileName string) {
 					log.WithError(err).Error("Failed to marshal config file.")
 				}
 				parts[1] = string(fixedByte)
-			case l > 8 && l <= 32:
+			case l > 8 && l <= 20:
+				var arr [20]byte
+				copy(arr[:], b)
+				fixedByte, err := yaml.Marshal(arr)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal config file.")
+				}
+				parts[1] = string(fixedByte)
+			case l > 20 && l <= 32:
 				var arr [32]byte
 				copy(arr[:], b)
 				fixedByte, err := yaml.Marshal(arr)
@@ -718,7 +726,7 @@ func loadChainConfigFile(chainConfigFileName string) {
 				}
 				parts[1] = string(fixedByte)
 			case l > 48 && l <= 64:
-				var arr [48]byte
+				var arr [64]byte
 				copy(arr[:], b)
 				fixedByte, err := yaml.Marshal(arr)
 				if err != nil {
@@ -726,7 +734,7 @@ func loadChainConfigFile(chainConfigFileName string) {
 				}
 				parts[1] = string(fixedByte)
 			case l > 64 && l <= 96:
-				var arr [48]byte
+				var arr [96]byte
 				copy(arr[:], b)
 				fixedByte, err := yaml.Marshal(arr)
 				if err != nil {
