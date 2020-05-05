@@ -42,7 +42,7 @@ func (g *Gateway) Start() {
 
 	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
 
-	conn, err := dial(ctx, "tcp", g.remoteAddr)
+	conn, err := g.dial(ctx, "tcp", g.remoteAddr)
 	if err != nil {
 		log.WithError(err).Error("Failed to connect to gRPC server")
 		g.startFailure = err
@@ -141,10 +141,10 @@ func New(
 }
 
 // dial the gRPC server.
-func dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
+func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
 	switch network {
 	case "tcp":
-		return dialTCP(ctx, addr)
+		return g.dialTCP(ctx, addr)
 	case "unix":
 		return dialUnix(ctx, addr)
 	default:
@@ -154,8 +154,20 @@ func dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
 
 // dialTCP creates a client connection via TCP.
 // "addr" must be a valid TCP address with a port number.
-func dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
-	return grpc.DialContext(ctx, addr, grpc.WithInsecure())
+func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+
+	if g.enableDebugRPCEndpoints {
+		// Increase Max call size from 4MB to 16MB to account for end point to retrieve beacon state,
+		// this should be large enough to cover state size up to 300k validators.
+		opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1<<24)))
+	}
+
+	return grpc.DialContext(
+		ctx,
+		addr,
+		opts...,
+	)
 }
 
 // dialUnix creates a client connection via a unix domain socket.
