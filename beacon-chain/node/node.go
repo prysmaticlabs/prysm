@@ -673,7 +673,7 @@ func (b *BeaconNode) registerArchiverService() error {
 func loadChainConfigFile(chainConfigFileName string) {
 	yamlFile, err := ioutil.ReadFile(chainConfigFileName)
 	if err != nil {
-		log.WithError(err).Error("Failed to read chain config file.")
+		log.WithError(err).Fatal("Failed to read chain config file.")
 	}
 	// convert 0x hex inputs to fixed bytes arrays
 	lines := strings.Split(string(yamlFile), "\n")
@@ -686,7 +686,7 @@ func loadChainConfigFile(chainConfigFileName string) {
 	yamlFile = []byte(strings.Join(lines, "\n"))
 	conf := params.BeaconConfig()
 	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
-		log.WithError(err).Error("Failed to parse chain config yaml file.")
+		log.WithError(err).Fatal("Failed to parse chain config yaml file.")
 	}
 	params.OverrideBeaconConfig(conf)
 }
