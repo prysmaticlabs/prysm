@@ -106,7 +106,7 @@ func (c *committeeIDs) GetPersistentCommittees(pubkey []byte) ([]uint64, bool, t
 	return id.([]uint64), ok, duration
 }
 
-// GetAllCommittees retrieves all the subscribed committees of all the validators
+// GetAllCommittees retrieves all the non-expired subscribed committees of all the validators
 // in the cache.
 func (c *committeeIDs) GetAllCommittees() []uint64 {
 	c.subnetsLock.RLock()
