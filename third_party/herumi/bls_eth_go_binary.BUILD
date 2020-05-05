@@ -83,6 +83,7 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -141,11 +142,15 @@ go_library(
         ":llvm_compiler_enabled": [":lib"],
         "//conditions:default": [":precompiled"],
     }),
-    copts = OPTS,
     cgo = True,
+    copts = OPTS,
     visibility = [
         # Additional access will require security approval.
         "@prysm//shared/bls:__pkg__",
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
     ],
+    clinkopts = select({
+        "@io_bazel_rules_go//go/platform:linux": ["-Wl,--unresolved-symbols=ignore-all"],
+        "//conditions:default": [],
+    }),
 )
