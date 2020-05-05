@@ -21,7 +21,6 @@ import (
 func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -54,7 +53,6 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -87,7 +85,6 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 
 func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
@@ -132,7 +129,6 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 
 func TestReplayBlocks_SameSlot(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
@@ -177,7 +173,6 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 
 func TestLoadBlocks_FirstBranch(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -208,7 +203,6 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 
 func TestLoadBlocks_SecondBranch(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -237,7 +231,6 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 
 func TestLoadBlocks_ThirdBranch(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -268,7 +261,6 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 
 func TestLoadBlocks_SameSlots(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -297,7 +289,6 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 
 func TestLoadBlocks_SameEndSlots(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -325,7 +316,6 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 
 func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -352,7 +342,6 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 
 func TestLoadBlocks_BadStart(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -370,7 +359,6 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 
 func TestLastSavedBlock_Genesis(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -403,7 +391,6 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 
 func TestLastSavedBlock_CanGet(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -441,7 +428,6 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 
 func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -459,7 +445,6 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 
 func TestLastSavedState_Genesis(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -489,7 +474,6 @@ func TestLastSavedState_Genesis(t *testing.T) {
 
 func TestLastSavedState_CanGet(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -532,7 +516,6 @@ func TestLastSavedState_CanGet(t *testing.T) {
 
 func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,

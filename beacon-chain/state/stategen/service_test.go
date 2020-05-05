@@ -14,7 +14,6 @@ import (
 func TestResume(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	root := [32]byte{'A'}
