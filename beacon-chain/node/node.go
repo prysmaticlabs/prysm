@@ -688,7 +688,7 @@ func loadChainConfigFile(chainConfigFileName string) {
 	if err := yaml.Unmarshal(yamlFile, conf); err != nil {
 		log.WithError(err).Fatal("Failed to parse chain config yaml file.")
 	}
-	log.Infof("Config file values: %+v", conf)
+	log.Debugf("Config file values: %+v", conf)
 	params.OverrideBeaconConfig(conf)
 }
 
