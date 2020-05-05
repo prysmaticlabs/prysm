@@ -39,9 +39,6 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 
 // BlockRoot returns the block hash tree root of the provided block.
 func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
-	if !featureconfig.Get().EnableBlockHTR {
-		return ssz.HashTreeRoot(blk)
-	}
 	fieldRoots := make([][32]byte, 5)
 	if blk != nil {
 		headerSlotBuf := make([]byte, 8)
@@ -67,9 +64,6 @@ func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 
 // BlockBodyRoot returns the hash tree root of the block body.
 func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
-	if !featureconfig.Get().EnableBlockHTR {
-		return ssz.HashTreeRoot(body)
-	}
 	hasher := hashutil.CustomSHA256Hasher()
 	fieldRoots := make([][32]byte, 8)
 	if body == nil {
