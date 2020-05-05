@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -74,5 +75,70 @@ func TestLoadConfigFile(t *testing.T) {
 		t.Errorf("Expected SecondsPerSlot to be set to minimal value: %d found: %d",
 			params.MinimalSpecConfig().SecondsPerSlot,
 			params.BeaconConfig().SecondsPerSlot)
+	}
+}
+
+func Test_replaceHexStringWithYAMLFormat(t *testing.T) {
+
+	testLines := []struct {
+		line   string
+		wanted string
+	}{
+		{
+			line:   "FOUR_BYTES: 0x41414141",
+			wanted: "FOUR_BYTES: \n- 65\n- 65\n- 65\n- 65\n",
+		},
+		{
+			line:   "THREE_BYTES: 0x414141",
+			wanted: "THREE_BYTES: \n- 65\n- 65\n- 65\n- 0\n",
+		},
+		{
+			line:   "EIGHT_BYTES: 0x4141414141414141",
+			wanted: "EIGHT_BYTES: \n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n",
+		},
+		{
+			line: "SIXTEEN_BYTES: 0x41414141414141414141414141414141",
+			wanted: "SIXTEEN_BYTES: \n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n",
+		},
+		{
+			line: "TWENTY_BYTES: 0x4141414141414141414141414141414141414141",
+			wanted: "TWENTY_BYTES: \n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n",
+		},
+		{
+			line: "THIRTY_TWO_BYTES: 0x4141414141414141414141414141414141414141414141414141414141414141",
+			wanted: "THIRTY_TWO_BYTES: \n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n",
+		},
+		{
+			line: "FORTY_EIGHT_BYTES: 0x41414141414141414141414141414141414141414141414141414141414141414141" +
+				"4141414141414141414141414141",
+			wanted: "FORTY_EIGHT_BYTES: \n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n",
+		},
+		{
+			line: "NINETY_SIX_BYTES: 0x414141414141414141414141414141414141414141414141414141414141414141414141" +
+				"4141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141" +
+				"41414141414141414141414141",
+			wanted: "NINETY_SIX_BYTES: \n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n" +
+				"- 65\n- 65\n- 65\n- 65\n- 65\n- 65\n",
+		},
+	}
+	for _, line := range testLines {
+		parts := replaceHexStringWithYAMLFormat(line.line)
+		res := strings.Join(parts, "\n")
+
+		if res != line.wanted {
+			t.Errorf("expected conversion to be: %v got: %v", line.wanted, res)
+		}
 	}
 }
