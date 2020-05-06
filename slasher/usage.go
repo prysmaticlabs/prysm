@@ -5,7 +5,6 @@ import (
 	"io"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
