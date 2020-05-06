@@ -77,6 +77,9 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, blkRoot, 0); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -110,6 +113,9 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, blkRoot, 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
