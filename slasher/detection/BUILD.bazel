@@ -14,6 +14,7 @@ go_library(
     deps = [
         "//beacon-chain/state/stateutil:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//slasher/beaconclient:go_default_library",
