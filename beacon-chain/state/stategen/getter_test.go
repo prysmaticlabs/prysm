@@ -6,9 +6,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -26,13 +26,16 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(b.Block)
+	bRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := beaconState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, bRoot, 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, bRoot); err != nil {
@@ -63,7 +66,7 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	blkRoot, err := ssz.HashTreeRoot(blk.Block)
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +84,7 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, targetBlock); err != nil {
 		t.Fatal(err)
 	}
-	targetRoot, err := ssz.HashTreeRoot(targetBlock.Block)
+	targetRoot, err := stateutil.BlockRoot(targetBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,11 +151,14 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(b.Block)
+	bRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, bRoot, 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveGenesisBlockRoot(ctx, bRoot); err != nil {
@@ -160,9 +166,6 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	}
 
 	r := [32]byte{}
-	if err := service.beaconDB.SaveArchivedPointRoot(ctx, r, 0); err != nil {
-		t.Fatal(err)
-	}
 	if err := service.beaconDB.SaveArchivedPointRoot(ctx, r, 1); err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +197,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(b.Block)
+	bRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

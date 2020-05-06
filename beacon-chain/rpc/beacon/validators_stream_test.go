@@ -10,8 +10,8 @@ import (
 )
 
 func TestInfostream_EpochToTimestamp(t *testing.T) {
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name      string
 		epoch     uint64
@@ -49,8 +49,8 @@ func TestInfostream_EpochToTimestamp(t *testing.T) {
 }
 
 func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name       string
 		reqPubKeys [][]byte
@@ -88,8 +88,8 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 }
 
 func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte
@@ -140,8 +140,8 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 }
 
 func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
-	resetCfg := params.OverrideBeaconConfigWithReset(params.MainnetConfig())
-	defer resetCfg()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte

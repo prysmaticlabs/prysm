@@ -125,7 +125,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		metaData:    &pb.MetaData{},
 	}
 	cache.CommitteeIDs.AddAttesterCommiteeID(0, 10)
-	testService.RefreshENR(0)
+	testService.RefreshENR()
 	time.Sleep(2 * time.Second)
 
 	exists, err = s.FindPeersWithSubnet(2)

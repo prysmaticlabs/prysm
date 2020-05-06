@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -102,7 +104,20 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.New("cannot save nil head state")
 	}
 
-	currentHeadSlot := s.headSlot()
+	// A chain re-org occurred, so we fire an event notifying the rest of the services.
+	if bytesutil.ToBytes32(newHeadBlock.Block.ParentRoot) != s.headRoot() {
+		log.WithFields(logrus.Fields{
+			"newSlot": fmt.Sprintf("%d", newHeadBlock.Block.Slot),
+			"oldSlot": fmt.Sprintf("%d", s.headSlot()),
+		}).Debug("Chain reorg occurred")
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{
+				NewSlot: newHeadBlock.Block.Slot,
+				OldSlot: s.headSlot(),
+			},
+		})
+	}
 
 	// Cache the new head info.
 	s.setHead(headRoot, newHeadBlock, newHeadState)
@@ -159,7 +174,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return errors.New("nil head state")
 	}
 
-	s.setHead(r, stateTrie.CopySignedBeaconBlock(b), headState)
+	s.setHeadInitialSync(r, stateTrie.CopySignedBeaconBlock(b), headState)
 
 	return nil
 }
@@ -175,6 +190,22 @@ func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *
 		root:  root,
 		block: stateTrie.CopySignedBeaconBlock(block),
 		state: state.Copy(),
+	}
+}
+
+// This sets head view object which is used to track the head slot, root, block and state. The method
+// assumes that state being passed into the method will not be modified by any other alternate
+// caller which holds the state's reference.
+func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
+	// This does a full copy of the block only.
+	s.head = &head{
+		slot:  block.Block.Slot,
+		root:  root,
+		block: stateTrie.CopySignedBeaconBlock(block),
+		state: state,
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +26,7 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,7 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +133,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +367,7 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,7 +418,7 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	if savedSlot != s.splitInfo.slot+20 {
 		t.Error("Did not save correct slot")
 	}
-	wantedRoot, err := ssz.HashTreeRoot(b3.Block)
+	wantedRoot, err := stateutil.BlockRoot(b3.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,7 +453,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 	}
 
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	gRoot, err := stateutil.BlockRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -488,7 +489,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
-	b2Root, err := ssz.HashTreeRoot(b2.Block)
+	b2Root, err := stateutil.BlockRoot(b2.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -530,6 +531,79 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	_, err := s.lastSavedState(ctx, s.splitInfo.slot+1)
 	if err != errUnknownState {
 		t.Error("Did not get wanted error")
+	}
+}
+
+func TestArchivedRoot_CanGet(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	r := [32]byte{'a'}
+	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+		t.Fatal(err)
+	}
+	got := service.archivedRoot(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	if r != got {
+		t.Error("Did not get wanted root")
+	}
+}
+
+func TestArchivedState_CanGet(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	r := [32]byte{'a'}
+	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := db.SaveState(ctx, beaconState, r); err != nil {
+		t.Fatal(err)
+	}
+	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not get wanted state")
+	}
+}
+
+func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	service := New(db, cache.NewStateSummaryCache())
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
+		t.Fatal(err)
+	}
+	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Error("Did not receive correct processed state")
+	}
+}
+
+func TestProcessStateUpToSlot_CanProcess(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	service := New(db, cache.NewStateSummaryCache())
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+
+	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Error("Did not receive correct processed state")
 	}
 }
 

@@ -310,12 +310,11 @@ func TestWeb3Service_BadReader(t *testing.T) {
 	testAcc.Backend.Commit()
 	web3Service.reader = &badReader{}
 	web3Service.logger = &goodLogger{}
-	web3Service.run(web3Service.ctx.Done())
-	msg := hook.LastEntry().Message
+	go web3Service.initPOWService()
+	time.Sleep(200 * time.Millisecond)
+	web3Service.cancel()
 	want := "Unable to subscribe to incoming ETH1.0 chain headers: subscription has failed"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
+	testutil.AssertLogsContain(t, hook, want)
 	hook.Reset()
 }
 

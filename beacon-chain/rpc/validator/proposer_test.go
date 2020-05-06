@@ -23,6 +23,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,18 +36,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
 func TestGetBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	testutil.ResetCache()
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -59,7 +55,7 @@ func TestGetBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	parentRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -152,8 +148,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -166,7 +162,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	parentRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -275,8 +271,8 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
@@ -286,7 +282,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -323,8 +319,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -337,7 +333,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	parentRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -1287,8 +1283,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -1303,7 +1299,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		t.Error(err)
 	}
 
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1596,7 +1592,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := s.deleteAttsInPool(append(aa, unaggregatedAtts...)); err != nil {
+	if err := s.deleteAttsInPool(context.Background(), append(aa, unaggregatedAtts...)); err != nil {
 		t.Fatal(err)
 	}
 	if len(s.AttPool.AggregatedAttestations()) != 0 {

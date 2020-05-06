@@ -2,13 +2,19 @@ package validator
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,10 +49,13 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
+
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	epochTicker := slotutil.GetSlotTicker(vs.GenesisTimeFetcher.GenesisTime(), secondsPerEpoch)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
-		case <-vs.EpochTicker.C():
+		case <-epochTicker.C():
 			res, err := vs.duties(stream.Context(), req)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
@@ -134,9 +143,35 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			assignment.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
+		// Assign relevant validator to subnet.
+		assignValidatorToSubnet(pubKey, assignment.Status)
 	}
 
 	return &ethpb.DutiesResponse{
 		Duties: validatorAssignments,
 	}, nil
+}
+
+// assignValidatorToSubnet checks the status and pubkey of a particular validator
+// to discern whether persistent subnets need to be registered for them.
+func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
+	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
+		return
+	}
+
+	_, ok, expTime := cache.CommitteeIDs.GetPersistentCommittees(pubkey)
+	if ok && expTime.After(roughtime.Now()) {
+		return
+	}
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	assignedIdxs := []uint64{}
+	for i := uint64(0); i < params.BeaconNetworkConfig().RandomSubnetsPerValidator; i++ {
+		assignedIndex := rand.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
+		assignedIdxs = append(assignedIdxs, uint64(assignedIndex))
+	}
+	assignedDuration := rand.Intn(int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription))
+	assignedDuration += int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
+
+	totalDuration := epochDuration * time.Duration(assignedDuration)
+	cache.CommitteeIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)
 }

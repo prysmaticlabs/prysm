@@ -213,6 +213,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 }
 
 func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig()
 	conf.MaxAttesterSlashings = 2
 	params.OverrideBeaconConfig(conf)

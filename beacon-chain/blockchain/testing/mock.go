@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -133,7 +133,7 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 		return err
 	}
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
+	signingRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		return err
 	}
