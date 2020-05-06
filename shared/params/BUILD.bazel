@@ -1,19 +1,34 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
     srcs = [
         "config.go",
+        "loader.go",
         "network_config.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/params",
     visibility = ["//visibility:public"],
-    deps = ["//shared/bytesutil:go_default_library"],
+    deps = [
+        "//shared/bytesutil:go_default_library",
+        "@com_github_mohae_deepcopy//:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+        "@in_gopkg_yaml_v2//:go_default_library",
+    ],
 )
 
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["config_test.go"],
+    srcs = [
+        "config_test.go",
+        "loader_test.go",
+    ],
+    data = glob(["*.yaml"]) + [
+        "@eth2_spec_tests_mainnet//:test_data",
+        "@eth2_spec_tests_minimal//:test_data",
+    ],
     embed = [":go_default_library"],
+    deps = ["@io_bazel_rules_go//go/tools/bazel:go_default_library"],
 )

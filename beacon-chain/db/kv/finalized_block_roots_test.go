@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -16,7 +16,6 @@ var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 
 func TestStore_IsFinalizedBlock(t *testing.T) {
 	slotsPerEpoch := int(params.BeaconConfig().SlotsPerEpoch)
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {
@@ -28,7 +27,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root, err := ssz.HashTreeRoot(blks[slotsPerEpoch].Block)
+	root, err := stateutil.BlockRoot(blks[slotsPerEpoch].Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +49,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
 	for i := 0; i < slotsPerEpoch*2; i++ {
-		root, err := ssz.HashTreeRoot(blks[i].Block)
+		root, err := stateutil.BlockRoot(blks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,7 +58,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		}
 	}
 	for i := slotsPerEpoch * 3; i < len(blks); i++ {
-		root, err := ssz.HashTreeRoot(blks[i].Block)
+		root, err := stateutil.BlockRoot(blks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,7 +88,6 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 	blocks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[len(blocks1)-1])))
 
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	if err := db.SaveGenesisBlockRoot(ctx, genesisBlockRoot); err != nil {
@@ -156,7 +154,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 }
 
 func sszRootOrDie(t *testing.T, block *ethpb.SignedBeaconBlock) []byte {
-	root, err := ssz.HashTreeRoot(block.Block)
+	root, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +173,7 @@ func makeBlocks(t *testing.T, i, n int, previousRoot [32]byte) []*ethpb.SignedBe
 			},
 		}
 		var err error
-		previousRoot, err = ssz.HashTreeRoot(blocks[j-i].Block)
+		previousRoot, err = stateutil.BlockRoot(blocks[j-i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}

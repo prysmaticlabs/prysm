@@ -1,4 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -33,6 +34,7 @@ go_library(
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
@@ -41,6 +43,7 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/roughtime:go_default_library",
         "//shared/traceutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
@@ -64,6 +67,7 @@ go_test(
         "proposer_test.go",
         "server_test.go",
         "status_test.go",
+        "validator_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -85,6 +89,7 @@ go_test(
         "//beacon-chain/rpc/testing:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",

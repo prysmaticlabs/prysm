@@ -231,10 +231,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.Bool(disableInitSyncQueue.Name) {
-		log.Warn("Disabled initial sync queue")
-		cfg.DisableInitSyncQueue = true
-	}
 	if ctx.Bool(enableFieldTrie.Name) {
 		log.Warn("Enabling state field trie")
 		cfg.EnableFieldTrie = true

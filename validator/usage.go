@@ -56,6 +56,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.LogFormat,
 			cmd.LogFileName,
 			cmd.ConfigFileFlag,
+			cmd.ChainConfigFileFlag,
 		},
 	},
 	{

@@ -6,8 +6,10 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -124,6 +126,18 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		traceutil.AnnotateError(span, err)
 		return err
 	}
+	// handle genesis case
+	if startSlot == 0 {
+		genBlock, genRoot, err := r.retrieveGenesisBlock(ctx)
+		if err != nil {
+			log.WithError(err).Error("Failed to retrieve genesis block")
+			r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		blks = append([]*ethpb.SignedBeaconBlock{genBlock}, blks...)
+		roots = append([][32]byte{genRoot}, roots...)
+	}
 	checkpoint, err := r.db.FinalizedCheckpoint(ctx)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve finalized checkpoint")
@@ -158,4 +172,16 @@ func (r *Service) writeErrorResponseToStream(responseCode byte, reason string, s
 			log.WithError(err).Errorf("Failed to write to stream")
 		}
 	}
+}
+
+func (r *Service) retrieveGenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, [32]byte, error) {
+	genBlock, err := r.db.GenesisBlock(ctx)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	genRoot, err := stateutil.BlockRoot(genBlock.Block)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	return genBlock, genRoot, nil
 }

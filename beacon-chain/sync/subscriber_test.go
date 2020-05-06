@@ -12,7 +12,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -20,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -72,7 +72,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
@@ -93,6 +92,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		if err := r.attesterSlashingSubscriber(ctx, msg); err != nil {
@@ -139,7 +139,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		Genesis:        time.Now(),
 	}
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 	c, err := lru.New(10)
 	if err != nil {
 		t.Fatal(err)
@@ -156,6 +155,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		if err := r.proposerSlashingSubscriber(ctx, msg); err != nil {
@@ -175,7 +175,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating proposer slashing")
 	}
-	root, err := ssz.HashTreeRoot(proposerSlashing.Header_1.Header)
+	root, err := stateutil.BlockHeaderRoot(proposerSlashing.Header_1.Header)
 	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
 		t.Fatal(err)
 	}

@@ -16,11 +16,11 @@ import (
 )
 
 func TestService_RequestHistoricalAttestations(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	db := testDB.SetupSlasherDB(t, false)
-	defer testDB.TeardownSlasherDB(t, db)
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{

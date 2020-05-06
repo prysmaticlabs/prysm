@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -18,7 +18,6 @@ func TestMigrateToCold_NoBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -33,7 +32,6 @@ func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
@@ -48,7 +46,6 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
@@ -63,7 +60,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err := ssz.HashTreeRoot(b.Block)
+	bRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +81,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	bRoot, err = ssz.HashTreeRoot(b.Block)
+	bRoot, err = stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

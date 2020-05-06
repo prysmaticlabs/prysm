@@ -7,14 +7,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	root := bytesutil.ToBytes32([]byte{'A'})
 	cp := &ethpb.Checkpoint{
@@ -45,7 +44,6 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 
 func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	genesis := bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
@@ -60,7 +58,7 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		},
 	}
 
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +96,6 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 
 func TestStore_JustifiedCheckpoint_DefaultCantBeNil(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	genesisRoot := [32]byte{'A'}
@@ -118,7 +115,6 @@ func TestStore_JustifiedCheckpoint_DefaultCantBeNil(t *testing.T) {
 
 func TestStore_FinalizedCheckpoint_DefaultCantBeNil(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	genesisRoot := [32]byte{'B'}
@@ -138,7 +134,6 @@ func TestStore_FinalizedCheckpoint_DefaultCantBeNil(t *testing.T) {
 
 func TestStore_FinalizedCheckpoint_StateMustExist(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	cp := &ethpb.Checkpoint{
 		Epoch: 5,

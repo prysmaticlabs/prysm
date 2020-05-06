@@ -185,18 +185,18 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vp, bp, err := New(context.Background(), state)
+	pVals, pBal, err := New(context.Background(), state)
 	if err != nil {
 		t.Error(err)
 	}
-	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
+	pVals, pBal, err = ProcessAttestations(context.Background(), state, pVals, pBal)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bp.CurrentEpoch = 0 // Could cause a divide by zero panic.
+	pBal.ActiveCurrentEpoch = 0 // Could cause a divide by zero panic.
 
-	_, _, err = attestationDeltas(state, bp, vp)
+	_, _, err = attestationDeltas(state, pBal, pVals)
 	if err != nil {
 		t.Fatal(err)
 	}

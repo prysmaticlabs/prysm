@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -28,7 +29,6 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 
 	var blkRoots [][32]byte
 	// Populate the database with blocks that would match the request.
@@ -88,11 +88,11 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	blockA := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 111}}
 	blockB := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 40}}
 	// Set up a head state with data we expect.
-	blockARoot, err := ssz.HashTreeRoot(blockA.Block)
+	blockARoot, err := stateutil.BlockRoot(blockA.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blockBRoot, err := ssz.HashTreeRoot(blockB.Block)
+	blockBRoot, err := stateutil.BlockRoot(blockB.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
