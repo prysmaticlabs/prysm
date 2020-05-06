@@ -90,7 +90,7 @@ func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
 			Slot: bs.GenesisTimeFetcher.CurrentSlot() + 1,
 		},
 	}
-	wanted := "Cannot retrieve information about an slot in the future"
+	wanted := "Cannot retrieve information about a slot in the future"
 	if _, err := bs.GetBeaconState(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}

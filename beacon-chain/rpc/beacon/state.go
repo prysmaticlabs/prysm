@@ -28,7 +28,7 @@ func (bs *Server) GetBeaconState(
 		if requestedSlot > currentSlot {
 			return nil, status.Errorf(
 				codes.InvalidArgument,
-				"Cannot retrieve information about an slot in the future, current slot %d, slot %d",
+				"Cannot retrieve information about a slot in the future, current slot %d, requested slot %d",
 				currentSlot,
 				requestedSlot,
 			)
