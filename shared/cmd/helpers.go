@@ -3,10 +3,10 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -48,14 +48,27 @@ func ConfirmAction(actionText string, deniedText string) (bool, error) {
 // EnterPassword queries the user for their password through the terminal, in order to make sure it is
 // not passed in a visible way to the terminal.
 // TODO(#5749): This function is untested and should be tested.
-func EnterPassword() (string, error) {
+func EnterPassword(confirmPassword bool) (string, error) {
 	var passphrase string
 	log.Info("Enter a password:")
 	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
-		return passphrase, errors.Wrap(err, "could not read account password")
+		return "", errors.Wrap(err, "could not read account password")
 	}
 	text := string(bytePassword)
 	passphrase = strings.Replace(text, "\n", "", -1)
+	if confirmPassword {
+		log.Info("Please re-enter your password:")
+		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+		if err != nil {
+			return "", errors.Wrap(err, "could not read account password")
+		}
+		text := string(bytePassword)
+		confirmedPass := strings.Replace(text, "\n", "", -1)
+		if passphrase != confirmedPass {
+			log.Info("Passwords did not match, please try again")
+			return EnterPassword(true)
+		}
+	}
 	return passphrase, nil
 }
