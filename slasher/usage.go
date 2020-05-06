@@ -5,9 +5,9 @@ import (
 	"io"
 	"sort"
 
-
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"gopkg.in/urfave/cli.v2"
 )
