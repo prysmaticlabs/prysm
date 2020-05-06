@@ -4,14 +4,12 @@
 package bls
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -36,9 +34,6 @@ var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
-
-// The size would be a combination of both the message(32 bytes) and domain(8 bytes) size.
-const concatMsgDomainSize = 40
 
 // Signature used in the BLS signature scheme.
 type Signature struct {
@@ -83,8 +78,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if len(pub) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
-	cv, ok := pubkeyCache.Get(string(pub))
-	if ok {
+	if cv, ok := pubkeyCache.Get(string(pub)); ok {
 		return cv.(*PublicKey).Copy()
 	}
 	pubKey := &bls12.PublicKey{}
@@ -92,13 +86,13 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	pubkeyObj := &PublicKey{p: pubKey}
-	copiedKey, err := pubkeyObj.Copy()
+	pubKeyObj := &PublicKey{p: pubKey}
+	copiedKey, err := pubKeyObj.Copy()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not copy pubkey")
+		return nil, errors.Wrap(err, "could not copy public key")
 	}
 	pubkeyCache.Set(string(pub), copiedKey, 48)
-	return pubkeyObj, nil
+	return pubKeyObj, nil
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
@@ -120,13 +114,6 @@ func SignatureFromBytes(sig []byte) (*Signature, error) {
 // PublicKey obtains the public key corresponding to the BLS secret key.
 func (s *SecretKey) PublicKey() *PublicKey {
 	return &PublicKey{p: s.p.GetPublicKey()}
-}
-
-func concatMsgAndDomain(msg []byte, domain uint64) []byte {
-	b := [concatMsgDomainSize]byte{}
-	binary.LittleEndian.PutUint64(b[32:], domain)
-	copy(b[0:32], msg)
-	return b[:]
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
@@ -272,22 +259,4 @@ func (s *Signature) Marshal() []byte {
 	}
 
 	return s.s.Serialize()
-}
-
-// HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element
-func HashWithDomain(messageHash [32]byte, domain [8]byte) []byte {
-	xReBytes := [41]byte{}
-	xImBytes := [41]byte{}
-	xBytes := make([]byte, 96)
-	copy(xReBytes[:32], messageHash[:])
-	copy(xReBytes[32:40], domain[:])
-	copy(xReBytes[40:41], []byte{0x01})
-	copy(xImBytes[:32], messageHash[:])
-	copy(xImBytes[32:40], domain[:])
-	copy(xImBytes[40:41], []byte{0x02})
-	hashedxImBytes := hashutil.Hash(xImBytes[:])
-	copy(xBytes[16:48], hashedxImBytes[:])
-	hashedxReBytes := hashutil.Hash(xReBytes[:])
-	copy(xBytes[64:], hashedxReBytes[:])
-	return xBytes
 }
