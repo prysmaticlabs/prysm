@@ -26,7 +26,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	mockSlotUtil "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
