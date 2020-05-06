@@ -4,13 +4,10 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestBlockRoot(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableBlockHTR: true})
-	defer resetCfg()
 	genState, keys := testutil.DeterministicGenesisState(t, 100)
 	blk, err := testutil.GenerateFullBlock(genState, keys, testutil.DefaultBlockGenConfig(), 10)
 	if err != nil {
