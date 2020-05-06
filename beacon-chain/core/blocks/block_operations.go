@@ -203,15 +203,15 @@ func ProcessBlockHeader(
 	}
 
 	// Verify proposer signature.
-	if err := VerifyBlockHeaderSignature(beaconState, block); err != nil {
+	if err := VerifyBlockSignature(beaconState, block); err != nil {
 		return nil, err
 	}
 
 	return beaconState, nil
 }
 
-// VerifyBlockHeaderSignature verifies the proposer signature of a beacon block.
-func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) error {
+// VerifyBlockSignature verifies the proposer signature of a beacon block.
+func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) error {
 	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
 	if err != nil {
 		return err

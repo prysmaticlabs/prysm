@@ -91,5 +91,34 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 // IsSlashableBlock returns an proposer slashing if the block submitted
 // is a double proposal.
 func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconBlockHeader) (*slashpb.ProposerSlashingResponse, error) {
-	return nil, errors.New("unimplemented")
+	gvr, err := ss.beaconClient.GenesisValidatorsRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	blockEpoch := helpers.SlotToEpoch(req.Header.Slot)
+	fork, err := p2putils.Fork(blockEpoch)
+	if err != nil {
+		return nil, err
+	}
+	domain, err := helpers.Domain(fork, blockEpoch, params.BeaconConfig().DomainBeaconProposer, gvr)
+	if err != nil {
+		return nil, err
+	}
+	pkMap, err := ss.beaconClient.FindOrGetPublicKeys(ctx, []uint64{req.Header.ProposerIndex})
+	if err := helpers.VerifyBlockHeaderSigningRoot(
+		req.Header, pkMap[req.Header.ProposerIndex], req.Signature, domain); err != nil {
+		return nil, err
+	}
+	slashing, err := ss.detector.DetectDoubleProposals(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not detect proposer slashing for block: %v: %v", req, err)
+	}
+	psr := &slashpb.ProposerSlashingResponse{}
+	if slashing != nil {
+		psr = &slashpb.ProposerSlashingResponse{
+			ProposerSlashing: []*ethpb.ProposerSlashing{slashing},
+		}
+	}
+	return psr, nil
+
 }
