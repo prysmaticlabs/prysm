@@ -5,6 +5,8 @@ import (
 	"io"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
@@ -77,6 +79,10 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RebuildSpanMapsFlag,
 			flags.BeaconRPCProviderFlag,
 		},
+	},
+	{
+		Name:  "features",
+		Flags: featureconfig.ActiveFlags(featureconfig.SlasherFlags),
 	},
 }
 
