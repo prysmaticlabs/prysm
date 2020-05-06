@@ -30,5 +30,7 @@ go_test(
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//validator/flags:go_default_library",
+        "@in_gopkg_urfave_cli_v2//:go_default_library",
     ],
 )
