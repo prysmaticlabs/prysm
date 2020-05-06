@@ -12,7 +12,6 @@ import (
 func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := SetupDB(t, pubkeys)
-	defer TeardownDB(t, db)
 
 	historyForPubKeys, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
 	if err != nil {
@@ -106,7 +105,6 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 
 func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 	db := SetupDB(t, [][48]byte{})
-	defer TeardownDB(t, db)
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	newMap1 := make(map[uint64]uint64)
 	newMap1[0] = farFuture

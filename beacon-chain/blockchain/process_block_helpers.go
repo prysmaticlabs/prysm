@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -348,7 +349,7 @@ func (s *Service) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32
 	if err != nil {
 		return nil, err
 	}
-	hRoot, err := ssz.HashTreeRoot(h.Block)
+	hRoot, err := stateutil.BlockRoot(h.Block)
 	if err != nil {
 		return nil, err
 	}

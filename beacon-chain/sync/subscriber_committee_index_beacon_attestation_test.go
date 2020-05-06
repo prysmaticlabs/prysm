@@ -8,7 +8,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -19,6 +18,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
@@ -28,7 +28,6 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	s, sKeys := testutil.DeterministicGenesisState(t, 64 /*validators*/)
 	if err := s.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
@@ -37,7 +36,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

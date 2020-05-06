@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -32,7 +32,6 @@ import (
 func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -63,7 +62,6 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p1 := p2ptest.NewTestP2P(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
@@ -85,7 +83,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 				Target: &ethpb.Checkpoint{}}}}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	r32, err := ssz.HashTreeRoot(b.Block)
+	r32, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +116,6 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
 	testutil.ResetCache()
@@ -128,7 +125,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), sb); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(sb.Block)
+	root, err := stateutil.BlockRoot(sb.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +207,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	}
 
 	sb = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	r32, err := ssz.HashTreeRoot(sb.Block)
+	r32, err := stateutil.BlockRoot(sb.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,9 +238,6 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 }
 
 func TestValidatePendingAtts_CanPruneOldAtts(t *testing.T) {
-	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
-
 	s := &Service{
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}

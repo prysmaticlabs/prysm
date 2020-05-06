@@ -133,7 +133,6 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -172,7 +171,6 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -211,7 +209,6 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -251,7 +248,6 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx

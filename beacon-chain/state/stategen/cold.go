@@ -46,7 +46,7 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
-	return s.ComputeStateUpToSlot(ctx, summary.Slot)
+	return s.loadColdStateBySlot(ctx, summary.Slot)
 }
 
 // This loads a cold state by slot.
@@ -54,5 +54,24 @@ func (s *State) loadColdStateBySlot(ctx context.Context, slot uint64) (*state.Be
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateBySlot")
 	defer span.End()
 
-	return s.ComputeStateUpToSlot(ctx, slot)
+	if slot == 0 {
+		return s.beaconDB.GenesisState(ctx)
+	}
+
+	archivedState, err := s.archivedState(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
+	if archivedState == nil {
+		archivedRoot := s.archivedRoot(ctx, slot)
+		archivedState, err = s.recoverStateByRoot(ctx, archivedRoot)
+		if err != nil {
+			return nil, err
+		}
+		if archivedState == nil {
+			return nil, errUnknownState
+		}
+	}
+
+	return s.processStateUpTo(ctx, archivedState, slot)
 }

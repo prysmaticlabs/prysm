@@ -1,4 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -16,9 +17,13 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//fuzz:__pkg__",
         "//proto/testing:__subpackages__",
         "//shared/testutil:__subpackages__",
+        "//slasher:__subpackages__",
+        "//tools/blocktree:__pkg__",
         "//tools/pcli:__pkg__",
+        "//validator/client:__pkg__",
     ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
@@ -42,6 +47,7 @@ go_test(
         "blocks_test.go",
         "state_root_cache_fuzz_test.go",
         "state_root_test.go",
+        "stateutil_test.go",
         "trie_helpers_test.go",
     ],
     embed = [":go_default_library"],

@@ -22,14 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	s := &beaconstate.BeaconState{}
@@ -49,7 +43,6 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -76,7 +69,6 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -112,14 +104,12 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
 	c := params.MinimalSpecConfig()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
-	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -176,14 +166,12 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
-	params.UseMinimalConfig()
+	params.SetupTestConfigCleanup(t)
 	c := params.MinimalSpecConfig()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
-	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)

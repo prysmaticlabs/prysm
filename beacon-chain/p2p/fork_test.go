@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,8 +23,6 @@ import (
 )
 
 func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
@@ -107,8 +104,6 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 }
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
 	hook := logTest.NewGlobal()
 	logrus.SetLevel(logrus.DebugLevel)
 	port := 2000
@@ -130,8 +125,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 
-	originalBeaconConfig := params.BeaconConfig()
-
+	params.SetupTestConfigCleanup(t)
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
@@ -178,7 +172,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
-	params.OverrideBeaconConfig(originalBeaconConfig)
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -199,8 +192,8 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 }
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig()
-	originalConfig := c
 	c.ForkVersionSchedule = map[uint64][]byte{
 		0: params.BeaconConfig().GenesisForkVersion,
 		1: {0, 0, 0, 1},
@@ -210,7 +203,6 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	c.NextForkEpoch = nextForkEpoch
 	c.NextForkVersion = nextForkVersion
 	params.OverrideBeaconConfig(c)
-	defer params.OverrideBeaconConfig(originalConfig)
 
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)

@@ -4,20 +4,15 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
-	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -25,9 +20,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const blockBatchSize = 32
-const counterSeconds = 20
-const refreshTime = 6 * time.Second
+const (
+	// counterSeconds is an interval over which an average rate will be calculated.
+	counterSeconds = 20
+	// refreshTime defines an interval at which suitable peer is checked during 2nd phase of sync.
+	refreshTime = 6 * time.Second
+)
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
@@ -43,8 +41,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer s.chain.ClearCachedStates()
-	state.SkipSlotCache.Enable()
-	defer state.SkipSlotCache.Disable()
+	state.SkipSlotCache.Disable()
+	defer state.SkipSlotCache.Enable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
@@ -95,12 +93,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			Count:     mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, allowedBlocksPerSecond),
 			Step:      1,
 		}
-
-		log.WithField("req", req).WithField("peer", best.Pretty()).Debug(
-			"Sending batch block request",
-		)
-
-		resp, err := s.requestBlocks(ctx, req, best)
+		log.WithFields(logrus.Fields{
+			"req":  req,
+			"peer": best.Pretty(),
+		}).Debug("Sending batch block request")
+		resp, err := queue.blocksFetcher.requestBlocks(ctx, req, best)
 		if err != nil {
 			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
 			return nil
@@ -119,44 +116,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	}
 
 	return nil
-}
-
-// requestBlocks by range to a specific peer.
-func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.SignedBeaconBlock, error) {
-	if s.blocksRateLimiter.Remaining(pid.String()) < int64(req.Count) {
-		log.WithField("peer", pid).Debug("Slowing down for rate limit")
-		time.Sleep(s.blocksRateLimiter.TillEmpty(pid.String()))
-	}
-	s.blocksRateLimiter.Add(pid.String(), int64(req.Count))
-	log.WithFields(logrus.Fields{
-		"peer":  pid,
-		"start": req.StartSlot,
-		"count": req.Count,
-		"step":  req.Step,
-	}).Debug("Requesting blocks")
-	stream, err := s.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to send request to peer")
-	}
-	defer func() {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
-		}
-	}()
-
-	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
-	for {
-		blk, err := prysmsync.ReadChunkedBlock(stream, s.p2p)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read chunked block")
-		}
-		resp = append(resp, blk)
-	}
-
-	return resp, nil
 }
 
 // highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.

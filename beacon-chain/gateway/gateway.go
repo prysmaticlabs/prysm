@@ -32,6 +32,7 @@ type Gateway struct {
 	allowedOrigins          []string
 	startFailure            error
 	enableDebugRPCEndpoints bool
+	maxCallRecvMsgSize      uint64
 }
 
 // Start the gateway service. This serves the HTTP JSON traffic on the specified
@@ -42,7 +43,7 @@ func (g *Gateway) Start() {
 
 	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
 
-	conn, err := dial(ctx, "tcp", g.remoteAddr)
+	conn, err := g.dial(ctx, "tcp", g.remoteAddr)
 	if err != nil {
 		log.WithError(err).Error("Failed to connect to gRPC server")
 		g.startFailure = err
@@ -125,6 +126,7 @@ func New(
 	mux *http.ServeMux,
 	allowedOrigins []string,
 	enableDebugRPCEndpoints bool,
+	maxCallRecvMsgSize uint64,
 ) *Gateway {
 	if mux == nil {
 		mux = http.NewServeMux()
@@ -137,14 +139,15 @@ func New(
 		mux:                     mux,
 		allowedOrigins:          allowedOrigins,
 		enableDebugRPCEndpoints: enableDebugRPCEndpoints,
+		maxCallRecvMsgSize:      maxCallRecvMsgSize,
 	}
 }
 
 // dial the gRPC server.
-func dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
+func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
 	switch network {
 	case "tcp":
-		return dialTCP(ctx, addr)
+		return g.dialTCP(ctx, addr)
 	case "unix":
 		return dialUnix(ctx, addr)
 	default:
@@ -154,8 +157,18 @@ func dial(ctx context.Context, network, addr string) (*grpc.ClientConn, error) {
 
 // dialTCP creates a client connection via TCP.
 // "addr" must be a valid TCP address with a port number.
-func dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
-	return grpc.DialContext(ctx, addr, grpc.WithInsecure())
+func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, error) {
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+
+	if g.enableDebugRPCEndpoints {
+		opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))))
+	}
+
+	return grpc.DialContext(
+		ctx,
+		addr,
+		opts...,
+	)
 }
 
 // dialUnix creates a client connection via a unix domain socket.
