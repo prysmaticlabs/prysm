@@ -30,8 +30,14 @@ import (
 const (
 	// maxPendingRequests limits how many concurrent fetch request one can initiate.
 	maxPendingRequests = 8
+	// allowedBlocksPerSecond is number of blocks (per peer) fetcher can request per second.
+	allowedBlocksPerSecond = 32.0
+	// blockBatchSize is a limit on number of blocks fetched per request.
+	blockBatchSize = 32
 	// peersPercentagePerRequest caps percentage of peers to be used in a request.
 	peersPercentagePerRequest = 0.75
+	// handshakePollingInterval is a polling interval for checking the number of received handshakes.
+	handshakePollingInterval = 5 * time.Second
 )
 
 var (
@@ -83,7 +89,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	rateLimiter := leakybucket.NewCollector(
 		allowedBlocksPerSecond, /* rate */
 		allowedBlocksPerSecond, /* capacity */
-		false /* deleteEmptyBuckets */)
+		false                   /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:            ctx,
