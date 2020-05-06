@@ -44,6 +44,7 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
+        "//shared/slotutil:go_default_library",
         "//shared/traceutil:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
