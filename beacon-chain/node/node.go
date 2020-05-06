@@ -594,6 +594,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 				nil, /*optional mux*/
 				allowedOrigins,
 				enableDebugRPCEndpoints,
+				b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 			),
 		)
 	}

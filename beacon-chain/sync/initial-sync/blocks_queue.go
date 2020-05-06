@@ -31,19 +31,9 @@ var (
 	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
 )
 
-// blocksProvider exposes enough methods for queue to fetch incoming blocks.
-type blocksProvider interface {
-	requestResponses() <-chan *fetchRequestResponse
-	scheduleRequest(ctx context.Context, start, count uint64) error
-	nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error)
-	bestFinalizedSlot() uint64
-	start() error
-	stop()
-}
-
 // blocksQueueConfig is a config to setup block queue service.
 type blocksQueueConfig struct {
-	blocksFetcher       blocksProvider
+	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	startSlot           uint64
 	highestExpectedSlot uint64
@@ -57,7 +47,7 @@ type blocksQueue struct {
 	cancel              context.CancelFunc
 	highestExpectedSlot uint64
 	state               *stateMachine
-	blocksFetcher       blocksProvider
+	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	fetchedBlocks       chan *eth.SignedBeaconBlock // output channel for ready blocks
 	quit                chan struct{}               // termination notifier
