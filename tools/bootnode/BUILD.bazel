@@ -52,11 +52,12 @@ go_image(
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/iputils:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/runutil:go_default_library",
-        "//shared/iputils:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_btcsuite_btcd//btcec:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
