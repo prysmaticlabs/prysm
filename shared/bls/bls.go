@@ -117,6 +117,13 @@ func (s *SecretKey) PublicKey() *PublicKey {
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
+//
+// In IETF draft BLS specification:
+// Sign(SK, message) -> signature: a signing algorithm that generates
+//      a deterministic signature given a secret key SK and a message.
+//
+// In ETH2.0 specification:
+// def Sign(SK: int, message: Bytes) -> BLSSignature
 func (s *SecretKey) Sign(msg []byte) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
@@ -156,6 +163,14 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 }
 
 // Verify a bls signature given a public key, a message.
+//
+// In IETF draft BLS specification:
+// Verify(PK, message, signature) -> VALID or INVALID: a verification
+//      algorithm that outputs VALID if signature is a valid signature of
+//      message under public key PK, and INVALID otherwise.
+//
+// In ETH2.0 specification:
+// def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -189,6 +204,15 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
 // AggregateVerify verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
+//
+// In IETF draft BLS specification:
+// FastAggregateVerify(PK_1, ..., PK_n, message, signature) -> VALID
+//      or INVALID: a verification algorithm for the aggregate of multiple
+//      signatures on the same message.  This function is faster than
+//      AggregateVerify.
+//
+// In ETH2.0 specification:
+// def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -209,7 +233,16 @@ func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool 
 	return s.s.AggregateVerify(rawKeys, msgSlices)
 }
 
-// FastAggregateVerify verifies all the provided pubkeys with their aggregated signature.
+// FastAggregateVerify verifies all the provided public keys with their aggregated signature.
+//
+// In IETF draft BLS specification:
+// FastAggregateVerify(PK_1, ..., PK_n, message, signature) -> VALID
+//      or INVALID: a verification algorithm for the aggregate of multiple
+//      signatures on the same message.  This function is faster than
+//      AggregateVerify.
+//
+// In ETH2.0 specification:
+// def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -250,6 +283,19 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 		signature.Add(sigs[i].s)
 	}
 	return &Signature{s: &signature}
+}
+
+// Aggregate is an alias for AggregateSignatures, defined to conform to BLS specification.
+//
+// In IETF draft BLS specification:
+// Aggregate(signature_1, ..., signature_n) -> signature: an
+//      aggregation algorithm that compresses a collection of signatures
+//      into a single signature.
+//
+// In ETH2.0 specification:
+// def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
+func Aggregate(sigs []*Signature) *Signature {
+	return AggregateSignatures(sigs)
 }
 
 // Marshal a signature into a LittleEndian byte slice.
