@@ -128,7 +128,7 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
-						if err := accounts.LogOutPublicAndPrivateKeys(keystorePath, passphrase); err != nil {
+						if err := accounts.PrintPublicAndPrivateKeys(keystorePath, passphrase); err != nil {
 							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
 						}
 						return nil

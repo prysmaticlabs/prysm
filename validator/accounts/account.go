@@ -155,7 +155,8 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 	return path, passphrase, nil
 }
 
-func LogOutPublicAndPrivateKeys(path string, passphrase string) error {
+// PrintPublicAndPrivateKeys uses the passed in path and prints out the public and private keys in that directory.
+func PrintPublicAndPrivateKeys(path string, passphrase string) error {
 	keystores, err := DecryptKeysFromKeystore(path, passphrase)
 	if err != nil {
 		return errors.Wrapf(err, "failed to decrypt keystore keys at path %s", path)
