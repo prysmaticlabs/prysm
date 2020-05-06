@@ -43,8 +43,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer s.chain.ClearCachedStates()
-	state.SkipSlotCache.Enable()
-	defer state.SkipSlotCache.Disable()
+	state.SkipSlotCache.Disable()
+	defer state.SkipSlotCache.Enable()
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
