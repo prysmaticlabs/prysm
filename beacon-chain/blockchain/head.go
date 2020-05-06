@@ -170,7 +170,7 @@ func (s *Service) setHeadInitialSync(root [32]byte, block *ethpb.SignedBeaconBlo
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	// This does a full copy of the block and state.
+	// This does a full copy of the block only.
 	s.head = &head{
 		slot:  block.Block.Slot,
 		root:  root,
