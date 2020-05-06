@@ -120,6 +120,7 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	ClearCache()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384

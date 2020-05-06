@@ -6,11 +6,15 @@ package testing
 
 import (
 	context "context"
+<<<<<<< HEAD
 	types "github.com/gogo/protobuf/types"
+=======
+	reflect "reflect"
+
+>>>>>>> master
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	metadata "google.golang.org/grpc/metadata"
-	reflect "reflect"
 )
 
 // MockBeaconNodeValidatorServer is a mock of BeaconNodeValidatorServer interface

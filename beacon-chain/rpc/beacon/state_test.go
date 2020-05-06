@@ -2,14 +2,16 @@ package beacon
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -32,7 +34,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,8 +46,9 @@ func TestServer_GetBeaconState(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs := &Server{
-		BeaconDB: db,
-		StateGen: gen,
+		BeaconDB:           db,
+		StateGen:           gen,
+		GenesisTimeFetcher: &mock.ChainService{},
 	}
 	if _, err := bs.GetBeaconState(ctx, &pbrpc.BeaconStateRequest{}); err == nil {
 		t.Errorf("Expected error without a query filter, received nil")
@@ -74,5 +77,21 @@ func TestServer_GetBeaconState(t *testing.T) {
 	}
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
+	bs := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	req := &pbrpc.BeaconStateRequest{
+		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
+			Slot: bs.GenesisTimeFetcher.CurrentSlot() + 1,
+		},
+	}
+	wanted := "Cannot retrieve information about a slot in the future"
+	if _, err := bs.GetBeaconState(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }

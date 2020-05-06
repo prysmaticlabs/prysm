@@ -3,10 +3,12 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -41,4 +43,19 @@ func ConfirmAction(actionText string, deniedText string) (bool, error) {
 	}
 
 	return confirmed, nil
+}
+
+// EnterPassword queries the user for their password through the terminal, in order to make sure it is
+// not passed in a visible way to the terminal.
+// TODO(#5749): This function is untested and should be tested.
+func EnterPassword() (string, error) {
+	var passphrase string
+	log.Info("Enter a password:")
+	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return passphrase, errors.Wrap(err, "could not read account password")
+	}
+	text := string(bytePassword)
+	passphrase = strings.Replace(text, "\n", "", -1)
+	return passphrase, nil
 }

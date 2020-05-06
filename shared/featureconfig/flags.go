@@ -154,9 +154,10 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableByteMempool,
+	enableCustomBlockHTR,
 	enableStateRefCopy,
 	enableFieldTrie,
+	enableNewStateMgmt,
 }
 
 // Deprecated flags list.
@@ -410,4 +411,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
+	"--enable-custom-block-htr",
 }

@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -21,6 +22,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -39,7 +41,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -87,7 +89,7 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis bs: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -177,7 +179,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -227,7 +229,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis bs: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -456,6 +458,25 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	cancel()
 }
 
+func TestAssignValidatorToSubnet(t *testing.T) {
+	k := pubKey(3)
+
+	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
+	coms, ok, exp := cache.CommitteeIDs.GetPersistentCommittees(k)
+	if !ok {
+		t.Fatal("No cache entry found for validator")
+	}
+	if uint64(len(coms)) != params.BeaconNetworkConfig().RandomSubnetsPerValidator {
+		t.Errorf("Only %d committees subscribed when %d was needed.", len(coms), params.BeaconNetworkConfig().RandomSubnetsPerValidator)
+	}
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
+	receivedTime := exp.Round(time.Second).Sub(time.Now())
+	if receivedTime < totalTime {
+		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
+	}
+}
+
 func BenchmarkCommitteeAssignment(b *testing.B) {
 	db := dbutil.SetupDB(b)
 
@@ -473,7 +494,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not setup genesis bs: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)
 	}
