@@ -3,6 +3,8 @@ package detection
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -85,9 +87,11 @@ func (ds *Service) Start() {
 	<-ch
 	sub.Unsubscribe()
 
-	// The detection service runs detection on all historical
-	// chain data since genesis.
-	go ds.detectHistoricalChainData(ds.ctx)
+	if !featureconfig.Get().DisableHistoricalDetection {
+		// The detection service runs detection on all historical
+		// chain data since genesis.
+		go ds.detectHistoricalChainData(ds.ctx)
+	}
 
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
