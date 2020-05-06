@@ -47,7 +47,6 @@ var appFlags = []cli.Flag{
 	flags.UnencryptedKeysFlag,
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
-	flags.GrpcMaxCallRecvMsgSizeFlag,
 	flags.GrpcRetriesFlag,
 	flags.GrpcHeadersFlag,
 	flags.KeyManager,
@@ -72,6 +71,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFileName,
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
+	cmd.GrpcMaxCallRecvMsgSizeFlag,
 }
 
 func init() {
