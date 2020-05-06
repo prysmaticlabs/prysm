@@ -234,9 +234,9 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	}
 
 	forkID := &pb.ENRForkID{
-		CurrentForkDigest: []byte{0, 0, 0, 0},
-		NextForkVersion:   params.BeaconConfig().NextForkVersion,
-		NextForkEpoch:     params.BeaconConfig().NextForkEpoch,
+		CurrentForkDigest: params.BeaconConfig().ZeroHash[:],
+		NextForkVersion:   params.BeaconConfig().GenesisForkVersion,
+		NextForkEpoch:     params.BeaconConfig().FarFutureEpoch,
 	}
 	forkEntry, err := ssz.Marshal(forkID)
 	if err != nil {
