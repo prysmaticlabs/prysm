@@ -61,6 +61,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ForceClearDB,
 			cmd.ClearDB,
 			cmd.ConfigFileFlag,
+			cmd.ChainConfigFileFlag,
+			cmd.GrpcMaxCallRecvMsgSizeFlag,
 		},
 	},
 	{

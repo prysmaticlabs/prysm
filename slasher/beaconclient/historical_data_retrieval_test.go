@@ -16,6 +16,7 @@ import (
 )
 
 func TestService_RequestHistoricalAttestations(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

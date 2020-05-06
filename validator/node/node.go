@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -65,6 +66,11 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
+	}
+
+	if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := ctx.String(cmd.ChainConfigFileFlag.Name)
+		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
 	featureconfig.ConfigureValidator(ctx)
@@ -177,7 +183,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 	emitAccountMetrics := ctx.Bool(flags.AccountMetricsFlag.Name)
 	cert := ctx.String(flags.CertFlag.Name)
 	graffiti := ctx.String(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := ctx.Int(flags.GrpcMaxCallRecvMsgSizeFlag.Name)
+	maxCallRecvMsgSize := ctx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := ctx.Uint(flags.GrpcRetriesFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:                   endpoint,
