@@ -185,7 +185,7 @@ func DefaultValidatorDir() string {
 }
 
 // HandleEmptyFlags checks what the set flags are and allows the user to manually enter them if they're empty.
-func HandleEmptyFlags(cliCtx *cli.Context) (string, string, error) {
+func HandleEmptyFlags(cliCtx *cli.Context, confirmPassword bool) (string, string, error) {
 	path := cliCtx.String(flags.KeystorePathFlag.Name)
 	passphrase := cliCtx.String(flags.PasswordFlag.Name)
 
@@ -204,7 +204,7 @@ func HandleEmptyFlags(cliCtx *cli.Context) (string, string, error) {
 
 	if passphrase == "" {
 		log.Info("Please enter the password for your private keys")
-		enteredPassphrase, err := cmd.EnterPassword()
+		enteredPassphrase, err := cmd.EnterPassword(confirmPassword)
 		if err != nil {
 			return path, enteredPassphrase, errors.Wrap(err, "could not read entered passphrase")
 		}
