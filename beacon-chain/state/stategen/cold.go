@@ -54,6 +54,10 @@ func (s *State) loadColdStateBySlot(ctx context.Context, slot uint64) (*state.Be
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateBySlot")
 	defer span.End()
 
+	if slot == 0 {
+		return s.beaconDB.GenesisState(ctx)
+	}
+
 	archivedState, err := s.archivedState(ctx, slot)
 	if err != nil {
 		return nil, err
@@ -69,5 +73,5 @@ func (s *State) loadColdStateBySlot(ctx context.Context, slot uint64) (*state.Be
 		}
 	}
 
-	return s.processStateUpToSlot(ctx, archivedState, slot)
+	return s.processStateUpTo(ctx, archivedState, slot)
 }

@@ -310,7 +310,10 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 
 // This retrieves the archived root in the DB.
 func (s *State) archivedRoot(ctx context.Context, slot uint64) [32]byte {
-	archivedIndex := slot/params.BeaconConfig().SlotsPerArchivedPoint - 1
+	archivedIndex := uint64(0)
+	if slot/params.BeaconConfig().SlotsPerArchivedPoint > 1 {
+		archivedIndex = slot/params.BeaconConfig().SlotsPerArchivedPoint - 1
+	}
 	return s.beaconDB.ArchivedPointRoot(ctx, archivedIndex)
 }
 
@@ -349,8 +352,8 @@ func (s *State) recoverStateByRoot(ctx context.Context, root [32]byte) (*state.B
 }
 
 // This processes a state up to input slot.
-func (s *State) processStateUpToSlot(ctx context.Context, state *state.BeaconState, slot uint64) (*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.processStateUpToSlot")
+func (s *State) processStateUpTo(ctx context.Context, state *state.BeaconState, slot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.processStateUpTo")
 	defer span.End()
 
 	// Short circuit if the slot is already less than pre state.
