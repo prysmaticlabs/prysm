@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -102,7 +104,20 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.New("cannot save nil head state")
 	}
 
-	currentHeadSlot := s.headSlot()
+	// A chain re-org occurred, so we fire an event notifying the rest of the services.
+	if bytesutil.ToBytes32(newHeadBlock.Block.ParentRoot) != s.headRoot() {
+		log.WithFields(logrus.Fields{
+			"newSlot": fmt.Sprintf("%d", newHeadBlock.Block.Slot),
+			"oldSlot": fmt.Sprintf("%d", s.headSlot()),
+		}).Debug("Chain reorg occurred")
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{
+				NewSlot: newHeadBlock.Block.Slot,
+				OldSlot: s.headSlot(),
+			},
+		})
+	}
 
 	// Cache the new head info.
 	s.setHead(headRoot, newHeadBlock, newHeadState)
@@ -110,17 +125,6 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Save the new head root to DB.
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
-	}
-
-	// A chain re-org occurred, so we fire an event notifying the rest of the services.
-	if newHeadState.Slot() < currentHeadSlot {
-		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Reorg,
-			Data: &statefeed.ReorgData{
-				NewSlot: newHeadState.Slot(),
-				OldSlot: currentHeadSlot,
-			},
-		})
 	}
 
 	return nil
