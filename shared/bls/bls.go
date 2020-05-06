@@ -178,29 +178,6 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	return s.s.VerifyByte(pub.p, msg)
 }
 
-// VerifyAggregate verifies each public key against its respective message.
-// This is vulnerable to rogue public-key attack. Each user must
-// provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
-	if featureconfig.Get().SkipBLSVerify {
-		return true
-	}
-	size := len(pubKeys)
-	if size == 0 {
-		return false
-	}
-	if size != len(msg) {
-		return false
-	}
-	hashes := make([][]byte, 0, len(msg))
-	var rawKeys []bls12.PublicKey
-	for i := 0; i < size; i++ {
-		hashes = append(hashes, msg[i][:])
-		rawKeys = append(rawKeys, *pubKeys[i].p)
-	}
-	return s.s.VerifyAggregateHashes(rawKeys, hashes)
-}
-
 // AggregateVerify verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
