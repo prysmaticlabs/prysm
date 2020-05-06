@@ -71,6 +71,7 @@ var appFlags = []cli.Flag{
 	debug.TraceFlag,
 	cmd.LogFileName,
 	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
 }
 
 func init() {
