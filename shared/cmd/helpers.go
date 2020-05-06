@@ -54,7 +54,7 @@ func EnterPassword(confirmPassword bool) (string, error) {
 	log.Info("Enter a password:")
 	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
-		return passphrase, errors.Wrap(err, "could not read account password")
+		return "", errors.Wrap(err, "could not read account password")
 	}
 	text := string(bytePassword)
 	passphrase = strings.Replace(text, "\n", "", -1)
@@ -62,7 +62,7 @@ func EnterPassword(confirmPassword bool) (string, error) {
 		log.Info("Please enter your password again:")
 		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
-			return passphrase, errors.Wrap(err, "could not read account password")
+			return "", errors.Wrap(err, "could not read account password")
 		}
 		text := string(bytePassword)
 		confirmedPass := strings.Replace(text, "\n", "", -1)
