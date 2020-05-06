@@ -149,7 +149,9 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	return nil
 }
 
-// This sets head view object which is used to track the head slot, root, block and state.
+// This sets head view object which is used to track the head slot, root, block and state. The method
+// assumes that state being passed into the method will not be modified by any other alternate
+// caller which holds the state's reference.
 func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
@@ -159,7 +161,7 @@ func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *
 		slot:  block.Block.Slot,
 		root:  root,
 		block: stateTrie.CopySignedBeaconBlock(block),
-		state: state.Copy(),
+		state: state,
 	}
 }
 
