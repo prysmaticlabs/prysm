@@ -21,8 +21,10 @@ import (
 )
 
 const (
+	// counterSeconds is an interval over which an average rate will be calculated.
 	counterSeconds = 20
-	refreshTime    = 6 * time.Second
+	// refreshTime defines an interval at which suitable peer is checked during 2nd phase of sync.
+	refreshTime = 6 * time.Second
 )
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
