@@ -14,13 +14,16 @@ const (
 	Initialized
 	// Synced is sent when the beacon node has completed syncing and is ready to participate in the network.
 	Synced
+	// Reorg is an event sent when the new head state's slot after a block
+	// transition is lower than its previous head state slot value.
+	Reorg
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
 	// Slot is the slot of the processed block.
 	Slot uint64
-	// BlockRoot is the hash of the processed block.
+	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
@@ -44,4 +47,12 @@ type InitializedData struct {
 	StartTime time.Time
 	// GenesisValidatorsRoot represents ssz.HashTreeRoot(state.validators).
 	GenesisValidatorsRoot []byte
+}
+
+// ReorgData is the data alongside a reorg event.
+type ReorgData struct {
+	// NewSlot is the slot of new state after the reorg.
+	NewSlot uint64
+	// OldSlot is the slot of the head state before the reorg.
+	OldSlot uint64
 }

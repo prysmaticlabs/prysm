@@ -8,14 +8,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -275,6 +281,181 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 	}
 }
 
+func TestStreamDuties_SyncNotReady(t *testing.T) {
+	vs := &Server{
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	if err := vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream); err == nil || strings.Contains(
+		err.Error(), "syncing to latest head",
+	) {
+		t.Error("Did not get wanted error")
+	}
+}
+
+func TestStreamDuties_OK(t *testing.T) {
+	db := dbutil.SetupDB(t)
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Could not setup genesis bs: %v", err)
+	}
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
+	}
+
+	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	for i, pk := range pubKeys {
+		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	vs := &Server{
+		Ctx:         ctx,
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mockChain.ChainService{
+			Genesis: time.Now(),
+		},
+		StateNotifier: &mockChain.MockStateNotifier{},
+	}
+
+	// Test the first validator in registry.
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+		Epoch:      0,
+	}
+	wantedRes, err := vs.duties(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exitRoutine := make(chan bool)
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+	go func(tt *testing.T) {
+		if err := vs.StreamDuties(req, mockStream); err != nil && !strings.Contains(err.Error(), "context canceled") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+	}(t)
+	<-exitRoutine
+	cancel()
+}
+
+func TestStreamDuties_OK_ChainReorg(t *testing.T) {
+	db := dbutil.SetupDB(t)
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Could not setup genesis bs: %v", err)
+	}
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
+	}
+
+	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	for i, pk := range pubKeys {
+		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	vs := &Server{
+		Ctx:         ctx,
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mockChain.ChainService{
+			Genesis: time.Now(),
+		},
+		StateNotifier: &mockChain.MockStateNotifier{},
+	}
+
+	// Test the first validator in registry.
+	req := &ethpb.DutiesRequest{
+		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
+		Epoch:      0,
+	}
+	wantedRes, err := vs.duties(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	exitRoutine := make(chan bool)
+	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream.EXPECT().Send(wantedRes).Return(nil)
+	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+	go func(tt *testing.T) {
+		if err := vs.StreamDuties(req, mockStream); err != nil && !strings.Contains(err.Error(), "context canceled") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+	}(t)
+	// Fire a reorg event within the same epoch. This should NOT
+	// trigger a recomputation not resending of duties over the stream.
+	for sent := 0; sent == 0; {
+		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{OldSlot: 0, NewSlot: 0},
+		})
+	}
+	// Fire a reorg event across epoch boundaries. This needs to trigger
+	// a recomputation and resending of duties over the stream.
+	for sent := 0; sent == 0; {
+		sent = vs.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Reorg,
+			Data: &statefeed.ReorgData{OldSlot: helpers.StartSlot(1), NewSlot: 0},
+		})
+	}
+	<-exitRoutine
+	cancel()
+}
+
 func TestAssignValidatorToSubnet(t *testing.T) {
 	k := pubKey(3)
 
@@ -292,7 +473,6 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	if receivedTime < totalTime {
 		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
 	}
-
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {

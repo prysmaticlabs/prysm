@@ -11,6 +11,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
