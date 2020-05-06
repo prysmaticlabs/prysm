@@ -32,6 +32,7 @@ type Gateway struct {
 	allowedOrigins          []string
 	startFailure            error
 	enableDebugRPCEndpoints bool
+	maxCallRecvMsgSize      uint64
 }
 
 // Start the gateway service. This serves the HTTP JSON traffic on the specified
@@ -125,6 +126,7 @@ func New(
 	mux *http.ServeMux,
 	allowedOrigins []string,
 	enableDebugRPCEndpoints bool,
+	maxCallRecvMsgSize uint64,
 ) *Gateway {
 	if mux == nil {
 		mux = http.NewServeMux()
@@ -137,6 +139,7 @@ func New(
 		mux:                     mux,
 		allowedOrigins:          allowedOrigins,
 		enableDebugRPCEndpoints: enableDebugRPCEndpoints,
+		maxCallRecvMsgSize:      maxCallRecvMsgSize,
 	}
 }
 
@@ -158,9 +161,7 @@ func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, e
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
 	if g.enableDebugRPCEndpoints {
-		// Increase Max call size from 4MB to 16MB to account for end point to retrieve beacon state,
-		// this should be large enough to cover state size up to 300k validators.
-		opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1<<24)))
+		opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.maxCallRecvMsgSize))))
 	}
 
 	return grpc.DialContext(
