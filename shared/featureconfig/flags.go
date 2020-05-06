@@ -312,6 +312,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableProtectProposerFlag = &cli.BoolFlag{
+		Name: "disable-protect-proposer",
+		Usage: "Disables functionality to prevent the validator client from signing and " +
+			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
+	}
+	deprecatedDisableProtectAttesterFlag = &cli.BoolFlag{
+		Name: "disable-protect-attester",
+		Usage: "Disables functionality to prevent the validator client from signing and " +
+			"broadcasting 2 any slashable attestations.",
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -345,6 +355,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
 	deprecatedUseSpanCacheFlag,
+	deprecatedDisableProtectProposerFlag,
+	deprecatedDisableProtectAttesterFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.

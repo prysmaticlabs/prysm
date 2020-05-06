@@ -87,7 +87,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory := v.attesterHistoryByPubKey[pubKey]
+	v.attesterHistoryByPubKeyLock.RUnlock()
 	if featureconfig.Get().ProtectAttester {
 		if isNewAttSlashable(attesterHistory, data.Source.Epoch, data.Target.Epoch) {
 			log.WithFields(logrus.Fields{
@@ -144,19 +146,19 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	if featureconfig.Get().ProtectAttester {
-		attesterHistory = markAttestationForTargetEpoch(attesterHistory, data.Source.Epoch, data.Target.Epoch)
-		v.attesterHistoryByPubKeyLock.Lock()
-		v.attesterHistoryByPubKey[pubKey] = attesterHistory
-		v.attesterHistoryByPubKeyLock.Unlock()
-	}
-
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
 			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
+	}
+
+	if featureconfig.Get().ProtectAttester {
+		attesterHistory = markAttestationForTargetEpoch(attesterHistory, data.Source.Epoch, data.Target.Epoch)
+		v.attesterHistoryByPubKeyLock.Lock()
+		v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		v.attesterHistoryByPubKeyLock.Unlock()
 	}
 
 	if v.emitAccountMetrics {
