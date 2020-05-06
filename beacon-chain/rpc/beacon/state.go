@@ -20,8 +20,20 @@ func (bs *Server) GetBeaconState(
 	if !featureconfig.Get().NewStateMgmt {
 		return nil, status.Error(codes.FailedPrecondition, "requires --enable-new-state-mgmt to function")
 	}
+
 	switch q := req.QueryFilter.(type) {
 	case *pbrpc.BeaconStateRequest_Slot:
+		currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+		requestedSlot := q.Slot
+		if requestedSlot > currentSlot {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"Cannot retrieve information about a slot in the future, current slot %d, requested slot %d",
+				currentSlot,
+				requestedSlot,
+			)
+		}
+
 		st, err := bs.StateGen.StateBySlot(ctx, q.Slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not compute state by slot: %v", err)
