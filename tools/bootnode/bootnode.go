@@ -40,6 +40,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/prysmaticlabs/prysm/shared/logutil"
@@ -232,9 +233,13 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	if *externalIP == "" {
 		external = ipAddr
 	}
+	digest, err := helpers.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().ZeroHash[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not compute fork digest")
+	}
 
 	forkID := &pb.ENRForkID{
-		CurrentForkDigest: params.BeaconConfig().ZeroHash[:],
+		CurrentForkDigest: digest[:],
 		NextForkVersion:   params.BeaconConfig().GenesisForkVersion,
 		NextForkEpoch:     params.BeaconConfig().FarFutureEpoch,
 	}
