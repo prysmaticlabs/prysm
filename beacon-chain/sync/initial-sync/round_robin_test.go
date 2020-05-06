@@ -12,13 +12,13 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -314,7 +314,6 @@ func TestRoundRobinSync(t *testing.T) {
 			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
-			dbtest.TeardownDB(t, beaconDB)
 		})
 	}
 }
@@ -378,7 +377,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 					blk.Block.ParentRoot = newRoot[:]
 				}
 				ret = append(ret, blk)
-				currRoot, err := ssz.HashTreeRoot(blk.Block)
+				currRoot, err := stateutil.BlockRoot(blk.Block)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -446,7 +445,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 	genesisBlock := &eth.BeaconBlock{
 		Slot: 0,
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesisBlock)
+	genesisRoot, err := stateutil.BlockRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,7 +456,7 @@ func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
 			Slot:       slot,
 			ParentRoot: parentRoot[:],
 		}
-		parentRoot, err = ssz.HashTreeRoot(currentBlock)
+		parentRoot, err = stateutil.BlockRoot(currentBlock)
 		if err != nil {
 			t.Fatal(err)
 		}

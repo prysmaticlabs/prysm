@@ -37,7 +37,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
-	initialsyncold "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync-old"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -91,6 +90,11 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		cliCtx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
+	}
+
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
 	featureconfig.ConfigureBeaconChain(cliCtx)
@@ -429,19 +433,9 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	var initSync prysmsync.Checker
-	if cfg := featureconfig.Get(); cfg.DisableInitSyncQueue {
-		var initSyncTmp *initialsyncold.Service
-		if err := b.services.FetchService(&initSyncTmp); err != nil {
-			return err
-		}
-		initSync = initSyncTmp
-	} else {
-		var initSyncTmp *initialsync.Service
-		if err := b.services.FetchService(&initSyncTmp); err != nil {
-			return err
-		}
-		initSync = initSyncTmp
+	var initSync *initialsync.Service
+	if err := b.services.FetchService(&initSync); err != nil {
+		return err
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
@@ -468,17 +462,6 @@ func (b *BeaconNode) registerInitialSyncService() error {
 		return err
 	}
 
-	if cfg := featureconfig.Get(); cfg.DisableInitSyncQueue {
-		is := initialsyncold.NewInitialSync(&initialsyncold.Config{
-			DB:            b.db,
-			Chain:         chainService,
-			P2P:           b.fetchP2P(),
-			StateNotifier: b,
-			BlockNotifier: b,
-		})
-		return b.services.RegisterService(is)
-	}
-
 	is := initialsync.NewInitialSync(&initialsync.Config{
 		DB:            b.db,
 		Chain:         chainService,
@@ -500,19 +483,9 @@ func (b *BeaconNode) registerRPCService() error {
 		return err
 	}
 
-	var syncService prysmsync.Checker
-	if cfg := featureconfig.Get(); cfg.DisableInitSyncQueue {
-		var initSyncTmp *initialsyncold.Service
-		if err := b.services.FetchService(&initSyncTmp); err != nil {
-			return err
-		}
-		syncService = initSyncTmp
-	} else {
-		var initSyncTmp *initialsync.Service
-		if err := b.services.FetchService(&initSyncTmp); err != nil {
-			return err
-		}
-		syncService = initSyncTmp
+	var syncService *initialsync.Service
+	if err := b.services.FetchService(&syncService); err != nil {
+		return err
 	}
 
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
@@ -538,38 +511,40 @@ func (b *BeaconNode) registerRPCService() error {
 	slasherCert := b.cliCtx.String(flags.SlasherCertFlag.Name)
 	slasherProvider := b.cliCtx.String(flags.SlasherProviderFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
+	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
-		Host:                  host,
-		Port:                  port,
-		CertFlag:              cert,
-		KeyFlag:               key,
-		BeaconDB:              b.db,
-		Broadcaster:           p2pService,
-		PeersFetcher:          p2pService,
-		HeadFetcher:           chainService,
-		ForkFetcher:           chainService,
-		FinalizationFetcher:   chainService,
-		ParticipationFetcher:  chainService,
-		BlockReceiver:         chainService,
-		AttestationReceiver:   chainService,
-		GenesisTimeFetcher:    chainService,
-		GenesisFetcher:        chainService,
-		AttestationsPool:      b.attestationPool,
-		ExitPool:              b.exitPool,
-		SlashingsPool:         b.slashingsPool,
-		POWChainService:       web3Service,
-		ChainStartFetcher:     chainStartFetcher,
-		MockEth1Votes:         mockEth1DataVotes,
-		SyncService:           syncService,
-		DepositFetcher:        depositFetcher,
-		PendingDepositFetcher: b.depositCache,
-		BlockNotifier:         b,
-		StateNotifier:         b,
-		OperationNotifier:     b,
-		SlasherCert:           slasherCert,
-		SlasherProvider:       slasherProvider,
-		StateGen:              b.stateGen,
+		Host:                    host,
+		Port:                    port,
+		CertFlag:                cert,
+		KeyFlag:                 key,
+		BeaconDB:                b.db,
+		Broadcaster:             p2pService,
+		PeersFetcher:            p2pService,
+		HeadFetcher:             chainService,
+		ForkFetcher:             chainService,
+		FinalizationFetcher:     chainService,
+		ParticipationFetcher:    chainService,
+		BlockReceiver:           chainService,
+		AttestationReceiver:     chainService,
+		GenesisTimeFetcher:      chainService,
+		GenesisFetcher:          chainService,
+		AttestationsPool:        b.attestationPool,
+		ExitPool:                b.exitPool,
+		SlashingsPool:           b.slashingsPool,
+		POWChainService:         web3Service,
+		ChainStartFetcher:       chainStartFetcher,
+		MockEth1Votes:           mockEth1DataVotes,
+		SyncService:             syncService,
+		DepositFetcher:          depositFetcher,
+		PendingDepositFetcher:   b.depositCache,
+		BlockNotifier:           b,
+		StateNotifier:           b,
+		OperationNotifier:       b,
+		SlasherCert:             slasherCert,
+		SlasherProvider:         slasherProvider,
+		StateGen:                b.stateGen,
+		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -610,6 +585,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		selfAddress := fmt.Sprintf("127.0.0.1:%d", b.cliCtx.Int(flags.RPCPort.Name))
 		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
 		allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+		enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 		return b.services.RegisterService(
 			gateway.New(
 				b.ctx,
@@ -617,6 +593,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 				gatewayAddress,
 				nil, /*optional mux*/
 				allowedOrigins,
+				enableDebugRPCEndpoints,
 			),
 		)
 	}

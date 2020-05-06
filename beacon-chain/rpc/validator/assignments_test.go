@@ -12,6 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -21,6 +22,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -36,12 +38,11 @@ func pubKey(i uint64) []byte {
 }
 func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -74,7 +75,6 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 
 func TestGetDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -90,7 +90,7 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis bs: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -160,7 +160,6 @@ func TestGetDuties_OK(t *testing.T) {
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -181,7 +180,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -215,7 +214,6 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
@@ -232,7 +230,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis bs: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -300,7 +298,6 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 
 func TestStreamDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -343,9 +340,6 @@ func TestStreamDuties_OK(t *testing.T) {
 			Genesis: time.Now(),
 		},
 		StateNotifier: &mockChain.MockStateNotifier{},
-		EpochTicker: &mockSlotUtil.MockTicker{
-			Channel: make(chan uint64),
-		},
 	}
 
 	// Test the first validator in registry.
@@ -376,7 +370,6 @@ func TestStreamDuties_OK(t *testing.T) {
 
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -419,9 +412,6 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 			Genesis: time.Now(),
 		},
 		StateNotifier: &mockChain.MockStateNotifier{},
-		EpochTicker: &mockSlotUtil.MockTicker{
-			Channel: make(chan uint64),
-		},
 	}
 
 	// Test the first validator in registry.
@@ -467,9 +457,27 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	cancel()
 }
 
+func TestAssignValidatorToSubnet(t *testing.T) {
+	k := pubKey(3)
+
+	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
+	coms, ok, exp := cache.CommitteeIDs.GetPersistentCommittees(k)
+	if !ok {
+		t.Fatal("No cache entry found for validator")
+	}
+	if uint64(len(coms)) != params.BeaconNetworkConfig().RandomSubnetsPerValidator {
+		t.Errorf("Only %d committees subscribed when %d was needed.", len(coms), params.BeaconNetworkConfig().RandomSubnetsPerValidator)
+	}
+	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+	totalTime := time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription) * epochDuration * time.Second
+	receivedTime := exp.Round(time.Second).Sub(time.Now())
+	if receivedTime < totalTime {
+		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
+	}
+}
+
 func BenchmarkCommitteeAssignment(b *testing.B) {
 	db := dbutil.SetupDB(b)
-	defer dbutil.TeardownDB(b, db)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(8192 * 2)
@@ -485,7 +493,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not setup genesis bs: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)
 	}

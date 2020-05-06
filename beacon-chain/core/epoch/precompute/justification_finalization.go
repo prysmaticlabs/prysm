@@ -10,7 +10,7 @@ import (
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 // Note: this is an optimized version by passing in precomputed total and attesting balances.
-func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState, p *Balance) (*stateTrie.BeaconState, error) {
+func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState, pBal *Balance) (*stateTrie.BeaconState, error) {
 	if state.Slot() <= helpers.StartSlot(2) {
 		return state, nil
 	}
@@ -34,7 +34,7 @@ func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState,
 	// We will use that paradigm here for consistency with the godoc spec definition.
 
 	// If 2/3 or more of total balance attested in the previous epoch.
-	if 3*p.PrevEpochTargetAttesters >= 2*p.CurrentEpoch {
+	if 3*pBal.PrevEpochTargetAttested >= 2*pBal.ActiveCurrentEpoch {
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
@@ -50,7 +50,7 @@ func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState,
 	}
 
 	// If 2/3 or more of the total balance attested in the current epoch.
-	if 3*p.CurrentEpochTargetAttesters >= 2*p.CurrentEpoch {
+	if 3*pBal.CurrentEpochTargetAttested >= 2*pBal.ActiveCurrentEpoch {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)

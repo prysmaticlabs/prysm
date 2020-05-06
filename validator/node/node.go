@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -67,6 +68,11 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		stop:     make(chan struct{}),
 	}
 
+	if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := ctx.String(cmd.ChainConfigFileFlag.Name)
+		params.LoadChainConfigFile(chainConfigFileName)
+	}
+
 	featureconfig.ConfigureValidator(ctx)
 
 	keyManager, err := selectKeyManager(ctx)
@@ -90,12 +96,12 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 
 	clearFlag := ctx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := ctx.Bool(cmd.ForceClearDB.Name)
+	dataDir := ctx.String(cmd.DataDirFlag.Name)
 	if clearFlag || forceClearFlag {
 		pubkeys, err := keyManager.FetchValidatingKeys()
 		if err != nil {
 			return nil, err
 		}
-		dataDir := ctx.String(cmd.DataDirFlag.Name)
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
 		}
@@ -103,6 +109,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
+	log.WithField("databasePath", dataDir).Info("Checking DB")
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err

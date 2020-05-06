@@ -1,4 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -10,6 +11,7 @@ go_library(
         "config.go",
         "server.go",
         "slashings.go",
+        "state.go",
         "validators.go",
         "validators_stream.go",
     ],
@@ -37,6 +39,7 @@ go_library(
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
@@ -63,10 +66,12 @@ go_test(
     srcs = [
         "assignments_test.go",
         "attestations_test.go",
+        "beacon_test.go",
         "blocks_test.go",
         "committees_test.go",
         "config_test.go",
         "slashings_test.go",
+        "state_test.go",
         "validators_stream_test.go",
         "validators_test.go",
     ],
@@ -91,7 +96,9 @@ go_test(
         "//beacon-chain/rpc/testing:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",

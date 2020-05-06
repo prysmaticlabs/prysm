@@ -40,7 +40,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 		t.Fatal(err)
 	}
 	attestedBalance := 4 * e * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttesters: attestedBalance}
+	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 		t.Fatal(err)
 	}
 	attestedBalance := 4 * e * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttesters: attestedBalance}
+	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	if err != nil {
 		t.Fatal(err)
@@ -149,7 +149,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 		t.Fatal(err)
 	}
 	attestedBalance := 4 * e * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttesters: attestedBalance}
+	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	if err != nil {
 		t.Fatal(err)

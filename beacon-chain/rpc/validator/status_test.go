@@ -8,7 +8,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -16,6 +15,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -24,7 +24,6 @@ import (
 
 func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
@@ -75,7 +74,6 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 
 func TestValidatorStatus_Deposited(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey1 := pubKey(1)
@@ -133,7 +131,6 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 
 func TestValidatorStatus_Pending(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -141,7 +138,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -211,10 +208,9 @@ func TestValidatorStatus_Pending(t *testing.T) {
 
 func TestValidatorStatus_Active(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -242,7 +238,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -294,7 +290,6 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 func TestValidatorStatus_Exiting(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -308,7 +303,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -368,7 +363,6 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 
 func TestValidatorStatus_Slashing(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -380,7 +374,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -439,7 +433,6 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 
 func TestValidatorStatus_Exited(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -451,12 +444,12 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	numDeposits := uint64(64)
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
@@ -518,7 +511,6 @@ func TestValidatorStatus_Exited(t *testing.T) {
 
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	pubKey := pubKey(1)
 	depositCache := depositcache.NewDepositCache()
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
@@ -549,7 +541,6 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 
 func TestMultipleValidatorStatus_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4)}
@@ -574,7 +565,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		},
 	})
 	block := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -647,7 +638,6 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 
 func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pbKey := pubKey(5)
@@ -655,7 +645,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -764,7 +754,6 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 
 func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -796,7 +785,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -840,7 +829,6 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 
 func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -872,7 +860,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}

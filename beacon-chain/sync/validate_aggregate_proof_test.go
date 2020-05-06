@@ -13,7 +13,6 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -118,7 +118,6 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 
 	att := &ethpb.Attestation{
@@ -170,7 +169,6 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 
 func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -180,7 +178,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +263,6 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 
 func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -275,7 +272,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +339,6 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	defer resetCfg()
 
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -352,7 +348,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -468,9 +464,8 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	}
 }
 
-func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
+func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -480,7 +475,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(b.Block)
+	root, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -590,6 +585,22 @@ func TestVerifyIndexInCommittee_SeenAggregatorSlot(t *testing.T) {
 	if !r.validateAggregateAndProof(context.Background(), "", msg) {
 		t.Fatal("Validated status is false")
 	}
+
+	// Should fail with another attestation in the same epoch.
+	signedAggregateAndProof.Message.Aggregate.Data.Slot++
+	buf = new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+		t.Fatal(err)
+	}
+	msg = &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(signedAggregateAndProof)],
+			},
+		},
+	}
+
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
 	if r.validateAggregateAndProof(context.Background(), "", msg) {
 		t.Fatal("Validated status is true")

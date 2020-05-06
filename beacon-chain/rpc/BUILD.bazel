@@ -1,4 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -24,6 +25,7 @@ go_library(
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//proto/slashing:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",

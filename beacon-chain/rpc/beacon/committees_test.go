@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +16,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -27,9 +27,8 @@ import (
 
 func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:true})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
 	numValidators := 128
@@ -48,7 +47,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	gRoot, err := ssz.HashTreeRoot(b.Block)
+	gRoot, err := stateutil.BlockRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,11 +88,10 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:false})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 
 	numValidators := 128
@@ -162,11 +160,10 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt:false})
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
 
 	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
 	helpers.ClearCache()
 	ctx := context.Background()
 

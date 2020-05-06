@@ -54,6 +54,10 @@ func (r *Service) committeesCount() int {
 	return int(helpers.SlotCommitteeCount(uint64(len(activeValidatorIndices))))
 }
 
+func (r *Service) persistentCommitteeIndices() []uint64 {
+	return cache.CommitteeIDs.GetAllCommittees()
+}
+
 func (r *Service) aggregatorCommitteeIndices(currentSlot uint64) []uint64 {
 	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
 	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch

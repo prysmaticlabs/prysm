@@ -61,6 +61,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ForceClearDB,
 			cmd.ClearDB,
 			cmd.ConfigFileFlag,
+			cmd.ChainConfigFileFlag,
 		},
 	},
 	{
@@ -94,6 +95,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SlotsPerArchivedPoint,
 			flags.DisableDiscv5,
 			flags.BlockBatchLimit,
+			flags.EnableDebugRPCEndpoints,
 		},
 	},
 	{

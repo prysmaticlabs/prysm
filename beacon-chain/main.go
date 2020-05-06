@@ -50,6 +50,7 @@ var appFlags = []cli.Flag{
 	flags.ArchiveBlocksFlag,
 	flags.ArchiveAttestationsFlag,
 	flags.SlotsPerArchivedPoint,
+	flags.EnableDebugRPCEndpoints,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
@@ -86,6 +87,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFileName,
 	cmd.EnableUPnPFlag,
 	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
 }
 
 func init() {

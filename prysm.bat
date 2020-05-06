@@ -102,14 +102,14 @@ if [%1]==[slasher] ( set process=%SLASHER_REAL%)
 REM GPG not natively available on Windows, external module required
 echo [33mWARN GPG verification is not natively available on Windows.[0m
 echo [33mWARN Skipping integrity verification of downloaded binary[0m
-REM Check SHA265 File Hash before running
-echo [37mVerifying binary authenticity with SHA265 Hash.[0m
+REM Check SHA256 File Hash before running
+echo [37mVerifying binary authenticity with SHA256 Hash.[0m
 for /f "delims=" %%A in ('certutil -hashfile %process% SHA256 ^| find /v "hash"') do (
     set SHA256Hash=%%A
 )
 set /p ExpectedSHA256=<%process%.sha256
 if [%ExpectedSHA256:~0,64%]==[%SHA256Hash%] (
-    echo [32mSHA265 Hash Match![0m
+    echo [32mSHA256 Hash Match![0m
 ) else if [%PRYSM_ALLOW_UNVERIFIED_BINARIES%]==[1] (
     echo [31mWARNING Failed to verify Prysm binary.[0m 
     echo Detected PRYSM_ALLOW_UNVERIFIED_BINARIES=1

@@ -31,8 +31,7 @@ func init() {
 
 func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
-	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
+	svc, _ := setupService(t)
 	st := testutil.NewBeaconState()
 	if err := st.SetSlot(1); err != nil {
 		t.Fatal(err)
@@ -55,8 +54,7 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 
 func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	hook := logTest.NewGlobal()
-	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
+	svc, _ := setupService(t)
 	// The head state is NOT an epoch end.
 	st := testutil.NewBeaconState()
 	if err := st.SetSlot(params.BeaconConfig().SlotsPerEpoch - 2); err != nil {
@@ -86,13 +84,12 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 
 func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 	hook := logTest.NewGlobal()
-	svc, beaconDB := setupService(t)
+	svc, _ := setupService(t)
 	validatorCount := uint64(100)
 	headState, err := setupState(validatorCount)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer dbutil.TeardownDB(t, beaconDB)
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
@@ -146,8 +143,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
+	svc, _ := setupService(t)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -187,8 +183,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
+	svc, _ := setupService(t)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -223,8 +218,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
+	svc, _ := setupService(t)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -274,7 +268,6 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -326,7 +319,6 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -377,7 +369,6 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc, beaconDB := setupService(t)
-	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
@@ -456,7 +447,7 @@ func setupService(t *testing.T) (*Service, db.Database) {
 		cancel:        cancel,
 		stateNotifier: mockChainService.StateNotifier(),
 		participationFetcher: &mock.ChainService{
-			Balance: &precompute.Balance{PrevEpoch: totalBalance, PrevEpochTargetAttesters: 1}},
+			Balance: &precompute.Balance{ActivePrevEpoch: totalBalance, PrevEpochTargetAttested: 1}},
 	}, beaconDB
 }
 

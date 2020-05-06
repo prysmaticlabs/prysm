@@ -65,7 +65,6 @@ func TestHasIndexedAttestation_NilDB(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	hasIdxAtt, err := db.HasIndexedAttestation(ctx, tests[0].idxAtt)
@@ -81,7 +80,6 @@ func TestSaveIndexedAttestation(t *testing.T) {
 	app := &cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -327,7 +325,6 @@ func TestIndexedAttestationsWithPrefix(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
 			db := setupDB(t, cli.NewContext(&app, set, nil))
-			defer teardownDB(t, db)
 			ctx := context.Background()
 
 			if err := db.SaveIndexedAttestations(ctx, tt.attsInDB); err != nil {
@@ -497,7 +494,6 @@ func TestIndexedAttestationsForTarget(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
 			db := setupDB(t, cli.NewContext(&app, set, nil))
-			defer teardownDB(t, db)
 			ctx := context.Background()
 
 			if err := db.SaveIndexedAttestations(ctx, tt.attsInDB); err != nil {
@@ -691,7 +687,6 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 			app := &cli.App{}
 			set := flag.NewFlagSet("test", 0)
 			db := setupDB(t, cli.NewContext(app, set, nil))
-			defer teardownDB(t, db)
 			ctx := context.Background()
 
 			if err := db.SaveIndexedAttestations(ctx, tt.attsInDB); err != nil {
@@ -731,7 +726,6 @@ func TestHasIndexedAttestation(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -763,7 +757,6 @@ func TestPruneHistoryIndexedAttestation(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range tests {
