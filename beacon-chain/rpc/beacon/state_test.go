@@ -46,8 +46,9 @@ func TestServer_GetBeaconState(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs := &Server{
-		BeaconDB: db,
-		StateGen: gen,
+		BeaconDB:           db,
+		StateGen:           gen,
+		GenesisTimeFetcher: &mock.ChainService{},
 	}
 	if _, err := bs.GetBeaconState(ctx, &pbrpc.BeaconStateRequest{}); err == nil {
 		t.Errorf("Expected error without a query filter, received nil")
