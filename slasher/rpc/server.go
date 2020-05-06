@@ -91,6 +91,9 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 // IsSlashableBlock returns an proposer slashing if the block submitted
 // is a double proposal.
 func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconBlockHeader) (*slashpb.ProposerSlashingResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableBlock")
+	defer span.End()
+
 	gvr, err := ss.beaconClient.GenesisValidatorsRoot(ctx)
 	if err != nil {
 		return nil, err
