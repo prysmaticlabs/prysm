@@ -34,88 +34,205 @@ func TestIsActiveValidator_OK(t *testing.T) {
 	}
 }
 
-func TestIsSlashableValidator_Active(t *testing.T) {
-	activeValidator := &ethpb.Validator{
-		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+func TestIsActiveValidatorUsingTrie_OK(t *testing.T) {
+	tests := []struct {
+		a uint64
+		b bool
+	}{
+		{a: 0, b: false},
+		{a: 10, b: true},
+		{a: 100, b: false},
+		{a: 1000, b: false},
+		{a: 64, b: true},
 	}
-
-	slashableValidator := IsSlashableValidator(activeValidator, 0)
-	if !slashableValidator {
-		t.Errorf("Expected active validator to be slashable, received false")
+	val := &ethpb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
+	beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{val}})
+	if err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestIsSlashableValidator_BeforeWithdrawable(t *testing.T) {
-	beforeWithdrawableValidator := &ethpb.Validator{
-		WithdrawableEpoch: 5,
-	}
-
-	slashableValidator := IsSlashableValidator(beforeWithdrawableValidator, 3)
-	if !slashableValidator {
-		t.Errorf("Expected before withdrawable validator to be slashable, received false")
-	}
-}
-
-func TestIsSlashableValidator_Inactive(t *testing.T) {
-	inactiveValidator := &ethpb.Validator{
-		ActivationEpoch:   5,
-		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-	}
-
-	slashableValidator := IsSlashableValidator(inactiveValidator, 2)
-	if slashableValidator {
-		t.Errorf("Expected inactive validator to not be slashable, received true")
+	for _, test := range tests {
+		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if IsActiveValidatorUsingTrie(readOnlyVal, test.a) != test.b {
+			t.Errorf("IsActiveValidatorUsingTrie(%d) = %v, want = %v",
+				test.a, IsActiveValidatorUsingTrie(readOnlyVal, test.a), test.b)
+		}
 	}
 }
 
-func TestIsSlashableValidator_AfterWithdrawable(t *testing.T) {
-	afterWithdrawableValidator := &ethpb.Validator{
-		WithdrawableEpoch: 3,
+func TestIsSlashableValidator_OK(t *testing.T) {
+	tests := []struct {
+		name      string
+		validator *ethpb.Validator
+		epoch     uint64
+		slashable bool
+	}{
+		{
+			name: "Unset withdrawable, slashable",
+			validator: &ethpb.Validator{
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     0,
+			slashable: true,
+		},
+		{
+			name: "before withdrawable, slashable",
+			validator: &ethpb.Validator{
+				WithdrawableEpoch: 5,
+			},
+			epoch:     3,
+			slashable: true,
+		},
+		{
+			name: "inactive, not slashable",
+			validator: &ethpb.Validator{
+				ActivationEpoch:   5,
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     2,
+			slashable: false,
+		},
+		{
+			name: "after withdrawable, not slashable",
+			validator: &ethpb.Validator{
+				WithdrawableEpoch: 3,
+			},
+			epoch:     3,
+			slashable: false,
+		},
+		{
+			name: "slashed and withdrawable, not slashable",
+			validator: &ethpb.Validator{
+				Slashed:           true,
+				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch: 1,
+			},
+			epoch:     2,
+			slashable: false,
+		},
+		{
+			name: "slashed, not slashable",
+			validator: &ethpb.Validator{
+				Slashed:           true,
+				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     2,
+			slashable: false,
+		},
+		{
+			name: "inactive and slashed, not slashable",
+			validator: &ethpb.Validator{
+				Slashed:           true,
+				ActivationEpoch:   4,
+				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     2,
+			slashable: false,
+		},
 	}
 
-	slashableValidator := IsSlashableValidator(afterWithdrawableValidator, 3)
-	if slashableValidator {
-		t.Errorf("Expected after withdrawable validator to not be slashable, received true")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			slashableValidator := IsSlashableValidator(test.validator, test.epoch)
+			if test.slashable != slashableValidator {
+				t.Errorf("Expected active validator slashable to be %t, received %t", test.slashable, slashableValidator)
+			}
+		})
 	}
 }
 
-func TestIsSlashableValidator_SlashedWithdrawalble(t *testing.T) {
-	slashedValidator := &ethpb.Validator{
-		Slashed:           true,
-		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-		WithdrawableEpoch: 1,
+func TestIsSlashableValidatorUsingTrie_OK(t *testing.T) {
+	tests := []struct {
+		name      string
+		validator *ethpb.Validator
+		epoch     uint64
+		slashable bool
+	}{
+		{
+			name: "Unset withdrawable, slashable",
+			validator: &ethpb.Validator{
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     0,
+			slashable: true,
+		},
+		{
+			name: "before withdrawable, slashable",
+			validator: &ethpb.Validator{
+				WithdrawableEpoch: 5,
+			},
+			epoch:     3,
+			slashable: true,
+		},
+		{
+			name: "inactive, not slashable",
+			validator: &ethpb.Validator{
+				ActivationEpoch:   5,
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     2,
+			slashable: false,
+		},
+		{
+			name: "after withdrawable, not slashable",
+			validator: &ethpb.Validator{
+				WithdrawableEpoch: 3,
+			},
+			epoch:     3,
+			slashable: false,
+		},
+		{
+			name: "slashed and withdrawable, not slashable",
+			validator: &ethpb.Validator{
+				Slashed:           true,
+				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch: 1,
+			},
+			epoch:     2,
+			slashable: false,
+		},
+		{
+			name: "slashed, not slashable",
+			validator: &ethpb.Validator{
+				Slashed:           true,
+				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     2,
+			slashable: false,
+		},
+		{
+			name: "inactive and slashed, not slashable",
+			validator: &ethpb.Validator{
+				Slashed:           true,
+				ActivationEpoch:   4,
+				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			},
+			epoch:     2,
+			slashable: false,
+		},
 	}
 
-	slashableValidator := IsSlashableValidator(slashedValidator, 2)
-	if slashableValidator {
-		t.Errorf("Expected slashable validator to not be slashable, received true")
-	}
-}
-
-func TestIsSlashableValidator_Slashed(t *testing.T) {
-	slashedValidator2 := &ethpb.Validator{
-		Slashed:           true,
-		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-	}
-
-	slashableValidator := IsSlashableValidator(slashedValidator2, 2)
-	if slashableValidator {
-		t.Errorf("Expected slashable validator to not be slashable, received true")
-	}
-}
-
-func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
-	slashedValidator2 := &ethpb.Validator{
-		Slashed:           true,
-		ActivationEpoch:   4,
-		ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-		WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-	}
-
-	slashableValidator := IsSlashableValidator(slashedValidator2, 2)
-	if slashableValidator {
-		t.Errorf("Expected slashable validator to not be slashable, received true")
+	for _, test := range tests {
+		beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{test.validator}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		readOnlyVal, err := beaconState.ValidatorAtIndexReadOnly(0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(test.name, func(t *testing.T) {
+			slashableValidator := IsSlashableValidatorUsingTrie(readOnlyVal, test.epoch)
+			if test.slashable != slashableValidator {
+				t.Errorf("Expected active validator slashable to be %t, received %t", test.slashable, slashableValidator)
+			}
+		})
 	}
 }
 
