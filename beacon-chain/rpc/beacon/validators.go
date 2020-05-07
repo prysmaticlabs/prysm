@@ -991,13 +991,15 @@ func (bs *Server) GetValidatorPerformance(
 		}
 		if idx >= uint64(len(validatorSummary)) {
 			// Not listed in validator summary yet; treat it as missing.
-			missingValidators = append(missingValidators, val.PublicKey)
+			pubKey := val.PublicKey()
+			missingValidators = append(missingValidators, pubKey[:])
 			continue
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
 		if !helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			// Inactive validator; treat it as missing.
-			missingValidators = append(missingValidators, val.PublicKey)
+			pubKey := val.PublicKey()
+			missingValidators = append(missingValidators, pubKey[:])
 			continue
 		}
 
