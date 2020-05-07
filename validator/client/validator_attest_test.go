@@ -83,6 +83,11 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
+	config := &featureconfig.Flags{
+		ProtectAttester: true,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
 	validator, m, finish := setup(t)
 	defer finish()
 	hook := logTest.NewGlobal()
