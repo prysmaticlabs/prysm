@@ -363,11 +363,11 @@ func unslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
 	// Remove the slashed validator indices.
 	for i := 0; i < len(setIndices); i++ {
-		v, err := state.ValidatorAtIndex(setIndices[i])
+		v, err := state.ValidatorAtIndexReadOnly(setIndices[i])
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to look up validator")
 		}
-		if v != nil && v.Slashed {
+		if v != nil && v.Slashed() {
 			setIndices = append(setIndices[:i], setIndices[i+1:]...)
 		}
 	}
@@ -391,11 +391,11 @@ func BaseReward(state *stateTrie.BeaconState, index uint64) (uint64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")
 	}
-	val, err := state.ValidatorAtIndex(index)
+	val, err := state.ValidatorAtIndexReadOnly(index)
 	if err != nil {
 		return 0, err
 	}
-	effectiveBalance := val.EffectiveBalance
+	effectiveBalance := val.EffectiveBalance()
 	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
 		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
 	return baseReward, nil
