@@ -121,11 +121,11 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING:
 		var lastActivatedValidatorIdx uint64
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
-			val, err := headState.ValidatorAtIndex(uint64(j))
+			val, err := headState.ValidatorAtIndexReadOnly(uint64(j))
 			if err != nil {
 				return resp
 			}
-			if helpers.IsActiveValidator(val, helpers.CurrentEpoch(headState)) {
+			if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(headState)) {
 				lastActivatedValidatorIdx = uint64(j)
 				break
 			}
