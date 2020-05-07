@@ -429,7 +429,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	}, nil
 }
 
-// ValidatorAtIndexReadOnly is the validator at the provided index.This method
+// ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, error) {
 	if !b.HasInnerState() {

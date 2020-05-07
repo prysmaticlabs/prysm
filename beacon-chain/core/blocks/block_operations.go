@@ -212,7 +212,7 @@ func ProcessBlockHeader(
 
 // VerifyBlockHeaderSignature verifies the proposer signature of a beacon block.
 func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) error {
-	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
+	proposer, err := beaconState.ValidatorAtIndexReadOnly(block.Block.ProposerIndex)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,8 @@ func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, block *ethpb
 	if err != nil {
 		return err
 	}
-	return helpers.VerifyBlockSigningRoot(block.Block, proposer.PublicKey, block.Signature, domain)
+	proposerPubKey := proposer.PublicKey()
+	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey[:], block.Signature, domain)
 }
 
 // ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
@@ -278,11 +279,11 @@ func ProcessBlockHeaderNoVerify(
 			block.ParentRoot, parentRoot)
 	}
 
-	proposer, err := beaconState.ValidatorAtIndex(idx)
+	proposer, err := beaconState.ValidatorAtIndexReadOnly(idx)
 	if err != nil {
 		return nil, err
 	}
-	if proposer.Slashed {
+	if proposer.Slashed() {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
