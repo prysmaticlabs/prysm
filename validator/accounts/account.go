@@ -17,7 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var log = logrus.WithField("prefix", "accounts")
@@ -137,27 +139,6 @@ func Exists(keystorePath string) (bool, error) {
 
 // CreateValidatorAccount creates a validator account from the given cli context.
 func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
-	if passphrase == "" {
-		log.Info("Creating a new validator account for eth2")
-		enteredPassphrase, err := cmd.EnterPassword()
-		if err != nil {
-			return path, enteredPassphrase, err
-		}
-		passphrase = enteredPassphrase
-	}
-
-	if path == "" {
-		path = DefaultValidatorDir()
-		log.Infof("Please specify a keystore path to save your private keys (default: %q):", path)
-		reader := bufio.NewReader(os.Stdin)
-		text, err := reader.ReadString('\n')
-		if err != nil {
-			return path, passphrase, err
-		}
-		if text = strings.Replace(text, "\n", "", -1); text != "" {
-			path = text
-		}
-	}
 	// Forces user to create directory if using non-default path.
 	if path != DefaultValidatorDir() {
 		exists, err := Exists(path)
@@ -172,6 +153,18 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		return "", "", errors.Wrapf(err, "could not initialize validator account")
 	}
 	return path, passphrase, nil
+}
+
+// PrintPublicAndPrivateKeys uses the passed in path and prints out the public and private keys in that directory.
+func PrintPublicAndPrivateKeys(path string, passphrase string) error {
+	keystores, err := DecryptKeysFromKeystore(path, passphrase)
+	if err != nil {
+		return errors.Wrapf(err, "failed to decrypt keystore keys at path %s", path)
+	}
+	for _, v := range keystores {
+		fmt.Printf("Public key: %#x private key: %#x\n", v.PublicKey.Marshal(), v.SecretKey.Marshal())
+	}
+	return nil
 }
 
 // DefaultValidatorDir returns OS-specific default keystore directory.
@@ -189,6 +182,36 @@ func DefaultValidatorDir() string {
 	}
 	// As we cannot guess a stable location, return empty and handle later
 	return ""
+}
+
+// HandleEmptyFlags checks what the set flags are and allows the user to manually enter them if they're empty.
+func HandleEmptyFlags(cliCtx *cli.Context, confirmPassword bool) (string, string, error) {
+	path := cliCtx.String(flags.KeystorePathFlag.Name)
+	passphrase := cliCtx.String(flags.PasswordFlag.Name)
+
+	if path == "" {
+		path = DefaultValidatorDir()
+		log.Infof("Please specify the keystore path for your private keys (default: %q):", path)
+		reader := bufio.NewReader(os.Stdin)
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			return path, passphrase, errors.Wrap(err, "could not read input path")
+		}
+		if text = strings.Replace(text, "\n", "", -1); text != "" {
+			path = text
+		}
+	}
+
+	if passphrase == "" {
+		log.Info("Please enter the password for your private keys")
+		enteredPassphrase, err := cmd.EnterPassword(confirmPassword)
+		if err != nil {
+			return path, enteredPassphrase, errors.Wrap(err, "could not read entered passphrase")
+		}
+		passphrase = enteredPassphrase
+	}
+
+	return path, passphrase, nil
 }
 
 // homeDir returns home directory path.

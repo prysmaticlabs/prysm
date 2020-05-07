@@ -183,7 +183,7 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 	emitAccountMetrics := s.cliCtx.Bool(flags.AccountMetricsFlag.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
 	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := s.cliCtx.Int(flags.GrpcMaxCallRecvMsgSizeFlag.Name)
+	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:                   endpoint,
