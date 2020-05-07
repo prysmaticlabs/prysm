@@ -447,12 +447,12 @@ func VerifyProposerSlashing(
 	if proto.Equal(slashing.Header_1, slashing.Header_2) {
 		return errors.New("expected slashing headers to differ")
 	}
-	proposer, err := beaconState.ValidatorAtIndex(slashing.Header_1.Header.ProposerIndex)
+	proposer, err := beaconState.ValidatorAtIndexReadOnly(slashing.Header_1.Header.ProposerIndex)
 	if err != nil {
 		return err
 	}
-	if !helpers.IsSlashableValidator(proposer, helpers.SlotToEpoch(beaconState.Slot())) {
-		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
+	if !helpers.IsSlashableValidatorUsingTrie(proposer, helpers.SlotToEpoch(beaconState.Slot())) {
+		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey())
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
 	domain, err := helpers.Domain(beaconState.Fork(), helpers.SlotToEpoch(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
@@ -461,7 +461,8 @@ func VerifyProposerSlashing(
 	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
-		if err := helpers.VerifySigningRoot(header.Header, proposer.PublicKey, header.Signature, domain); err != nil {
+		proposerPubKey := proposer.PublicKey()
+		if err := helpers.VerifySigningRoot(header.Header, proposerPubKey[:], header.Signature, domain); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}
 	}
@@ -503,13 +504,13 @@ func ProcessAttesterSlashings(
 		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 		var err error
 		var slashedAny bool
-		var val *ethpb.Validator
+		var val *stateTrie.ReadOnlyValidator
 		for _, validatorIndex := range slashableIndices {
-			val, err = beaconState.ValidatorAtIndex(validatorIndex)
+			val, err = beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 			if err != nil {
 				return nil, err
 			}
-			if helpers.IsSlashableValidator(val, currentEpoch) {
+			if helpers.IsSlashableValidatorUsingTrie(val, currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
@@ -1055,7 +1056,7 @@ func ProcessVoluntaryExits(
 				beaconState.NumValidators(),
 			)
 		}
-		val, err := beaconState.ValidatorAtIndex(exit.Exit.ValidatorIndex)
+		val, err := beaconState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -1110,7 +1111,7 @@ func ProcessVoluntaryExitsNoVerify(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
+func VerifyExit(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit, genesisRoot []byte) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}
@@ -1118,30 +1119,31 @@ func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, s
 	exit := signed.Exit
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 	// Verify the validator is active.
-	if !helpers.IsActiveValidator(validator, currentEpoch) {
+	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
 		return errors.New("non-active validator cannot exit")
 	}
 	// Verify the validator has not yet exited.
-	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
+	if validator.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
+		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch())
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
 		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
 	}
 	// Verify the validator has been active long enough.
-	if currentEpoch < validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod {
+	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().PersistentCommitteePeriod {
 		return fmt.Errorf(
 			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
-			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
+			validator.ActivationEpoch()+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
 	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
 	if err != nil {
 		return err
 	}
-	if err := helpers.VerifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
+	valPubKey := validator.PublicKey()
+	if err := helpers.VerifySigningRoot(exit, valPubKey[:], signed.Signature, domain); err != nil {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
