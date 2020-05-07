@@ -3,17 +3,13 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -23,30 +19,9 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
-
-type testCache struct {
-	sync.RWMutex
-	rootCache       map[uint64][32]byte
-	parentSlotCache map[uint64]uint64
-}
-
-var cache = &testCache{}
-
-type peerData struct {
-	blocks         []uint64 // slots that peer has blocks
-	finalizedEpoch uint64
-	headSlot       uint64
-	failureSlots   []uint64 // slots at which the peer will return an error
-	forkedPeer     bool
-}
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-}
 
 func TestConstants(t *testing.T) {
 	if params.BeaconConfig().MaxPeersToSync*blockBatchSize > 1000 {
@@ -406,71 +381,5 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			HeadRoot:       []byte("head_root"),
 			HeadSlot:       datum.headSlot,
 		})
-	}
-}
-
-// makeGenesisTime where now is the current slot.
-func makeGenesisTime(currentSlot uint64) time.Time {
-	return roughtime.Now().Add(-1 * time.Second * time.Duration(currentSlot) * time.Duration(params.BeaconConfig().SecondsPerSlot))
-}
-
-// sanity test on helper function
-func TestMakeGenesisTime(t *testing.T) {
-	currentSlot := uint64(64)
-	gt := makeGenesisTime(currentSlot)
-	if helpers.SlotsSince(gt) != currentSlot {
-		t.Fatalf("Wanted %d, got %d", currentSlot, helpers.SlotsSince(gt))
-	}
-}
-
-// helper function for sequences of block slots
-func makeSequence(start, end uint64) []uint64 {
-	if end < start {
-		panic("cannot make sequence where end is before start")
-	}
-	seq := make([]uint64, 0, end-start+1)
-	for i := start; i <= end; i++ {
-		seq = append(seq, i)
-	}
-	return seq
-}
-
-func (c *testCache) initializeRootCache(reqSlots []uint64, t *testing.T) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.rootCache = make(map[uint64][32]byte)
-	c.parentSlotCache = make(map[uint64]uint64)
-	parentSlot := uint64(0)
-	genesisBlock := &eth.BeaconBlock{
-		Slot: 0,
-	}
-	genesisRoot, err := stateutil.BlockRoot(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	c.rootCache[0] = genesisRoot
-	parentRoot := genesisRoot
-	for _, slot := range reqSlots {
-		currentBlock := &eth.BeaconBlock{
-			Slot:       slot,
-			ParentRoot: parentRoot[:],
-		}
-		parentRoot, err = stateutil.BlockRoot(currentBlock)
-		if err != nil {
-			t.Fatal(err)
-		}
-		c.rootCache[slot] = parentRoot
-		c.parentSlotCache[slot] = parentSlot
-		parentSlot = slot
-	}
-}
-
-// sanity test on helper function
-func TestMakeSequence(t *testing.T) {
-	got := makeSequence(3, 5)
-	want := []uint64{3, 4, 5}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("Wanted %v, got %v", want, got)
 	}
 }
