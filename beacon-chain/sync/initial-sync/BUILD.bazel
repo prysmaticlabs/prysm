@@ -48,6 +48,7 @@ go_test(
         "blocks_fetcher_test.go",
         "blocks_queue_test.go",
         "fsm_test.go",
+        "initial_sync_test.go",
         "round_robin_test.go",
     ],
     embed = [":go_default_library"],
