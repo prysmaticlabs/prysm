@@ -1901,9 +1901,9 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	if err := headState.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	publicKey1 := bytesutil.ToBytes32([]byte{1})
-	publicKey2 := bytesutil.ToBytes32([]byte{2})
-	publicKey3 := bytesutil.ToBytes32([]byte{3})
+	publicKey1 := bytesutil.ToBytes48([]byte{1})
+	publicKey2 := bytesutil.ToBytes48([]byte{2})
+	publicKey3 := bytesutil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],
@@ -1994,9 +1994,9 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	if err := headState.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	publicKey1 := bytesutil.ToBytes32([]byte{1})
-	publicKey2 := bytesutil.ToBytes32([]byte{2})
-	publicKey3 := bytesutil.ToBytes32([]byte{3})
+	publicKey1 := bytesutil.ToBytes48([]byte{1})
+	publicKey2 := bytesutil.ToBytes48([]byte{2})
+	publicKey3 := bytesutil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],
@@ -2089,9 +2089,9 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	if err := headState.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	publicKey1 := bytesutil.ToBytes32([]byte{1})
-	publicKey2 := bytesutil.ToBytes32([]byte{2})
-	publicKey3 := bytesutil.ToBytes32([]byte{3})
+	publicKey1 := bytesutil.ToBytes48([]byte{1})
+	publicKey2 := bytesutil.ToBytes48([]byte{2})
+	publicKey3 := bytesutil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],
