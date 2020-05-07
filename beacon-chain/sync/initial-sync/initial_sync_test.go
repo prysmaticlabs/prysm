@@ -40,12 +40,9 @@ type peerData struct {
 	forkedPeer     bool
 }
 
-func init() {
+func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-}
-
-func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
