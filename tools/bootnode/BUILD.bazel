@@ -47,7 +47,6 @@ go_image(
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/bootnode",
-    pure = "on",
     race = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
