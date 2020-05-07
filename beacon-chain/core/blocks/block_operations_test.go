@@ -549,7 +549,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	}
 	want := fmt.Sprintf(
 		"validator with key %#x is not slashable",
-		beaconState.Validators()[0].PublicKey,
+		bytesutil.ToBytes48(beaconState.Validators()[0].PublicKey),
 	)
 
 	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)
