@@ -72,7 +72,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	}
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
-	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
+	// Keep the slice sorted on insertion in order to avoid costly sorting on retrieval.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
 	newDeposits := append([]*dbpb.DepositContainer{{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}}, dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
@@ -162,7 +162,10 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
-	for _, ctnr := range dc.deposits {
+	// Search the list backwards since this function is only used for
+	// pending activation validators and the newest deposits are always at the end.
+	for i := len(dc.deposits) - 1; i > 0; i-- {
+		ctnr := dc.deposits[i]
 		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
 			deposit = ctnr.Deposit
 			blockNum = big.NewInt(int64(ctnr.Eth1BlockHeight))
