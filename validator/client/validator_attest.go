@@ -71,6 +71,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.Debug("Empty committee for validator duty, not attesting")
 		return
 	}
+	v.attesterHistoryByPubKeyLock.RLock()
+	attesterHistory := v.attesterHistoryByPubKey[pubKey]
+	v.attesterHistoryByPubKeyLock.RUnlock()
 
 	v.waitToSlotOneThird(ctx, slot)
 
@@ -87,9 +90,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	v.attesterHistoryByPubKeyLock.RLock()
-	attesterHistory := v.attesterHistoryByPubKey[pubKey]
-	v.attesterHistoryByPubKeyLock.RUnlock()
 	if featureconfig.Get().ProtectAttester {
 		if isNewAttSlashable(attesterHistory, data.Source.Epoch, data.Target.Epoch) {
 			log.WithFields(logrus.Fields{
