@@ -981,6 +981,7 @@ func (bs *Server) GetValidatorPerformance(
 	sort.Slice(validatorIndices, func(i, j int) bool {
 		return validatorIndices[i] < validatorIndices[j]
 	})
+	
 	// Append performance summaries.
 	// Also track missing validators using public keys.
 	for _, idx := range validatorIndices {

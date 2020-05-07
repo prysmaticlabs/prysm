@@ -1948,7 +1948,6 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey2[:], publicKey3[:]},
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
