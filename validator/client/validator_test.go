@@ -697,7 +697,6 @@ func TestUpdateProtections_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
 	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
-	defer db2.TeardownDB(t, db)
 
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
@@ -769,7 +768,6 @@ func TestSaveProtections_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
 	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
-	defer db2.TeardownDB(t, db)
 
 	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
 	if err != nil {
