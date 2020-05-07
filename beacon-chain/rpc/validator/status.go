@@ -85,6 +85,14 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		return resp
 	}
 	resp.Status = vStatus
+	if err != errPubkeyDoesNotExist {
+		val, err := headState.ValidatorAtIndexReadOnly(idx)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return resp
+		}
+		resp.ActivationEpoch = val.ActivationEpoch()
+	}
 
 	switch resp.Status {
 	// Unknown status means the validator has not been put into the state yet.
@@ -149,7 +157,7 @@ func (vs *Server) retrieveStatusFromState(
 }
 
 func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *stateTrie.BeaconState) ethpb.ValidatorStatus {
-	validator, err := beaconState.ValidatorAtIndex(validatorIdx)
+	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIdx)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
@@ -159,17 +167,17 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *stateTrie.B
 	if validator == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
-	if currentEpoch < validator.ActivationEligibilityEpoch {
+	if currentEpoch < validator.ActivationEligibilityEpoch() {
 		return ethpb.ValidatorStatus_DEPOSITED
 	}
-	if currentEpoch < validator.ActivationEpoch {
+	if currentEpoch < validator.ActivationEpoch() {
 		return ethpb.ValidatorStatus_PENDING
 	}
-	if validator.ExitEpoch == farFutureEpoch {
+	if validator.ExitEpoch() == farFutureEpoch {
 		return ethpb.ValidatorStatus_ACTIVE
 	}
-	if currentEpoch < validator.ExitEpoch {
-		if validator.Slashed {
+	if currentEpoch < validator.ExitEpoch() {
+		if validator.Slashed() {
 			return ethpb.ValidatorStatus_SLASHING
 		}
 		return ethpb.ValidatorStatus_EXITING
