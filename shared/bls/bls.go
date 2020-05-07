@@ -183,13 +183,14 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 // provide a proof-of-knowledge of the public key.
 //
 // In IETF draft BLS specification:
-// FastAggregateVerify(PK_1, ..., PK_n, message, signature) -> VALID
-//      or INVALID: a verification algorithm for the aggregate of multiple
-//      signatures on the same message.  This function is faster than
-//      AggregateVerify.
+// AggregateVerify((PK_1, message_1), ..., (PK_n, message_n),
+//      signature) -> VALID or INVALID: an aggregate verification
+//      algorithm that outputs VALID if signature is a valid aggregated
+//      signature for a collection of public keys and messages, and
+//      outputs INVALID otherwise.
 //
 // In ETH2.0 specification:
-// def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
+// def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> boo
 func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -238,11 +239,6 @@ func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool
 // NewAggregateSignature creates a blank aggregate signature.
 func NewAggregateSignature() *Signature {
 	return &Signature{s: bls12.HashAndMapToSignature([]byte{'m', 'o', 'c', 'k'})}
-}
-
-// NewAggregatePubkey creates a blank public key.
-func NewAggregatePubkey() *PublicKey {
-	return &PublicKey{p: RandKey().PublicKey().p}
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
