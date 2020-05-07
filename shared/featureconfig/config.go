@@ -61,7 +61,8 @@ type Flags struct {
 	DisableForkChoice bool
 
 	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
-	BroadcastSlashings bool
+	BroadcastSlashings         bool
+	DisableHistoricalDetection bool
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -258,6 +259,13 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
+	cfg := &Flags{}
+	cfg = configureConfig(ctx, cfg)
+	if ctx.Bool(disableHistoricalDetectionFlag.Name) {
+		log.Warn("Disabling historical attestation detection")
+		cfg.DisableHistoricalDetection = true
+	}
+	Init(cfg)
 }
 
 // ConfigureValidator sets the global config based

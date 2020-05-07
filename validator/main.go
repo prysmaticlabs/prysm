@@ -47,7 +47,6 @@ var appFlags = []cli.Flag{
 	flags.UnencryptedKeysFlag,
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
-	flags.GrpcMaxCallRecvMsgSizeFlag,
 	flags.GrpcRetriesFlag,
 	flags.GrpcHeadersFlag,
 	flags.KeyManager,
@@ -72,6 +71,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFileName,
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
+	cmd.GrpcMaxCallRecvMsgSizeFlag,
 }
 
 func init() {
@@ -110,7 +110,7 @@ contract in order to activate the validator client`,
 							params.UseSchlesiTestnet()
 						}
 
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx)
+						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -128,7 +128,7 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx)
+						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
