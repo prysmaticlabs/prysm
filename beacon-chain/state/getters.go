@@ -438,13 +438,13 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, 
 	if b.state.Validators == nil {
 		return &ReadOnlyValidator{}, nil
 	}
+	if uint64(len(b.state.Validators)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.Validators) <= int(idx) {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
 	return &ReadOnlyValidator{b.state.Validators[idx]}, nil
 }
 
