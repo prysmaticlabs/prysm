@@ -11,7 +11,6 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -701,34 +700,4 @@ func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
 			t.Errorf("unexpected slot, want: %v, got: %v", expectedSlot, slot)
 		}
 	}
-}
-
-func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
-	cache.initializeRootCache(blocks, t)
-	beaconDB := dbtest.SetupDB(t)
-
-	p := p2pt.NewTestP2P(t)
-	connectPeers(t, p, peers, p.Peers())
-	cache.RLock()
-	genesisRoot := cache.rootCache[0]
-	cache.RUnlock()
-
-	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
-		Block: &eth.BeaconBlock{
-			Slot: 0,
-		}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return &mock.ChainService{
-		State: st,
-		Root:  genesisRoot[:],
-		DB:    beaconDB,
-	}, p, beaconDB
 }
