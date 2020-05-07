@@ -410,7 +410,7 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 func TestFuzzVerifyExit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ve := &eth.SignedVoluntaryExit{}
-	val := &eth.Validator{}
+	val := &beaconstate.ReadOnlyValidator{}
 	fork := &pb.Fork{}
 	var slot uint64
 
