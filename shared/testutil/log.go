@@ -45,10 +45,10 @@ func assertLogs(t *testing.T, hook *test.Hook, want string, flag bool) {
 // WaitForLog waits for the desired string to appear the logs within a
 // time period. If it does not appear within the limit, the function
 // will throw an error.
-func WaitForLog(t *testing.T, hook *test.Hook, want string, durationCount int) {
+func WaitForLog(t *testing.T, hook *test.Hook, want string, wait time.Duration) {
 	t.Logf("waiting for: %s", want)
 	match := false
-	timer := time.After(time.Duration(durationCount) * time.Second)
+	timer := time.After(time.Duration(wait) * time.Second)
 
 	for {
 		select {
