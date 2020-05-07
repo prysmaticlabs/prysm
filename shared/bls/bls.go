@@ -4,14 +4,12 @@
 package bls
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -19,7 +17,7 @@ func init() {
 	if err := bls12.Init(bls12.BLS12_381); err != nil {
 		panic(err)
 	}
-	if err := bls12.SetETHmode(1); err != nil {
+	if err := bls12.SetETHmode(bls12.EthModeDraft05); err != nil {
 		panic(err)
 	}
 }
@@ -36,9 +34,6 @@ var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
-
-// The size would be a combination of both the message(32 bytes) and domain(8 bytes) size.
-const concatMsgDomainSize = 40
 
 // Signature used in the BLS signature scheme.
 type Signature struct {
@@ -83,8 +78,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if len(pub) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
-	cv, ok := pubkeyCache.Get(string(pub))
-	if ok {
+	if cv, ok := pubkeyCache.Get(string(pub)); ok {
 		return cv.(*PublicKey).Copy()
 	}
 	pubKey := &bls12.PublicKey{}
@@ -92,13 +86,13 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	pubkeyObj := &PublicKey{p: pubKey}
-	copiedKey, err := pubkeyObj.Copy()
+	pubKeyObj := &PublicKey{p: pubKey}
+	copiedKey, err := pubKeyObj.Copy()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not copy pubkey")
+		return nil, errors.Wrap(err, "could not copy public key")
 	}
 	pubkeyCache.Set(string(pub), copiedKey, 48)
-	return pubkeyObj, nil
+	return pubKeyObj, nil
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
@@ -122,14 +116,14 @@ func (s *SecretKey) PublicKey() *PublicKey {
 	return &PublicKey{p: s.p.GetPublicKey()}
 }
 
-func concatMsgAndDomain(msg []byte, domain uint64) []byte {
-	b := [concatMsgDomainSize]byte{}
-	binary.LittleEndian.PutUint64(b[32:], domain)
-	copy(b[0:32], msg)
-	return b[:]
-}
-
 // Sign a message using a secret key - in a beacon/validator client.
+//
+// In IETF draft BLS specification:
+// Sign(SK, message) -> signature: a signing algorithm that generates
+//      a deterministic signature given a secret key SK and a message.
+//
+// In ETH2.0 specification:
+// def Sign(SK: int, message: Bytes) -> BLSSignature
 func (s *SecretKey) Sign(msg []byte) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
@@ -169,6 +163,14 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 }
 
 // Verify a bls signature given a public key, a message.
+//
+// In IETF draft BLS specification:
+// Verify(PK, message, signature) -> VALID or INVALID: a verification
+//      algorithm that outputs VALID if signature is a valid signature of
+//      message under public key PK, and INVALID otherwise.
+//
+// In ETH2.0 specification:
+// def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -176,32 +178,19 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	return s.s.VerifyByte(pub.p, msg)
 }
 
-// VerifyAggregate verifies each public key against its respective message.
-// This is vulnerable to rogue public-key attack. Each user must
-// provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
-	if featureconfig.Get().SkipBLSVerify {
-		return true
-	}
-	size := len(pubKeys)
-	if size == 0 {
-		return false
-	}
-	if size != len(msg) {
-		return false
-	}
-	hashes := make([][]byte, 0, len(msg))
-	var rawKeys []bls12.PublicKey
-	for i := 0; i < size; i++ {
-		hashes = append(hashes, msg[i][:])
-		rawKeys = append(rawKeys, *pubKeys[i].p)
-	}
-	return s.s.VerifyAggregateHashes(rawKeys, hashes)
-}
-
 // AggregateVerify verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
+//
+// In IETF draft BLS specification:
+// AggregateVerify((PK_1, message_1), ..., (PK_n, message_n),
+//      signature) -> VALID or INVALID: an aggregate verification
+//      algorithm that outputs VALID if signature is a valid aggregated
+//      signature for a collection of public keys and messages, and
+//      outputs INVALID otherwise.
+//
+// In ETH2.0 specification:
+// def AggregateVerify(pairs: Sequence[PK: BLSPubkey, message: Bytes], signature: BLSSignature) -> boo
 func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -222,7 +211,16 @@ func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool 
 	return s.s.AggregateVerify(rawKeys, msgSlices)
 }
 
-// FastAggregateVerify verifies all the provided pubkeys with their aggregated signature.
+// FastAggregateVerify verifies all the provided public keys with their aggregated signature.
+//
+// In IETF draft BLS specification:
+// FastAggregateVerify(PK_1, ..., PK_n, message, signature) -> VALID
+//      or INVALID: a verification algorithm for the aggregate of multiple
+//      signatures on the same message.  This function is faster than
+//      AggregateVerify.
+//
+// In ETH2.0 specification:
+// def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
@@ -243,11 +241,6 @@ func NewAggregateSignature() *Signature {
 	return &Signature{s: bls12.HashAndMapToSignature([]byte{'m', 'o', 'c', 'k'})}
 }
 
-// NewAggregatePubkey creates a blank public key.
-func NewAggregatePubkey() *PublicKey {
-	return &PublicKey{p: RandKey().PublicKey().p}
-}
-
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []*Signature) *Signature {
 	if len(sigs) == 0 {
@@ -265,6 +258,19 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 	return &Signature{s: &signature}
 }
 
+// Aggregate is an alias for AggregateSignatures, defined to conform to BLS specification.
+//
+// In IETF draft BLS specification:
+// Aggregate(signature_1, ..., signature_n) -> signature: an
+//      aggregation algorithm that compresses a collection of signatures
+//      into a single signature.
+//
+// In ETH2.0 specification:
+// def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
+func Aggregate(sigs []*Signature) *Signature {
+	return AggregateSignatures(sigs)
+}
+
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
 	if featureconfig.Get().SkipBLSVerify {
@@ -272,22 +278,4 @@ func (s *Signature) Marshal() []byte {
 	}
 
 	return s.s.Serialize()
-}
-
-// HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element
-func HashWithDomain(messageHash [32]byte, domain [8]byte) []byte {
-	xReBytes := [41]byte{}
-	xImBytes := [41]byte{}
-	xBytes := make([]byte, 96)
-	copy(xReBytes[:32], messageHash[:])
-	copy(xReBytes[32:40], domain[:])
-	copy(xReBytes[40:41], []byte{0x01})
-	copy(xImBytes[:32], messageHash[:])
-	copy(xImBytes[32:40], domain[:])
-	copy(xImBytes[40:41], []byte{0x02})
-	hashedxImBytes := hashutil.Hash(xImBytes[:])
-	copy(xBytes[16:48], hashedxImBytes[:])
-	hashedxReBytes := hashutil.Hash(xReBytes[:])
-	copy(xBytes[64:], hashedxReBytes[:])
-	return xBytes
 }
