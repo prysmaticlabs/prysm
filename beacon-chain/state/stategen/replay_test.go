@@ -534,6 +534,79 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	}
 }
 
+func TestArchivedRoot_CanGet(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	r := [32]byte{'a'}
+	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+		t.Fatal(err)
+	}
+	got := service.archivedRoot(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	if r != got {
+		t.Error("Did not get wanted root")
+	}
+}
+
+func TestArchivedState_CanGet(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	r := [32]byte{'a'}
+	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := db.SaveState(ctx, beaconState, r); err != nil {
+		t.Fatal(err)
+	}
+	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not get wanted state")
+	}
+}
+
+func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	service := New(db, cache.NewStateSummaryCache())
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1); err != nil {
+		t.Fatal(err)
+	}
+	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Error("Did not receive correct processed state")
+	}
+}
+
+func TestProcessStateUpToSlot_CanProcess(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	service := New(db, cache.NewStateSummaryCache())
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+
+	s, err := service.processStateUpTo(ctx, beaconState, params.BeaconConfig().SlotsPerEpoch+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Error("Did not receive correct processed state")
+	}
+}
+
 // tree1 constructs the following tree:
 // B0 - B1 - - B3 -- B5
 //        \- B2 -- B4 -- B6 ----- B8

@@ -53,7 +53,7 @@ func TestNewValidatorAccount_CreateValidatorAccount(t *testing.T) {
 	}
 }
 
-func TestHandleEmptyFlags_FlagsSetF(t *testing.T) {
+func TestHandleEmptyFlags_FlagsSet(t *testing.T) {
 	passedPath := "~/path/given"
 	passedPassword := "password"
 
@@ -62,7 +62,7 @@ func TestHandleEmptyFlags_FlagsSetF(t *testing.T) {
 	set.String(flags.KeystorePathFlag.Name, passedPath, "set keystore path")
 	set.String(flags.PasswordFlag.Name, passedPassword, "set keystore password")
 	ctx := cli.NewContext(app, set, nil)
-	path, passphrase, err := HandleEmptyFlags(ctx)
+	path, passphrase, err := HandleEmptyFlags(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}

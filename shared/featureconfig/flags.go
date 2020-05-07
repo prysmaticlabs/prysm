@@ -146,6 +146,10 @@ var (
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
 	}
+	disableHistoricalDetectionFlag = &cli.BoolFlag{
+		Name:  "disable-historical-detection",
+		Usage: "Disables historical attestation detection for the slasher",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -362,7 +366,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
-var SlasherFlags = append(deprecatedFlags, []cli.Flag{}...)
+var SlasherFlags = append(deprecatedFlags, []cli.Flag{
+	disableHistoricalDetectionFlag,
+}...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{

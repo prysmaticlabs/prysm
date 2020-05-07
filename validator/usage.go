@@ -57,6 +57,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.LogFileName,
 			cmd.ConfigFileFlag,
 			cmd.ChainConfigFileFlag,
+			cmd.GrpcMaxCallRecvMsgSizeFlag,
 		},
 	},
 	{
@@ -82,7 +83,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
-			flags.GrpcMaxCallRecvMsgSizeFlag,
 			flags.GrpcRetriesFlag,
 			flags.GrpcHeadersFlag,
 			flags.AccountMetricsFlag,
