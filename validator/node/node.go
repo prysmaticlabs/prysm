@@ -36,25 +36,25 @@ var log = logrus.WithField("prefix", "node")
 // the entire lifecycle of services attached to it participating in
 // Ethereum Serenity.
 type ValidatorClient struct {
-	ctx      *cli.Context
+	cliCtx   *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
 	lock     sync.RWMutex
 	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
 // NewValidatorClient creates a new, Ethereum Serenity validator client.
-func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
+func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
-		ctx.String(cmd.TracingProcessNameFlag.Name),
-		ctx.String(cmd.TracingEndpointFlag.Name),
-		ctx.Float64(cmd.TraceSampleFractionFlag.Name),
-		ctx.Bool(cmd.EnableTracingFlag.Name),
+		cliCtx.String(cmd.TracingProcessNameFlag.Name),
+		cliCtx.String(cmd.TracingEndpointFlag.Name),
+		cliCtx.Float64(cmd.TraceSampleFractionFlag.Name),
+		cliCtx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
 	}
 
-	verbosity := ctx.String(cmd.VerbosityFlag.Name)
+	verbosity := cliCtx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
 		return nil, err
@@ -63,19 +63,19 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
-		ctx:      ctx,
+		cliCtx:   cliCtx,
 		services: registry,
 		stop:     make(chan struct{}),
 	}
 
-	if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := ctx.String(cmd.ChainConfigFileFlag.Name)
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
-	featureconfig.ConfigureValidator(ctx)
+	featureconfig.ConfigureValidator(cliCtx)
 
-	keyManager, err := selectKeyManager(ctx)
+	keyManager, err := selectKeyManager(cliCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -94,9 +94,9 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 
-	clearFlag := ctx.Bool(cmd.ClearDB.Name)
-	forceClearFlag := ctx.Bool(cmd.ForceClearDB.Name)
-	dataDir := ctx.String(cmd.DataDirFlag.Name)
+	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	if clearFlag || forceClearFlag {
 		pubkeys, err := keyManager.FetchValidatingKeys()
 		if err != nil {
@@ -111,11 +111,11 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
+	if err := ValidatorClient.registerPrometheusService(); err != nil {
 		return nil, err
 	}
 
-	if err := ValidatorClient.registerClientService(ctx, keyManager); err != nil {
+	if err := ValidatorClient.registerClientService(keyManager); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +141,7 @@ func (s *ValidatorClient) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
-		debug.Exit(s.ctx) // Ensure trace and CPU profile data are flushed.
+		debug.Exit(s.cliCtx) // Ensure trace and CPU profile data are flushed.
 		go s.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
@@ -167,24 +167,24 @@ func (s *ValidatorClient) Close() {
 	close(s.stop)
 }
 
-func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
+func (s *ValidatorClient) registerPrometheusService() error {
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.Int64(flags.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", s.cliCtx.Int64(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager keymanager.KeyManager) error {
-	endpoint := ctx.String(flags.BeaconRPCProviderFlag.Name)
-	dataDir := ctx.String(cmd.DataDirFlag.Name)
-	logValidatorBalances := !ctx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := ctx.Bool(flags.AccountMetricsFlag.Name)
-	cert := ctx.String(flags.CertFlag.Name)
-	graffiti := ctx.String(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := ctx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := ctx.Uint(flags.GrpcRetriesFlag.Name)
+func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager) error {
+	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
+	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
+	emitAccountMetrics := s.cliCtx.Bool(flags.AccountMetricsFlag.Name)
+	cert := s.cliCtx.String(flags.CertFlag.Name)
+	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
+	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -195,7 +195,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 		GraffitiFlag:               graffiti,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
-		GrpcHeadersFlag:            ctx.String(flags.GrpcHeadersFlag.Name),
+		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
