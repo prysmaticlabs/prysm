@@ -81,23 +81,3 @@ go_test(
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
-
-# gazelle:exclude blocks_fetcher_benchmark_test.go
-go_test(
-    name = "go_benchmark_test",
-    size = "small",
-    srcs = ["blocks_fetcher_benchmark_test.go"],
-    args = [
-        "-test.bench=.",
-        "-test.benchmem",
-        "-test.v",
-    ],
-    local = True,
-    tags = [
-        "benchmark",
-        "manual",
-        "no-cache",
-    ],
-    deps = [
-    ],
-)
