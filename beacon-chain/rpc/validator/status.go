@@ -80,19 +80,11 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
 	vStatus, idx, err := vs.retrieveStatusFromState(ctx, pubKey, headState)
-	if err != nil && err != errPubkeyDoesNotExist {
+	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return resp
 	}
 	resp.Status = vStatus
-	if err != errPubkeyDoesNotExist {
-		val, err := headState.ValidatorAtIndex(idx)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return resp
-		}
-		resp.ActivationEpoch = val.ActivationEpoch
-	}
 
 	switch resp.Status {
 	// Unknown status means the validator has not been put into the state yet.
