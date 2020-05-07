@@ -12,8 +12,8 @@ func BenchmarkPairing(b *testing.B) {
 	if err := bls2.Init(bls2.BLS12_381); err != nil {
 		b.Fatal(err)
 	}
-	if err := bls2.SetETHmode(1); err != nil {
-		b.Fatal(err)
+	if err := bls2.SetETHmode(bls2.EthModeDraft05); err != nil {
+		panic(err)
 	}
 	newGt := &bls2.GT{}
 	newG1 := &bls2.G1{}
