@@ -985,7 +985,7 @@ func (bs *Server) GetValidatorPerformance(
 	// Append performance summaries.
 	// Also track missing validators using public keys.
 	for _, idx := range validatorIndices {
-		val, err := headState.ValidatorAtIndex(idx)
+		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
 		}
@@ -995,7 +995,7 @@ func (bs *Server) GetValidatorPerformance(
 			continue
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
-		if !helpers.IsActiveValidator(val, currentEpoch) {
+		if !helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			// Inactive validator; treat it as missing.
 			missingValidators = append(missingValidators, val.PublicKey)
 			continue
