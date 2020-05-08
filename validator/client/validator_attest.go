@@ -71,6 +71,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.Debug("Empty committee for validator duty, not attesting")
 		return
 	}
+	v.attesterHistoryByPubKeyLock.RLock()
+	attesterHistory := v.attesterHistoryByPubKey[pubKey]
+	v.attesterHistoryByPubKeyLock.RUnlock()
 
 	v.waitToSlotOneThird(ctx, slot)
 
@@ -87,17 +90,8 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	var history *slashpb.AttestationHistory
 	if featureconfig.Get().ProtectAttester {
-		history, err = v.db.AttestationHistory(ctx, pubKey[:])
-		if err != nil {
-			log.Errorf("Could not get attestation history from DB: %v", err)
-			if v.emitAccountMetrics {
-				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-		if isNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch) {
+		if isNewAttSlashable(attesterHistory, data.Source.Epoch, data.Target.Epoch) {
 			log.WithFields(logrus.Fields{
 				"sourceEpoch": data.Source.Epoch,
 				"targetEpoch": data.Target.Epoch,
@@ -152,23 +146,19 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	if featureconfig.Get().ProtectAttester {
-		history = markAttestationForTargetEpoch(history, data.Source.Epoch, data.Target.Epoch)
-		if err := v.db.SaveAttestationHistory(ctx, pubKey[:], history); err != nil {
-			log.Errorf("Could not save attestation history to DB: %v", err)
-			if v.emitAccountMetrics {
-				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
 			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
+	}
+
+	if featureconfig.Get().ProtectAttester {
+		attesterHistory = markAttestationForTargetEpoch(attesterHistory, data.Source.Epoch, data.Target.Epoch)
+		v.attesterHistoryByPubKeyLock.Lock()
+		v.attesterHistoryByPubKey[pubKey] = attesterHistory
+		v.attesterHistoryByPubKeyLock.Unlock()
 	}
 
 	if v.emitAccountMetrics {

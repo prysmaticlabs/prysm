@@ -20,8 +20,8 @@ func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, 
 	defer span.End()
 
 	var err error
-	// Using 5 here since a bitfield length of 32 is always 5 bytes long.
-	slotBitlist := make(bitfield.Bitlist, 5)
+	// Adding an extra byte for the bitlist length.
+	slotBitlist := make(bitfield.Bitlist, params.BeaconConfig().SlotsPerEpoch/8+1)
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(publicKey)
