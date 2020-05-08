@@ -56,6 +56,14 @@ func TestService_GenesisValidatorsRoot(t *testing.T) {
 	if !bytes.Equal(res, wanted.GenesisValidatorsRoot) {
 		t.Errorf("Wanted %#x, received %#x", wanted.GenesisValidatorsRoot, res)
 	}
+	// test next fetch uses memory and not the rpc call.
+	res, err = bs.GenesisValidatorsRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(res, wanted.GenesisValidatorsRoot) {
+		t.Errorf("Wanted %#x, received %#x", wanted.GenesisValidatorsRoot, res)
+	}
 }
 
 func TestService_QuerySyncStatus(t *testing.T) {
