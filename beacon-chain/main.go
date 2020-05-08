@@ -88,6 +88,7 @@ var appFlags = []cli.Flag{
 	cmd.EnableUPnPFlag,
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
+	cmd.GrpcMaxCallRecvMsgSizeFlag,
 }
 
 func init() {
