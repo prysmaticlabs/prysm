@@ -27,11 +27,13 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateDuties(ctx context.Context, slot uint64) error
+	UpdateProtections(ctx context.Context, slot uint64) error
 	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
+	SaveProtections(ctx context.Context) error
 	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 }
 
@@ -96,6 +98,12 @@ func run(ctx context.Context, v Validator) {
 				continue
 			}
 
+			if featureconfig.Get().ProtectAttester {
+				if err := v.UpdateProtections(ctx, slot); err != nil {
+					log.WithError(err).Error("Could not update validator protection")
+				}
+			}
+
 			// Start fetching domain data for the next epoch.
 			if helpers.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
@@ -132,6 +140,11 @@ func run(ctx context.Context, v Validator) {
 			go func() {
 				wg.Wait()
 				v.LogAttestationsSubmitted()
+				if featureconfig.Get().ProtectAttester {
+					if err := v.SaveProtections(ctx); err != nil {
+						log.WithError(err).Error("Could not save validator protection")
+					}
+				}
 				span.End()
 			}()
 		}
