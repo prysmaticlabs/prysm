@@ -58,6 +58,7 @@ type Service struct {
 	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
 	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
 	publicKeyCache              *cache.PublicKeyCache
+	genesisValidatorRoot        []byte
 }
 
 // Config options for the beaconclient service.

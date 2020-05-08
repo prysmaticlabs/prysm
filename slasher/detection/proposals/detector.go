@@ -46,5 +46,8 @@ func (dd *ProposeDetector) DetectDoublePropose(
 		}
 		return ps, nil
 	}
+	if err := dd.slasherDB.SaveBlockHeader(ctx, incomingBlk); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
