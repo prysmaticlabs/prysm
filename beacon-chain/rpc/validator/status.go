@@ -86,12 +86,12 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	}
 	resp.Status = vStatus
 	if err != errPubkeyDoesNotExist {
-		val, err := headState.ValidatorAtIndex(idx)
+		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return resp
 		}
-		resp.ActivationEpoch = val.ActivationEpoch
+		resp.ActivationEpoch = val.ActivationEpoch()
 	}
 
 	switch resp.Status {
@@ -121,11 +121,11 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING:
 		var lastActivatedValidatorIdx uint64
 		for j := headState.NumValidators() - 1; j >= 0; j-- {
-			val, err := headState.ValidatorAtIndex(uint64(j))
+			val, err := headState.ValidatorAtIndexReadOnly(uint64(j))
 			if err != nil {
 				return resp
 			}
-			if helpers.IsActiveValidator(val, helpers.CurrentEpoch(headState)) {
+			if helpers.IsActiveValidatorUsingTrie(val, helpers.CurrentEpoch(headState)) {
 				lastActivatedValidatorIdx = uint64(j)
 				break
 			}
@@ -157,7 +157,7 @@ func (vs *Server) retrieveStatusFromState(
 }
 
 func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *stateTrie.BeaconState) ethpb.ValidatorStatus {
-	validator, err := beaconState.ValidatorAtIndex(validatorIdx)
+	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIdx)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
@@ -167,17 +167,17 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *stateTrie.B
 	if validator == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
-	if currentEpoch < validator.ActivationEligibilityEpoch {
+	if currentEpoch < validator.ActivationEligibilityEpoch() {
 		return ethpb.ValidatorStatus_DEPOSITED
 	}
-	if currentEpoch < validator.ActivationEpoch {
+	if currentEpoch < validator.ActivationEpoch() {
 		return ethpb.ValidatorStatus_PENDING
 	}
-	if validator.ExitEpoch == farFutureEpoch {
+	if validator.ExitEpoch() == farFutureEpoch {
 		return ethpb.ValidatorStatus_ACTIVE
 	}
-	if currentEpoch < validator.ExitEpoch {
-		if validator.Slashed {
+	if currentEpoch < validator.ExitEpoch() {
+		if validator.Slashed() {
 			return ethpb.ValidatorStatus_SLASHING
 		}
 		return ethpb.ValidatorStatus_EXITING
