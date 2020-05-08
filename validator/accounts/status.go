@@ -14,7 +14,7 @@ import (
 )
 
 func beaconNodeRPCProvider() (ethpb.BeaconNodeValidatorClient, *grpc.ClientConn, error) {
-	conn, err := grpc.Dial(flags.BeaconRPCProviderFlag.Name, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(flags.BeaconRPCProviderFlag.Value, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, nil, err
 	}
