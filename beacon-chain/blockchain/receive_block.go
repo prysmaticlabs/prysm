@@ -21,7 +21,7 @@ import (
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) error
+	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error
 	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error
@@ -34,21 +34,16 @@ type BlockReceiver interface {
 //   2. Validate block, apply state transition and update check points
 //   3. Apply fork choice to the processed block
 //   4. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-
-	root, err := stateutil.BlockRoot(block.Block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
-	}
 
 	// Broadcast the new block to the network.
 	if err := s.p2p.Broadcast(ctx, block); err != nil {
 		return errors.Wrap(err, "could not broadcast block")
 	}
 	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(root[:]),
+		"blockRoot": hex.EncodeToString(blockRoot[:]),
 	}).Debug("Broadcasting block")
 
 	if err := captureSentTimeMetric(uint64(s.genesisTime.Unix()), block.Block.Slot); err != nil {
@@ -56,7 +51,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		log.Warnf("Could not capture block sent time metric: %v", err)
 	}
 
-	if err := s.ReceiveBlockNoPubsub(ctx, block, root); err != nil {
+	if err := s.ReceiveBlockNoPubsub(ctx, block, blockRoot); err != nil {
 		return err
 	}
 
