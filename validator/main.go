@@ -134,9 +134,9 @@ contract in order to activate the validator client`,
 						}
 						return nil
 					},
-				}, 
+				},
 				{
-					Name: "status",
+					Name:        "status",
 					Description: `list the validator status for existing validator keys`,
 					Flags: []cli.Flag{
 						flags.KeystorePathFlag,

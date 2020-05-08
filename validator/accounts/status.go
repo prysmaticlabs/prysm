@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"sort"
 
-	"google.golang.org/grpc"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 )
 
 func beaconNodeRPCProvider() (ethpb.BeaconNodeValidatorClient, error) {
@@ -21,7 +21,7 @@ func beaconNodeRPCProvider() (ethpb.BeaconNodeValidatorClient, error) {
 	return ethpb.NewBeaconNodeValidatorClient(conn), nil
 }
 
-// FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient for each validator publick key.
+// FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient for each validator public key.
 func FetchAccountStatuses(ctx context.Context, keyPairs map[string]*keystore.Key) ([]*ethpb.ValidatorStatusResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.FetchAccountStatuses")
 	defer span.End()
