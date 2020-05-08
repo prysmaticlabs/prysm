@@ -139,8 +139,9 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
 		} else {
-			// If the validator isn't in the beacon state, assume their status is unknown.
-			assignment.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
+			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
+			vStatus := vs.validatorStatus(ctx, pubKey, s)
+			assignment.Status = vStatus.Status
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
 		// Assign relevant validator to subnet.
