@@ -945,7 +945,6 @@ func ProcessDeposit(
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	numVals := beaconState.NumValidators()
 	if !ok {
 		domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 		if err != nil {
@@ -976,8 +975,6 @@ func ProcessDeposit(
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
-		numVals++
-		beaconState.SetValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey), uint64(numVals-1))
 	} else {
 		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
 			return nil, err
