@@ -51,6 +51,8 @@ func FetchAccountStatuses(ctx context.Context, keyPairs map[string]*keystore.Key
 	}
 
 	// Sort responses by status
+	// XXX: This sort does not work right now. We need to have the
+	// public key of the validator indicated in the response.
 	sort.Slice(statuses, func(i, j int) bool {
 		return statuses[i].Status < statuses[j].Status
 	})
