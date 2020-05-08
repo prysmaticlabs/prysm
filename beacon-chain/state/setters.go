@@ -666,10 +666,15 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	// append validator to slice and add
+	// it to the validator map
 	b.state.Validators = append(vals, val)
+	valIdx := uint64(len(b.state.Validators) - 1)
+	valMap := coreutils.ValidatorIndexMap(b.state.Validators)
+
 	b.markFieldAsDirty(validators)
-	b.AddDirtyIndices(validators, []uint64{uint64(len(b.state.Validators) - 1)})
-	b.valIdxMap = coreutils.ValidatorIndexMap(b.state.Validators)
+	b.AddDirtyIndices(validators, []uint64{valIdx})
+	b.valIdxMap = valMap
 	return nil
 }
 

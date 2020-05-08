@@ -57,7 +57,7 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	if int(exit.Exit.ValidatorIndex) >= s.NumValidators() {
 		return false
 	}
-	val, err := s.ValidatorAtIndex(exit.Exit.ValidatorIndex)
+	val, err := s.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
 		return false
 	}
