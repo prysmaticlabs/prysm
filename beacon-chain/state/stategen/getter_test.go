@@ -135,6 +135,126 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	}
 }
 
+func TestStateByRootInitialSync_UseDB(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	service := New(db, cache.NewStateSummaryCache())
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	targetSlot := uint64(10)
+	targetBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: targetSlot, ParentRoot: blkRoot[:], ProposerIndex: 7}}
+	if err := service.beaconDB.SaveBlock(ctx, targetBlock); err != nil {
+		t.Fatal(err)
+	}
+	targetRoot, err := stateutil.BlockRoot(targetBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ = testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(10); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, targetRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: targetSlot,
+		Root: targetRoot[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	loadedState, err := service.StateByRoot(ctx, targetRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loadedState.Slot() != targetSlot {
+		t.Error("Did not correctly load state")
+	}
+}
+
+func TestStateByRootInitialSync_UseCache(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	service := New(db, cache.NewStateSummaryCache())
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	r := [32]byte{'A'}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: r[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	service.hotStateCache.Put(r, beaconState)
+
+	loadedState, err := service.StateByRoot(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not correctly cache state")
+	}
+}
+
+func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	targetSlot := uint64(10)
+	targetRoot := [32]byte{'a'}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: targetSlot,
+		Root: targetRoot[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ = testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(10); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, beaconState, targetRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	loadedState, err := service.StateByRootInitialSync(ctx, targetRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if loadedState.Slot() != targetSlot {
+		t.Error("Did not correctly load state")
+	}
+}
+
 func TestStateBySlot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)

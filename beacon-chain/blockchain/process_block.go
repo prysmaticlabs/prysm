@@ -206,6 +206,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return err
 	}
+	// To invalidate cache for parent root because pre state will get mutated.
+	s.stateGen.DeleteHotStateInCache(bytesutil.ToBytes32(b.ParentRoot))
 
 	// Exit early if the pre state slot is higher than incoming block's slot.
 	if preState.Slot() >= signed.Block.Slot {
