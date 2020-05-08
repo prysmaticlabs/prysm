@@ -16,11 +16,11 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -62,7 +62,7 @@ func main() {
 	m := make(map[[32]byte]*node)
 	for i := 0; i < len(blks); i++ {
 		b := blks[i]
-		r, err := ssz.HashTreeRoot(b.Block)
+		r, err := stateutil.BlockRoot(b.Block)
 		if err != nil {
 			panic(err)
 		}
@@ -83,7 +83,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			rs, err := ssz.HashTreeRoot(bs[0].Block)
+			rs, err := stateutil.BlockRoot(bs[0].Block)
 			if err != nil {
 				panic(err)
 			}

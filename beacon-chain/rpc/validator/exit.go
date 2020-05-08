@@ -31,7 +31,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	}
 
 	// Confirm the validator is eligible to exit with the parameters provided.
-	val, err := s.ValidatorAtIndex(req.Exit.ValidatorIndex)
+	val, err := s.ValidatorAtIndexReadOnly(req.Exit.ValidatorIndex)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "validator index exceeds validator set length")
 	}

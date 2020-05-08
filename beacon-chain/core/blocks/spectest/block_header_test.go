@@ -11,7 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -19,7 +19,7 @@ import (
 )
 
 func runBlockHeaderTest(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -43,7 +43,7 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			if err := ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
+			preBeaconState, err := stateTrie.InitializeFromProto(preBeaconStateBase)
 			if err != nil {
 				t.Fatal(err)
 			}

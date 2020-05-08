@@ -10,7 +10,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -22,6 +21,7 @@ import (
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -32,14 +32,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func init() {
-	// Use minimal config to reduce test setup time.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
 func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
@@ -68,7 +62,6 @@ func TestValidatorIndex_OK(t *testing.T) {
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	beaconState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -82,7 +75,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -122,10 +115,9 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	// This test breaks if it doesnt use mainnet config
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
 	priv1 := bls.RandKey()
@@ -145,7 +137,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -218,7 +210,6 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 
 func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	priv1 := bls.RandKey()
 	priv2 := bls.RandKey()
@@ -251,7 +242,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -309,7 +300,6 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -340,7 +330,6 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
 	trie := testutil.NewBeaconState()
@@ -380,7 +369,6 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 
 func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	hook := logTest.NewGlobal()
 	chainService := &mockChain.ChainService{}
@@ -426,7 +414,6 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 func TestWaitForSynced_ContextClosed(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -457,7 +444,6 @@ func TestWaitForSynced_ContextClosed(t *testing.T) {
 
 func TestWaitForSynced_AlreadySynced(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
 	trie := testutil.NewBeaconState()
@@ -498,7 +484,6 @@ func TestWaitForSynced_AlreadySynced(t *testing.T) {
 
 func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	defer dbutil.TeardownDB(t, db)
 
 	hook := logTest.NewGlobal()
 	chainService := &mockChain.ChainService{}

@@ -7,9 +7,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -59,7 +59,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	blockRoot, err := ssz.HashTreeRoot(blk.Block)
+	blockRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		return false
 	}
@@ -111,7 +111,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			return false
 		}
 
-		if err := blocks.VerifyBlockHeaderSignature(parentState, blk); err != nil {
+		if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
 			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
 			return false
 		}

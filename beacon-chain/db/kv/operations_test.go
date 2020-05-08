@@ -11,7 +11,6 @@ import (
 
 func TestStore_VoluntaryExits_CRUD(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	exit := &ethpb.VoluntaryExit{
 		Epoch: 5,

@@ -7,7 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -59,7 +59,7 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
 	if ps.Header_1 != nil && ps.Header_1.Header != nil {
-		root, err := ssz.HashTreeRoot(ps.Header_1.Header)
+		root, err := stateutil.BlockHeaderRoot(ps.Header_1.Header)
 		s, err := r.db.State(ctx, root)
 		if err != nil {
 			return err

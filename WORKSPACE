@@ -43,6 +43,8 @@ load("@prysm//tools/cross-toolchain:rbe_toolchains_config.bzl", "rbe_toolchains_
 
 rbe_toolchains_config()
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 http_archive(
     name = "bazel_skylib",
     sha256 = "97e70364e9249702246c0e9444bccdc4b847bed1eb03c5a3ece4f83dfe6abc44",
@@ -88,6 +90,13 @@ http_archive(
     ],
 )
 
+http_archive(
+    name = "fuzzit_linux",
+    build_file_content = "exports_files([\"fuzzit\"])",
+    sha256 = "9ca76ac1c22d9360936006efddf992977ebf8e4788ded8e5f9d511285c9ac774",
+    urls = ["https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.76/fuzzit_Linux_x86_64.zip"],
+)
+
 git_repository(
     name = "graknlabs_bazel_distribution",
     commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
@@ -124,9 +133,16 @@ load(
 
 container_pull(
     name = "alpine_cc_linux_amd64",
-    digest = "sha256:d5cee45549351be7a03a96c7b319b9c1808979b10888b79acca4435cc068005e",
+    digest = "sha256:3f7f4dfcb6dceac3a902f36609cc232262e49f5656a6dc4bb3da89e35fecc8a5",
     registry = "index.docker.io",
-    repository = "frolvlad/alpine-glibc",
+    repository = "fasibio/alpine-libgcc",
+)
+
+container_pull(
+    name = "fuzzit_base",
+    digest = "sha256:24a39a4360b07b8f0121eb55674a2e757ab09f0baff5569332fefd227ee4338f",
+    registry = "gcr.io",
+    repository = "fuzzit-public/stretch-llvm8",
 )
 
 load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
@@ -139,7 +155,8 @@ go_rules_dependencies()
 
 go_register_toolchains(nogo = "@//:nogo")
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@prysm//tools/go:def.bzl", "go_repository")
 
 gazelle_dependencies()
 
@@ -266,9 +283,9 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 
 http_archive(
     name = "rules_foreign_cc",
-    sha256 = "450563dc2938f38566a59596bb30a3e905fbbcc35b3fff5a1791b122bc140465",
-    strip_prefix = "rules_foreign_cc-456425521973736ef346d93d3d6ba07d807047df",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/456425521973736ef346d93d3d6ba07d807047df.zip",
+    sha256 = "b85ce66a3410f7370d1a9a61dfe3a29c7532b7637caeb2877d8d0dfd41d77abb",
+    strip_prefix = "rules_foreign_cc-3515b20a2417c4dd51c8a4a8cac1f6ecf3c6d934",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/3515b20a2417c4dd51c8a4a8cac1f6ecf3c6d934.zip",
 )
 
 load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
@@ -283,6 +300,16 @@ http_archive(
     sha256 = "f6be27772babfdacbbf2e4c5432ea46c57ef5b7d82e52a81b885e7b804781fd6",
     strip_prefix = "librdkafka-1.2.1",
     urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
+)
+
+http_archive(
+    name = "sigp_beacon_fuzz_corpora",
+    build_file = "//third_party:beacon-fuzz/corpora.BUILD",
+    sha256 = "42993d0901a316afda45b4ba6d53c7c21f30c551dcec290a4ca131c24453d1ef",
+    strip_prefix = "beacon-fuzz-corpora-bac24ad78d45cc3664c0172241feac969c1ac29b",
+    urls = [
+        "https://github.com/sigp/beacon-fuzz-corpora/archive/bac24ad78d45cc3664c0172241feac969c1ac29b.tar.gz",
+    ],
 )
 
 # External dependencies
@@ -1306,7 +1333,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "ba9042096e9fc49606279513d3e24e5e8cdbd5a0",
+    commit = "df460bd3d84be4ff3df0658395c7dc9d2a7e7b3d",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 
@@ -1607,6 +1634,34 @@ go_repository(
     name = "com_github_ferranbt_fastssz",
     commit = "06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
     importpath = "github.com/ferranbt/fastssz",
+    nofuzz = True,
+)
+
+http_archive(
+    name = "sszgen",  # Hack because we don't want to build this binary with libfuzzer, but need it to build.
+    build_file_content = """
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_binary")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "sszgen/main.go",
+        "sszgen/marshal.go",
+        "sszgen/size.go",
+        "sszgen/unmarshal.go",
+    ],
+    importpath = "github.com/ferranbt/fastssz/sszgen",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "sszgen",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+    """,
+    strip_prefix = "fastssz-06015a5d84f9e4eefe2c21377ca678fa8f1a1b09",
+    urls = ["https://github.com/ferranbt/fastssz/archive/06015a5d84f9e4eefe2c21377ca678fa8f1a1b09.tar.gz"],
 )
 
 go_repository(
