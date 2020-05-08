@@ -141,7 +141,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	var headState *state.BeaconState
 	var err error
 	if featureconfig.Get().NewStateMgmt {
-		headState, err = s.stateGen.StateByRoot(ctx, r)
+		headState, err = s.stateGen.StateByRootInitialSync(ctx, r)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
