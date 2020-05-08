@@ -87,8 +87,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 		if preState == nil {
 			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
 		}
-		// To invalidate cache for parent root because pre state will get mutated.
-		s.stateGen.DeleteHotStateInCache(parentRoot)
+
 		return preState, nil // No copy needed from newly hydrated state gen object.
 	}
 
