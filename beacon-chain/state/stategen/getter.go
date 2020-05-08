@@ -46,7 +46,9 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	}
 
 	if s.hotStateCache.Has(blockRoot) {
-		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
+		cachedState := s.hotStateCache.GetWithoutCopy(blockRoot)
+		s.hotStateCache.Delete(blockRoot)
+		return cachedState, nil
 	}
 
 	if s.beaconDB.HasState(ctx, blockRoot) {
