@@ -34,6 +34,23 @@ type Server struct {
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableAttestation")
 	defer span.End()
+
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil request provided")
+	}
+	if req.Data == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil request data provided")
+	}
+	if req.Data.Target == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil request data target provided")
+	}
+	if req.Data.Source == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil request data source provided")
+	}
+	if req.Signature == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil signature provided")
+	}
+
 	err := attestationutil.IsValidAttestationIndices(ctx, req)
 	if err != nil {
 		return nil, err
@@ -94,6 +111,16 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableBlock")
 	defer span.End()
 
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil request provided")
+	}
+	if req.Header == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil header provided")
+
+	}
+	if req.Signature == nil {
+		return nil, status.Error(codes.InvalidArgument, "nil signature provided")
+	}
 	gvr, err := ss.beaconClient.GenesisValidatorsRoot(ctx)
 	if err != nil {
 		return nil, err

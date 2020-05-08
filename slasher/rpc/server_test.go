@@ -129,7 +129,6 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(wantedValidators2, nil)
-	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	slashing, err := server.IsSlashableAttestation(ctx, incomingAtt)
 	if err != nil {
 		t.Fatalf("got error while trying to detect slashing: %v", err)
@@ -232,7 +231,6 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	if len(slashings.ProposerSlashing) != 0 {
 		t.Fatalf("Found slashings while no slashing should have been found on first block: %v slashing found: %v", savedBlock, slashings)
 	}
-	nClient.EXPECT().GetGenesis(gomock.Any(), gomock.Any()).Return(wantedGenesis, nil)
 	slashing, err := server.IsSlashableBlock(ctx, incomingBlock)
 	if err != nil {
 		t.Fatalf("got error while trying to detect slashing: %v", err)

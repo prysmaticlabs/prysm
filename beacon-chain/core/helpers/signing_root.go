@@ -109,7 +109,6 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	root, err := signingRoot(func() ([32]byte, error) {
-		// utilize custom block hashing function
 		return stateutil.BlockHeaderRoot(blkHdr)
 	}, domain)
 	if err != nil {
