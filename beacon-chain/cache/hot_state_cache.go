@@ -71,3 +71,8 @@ func (c *HotStateCache) Put(root [32]byte, state *stateTrie.BeaconState) {
 func (c *HotStateCache) Has(root [32]byte) bool {
 	return c.cache.Contains(root)
 }
+
+// Delete deletes the key exists in the cache.
+func (c *HotStateCache) Delete(root [32]byte) bool {
+	return c.cache.Remove(root)
+}
