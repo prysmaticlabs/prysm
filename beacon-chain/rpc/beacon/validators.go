@@ -959,12 +959,12 @@ func (bs *Server) GetValidatorPerformance(
 			missingValidators = append(missingValidators, key)
 			continue
 		}
-		val, err := headState.ValidatorAtIndex(idx)
+		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
-		if !helpers.IsActiveValidator(val, currentEpoch) {
+		if !helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			// Inactive validator; treat it as missing.
 			missingValidators = append(missingValidators, key)
 			continue
