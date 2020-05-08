@@ -70,13 +70,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return nil, err
 	}
 
-	root, err := stateutil.BlockRoot(b)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
-	}
 	log.WithFields(logrus.Fields{
 		"slot": b.Slot,
-		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
+		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
 	}).Debug("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
@@ -88,16 +84,16 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 
-	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
+	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
 	if featureconfig.Get().NewStateMgmt {
-		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
+		if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
 			return nil, errors.Wrap(err, "could not save state")
 		}
 	} else {
-		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+		if err := s.beaconDB.SaveState(ctx, postState, blockRoot); err != nil {
 			return nil, errors.Wrap(err, "could not save state")
 		}
 	}
