@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -212,6 +214,9 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	useDb := false
 	var err error
 	for ; epoch >= untilEpoch; epoch-- {
+		if ctx.Err() != nil {
+			return errors.Wrap(ctx.Err(), "could not update min spans")
+		}
 		if featureconfig.Get().DisableLookback {
 			if useCache {
 				spanMap, useCache, err = s.slasherDB.EpochSpansMap(ctx, epoch)
