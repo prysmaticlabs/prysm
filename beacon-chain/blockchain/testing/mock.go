@@ -112,7 +112,7 @@ func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBea
 }
 
 // ReceiveBlockNoVerify mocks ReceiveBlockNoVerify method in chain service.
-func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	return nil
 }
 

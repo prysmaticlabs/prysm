@@ -275,7 +275,7 @@ func TestBlocksQueueLoop(t *testing.T) {
 					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
 				}
 				if featureconfig.Get().InitSyncNoVerify {
-					if err := mc.ReceiveBlockNoVerify(ctx, block); err != nil {
+					if err := mc.ReceiveBlockNoVerify(ctx, block, root); err != nil {
 						return err
 					}
 				} else {

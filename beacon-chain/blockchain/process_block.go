@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -24,6 +23,8 @@ import (
 var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
+// The block's signing root should be computed before calling this method to avoid redundant
+// computation in this method and methods it calls into.
 //
 // Spec pseudocode definition:
 //   def on_block(store: Store, block: BeaconBlock) -> None:
@@ -187,7 +188,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 // onBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The excluded BLS verification
 // includes attestation's aggregated signature. It also does not save attestations.
-func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
+// The block's signing root should be computed before calling this method to avoid redundant
+// computation in this method and methods it calls into.
+func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
 	defer span.End()
 
@@ -215,31 +218,27 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	root, err := stateutil.BlockRoot(b)
-	if err != nil {
-		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
-	}
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
-		s.saveInitSyncBlock(root, signed)
+		s.saveInitSyncBlock(blockRoot, signed)
 	} else {
 		if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
 			return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 		}
 	}
 
-	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
+	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
 	if featureconfig.Get().NewStateMgmt {
-		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
+		if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
 			return errors.Wrap(err, "could not save state")
 		}
 	} else {
 		s.initSyncStateLock.Lock()
 		defer s.initSyncStateLock.Unlock()
-		s.initSyncState[root] = postState.Copy()
-		s.filterBoundaryCandidates(ctx, root, postState)
+		s.initSyncState[blockRoot] = postState.Copy()
+		s.filterBoundaryCandidates(ctx, blockRoot, postState)
 	}
 
 	if flags.Get().EnableArchive {
@@ -337,7 +336,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		}
 
 		if !featureconfig.Get().NewStateMgmt && helpers.IsEpochStart(postState.Slot()) {
-			if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+			if err := s.beaconDB.SaveState(ctx, postState, blockRoot); err != nil {
 				return errors.Wrap(err, "could not save state")
 			}
 		}

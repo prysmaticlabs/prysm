@@ -12,7 +12,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -24,7 +23,7 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error
+	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
@@ -177,21 +176,16 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 // ReceiveBlockNoVerify runs state transition on a input block without verifying the block's BLS contents.
 // Depends on the security model, this is the "minimal" work a node can do to sync the chain.
 // It simulates light client behavior and assumes 100% trust with the syncing peer.
-func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoVerify")
 	defer span.End()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {
+	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy, blockRoot); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
-	}
-
-	root, err := stateutil.BlockRoot(blockCopy.Block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}
 
 	cachedHeadRoot, err := s.HeadRoot(ctx)
@@ -199,8 +193,8 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		return errors.Wrap(err, "could not get head root from cache")
 	}
 
-	if !bytes.Equal(root[:], cachedHeadRoot) {
-		if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
+	if !bytes.Equal(blockRoot[:], cachedHeadRoot) {
+		if err := s.saveHeadNoDB(ctx, blockCopy, blockRoot); err != nil {
 			err := errors.Wrap(err, "could not save head")
 			traceutil.AnnotateError(span, err)
 			return err
@@ -212,7 +206,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			Slot:      blockCopy.Block.Slot,
-			BlockRoot: root,
+			BlockRoot: blockRoot,
 			Verified:  false,
 		},
 	})
