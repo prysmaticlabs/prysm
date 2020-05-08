@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -278,7 +279,11 @@ func TestBlocksQueueLoop(t *testing.T) {
 						return err
 					}
 				} else {
-					if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, block); err != nil {
+					root, err := stateutil.BlockRoot(block.Block)
+					if err != nil {
+						return err
+					}
+					if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, block, root); err != nil {
 						return err
 					}
 				}

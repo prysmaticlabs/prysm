@@ -105,7 +105,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range resp {
 			s.logSyncStatus(genesis, blk.Block, counter)
-			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+			root, err := stateutil.BlockRoot(blk.Block)
+			if err != nil {
+				return err
+			}
+			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk, root); err != nil {
 				log.WithError(err).Error("Failed to process block, exiting init sync")
 				return nil
 			}
@@ -174,7 +178,11 @@ func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock) 
 			return err
 		}
 	} else {
-		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+		root, err := stateutil.BlockRoot(blk.Block)
+		if err != nil {
+			return err
+		}
+		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk, root); err != nil {
 			return err
 		}
 	}

@@ -23,7 +23,7 @@ import (
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error
+	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error
 	HasInitSyncBlock(root [32]byte) bool
 }
@@ -69,7 +69,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
-	postState, err := s.onBlock(ctx, blockCopy)
+	postState, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
@@ -125,29 +125,25 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 // that are preformed blocks that is received from initial sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Save latest head info
-func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
 	defer span.End()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
-	_, err := s.onBlock(ctx, blockCopy)
+	_, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
 
-	root, err := stateutil.BlockRoot(blockCopy.Block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
-	}
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
-	if !bytes.Equal(root[:], cachedHeadRoot) {
-		if err := s.saveHead(ctx, root); err != nil {
+	if !bytes.Equal(blockRoot[:], cachedHeadRoot) {
+		if err := s.saveHead(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	}
@@ -157,7 +153,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			Slot:      blockCopy.Block.Slot,
-			BlockRoot: root,
+			BlockRoot: blockRoot,
 			Verified:  true,
 		},
 	})
@@ -166,7 +162,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log block sync status.
-	logBlockSyncStatus(blockCopy.Block, root, s.finalizedCheckpt)
+	logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
