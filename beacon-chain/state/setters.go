@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
@@ -656,8 +657,10 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	}
 	b.lock.RLock()
 	vals := b.state.Validators
+	valMap := b.valIdxMap
 	if b.sharedFieldReferences[validators].refs > 1 {
 		vals = b.Validators()
+		valMap = coreutils.ValidatorIndexMap(vals)
 		b.sharedFieldReferences[validators].MinusRef()
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
@@ -666,10 +669,15 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	// append validator to slice and add
+	// it to the validator map
 	b.state.Validators = append(vals, val)
+	valIdx := uint64(len(b.state.Validators) - 1)
+	valMap[bytesutil.ToBytes48(val.PublicKey)] = valIdx
+
 	b.markFieldAsDirty(validators)
-	b.AddDirtyIndices(validators, []uint64{uint64(len(b.state.Validators) - 1)})
-	b.valIdxMap = coreutils.ValidatorIndexMap(b.state.Validators)
+	b.AddDirtyIndices(validators, []uint64{valIdx})
+	b.valIdxMap = valMap
 	return nil
 }
 
