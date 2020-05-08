@@ -20,7 +20,7 @@ func TestMigrateToCold_NoBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-
+	service.splitInfo.slot = 1
 	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
@@ -48,6 +48,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	db := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
+	service.splitInfo.slot = 1
 	service.slotsPerArchivedPoint = 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)

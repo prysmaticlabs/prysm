@@ -203,16 +203,16 @@ func ProcessBlockHeader(
 	}
 
 	// Verify proposer signature.
-	if err := VerifyBlockHeaderSignature(beaconState, block); err != nil {
+	if err := VerifyBlockSignature(beaconState, block); err != nil {
 		return nil, err
 	}
 
 	return beaconState, nil
 }
 
-// VerifyBlockHeaderSignature verifies the proposer signature of a beacon block.
-func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) error {
-	proposer, err := beaconState.ValidatorAtIndexReadOnly(block.Block.ProposerIndex)
+// VerifyBlockSignature verifies the proposer signature of a beacon block.
+func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) error {
+	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func VerifyBlockHeaderSignature(beaconState *stateTrie.BeaconState, block *ethpb
 	if err != nil {
 		return err
 	}
-	proposerPubKey := proposer.PublicKey()
+	proposerPubKey := proposer.PublicKey
 	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey[:], block.Signature, domain)
 }
 
@@ -945,7 +945,6 @@ func ProcessDeposit(
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	numVals := beaconState.NumValidators()
 	if !ok {
 		domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 		if err != nil {
@@ -976,8 +975,6 @@ func ProcessDeposit(
 		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
-		numVals++
-		beaconState.SetValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey), uint64(numVals-1))
 	} else {
 		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
 			return nil, err
