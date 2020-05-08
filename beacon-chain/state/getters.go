@@ -429,7 +429,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	}, nil
 }
 
-// ValidatorAtIndexReadOnly is the validator at the provided index.This method
+// ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, error) {
 	if !b.HasInnerState() {
@@ -438,13 +438,13 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, 
 	if b.state.Validators == nil {
 		return &ReadOnlyValidator{}, nil
 	}
+	if uint64(len(b.state.Validators)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.Validators) <= int(idx) {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
 	return &ReadOnlyValidator{b.state.Validators[idx]}, nil
 }
 
