@@ -12,11 +12,13 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	db2 "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
@@ -685,6 +687,122 @@ func TestUpdateDuties_OK(t *testing.T) {
 			resp.Duties[0].ValidatorIndex,
 			v.duties.Duties[0].ValidatorIndex,
 		)
+	}
+}
+
+func TestUpdateProtections_OK(t *testing.T) {
+	pubKey1 := [48]byte{1}
+	pubKey2 := [48]byte{2}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+
+	newMap := make(map[uint64]uint64)
+	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	newMap[1] = 0
+	newMap[2] = 1
+	history := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 2,
+	}
+
+	newMap2 := make(map[uint64]uint64)
+	newMap2[0] = params.BeaconConfig().FarFutureEpoch
+	newMap2[1] = params.BeaconConfig().FarFutureEpoch
+	newMap2[2] = params.BeaconConfig().FarFutureEpoch
+	newMap2[3] = 2
+	history2 := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 3,
+	}
+
+	histories := make(map[[48]byte]*slashpb.AttestationHistory)
+	histories[pubKey1] = history
+	histories[pubKey2] = history2
+	if err := db.SaveAttestationHistoryForPubKeys(context.Background(), histories); err != nil {
+		t.Fatal(err)
+	}
+
+	slot := params.BeaconConfig().SlotsPerEpoch
+	duties := &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   slot,
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      pubKey1[:],
+			},
+			{
+				AttesterSlot:   slot,
+				ValidatorIndex: 201,
+				CommitteeIndex: 100,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      pubKey2[:],
+			},
+		},
+	}
+	v := validator{
+		db:              db,
+		keyManager:      testKeyManager,
+		validatorClient: client,
+		duties:          duties,
+	}
+
+	if err := v.UpdateProtections(context.Background(), slot); err != nil {
+		t.Fatalf("Could not update assignments: %v", err)
+	}
+	if !reflect.DeepEqual(v.attesterHistoryByPubKey[pubKey1], history) {
+		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history, v.attesterHistoryByPubKey[pubKey1])
+	}
+	if !reflect.DeepEqual(v.attesterHistoryByPubKey[pubKey2], history2) {
+		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history2, v.attesterHistoryByPubKey[pubKey2])
+	}
+}
+
+func TestSaveProtections_OK(t *testing.T) {
+	pubKey1 := [48]byte{1}
+	pubKey2 := [48]byte{2}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+
+	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := validator{
+		db:                      db,
+		keyManager:              testKeyManager,
+		validatorClient:         client,
+		attesterHistoryByPubKey: cleanHistories,
+	}
+
+	history1 := cleanHistories[pubKey1]
+	history1 = markAttestationForTargetEpoch(history1, 0, 1)
+
+	history2 := cleanHistories[pubKey1]
+	history2 = markAttestationForTargetEpoch(history1, 2, 3)
+
+	cleanHistories[pubKey1] = history1
+	cleanHistories[pubKey2] = history2
+
+	v.attesterHistoryByPubKey = cleanHistories
+	if err := v.SaveProtections(context.Background()); err != nil {
+		t.Fatalf("Could not update assignments: %v", err)
+	}
+	savedHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(savedHistories[pubKey1], history1) {
+		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history1, v.attesterHistoryByPubKey[pubKey1])
+	}
+	if !reflect.DeepEqual(savedHistories[pubKey2], history2) {
+		t.Fatalf("Expected retrieved history to be equal to %v, received %v", history2, v.attesterHistoryByPubKey[pubKey2])
 	}
 }
 

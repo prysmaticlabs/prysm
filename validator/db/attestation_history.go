@@ -20,44 +20,63 @@ func unmarshalAttestationHistory(enc []byte) (*slashpb.AttestationHistory, error
 	return history, nil
 }
 
-// AttestationHistory accepts a validator public key and returns the corresponding attestation history.
-// Returns nil if there is no attestation history for the validator.
-func (db *Store) AttestationHistory(ctx context.Context, publicKey []byte) (*slashpb.AttestationHistory, error) {
+// AttestationHistoryForPubKeys accepts an array of validator public keys and returns a mapping of corresponding attestation history.
+func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistory")
 	defer span.End()
 
+	if len(publicKeys) == 0 {
+		return make(map[[48]byte]*slashpb.AttestationHistory), nil
+	}
+
 	var err error
-	var attestationHistory *slashpb.AttestationHistory
+	attestationHistoryForVals := make(map[[48]byte]*slashpb.AttestationHistory)
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
-		enc := bucket.Get(publicKey)
-		if enc == nil {
-			newMap := make(map[uint64]uint64)
-			newMap[0] = params.BeaconConfig().FarFutureEpoch
-			attestationHistory = &slashpb.AttestationHistory{
-				TargetToSource: newMap,
+		for _, key := range publicKeys {
+			enc := bucket.Get(key[:])
+			var attestationHistory *slashpb.AttestationHistory
+			if enc == nil {
+				newMap := make(map[uint64]uint64)
+				newMap[0] = params.BeaconConfig().FarFutureEpoch
+				attestationHistory = &slashpb.AttestationHistory{
+					TargetToSource: newMap,
+				}
+			} else {
+				attestationHistory, err = unmarshalAttestationHistory(enc)
+				if err != nil {
+					return err
+				}
 			}
-			return nil
+			attestationHistoryForVals[key] = attestationHistory
 		}
-		attestationHistory, err = unmarshalAttestationHistory(enc)
-		return err
+		return nil
 	})
-	return attestationHistory, err
+	return attestationHistoryForVals, err
 }
 
-// SaveAttestationHistory returns the attestation history for the requested validator public key.
-func (db *Store) SaveAttestationHistory(ctx context.Context, pubKey []byte, attestationHistory *slashpb.AttestationHistory) error {
+// SaveAttestationHistoryForPubKeys returns the attestation histories for the requested validator public keys.
+func (db *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*slashpb.AttestationHistory) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistory")
 	defer span.End()
 
-	enc, err := proto.Marshal(attestationHistory)
-	if err != nil {
-		return errors.Wrap(err, "failed to encode attestation history")
+	encoded := make(map[[48]byte][]byte)
+	for pubKey, history := range historyByPubKeys {
+		enc, err := proto.Marshal(history)
+		if err != nil {
+			return errors.Wrap(err, "failed to encode attestation history")
+		}
+		encoded[pubKey] = enc
 	}
 
-	err = db.update(func(tx *bolt.Tx) error {
+	err := db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
-		return bucket.Put(pubKey, enc)
+		for pubKey, encodedHistory := range encoded {
+			if err := bucket.Put(pubKey[:], encodedHistory); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	return err
 }
