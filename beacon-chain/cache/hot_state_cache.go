@@ -53,7 +53,6 @@ func (c *HotStateCache) Get(root [32]byte) *stateTrie.BeaconState {
 // GetWithoutCopy returns a non-copied cached response via input block root.
 func (c *HotStateCache) GetWithoutCopy(root [32]byte) *stateTrie.BeaconState {
 	item, exists := c.cache.Get(root)
-
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
 		return item.(*stateTrie.BeaconState)
