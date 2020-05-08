@@ -22,7 +22,7 @@ import (
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) error
-	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock) error
+	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error
 	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error
 	HasInitSyncBlock(root [32]byte) bool
@@ -56,7 +56,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		log.Warnf("Could not capture block sent time metric: %v", err)
 	}
 
-	if err := s.ReceiveBlockNoPubsub(ctx, block); err != nil {
+	if err := s.ReceiveBlockNoPubsub(ctx, block, root); err != nil {
 		return err
 	}
 
@@ -68,7 +68,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
 	defer span.End()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
@@ -94,13 +94,8 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	defer s.epochParticipationLock.Unlock()
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
-	root, err := stateutil.BlockRoot(blockCopy.Block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
-	}
-
 	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot() {
-		if err := s.saveHead(ctx, root); err != nil {
+		if err := s.saveHead(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
@@ -114,7 +109,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			Slot:      blockCopy.Block.Slot,
-			BlockRoot: root,
+			BlockRoot: blockRoot,
 			Verified:  true,
 		},
 	})
@@ -123,7 +118,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
 	// Log block sync status.
-	logBlockSyncStatus(blockCopy.Block, root, s.finalizedCheckpt)
+	logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
