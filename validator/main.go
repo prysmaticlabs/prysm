@@ -134,6 +134,29 @@ contract in order to activate the validator client`,
 						}
 						return nil
 					},
+				}, 
+				{
+					Name: "status",
+					Description: `list the validator status for existing validator keys`,
+					Flags: []cli.Flag{
+						flags.KeystorePathFlag,
+						flags.PasswordFlag,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
+						if err != nil {
+							log.WithError(err).Error("Could not list keys")
+						}
+						keyPairs, err := accounts.DecryptKeysFromKeystore(keystorePath, passphrase)
+						if err != nil {
+							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
+						}
+						statuses, err := accounts.FetchAccountStatuses(cliCtx, keyPairs)
+
+						// TODO: Properly print statuses
+						fmt.Println(statuses)
+						return nil
+					},
 				},
 			},
 		},
