@@ -10,9 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -136,7 +134,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		result := attestationutil.AttestingIndices(tt.bitfield, committee)
+		result, err := AttestingIndices(tt.bitfield, committee)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -172,7 +170,10 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	indices := attestationutil.AttestingIndices(bitfield.NewBitlist(128), committee)
+	indices, err := AttestingIndices(bitfield.NewBitlist(128), committee)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(indices) != 0 {
 		t.Errorf("Attesting indices are non-zero despite an empty bitfield being provided; Size %d", len(indices))
 	}
@@ -434,10 +435,6 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearCache()
-	c := featureconfig.Get()
-	featureconfig.Init(c)
-	defer featureconfig.Init(nil)
-
 	validatorCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	validators := make([]*ethpb.Validator, validatorCount)
 	indices := make([]uint64, validatorCount)
@@ -679,10 +676,6 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 }
 
 func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
-	c := featureconfig.Get()
-	featureconfig.Init(c)
-	defer featureconfig.Init(nil)
-
 	committeeSize := uint64(16)
 	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -752,7 +745,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
-		index, err := ComputeProposerIndex(state.Validators(), indices, seedWithSlotHash)
+		index, err := ComputeProposerIndex(state, indices, seedWithSlotHash)
 		if err != nil {
 			t.Fatal(err)
 		}

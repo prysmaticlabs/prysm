@@ -1,3 +1,5 @@
+// Package proposals defines an implementation of a double-propose
+// detector in the slasher runtime.
 package proposals
 
 import (
@@ -30,17 +32,16 @@ func (dd *ProposeDetector) DetectDoublePropose(
 ) (*ethpb.ProposerSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detector.DetectDoublePropose")
 	defer span.End()
-	bha, err := dd.slasherDB.BlockHeaders(ctx, incomingBlk.Header.Slot, incomingBlk.Header.ProposerIndex)
+	headersFromIdx, err := dd.slasherDB.BlockHeaders(ctx, incomingBlk.Header.Slot, incomingBlk.Header.ProposerIndex)
 	if err != nil {
 		return nil, err
 	}
-	for _, bh := range bha {
-		if bytes.Equal(bh.Signature, incomingBlk.Signature) {
+	for _, blockHeader := range headersFromIdx {
+		if bytes.Equal(blockHeader.Signature, incomingBlk.Signature) {
 			continue
 		}
-		ps := &ethpb.ProposerSlashing{Header_1: incomingBlk, Header_2: bh}
-		err := dd.slasherDB.SaveProposerSlashing(ctx, status.Active, ps)
-		if err != nil {
+		ps := &ethpb.ProposerSlashing{Header_1: incomingBlk, Header_2: blockHeader}
+		if err := dd.slasherDB.SaveProposerSlashing(ctx, status.Active, ps); err != nil {
 			return nil, err
 		}
 		return ps, nil

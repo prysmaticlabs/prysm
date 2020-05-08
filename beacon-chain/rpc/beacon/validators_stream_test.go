@@ -4,11 +4,14 @@ import (
 	"sync"
 	"testing"
 
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestInfostream_EpochToTimestamp(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name      string
 		epoch     uint64
@@ -46,7 +49,8 @@ func TestInfostream_EpochToTimestamp(t *testing.T) {
 }
 
 func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name       string
 		reqPubKeys [][]byte
@@ -67,19 +71,25 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
+		headFetcher: &mock.ChainService{
+			State: testutil.NewBeaconState(),
+		},
 	}
 	for _, test := range tests {
-		if err := is.handleSetValidatorKeys(test.reqPubKeys); err != nil {
-			t.Log(err)
-		}
-		if len(is.pubKeys) != len(test.reqPubKeys) {
-			t.Errorf("Incorrect number of keys: expected %v, received %v", len(test.reqPubKeys), len(is.pubKeys))
-		}
+		t.Run(test.name, func(t *testing.T) {
+			if err := is.handleSetValidatorKeys(test.reqPubKeys); err != nil {
+				t.Error(err)
+			}
+			if len(is.pubKeys) != len(test.reqPubKeys) {
+				t.Errorf("Incorrect number of keys: expected %v, received %v", len(test.reqPubKeys), len(is.pubKeys))
+			}
+		})
 	}
 }
 
 func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte
@@ -112,13 +122,16 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
+		headFetcher: &mock.ChainService{
+			State: testutil.NewBeaconState(),
+		},
 	}
 	for _, test := range tests {
 		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
-			t.Log(err)
+			t.Error(err)
 		}
 		if err := is.handleAddValidatorKeys(test.reqPubKeys); err != nil {
-			t.Log(err)
+			t.Error(err)
 		}
 		if len(is.pubKeys) != test.finalLen {
 			t.Errorf("Incorrect number of keys: expected %v, received %v", len(is.pubKeys), test.finalLen)
@@ -127,7 +140,8 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 }
 
 func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
-	params.UseMainnetConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte
@@ -160,10 +174,13 @@ func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 	is := &infostream{
 		pubKeysMutex: &sync.RWMutex{},
 		pubKeys:      make([][]byte, 0),
+		headFetcher: &mock.ChainService{
+			State: testutil.NewBeaconState(),
+		},
 	}
 	for _, test := range tests {
 		if err := is.handleSetValidatorKeys(test.initialPubKeys); err != nil {
-			t.Log(err)
+			t.Error(err)
 		}
 		is.handleRemoveValidatorKeys(test.reqPubKeys)
 		if len(is.pubKeys) != test.finalLen {

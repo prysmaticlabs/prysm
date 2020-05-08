@@ -126,10 +126,6 @@ var (
 		Name:  "enable-new-state-mgmt",
 		Usage: "This enable the usage of state mgmt service across Prysm",
 	}
-	disableInitSyncQueue = &cli.BoolFlag{
-		Name:  "disable-init-sync-queue",
-		Usage: "Disables concurrent fetching and processing of blocks on initial sync.",
-	}
 	enableFieldTrie = &cli.BoolFlag{
 		Name:  "enable-state-field-trie",
 		Usage: "Enables the usage of state field tries to compute the state root",
@@ -150,13 +146,18 @@ var (
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
 	}
+	disableHistoricalDetectionFlag = &cli.BoolFlag{
+		Name:  "disable-historical-detection",
+		Usage: "Disables historical attestation detection for the slasher",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableByteMempool,
+	enableCustomBlockHTR,
 	enableStateRefCopy,
 	enableFieldTrie,
+	enableNewStateMgmt,
 }
 
 // Deprecated flags list.
@@ -314,6 +315,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableInitSyncQueueFlag = &cli.BoolFlag{
+		Name:   "disable-init-sync-queue",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -347,6 +353,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
 	deprecatedUseSpanCacheFlag,
+	deprecatedDisableInitSyncQueueFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -359,7 +366,9 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
-var SlasherFlags = append(deprecatedFlags, []cli.Flag{}...)
+var SlasherFlags = append(deprecatedFlags, []cli.Flag{
+	disableHistoricalDetectionFlag,
+}...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
@@ -392,7 +401,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
 	enableNewStateMgmt,
-	disableInitSyncQueue,
 	enableFieldTrie,
 	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
@@ -410,4 +418,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
+	"--enable-custom-block-htr",
 }

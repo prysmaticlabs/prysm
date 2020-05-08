@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -39,7 +38,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 
-	root, err := ssz.HashTreeRoot(block.Block)
+	root, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
@@ -51,6 +50,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
+
+	if err := captureSentTimeMetric(uint64(s.genesisTime.Unix()), block.Block.Slot); err != nil {
+		// If a node fails to capture metric, this shouldn't cause the block processing to fail.
+		log.Warnf("Could not capture block sent time metric: %v", err)
+	}
 
 	if err := s.ReceiveBlockNoPubsub(ctx, block); err != nil {
 		return err
@@ -118,6 +122,9 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	// Reports on block and fork choice metrics.
 	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
 
+	// Log block sync status.
+	logBlockSyncStatus(blockCopy.Block, root, s.finalizedCheckpt)
+
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
 
@@ -167,6 +174,9 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 
 	// Reports on block and fork choice metrics.
 	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+
+	// Log block sync status.
+	logBlockSyncStatus(blockCopy.Block, root, s.finalizedCheckpt)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)

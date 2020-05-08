@@ -119,11 +119,11 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -156,11 +156,11 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -194,11 +194,11 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -233,11 +233,11 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	cfg := &featureconfig.Flags{
 		ProtectProposer: true,
 	}
-	featureconfig.Init(cfg)
+	reset := featureconfig.InitWithReset(cfg)
+	defer reset()
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx

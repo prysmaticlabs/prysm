@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -61,20 +63,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts := vs.AttPool.AggregatedAttestations()
-	atts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
+	atts, err := vs.packAttestations(ctx, req.Slot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
-	}
-
-	// If there is any room left in the block, consider unaggregated attestations as well.
-	if len(atts) < int(params.BeaconConfig().MaxAttestations) {
-		uAtts := vs.AttPool.UnaggregatedAttestations()
-		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, uAtts)
-		if len(uAtts)+len(atts) > int(params.BeaconConfig().MaxAttestations) {
-			uAtts = uAtts[:int(params.BeaconConfig().MaxAttestations)-len(atts)]
-		}
-		atts = append(atts, uAtts...)
+		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -127,21 +118,26 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
-		"Block proposal received via RPC")
-	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.ReceivedBlock,
-		Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
-	})
+
+	// Do not block proposal critical path with debug logging or block feed updates.
+	defer func() {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
+			"Block proposal received via RPC")
+		vs.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
+		})
+	}()
+
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
-	if err := vs.deleteAttsInPool(blk.Block.Body.Attestations); err != nil {
+	if err := vs.deleteAttsInPool(ctx, blk.Block.Body.Attestations); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete attestations in pool: %v", err)
 	}
 
@@ -392,24 +388,12 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state *stateTrie.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
-
-	bState, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, errors.New("could not head state from DB")
-	}
-
-	if bState.Slot() < slot {
-		bState, err = state.ProcessSlots(ctx, bState, slot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", slot)
-		}
-	}
 
 	// TODO(3916): Insert optimizations to sort out the most profitable attestations
 	for i, att := range atts {
@@ -417,7 +401,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 			break
 		}
 
-		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
+		if _, err := blocks.ProcessAttestation(ctx, state, att); err != nil {
 			inValidAtts = append(inValidAtts, att)
 			continue
 
@@ -425,7 +409,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 		validAtts = append(validAtts, att)
 	}
 
-	if err := vs.deleteAttsInPool(inValidAtts); err != nil {
+	if err := vs.deleteAttsInPool(ctx, inValidAtts); err != nil {
 		return nil, err
 	}
 
@@ -434,8 +418,14 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 
 // The input attestations are processed and seen by the node, this deletes them from pool
 // so proposers don't include them in a block for the future.
-func (vs *Server) deleteAttsInPool(atts []*ethpb.Attestation) error {
+func (vs *Server) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.deleteAttsInPool")
+	defer span.End()
+
 	for _, att := range atts {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		if helpers.IsAggregated(att) {
 			if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
 				return err
@@ -459,4 +449,36 @@ func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *e
 	// property changes during a state transition after a voting period.
 	deposit.Proof = proof
 	return deposit, nil
+}
+
+func (vs *Server) packAttestations(ctx context.Context, slot uint64) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "validatorServer.packAttestations")
+	defer span.End()
+	st, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could fetch head state")
+	}
+	if st.Slot() < slot {
+		st, err = state.ProcessSlots(ctx, st, slot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not advance state")
+		}
+	}
+
+	atts := vs.AttPool.AggregatedAttestations()
+	atts, err = vs.filterAttestationsForBlockInclusion(ctx, st, atts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not filter attestations")
+	}
+
+	// If there is any room left in the block, consider unaggregated attestations as well.
+	if len(atts) < int(params.BeaconConfig().MaxAttestations) {
+		uAtts := vs.AttPool.UnaggregatedAttestations()
+		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, st, uAtts)
+		if len(uAtts)+len(atts) > int(params.BeaconConfig().MaxAttestations) {
+			uAtts = uAtts[:int(params.BeaconConfig().MaxAttestations)-len(atts)]
+		}
+		atts = append(atts, uAtts...)
+	}
+	return atts, nil
 }

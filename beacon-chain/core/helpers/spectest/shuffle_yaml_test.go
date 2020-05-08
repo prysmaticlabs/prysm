@@ -1,3 +1,5 @@
+// Package spectest contains all conformity specification tests
+// for validator shuffling logic according to the eth2 beacon spec.
 package spectest
 
 import (
@@ -23,7 +25,7 @@ func TestShufflingMainnet(t *testing.T) {
 }
 
 func runShuffleTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
 

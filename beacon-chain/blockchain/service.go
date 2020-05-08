@@ -1,6 +1,6 @@
-// Package blockchain defines the life-cycle and status of the beacon chain
-// as well as the Ethereum Serenity beacon chain fork-choice rule based on
-// Casper Proof of Stake finality.
+// Package blockchain defines the life-cycle of the blockchain at the core of
+// eth2, including processing of new blocks and attestations using casper
+// proof of stake.
 package blockchain
 
 import (
@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -33,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -319,7 +319,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
@@ -381,7 +381,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if genesisBlock == nil {
 		return errors.New("no genesis block in db")
 	}
-	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
@@ -392,7 +392,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head block")
 		}
-		headRoot, err := ssz.HashTreeRoot(headBlock.Block)
+		headRoot, err := stateutil.BlockRoot(headBlock.Block)
 		if err != nil {
 			return errors.Wrap(err, "could not hash head block")
 		}

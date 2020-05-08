@@ -11,7 +11,7 @@ import (
 )
 
 func runRegistryUpdatesTests(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
 

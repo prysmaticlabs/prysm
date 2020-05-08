@@ -1,3 +1,6 @@
+// Package precompute provides gathering of nicely-structured
+// data important to feed into epoch processing, such as attesting
+// records and balances, for faster computation.
 package precompute
 
 import (
@@ -16,8 +19,8 @@ import (
 func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
-	vp := make([]*Validator, state.NumValidators())
-	bp := &Balance{}
+	pValidators := make([]*Validator, state.NumValidators())
+	pBal := &Balance{}
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
@@ -25,30 +28,30 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 	if err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
 		withdrawable := currentEpoch >= val.WithdrawableEpoch()
-		p := &Validator{
+		pVal := &Validator{
 			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
 			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
 		}
 		// Was validator active current epoch
 		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
-			p.IsActiveCurrentEpoch = true
-			bp.CurrentEpoch += val.EffectiveBalance()
+			pVal.IsActiveCurrentEpoch = true
+			pBal.ActiveCurrentEpoch += val.EffectiveBalance()
 		}
 		// Was validator active previous epoch
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
-			p.IsActivePrevEpoch = true
-			bp.PrevEpoch += val.EffectiveBalance()
+			pVal.IsActivePrevEpoch = true
+			pBal.ActivePrevEpoch += val.EffectiveBalance()
 		}
 		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
 		// with the lower values
-		p.InclusionSlot = params.BeaconConfig().FarFutureEpoch
-		p.InclusionDistance = params.BeaconConfig().FarFutureEpoch
+		pVal.InclusionSlot = params.BeaconConfig().FarFutureEpoch
+		pVal.InclusionDistance = params.BeaconConfig().FarFutureEpoch
 
-		vp[idx] = p
+		pValidators[idx] = pVal
 		return nil
 	}); err != nil {
 		return nil, nil, errors.Wrap(err, "failed to initialize precompute")
 	}
-	return vp, bp, nil
+	return pValidators, pBal, nil
 }

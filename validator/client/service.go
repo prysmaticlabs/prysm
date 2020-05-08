@@ -1,3 +1,5 @@
+// Package client defines the entire lifecycle of a validator in eth2 – it is responsible
+// for interacting with a beacon node to determine and perform validator duties.
 package client
 
 import (
@@ -158,8 +160,8 @@ func (v *ValidatorService) Start() {
 
 	v.conn = conn
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1280, // number of keys to track.
-		MaxCost:     128,  // maximum cost of cache, 1 item = 1 cost.
+		NumCounters: 1920, // number of keys to track.
+		MaxCost:     192,  // maximum cost of cache, 1 item = 1 cost.
 		BufferItems: 64,   // number of keys per Get buffer.
 	})
 	if err != nil {

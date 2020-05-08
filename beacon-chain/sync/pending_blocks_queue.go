@@ -9,8 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
@@ -115,7 +115,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 			log.WithError(err).Error("Failed to broadcast block")
 		}
 
-		blkRoot, err := ssz.HashTreeRoot(b.Block)
+		blkRoot, err := stateutil.BlockRoot(b.Block)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			span.End()
@@ -130,7 +130,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		log.WithFields(logrus.Fields{
 			"slot":      s,
 			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blkRoot[:])),
-		}).Info("Processed pending block and cleared it in cache")
+		}).Debug("Processed pending block and cleared it in cache")
 
 		span.End()
 	}
@@ -163,7 +163,7 @@ func (r *Service) validatePendingSlots() error {
 		epoch := helpers.SlotToEpoch(s)
 		// remove all descendant blocks of old blocks
 		if oldBlockRoots[bytesutil.ToBytes32(b.Block.ParentRoot)] {
-			root, err := ssz.HashTreeRoot(b.Block)
+			root, err := stateutil.BlockRoot(b.Block)
 			if err != nil {
 				return err
 			}
@@ -174,7 +174,7 @@ func (r *Service) validatePendingSlots() error {
 		}
 		// don't process old blocks
 		if finalizedEpoch > 0 && epoch <= finalizedEpoch {
-			blkRoot, err := ssz.HashTreeRoot(b.Block)
+			blkRoot, err := stateutil.BlockRoot(b.Block)
 			if err != nil {
 				return err
 			}

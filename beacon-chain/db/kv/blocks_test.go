@@ -8,15 +8,14 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 1
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	slot := uint64(20)
 	ctx := context.Background()
 	// First we save a previous block to ensure the cache max size is reached.
@@ -56,7 +55,6 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -64,7 +62,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 			ParentRoot: []byte{1, 2, 3},
 		},
 	}
-	blockRoot, err := ssz.HashTreeRoot(block.Block)
+	blockRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +96,6 @@ func TestStore_BlocksCRUD(t *testing.T) {
 
 func TestStore_BlocksBatchDelete(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	numBlocks := 1000
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
@@ -113,7 +110,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 		}
 
 		if i%2 == 0 {
-			r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
+			r, err := stateutil.BlockRoot(totalBlocks[i].Block)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -151,7 +148,6 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	genesisBlock := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -159,7 +155,7 @@ func TestStore_GenesisBlock(t *testing.T) {
 			ParentRoot: []byte{1, 2, 3},
 		},
 	}
-	blockRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	blockRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +176,6 @@ func TestStore_GenesisBlock(t *testing.T) {
 
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -188,7 +183,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 			ParentRoot: []byte{1, 2, 3},
 		},
 	}
-	blockRoot, err := ssz.HashTreeRoot(block.Block)
+	blockRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +218,6 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 
 func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	blocks := []*ethpb.SignedBeaconBlock{
 		{
 			Block: &ethpb.BeaconBlock{
@@ -329,7 +323,6 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	b := make([]*ethpb.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b[i] = &ethpb.SignedBeaconBlock{
@@ -355,7 +348,6 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	slots := params.BeaconConfig().SlotsPerEpoch * 7
 	b := make([]*ethpb.SignedBeaconBlock, slots)
 	for i := uint64(0); i < slots; i++ {
@@ -390,7 +382,6 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 
 func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	b := make([]*ethpb.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
 		b[i] = &ethpb.SignedBeaconBlock{
@@ -422,7 +413,6 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 
 func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
@@ -464,7 +454,6 @@ func TestStore_SaveBlock_CanGetHighest(t *testing.T) {
 
 func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	block1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
@@ -502,7 +491,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", block3, highestAt)
 	}
 
-	r3, err := ssz.HashTreeRoot(block3.Block)
+	r3, err := stateutil.BlockRoot(block3.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -521,11 +510,10 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 
 func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	genesisBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
-	genesisRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	genesisRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -565,7 +553,6 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 
 func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	b := make([]*ethpb.SignedBeaconBlock, 500)
@@ -592,7 +579,6 @@ func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 
 func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	b := make([]*ethpb.SignedBeaconBlock, 500)
@@ -625,7 +611,6 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 
 func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	b50 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 50}}
@@ -641,7 +626,7 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 	}
 
 	b51 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 51}}
-	r51, err := ssz.HashTreeRoot(b51.Block)
+	r51, err := stateutil.BlockRoot(b51.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -671,7 +656,6 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 
 func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	var err error
@@ -684,7 +668,7 @@ func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 				Slot:       uint64(i),
 			},
 		}
-		r[i], err = ssz.HashTreeRoot(b[i].Block)
+		r[i], err = stateutil.BlockRoot(b[i].Block)
 		if err != nil {
 			t.Error(err)
 		}

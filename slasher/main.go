@@ -1,3 +1,6 @@
+// Package main defines slasher server implementation for eth2. A slasher
+// listens for all broadcasted messages using a running beacon node in order
+// to detect malicious attestations and block proposals.
 package main
 
 import (
@@ -16,19 +19,19 @@ import (
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"gopkg.in/urfave/cli.v2"
+	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
 var log = logrus.WithField("prefix", "main")
 
-func startSlasher(ctx *cli.Context) error {
-	featureconfig.ConfigureSlasher(ctx)
-	verbosity := ctx.String(cmd.VerbosityFlag.Name)
+func startSlasher(cliCtx *cli.Context) error {
+	verbosity := cliCtx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
 		return err
 	}
 	logrus.SetLevel(level)
-	slasher, err := node.NewSlasherNode(ctx)
+	slasher, err := node.NewSlasherNode(cliCtx)
 	if err != nil {
 		return err
 	}
@@ -48,6 +51,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFormat,
 	cmd.ClearDB,
 	cmd.ForceClearDB,
+	cmd.ConfigFileFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
@@ -73,6 +77,16 @@ func main() {
 	app.Flags = appFlags
 	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
+		// Load any flags from file, if specified.
+		if ctx.IsSet(cmd.ConfigFileFlag.Name) {
+			if err := altsrc.InitInputSourceWithContext(
+				appFlags,
+				altsrc.NewYamlSourceFromFlagFunc(
+					cmd.ConfigFileFlag.Name))(ctx); err != nil {
+				return err
+			}
+		}
+
 		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":

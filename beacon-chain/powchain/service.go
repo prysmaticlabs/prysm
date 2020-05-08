@@ -1,4 +1,6 @@
-// Package powchain defines the services that interact with the ETH1.0 of Ethereum.
+// Package powchain defines a runtime service which is tasked with
+// communicating with an eth1 endpoint, processing logs from a deposit
+// contract, and the latest eth1 data headers for usage in the beacon node.
 package powchain
 
 import (
@@ -553,35 +555,73 @@ func (s *Service) handleDelayTicker() {
 	}
 }
 
+func (s *Service) initPOWService() ethereum.Subscription {
+	// initialize a nil subscription
+	headSub := ethereum.Subscription(nil)
+	// reconnect to eth1 node in case of any failure
+	retryETH1Node := func(err error) {
+		s.runError = err
+		s.connectedETH1 = false
+		s.waitForConnection()
+		// reset value in the event of a successful connection.
+		s.runError = nil
+	}
+
+	// run in a select loop to retry in the event of any failures.
+	for {
+		select {
+		case <-s.ctx.Done():
+			return headSub
+		default:
+			err := s.initDataFromContract()
+			if err != nil {
+				log.Errorf("Unable to retrieve data from deposit contract %v", err)
+				retryETH1Node(err)
+				continue
+			}
+
+			headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
+			if err != nil {
+				log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
+				retryETH1Node(err)
+				continue
+			}
+
+			if headSub == nil {
+				log.Errorf("Nil head subscription received: %v", err)
+				retryETH1Node(err)
+				continue
+			}
+
+			header, err := s.blockFetcher.HeaderByNumber(context.Background(), nil)
+			if err != nil {
+				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
+				retryETH1Node(err)
+				continue
+			}
+
+			s.latestEth1Data.BlockHeight = header.Number.Uint64()
+			s.latestEth1Data.BlockHash = header.Hash().Bytes()
+
+			if err := s.processPastLogs(context.Background()); err != nil {
+				log.Errorf("Unable to process past logs %v", err)
+				retryETH1Node(err)
+				continue
+			}
+			return headSub
+		}
+	}
+}
+
 // run subscribes to all the services for the ETH1.0 chain.
 func (s *Service) run(done <-chan struct{}) {
+	var err error
 	s.isRunning = true
 	s.runError = nil
-	if err := s.initDataFromContract(); err != nil {
-		log.Errorf("Unable to retrieve data from deposit contract %v", err)
-		return
-	}
 
-	headSub, err := s.reader.SubscribeNewHead(s.ctx, s.headerChan)
-	if err != nil {
-		log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
-		s.runError = err
-		return
-	}
-
-	header, err := s.blockFetcher.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
-		s.runError = err
-		return
-	}
-
-	s.latestEth1Data.BlockHeight = header.Number.Uint64()
-	s.latestEth1Data.BlockHash = header.Hash().Bytes()
-
-	if err := s.processPastLogs(context.Background()); err != nil {
-		log.Errorf("Unable to process past logs %v", err)
-		s.runError = err
+	headSub := s.initPOWService()
+	if headSub == nil {
+		log.Error("Received a nil head subscription, exiting service")
 		return
 	}
 

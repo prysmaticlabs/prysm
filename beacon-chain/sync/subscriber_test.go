@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -9,8 +10,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -18,11 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
@@ -69,7 +72,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
@@ -90,6 +92,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		if err := r.attesterSlashingSubscriber(ctx, msg); err != nil {
@@ -136,7 +139,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		Genesis:        time.Now(),
 	}
 	d := db.SetupDB(t)
-	defer db.TeardownDB(t, d)
 	c, err := lru.New(10)
 	if err != nil {
 		t.Fatal(err)
@@ -153,6 +155,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	topic := "/eth2/%x/proposer_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
 		if err := r.proposerSlashingSubscriber(ctx, msg); err != nil {
@@ -172,7 +175,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating proposer slashing")
 	}
-	root, err := ssz.HashTreeRoot(proposerSlashing.Header_1.Header)
+	root, err := stateutil.BlockHeaderRoot(proposerSlashing.Header_1.Header)
 	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
 		t.Fatal(err)
 	}
@@ -269,4 +272,48 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
+}
+
+func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	hook := logTest.NewGlobal()
+	r := Service{
+		ctx: context.Background(),
+		chain: &mockChain.ChainService{
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		},
+		p2p: p,
+	}
+	digest, err := r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
+
+	defaultTopic := "/eth2/testing/%#x/committee%d"
+	// committee index 1
+	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.p2p.Encoding().ProtocolSuffix()
+	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriptions[1], err = r.p2p.PubSub().Subscribe(fullTopic)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// committee index 2
+	fullTopic = fmt.Sprintf(defaultTopic, digest, 2) + r.p2p.Encoding().ProtocolSuffix()
+	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriptions[2], err = r.p2p.PubSub().Subscribe(fullTopic)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r.reValidateSubscriptions(subscriptions, []uint64{2}, defaultTopic, digest)
+	testutil.AssertLogsDoNotContain(t, hook, "Failed to unregister topic validator")
 }

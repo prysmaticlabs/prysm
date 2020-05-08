@@ -17,7 +17,6 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: bytesutil.PadTo([]byte("hello"), 96)}}
@@ -42,7 +41,6 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	data := &ethpb.AttestationData{
@@ -90,7 +88,6 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	ckpt := &ethpb.Checkpoint{}
@@ -121,7 +118,6 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -179,7 +175,6 @@ func TestStore_LatestEpochDetected(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
-	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	e, err := db.GetLatestEpochDetected(ctx)

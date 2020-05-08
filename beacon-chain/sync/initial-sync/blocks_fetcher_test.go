@@ -11,7 +11,6 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -24,7 +23,7 @@ import (
 )
 
 func TestBlocksFetcherInitStartStop(t *testing.T) {
-	mc, p2p, beaconDB := initializeTestServices(t, []uint64{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -84,8 +83,6 @@ func TestBlocksFetcherInitStartStop(t *testing.T) {
 		cancel()
 		fetcher.stop()
 	})
-
-	dbtest.TeardownDB(t, beaconDB)
 }
 
 func TestBlocksFetcherRoundRobin(t *testing.T) {
@@ -411,8 +408,6 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
-
-			dbtest.TeardownDB(t, beaconDB)
 		})
 	}
 }
@@ -451,8 +446,7 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 		},
 	}
 
-	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-	defer dbtest.TeardownDB(t, beaconDB)
+	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -531,7 +525,7 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	}
 
 	hook := logTest.NewGlobal()
-	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -578,8 +572,6 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	if err == nil || err.Error() != "context canceled" {
 		t.Errorf("expected context closed error, got: %v", err)
 	}
-
-	dbtest.TeardownDB(t, beaconDB)
 }
 
 func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
@@ -681,8 +673,7 @@ func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
 		},
 	}
 
-	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-	defer dbtest.TeardownDB(t, beaconDB)
+	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -709,34 +700,4 @@ func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
 			t.Errorf("unexpected slot, want: %v, got: %v", expectedSlot, slot)
 		}
 	}
-}
-
-func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
-	cache.initializeRootCache(blocks, t)
-	beaconDB := dbtest.SetupDB(t)
-
-	p := p2pt.NewTestP2P(t)
-	connectPeers(t, p, peers, p.Peers())
-	cache.RLock()
-	genesisRoot := cache.rootCache[0]
-	cache.RUnlock()
-
-	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
-		Block: &eth.BeaconBlock{
-			Slot: 0,
-		}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return &mock.ChainService{
-		State: st,
-		Root:  genesisRoot[:],
-		DB:    beaconDB,
-	}, p, beaconDB
 }

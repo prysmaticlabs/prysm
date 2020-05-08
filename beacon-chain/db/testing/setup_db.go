@@ -1,3 +1,5 @@
+// Package testing allows for spinning up a real bolt-db
+// instance for unit tests throughout the Prysm repo.
 package testing
 
 import (
@@ -28,15 +30,13 @@ func SetupDB(t testing.TB) db.Database {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Fatalf("failed to close database: %v", err)
+		}
+		if err := os.RemoveAll(s.DatabasePath()); err != nil {
+			t.Fatalf("could not remove tmp db dir: %v", err)
+		}
+	})
 	return s
-}
-
-// TeardownDB closes a database and destroys the files at the database path.
-func TeardownDB(t testing.TB, db db.Database) {
-	if err := db.Close(); err != nil {
-		t.Fatalf("failed to close database: %v", err)
-	}
-	if err := os.RemoveAll(db.DatabasePath()); err != nil {
-		t.Fatalf("could not remove tmp db dir: %v", err)
-	}
 }

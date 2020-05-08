@@ -21,10 +21,27 @@ func (bs *Service) ChainHead(
 	ctx, span := trace.StartSpan(ctx, "beaconclient.ChainHead")
 	defer span.End()
 	res, err := bs.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
-	if err != nil {
-		return nil, errors.Wrap(err, "Could not retrieve chain head")
+	if err != nil || res == nil {
+		return nil, errors.Wrap(err, "Could not retrieve chain head or got nil chain head")
 	}
 	return res, nil
+}
+
+// GenesisValidatorsRoot requests the beacon chain genesis validators
+// root via gRPC.
+func (bs *Service) GenesisValidatorsRoot(
+	ctx context.Context,
+) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "beaconclient.GenesisValidatorsRoot")
+	defer span.End()
+	res, err := bs.nodeClient.GetGenesis(ctx, &ptypes.Empty{})
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not retrieve genesis data")
+	}
+	if res == nil {
+		return nil, errors.Wrap(err, " genesis data")
+	}
+	return res.GenesisValidatorsRoot, nil
 }
 
 // Poll the beacon node every syncStatusPollingInterval until the node
@@ -34,7 +51,7 @@ func (bs *Service) querySyncStatus(ctx context.Context) {
 	if err != nil {
 		log.WithError(err).Error("Could not fetch sync status")
 	}
-	if !status.Syncing {
+	if status != nil && !status.Syncing {
 		log.Info("Beacon node is fully synced, starting slashing detection")
 		return
 	}

@@ -1,3 +1,7 @@
+// Package endtoend performs full a end-to-end test for Prysm,
+// including spinning up an ETH1 dev chain, sending deposits to the deposit
+// contract, and making sure the beacon node and validators are running and
+// performing properly for a few epochs.
 package endtoend
 
 import (
@@ -30,11 +34,11 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	t.Logf("Log Path: %s\n\n", e2e.TestParams.LogPath)
 
 	keystorePath, eth1PID := components.StartEth1Node(t)
-	bootnodeENR, _ := components.StartBootnode(t)
+	bootnodeENR, bootnodePID := components.StartBootnode(t)
 	bProcessIDs := components.StartBeaconNodes(t, config, bootnodeENR)
-	valProcessIDs := components.StartValidators(t, config, keystorePath)
+	valProcessIDs := components.StartValidatorClients(t, config, keystorePath)
 	processIDs := append(valProcessIDs, bProcessIDs...)
-	processIDs = append(processIDs, eth1PID)
+	processIDs = append(processIDs, []int{eth1PID, bootnodePID}...)
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
 
@@ -49,6 +53,17 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	// Failing early in case chain doesn't start.
 	if t.Failed() {
 		return
+	}
+
+	if config.TestSlasher {
+		slasherPIDs := components.StartSlashers(t)
+		defer helpers.KillProcesses(t, slasherPIDs)
+	}
+	if config.TestDeposits {
+		valCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / e2e.TestParams.BeaconNodeCount
+		valPid := components.StartNewValidatorClient(t, config, valCount, e2e.TestParams.BeaconNodeCount)
+		defer helpers.KillProcesses(t, []int{valPid})
+		components.SendAndMineDeposits(t, keystorePath, valCount, int(params.BeaconConfig().MinGenesisActiveValidatorCount))
 	}
 
 	conns := make([]*grpc.ClientConn, e2e.TestParams.BeaconNodeCount)
@@ -69,16 +84,14 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Small offset so evaluators perform in the middle of an epoch.
+
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
-	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
+	// Adding a half slot here to ensure the requests are in the middle of an epoch.
+	middleOfEpoch := int64(epochSeconds/2 + (params.BeaconConfig().SecondsPerSlot / 2))
+	// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
+	tickingStartTime := time.Unix(genesis.GenesisTime.Seconds+middleOfEpoch, 0)
 
-	if config.TestSlasher {
-		slasherPIDs := components.StartSlashers(t)
-		defer helpers.KillProcesses(t, slasherPIDs)
-	}
-
-	ticker := helpers.GetEpochTicker(genesisTime, epochSeconds)
+	ticker := helpers.GetEpochTicker(tickingStartTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.Evaluators {
 			// Only run if the policy says so.
@@ -113,11 +126,10 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	conns = append(conns, syncConn)
 
-	// Sleep until the next epoch to give time for the newly started node to sync.
-	extraTimeToSync := (config.EpochsToRun+3)*epochSeconds + 60
-	genesisTime.Add(time.Duration(extraTimeToSync) * time.Second)
-	// Wait until middle of epoch to request to prevent conflicts.
-	time.Sleep(time.Until(genesisTime))
+	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
+	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 4 * config.EpochsToRun)
+	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
+	time.Sleep(time.Until(waitForSync))
 
 	syncLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index)))
 	if err != nil {

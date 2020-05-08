@@ -297,7 +297,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 	blockSig := priv.Sign(signingRoot[:])
 	block.Signature = blockSig.Marshal()[:]
-	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
+	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
@@ -549,7 +549,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	}
 	want := fmt.Sprintf(
 		"validator with key %#x is not slashable",
-		beaconState.Validators()[0].PublicKey,
+		bytesutil.ToBytes48(beaconState.Validators()[0].PublicKey),
 	)
 
 	_, err = blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body)

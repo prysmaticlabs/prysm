@@ -1,3 +1,6 @@
+// Package p2p defines the network protocol implementation for eth2
+// used by beacon nodes, including peer discovery using discv5, gossip-sub
+// using libp2p, and handing peer lifecycles + handshakes.
 package p2p
 
 import (
@@ -30,14 +33,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -277,8 +278,7 @@ func (s *Service) Start() {
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
 	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
 	runutil.RunEvery(s.ctx, refreshRate, func() {
-		currentEpoch := helpers.SlotToEpoch(helpers.SlotsSince(s.genesisTime))
-		s.RefreshENR(currentEpoch)
+		s.RefreshENR()
 	})
 
 	multiAddrs := s.host.Network().ListenAddresses()
@@ -361,6 +361,11 @@ func (s *Service) Disconnect(pid peer.ID) error {
 	return s.host.Network().ClosePeer(pid)
 }
 
+// Connect to a specific peer.
+func (s *Service) Connect(pi peer.AddrInfo) error {
+	return s.host.Connect(s.ctx, pi)
+}
+
 // Peers returns the peer status interface.
 func (s *Service) Peers() *peers.Status {
 	return s.peers
@@ -379,19 +384,13 @@ func (s *Service) MetadataSeq() uint64 {
 // RefreshENR uses an epoch to refresh the enr entry for our node
 // with the tracked committee id's for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee id's.
-func (s *Service) RefreshENR(epoch uint64) {
+func (s *Service) RefreshENR() {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-
-	var committees []uint64
-	epochStartSlot := helpers.StartSlot(epoch)
-	for i := epochStartSlot; i < epochStartSlot+2*params.BeaconConfig().SlotsPerEpoch; i++ {
-		committees = append(committees, sliceutil.UnionUint64(cache.CommitteeIDs.GetAttesterCommitteeIDs(i),
-			cache.CommitteeIDs.GetAggregatorCommitteeIDs(i))...)
-	}
+	committees := cache.CommitteeIDs.GetAllCommittees()
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}

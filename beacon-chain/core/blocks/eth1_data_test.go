@@ -56,6 +56,7 @@ func TestEth1DataHasEnoughSupport(t *testing.T) {
 		},
 	}
 
+	params.SetupTestConfigCleanup(t)
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			c := params.BeaconConfig()

@@ -1,3 +1,5 @@
+// Package spectest contains all comformity specification tests
+// for block processing according to the eth2 spec.
 package spectest
 
 import (
@@ -14,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -26,7 +28,7 @@ func init() {
 }
 
 func runBlockProcessingTest(t *testing.T, config string) {
-	if err := spectest.SetConfig(config); err != nil {
+	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -42,7 +44,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 			if err := ssz.Unmarshal(preBeaconStateFile, beaconStateBase); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			beaconState, err := beaconstate.InitializeFromProto(beaconStateBase)
+			beaconState, err := stateTrie.InitializeFromProto(beaconStateBase)
 			if err != nil {
 				t.Fatal(err)
 			}

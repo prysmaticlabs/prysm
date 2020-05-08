@@ -12,7 +12,8 @@ The process for implementing new features using this package is as follows:
 	cfg := &featureconfig.Flags{
 		VerifyAttestationSigs: true,
 	}
-	featureconfig.Init(cfg)
+	resetCfg := featureconfig.InitWithReset(cfg)
+	defer resetCfg()
 	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
 	and E2EBeaconChainFlags.
 */
@@ -59,7 +60,8 @@ type Flags struct {
 	DisableForkChoice bool
 
 	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
-	BroadcastSlashings bool
+	BroadcastSlashings         bool
+	DisableHistoricalDetection bool
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -86,43 +88,13 @@ func Init(c *Flags) {
 	featureConfig = c
 }
 
-// Copy returns copy of the config object.
-func (c *Flags) Copy() *Flags {
-	return &Flags{
-		MinimalConfig:                              c.MinimalConfig,
-		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
-		InitSyncNoVerify:                           c.InitSyncNoVerify,
-		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
-		SkipBLSVerify:                              c.SkipBLSVerify,
-		EnableBackupWebhook:                        c.EnableStateRefCopy,
-		PruneEpochBoundaryStates:                   c.PruneEpochBoundaryStates,
-		EnableSnappyDBCompression:                  c.EnableSnappyDBCompression,
-		ProtectProposer:                            c.ProtectProposer,
-		ProtectAttester:                            c.ProtectAttester,
-		DisableStrictAttestationPubsubVerification: c.DisableStrictAttestationPubsubVerification,
-		DisableUpdateHeadPerAttestation:            c.DisableUpdateHeadPerAttestation,
-		EnableByteMempool:                          c.EnableByteMempool,
-		EnableDomainDataCache:                      c.EnableDomainDataCache,
-		EnableStateGenSigVerify:                    c.EnableStateGenSigVerify,
-		CheckHeadState:                             c.CheckHeadState,
-		EnableNoise:                                c.EnableNoise,
-		DontPruneStateStartUp:                      c.DontPruneStateStartUp,
-		NewStateMgmt:                               c.NewStateMgmt,
-		DisableInitSyncQueue:                       c.DisableInitSyncQueue,
-		EnableFieldTrie:                            c.EnableFieldTrie,
-		EnableBlockHTR:                             c.EnableBlockHTR,
-		NoInitSyncBatchSaveBlocks:                  c.NoInitSyncBatchSaveBlocks,
-		EnableStateRefCopy:                         c.EnableStateRefCopy,
-		WaitForSynced:                              c.WaitForSynced,
-		DisableForkChoice:                          c.DisableForkChoice,
-		BroadcastSlashings:                         c.BroadcastSlashings,
-		EnableSSZCache:                             c.EnableSSZCache,
-		EnableEth1DataVoteCache:                    c.EnableEth1DataVoteCache,
-		EnableSlasherConnection:                    c.EnableSlasherConnection,
-		EnableBlockTreeCache:                       c.EnableBlockTreeCache,
-		KafkaBootstrapServers:                      c.KafkaBootstrapServers,
-		CustomGenesisDelay:                         c.CustomGenesisDelay,
+// InitWithReset sets the global config and returns function that is used to reset configuration.
+func InitWithReset(c *Flags) func() {
+	resetFunc := func() {
+		Init(&Flags{})
 	}
+	Init(c)
+	return resetFunc
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -219,10 +191,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.Bool(disableInitSyncQueue.Name) {
-		log.Warn("Disabled initial sync queue")
-		cfg.DisableInitSyncQueue = true
-	}
 	if ctx.Bool(enableFieldTrie.Name) {
 		log.Warn("Enabling state field trie")
 		cfg.EnableFieldTrie = true
@@ -250,6 +218,13 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
+	cfg := &Flags{}
+	cfg = configureConfig(ctx, cfg)
+	if ctx.Bool(disableHistoricalDetectionFlag.Name) {
+		log.Warn("Disabling historical attestation detection")
+		cfg.DisableHistoricalDetection = true
+	}
+	Init(cfg)
 }
 
 // ConfigureValidator sets the global config based

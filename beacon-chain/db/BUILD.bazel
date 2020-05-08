@@ -13,11 +13,11 @@ go_library(
         "alias.go",
         "http_backup_handler.go",
     ] + select({
-        "//conditions:default": [
-            "db_kafka_wrapped.go",
-        ],
         ":kafka_disabled": [
             "db.go",
+        ],
+        "//conditions:default": [
+            "db_kafka_wrapped.go",
         ],
     }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",

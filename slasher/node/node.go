@@ -1,3 +1,6 @@
+// Package node is the main process which handles the lifecycle of
+// the runtime services in a slasher process, gracefully shutting
+// everything down upon close.
 package node
 
 import (
@@ -14,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
@@ -34,7 +38,9 @@ const slasherDBName = "slasherdata"
 // for eth2. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type SlasherNode struct {
-	ctx                   *cli.Context
+	cliCtx                *cli.Context
+	ctx                   context.Context
+	cancel                context.CancelFunc
 	lock                  sync.RWMutex
 	services              *shared.ServiceRegistry
 	proposerSlashingsFeed *event.Feed
@@ -45,35 +51,39 @@ type SlasherNode struct {
 
 // NewSlasherNode creates a new node instance, sets up configuration options,
 // and registers every required service.
-func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
+func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 	if err := tracing.Setup(
 		"slasher", // Service name.
-		ctx.String(cmd.TracingProcessNameFlag.Name),
-		ctx.String(cmd.TracingEndpointFlag.Name),
-		ctx.Float64(cmd.TraceSampleFractionFlag.Name),
-		ctx.Bool(cmd.EnableTracingFlag.Name),
+		cliCtx.String(cmd.TracingProcessNameFlag.Name),
+		cliCtx.String(cmd.TracingEndpointFlag.Name),
+		cliCtx.Float64(cmd.TraceSampleFractionFlag.Name),
+		cliCtx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
 	}
 
+	featureconfig.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 
+	ctx, cancel := context.WithCancel(cliCtx)
 	slasher := &SlasherNode{
+		cliCtx:                cliCtx,
 		ctx:                   ctx,
+		cancel:                cancel,
 		proposerSlashingsFeed: new(event.Feed),
 		attesterSlashingsFeed: new(event.Feed),
 		services:              registry,
 		stop:                  make(chan struct{}),
 	}
-	if err := slasher.registerPrometheusService(ctx); err != nil {
+	if err := slasher.registerPrometheusService(); err != nil {
 		return nil, err
 	}
 
-	if err := slasher.startDB(ctx); err != nil {
+	if err := slasher.startDB(); err != nil {
 		return nil, err
 	}
 
-	if err := slasher.registerBeaconClientService(ctx); err != nil {
+	if err := slasher.registerBeaconClientService(); err != nil {
 		return nil, err
 	}
 
@@ -81,7 +91,7 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 		return nil, err
 	}
 
-	if err := slasher.registerRPCService(ctx); err != nil {
+	if err := slasher.registerRPCService(); err != nil {
 		return nil, err
 	}
 
@@ -101,12 +111,12 @@ func (s *SlasherNode) Start() {
 		defer signal.Stop(sigc)
 		<-sigc
 		log.Info("Got interrupt, shutting down...")
-		debug.Exit(s.ctx) // Ensure trace and CPU profile data are flushed.
+		debug.Exit(s.cliCtx) // Ensure trace and CPU profile data are flushed.
 		go s.Close()
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
+				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic")
 			}
 		}
 		panic("Panic closing the beacon node")
@@ -122,6 +132,7 @@ func (s *SlasherNode) Close() {
 	defer s.lock.Unlock()
 
 	log.Info("Stopping hash slinging slasher")
+	s.cancel()
 	s.services.StopAll()
 	if err := s.db.Close(); err != nil {
 		log.Errorf("Failed to close database: %v", err)
@@ -129,19 +140,19 @@ func (s *SlasherNode) Close() {
 	close(s.stop)
 }
 
-func (s *SlasherNode) registerPrometheusService(ctx *cli.Context) error {
+func (s *SlasherNode) registerPrometheusService() error {
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.Int64(flags.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", s.cliCtx.Int64(flags.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
 	return s.services.RegisterService(service)
 }
 
-func (s *SlasherNode) startDB(ctx *cli.Context) error {
-	baseDir := ctx.String(cmd.DataDirFlag.Name)
-	clearDB := ctx.Bool(cmd.ClearDB.Name)
-	forceClearDB := ctx.Bool(cmd.ForceClearDB.Name)
+func (s *SlasherNode) startDB() error {
+	baseDir := s.cliCtx.String(cmd.DataDirFlag.Name)
+	clearDB := s.cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearDB := s.cliCtx.Bool(cmd.ForceClearDB.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
 	cfg := &kv.Config{}
 	d, err := db.NewDB(dbPath, cfg)
@@ -173,14 +184,14 @@ func (s *SlasherNode) startDB(ctx *cli.Context) error {
 	return nil
 }
 
-func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
-	beaconCert := ctx.String(flags.BeaconCertFlag.Name)
-	beaconProvider := ctx.String(flags.BeaconRPCProviderFlag.Name)
+func (s *SlasherNode) registerBeaconClientService() error {
+	beaconCert := s.cliCtx.String(flags.BeaconCertFlag.Name)
+	beaconProvider := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	if beaconProvider == "" {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 
-	bs, err := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
+	bs, err := beaconclient.NewBeaconClientService(s.ctx, &beaconclient.Config{
 		BeaconCert:            beaconCert,
 		SlasherDB:             s.db,
 		BeaconProvider:        beaconProvider,
@@ -198,7 +209,7 @@ func (s *SlasherNode) registerDetectionService() error {
 	if err := s.services.FetchService(&bs); err != nil {
 		panic(err)
 	}
-	ds := detection.NewDetectionService(context.Background(), &detection.Config{
+	ds := detection.NewDetectionService(s.ctx, &detection.Config{
 		Notifier:              bs,
 		SlasherDB:             s.db,
 		BeaconClient:          bs,
@@ -209,16 +220,16 @@ func (s *SlasherNode) registerDetectionService() error {
 	return s.services.RegisterService(ds)
 }
 
-func (s *SlasherNode) registerRPCService(ctx *cli.Context) error {
+func (s *SlasherNode) registerRPCService() error {
 	var detectionService *detection.Service
 	if err := s.services.FetchService(&detectionService); err != nil {
 		return err
 	}
 
-	port := ctx.String(flags.RPCPort.Name)
-	cert := ctx.String(flags.CertFlag.Name)
-	key := ctx.String(flags.KeyFlag.Name)
-	rpcService := rpc.NewService(context.Background(), &rpc.Config{
+	port := s.cliCtx.String(flags.RPCPort.Name)
+	cert := s.cliCtx.String(flags.CertFlag.Name)
+	key := s.cliCtx.String(flags.KeyFlag.Name)
+	rpcService := rpc.NewService(s.ctx, &rpc.Config{
 		Port:      port,
 		CertFlag:  cert,
 		KeyFlag:   key,

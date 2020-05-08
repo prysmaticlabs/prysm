@@ -1,10 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
         "finality.go",
+        "metrics.go",
         "node.go",
         "slashing.go",
         "validator.go",
@@ -16,6 +17,7 @@ go_library(
         "//endtoend/params:go_default_library",
         "//endtoend/types:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/testutil:go_default_library",

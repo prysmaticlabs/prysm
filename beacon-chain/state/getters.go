@@ -429,7 +429,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	}, nil
 }
 
-// ValidatorAtIndexReadOnly is the validator at the provided index.This method
+// ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, error) {
 	if !b.HasInnerState() {
@@ -438,25 +438,31 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, 
 	if b.state.Validators == nil {
 		return &ReadOnlyValidator{}, nil
 	}
+	if uint64(len(b.state.Validators)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.Validators) <= int(idx) {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
 	return &ReadOnlyValidator{b.state.Validators[idx]}, nil
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
 func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
+	if b == nil || b.valIdxMap == nil {
+		return 0, false
+	}
 	b.lock.RLock()
-	b.lock.RUnlock()
+	defer b.lock.RUnlock()
 	idx, ok := b.valIdxMap[key]
 	return idx, ok
 }
 
 func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
+	if b == nil || b.valIdxMap == nil {
+		return map[[48]byte]uint64{}
+	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 

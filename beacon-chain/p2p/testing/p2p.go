@@ -1,3 +1,5 @@
+// Package testing includes useful utilities for mocking
+// a beacon node's p2p service for unit tests.
 package testing
 
 import (
@@ -253,7 +255,7 @@ func (p *TestP2P) FindPeersWithSubnet(index uint64) (bool, error) {
 }
 
 // RefreshENR mocks the p2p func.
-func (p *TestP2P) RefreshENR(epoch uint64) {
+func (p *TestP2P) RefreshENR() {
 	return
 }
 

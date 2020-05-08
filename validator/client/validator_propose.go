@@ -10,8 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -188,15 +188,16 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	}
 	var sig *bls.Signature
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		bodyRoot, err := ssz.HashTreeRoot(b.Body)
+		bodyRoot, err := stateutil.BlockBodyRoot(b.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
 		}
 		blockHeader := &ethpb.BeaconBlockHeader{
-			Slot:       b.Slot,
-			StateRoot:  b.StateRoot,
-			ParentRoot: b.ParentRoot,
-			BodyRoot:   bodyRoot[:],
+			Slot:          b.Slot,
+			ProposerIndex: b.ProposerIndex,
+			StateRoot:     b.StateRoot,
+			ParentRoot:    b.ParentRoot,
+			BodyRoot:      bodyRoot[:],
 		}
 		sig, err = protectingKeymanager.SignProposal(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), blockHeader)
 		if err != nil {

@@ -1,3 +1,6 @@
+// Package interopcoldstart allows for spinning up a deterministic
+// local chain without the need for eth1 deposits useful for
+// local client development and interoperability testing.
 package interopcoldstart
 
 import (
@@ -13,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -158,7 +162,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}

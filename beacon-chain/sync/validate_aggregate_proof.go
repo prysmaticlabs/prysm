@@ -53,7 +53,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 	// Verify this is the first aggregate received from the aggregator with index and slot.
-	if r.hasSeenAggregatorIndexSlot(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex) {
+	if r.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
 		return false
 	}
 
@@ -74,11 +74,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Message.Aggregate) {
-		return false
-	}
-
-	r.setAggregatorIndexSlotSeen(m.Message.Aggregate.Data.Slot, m.Message.AggregatorIndex)
+	r.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
 
@@ -95,7 +91,7 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		return false
 	}
 
-	s, err := r.chain.HeadState(ctx)
+	s, err := r.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return false
@@ -129,9 +125,11 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	}
 
 	// Verify aggregated attestation has a valid signature.
-	if err := blocks.VerifyAttestation(ctx, s, signed.Message.Aggregate); err != nil {
-		traceutil.AnnotateError(span, err)
-		return false
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
+		if err := blocks.VerifyAttestation(ctx, s, signed.Message.Aggregate); err != nil {
+			traceutil.AnnotateError(span, err)
+			return false
+		}
 	}
 
 	return true
@@ -152,20 +150,20 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, s *ethpb.Signe
 	return true
 }
 
-// Returns true if the node has received aggregate for the aggregator with index and slot.
-func (r *Service) hasSeenAggregatorIndexSlot(slot uint64, aggregatorIndex uint64) bool {
+// Returns true if the node has received aggregate for the aggregator with index and target epoch.
+func (r *Service) hasSeenAggregatorIndexEpoch(epoch uint64, aggregatorIndex uint64) bool {
 	r.seenAttestationLock.RLock()
 	defer r.seenAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
 	_, seen := r.seenAttestationCache.Get(string(b))
 	return seen
 }
 
-// Set aggregate's aggregator index slot as seen.
-func (r *Service) setAggregatorIndexSlotSeen(slot uint64, aggregatorIndex uint64) {
+// Set aggregate's aggregator index target epoch as seen.
+func (r *Service) setAggregatorIndexEpochSeen(epoch uint64, aggregatorIndex uint64) {
 	r.seenAttestationLock.Lock()
 	defer r.seenAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(slot), bytesutil.Bytes32(aggregatorIndex)...)
+	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
 	r.seenAttestationCache.Add(string(b), true)
 }
 

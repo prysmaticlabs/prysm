@@ -1,22 +1,25 @@
+// Package spectest allows for easy switching of chain
+// configuration parameters in spec conformity unit tests.
 package spectest
 
 import (
 	"errors"
 	"fmt"
+	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.
-func SetConfig(config string) error {
+// Provides reset function allowing to get back to the previous configuration at the end of a test.
+func SetConfig(t *testing.T, config string) error {
+	params.SetupTestConfigCleanup(t)
 	switch config {
 	case "minimal":
-		newConfig := params.MinimalSpecConfig()
-		params.OverrideBeaconConfig(newConfig)
+		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 		return nil
 	case "mainnet":
-		newConfig := params.MainnetConfig()
-		params.OverrideBeaconConfig(newConfig)
+		params.OverrideBeaconConfig(params.MainnetConfig())
 		return nil
 	case "":
 		return errors.New("no config provided")

@@ -1,3 +1,6 @@
+// Package initialsync includes all initial block download and processing
+// logic for the beacon node, using a round robin strategy and a finite-state-machine
+// to handle edge-cases in a beacon node's sync status.
 package initialsync
 
 import (
@@ -23,18 +26,13 @@ import (
 
 var _ = shared.Service(&Service{})
 
+// blockchainService defines the interface for interaction with block chain service.
 type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.HeadFetcher
 	ClearCachedStates()
 	blockchain.FinalizationFetcher
 }
-
-const (
-	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
-
-	allowedBlocksPerSecond = 32.0
-)
 
 // Config to set up the initial sync service.
 type Config struct {
@@ -64,14 +62,15 @@ type Service struct {
 func NewInitialSync(cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Service{
-		ctx:               ctx,
-		cancel:            cancel,
-		chain:             cfg.Chain,
-		p2p:               cfg.P2P,
-		db:                cfg.DB,
-		stateNotifier:     cfg.StateNotifier,
-		blockNotifier:     cfg.BlockNotifier,
-		blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
+		ctx:           ctx,
+		cancel:        cancel,
+		chain:         cfg.Chain,
+		p2p:           cfg.P2P,
+		db:            cfg.DB,
+		stateNotifier: cfg.StateNotifier,
+		blockNotifier: cfg.BlockNotifier,
+		blocksRateLimiter: leakybucket.NewCollector(
+			allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 	}
 }
 
@@ -114,8 +113,7 @@ func (s *Service) Start() {
 
 	if genesis.After(roughtime.Now()) {
 		log.WithField(
-			"genesis time",
-			genesis,
+			"genesis time", genesis,
 		).Warn("Genesis time is in the future - waiting to start sync...")
 		logutil.CountdownToGenesis(genesis, 300 /* countdown interval */)
 		time.Sleep(roughtime.Until(genesis))
@@ -213,7 +211,8 @@ func (s *Service) waitForMinimumPeers() {
 		}
 		log.WithFields(logrus.Fields{
 			"suitable": len(peers),
-			"required": required}).Info("Waiting for enough suitable peers before syncing")
+			"required": required,
+		}).Info("Waiting for enough suitable peers before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
 }

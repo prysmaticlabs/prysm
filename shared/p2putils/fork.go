@@ -1,3 +1,4 @@
+// Package p2putils contains useful helpers for eth2 fork-related functionality.
 package p2putils
 
 import (
@@ -5,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -41,4 +43,32 @@ func CreateForkDigest(
 		return [4]byte{}, err
 	}
 	return digest, nil
+}
+
+// Fork given a target epoch,
+// returns the active fork version during this epoch.
+func Fork(
+	targetEpoch uint64,
+) (*pb.Fork, error) {
+	// We retrieve a list of scheduled forks by epoch.
+	// We loop through the keys in this map to determine the current
+	// fork version based on the requested epoch.
+	retrievedForkVersion := params.BeaconConfig().GenesisForkVersion
+	previousForkVersion := params.BeaconConfig().GenesisForkVersion
+	scheduledForks := params.BeaconConfig().ForkVersionSchedule
+	forkEpoch := uint64(0)
+	for epoch, forkVersion := range scheduledForks {
+		if epoch <= targetEpoch {
+			previousForkVersion = retrievedForkVersion
+			retrievedForkVersion = forkVersion
+			forkEpoch = epoch
+
+		}
+	}
+
+	return &pb.Fork{
+		PreviousVersion: previousForkVersion,
+		CurrentVersion:  retrievedForkVersion,
+		Epoch:           forkEpoch,
+	}, nil
 }
