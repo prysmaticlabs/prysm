@@ -111,7 +111,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			return false
 		}
 
-		if err := blocks.VerifyBlockHeaderSignature(parentState, blk); err != nil {
+		if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
 			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
 			return false
 		}

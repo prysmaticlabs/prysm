@@ -70,7 +70,9 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
         "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/mock:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
