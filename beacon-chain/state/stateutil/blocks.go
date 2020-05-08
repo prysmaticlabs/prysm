@@ -64,11 +64,13 @@ func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 
 // BlockBodyRoot returns the hash tree root of the block body.
 func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
+	if body == nil {
+		// Treat nil body to be the same as empty. This is mostly for test setup purposes and would
+		// be very unlikely to happen in production workflow.
+		return [32]byte{117, 149, 118, 243, 29, 85, 147, 152, 201, 11, 234, 19, 146, 229, 35, 209, 93, 246, 109, 242, 141, 181, 176, 126, 79, 196, 1, 189, 124, 203, 199, 62}, nil
+	}
 	hasher := hashutil.CustomSHA256Hasher()
 	fieldRoots := make([][32]byte, 8)
-	if body == nil {
-		return [32]byte{}, errors.New("nil block body provided")
-	}
 	rawRandao := bytesutil.ToBytes96(body.RandaoReveal)
 	packedRandao, err := pack([][]byte{rawRandao[:]})
 	if err != nil {

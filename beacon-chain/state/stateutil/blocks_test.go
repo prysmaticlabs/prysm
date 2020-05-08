@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func TestBlockRoot(t *testing.T) {
@@ -38,5 +39,21 @@ func TestBlockRoot(t *testing.T) {
 	}
 	if receivedRoot != expectedRoot {
 		t.Fatalf("Wanted %#x but got %#x", expectedRoot, receivedRoot)
+	}
+}
+
+func TestBlockBodyRoot_NilIsSameAsEmpty(t *testing.T) {
+	a, err := stateutil.BlockBodyRoot(&ethpb.BeaconBlockBody{})
+	if err != nil {
+		t.Error(err)
+	}
+	b, err := stateutil.BlockBodyRoot(nil)
+	if err != nil {
+		t.Error(err)
+	}
+	if a != b {
+		t.Log(a)
+		t.Log(b)
+		t.Error("A nil and empty block body do not generate the same root")
 	}
 }
