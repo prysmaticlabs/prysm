@@ -13,12 +13,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-func beaconNodeRPCProvider() (ethpb.BeaconNodeValidatorClient, error) {
+func beaconNodeRPCProvider() (ethpb.BeaconNodeValidatorClient, *grpc.ClientConn, error) {
 	conn, err := grpc.Dial(flags.BeaconRPCProviderFlag.Name, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return ethpb.NewBeaconNodeValidatorClient(conn), nil
+	return ethpb.NewBeaconNodeValidatorClient(conn), conn, nil
 }
 
 // FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient for each validator public key.
@@ -27,7 +27,7 @@ func FetchAccountStatuses(ctx context.Context, keyPairs map[string]*keystore.Key
 	defer span.End()
 
 	var err error
-	beaconNodeRPC, err := beaconNodeRPCProvider()
+	beaconNodeRPC, conn, err := beaconNodeRPCProvider()
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot connect to Beacon Node.")
 	}
@@ -48,6 +48,10 @@ func FetchAccountStatuses(ctx context.Context, keyPairs map[string]*keystore.Key
 		case e := <-errorChannel:
 			err = e
 		}
+	}
+
+	if e := conn.Close(); e != nil {
+		return nil, errors.Wrap(e, "could not close connection to beacon node")
 	}
 
 	// Sort responses by status
