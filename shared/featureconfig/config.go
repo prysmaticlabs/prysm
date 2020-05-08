@@ -62,7 +62,7 @@ type Flags struct {
 	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
 	BroadcastSlashings         bool
 	DisableHistoricalDetection bool // DisableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
-	DisableLookback            bool // DisableLookback removes changes the slasher to not use the lookback and update validator histories until epoch 0.
+	DisableLookback            bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -238,15 +238,13 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	cfg.ProtectProposer = true
-	if ctx.Bool(disableProtectProposerFlag.Name) {
-		log.Warn("Disabled validator proposal slashing protection.")
-		cfg.ProtectProposer = false
+	if ctx.Bool(enableProtectProposerFlag.Name) {
+		log.Warn("Enabled validator proposal slashing protection.")
+		cfg.ProtectProposer = true
 	}
-	cfg.ProtectAttester = true
-	if ctx.Bool(disableProtectAttesterFlag.Name) {
-		log.Warn("Disabled validator attestation slashing protection.")
-		cfg.ProtectAttester = false
+	if ctx.Bool(enableProtectAttesterFlag.Name) {
+		log.Warn("Enabled validator attestation slashing protection.")
+		cfg.ProtectAttester = true
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")
