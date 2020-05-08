@@ -222,7 +222,7 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 	if err != nil {
 		return err
 	}
-	proposerPubKey := proposer.PublicKey()
+	proposerPubKey := proposer.PublicKey
 	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey[:], block.Signature, domain)
 }
 
