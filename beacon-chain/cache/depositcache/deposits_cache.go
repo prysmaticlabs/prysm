@@ -162,10 +162,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 	var deposit *ethpb.Deposit
 	var blockNum *big.Int
-	// Search the list backwards since this function is only used for
-	// pending activation validators and the newest deposits are always at the end.
-	for i := len(dc.deposits) - 1; i > 0; i-- {
-		ctnr := dc.deposits[i]
+	for _, ctnr := range dc.deposits {
 		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
 			deposit = ctnr.Deposit
 			blockNum = big.NewInt(int64(ctnr.Eth1BlockHeight))
