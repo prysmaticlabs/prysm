@@ -9,62 +9,96 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestAttestationHistory_EmptyVal(t *testing.T) {
+func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := SetupDB(t, pubkeys)
 
-	for _, pub := range pubkeys {
-		attestationHistory, err := db.AttestationHistory(context.Background(), pub[:])
-		if err != nil {
-			t.Fatal(err)
-		}
+	historyForPubKeys, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		newMap := make(map[uint64]uint64)
-		newMap[0] = params.BeaconConfig().FarFutureEpoch
-		clean := &slashpb.AttestationHistory{
-			TargetToSource: newMap,
-		}
-		if !reflect.DeepEqual(attestationHistory, clean) {
-			t.Fatalf("Expected attestation history epoch bits to be empty, received %v", attestationHistory)
-		}
+	newMap := make(map[uint64]uint64)
+	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	clean := &slashpb.AttestationHistory{
+		TargetToSource: newMap,
+	}
+	cleanAttHistoryForPubKeys := make(map[[48]byte]*slashpb.AttestationHistory)
+	for _, pubKey := range pubkeys {
+		cleanAttHistoryForPubKeys[pubKey] = clean
+	}
+
+	if !reflect.DeepEqual(cleanAttHistoryForPubKeys, historyForPubKeys) {
+		t.Fatalf(
+			"Expected attestation history epoch bits to be empty, expected %v received %v",
+			cleanAttHistoryForPubKeys,
+			historyForPubKeys,
+		)
 	}
 }
 
 func TestSaveAttestationHistory_OK(t *testing.T) {
-	db := SetupDB(t, [][48]byte{})
+	pubKeys := [][48]byte{{3}, {4}}
+	db := SetupDB(t, pubKeys)
 
-	pubkey := []byte{3}
-	epoch := uint64(2)
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	newMap := make(map[uint64]uint64)
 	// The validator attested at target epoch 2 but had no attestations for target epochs 0 and 1.
 	newMap[0] = farFuture
 	newMap[1] = farFuture
-	newMap[epoch] = 1
+	newMap[2] = 1
 	history := &slashpb.AttestationHistory{
 		TargetToSource:     newMap,
 		LatestEpochWritten: 2,
 	}
 
-	if err := db.SaveAttestationHistory(context.Background(), pubkey, history); err != nil {
+	newMap2 := make(map[uint64]uint64)
+	// The validator attested at target epoch 2 but had no attestations for target epochs 0 and 1.
+	newMap2[0] = farFuture
+	newMap2[1] = 0
+	newMap2[2] = farFuture
+	newMap2[3] = 2
+	history2 := &slashpb.AttestationHistory{
+		TargetToSource:     newMap2,
+		LatestEpochWritten: 3,
+	}
+
+	attestationHistory := make(map[[48]byte]*slashpb.AttestationHistory)
+	attestationHistory[pubKeys[0]] = history
+	attestationHistory[pubKeys[1]] = history2
+
+	if err := db.SaveAttestationHistoryForPubKeys(context.Background(), attestationHistory); err != nil {
 		t.Fatalf("Saving attestation history failed: %v", err)
 	}
-	savedHistory, err := db.AttestationHistory(context.Background(), pubkey)
+	savedHistories, err := db.AttestationHistoryForPubKeys(context.Background(), pubKeys)
 	if err != nil {
 		t.Fatalf("Failed to get attestation history: %v", err)
 	}
 
-	if savedHistory == nil || !reflect.DeepEqual(history, savedHistory) {
+	if savedHistories == nil || !reflect.DeepEqual(attestationHistory, savedHistories) {
 		t.Fatalf("Expected DB to keep object the same, received: %v", history)
 	}
-	if savedHistory.TargetToSource[epoch] != newMap[epoch] {
-		t.Fatalf("Expected target epoch %d to have the same marked source epoch, received %d", epoch, savedHistory.TargetToSource[epoch])
+
+	savedHistory := savedHistories[pubKeys[0]]
+	if savedHistory.TargetToSource[2] != newMap[2] {
+		t.Fatalf("Expected target epoch %d to have the same marked source epoch, received %d", 2, savedHistory.TargetToSource[2])
 	}
-	if savedHistory.TargetToSource[epoch-1] != farFuture {
-		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d ", epoch-1, savedHistory.TargetToSource[epoch-1])
+	if savedHistory.TargetToSource[1] != newMap[1] {
+		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d ", 1, savedHistory.TargetToSource[1])
 	}
-	if savedHistory.TargetToSource[epoch-2] != farFuture {
-		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", epoch-2, savedHistory.TargetToSource[epoch-2])
+	if savedHistory.TargetToSource[0] != newMap[0] {
+		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", 0, savedHistory.TargetToSource[0])
+	}
+
+	savedHistory = savedHistories[pubKeys[1]]
+	if savedHistory.TargetToSource[3] != newMap2[3] {
+		t.Fatalf("Expected target epoch %d to have the same marked source epoch, received %d", 3, savedHistory.TargetToSource[3])
+	}
+	if savedHistory.TargetToSource[2] != newMap2[2] {
+		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d ", 2, savedHistory.TargetToSource[2])
+	}
+	if savedHistory.TargetToSource[1] != newMap2[1] {
+		t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", 1, savedHistory.TargetToSource[1])
 	}
 }
 
@@ -84,12 +118,12 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 	newMap3[2] = farFuture
 	newMap3[3] = 2
 	tests := []struct {
-		pubkey  []byte
+		pubkey  [48]byte
 		epoch   uint64
 		history *slashpb.AttestationHistory
 	}{
 		{
-			pubkey: []byte{0},
+			pubkey: [48]byte{0},
 			epoch:  uint64(1),
 			history: &slashpb.AttestationHistory{
 				TargetToSource:     newMap1,
@@ -97,7 +131,7 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 			},
 		},
 		{
-			pubkey: []byte{0},
+			pubkey: [48]byte{0},
 			epoch:  uint64(2),
 			history: &slashpb.AttestationHistory{
 				TargetToSource:     newMap2,
@@ -105,7 +139,7 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 			},
 		},
 		{
-			pubkey: []byte{0},
+			pubkey: [48]byte{0},
 			epoch:  uint64(3),
 			history: &slashpb.AttestationHistory{
 				TargetToSource:     newMap3,
@@ -115,14 +149,17 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if err := db.SaveAttestationHistory(context.Background(), tt.pubkey, tt.history); err != nil {
+		attHistory := make(map[[48]byte]*slashpb.AttestationHistory)
+		attHistory[tt.pubkey] = tt.history
+		if err := db.SaveAttestationHistoryForPubKeys(context.Background(), attHistory); err != nil {
 			t.Fatalf("Saving attestation history failed: %v", err)
 		}
-		history, err := db.AttestationHistory(context.Background(), tt.pubkey)
+		histories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{tt.pubkey})
 		if err != nil {
 			t.Fatalf("Failed to get attestation history: %v", err)
 		}
 
+		history := histories[tt.pubkey]
 		if history == nil || !reflect.DeepEqual(history, tt.history) {
 			t.Fatalf("Expected DB to keep object the same, received: %v", history)
 		}
@@ -136,9 +173,9 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 }
 
 func TestDeleteAttestationHistory_OK(t *testing.T) {
-	db := SetupDB(t, [][48]byte{})
+	pubkey := [48]byte{2}
+	db := SetupDB(t, [][48]byte{pubkey})
 
-	pubkey := []byte{2}
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
 	newMap[1] = 0
@@ -147,23 +184,26 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 		LatestEpochWritten: 1,
 	}
 
-	if err := db.SaveAttestationHistory(context.Background(), pubkey, history); err != nil {
+	histories := make(map[[48]byte]*slashpb.AttestationHistory)
+	histories[pubkey] = history
+	if err := db.SaveAttestationHistoryForPubKeys(context.Background(), histories); err != nil {
 		t.Fatalf("Save attestation history failed: %v", err)
 	}
 	// Making sure everything is saved.
-	savedHistory, err := db.AttestationHistory(context.Background(), pubkey)
+	savedHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubkey})
 	if err != nil {
 		t.Fatalf("Failed to get attestation history: %v", err)
 	}
+	savedHistory := savedHistories[pubkey]
 	if savedHistory == nil || !reflect.DeepEqual(savedHistory, history) {
 		t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", savedHistory, history)
 	}
-	if err := db.DeleteAttestationHistory(context.Background(), pubkey); err != nil {
+	if err := db.DeleteAttestationHistory(context.Background(), pubkey[:]); err != nil {
 		t.Fatal(err)
 	}
 
 	// Check after deleting from DB.
-	savedHistory, err = db.AttestationHistory(context.Background(), pubkey)
+	savedHistories, err = db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubkey})
 	if err != nil {
 		t.Fatalf("Failed to get attestation history: %v", err)
 	}
@@ -172,7 +212,7 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	clean := &slashpb.AttestationHistory{
 		TargetToSource: cleanMap,
 	}
-	if !reflect.DeepEqual(savedHistory, clean) {
+	if !reflect.DeepEqual(savedHistories[pubkey], clean) {
 		t.Fatalf("Expected attestation history to be %v, received %v", clean, savedHistory)
 	}
 }

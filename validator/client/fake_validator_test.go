@@ -16,10 +16,12 @@ type fakeValidator struct {
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
 	UpdateDutiesCalled               bool
+	UpdateProtectionsCalled          bool
 	RoleAtCalled                     bool
 	AttestToBlockHeadCalled          bool
 	ProposeBlockCalled               bool
 	LogValidatorGainsAndLossesCalled bool
+	SaveProtectionsCalled            bool
 	SlotDeadlineCalled               bool
 	ProposeBlockArg1                 uint64
 	AttestToBlockHeadArg1            uint64
@@ -76,8 +78,18 @@ func (fv *fakeValidator) UpdateDuties(_ context.Context, slot uint64) error {
 	return fv.UpdateDutiesRet
 }
 
+func (fv *fakeValidator) UpdateProtections(_ context.Context, slot uint64) error {
+	fv.UpdateProtectionsCalled = true
+	return nil
+}
+
 func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint64) error {
 	fv.LogValidatorGainsAndLossesCalled = true
+	return nil
+}
+
+func (fv *fakeValidator) SaveProtections(_ context.Context) error {
+	fv.SaveProtectionsCalled = true
 	return nil
 }
 
