@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -84,6 +83,9 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 	var detections []*types.DetectionResult
 	distance := uint16(targetEpoch - sourceEpoch)
 	for _, idx := range att.AttestingIndices {
+		if ctx.Err() != nil {
+			return nil, errors.Wrap(ctx.Err(), "could not detect slashings")
+		}
 		span := spanMap[idx]
 		minSpan := span.MinSpan
 		if minSpan > 0 && minSpan < distance {
@@ -164,6 +166,9 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 
 	// We loop through the indices, instead of constantly locking/unlocking the cache for equivalent accesses.
 	for _, idx := range att.AttestingIndices {
+		if ctx.Err() != nil {
+			return errors.Wrap(ctx.Err(), "could not save signature bytes")
+		}
 		span := spanMap[idx]
 		// If the validator has already attested for this target epoch,
 		// then we do not need to update the values of the span sig bytes.
@@ -312,6 +317,9 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
 	for epoch := source + 1; epoch < target; epoch++ {
+		if ctx.Err() != nil {
+			return errors.Wrap(ctx.Err(), "could not update max spans")
+		}
 		spanMap, _, err := s.slasherDB.EpochSpansMap(ctx, epoch)
 		if err != nil {
 			return err
