@@ -3,7 +3,6 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -39,13 +38,6 @@ func FetchAccountStatuses(
 			err = e
 		}
 	}
-
-	// Sort responses by status
-	// XXX: This sort does not work right now. We need to have the
-	// public key of the validator indicated in the response.
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Status < statuses[j].Status
-	})
 
 	return statuses, err
 }

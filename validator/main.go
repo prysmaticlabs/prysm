@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
+	"sort"
 
 	joonix "github.com/joonix/log"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -157,13 +158,21 @@ contract in order to activate the validator client`,
 						conn, err := grpc.Dial(
 							flags.BeaconRPCProviderFlag.Value, grpc.WithInsecure(), grpc.WithBlock())
 						if err != nil {
-							log.WithError(err).Error("Could not connect to beacon node.")
+							log.WithError(err).Fatal("Could not connect to beacon node.")
 						}
 						beaconNodeRPC := ethpb.NewBeaconNodeValidatorClient(conn)
 						statuses, err := accounts.FetchAccountStatuses(cliCtx, beaconNodeRPC, keyPairs)
+						if err != nil {
+							log.WithError(err).Fatal("Could not fetch account statuses from the beacon node.")
+						}
 						if err := conn.Close(); err != nil {
 							log.WithError(err).Error("Could not close connection to beacon node.")
 						}
+						// XXX: This sort does not work right now. We need to have the
+						// public key of the validator indicated in the response.
+						sort.Slice(statuses, func(i, j int) bool {
+							return statuses[i].Status < statuses[j].Status
+						})
 						// TODO: Properly print statuses
 						fmt.Println(statuses)
 						return nil
