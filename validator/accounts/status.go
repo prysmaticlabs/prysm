@@ -10,7 +10,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient for each validator public key.
+// FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient
+// for each validator public key.
 func FetchAccountStatuses(
 	ctx context.Context,
 	beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient,
