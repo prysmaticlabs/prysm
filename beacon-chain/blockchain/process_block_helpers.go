@@ -43,6 +43,18 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 		return nil, err
 	}
 
+	//  For new state management, this ensures the state does not get mutated since initial syncing
+	//  uses verifyBlkPreState.
+	if featureconfig.Get().NewStateMgmt {
+		preState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		}
+		if preState == nil {
+			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		}
+	}
+
 	// Verify block slot time is not from the feature.
 	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, helpers.TimeShiftTolerance); err != nil {
 		return nil, err

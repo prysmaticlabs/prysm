@@ -41,11 +41,6 @@ var (
 		Name:  "disable-ssz-cache",
 		Usage: "Disable ssz state root cache mechanism.",
 	}
-	// enableEth1DataVoteCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
-	enableEth1DataVoteCacheFlag = &cli.BoolFlag{
-		Name:  "enable-eth1-data-vote-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
 	skipBLSVerifyFlag = &cli.BoolFlag{
 		Name:  "skip-bls-verify",
 		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
@@ -336,6 +331,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableEth1DataVoteCacheFlag = &cli.BoolFlag{
+		Name:   "enable-eth1-data-vote-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -373,6 +373,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableProtectAttesterFlag,
 	deprecatedDisableInitSyncQueueFlag,
 	deprecatedEnableCustomBlockHTR,
+	deprecatedEnableEth1DataVoteCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -409,7 +410,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,
 	disableSSZCache,
-	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
@@ -434,10 +434,10 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
-	"--enable-eth1-data-vote-cache",
 	"--enable-byte-mempool",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
+	"--enable-new-state-mgmt",
 }

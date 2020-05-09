@@ -169,10 +169,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
 	}
-	if ctx.Bool(enableEth1DataVoteCacheFlag.Name) {
-		log.Warn("Enabled unsafe eth1 data vote cache")
-		cfg.EnableEth1DataVoteCache = true
-	}
 	if ctx.Bool(initSyncVerifyEverythingFlag.Name) {
 		log.Warn("Initial syncing with verifying all block's content signatures.")
 		cfg.InitSyncNoVerify = false
