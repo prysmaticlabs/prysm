@@ -80,13 +80,14 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 			}
 			s.clearInitSyncBlocks()
 		}
-		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)
+		preState, err := s.stateGen.StateByRootInitialSync(ctx, parentRoot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 		}
 		if preState == nil {
 			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
 		}
+
 		return preState, nil // No copy needed from newly hydrated state gen object.
 	}
 

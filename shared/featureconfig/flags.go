@@ -75,17 +75,15 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-	disableProtectProposerFlag = &cli.BoolFlag{
-		Name: "disable-protect-proposer",
-		Usage: "Disables functionality to prevent the validator client from signing and " +
+	enableProtectProposerFlag = &cli.BoolFlag{
+		Name: "enable-protect-proposer",
+		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
-		Value: true,
 	}
-	disableProtectAttesterFlag = &cli.BoolFlag{
-		Name: "disable-protect-attester",
-		Usage: "Disables functionality to prevent the validator client from signing and " +
+	enableProtectAttesterFlag = &cli.BoolFlag{
+		Name: "enable-protect-attester",
+		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 any slashable attestations.",
-		Value: true,
 	}
 	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
 		Name:  "disable-strict-attestation-pubsub-verification",
@@ -130,10 +128,6 @@ var (
 		Name:  "enable-state-field-trie",
 		Usage: "Enables the usage of state field tries to compute the state root",
 	}
-	enableCustomBlockHTR = &cli.BoolFlag{
-		Name:  "enable-custom-block-htr",
-		Usage: "Enables the usage of a custom hashing method for our block",
-	}
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
@@ -154,7 +148,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableCustomBlockHTR,
 	enableStateRefCopy,
 	enableFieldTrie,
 	enableNewStateMgmt,
@@ -315,6 +308,21 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableProtectProposerFlag = &cli.BoolFlag{
+		Name:   "disable-protect-proposer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableProtectAttesterFlag = &cli.BoolFlag{
+		Name:   "disable-protect-attester",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableCustomBlockHTR = &cli.BoolFlag{
+		Name:  "enable-custom-block-htr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableInitSyncQueueFlag = &cli.BoolFlag{
 		Name:   "disable-init-sync-queue",
 		Usage:  deprecatedUsage,
@@ -353,14 +361,17 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
 	deprecatedUseSpanCacheFlag,
+	deprecatedDisableProtectProposerFlag,
+	deprecatedDisableProtectAttesterFlag,
 	deprecatedDisableInitSyncQueueFlag,
+	deprecatedEnableCustomBlockHTR,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
-	disableProtectAttesterFlag,
-	disableProtectProposerFlag,
+	enableProtectAttesterFlag,
+	enableProtectProposerFlag,
 	enableDomainDataCacheFlag,
 	waitForSyncedFlag,
 }...)
@@ -374,6 +385,8 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 var E2EValidatorFlags = []string{
 	"--enable-domain-data-cache",
 	"--wait-for-synced",
+	"--enable-protect-attester",
+	"--enable-protect-proposer",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -402,7 +415,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	broadcastSlashingFlag,
 	enableNewStateMgmt,
 	enableFieldTrie,
-	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
 	enableStateRefCopy,
 	waitForSyncedFlag,
@@ -418,5 +430,4 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
-	"--enable-custom-block-htr",
 }

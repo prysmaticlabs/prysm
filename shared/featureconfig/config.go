@@ -50,7 +50,6 @@ type Flags struct {
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	DisableInitSyncQueue                       bool // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
-	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
@@ -195,10 +194,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state field trie")
 		cfg.EnableFieldTrie = true
 	}
-	if ctx.Bool(enableCustomBlockHTR.Name) {
-		log.Warn("Enabling custom block hashing")
-		cfg.EnableBlockHTR = true
-	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
@@ -233,15 +228,13 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	cfg.ProtectProposer = true
-	if ctx.Bool(disableProtectProposerFlag.Name) {
-		log.Warn("Disabled validator proposal slashing protection.")
-		cfg.ProtectProposer = false
+	if ctx.Bool(enableProtectProposerFlag.Name) {
+		log.Warn("Enabled validator proposal slashing protection.")
+		cfg.ProtectProposer = true
 	}
-	cfg.ProtectAttester = true
-	if ctx.Bool(disableProtectAttesterFlag.Name) {
-		log.Warn("Disabled validator attestation slashing protection.")
-		cfg.ProtectAttester = false
+	if ctx.Bool(enableProtectAttesterFlag.Name) {
+		log.Warn("Enabled validator attestation slashing protection.")
+		cfg.ProtectAttester = true
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")

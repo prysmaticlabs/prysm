@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -60,6 +61,8 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
+	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
+	attesterHistoryByPubKeyLock        sync.RWMutex
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(
@@ -439,6 +442,35 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 		rolesAt[pubKey] = roles
 	}
 	return rolesAt, nil
+}
+
+// UpdateProtections goes through the duties of the given slot and fetches the required validator history,
+// assigning it in validator.
+func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
+	attestingPubKeys := make([][48]byte, 0, len(v.duties.Duties))
+	for _, duty := range v.duties.Duties {
+		if duty == nil {
+			continue
+		}
+		if duty.AttesterSlot == slot {
+			attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
+		}
+	}
+	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeys(ctx, attestingPubKeys)
+	if err != nil {
+		return errors.Wrap(err, "could not get attester history")
+	}
+	v.attesterHistoryByPubKey = attHistoryByPubKey
+	return nil
+}
+
+// SaveProtections saves the attestation information currently in validator state.
+func (v *validator) SaveProtections(ctx context.Context) error {
+	if err := v.db.SaveAttestationHistoryForPubKeys(ctx, v.attesterHistoryByPubKey); err != nil {
+		return errors.Wrap(err, "could not save attester history to DB")
+	}
+	v.attesterHistoryByPubKey = make(map[[48]byte]*slashpb.AttestationHistory)
+	return nil
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
