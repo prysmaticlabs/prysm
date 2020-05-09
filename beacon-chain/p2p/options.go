@@ -26,6 +26,7 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.EnableRelay(),
 		libp2p.ListenAddrs(listen),
 		whitelistSubnet(cfg.WhitelistCIDR),
+		blacklistSubnets(cfg.BlacklistCIDR),
 		// Add one for the boot node and another for the relay, otherwise when we are close to maxPeers we will be above the high
 		// water mark and continually trigger pruning.
 		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers+2), int(cfg.MaxPeers+2), 1*time.Second)),
@@ -118,6 +119,31 @@ func whitelistSubnet(cidr string) libp2p.Option {
 		}
 		cfg.Filters.AddFilter(*ipnet, filter.ActionAccept)
 
+		return nil
+	}
+}
+
+// blacklistSubnet adds a blacklist multiaddress filter for multiple given CIDR subnets.
+// Example: 192.168.0.0/16 may be used to deny connections from your local
+// network.
+func blacklistSubnets(mulCidrs []string) libp2p.Option {
+	if len(mulCidrs) == 0 {
+		return func(_ *libp2p.Config) error {
+			return nil
+		}
+	}
+	return func(cfg *libp2p.Config) error {
+		if cfg.Filters == nil {
+			cfg.Filters = filter.NewFilters()
+		}
+
+		for _, cidr := range mulCidrs {
+			_, ipnet, err := net.ParseCIDR(cidr)
+			if err != nil {
+				return err
+			}
+			cfg.Filters.AddFilter(*ipnet, filter.ActionDeny)
+		}
 		return nil
 	}
 }
