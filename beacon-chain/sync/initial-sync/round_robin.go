@@ -58,7 +58,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// Step 1 - Sync to end of finalized epoch.
 	for blk := range queue.fetchedBlocks {
 		s.logSyncStatus(genesis, blk.Block, counter)
-		if err := s.processBlock(ctx, blk); err != nil {
+		root, err := stateutil.BlockRoot(blk.Block)
+		if err != nil {
+			log.WithError(err).Info("Cannot determine root of block")
+			continue
+		}
+		if err := s.processBlock(ctx, blk, root); err != nil {
 			log.WithError(err).Info("Block is invalid")
 			continue
 		}
@@ -105,7 +110,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range resp {
 			s.logSyncStatus(genesis, blk.Block, counter)
-			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+			root, err := stateutil.BlockRoot(blk.Block)
+			if err != nil {
+				return err
+			}
+			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk, root); err != nil {
 				log.WithError(err).Error("Failed to process block, exiting init sync")
 				return nil
 			}
@@ -160,7 +169,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 	)
 }
 
-func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock) error {
+func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blockRoot [32]byte) error {
 	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
@@ -170,11 +179,11 @@ func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock) 
 		Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
 	})
 	if featureconfig.Get().InitSyncNoVerify {
-		if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
+		if err := s.chain.ReceiveBlockNoVerify(ctx, blk, blockRoot); err != nil {
 			return err
 		}
 	} else {
-		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk, blockRoot); err != nil {
 			return err
 		}
 	}
