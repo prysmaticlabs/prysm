@@ -144,6 +144,10 @@ var (
 		Name:  "disable-historical-detection",
 		Usage: "Disables historical attestation detection for the slasher",
 	}
+	disableLookbackFlag = &cli.BoolFlag{
+		Name:  "disable-lookback",
+		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -379,6 +383,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableHistoricalDetectionFlag,
+	disableLookbackFlag,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
