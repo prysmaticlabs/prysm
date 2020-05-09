@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -81,8 +82,14 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
+	config := &featureconfig.Flags{
+		ProtectAttester: true,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
 	validator, m, finish := setup(t)
 	defer finish()
+	hook := logTest.NewGlobal()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -91,14 +98,19 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
-		}}}
+		},
+	}}
+
+	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
+	targetRoot := bytesutil.ToBytes32([]byte("B"))
+	sourceRoot := bytesutil.ToBytes32([]byte("C"))
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B")},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+		BeaconBlockRoot: beaconBlockRoot[:],
+		Target:          &ethpb.Checkpoint{Root: targetRoot[:]},
+		Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -120,9 +132,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	aggregationBitfield.SetBitAt(4, true)
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: []byte("A"),
-			Target:          &ethpb.Checkpoint{Root: []byte("B")},
-			Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+			BeaconBlockRoot: beaconBlockRoot[:],
+			Target:          &ethpb.Checkpoint{Root: targetRoot[:]},
+			Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 		},
 		AggregationBits: aggregationBitfield,
 	}
@@ -142,6 +154,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		diff, _ := messagediff.PrettyDiff(expectedAttestation, generatedAttestation)
 		t.Log(diff)
 	}
+	testutil.AssertLogsDoNotContain(t, hook, "Could not")
 }
 
 func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
@@ -161,14 +174,19 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
-		}}}
+		},
+	}}
+	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
+	targetRoot := bytesutil.ToBytes32([]byte("B"))
+	sourceRoot := bytesutil.ToBytes32([]byte("C"))
+
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Times(2).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 4},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+		BeaconBlockRoot: beaconBlockRoot[:],
+		Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 4},
+		Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -203,14 +221,19 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
-		}}}
+		},
+	}}
+	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
+	targetRoot := bytesutil.ToBytes32([]byte("B"))
+	sourceRoot := bytesutil.ToBytes32([]byte("C"))
+
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 2},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 1},
+	).Times(2).Return(&ethpb.AttestationData{
+		BeaconBlockRoot: beaconBlockRoot[:],
+		Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 2},
+		Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 1},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(
@@ -224,16 +247,6 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-
-	m.validatorClient.EXPECT().GetAttestationData(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
-	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 4},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 0},
-	}, nil)
-
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
 }
@@ -255,14 +268,19 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 			CommitteeIndex: 5,
 			Committee:      committee,
 			ValidatorIndex: validatorIndex,
-		}}}
+		},
+	}}
+	beaconBlockRoot := bytesutil.ToBytes32([]byte("A"))
+	targetRoot := bytesutil.ToBytes32([]byte("B"))
+	sourceRoot := bytesutil.ToBytes32([]byte("C"))
+
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
-		BeaconBlockRoot: []byte("A"),
-		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 3},
-		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 0},
+		BeaconBlockRoot: beaconBlockRoot[:],
+		Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 3},
+		Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 0},
 	}, nil)
 
 	m.validatorClient.EXPECT().DomainData(

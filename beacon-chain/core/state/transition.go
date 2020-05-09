@@ -54,7 +54,6 @@ func ExecuteStateTransition(
 		return nil, errors.New("nil block")
 	}
 
-	b.ClearEth1DataVoteCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransition")
 	defer span.End()
 	var err error
@@ -111,7 +110,6 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 		return nil, errors.New("nil block")
 	}
 
-	b.ClearEth1DataVoteCache()
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionNoVerifyAttSigs")
 	defer span.End()
 	var err error
@@ -167,8 +165,6 @@ func CalculateStateRoot(
 
 	// Copy state to avoid mutating the state reference.
 	state = state.Copy()
-
-	b.ClearEth1DataVoteCache()
 
 	// Execute per slots transition.
 	state, err := ProcessSlots(ctx, state, signed.Block.Slot)

@@ -119,7 +119,11 @@ func TestStore_OnBlock(t *testing.T) {
 			service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: validGenesisRoot[:]}
 			service.finalizedCheckpt.Root = roots[0]
 
-			_, err := service.onBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk})
+			root, err := stateutil.BlockRoot(tt.blk)
+			if err != nil {
+				t.Error(err)
+			}
+			_, err = service.onBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk}, root)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErrString) {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
 			}
