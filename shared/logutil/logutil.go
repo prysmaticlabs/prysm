@@ -37,7 +37,7 @@ func CountdownToGenesis(genesisTime time.Time, duration time.Duration) {
 			return
 
 		case <-ticker.C:
-			log.Infof("%s to genesis.", genesisTime.Sub(roughtime.Now()))
+			log.Infof("%s to genesis.", genesisTime.Sub(roughtime.Now()) * time.Minute)
 		}
 	}
 } 
