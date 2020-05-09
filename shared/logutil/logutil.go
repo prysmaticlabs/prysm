@@ -27,18 +27,17 @@ func ConfigurePersistentLogging(logFileName string) error {
 	return nil
 }
 
-// CountdownToGenesis logs the time remains until genesis time
-func CountdownToGenesis(genesisTime time.Time, secondsCount int) {
-	ticker := time.NewTicker(time.Duration(secondsCount) * time.Second)
+// CountdownToGenesis logs the time remaining until the specified genesis time.
+func CountdownToGenesis(genesisTime time.Time, duration time.Duration) {
+	ticker := time.NewTicker(duration * time.Second)
 
 	for {
 		select {
-		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1 /* adding one to be able to print the last minute */).C:
-			log.Infof("genesis time\n")
+		case <-time.NewTimer(genesisTime.Sub(roughtime.Now()) + 1 /* adding one to stop after the last minute */).C:
 			return
 
 		case <-ticker.C:
-			log.Infof("%02d minutes to genesis!\n", genesisTime.Sub(roughtime.Now()).Round(time.Minute)/time.Minute+1)
+			log.Infof("%s to genesis.", genesisTime.Sub(roughtime.Now()))
 		}
 	}
 } 
