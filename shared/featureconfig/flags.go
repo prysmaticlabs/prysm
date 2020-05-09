@@ -429,4 +429,5 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
+	"--enable-new-state-mgmt",
 }
