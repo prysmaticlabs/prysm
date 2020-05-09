@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -49,6 +50,27 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 
 			// Connection handler must be non-blocking as part of libp2p design.
 			go func() {
+				// Do not perform handshake on inbound dials.
+				if conn.Stat().Direction == network.DirInbound {
+					_, err := s.peers.ChainState(conn.RemotePeer())
+					peerExists := err == nil
+
+					// wait for peer to initiate handshake
+					time.Sleep(10 * time.Second)
+
+					// if peer hasn't sent a status request, we disconnect with them
+					if _, err := s.peers.ChainState(conn.RemotePeer()); err == peers.ErrPeerUnknown {
+						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
+						if err := s.Disconnect(conn.RemotePeer()); err != nil {
+							log.WithError(err).Error("Unable to disconnect from peer")
+						}
+						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
+					}
+					if peerExists {
+					}
+					return
+				}
+
 				// Go through the handshake process.
 				multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
 				log := log.WithFields(logrus.Fields{
