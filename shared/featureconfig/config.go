@@ -123,7 +123,6 @@ func (c *Flags) Copy() *Flags {
 		NewStateMgmt:                               c.NewStateMgmt,
 		DisableInitSyncQueue:                       c.DisableInitSyncQueue,
 		EnableFieldTrie:                            c.EnableFieldTrie,
-		EnableBlockHTR:                             c.EnableBlockHTR,
 		NoInitSyncBatchSaveBlocks:                  c.NoInitSyncBatchSaveBlocks,
 		EnableStateRefCopy:                         c.EnableStateRefCopy,
 		WaitForSynced:                              c.WaitForSynced,
