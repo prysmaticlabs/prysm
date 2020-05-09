@@ -105,7 +105,14 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 			continue
 		}
 
-		if err := r.chain.ReceiveBlockNoPubsub(ctx, b); err != nil {
+		blkRoot, err := stateutil.BlockRoot(b.Block)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			span.End()
+			return err
+		}
+
+		if err := r.chain.ReceiveBlockNoPubsub(ctx, b, blkRoot); err != nil {
 			log.Errorf("Could not process block from slot %d: %v", b.Block.Slot, err)
 			traceutil.AnnotateError(span, err)
 		}
@@ -113,13 +120,6 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		// Broadcasting the block again once a node is able to process it.
 		if err := r.p2p.Broadcast(ctx, b); err != nil {
 			log.WithError(err).Error("Failed to broadcast block")
-		}
-
-		blkRoot, err := stateutil.BlockRoot(b.Block)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			span.End()
-			return err
 		}
 
 		r.pendingQueueLock.Lock()
