@@ -38,4 +38,9 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	if !reflect.DeepEqual(state.CloneInnerState(), res.CloneInnerState()) {
 		t.Error("Expected equal protos to return from cache")
 	}
+
+	c.Delete(root)
+	if c.Has(root) {
+		t.Error("Cache not suppose to have the object")
+	}
 }
