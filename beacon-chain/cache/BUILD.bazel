@@ -10,7 +10,6 @@ go_library(
         "committee_ids.go",
         "common.go",
         "doc.go",
-        "eth1_data.go",
         "hot_state_cache.go",
         "skip_slot_cache.go",
         "state_summary.go",
@@ -24,7 +23,6 @@ go_library(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
@@ -47,7 +45,6 @@ go_test(
         "committee_fuzz_test.go",
         "committee_ids_test.go",
         "committee_test.go",
-        "eth1_data_test.go",
         "feature_flag_test.go",
         "hot_state_cache_test.go",
         "skip_slot_cache_test.go",

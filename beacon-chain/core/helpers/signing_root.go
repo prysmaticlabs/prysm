@@ -35,9 +35,14 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 //    )
 //    return hash_tree_root(domain_wrapped_object)
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
-	// utilise generic ssz library
 	return signingRoot(func() ([32]byte, error) {
-		return ssz.HashTreeRoot(object)
+		switch object.(type) {
+		case *ethpb.BeaconBlock:
+			return stateutil.BlockRoot(object.(*ethpb.BeaconBlock))
+		default:
+			// utilise generic ssz library
+			return ssz.HashTreeRoot(object)
+		}
 	}, domain)
 }
 

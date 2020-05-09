@@ -20,3 +20,8 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.Beaco
 
 	return s.saveHotState(ctx, root, state)
 }
+
+// DeleteHotStateInCache deletes the hot state entry from the cache.
+func (s *State) DeleteHotStateInCache(root [32]byte) {
+	s.hotStateCache.Delete(root)
+}

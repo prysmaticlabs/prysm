@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -32,6 +33,51 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	}
 
 	return s.loadHotStateByRoot(ctx, blockRoot)
+}
+
+// StateByRootInitialSync retrieves the state from the DB for the initial syncing phase.
+// It assumes initial syncing using a block list rather than a block tree hence the returned
+// state is not copied.
+// Do not use this method for anything other than initial syncing purpose or block tree is applied.
+func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
+	if blockRoot == params.BeaconConfig().ZeroHash {
+		return s.beaconDB.State(ctx, blockRoot)
+	}
+
+	if s.hotStateCache.Has(blockRoot) {
+		return s.hotStateCache.GetWithoutCopy(blockRoot), nil
+	}
+
+	if s.beaconDB.HasState(ctx, blockRoot) {
+		return s.beaconDB.State(ctx, blockRoot)
+	}
+
+	startState, err := s.lastAncestorState(ctx, blockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get ancestor state")
+	}
+	if startState == nil {
+		return nil, errUnknownState
+	}
+	summary, err := s.stateSummary(ctx, blockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get state summary")
+	}
+	if startState.Slot() == summary.Slot {
+		return startState, nil
+	}
+
+	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, summary.Slot, bytesutil.ToBytes32(summary.Root))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load blocks for hot state using root")
+	}
+	startState, err = s.ReplayBlocks(ctx, startState, blks, summary.Slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
+	}
+
+	return startState, nil
 }
 
 // StateBySlot retrieves the state from DB using input slot.

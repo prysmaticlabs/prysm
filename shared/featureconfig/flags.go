@@ -37,11 +37,6 @@ var (
 		Name:  "disable-ssz-cache",
 		Usage: "Disable ssz state root cache mechanism.",
 	}
-	// enableEth1DataVoteCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
-	enableEth1DataVoteCacheFlag = &cli.BoolFlag{
-		Name:  "enable-eth1-data-vote-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
 	skipBLSVerifyFlag = &cli.BoolFlag{
 		Name:  "skip-bls-verify",
 		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
@@ -75,17 +70,15 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-	disableProtectProposerFlag = &cli.BoolFlag{
-		Name: "disable-protect-proposer",
-		Usage: "Disables functionality to prevent the validator client from signing and " +
+	enableProtectProposerFlag = &cli.BoolFlag{
+		Name: "enable-protect-proposer",
+		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
-		Value: true,
 	}
-	disableProtectAttesterFlag = &cli.BoolFlag{
-		Name: "disable-protect-attester",
-		Usage: "Disables functionality to prevent the validator client from signing and " +
+	enableProtectAttesterFlag = &cli.BoolFlag{
+		Name: "enable-protect-attester",
+		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 any slashable attestations.",
-		Value: true,
 	}
 	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
 		Name:  "disable-strict-attestation-pubsub-verification",
@@ -130,10 +123,6 @@ var (
 		Name:  "enable-state-field-trie",
 		Usage: "Enables the usage of state field tries to compute the state root",
 	}
-	enableCustomBlockHTR = &cli.BoolFlag{
-		Name:  "enable-custom-block-htr",
-		Usage: "Enables the usage of a custom hashing method for our block",
-	}
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
@@ -150,11 +139,14 @@ var (
 		Name:  "disable-historical-detection",
 		Usage: "Disables historical attestation detection for the slasher",
 	}
+	disableLookbackFlag = &cli.BoolFlag{
+		Name:  "disable-lookback",
+		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableCustomBlockHTR,
 	enableStateRefCopy,
 	enableFieldTrie,
 	enableNewStateMgmt,
@@ -315,8 +307,28 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableProtectProposerFlag = &cli.BoolFlag{
+		Name:   "disable-protect-proposer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableProtectAttesterFlag = &cli.BoolFlag{
+		Name:   "disable-protect-attester",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableCustomBlockHTR = &cli.BoolFlag{
+		Name:   "enable-custom-block-htr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableInitSyncQueueFlag = &cli.BoolFlag{
 		Name:   "disable-init-sync-queue",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableEth1DataVoteCacheFlag = &cli.BoolFlag{
+		Name:   "enable-eth1-data-vote-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -353,14 +365,18 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDiscv5Flag,
 	deprecatedEnableSSZCache,
 	deprecatedUseSpanCacheFlag,
+	deprecatedDisableProtectProposerFlag,
+	deprecatedDisableProtectAttesterFlag,
 	deprecatedDisableInitSyncQueueFlag,
+	deprecatedEnableCustomBlockHTR,
+	deprecatedEnableEth1DataVoteCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
-	disableProtectAttesterFlag,
-	disableProtectProposerFlag,
+	enableProtectAttesterFlag,
+	enableProtectProposerFlag,
 	enableDomainDataCacheFlag,
 	waitForSyncedFlag,
 }...)
@@ -368,12 +384,15 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	disableHistoricalDetectionFlag,
+	disableLookbackFlag,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--enable-domain-data-cache",
 	"--wait-for-synced",
+	"--enable-protect-attester",
+	"--enable-protect-proposer",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -385,7 +404,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,
 	disableSSZCache,
-	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
@@ -402,7 +420,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	broadcastSlashingFlag,
 	enableNewStateMgmt,
 	enableFieldTrie,
-	enableCustomBlockHTR,
 	disableInitSyncBatchSaveBlocks,
 	enableStateRefCopy,
 	waitForSyncedFlag,
@@ -411,12 +428,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
-	"--enable-eth1-data-vote-cache",
 	"--enable-byte-mempool",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
-	"--enable-new-state-mgmt",
-	"--enable-custom-block-htr",
 }
