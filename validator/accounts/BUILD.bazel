@@ -20,7 +20,6 @@ go_library(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@in_gopkg_urfave_cli_v2//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
-        "@org_golang_google_grpc//:go_default_library",
     ],
 )
 

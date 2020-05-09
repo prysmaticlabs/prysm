@@ -10,6 +10,7 @@ import (
 	runtimeDebug "runtime/debug"
 
 	joonix "github.com/joonix/log"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -22,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
+	"google.golang.org/grpc"
 	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
 )
@@ -151,8 +153,17 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
 						}
-						statuses, err := accounts.FetchAccountStatuses(cliCtx, keyPairs)
 
+						conn, err := grpc.Dial(
+							flags.BeaconRPCProviderFlag.Value, grpc.WithInsecure(), grpc.WithBlock())
+						if err != nil {
+							log.WithError(err).Error("Could not connect to beacon node.")
+						}
+						beaconNodeRPC := ethpb.NewBeaconNodeValidatorClient(conn)
+						statuses, err := accounts.FetchAccountStatuses(cliCtx, beaconNodeRPC, keyPairs)
+						if err := conn.Close(); err != nil {
+							log.WithError(err).Error("Could not close connection to beacon node.")
+						}
 						// TODO: Properly print statuses
 						fmt.Println(statuses)
 						return nil
