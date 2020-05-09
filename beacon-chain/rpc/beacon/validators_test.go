@@ -25,6 +25,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -1863,6 +1864,19 @@ func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.
 	}
 }
 
+func TestGetValidatorPerformance_Syncing(t *testing.T) {
+	ctx := context.Background()
+
+	bs := &Server{
+		SyncChecker: &mockSync.Sync{IsSyncing: true},
+	}
+
+	wanted := "Syncing to latest head, not ready to respond"
+	if _, err := bs.GetValidatorPerformance(ctx, nil); err == nil || !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not receive wanted error")
+	}
+}
+
 func TestGetValidatorPerformance_OK(t *testing.T) {
 	ctx := context.Background()
 	epoch := uint64(1)
@@ -1932,6 +1946,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 			// 10 epochs into the future.
 			State: headState,
 		},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
