@@ -64,6 +64,7 @@ func (s *Service) createListener(
 			log.Errorf("Invalid host address given: %s", hostIP.String())
 		} else {
 			localNode.SetFallbackIP(hostIP)
+			localNode.SetStaticIP(hostIP)
 		}
 	}
 	dv5Cfg := discover.Config{
