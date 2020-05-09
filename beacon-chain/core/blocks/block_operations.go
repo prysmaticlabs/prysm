@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -20,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -31,8 +29,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "blocks")
-
-var eth1DataCache = cache.NewEth1DataVoteCache()
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
 func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain []byte) error {
@@ -131,35 +127,11 @@ func areEth1DataEqual(a, b *ethpb.Eth1Data) bool {
 // votes to see if they match the eth1data.
 func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Eth1Data) (bool, error) {
 	voteCount := uint64(0)
-	var eth1DataHash [32]byte
-	var err error
 	data = stateTrie.CopyETH1Data(data)
-	if featureconfig.Get().EnableEth1DataVoteCache {
-		eth1DataHash, err = hashutil.HashProto(data)
-		if err != nil {
-			return false, errors.Wrap(err, "could not hash eth1data")
-		}
-		voteCount, err = eth1DataCache.Eth1DataVote(eth1DataHash)
-		if err != nil {
-			return false, errors.Wrap(err, "could not retrieve eth1 data vote cache")
-		}
-	}
-	if voteCount == 0 {
-		for _, vote := range beaconState.Eth1DataVotes() {
-			if areEth1DataEqual(vote, data) {
-				voteCount++
-			}
-		}
-	} else {
-		voteCount++
-	}
 
-	if featureconfig.Get().EnableEth1DataVoteCache {
-		if err := eth1DataCache.AddEth1DataVote(&cache.Eth1DataVote{
-			Eth1DataHash: eth1DataHash,
-			VoteCount:    voteCount,
-		}); err != nil {
-			return false, errors.Wrap(err, "could not save eth1 data vote cache")
+	for _, vote := range beaconState.Eth1DataVotes() {
+		if areEth1DataEqual(vote, data) {
+			voteCount++
 		}
 	}
 
@@ -1144,9 +1116,4 @@ func VerifyExit(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, fork
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
-}
-
-// ClearEth1DataVoteCache clears the eth1 data vote count cache.
-func ClearEth1DataVoteCache() {
-	eth1DataCache = cache.NewEth1DataVoteCache()
 }

@@ -50,7 +50,6 @@ type Flags struct {
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	DisableInitSyncQueue                       bool // DisableInitSyncQueue disables the new initial sync implementation.
 	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
-	EnableBlockHTR                             bool // EnableBlockHTR enables custom hashing of our beacon blocks.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
@@ -61,7 +60,8 @@ type Flags struct {
 
 	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
 	BroadcastSlashings         bool
-	DisableHistoricalDetection bool
+	DisableHistoricalDetection bool // DisableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
+	DisableLookback            bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -129,10 +129,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled ssz cache")
 		cfg.EnableSSZCache = false
 	}
-	if ctx.Bool(enableEth1DataVoteCacheFlag.Name) {
-		log.Warn("Enabled unsafe eth1 data vote cache")
-		cfg.EnableEth1DataVoteCache = true
-	}
 	if ctx.Bool(initSyncVerifyEverythingFlag.Name) {
 		log.Warn("Initial syncing with verifying all block's content signatures.")
 		cfg.InitSyncNoVerify = false
@@ -195,10 +191,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state field trie")
 		cfg.EnableFieldTrie = true
 	}
-	if ctx.Bool(enableCustomBlockHTR.Name) {
-		log.Warn("Enabling custom block hashing")
-		cfg.EnableBlockHTR = true
-	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
@@ -223,6 +215,10 @@ func ConfigureSlasher(ctx *cli.Context) {
 	if ctx.Bool(disableHistoricalDetectionFlag.Name) {
 		log.Warn("Disabling historical attestation detection")
 		cfg.DisableHistoricalDetection = true
+	}
+	if ctx.Bool(disableLookbackFlag.Name) {
+		log.Warn("Disabling slasher lookback")
+		cfg.DisableLookback = true
 	}
 	Init(cfg)
 }
