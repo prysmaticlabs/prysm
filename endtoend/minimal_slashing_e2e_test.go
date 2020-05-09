@@ -15,7 +15,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	params.UseMinimalConfig()
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=10"},
+		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=25"},
 		ValidatorFlags: []string{"--minimal-config"},
 		EpochsToRun:    2,
 		TestSync:       false,
