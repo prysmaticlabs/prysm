@@ -28,7 +28,7 @@ func TestEndToEnd_AntiFlake_MinimalConfig_2(t *testing.T) {
 			ev.MetricsCheck,
 		},
 	}
-	if err := e2eParams.Init(4); err != nil {
+	if err := e2eParams.Init(2); err != nil {
 		t.Fatal(err)
 	}
 

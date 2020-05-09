@@ -29,7 +29,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.MetricsCheck,
 		},
 	}
-	if err := e2eParams.Init(4); err != nil {
+	if err := e2eParams.Init(2); err != nil {
 		t.Fatal(err)
 	}
 
