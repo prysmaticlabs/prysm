@@ -20,7 +20,7 @@ import (
 func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error,
 	goodbyeFunc func(ctx context.Context, id peer.ID) error) {
 
-	// peer map and lock to keep track of current connection attempts.
+	// Peer map and lock to keep track of current connection attempts.
 	peerMap := make(map[peer.ID]bool)
 	peerLock := new(sync.Mutex)
 
