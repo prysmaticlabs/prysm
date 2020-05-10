@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,8 +19,35 @@ import (
 // and validating the response from the peer.
 func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error,
 	goodbyeFunc func(ctx context.Context, id peer.ID) error) {
+
+	peerMap := make(map[peer.ID]bool)
+	peerLock := new(sync.Mutex)
+	peerHandshaking := func(id peer.ID) bool {
+		peerLock.Lock()
+		defer peerLock.Unlock()
+
+		if peerMap[id] {
+			return true
+		}
+
+		peerMap[id] = true
+		return false
+	}
+
+	peerFinished := func(id peer.ID) {
+		peerLock.Lock()
+		defer peerLock.Unlock()
+
+		delete(peerMap, id)
+	}
+
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
+			if peerHandshaking(conn.RemotePeer()) {
+				return
+			}
+			defer peerFinished(conn.RemotePeer())
+
 			log := log.WithField("peer", conn.RemotePeer().Pretty())
 
 			// Handle the various pre-existing conditions that will result in us not handshaking.
@@ -54,20 +83,37 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				if conn.Stat().Direction == network.DirInbound {
 					_, err := s.peers.ChainState(conn.RemotePeer())
 					peerExists := err == nil
+					currentTime := roughtime.Now()
 
 					// wait for peer to initiate handshake
 					time.Sleep(10 * time.Second)
 
-					// if peer hasn't sent a status request, we disconnect with them
-					if _, err := s.peers.ChainState(conn.RemotePeer()); err == peers.ErrPeerUnknown {
+					disconnectFromPeer := func() {
 						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 						if err := s.Disconnect(conn.RemotePeer()); err != nil {
 							log.WithError(err).Error("Unable to disconnect from peer")
 						}
 						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 					}
-					if peerExists {
+
+					// if peer hasn't sent a status request, we disconnect with them
+					if _, err := s.peers.ChainState(conn.RemotePeer()); err == peers.ErrPeerUnknown {
+						disconnectFromPeer()
+						return
 					}
+					if peerExists {
+						updated, err := s.peers.ChainStateLastUpdated(conn.RemotePeer())
+						if err != nil {
+							disconnectFromPeer()
+							return
+						}
+						if !updated.After(currentTime) {
+							disconnectFromPeer()
+							return
+						}
+					}
+					s.host.ConnManager().Protect(conn.RemotePeer(), "protocol")
+					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
 					return
 				}
 
