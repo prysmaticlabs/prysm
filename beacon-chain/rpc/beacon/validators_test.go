@@ -2040,6 +2040,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 			// 10 epochs into the future.
 			State: headState,
 		},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -2135,6 +2136,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 			// 10 epochs into the future.
 			State: headState,
 		},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
