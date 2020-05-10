@@ -50,6 +50,17 @@ func (c *HotStateCache) Get(root [32]byte) *stateTrie.BeaconState {
 	return nil
 }
 
+// GetWithoutCopy returns a non-copied cached response via input block root.
+func (c *HotStateCache) GetWithoutCopy(root [32]byte) *stateTrie.BeaconState {
+	item, exists := c.cache.Get(root)
+	if exists && item != nil {
+		hotStateCacheHit.Inc()
+		return item.(*stateTrie.BeaconState)
+	}
+	hotStateCacheMiss.Inc()
+	return nil
+}
+
 // Put the response in the cache.
 func (c *HotStateCache) Put(root [32]byte, state *stateTrie.BeaconState) {
 	c.cache.Add(root, state)
@@ -58,4 +69,9 @@ func (c *HotStateCache) Put(root [32]byte, state *stateTrie.BeaconState) {
 // Has returns true if the key exists in the cache.
 func (c *HotStateCache) Has(root [32]byte) bool {
 	return c.cache.Contains(root)
+}
+
+// Delete deletes the key exists in the cache.
+func (c *HotStateCache) Delete(root [32]byte) bool {
+	return c.cache.Remove(root)
 }

@@ -53,8 +53,7 @@ func Init(beaconNodeCount int) error {
 	}
 	testIndexStr, ok := os.LookupEnv("TEST_SHARD_INDEX")
 	if !ok {
-		// Picking a index that won't normally be used.
-		testIndexStr = "8"
+		testIndexStr = "0"
 	}
 	testIndex, err := strconv.Atoi(testIndexStr)
 	if err != nil {
