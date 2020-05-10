@@ -932,6 +932,10 @@ func (bs *Server) GetValidatorQueue(
 func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
+	if bs.SyncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
 	validatorSummary := state.ValidatorSummary
 
 	reqPubKeysCount := len(req.PublicKeys)
