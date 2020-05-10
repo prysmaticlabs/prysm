@@ -269,6 +269,7 @@ func (s *Service) Start() {
 		AttestationNotifier:         s.operationNotifier,
 		Broadcaster:                 s.p2p,
 		StateGen:                    s.stateGen,
+		SyncChecker:                 s.syncService,
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),
 	}
