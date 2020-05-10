@@ -103,10 +103,15 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					peerExists := err == nil
 					currentTime := roughtime.Now()
 
-					// wait for peer to initiate handshake
+					// Wait for peer to initiate handshake
 					time.Sleep(timeForStatus)
 
-					// if peer hasn't sent a status request, we disconnect with them
+					// Exit if we are disconnected with the peer.
+					if s.host.Network().Connectedness(remotePeer) != network.Connected {
+						return
+					}
+
+					// If peer hasn't sent a status request, we disconnect with them
 					if _, err := s.peers.ChainState(remotePeer); err == peers.ErrPeerUnknown {
 						disconnectFromPeer()
 						return
