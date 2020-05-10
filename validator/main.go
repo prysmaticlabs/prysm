@@ -8,6 +8,8 @@ import (
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
+	"strings"
+	"time"
 
 	joonix "github.com/joonix/log"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -153,11 +156,23 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
 						}
-
-						conn, err := grpc.Dial(
-							flags.BeaconRPCProviderFlag.Value, grpc.WithInsecure(), grpc.WithBlock())
+						endpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+						cert := cliCtx.String(flags.CertFlag.Name)
+						maxCallRecvMsgSize := cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+						grpcHeaders := strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ",")
+						grpcRetries := cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+						timeout := grpc.WithTimeout(
+							10 * time.Second /* Block for 10 seconds to see if we can connect to beacon node */)
+						dialOpts := client.ConstructDialOptions(
+							maxCallRecvMsgSize,
+							cert,
+							grpcHeaders,
+							grpcRetries,
+							grpc.WithBlock(),
+							timeout)
+						conn, err := grpc.DialContext(cliCtx, endpoint, dialOpts...)
 						if err != nil {
-							log.WithError(err).Fatal("Could not connect to beacon node.")
+							log.WithError(err).Fatalf("Failed to dial beacon node endpoint at %s", endpoint)
 						}
 						beaconNodeRPC := ethpb.NewBeaconNodeValidatorClient(conn)
 						statuses, err := accounts.FetchAccountStatuses(cliCtx, beaconNodeRPC, keyPairs)

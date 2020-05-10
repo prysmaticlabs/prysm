@@ -21,6 +21,7 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/version:go_default_library",
         "//validator/accounts:go_default_library",
+        "//validator/client:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/node:go_default_library",
         "@com_github_joonix_log//:go_default_library",
