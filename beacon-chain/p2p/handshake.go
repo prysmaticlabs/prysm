@@ -27,7 +27,7 @@ const (
 func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error,
 	goodbyeFunc func(ctx context.Context, id peer.ID) error) {
 
-	// peer map and lock to keep track of current connection attempts.
+	// Peer map and lock to keep track of current connection attempts.
 	peerMap := make(map[peer.ID]bool)
 	peerLock := new(sync.Mutex)
 
@@ -68,7 +68,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 			// Connection handler must be non-blocking as part of libp2p design.
 			go func() {
 				if peerHandshaking(remotePeer) {
-					// exit this if there is already another connection
+					// Exit this if there is already another connection
 					// request in flight.
 					return
 				}
