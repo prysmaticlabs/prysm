@@ -14,6 +14,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// The time to wait before disconnecting a peer.
+	flushDuration = 50 * time.Millisecond
+	// The time to wait for a status request.
+	timeForStatus = 10 * time.Second
+)
+
 // AddConnectionHandler adds a callback function which handles the connection with a
 // newly added peer. It performs a handshake with that peer by sending a hello request
 // and validating the response from the peer.
@@ -80,7 +87,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					}
 					// Add a short delay to allow the stream to flush before closing the connection.
 					// There is still a chance that the peer won't receive the message.
-					time.Sleep(50 * time.Millisecond)
+					time.Sleep(flushDuration)
 					disconnectFromPeer()
 					return
 				}
@@ -97,7 +104,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					currentTime := roughtime.Now()
 
 					// wait for peer to initiate handshake
-					time.Sleep(10 * time.Second)
+					time.Sleep(timeForStatus)
 
 					// if peer hasn't sent a status request, we disconnect with them
 					if _, err := s.peers.ChainState(remotePeer); err == peers.ErrPeerUnknown {
