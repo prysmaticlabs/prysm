@@ -42,6 +42,8 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
+	flags.MergeSourceDirectoriesFlag,
+	flags.MergeTargetDirectoryFlag,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -107,7 +109,7 @@ contract in order to activate the validator client`,
 							params.UseMinimalConfig()
 						}
 
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, true /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -125,7 +127,7 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -135,6 +137,19 @@ contract in order to activate the validator client`,
 						return nil
 					},
 				},
+			},
+		},
+		{
+			Name: "merge",
+			Description: "merges data from multiple validator databases into one database",
+			Flags: []cli.Flag{
+				flags.MergeSourceDirectoriesFlag,
+				flags.MergeTargetDirectoryFlag,
+			},
+			Action: func(cliCtx *cli.Context) error {
+				fmt.Printf("Source; %#v\n", cliCtx.String(flags.MergeSourceDirectoriesFlag.Name))
+				fmt.Printf("Target; %#v\n", cliCtx.String(flags.MergeTargetDirectoryFlag.Name))
+				return nil
 			},
 		},
 	}

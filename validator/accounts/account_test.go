@@ -62,7 +62,7 @@ func TestHandleEmptyFlags_FlagsSet(t *testing.T) {
 	set.String(flags.KeystorePathFlag.Name, passedPath, "set keystore path")
 	set.String(flags.PasswordFlag.Name, passedPassword, "set keystore password")
 	ctx := cli.NewContext(app, set, nil)
-	path, passphrase, err := HandleEmptyFlags(ctx, false)
+	path, passphrase, err := HandleEmptyKeystoreFlags(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
