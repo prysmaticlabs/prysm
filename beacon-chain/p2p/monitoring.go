@@ -11,6 +11,10 @@ var (
 		Help: "The number of peers in a given state.",
 	},
 		[]string{"state"})
+	repeatPeerConnections = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "p2p_repeat_attempts",
+		Help: "The number of repeat attempts the connection handler is triggered for a peer.",
+	})
 )
 
 func (s *Service) updateMetrics() {
