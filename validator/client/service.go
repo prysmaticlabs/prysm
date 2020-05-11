@@ -184,7 +184,7 @@ func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byt
 	return v.keyManager.Sign(pubKey, root)
 }
 
-// Construct grpc dial options
+// ConstructDialOptions constructs a list of grpc dial options
 func ConstructDialOptions(
 	maxCallRecvMsgSize int,
 	withCert string,

@@ -182,7 +182,7 @@ contract in order to activate the validator client`,
 						// sort.Slice(statuses, func(i, j int) bool {
 						// 	return statuses[i].Status < statuses[j].Status
 						// })
-						// TODO: Properly print statuses
+						// XXX: Properly print statuses
 						fmt.Println(statuses)
 						return nil
 					},
