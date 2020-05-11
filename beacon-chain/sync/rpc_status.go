@@ -209,11 +209,15 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 		return errWrongForkDigestVersion
 	}
 	genesis := r.chain.GenesisTime()
-	finalizedEpoch := helpers.SlotToEpoch(r.chain.FinalizedCheckpt().Epoch)
+	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
 	maxFinalizedEpoch := maxEpoch - 2
+	// account for overflow
+	if maxEpoch < 2 {
+		maxFinalizedEpoch = 0
+	}
 	if msg.FinalizedEpoch > maxFinalizedEpoch {
 		return errInvalidEpoch
 	}
