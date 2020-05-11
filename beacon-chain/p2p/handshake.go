@@ -96,6 +96,17 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					disconnectFromPeer()
 					return
 				}
+				validPeerConnection := func() {
+					s.host.ConnManager().Protect(conn.RemotePeer(), "protocol")
+					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
+					// Go through the handshake process.
+					multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
+					log.WithFields(logrus.Fields{
+						"direction":   conn.Stat().Direction,
+						"multiAddr":   multiAddr,
+						"activePeers": len(s.peers.Active()),
+					}).Info("Peer Connected")
+				}
 
 				// Do not perform handshake on inbound dials.
 				if conn.Stat().Direction == network.DirInbound {
@@ -127,18 +138,10 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 							return
 						}
 					}
-					s.host.ConnManager().Protect(conn.RemotePeer(), "protocol")
-					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
+					validPeerConnection()
 					return
 				}
 
-				// Go through the handshake process.
-				multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
-				log := log.WithFields(logrus.Fields{
-					"direction":   conn.Stat().Direction,
-					"multiAddr":   multiAddr,
-					"activePeers": len(s.peers.Active()),
-				})
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				if err := reqFunc(context.Background(), conn.RemotePeer()); err != nil && err != io.EOF {
 					log.WithError(err).Trace("Handshake failed")
@@ -153,9 +156,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					disconnectFromPeer()
 					return
 				}
-				s.host.ConnManager().Protect(conn.RemotePeer(), "protocol")
-				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
-				log.Info("Peer connected")
+				validPeerConnection()
 			}()
 		},
 	})
