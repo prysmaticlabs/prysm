@@ -6,6 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -35,11 +36,11 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	}
 
 	epoch := helpers.SlotToEpoch(req.Slot)
-	activeValidatorIndices, err := as.HeadFetcher.HeadValidatorsIndices(epoch)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(st, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
 	}
-	seed, err := as.HeadFetcher.HeadSeed(epoch)
+	seed, err := helpers.Seed(st, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
 	}
