@@ -2,13 +2,10 @@ package client
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func cancelledContext() context.Context {
@@ -52,49 +49,6 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	if !v.WaitForActivationCalled {
 		t.Error("Expected WaitForActivation() to be called")
 	}
-}
-
-func TestUpdateDuties_NextSlot(t *testing.T) {
-	v := &fakeValidator{}
-	ctx, cancel := context.WithCancel(context.Background())
-
-	slot := uint64(55)
-	ticker := make(chan uint64)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-
-		cancel()
-	}()
-
-	run(ctx, v)
-
-	if !v.UpdateDutiesCalled {
-		t.Fatalf("Expected UpdateAssignments(%d) to be called", slot)
-	}
-	if v.UpdateDutiesArg1 != slot {
-		t.Errorf("UpdateAssignments was called with wrong argument. Want=%d, got=%d", slot, v.UpdateDutiesArg1)
-	}
-}
-
-func TestUpdateDuties_HandlesError(t *testing.T) {
-	hook := logTest.NewGlobal()
-	v := &fakeValidator{}
-	ctx, cancel := context.WithCancel(context.Background())
-
-	slot := uint64(55)
-	ticker := make(chan uint64)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-
-		cancel()
-	}()
-	v.UpdateDutiesRet = errors.New("bad")
-
-	run(ctx, v)
-
-	testutil.AssertLogsContain(t, hook, "Failed to update assignments")
 }
 
 func TestRoleAt_NextSlot(t *testing.T) {
