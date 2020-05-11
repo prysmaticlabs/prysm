@@ -183,7 +183,7 @@ func (v *ValidatorService) Start() {
 	}
 	var slasherClient ethsl.SlasherClient
 	if v.slasherEndpoint != "" {
-		slasherClient = v.StartSlasherClient()
+		slasherClient = v.startSlasherClient()
 	}
 
 	v.validator = &validator{
@@ -204,7 +204,7 @@ func (v *ValidatorService) Start() {
 	go run(v.ctx, v.validator)
 }
 
-func (v *ValidatorService) StartSlasherClient() ethsl.SlasherClient {
+func (v *ValidatorService) startSlasherClient() ethsl.SlasherClient {
 	var dialOpt grpc.DialOption
 
 	if v.slasherWithCert != "" {
