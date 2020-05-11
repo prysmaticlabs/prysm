@@ -35,8 +35,8 @@ go_image(
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/genesis-state-gen",
     pure = "off",
-    race = "off",
     static = "off",  # Static enabled binary seems to cause issues with DNS lookup with cgo.
+    race = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
