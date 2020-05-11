@@ -305,7 +305,7 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 // validator assignments are unknown. Otherwise returns a valid validatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
 	rolesAt := make(map[[48]byte][]validatorRole)
-	if v.duties.CurrentEpochDuties == nil {
+	if v.duties == nil {
 		log.Debug("No assigned duties yet for current epoch")
 		return rolesAt, nil
 	}
