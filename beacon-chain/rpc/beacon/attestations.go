@@ -249,8 +249,7 @@ func (bs *Server) StreamIndexedAttestations(
 					continue
 				}
 				bs.ReceivedAttestationsBuffer <- data.Attestation
-			}
-			if event.Type == operation.AggregatedAttReceived {
+			} else if event.Type == operation.AggregatedAttReceived {
 				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
 				if !ok {
 					// Got bad data over the stream.
@@ -260,7 +259,7 @@ func (bs *Server) StreamIndexedAttestations(
 					// One nil attestation shouldn't stop the stream.
 					continue
 				}
-				bs.CollectedAttestationsBuffer <- []*ethpb.Attestation{data.Attestation.Aggregate}
+				bs.ReceivedAttestationsBuffer <- data.Attestation.Aggregate
 			}
 		case atts := <-bs.CollectedAttestationsBuffer:
 			// We aggregate the received attestations.
