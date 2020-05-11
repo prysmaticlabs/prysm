@@ -16,7 +16,7 @@ import (
 func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
@@ -28,7 +28,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 	validator.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				PublicKey: validatorKey.PublicKey.Marshal(),
 			},

@@ -595,7 +595,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	duties := &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				AttesterSlot:   slot,
 				ValidatorIndex: 200,
@@ -686,7 +686,7 @@ func TestRolesAt_OK(t *testing.T) {
 	sks[3] = bls.RandKey()
 	v.keyManager = keymanager.NewDirect(sks)
 	v.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   1,
@@ -756,7 +756,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	sks[2] = bls.RandKey()
 	v.keyManager = keymanager.NewDirect(sks)
 	v.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
@@ -891,7 +891,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				keyManager:      testKeyManager,
 				validatorClient: client,
 				duties: &ethpb.DutiesResponse{
-					Duties: []*ethpb.DutiesResponse_Duty{
+					CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 						{
 							CommitteeIndex: 1,
 						},
