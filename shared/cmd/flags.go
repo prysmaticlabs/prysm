@@ -125,6 +125,13 @@ var (
 			"would whitelist connections to peers on your local network only. The default " +
 			"is to accept all connections.",
 	}
+	// P2PBlacklist defines a list of CIDR subnets to disallow connections from them.
+	P2PBlacklist = &cli.StringSliceFlag{
+		Name: "p2p-blacklist",
+		Usage: "The CIDR subnets for blacklisting peer connections. Example: 192.168.0.0/16 " +
+			"would blacklist connections from peers on your local network only. The default " +
+			"is to accept all connections.",
+	}
 	// P2PEncoding defines the encoding format for p2p messages.
 	P2PEncoding = &cli.StringFlag{
 		Name:  "p2p-encoding",

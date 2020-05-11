@@ -37,12 +37,17 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	if err != nil {
 		return err
 	}
+	buf := bytes.NewBuffer([]byte{})
+	if err := record.EncodeRLP(buf); err != nil {
+		return errors.Wrap(err, "could not encode ENR record to bytes")
+	}
+	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
 	// Clients SHOULD connect to peers with current_fork_digest, next_fork_version,
 	// and next_fork_epoch that match local values.
 	if !bytes.Equal(peerForkENR.CurrentForkDigest, currentForkENR.CurrentForkDigest) {
 		return fmt.Errorf(
-			"fork digest of peer with ENR %v: %v, does not match local value: %v",
-			record,
+			"fork digest of peer with ENR %s: %v, does not match local value: %v",
+			enrString,
 			peerForkENR.CurrentForkDigest,
 			currentForkENR.CurrentForkDigest,
 		)
@@ -52,11 +57,6 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	// updated to matching prior to the earlier next_fork_epoch of the two clients,
 	// these type of connecting clients will be unable to successfully interact
 	// starting at the earlier next_fork_epoch.
-	buf := bytes.NewBuffer([]byte{})
-	if err := record.EncodeRLP(buf); err != nil {
-		return errors.Wrap(err, "could not encode ENR record to bytes")
-	}
-	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
 	if peerForkENR.NextForkEpoch != currentForkENR.NextForkEpoch {
 		log.WithFields(logrus.Fields{
 			"peerNextForkEpoch": peerForkENR.NextForkEpoch,

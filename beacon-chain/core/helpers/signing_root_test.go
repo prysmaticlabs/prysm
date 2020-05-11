@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -40,11 +39,6 @@ func TestComputeDomain_OK(t *testing.T) {
 }
 
 func TestSigningRoot_Compatibility(t *testing.T) {
-	featureFlags := new(featureconfig.Flags)
-	featureFlags.EnableBlockHTR = true
-	reset := featureconfig.InitWithReset(featureFlags)
-	defer reset()
-
 	parRoot := [32]byte{'A'}
 	stateRoot := [32]byte{'B'}
 	blk := &ethpb.BeaconBlock{

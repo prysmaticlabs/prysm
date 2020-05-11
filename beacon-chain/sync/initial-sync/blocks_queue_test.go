@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -274,11 +275,19 @@ func TestBlocksQueueLoop(t *testing.T) {
 					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
 				}
 				if featureconfig.Get().InitSyncNoVerify {
-					if err := mc.ReceiveBlockNoVerify(ctx, block); err != nil {
+					root, err := stateutil.BlockRoot(block.Block)
+					if err != nil {
+						return err
+					}
+					if err := mc.ReceiveBlockNoVerify(ctx, block, root); err != nil {
 						return err
 					}
 				} else {
-					if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, block); err != nil {
+					root, err := stateutil.BlockRoot(block.Block)
+					if err != nil {
+						return err
+					}
+					if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, block, root); err != nil {
 						return err
 					}
 				}

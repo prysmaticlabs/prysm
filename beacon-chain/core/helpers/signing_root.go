@@ -35,9 +35,14 @@ var ErrSigFailedToVerify = errors.New("signature did not verify")
 //    )
 //    return hash_tree_root(domain_wrapped_object)
 func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
-	// utilise generic ssz library
 	return signingRoot(func() ([32]byte, error) {
-		return ssz.HashTreeRoot(object)
+		switch object.(type) {
+		case *ethpb.BeaconBlock:
+			return stateutil.BlockRoot(object.(*ethpb.BeaconBlock))
+		default:
+			// utilise generic ssz library
+			return ssz.HashTreeRoot(object)
+		}
 	}, domain)
 }
 
@@ -88,6 +93,28 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte
 	root, err := signingRoot(func() ([32]byte, error) {
 		// utilize custom block hashing function
 		return stateutil.BlockRoot(blk)
+	}, domain)
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing root")
+	}
+	if !sig.Verify(root[:], publicKey) {
+		return ErrSigFailedToVerify
+	}
+	return nil
+}
+
+// VerifyBlockHeaderSigningRoot verifies the signing root of a block header given it's public key, signature and domain.
+func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, signature []byte, domain []byte) error {
+	publicKey, err := bls.PublicKeyFromBytes(pub)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to public key")
+	}
+	sig, err := bls.SignatureFromBytes(signature)
+	if err != nil {
+		return errors.Wrap(err, "could not convert bytes to signature")
+	}
+	root, err := signingRoot(func() ([32]byte, error) {
+		return stateutil.BlockHeaderRoot(blkHdr)
 	}, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")

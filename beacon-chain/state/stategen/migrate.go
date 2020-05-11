@@ -20,7 +20,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 	// Verify migration is sensible. The new finalized point must increase the current split slot, and
 	// on an epoch boundary for hot state summary scheme to work.
 	currentSplitSlot := s.splitInfo.slot
-	if currentSplitSlot > finalizedSlot {
+	if currentSplitSlot == 0 || currentSplitSlot > finalizedSlot {
 		return nil
 	}
 
