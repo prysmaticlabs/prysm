@@ -539,7 +539,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	}
 }
 
-func TestMultipleValidatorStatus_OK(t *testing.T) {
+func TestActivationStatus_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -608,7 +608,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		DepositFetcher:     depositCache,
 		HeadFetcher:        &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
-	activeExists, response, err := vs.multipleValidatorStatus(context.Background(), pubKeys)
+	activeExists, response, err := vs.activationStatus(context.Background(), pubKeys)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -38,9 +38,9 @@ func (vs *Server) ValidatorStatus(
 	return vs.validatorStatus(ctx, req.PublicKey, headState), nil
 }
 
-// multipleValidatorStatus returns the validator status response for the set of validators
+// activationStatus returns the validator status response for the set of validators
 // requested by their pub keys.
-func (vs *Server) multipleValidatorStatus(
+func (vs *Server) activationStatus(
 	ctx context.Context,
 	pubkeys [][]byte,
 ) (bool, []*ethpb.ValidatorActivationResponse_Status, error) {
