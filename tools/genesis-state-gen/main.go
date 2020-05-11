@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/prysmaticlabs/prysm/shared/debug"
-
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/interop"
