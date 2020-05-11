@@ -133,7 +133,9 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 							disconnectFromPeer()
 							return
 						}
-						if !updated.After(currentTime) {
+						// exit if we don't receive any current status messages from
+						// peer.
+						if updated.IsZero() || !updated.After(currentTime) {
 							disconnectFromPeer()
 							return
 						}
