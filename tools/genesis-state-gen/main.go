@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/prysmaticlabs/prysm/shared/debug"
-
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -21,7 +19,6 @@ var (
 	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	jsonOutputFile   = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
-	cpuProfile       = flag.String("cpuprofile", "", "Output filename for cpu profiling")
 )
 
 func main() {
@@ -38,21 +35,10 @@ func main() {
 	if !*useMainnetConfig {
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	}
-	if *cpuProfile != "" {
-		if err := debug.Handler.StartCPUProfile(*cpuProfile); err != nil {
-			log.Fatal(err)
-		}
-	}
 
 	genesisState, _, err := interop.GenerateGenesisState(*genesisTime, uint64(*numValidators))
 	if err != nil {
 		log.Fatalf("Could not generate genesis beacon state: %v", err)
-	}
-
-	if *cpuProfile != "" {
-		if err := debug.Handler.StopCPUProfile(); err != nil {
-			log.Fatal(err)
-		}
 	}
 	if *sszOutputFile != "" {
 		encodedState, err := ssz.Marshal(genesisState)
