@@ -237,7 +237,10 @@ func (bs *Server) StreamIndexedAttestations(
 	go bs.collectReceivedAttestations(stream.Context())
 	for {
 		select {
-		case event := <-attestationsChannel:
+		case event, ok := <-attestationsChannel:
+			if !ok {
+				logrus.Errorf("Stream indexed attestations attestations channel is got closed")
+			}
 			if event.Type == operation.UnaggregatedAttReceived {
 				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 				if !ok {
@@ -259,9 +262,12 @@ func (bs *Server) StreamIndexedAttestations(
 					// One nil attestation shouldn't stop the stream.
 					continue
 				}
-				bs.ReceivedAttestationsBuffer <- data.Attestation.Aggregate
+				bs.CollectedAttestationsBuffer <- []*ethpb.Attestation{data.Attestation.Aggregate}
 			}
-		case atts := <-bs.CollectedAttestationsBuffer:
+		case atts, ok := <-bs.CollectedAttestationsBuffer:
+			if !ok {
+				logrus.Errorf("Stream indexed attestations collected attestations channel got closed")
+			}
 			// We aggregate the received attestations.
 			aggAtts, err := helpers.AggregateAttestations(atts)
 			if err != nil {
