@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
@@ -33,5 +32,6 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 			Attestation: a.Message,
 		},
 	})
+
 	return r.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }
