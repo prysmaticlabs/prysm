@@ -310,7 +310,7 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
 	}
-	
+
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*dbpb.DepositContainer
