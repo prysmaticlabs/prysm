@@ -32,5 +32,6 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 			Attestation: a.Message,
 		},
 	})
+
 	return r.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }
