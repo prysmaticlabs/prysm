@@ -176,11 +176,11 @@ contract in order to activate the validator client`,
 						}
 						beaconNodeRPC := ethpb.NewBeaconNodeValidatorClient(conn)
 						statuses, err := accounts.FetchAccountStatuses(cliCtx, beaconNodeRPC, keyPairs)
-						if err != nil {
-							log.WithError(err).Fatal("Could not fetch account statuses from the beacon node.")
-						}
 						if err := conn.Close(); err != nil {
 							log.WithError(err).Error("Could not close connection to beacon node.")
+						}
+						if err != nil {
+							log.WithError(err).Fatal("Could not fetch account statuses from the beacon node.")
 						}
 						// XXX: Sorting does not work right now. We need to have the
 						// public key of the validator indicated in the response.
