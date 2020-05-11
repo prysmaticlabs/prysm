@@ -164,20 +164,15 @@ contract in order to activate the validator client`,
 						timeout := grpc.WithTimeout(
 							10 * time.Second /* Block for 10 seconds to see if we can connect to beacon node */)
 						dialOpts := client.ConstructDialOptions(
-							maxCallRecvMsgSize,
-							cert,
-							grpcHeaders,
-							grpcRetries,
-							grpc.WithBlock(),
-							timeout)
+							maxCallRecvMsgSize, cert, grpcHeaders, grpcRetries, grpc.WithBlock(), timeout)
 						conn, err := grpc.DialContext(cliCtx, endpoint, dialOpts...)
 						if err != nil {
 							log.WithError(err).Fatalf("Failed to dial beacon node endpoint at %s", endpoint)
 						}
 						beaconNodeRPC := ethpb.NewBeaconNodeValidatorClient(conn)
 						statuses, err := accounts.FetchAccountStatuses(cliCtx, beaconNodeRPC, keyPairs)
-						if err := conn.Close(); err != nil {
-							log.WithError(err).Error("Could not close connection to beacon node.")
+						if e := conn.Close(); e != nil {
+							log.WithError(e).Error("Could not close connection to beacon node.")
 						}
 						if err != nil {
 							log.WithError(err).Fatal("Could not fetch account statuses from the beacon node.")
