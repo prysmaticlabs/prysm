@@ -23,6 +23,17 @@ var (
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
+	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
+	SlasherRPCProviderFlag = &cli.StringFlag{
+		Name:  "slasher-rpc-provider",
+		Usage: "Slasher node RPC provider endpoint",
+		Value: "localhost:4000",
+	}
+	// SlasherCertFlag defines a flag for the slasher node's TLS certificate.
+	SlasherCertFlag = &cli.StringFlag{
+		Name:  "slasher-tls-cert",
+		Usage: "Certificate for secure slasher gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
+	}
 	// DisablePenaltyRewardLogFlag defines the ability to not log reward/penalty information during deployment
 	DisablePenaltyRewardLogFlag = &cli.BoolFlag{
 		Name:  "disable-rewards-penalties-logging",

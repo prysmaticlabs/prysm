@@ -178,10 +178,12 @@ func (s *ValidatorClient) registerPrometheusService() error {
 
 func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager) error {
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	slasherEndpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
 	emitAccountMetrics := s.cliCtx.Bool(flags.AccountMetricsFlag.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
+	slasherCert := s.cliCtx.String(flags.SlasherCertFlag.Name)
 	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
@@ -192,10 +194,12 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 		LogValidatorBalances:       logValidatorBalances,
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
+		SlasherCertFlag:            slasherCert,
 		GraffitiFlag:               graffiti,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		SlasherEndpoint:            slasherEndpoint,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")

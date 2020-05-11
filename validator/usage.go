@@ -86,6 +86,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GrpcRetriesFlag,
 			flags.GrpcHeadersFlag,
 			flags.AccountMetricsFlag,
+			flags.SlasherRPCProviderFlag,
+			flags.SlasherCertFlag,
 		},
 	},
 	{
