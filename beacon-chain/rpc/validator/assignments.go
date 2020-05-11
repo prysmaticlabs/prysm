@@ -117,23 +117,35 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest, epoch ui
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
+	// Query the next epoch assignments for committee subnet subscriptions.
+	nextCommitteeAssignments, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(s, epoch+1)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
+	}
 
 	var committeeIDs []uint64
+	var nextCommitteeIDs []uint64
 	validatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
+	nextValidatorAssignments := make([]*ethpb.DutiesResponse_Duty, 0, len(req.PublicKeys))
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
 		}
-		// Default assignment.
 		assignment := &ethpb.DutiesResponse_Duty{
 			PublicKey: pubKey,
 		}
-
+		nextAssignment := &ethpb.DutiesResponse_Duty{
+			PublicKey: pubKey,
+		}
 		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if ok {
 			assignment.ValidatorIndex = idx
 			assignment.Status = vs.assignmentStatus(idx, s)
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
+
+			nextAssignment.ValidatorIndex = idx
+			nextAssignment.Status = vs.assignmentStatus(idx, s)
+			nextAssignment.ProposerSlots = nextProposerIndexToSlots[idx]
 
 			ca, ok := committeeAssignments[idx]
 			if ok {
@@ -142,18 +154,29 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest, epoch ui
 				assignment.CommitteeIndex = ca.CommitteeIndex
 				committeeIDs = append(committeeIDs, ca.CommitteeIndex)
 			}
+			// Save the next epoch assignments.
+			ca, ok = nextCommitteeAssignments[idx]
+			if ok {
+				nextAssignment.Committee = ca.Committee
+				nextAssignment.AttesterSlot = ca.AttesterSlot
+				nextAssignment.CommitteeIndex = ca.CommitteeIndex
+				nextCommitteeIDs = append(nextCommitteeIDs, ca.CommitteeIndex)
+			}
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
 			vStatus := vs.validatorStatus(ctx, pubKey, s)
 			assignment.Status = vStatus.Status
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
+		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 		// Assign relevant validator to subnet.
 		assignValidatorToSubnet(pubKey, assignment.Status)
+		assignValidatorToSubnet(pubKey, nextAssignment.Status)
 	}
 
 	return &ethpb.DutiesResponse{
 		CurrentEpochDuties: validatorAssignments,
+		NextEpochDuties:    nextValidatorAssignments,
 	}, nil
 }
 
