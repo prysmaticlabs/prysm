@@ -42,16 +42,20 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
-			return errors.Wrap(err, "could not receive validator duties from stream")
+			log.WithError(err).Error("Could not receive duties from stream")
+			continue
 		}
-		if err := v.updateDuties(res, len(validatingKeys)); err != nil {
+		if err := v.updateDuties(ctx, res, len(validatingKeys)); err != nil {
 			log.WithError(err).Error("Could not update duties from stream")
 		}
 	}
-
 	return nil
 }
 
+// Update duties sets the received validator duties in-memory for the validator client
+// and determines which validating keys were selected as attestation aggregators
+// for the epoch. Additionally, this function uses that information to notify
+// the beacon node it should subscribe the assigned attestation p2p subnets.
 func (v *validator) updateDuties(ctx context.Context, dutiesResp *ethpb.DutiesResponse, numKeys int) error {
 	ctx, span := trace.StartSpan(ctx, "validator.updateDuties")
 	defer span.End()
