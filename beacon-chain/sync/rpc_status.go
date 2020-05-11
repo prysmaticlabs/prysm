@@ -222,7 +222,7 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 		return errInvalidEpoch
 	}
 	// Exit early if the peer's finalized epoch
-	// is less than that of the remote peer's
+	// is less than that of the remote peer's.
 	if finalizedEpoch < msg.FinalizedEpoch {
 		return nil
 	}
