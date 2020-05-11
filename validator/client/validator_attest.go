@@ -182,7 +182,7 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 		return nil, errors.New("no duties for validators")
 	}
 
-	for _, duty := range v.duties.Duties {
+	for _, duty := range v.duties.CurrentEpochDuties {
 		if bytes.Equal(pubKey[:], duty.PublicKey) {
 			return duty, nil
 		}

@@ -42,8 +42,7 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 		}
 		if err != nil {
-			log.WithError(err).Error("Could not receive duties from stream")
-			continue
+			return errors.Wrap(err, "Could not receive duties from stream")
 		}
 		if err := v.updateDuties(ctx, res, len(validatingKeys)); err != nil {
 			log.WithError(err).Error("Could not update duties from stream")

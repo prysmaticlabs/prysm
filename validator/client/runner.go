@@ -68,9 +68,13 @@ func run(ctx context.Context, v Validator) {
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)
 	}
-	if err := v.StreamDuties(ctx); err != nil {
-		handleAssignmentError(err, headSlot)
-	}
+	// We listen to a server-side stream of validator duties in the
+	// background of the validator client.
+	go func() {
+		if err := v.StreamDuties(ctx); err != nil {
+			handleAssignmentError(err, headSlot)
+		}
+	}()
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
