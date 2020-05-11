@@ -65,7 +65,7 @@ func (vs *Server) MultipleValidatorStatus(
 		}
 	}
 
-	statuses := make([]*ethpb.ValidatorStatusResponse, 0, len(pubkeys))
+	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubkeys))
 	for i, pubKey := range pubkeys {
 		statuses[i] = vs.validatorStatus(ctx, pubKey, headState)
 	}
