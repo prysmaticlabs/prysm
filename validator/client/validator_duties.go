@@ -2,16 +2,21 @@ package client
 
 import (
 	"context"
+	"io"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 )
 
-func (v *validator) StreamDuties() error {
+// StreamDuties consumes a server-side stream of validator duties from a beacon node
+// for a set of validating keys passed in as a request type. New duties will be
+// sent over the stream upon a new epoch being reached or from a a chain reorg happening
+// across epochs in the beacon node.
+func (v *validator) StreamDuties(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.StreamDuties")
 	defer span.End()
 
@@ -20,58 +25,46 @@ func (v *validator) StreamDuties() error {
 		return err
 	}
 	req := &ethpb.DutiesRequest{
-		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
-	resp, err := v.validatorClient.StreamDuties(ctx, req)
+	stream, err := v.validatorClient.StreamDuties(ctx, req)
 	if err != nil {
-		v.duties = nil // Clear assignments so we know to retry the request.
-		log.Error(err)
-		return err
+		return errors.Wrap(err, "Could not setup validator duties streaming client")
 	}
-	_ = resp
+	for {
+		res, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+		}
+		if err != nil {
+			return errors.Wrap(err, "could not receive validator duties from stream")
+		}
+		if err := v.updateDuties(res, len(validatingKeys)); err != nil {
+			log.WithError(err).Error("Could not update duties from stream")
+		}
+	}
+
 	return nil
 }
 
-// UpdateDuties checks the slot number to determine if the validator's
-// list of upcoming assignments needs to be updated. For example, at the
-// beginning of a new epoch.
-func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.duties != nil {
-		// Do nothing if not epoch start AND assignments already exist.
-		return nil
-	}
-	// Set deadline to end of epoch.
-	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(helpers.StartSlot(helpers.SlotToEpoch(slot)+1)))
-	defer cancel()
-	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+func (v *validator) updateDuties(ctx context.Context, dutiesResp *ethpb.DutiesResponse, numKeys int) error {
+	ctx, span := trace.StartSpan(ctx, "validator.updateDuties")
 	defer span.End()
+	currentSlot := slotutil.SlotsSinceGenesis(time.Unix(int64(v.genesisTime), 0))
 
-	validatingKeys, err := v.keyManager.FetchValidatingKeys()
-	if err != nil {
-		return err
-	}
-	req := &ethpb.DutiesRequest{
-		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
-	}
-
-	// If duties is nil it means we have had no prior duties and just started up.
-	resp, err := v.validatorClient.GetDuties(ctx, req)
-	if err != nil {
-		v.duties = nil // Clear assignments so we know to retry the request.
-		log.Error(err)
-		return err
-	}
-
-	v.duties = resp
-	v.logDuties(slot, v.duties.Duties)
-	subscribeSlots := make([]uint64, 0, len(validatingKeys))
-	subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
-	subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
+	v.duties = dutiesResp
+	v.logDuties(currentSlot, dutiesResp.CurrentEpochDuties)
+	subscribeSlots := make([]uint64, 0, numKeys)
+	subscribeCommitteeIDs := make([]uint64, 0, numKeys)
+	subscribeIsAggregator := make([]bool, 0, numKeys)
 	alreadySubscribed := make(map[[64]byte]bool)
 
-	for _, duty := range v.duties.Duties {
+	for _, duty := range dutiesResp.CurrentEpochDuties {
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
@@ -95,14 +88,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		}
 	}
 
-	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
-	req.Epoch++
-	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	for _, duty := range dutiesNextEpoch.Duties {
+	for _, duty := range dutiesResp.NextEpochDuties {
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
@@ -126,53 +112,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		}
 	}
 
-	_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
+	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
 		Slots:        subscribeSlots,
 		CommitteeIds: subscribeCommitteeIDs,
 		IsAggregator: subscribeIsAggregator,
 	})
-
 	return err
-}
-
-// RolesAt slot returns the validator roles at the given slot. Returns nil if the
-// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid validatorRole map.
-func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
-	rolesAt := make(map[[48]byte][]validatorRole)
-	for _, duty := range v.duties.Duties {
-		var roles []validatorRole
-
-		if duty == nil {
-			continue
-		}
-		if len(duty.ProposerSlots) > 0 {
-			for _, proposerSlot := range duty.ProposerSlots {
-				if proposerSlot != 0 && proposerSlot == slot {
-					roles = append(roles, roleProposer)
-					break
-				}
-			}
-		}
-		if duty.AttesterSlot == slot {
-			roles = append(roles, roleAttester)
-
-			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
-			if err != nil {
-				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
-			}
-			if aggregator {
-				roles = append(roles, roleAggregator)
-			}
-
-		}
-		if len(roles) == 0 {
-			roles = append(roles, roleUnknown)
-		}
-
-		var pubKey [48]byte
-		copy(pubKey[:], duty.PublicKey)
-		rolesAt[pubKey] = roles
-	}
-	return rolesAt, nil
 }

@@ -25,7 +25,8 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-	return vs.duties(ctx, req)
+	currentEpoch := slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
+	return vs.duties(ctx, req, currentEpoch)
 }
 
 // StreamDuties returns the duties assigned to a list of validators specified
@@ -37,7 +38,8 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	}
 
 	// We compute duties the very first time the endpoint is called.
-	res, err := vs.duties(stream.Context(), req)
+	currentEpoch := slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
+	res, err := vs.duties(stream.Context(), req, currentEpoch)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
 	}
@@ -55,8 +57,8 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
-		case <-epochTicker.C():
-			res, err := vs.duties(stream.Context(), req)
+		case epoch := <-epochTicker.C():
+			res, err := vs.duties(stream.Context(), req, epoch)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
 			}
@@ -66,6 +68,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 		case ev := <-stateChannel:
 			// If a reorg occurred, we recompute duties for the connected validator clients
 			// and send another response over the server stream right away.
+			currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
 			if ev.Type == statefeed.Reorg {
 				data, ok := ev.Data.(*statefeed.ReorgData)
 				if !ok {
@@ -78,7 +81,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 				if newSlotEpoch >= oldSlotEpoch {
 					continue
 				}
-				res, err := vs.duties(stream.Context(), req)
+				res, err := vs.duties(stream.Context(), req, currentEpoch)
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
 				}
@@ -96,20 +99,20 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 
 // Compute the validator duties from the head state's corresponding epoch
 // for validators public key / indices requested.
-func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest, epoch uint64) (*ethpb.DutiesResponse, error) {
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	if epochStartSlot := helpers.StartSlot(req.Epoch); s.Slot() < epochStartSlot {
+	if epochStartSlot := helpers.StartSlot(epoch); s.Slot() < epochStartSlot {
 		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -149,7 +152,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	}
 
 	return &ethpb.DutiesResponse{
-		Duties: validatorAssignments,
+		CurrentEpochDuties: validatorAssignments,
 	}, nil
 }
 

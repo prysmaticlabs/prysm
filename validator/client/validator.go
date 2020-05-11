@@ -300,11 +300,53 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
 }
 
+// RolesAt slot returns the validator roles at the given slot. Returns nil if the
+// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
+// validator assignments are unknown. Otherwise returns a valid validatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
+	rolesAt := make(map[[48]byte][]validatorRole)
+	for _, duty := range v.duties.Duties {
+		var roles []validatorRole
+
+		if duty == nil {
+			continue
+		}
+		if len(duty.ProposerSlots) > 0 {
+			for _, proposerSlot := range duty.ProposerSlots {
+				if proposerSlot != 0 && proposerSlot == slot {
+					roles = append(roles, roleProposer)
+					break
+				}
+			}
+		}
+		if duty.AttesterSlot == slot {
+			roles = append(roles, roleAttester)
+
+			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				roles = append(roles, roleAggregator)
+			}
+
+		}
+		if len(roles) == 0 {
+			roles = append(roles, roleUnknown)
+		}
+
+		var pubKey [48]byte
+		copy(pubKey[:], duty.PublicKey)
+		rolesAt[pubKey] = roles
+	}
+	return rolesAt, nil
+}
+
 // UpdateProtections goes through the duties of the given slot and fetches the required validator history,
 // assigning it in validator.
 func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
-	attestingPubKeys := make([][48]byte, 0, len(v.duties.Duties))
-	for _, duty := range v.duties.Duties {
+	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
+	for _, duty := range v.duties.CurrentEpochDuties {
 		if duty == nil {
 			continue
 		}
