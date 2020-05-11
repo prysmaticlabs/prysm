@@ -38,6 +38,44 @@ func (vs *Server) ValidatorStatus(
 	return vs.validatorStatus(ctx, req.PublicKey, headState), nil
 }
 
+func (vs *Server) MultipleValidatorStatus(
+	ctx context.Context,
+	req *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
+	filtered := make(map[[48]byte]bool)
+	pubkeys := req.GetPublicKeys()
+	for _, pubKey := range pubkeys {
+		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		filtered[pubkeyBytes] = true
+	}
+	// Convert indices to public keys
+	for _, idx := range req.GetIndices() {
+		pubkeyBytes := headState.PubkeyAtIndex(uint64(idx))
+		if len(pubkeyBytes) == 0 {
+			// No validator at given index. Skip.
+			continue
+		}
+		if !filtered[pubkeyBytes] {
+			pubkeys = append(pubkeys, pubkeyBytes[:])
+			filtered[pubkeyBytes] = true
+		}
+	}
+
+	statuses := make([]*ethpb.ValidatorStatusResponse, 0, len(pubkeys))
+	for i, pubKey := range pubkeys {
+		statuses[i] = vs.validatorStatus(ctx, pubKey, headState)
+	}
+
+	return &ethpb.MultipleValidatorStatusResponse{
+		PublicKeys: pubkeys,
+		Statuses:   statuses,
+	}, nil
+}
+
 // activationStatus returns the validator status response for the set of validators
 // requested by their pub keys.
 func (vs *Server) activationStatus(
