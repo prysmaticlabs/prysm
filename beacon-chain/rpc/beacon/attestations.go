@@ -257,6 +257,10 @@ func (bs *Server) StreamIndexedAttestations(
 					continue
 				}
 				if data.Attestation == nil {
+					// One nil attestation and proof shouldn't stop the stream.
+					continue
+				}
+				if data.Attestation.Aggregate == nil {
 					// One nil attestation shouldn't stop the stream.
 					continue
 				}
