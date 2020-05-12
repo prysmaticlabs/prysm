@@ -542,7 +542,7 @@ func IsSlashableAttestationData(data1 *ethpb.AttestationData, data2 *ethpb.Attes
 	if data1 == nil || data2 == nil || data1.Target == nil || data2.Target == nil || data1.Source == nil || data2.Source == nil {
 		return false
 	}
-	isDoubleVote := !proto.Equal(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
+	isDoubleVote := !attestationutil.AttDataIsEqual(data1, data2) && data1.Target.Epoch == data2.Target.Epoch
 	isSurroundVote := data1.Source.Epoch < data2.Source.Epoch && data2.Target.Epoch < data1.Target.Epoch
 	return isDoubleVote || isSurroundVote
 }
