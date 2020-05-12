@@ -190,7 +190,7 @@ func ConstructDialOptions(
 	withCert string,
 	grpcHeaders []string,
 	grpcRetries uint,
-	otherOpts ...grpc.DialOption,
+	extraOpts ...grpc.DialOption,
 ) []grpc.DialOption {
 	var transportSecurity grpc.DialOption
 	if withCert != "" {
@@ -237,7 +237,7 @@ func ConstructDialOptions(
 		)),
 	}
 
-	for _, opt := range otherOpts {
+	for _, opt := range extraOpts {
 		dialOpts = append(dialOpts, opt)
 	}
 
