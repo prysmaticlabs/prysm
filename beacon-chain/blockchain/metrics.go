@@ -87,11 +87,22 @@ var (
 		Name: "total_voted_target_balances",
 		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
+	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_reorg_total",
+		Help: "Count the number of times beacon chain has a reorg",
+	})
 	sentBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_sent_latency_milliseconds",
 			Help:    "Captures blocks broadcast time. Blocks sent in milliseconds distribution",
 			Buckets: []float64{1000, 2000, 3000, 4000, 5000, 6000},
+		},
+	)
+	attestationInclusionDelay = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "attestation_inclusion_delay_slots",
+			Help: "The number of slots between att.Slot and block.Slot",
+			Buckets: []float64{1, 2, 3, 4, 6, 32, 64},
 		},
 	)
 )
@@ -205,4 +216,10 @@ func captureSentTimeMetric(genesisTime uint64, currentSlot uint64) error {
 	sentBlockPropagationHistogram.Observe(float64(diffMs))
 
 	return nil
+}
+
+func reportAttestationInclusion(blk *ethpb.BeaconBlock) {
+	for _, att := range blk.Body.Attestations {
+		attestationInclusionDelay.Observe(float64(blk.Slot-att.Data.Slot))
+	}
 }
