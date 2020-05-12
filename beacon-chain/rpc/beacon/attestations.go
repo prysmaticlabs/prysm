@@ -245,7 +245,7 @@ func (bs *Server) StreamIndexedAttestations(
 		select {
 		case event, ok := <-attestationsChannel:
 			if !ok {
-				log.Error("Stream indexed attestations channel closed")
+				log.Error("Indexed attestations stream channel closed")
 			}
 			if event.Type == operation.UnaggregatedAttReceived {
 				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
@@ -264,19 +264,19 @@ func (bs *Server) StreamIndexedAttestations(
 				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
 				if !ok {
 					// Got bad data over the stream.
-					log.Warningf("Got data of wrong type on stream expected *AggregatedAttReceivedData, received %T", event.Data)
+					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *AggregatedAttReceivedData, received %T", event.Data)
 					continue
 				}
 				if data.Attestation == nil || data.Attestation.Aggregate == nil {
 					// One nil attestation shouldn't stop the stream.
-					log.Info("Got nil attestation or nil attestation aggregate")
+					log.Info("Indexed attestations stream got nil attestation or nil attestation aggregate")
 					continue
 				}
 				bs.CollectedAttestationsBuffer <- []*ethpb.Attestation{data.Attestation.Aggregate}
 			}
 		case atts, ok := <-bs.CollectedAttestationsBuffer:
 			if !ok {
-				log.Error("Stream indexed attestations collected attestations channel closed")
+				log.Error("Indexed attestations stream collected attestations channel closed")
 			}
 			// We aggregate the received attestations.
 			aggAtts, err := helpers.AggregateAttestations(atts)
