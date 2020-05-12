@@ -28,7 +28,6 @@ go_test(
         "minimal",
     ],
     deps = [
-        "//beacon-chain/core/state:go_default_library",
         "//endtoend/components:go_default_library",
         "//endtoend/evaluators:go_default_library",
         "//endtoend/helpers:go_default_library",

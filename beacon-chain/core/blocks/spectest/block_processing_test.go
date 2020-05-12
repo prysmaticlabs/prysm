@@ -23,10 +23,6 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func init() {
-	state.SkipSlotCache.Disable()
-}
-
 func runBlockProcessingTest(t *testing.T, config string) {
 	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -41,8 +42,16 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer s.chain.ClearCachedStates()
-	state.SkipSlotCache.Disable()
-	defer state.SkipSlotCache.Enable()
+
+	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
+		cfg.EnableSkipSlotsCache = false
+		featureconfig.Init(cfg)
+		defer func() {
+			cfg := featureconfig.Get()
+			cfg.EnableSkipSlotsCache = true
+			featureconfig.Init(cfg)
+		}()
+	}
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)

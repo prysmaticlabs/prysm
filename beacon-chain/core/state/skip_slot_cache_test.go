@@ -7,13 +7,12 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestSkipSlotCache_OK(t *testing.T) {
-	state.SkipSlotCache.Enable()
-	defer state.SkipSlotCache.Disable()
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	originalState, err := beaconstate.InitializeFromProto(bState.CloneInnerState())
 	if err != nil {
@@ -22,6 +21,14 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
+
+	cfg := featureconfig.Get()
+	cfg.EnableSkipSlotsCache = true
+	featureconfig.Init(cfg)
+	defer func() {
+		cfg.EnableSkipSlotsCache = false
+		featureconfig.Init(cfg)
+	}()
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
