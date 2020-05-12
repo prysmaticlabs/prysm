@@ -104,7 +104,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 					break
 				default:
 					log.WithError(err).Errorf("Could not receive attestations from beacon node. rpc status: %v", e.Code())
-					return
+					break
 				}
 			} else {
 				log.WithError(err).Error("Could not receive attestations from beacon node")
