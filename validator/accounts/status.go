@@ -12,17 +12,20 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ValidatorStatusMetadata holds all status information about a validator.
 type ValidatorStatusMetadata struct {
 	PublicKey []byte
 	Metadata  *ethpb.ValidatorStatusResponse
 }
 
-// Maximum grpc requests allowed to fetch account statuses.
+// MaxRequestLimit specifies the max grpc requests allowed
+// to fetch account statuses.
 const MaxRequestLimit = 3
 
-// XXX: This is an arbitrary number. Should compute
-// max keys allowed before exceeding GrpcMaxCallRecvMsgSizeFlag.
-const MaxRequestKeys = 13
+// MaxRequestKeys specifies the max amount of public keys allowed
+// in a single grpc request, when fetching account statuses.
+const MaxRequestKeys = 2000 // XXX: This is an arbitrary number.
+// Should compute max keys allowed before exceeding GrpcMaxCallRecvMsgSizeFlag
 
 // FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient
 // for each validator public key.
