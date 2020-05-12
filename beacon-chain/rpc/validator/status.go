@@ -39,7 +39,7 @@ func (vs *Server) ValidatorStatus(
 }
 
 // MultipleValidatorStatus is the same as ValidatorStatus. Supports retrieval of multiple
-// validator statues. Takes a list of public keys or a list of validator indices.
+// validator statuses. Takes a list of public keys or a list of validator indices.
 func (vs *Server) MultipleValidatorStatus(
 	ctx context.Context,
 	req *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
@@ -50,8 +50,8 @@ func (vs *Server) MultipleValidatorStatus(
 	responseCap := len(req.GetPublicKeys()) + len(req.GetIndices())
 	pubkeys := make([][]byte, 0, responseCap)
 	filtered := make(map[[48]byte]bool)
-	filtered[[48]byte{}] = true //Filter out keys with all zeros
-	// Filter out duplicate public keys
+	filtered[[48]byte{}] = true // Filter out keys with all zeros.
+	// Filter out duplicate public keys.
 	for _, pubKey := range req.GetPublicKeys() {
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)
 		if !filtered[pubkeyBytes] {
@@ -59,7 +59,7 @@ func (vs *Server) MultipleValidatorStatus(
 			filtered[pubkeyBytes] = true
 		}
 	}
-	// Convert indices to public keys
+	// Convert indices to public keys.
 	for _, idx := range req.GetIndices() {
 		pubkeyBytes := headState.PubkeyAtIndex(uint64(idx))
 		if !filtered[pubkeyBytes] {
@@ -67,7 +67,7 @@ func (vs *Server) MultipleValidatorStatus(
 			filtered[pubkeyBytes] = true
 		}
 	}
-	// Fetch statuses from beacon state
+	// Fetch statuses from beacon state.
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubkeys))
 	for i, pubKey := range pubkeys {
 		statuses[i] = vs.validatorStatus(ctx, pubKey, headState)
