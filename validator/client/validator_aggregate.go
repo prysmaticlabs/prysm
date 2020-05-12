@@ -150,7 +150,7 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 	_, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
 	defer span.End()
 
-	oneThird := slotutil.DivideSecondsPerSlot(3 /* one third of slot duration */)
+	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
 	twoThird := oneThird + oneThird
 	delay := twoThird
 

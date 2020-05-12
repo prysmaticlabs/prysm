@@ -19,7 +19,7 @@ import (
 )
 
 // Prepare attestations for fork choice three times per slot.
-var prepareForkChoiceAttsPeriod = slotutil.DivideSecondsPerSlot(3 /* times-per-slot */)
+var prepareForkChoiceAttsPeriod = slotutil.DivideSlotBy(3 /* times-per-slot */)
 
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.

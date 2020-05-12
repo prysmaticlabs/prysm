@@ -49,7 +49,7 @@ var _ = shared.Service(&Service{})
 var pollingPeriod = 15 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
-var refreshRate = slotutil.DivideSecondsPerSlot(2)
+var refreshRate = slotutil.DivideSlotBy(2)
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100

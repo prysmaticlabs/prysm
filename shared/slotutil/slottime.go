@@ -27,10 +27,10 @@ func EpochsSinceGenesis(genesis time.Time) uint64 {
 	return SlotsSinceGenesis(genesis) / params.BeaconConfig().SlotsPerEpoch
 }
 
-// DivideSecondsPerSlot divides the SECONDS_PER_SLOT configuration
+// DivideSlotBy divides the SECONDS_PER_SLOT configuration
 // parameter by a specified number. It returns a value of time.Duration
 // in milliseconds, useful for dividing values such as 1 second into
 // millisecond-based durations.
-func DivideSecondsPerSlot(timesPerSlot int64) time.Duration {
+func DivideSlotBy(timesPerSlot int64) time.Duration {
 	return time.Duration(int64(params.BeaconConfig().SecondsPerSlot*1000)/timesPerSlot) * time.Millisecond
 }

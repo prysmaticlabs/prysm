@@ -19,7 +19,7 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-var processPendingBlocksPeriod = slotutil.DivideSecondsPerSlot(3 /* times per slot */)
+var processPendingBlocksPeriod = slotutil.DivideSlotBy(3 /* times per slot */)
 
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (r *Service) processPendingBlocksQueue() {
