@@ -24,11 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var log logrus.FieldLogger
-
-func init() {
-	log = logrus.WithField("prefix", "rpc")
-}
+var log = logrus.WithField("prefix", "rpc")
 
 // sortableAttestations implements the Sort interface to sort attestations
 // by slot as the canonical sorting attribute.
