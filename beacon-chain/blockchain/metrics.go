@@ -87,6 +87,10 @@ var (
 		Name: "total_voted_target_balances",
 		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
+	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_reorg_total",
+		Help: "Count the number of times beacon chain has a reorg",
+	})
 	sentBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_sent_latency_milliseconds",
