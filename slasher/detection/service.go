@@ -137,6 +137,11 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
+			if len(slashings) < 1 {
+				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, att); err != nil {
+					log.WithError(err).Error("Could not update spans")
+				}
+			}
 			ds.submitAttesterSlashings(ctx, slashings)
 		}
 		latestStoredHead = &ethpb.ChainHead{HeadEpoch: epoch}
