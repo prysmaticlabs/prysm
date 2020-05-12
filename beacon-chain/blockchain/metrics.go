@@ -98,6 +98,13 @@ var (
 			Buckets: []float64{1000, 2000, 3000, 4000, 5000, 6000},
 		},
 	)
+	attestationInclusionDelay = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "attestation_inclusion_delay_slots",
+			Help: "The number of slots between att.Slot and block.Slot",
+			Buckets: []float64{1, 2, 3, 4, 6, 32, 64},
+		},
+	)
 )
 
 // reportSlotMetrics reports slot related metrics.
@@ -209,4 +216,10 @@ func captureSentTimeMetric(genesisTime uint64, currentSlot uint64) error {
 	sentBlockPropagationHistogram.Observe(float64(diffMs))
 
 	return nil
+}
+
+func reportAttestationInclusion(blk *ethpb.BeaconBlock) {
+	for _, att := range blk.Body.Attestations {
+		attestationInclusionDelay.Observe(float64(blk.Slot-att.Data.Slot))
+	}
 }
