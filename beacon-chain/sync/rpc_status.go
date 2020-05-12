@@ -222,15 +222,15 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
 	maxFinalizedEpoch := maxEpoch - 2
-	// account for overflow
+	// Account for overflow.
 	if maxEpoch < 2 {
 		maxFinalizedEpoch = 0
 	}
 	if msg.FinalizedEpoch > maxFinalizedEpoch {
 		return errInvalidEpoch
 	}
-	// exit early if the peer's finalized epoch
-	// is less than that of the remote peer's
+	// Exit early if the peer's finalized epoch
+	// is less than that of the remote peer's.
 	if finalizedEpoch < msg.FinalizedEpoch {
 		return nil
 	}
