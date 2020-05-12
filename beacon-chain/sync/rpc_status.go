@@ -243,8 +243,7 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	if blk == nil {
 		return errors.New(genericError)
 	}
-	if helpers.SlotToEpoch(blk.Block.Slot) != msg.FinalizedEpoch {
-		return errInvalidEpoch
-	}
+	// TODO(#5827) Verify the finalized block with the epoch in the
+	// status message
 	return nil
 }
