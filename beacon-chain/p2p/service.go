@@ -39,7 +39,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-
 	"github.com/sirupsen/logrus"
 )
 
