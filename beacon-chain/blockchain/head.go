@@ -118,6 +118,8 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 				OldSlot: s.headSlot(),
 			},
 		})
+
+		reorgCount.Inc()
 	}
 
 	// Cache the new head info.
