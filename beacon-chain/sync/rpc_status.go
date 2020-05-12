@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
@@ -110,7 +111,7 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
 
-	err = r.validateStatusMessage(msg, stream)
+	err = r.validateStatusMessage(ctx, msg, stream)
 	if err != nil {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 	}
@@ -148,11 +149,19 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return errors.New("message is not type *pb.Status")
 	}
 
-	if err := r.validateStatusMessage(m, stream); err != nil {
+	if err := r.validateStatusMessage(ctx, m, stream); err != nil {
 		log.WithField("peer", stream.Conn().RemotePeer()).Debug("Invalid fork version from peer")
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		respCode := byte(0)
+		switch err.Error() {
+		case genericError:
+			respCode = responseCodeServerError
+		default:
+			respCode = responseCodeInvalidRequest
+			r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		}
+
 		originalErr := err
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
+		resp, err := r.generateErrorResponse(respCode, err.Error())
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
@@ -199,7 +208,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	return err
 }
 
-func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
+func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, stream network.Stream) error {
 	forkDigest, err := r.forkDigest()
 	if err != nil {
 		return err
@@ -208,12 +217,33 @@ func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) e
 		return errWrongForkDigestVersion
 	}
 	genesis := r.chain.GenesisTime()
+	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
-	maxFinalizedEpoch := maxEpoch - 2
+	maxFinalizedEpoch := uint64(0)
+	if maxEpoch > 2 {
+		maxFinalizedEpoch = maxEpoch - 2
+	}
 	if msg.FinalizedEpoch > maxFinalizedEpoch {
 		return errInvalidEpoch
 	}
+	// Exit early if the peer's finalized epoch
+	// is less than that of the remote peer's.
+	if finalizedEpoch < msg.FinalizedEpoch {
+		return nil
+	}
+	if !r.db.IsFinalizedBlock(context.Background(), bytesutil.ToBytes32(msg.FinalizedRoot)) {
+		return errInvalidFinalizedRoot
+	}
+	blk, err := r.db.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
+	if err != nil {
+		return errors.New(genericError)
+	}
+	if blk == nil {
+		return errors.New(genericError)
+	}
+	// TODO(#5827) Verify the finalized block with the epoch in the
+	// status message
 	return nil
 }

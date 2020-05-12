@@ -1,5 +1,8 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_bundle")
+load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 
 go_library(
     name = "go_default_library",
@@ -18,4 +21,43 @@ go_binary(
     name = "genesis-state-gen",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    srcs = ["main.go"],
+    base = select({
+        "//tools:base_image_alpine": "//tools:alpine_cc_image",
+        "//tools:base_image_cc": "//tools:cc_image",
+        "//conditions:default": "//tools:cc_image",
+    }),
+    goarch = "amd64",
+    goos = "linux",
+    importpath = "github.com/prysmaticlabs/prysm/tools/genesis-state-gen",
+    pure = "off",
+    static = "off",  # Static enabled binary seems to cause issues with DNS lookup with cgo.
+    race = "off",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//shared/interop:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)
+
+container_bundle(
+    name = "image_bundle",
+    images = {
+        "gcr.io/prysmaticlabs/prysm/genesis-state-gen:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/genesis-state-gen:{DOCKER_TAG}": ":image",
+    },
+    tags = ["manual"],
+)
+
+docker_push(
+    name = "push_images",
+    bundle = ":image_bundle",
+    tags = ["manual"],
 )
