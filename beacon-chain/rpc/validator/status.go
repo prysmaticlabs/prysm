@@ -45,26 +45,27 @@ func (vs *Server) MultipleValidatorStatus(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-
+	responseCap := len(req.GetPublicKeys()) + len(req.GetIndices())
+	pubkeys := make([][]byte, 0, responseCap)
 	filtered := make(map[[48]byte]bool)
-	pubkeys := req.GetPublicKeys()
-	for _, pubKey := range pubkeys {
+	filtered[[48]byte{}] = true //Filter out keys with all zeros
+	// Filter out duplicate public keys
+	for _, pubKey := range req.GetPublicKeys() {
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)
-		filtered[pubkeyBytes] = true
+		if !filtered[pubkeyBytes] {
+			pubkeys = append(pubkeys, pubKey)
+			filtered[pubkeyBytes] = true
+		}
 	}
 	// Convert indices to public keys
 	for _, idx := range req.GetIndices() {
 		pubkeyBytes := headState.PubkeyAtIndex(uint64(idx))
-		if len(pubkeyBytes) == 0 {
-			// No validator at given index. Skip.
-			continue
-		}
 		if !filtered[pubkeyBytes] {
 			pubkeys = append(pubkeys, pubkeyBytes[:])
 			filtered[pubkeyBytes] = true
 		}
 	}
-
+	// Fetch statuses from beacon state
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubkeys))
 	for i, pubKey := range pubkeys {
 		statuses[i] = vs.validatorStatus(ctx, pubKey, headState)
