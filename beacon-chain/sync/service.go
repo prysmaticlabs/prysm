@@ -110,7 +110,7 @@ type Service struct {
 func NewRegularSync(cfg *Config) *Service {
 	// Intialize block limits.
 	allowedBlocksPerSecond = float64(flags.Get().BlockBatchLimit)
-	allowedBlocksBurst = int64(10 * allowedBlocksPerSecond)
+	allowedBlocksBurst = int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
