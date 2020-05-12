@@ -38,6 +38,8 @@ func (vs *Server) ValidatorStatus(
 	return vs.validatorStatus(ctx, req.PublicKey, headState), nil
 }
 
+// MultipleValidatorStatus is the same as ValidatorStatus. Supports retrieval of multiple
+// validator statues. Takes a list of public keys or a list of validator indices.
 func (vs *Server) MultipleValidatorStatus(
 	ctx context.Context,
 	req *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
