@@ -68,6 +68,26 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 	}
 }
 
+func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
+	root, err := stateutil.BlockRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	if finalized := db.IsFinalizedBlock(ctx, root); !finalized {
+		t.Error("Finalized genesis block doesn't exist in db")
+	}
+}
+
 // This test scenario is to test a specific edge case where the finalized block root is not part of
 // the finalized and canonical chain.
 //

@@ -39,9 +39,6 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 
 // BlockRoot returns the block hash tree root of the provided block.
 func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
-	if !featureconfig.Get().EnableBlockHTR {
-		return ssz.HashTreeRoot(blk)
-	}
 	fieldRoots := make([][32]byte, 5)
 	if blk != nil {
 		headerSlotBuf := make([]byte, 8)
@@ -67,14 +64,13 @@ func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 
 // BlockBodyRoot returns the hash tree root of the block body.
 func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
-	if !featureconfig.Get().EnableBlockHTR {
-		return ssz.HashTreeRoot(body)
+	if body == nil {
+		// Treat nil body to be the same as empty. This is mostly for test setup purposes and would
+		// be very unlikely to happen in production workflow.
+		return [32]byte{117, 149, 118, 243, 29, 85, 147, 152, 201, 11, 234, 19, 146, 229, 35, 209, 93, 246, 109, 242, 141, 181, 176, 126, 79, 196, 1, 189, 124, 203, 199, 62}, nil
 	}
 	hasher := hashutil.CustomSHA256Hasher()
 	fieldRoots := make([][32]byte, 8)
-	if body == nil {
-		return [32]byte{}, errors.New("nil block body provided")
-	}
 	rawRandao := bytesutil.ToBytes96(body.RandaoReveal)
 	packedRandao, err := pack([][]byte{rawRandao[:]})
 	if err != nil {
@@ -95,12 +91,12 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	graffitiRoot := bytesutil.ToBytes32(body.Graffiti)
 	fieldRoots[2] = graffitiRoot
 
-	proposerSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.ProposerSlashings, 16)
+	proposerSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.ProposerSlashings, params.BeaconConfig().MaxProposerSlashings)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	fieldRoots[3] = proposerSlashingsRoot
-	attesterSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.AttesterSlashings, 1)
+	attesterSlashingsRoot, err := ssz.HashTreeRootWithCapacity(body.AttesterSlashings, params.BeaconConfig().MaxAttesterSlashings)
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -111,13 +107,13 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	}
 	fieldRoots[5] = attsRoot
 
-	depositRoot, err := ssz.HashTreeRootWithCapacity(body.Deposits, 16)
+	depositRoot, err := ssz.HashTreeRootWithCapacity(body.Deposits, params.BeaconConfig().MaxDeposits)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	fieldRoots[6] = depositRoot
 
-	exitRoot, err := ssz.HashTreeRootWithCapacity(body.VoluntaryExits, 16)
+	exitRoot, err := ssz.HashTreeRootWithCapacity(body.VoluntaryExits, params.BeaconConfig().MaxVoluntaryExits)
 	if err != nil {
 		return [32]byte{}, err
 	}

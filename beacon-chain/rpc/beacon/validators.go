@@ -932,6 +932,10 @@ func (bs *Server) GetValidatorQueue(
 func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
+	if bs.SyncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
 	validatorSummary := state.ValidatorSummary
 
 	reqPubKeysCount := len(req.PublicKeys)
@@ -959,12 +963,12 @@ func (bs *Server) GetValidatorPerformance(
 			missingValidators = append(missingValidators, key)
 			continue
 		}
-		val, err := headState.ValidatorAtIndex(idx)
+		val, err := headState.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
 		}
 		currentEpoch := helpers.CurrentEpoch(headState)
-		if !helpers.IsActiveValidator(val, currentEpoch) {
+		if !helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			// Inactive validator; treat it as missing.
 			missingValidators = append(missingValidators, key)
 			continue

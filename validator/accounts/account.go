@@ -203,7 +203,7 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 
 	if passphrase == "" {
 		log.Info("Please enter the password for your private keys")
-		enteredPassphrase, err := cmd.EnterPassword(confirmPassword)
+		enteredPassphrase, err := cmd.EnterPassword(confirmPassword, cmd.StdInPasswordReader{})
 		if err != nil {
 			return path, enteredPassphrase, errors.Wrap(err, "could not read entered passphrase")
 		}
