@@ -2,12 +2,11 @@ package accounts
 
 import (
 	"context"
-	"encoding/hex"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 )
 
@@ -16,15 +15,11 @@ func TestFetchAccountStatuses_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	const numBatches = 5
-	keyMap := make(map[string]*keystore.Key)
+	pubkeys := make([][]byte, MaxRequestKeys*numBatches)
 	for i := 0; i < MaxRequestKeys*numBatches; i++ {
-		newKey, err := keystore.NewKey()
-		if err != nil {
-			t.Fatal("Failed to generate new key.")
-		}
-		keyMap[hex.EncodeToString(newKey.PublicKey.Marshal())] = newKey
+		pubkeyBytes := bytesutil.ToBytes48([]byte{byte(i)})
+		pubkeys[i] = pubkeyBytes[:]
 	}
-	pubkeys := ExtractPublicKeys(keyMap)
 	mockClient := internal.NewMockBeaconNodeValidatorClient(ctrl)
 	for i := 0; i+MaxRequestKeys <= len(pubkeys); i += MaxRequestKeys {
 		mockClient.EXPECT().MultipleValidatorStatus(
