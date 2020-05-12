@@ -160,7 +160,7 @@ func (bs *Server) ListIndexedAttestations(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"Could not retrieve state for attestation data block root %v: %v",
+				"Could not retrieve state for attestation data block root %#x: %v",
 				targetRoot,
 				err,
 			)
