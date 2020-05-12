@@ -166,6 +166,11 @@ func (k *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	var exists bool
 	err := k.db.View(func(tx *bolt.Tx) error {
 		exists = tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:]) != nil
+		// Check genesis block root.
+		if !exists {
+			genRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
+			exists = bytesutil.ToBytes32(genRoot) == blockRoot
+		}
 		return nil
 	})
 	if err != nil {
