@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"sort"
 
@@ -145,4 +146,28 @@ func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
 		i, k = i+1, k+1
 	}
 	return sortedStatuses
+}
+
+// PrintValidatorStatusMetadata prints out validator statuses and its corresponding metadata
+func PrintValidatorStatusMetadata(validatorStatuses []ValidatorStatusMetadata) {
+	for _, v := range validatorStatuses {
+		m := v.Metadata
+		key := v.PublicKey
+		fmt.Printf(
+			"ValidatorKey: %v Status: %v ", hex.EncodeToString(key), m.Status)
+		fmt.Printf(
+			"Eth1DepositBlockNumber: %s DepositInclusionSlot: %s ",
+			fieldToString(m.Eth1DepositBlockNumber), fieldToString(m.DepositInclusionSlot))
+		fmt.Printf(
+			"ActivationEpoch: %s PositionInActivationQueue: %s\n",
+			fieldToString(m.ActivationEpoch), fieldToString(m.PositionInActivationQueue))
+	}
+}
+
+func fieldToString(field uint64) string {
+	// Field is missing
+	if field == 0 {
+		return "NA"
+	}
+	return fmt.Sprintf("%d", field)
 }

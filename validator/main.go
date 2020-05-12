@@ -178,8 +178,7 @@ contract in order to activate the validator client`,
 							log.WithError(err).Fatal("Could not fetch account statuses from the beacon node.")
 						}
 						sortedStatuses := accounts.MergeStatuses(allStatuses)
-						// XXX: Properly print statuses
-						fmt.Println(sortedStatuses)
+						accounts.PrintValidatorStatusMetadata(sortedStatuses)
 						return nil
 					},
 				},
