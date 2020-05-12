@@ -5,9 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 )
