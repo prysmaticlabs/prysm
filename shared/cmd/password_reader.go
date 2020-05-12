@@ -5,10 +5,12 @@ import (
 	"os"
 )
 
+// Reads a password from a mock or stdin.
 type PasswordReader interface {
 	ReadPassword() (string, error)
 }
 
+// Reads a password from stdin.
 type StdInPasswordReader struct {
 }
 

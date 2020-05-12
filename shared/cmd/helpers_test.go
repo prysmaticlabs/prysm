@@ -49,8 +49,8 @@ func TestEnterPassword(t *testing.T) {
 		},
 		{
 			"cant_read",
-			[]rets{{"pw", errors.New("I/O fail")}},
-			errors.New("I/O fail"),
+			[]rets{{"pw", errors.New("i/o fail")}},
+			errors.New("i/o fail"),
 			"",
 		},
 	}
