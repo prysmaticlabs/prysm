@@ -97,6 +97,14 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
+				// Based on the spec, don't process the attestation until the subsequent slot.
+				// This delays consideration in the fork choice until their slot is in the past.
+				// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
+				nextSlot := a.Data.Slot + 1
+				if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, helpers.TimeShiftTolerance); err != nil {
+					continue
+				}
+
 				var hasState bool
 				if featureconfig.Get().NewStateMgmt {
 					hasState = s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
