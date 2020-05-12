@@ -124,6 +124,12 @@ var (
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
 	}
+	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
+	BlockBatchLimitBurstFactor = &cli.IntFlag{
+		Name:  "block-batch-limit-burst-factor",
+		Usage: "The factor by which block batch limit may increase on burst.",
+		Value: 10,
+	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
 		Name:  "enable-debug-rpc-endpoints",
