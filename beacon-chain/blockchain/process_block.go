@@ -182,6 +182,8 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		s.slashingPool.MarkIncludedAttesterSlashing(b.Body.AttesterSlashings[i])
 	}
 
+	defer reportAttestationInclusion(b)
+
 	return postState, nil
 }
 
