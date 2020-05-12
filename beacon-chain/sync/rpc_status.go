@@ -226,7 +226,6 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 		maxFinalizedEpoch = maxEpoch - 2
 	}
 	if msg.FinalizedEpoch > maxFinalizedEpoch {
-		log.Errorf("msg epoch %d and max epoch %d", msg.FinalizedEpoch, maxFinalizedEpoch)
 		return errInvalidEpoch
 	}
 	// Exit early if the peer's finalized epoch
