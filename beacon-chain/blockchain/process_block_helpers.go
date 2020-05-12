@@ -164,7 +164,7 @@ func (s *Service) verifyBlkPreStateSync(ctx context.Context, b *ethpb.BeaconBloc
 	}
 	if bytes.Equal(headRoot, b.ParentRoot) {
 		rawHead := s.headStateSync()
-		// unset the head so that it can't be used by any other
+		// Unset the head so that it can't be used by any other
 		// method
 		s.head = &head{
 			root:  [32]byte{},
