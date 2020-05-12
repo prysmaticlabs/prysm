@@ -134,6 +134,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		for _, att := range indexedAtts {
 			if ctx.Err() == context.Canceled {
 				log.WithError(ctx.Err()).Error("context has been canceled, ending detection")
+				return
 			}
 			slashings, err := ds.DetectAttesterSlashings(ctx, att)
 			if err != nil {
