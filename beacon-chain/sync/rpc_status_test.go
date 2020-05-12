@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -85,13 +86,15 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
+	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
 		t.Fatal(err)
 	}
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
+	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
+	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,10 +108,18 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: blkSlot}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(context.Background(), finalizedRoot); err != nil {
+		t.Fatal(err)
+	}
 	finalizedCheckpt := &ethpb.Checkpoint{
-		Epoch: 5,
+		Epoch: 3,
 		Root:  finalizedRoot[:],
 	}
+	totalSec := params.BeaconConfig().SlotsPerEpoch * 5 * params.BeaconConfig().SecondsPerSlot
+	genTime := time.Now().Unix() - int64(totalSec)
 
 	r := &Service{
 		p2p: p1,
@@ -121,8 +132,9 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			},
 			ValidatorsRoot: [32]byte{'A'},
-			Genesis:        time.Now(),
+			Genesis:        time.Unix(genTime, 0),
 		},
+		db: db,
 	}
 	digest, err := r.forkDigest()
 	if err != nil {
@@ -144,7 +156,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 			ForkDigest:     digest[:],
 			HeadSlot:       genesisState.Slot(),
 			HeadRoot:       headRoot[:],
-			FinalizedEpoch: 5,
+			FinalizedEpoch: 3,
 			FinalizedRoot:  finalizedRoot[:],
 		}
 		if !proto.Equal(out, expected) {
@@ -156,7 +168,11 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: digest[:]}, stream1)
+	err = r.statusRPCHandler(context.Background(), &pb.Status{
+		ForkDigest:     digest[:],
+		FinalizedRoot:  finalizedRoot[:],
+		FinalizedEpoch: 3,
+	}, stream1)
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -171,6 +187,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
+	db := testingDB.SetupDB(t)
 
 	p1.LocalMetadata = &pb.MetaData{
 		SeqNumber: 2,
@@ -188,11 +205,22 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
+	if err := db.SaveBlock(context.Background(), blk); err != nil {
+		t.Fatal(err)
+	}
+	finalizedRoot, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(context.Background(), finalizedRoot); err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
 			State:               st,
-			FinalizedCheckPoint: &ethpb.Checkpoint{},
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
 			Fork: &pb.Fork{
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -200,6 +228,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
+		db:  db,
 		ctx: context.Background(),
 	}
 	p1.Digest, err = r.forkDigest()
@@ -208,6 +237,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	}
 
 	r2 := &Service{
+		chain: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
+		},
 		p2p: p2,
 	}
 	p2.Digest, err = r.forkDigest()
@@ -228,8 +260,8 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		log.WithField("status", out).Warn("received status")
-
-		resp := &pb.Status{HeadSlot: 100, ForkDigest: p2.Digest[:]}
+		resp := &pb.Status{HeadSlot: 100, ForkDigest: p2.Digest[:],
+			FinalizedRoot: finalizedRoot[:], FinalizedEpoch: 0}
 
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
@@ -388,6 +420,104 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	if len(p1.Host.Network().Peers()) != 1 {
+		t.Error("Expected peers to continue being connected")
+	}
+}
+
+func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	db := testingDB.SetupDB(t)
+
+	// Set up a head state with data we expect.
+	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
+	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: blkSlot}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(context.Background(), finalizedRoot); err != nil {
+		t.Fatal(err)
+	}
+	finalizedCheckpt := &ethpb.Checkpoint{
+		Epoch: 3,
+		Root:  finalizedRoot[:],
+	}
+	totalSec := params.BeaconConfig().SlotsPerEpoch * 5 * params.BeaconConfig().SecondsPerSlot
+	genTime := time.Now().Unix() - int64(totalSec)
+	r := &Service{
+		p2p: p1,
+		chain: &mock.ChainService{
+			State:               genesisState,
+			FinalizedCheckPoint: finalizedCheckpt,
+			Root:                headRoot[:],
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
+			Genesis:        time.Unix(genTime, 0),
+			ValidatorsRoot: [32]byte{'A'},
+		},
+		ctx: context.Background(),
+	}
+
+	r2 := &Service{
+		p2p: p1,
+		chain: &mock.ChainService{
+			State:               genesisState,
+			FinalizedCheckPoint: finalizedCheckpt,
+			Root:                headRoot[:],
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
+			Genesis:        time.Unix(genTime, 0),
+			ValidatorsRoot: [32]byte{'A'},
+		},
+		db:  db,
+		ctx: context.Background(),
+	}
+
+	// Setup streams
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		out := &pb.Status{}
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+			t.Fatal(err)
+		}
+		err := r2.validateStatusMessage(context.Background(), out, stream)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	p1.AddConnectionHandler(r.sendRPCStatusRequest, r.sendGenericGoodbyeMessage)
+	p1.Connect(p2)
+
+	if testutil.WaitTimeout(&wg, 100*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 

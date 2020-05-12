@@ -46,6 +46,7 @@ go_library(
         "//shared/iputils:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/roughtime:go_default_library",
         "//shared/runutil:go_default_library",
         "//shared/traceutil:go_default_library",
         "@com_github_btcsuite_btcd//btcec:go_default_library",

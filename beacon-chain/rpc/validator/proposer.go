@@ -290,6 +290,12 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 		return []*ethpb.Deposit{}, nil
 	}
 
+	// If there are no pending deposits, exit early.
+	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, latestEth1DataHeight)
+	if len(allPendingContainers) == 0 {
+		return []*ethpb.Deposit{}, nil
+	}
+
 	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, latestEth1DataHeight)
 	depositData := [][]byte{}
 	for _, dep := range upToEth1DataDeposits {
@@ -304,8 +310,6 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
 	}
-
-	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, latestEth1DataHeight)
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
