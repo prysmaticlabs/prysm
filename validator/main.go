@@ -169,7 +169,7 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Fatalf("Failed to dial beacon node endpoint at %s", endpoint)
 						}
-						statuses, err := accounts.FetchAccountStatuses(
+						allStatuses, err := accounts.FetchAccountStatuses(
 							cliCtx, ethpb.NewBeaconNodeValidatorClient(conn), accounts.ExtractPublicKeys(decryptedKeys))
 						if e := conn.Close(); e != nil {
 							log.WithError(e).Error("Could not close connection to beacon node.")
@@ -177,13 +177,9 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Fatal("Could not fetch account statuses from the beacon node.")
 						}
-						// XXX: Sorting does not work right now. We need to have the
-						// public key of the validator indicated in the response.
-						// sort.Slice(statuses, func(i, j int) bool {
-						// 	return statuses[i].Status < statuses[j].Status
-						// })
+						sortedStatuses := accounts.MergeStatuses(allStatuses)
 						// XXX: Properly print statuses
-						fmt.Println(statuses)
+						fmt.Println(sortedStatuses)
 						return nil
 					},
 				},

@@ -21,7 +21,7 @@ const MaxRequestLimit = 3
 
 // XXX: This is an arbitrary number. Should compute
 // max keys allowed before exceeding GrpcMaxCallRecvMsgSizeFlag.
-const MaxRequestKeys = 1000
+const MaxRequestKeys = 13
 
 // FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient
 // for each validator public key.
@@ -108,4 +108,41 @@ func responseToSortedMetadata(resp *ethpb.MultipleValidatorStatusResponse) []Val
 		return validatorStatuses[i].Metadata.Status < validatorStatuses[j].Metadata.Status
 	})
 	return validatorStatuses
+}
+
+// MergeStatuses merges k sorted ValidatorStatusMetadata slices to 1.
+func MergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMetadata {
+	if len(allStatuses) == 0 {
+		return []ValidatorStatusMetadata{}
+	}
+	if len(allStatuses) == 1 {
+		return allStatuses[0]
+	}
+	leftHalf := allStatuses[:len(allStatuses)/2]
+	rightHalf := allStatuses[len(allStatuses)/2:]
+	return mergeTwo(MergeStatuses(leftHalf), MergeStatuses(rightHalf))
+}
+
+func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
+	i, j, k := 0, 0, 0
+	sortedStatuses := make([]ValidatorStatusMetadata, len(s1)+len(s2))
+	for j < len(s1) && k < len(s2) {
+		if s1[j].Metadata.Status < s2[k].Metadata.Status {
+			sortedStatuses[i] = s1[j]
+			j++
+		} else {
+			sortedStatuses[i] = s2[k]
+			k++
+		}
+		i++
+	}
+	for j < len(s1) {
+		sortedStatuses[i] = s1[j]
+		i, j = i+1, j+1
+	}
+	for k < len(s2) {
+		sortedStatuses[i] = s2[k]
+		i, k = i+1, k+1
+	}
+	return sortedStatuses
 }
