@@ -92,6 +92,61 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 			}
 			s.clearInitSyncBlocks()
 		}
+		preState, err := s.stateGen.StateByRoot(ctx, parentRoot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		}
+		if preState == nil {
+			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		}
+
+		return preState, nil // No copy needed from newly hydrated state gen object.
+	}
+
+	if featureconfig.Get().CheckHeadState {
+		headRoot, err := s.HeadRoot(ctx)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get head root")
+		}
+		if bytes.Equal(headRoot, b.ParentRoot) {
+			return s.HeadState(ctx)
+		}
+	}
+	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+	}
+	if preState == nil {
+		if bytes.Equal(s.finalizedCheckpt.Root, b.ParentRoot) {
+			return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+		}
+		preState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), bytesutil.ToBytes32(b.ParentRoot))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return preState, nil // No copy needed from newly hydrated DB object.
+}
+
+// verifyBlkPreState validates input block has a valid pre-state.
+func (s *Service) verifyBlkPreStateSync(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
+	defer span.End()
+
+	if featureconfig.Get().NewStateMgmt {
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
+		// Loosen the check to HasBlock because state summary gets saved in batches
+		// during initial syncing. There's no risk given a state summary object is just a
+		// a subset of the block object.
+		if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
+			return nil, errors.New("could not reconstruct parent state")
+		}
+		if !s.stateGen.HasState(ctx, parentRoot) {
+			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+				return nil, errors.Wrap(err, "could not save initial sync blocks")
+			}
+			s.clearInitSyncBlocks()
+		}
 		preState, err := s.stateGen.StateByRootInitialSync(ctx, parentRoot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
@@ -103,18 +158,23 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 		return preState, nil // No copy needed from newly hydrated state gen object.
 	}
 
-	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-	var err error
-	if preState == nil {
-		if featureconfig.Get().CheckHeadState {
-			headRoot, err := s.HeadRoot(ctx)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get head root")
-			}
-			if bytes.Equal(headRoot, b.ParentRoot) {
-				return s.HeadState(ctx)
-			}
+	headRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get head root")
+	}
+	if bytes.Equal(headRoot, b.ParentRoot) {
+		rawHead := s.headStateSync()
+		// Unset the head so that it can't be used by any other
+		// method.
+		s.head = &head{
+			root:  [32]byte{},
+			block: nil,
+			state: nil,
 		}
+		return rawHead, nil
+	}
+	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+	if preState == nil {
 		preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
