@@ -26,10 +26,9 @@ var log = logrus.WithField("prefix", "accounts")
 
 // DecryptKeysFromKeystore extracts a set of validator private keys from
 // an encrypted keystore directory and a password string.
-func DecryptKeysFromKeystore(directory string, password string) (map[string]*keystore.Key, error) {
-	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
+func DecryptKeysFromKeystore(directory string, filePrefix string, password string) (map[string]*keystore.Key, error) {
 	ks := keystore.NewKeystore(directory)
-	validatorKeys, err := ks.GetKeys(directory, validatorPrefix, password, true /* warnOnFail */)
+	validatorKeys, err := ks.GetKeys(directory, filePrefix, password, true /* warnOnFail */)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get private key")
 	}
@@ -157,7 +156,7 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 
 // PrintPublicAndPrivateKeys uses the passed in path and prints out the public and private keys in that directory.
 func PrintPublicAndPrivateKeys(path string, passphrase string) error {
-	keystores, err := DecryptKeysFromKeystore(path, passphrase)
+	keystores, err := DecryptKeysFromKeystore(path, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
 	if err != nil {
 		return errors.Wrapf(err, "failed to decrypt keystore keys at path %s", path)
 	}
@@ -212,6 +211,60 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	}
 
 	return path, passphrase, nil
+}
+
+func Merge(cliCtx *cli.Context) error {
+	sources := strings.Split(cliCtx.String(flags.MergeSourceDirectoriesFlag.Name), ",")
+	target := cliCtx.String(flags.MergeTargetDirectoryFlag.Name)
+
+	log.Info("Please enter the password for your private keys in target directory")
+	targetPassword, err := cmd.EnterPassword(true)
+	if err != nil {
+		return errors.Wrap(err, "Could not read entered passphrase")
+	}
+
+	keyStore := keystore.NewKeystore(target)
+
+	for _, source := range sources {
+		log.Infof("Please enter the password for your private keys for source directory %s", source)
+		sourcePassword, err := cmd.EnterPassword(true)
+		if err != nil {
+			return errors.Wrap(err, "Could not read entered passphrase")
+		}
+
+		log.Infof("Merging keys from source directory %s ...", source)
+
+		err = mergeKeys(source, sourcePassword, target, targetPassword, params.BeaconConfig().ValidatorPrivkeyFileName, keyStore)
+		if err != nil {
+			return err
+		}
+
+		err = mergeKeys(source, sourcePassword, target, targetPassword, params.BeaconConfig().WithdrawalPrivkeyFileName, keyStore)
+		if err != nil {
+			return err
+		}
+
+		log.Infof("Finished merging keys from source directory %s", source)
+	}
+
+	log.Info("Finished merging keys from all source directories")
+	return nil
+}
+
+func mergeKeys(sourceDirectory string, sourcePassword string, targetDirectory string, targetPassword string, filePrefix string, keyStore keystore.Store) error {
+	validatorKeys, err := DecryptKeysFromKeystore(sourceDirectory, params.BeaconConfig().ValidatorPrivkeyFileName, sourcePassword)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to decrypt keystore keys for source directory %s", sourceDirectory)
+	}
+
+	for _, key := range validatorKeys {
+		targetValidatorKeyFile := targetDirectory + filePrefix + hex.EncodeToString(key.PublicKey.Marshal())[:12]
+		if err := keyStore.StoreKey(targetValidatorKeyFile, key, targetPassword); err != nil {
+			return errors.Wrapf(err, "Failed to merge keys from source directory %s", sourceDirectory)
+		}
+	}
+
+	return nil
 }
 
 // homeDir returns home directory path.

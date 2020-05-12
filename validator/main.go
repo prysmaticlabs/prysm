@@ -5,10 +5,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"runtime"
-	runtimeDebug "runtime/debug"
-
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -24,6 +20,9 @@ import (
 	_ "go.uber.org/automaxprocs"
 	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
+	"os"
+	"runtime"
+	runtimeDebug "runtime/debug"
 )
 
 var log = logrus.WithField("prefix", "main")
@@ -137,19 +136,21 @@ contract in order to activate the validator client`,
 						return nil
 					},
 				},
-			},
-		},
-		{
-			Name: "merge",
-			Description: "merges data from multiple validator databases into one database",
-			Flags: []cli.Flag{
-				flags.MergeSourceDirectoriesFlag,
-				flags.MergeTargetDirectoryFlag,
-			},
-			Action: func(cliCtx *cli.Context) error {
-				fmt.Printf("Source; %#v\n", cliCtx.String(flags.MergeSourceDirectoriesFlag.Name))
-				fmt.Printf("Target; %#v\n", cliCtx.String(flags.MergeTargetDirectoryFlag.Name))
-				return nil
+				{
+					Name:        "merge",
+					Description: "merges keys and data of multiple validators into a single directory",
+					Flags: []cli.Flag{
+						flags.MergeSourceDirectoriesFlag,
+						flags.MergeTargetDirectoryFlag,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						err := accounts.Merge(cliCtx)
+						if err != nil {
+							log.WithError(err).Error("Merging accounts failed")
+						}
+						return nil
+					},
+				},
 			},
 		},
 	}

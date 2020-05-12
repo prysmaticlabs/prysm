@@ -64,11 +64,11 @@ var (
 	}
 	MergeSourceDirectoriesFlag = &cli.StringFlag{
 		Name: "source-dirs",
-		Usage: "A comma-separated list of directories containing validator databases which are to be merged.",
+		Usage: "A comma-separated list of directories containing validator keys and data that should be merged.",
 	}
 	MergeTargetDirectoryFlag = &cli.StringFlag{
 		Name: "target-dir",
-		Usage: "The directory where the merged validator database should be saved.",
+		Usage: "The directory which should contain the merged validator keys and data.",
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.Int64Flag{

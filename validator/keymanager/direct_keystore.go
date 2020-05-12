@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"encoding/json"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"os"
 	"strings"
 
@@ -73,7 +74,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 		}
 	}
 
-	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, opts.Passphrase)
+	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, params.BeaconConfig().ValidatorPrivkeyFileName, opts.Passphrase)
 	if err != nil {
 		return nil, keystoreOptsHelp, err
 	}
