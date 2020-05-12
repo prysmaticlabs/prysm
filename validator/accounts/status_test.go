@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"encoding/hex"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -14,20 +15,27 @@ func TestFetchAccountStatuses_OK(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockClient := internal.NewMockBeaconNodeValidatorClient(ctrl)
-	key, err := keystore.NewKey()
-	if err != nil {
-		t.Fatal("Failed to generate new key.")
+	const numBatches = 5
+	keyMap := make(map[string]*keystore.Key)
+	for i := 0; i < MaxRequestKeys*numBatches; i++ {
+		newKey, err := keystore.NewKey()
+		if err != nil {
+			t.Fatal("Failed to generate new key.")
+		}
+		keyMap[hex.EncodeToString(newKey.PublicKey.Marshal())] = newKey
 	}
-	keyPairs := map[string]*keystore.Key{"": key}
-	mockClient.EXPECT().ValidatorStatus(
-		gomock.Any(),
-		&ethpb.ValidatorStatusRequest{
-			PublicKey: key.PublicKey.Marshal(),
-		},
-	)
-	_, err = FetchAccountStatuses(ctx, mockClient, keyPairs)
+	pubkeys := ExtractPublicKeys(keyMap)
+	mockClient := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	for i := 0; i+MaxRequestKeys <= len(pubkeys); i += MaxRequestKeys {
+		mockClient.EXPECT().MultipleValidatorStatus(
+			gomock.Any(),
+			&ethpb.MultipleValidatorStatusRequest{
+				PublicKeys: pubkeys[i : i+MaxRequestKeys],
+			},
+		)
+	}
+	_, err := FetchAccountStatuses(ctx, mockClient, pubkeys)
 	if err != nil {
-		t.Fatalf("FetchAccountStatuses failed with error: %v", err)
+		t.Fatalf("FetchAccountStatuses failed with error: %v.", err)
 	}
 }

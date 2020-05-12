@@ -152,7 +152,7 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
-						keyPairs, err := accounts.DecryptKeysFromKeystore(keystorePath, passphrase)
+						decryptedKeys, err := accounts.DecryptKeysFromKeystore(keystorePath, passphrase)
 						if err != nil {
 							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
 						}
@@ -169,8 +169,8 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Fatalf("Failed to dial beacon node endpoint at %s", endpoint)
 						}
-						beaconNodeRPC := ethpb.NewBeaconNodeValidatorClient(conn)
-						statuses, err := accounts.FetchAccountStatuses(cliCtx, beaconNodeRPC, keyPairs)
+						statuses, err := accounts.FetchAccountStatuses(
+							cliCtx, ethpb.NewBeaconNodeValidatorClient(conn), accounts.ExtractPublicKeys(decryptedKeys))
 						if e := conn.Close(); e != nil {
 							log.WithError(e).Error("Could not close connection to beacon node.")
 						}
