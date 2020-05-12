@@ -21,5 +21,9 @@ go_test(
     name = "go_default_test",
     srcs = ["attestation_utils_test.go"],
     embed = [":go_default_library"],
-    deps = ["@com_github_prysmaticlabs_go_bitfield//:go_default_library"],
+    deps = [
+        "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
 )
