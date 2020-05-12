@@ -89,7 +89,7 @@ func (ds *Service) Start() {
 	if !featureconfig.Get().DisableHistoricalDetection {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
-		go ds.detectHistoricalChainData(ds.ctx)
+		ds.detectHistoricalChainData(ds.ctx)
 	}
 
 	// We subscribe to incoming blocks from the beacon node via
