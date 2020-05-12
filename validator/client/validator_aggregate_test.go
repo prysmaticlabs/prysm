@@ -76,7 +76,8 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 
 	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
-	if currentTime != twoThirdTime {
+	currentTime = roughtime.Now()
+	if currentTime.Unix() != twoThirdTime.Unix() {
 		t.Errorf("Wanted %v time for slot two third but got %v", twoThirdTime, currentTime)
 	}
 }
