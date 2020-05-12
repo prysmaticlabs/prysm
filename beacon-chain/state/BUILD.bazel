@@ -44,6 +44,7 @@ go_test(
         "field_trie_test.go",
         "getters_test.go",
         "references_test.go",
+        "state_trie_test.go",
         "types_test.go",
     ],
     embed = [":go_default_library"],
