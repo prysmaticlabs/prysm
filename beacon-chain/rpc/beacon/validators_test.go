@@ -2058,7 +2058,6 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		Indices: []uint64{0, 1, 2},
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
