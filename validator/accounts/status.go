@@ -157,7 +157,7 @@ func PrintValidatorStatusMetadata(validatorStatuses []ValidatorStatusMetadata) {
 		m := v.Metadata
 		key := v.PublicKey
 		fmt.Printf(
-			"ValidatorKey: %v, Status: %v\n", hex.EncodeToString(key), m.Status)
+			"ValidatorKey: 0x%s, Status: %v\n", hex.EncodeToString(key), m.Status)
 		fmt.Printf(
 			"Eth1DepositBlockNumber: %s, DepositInclusionSlot: %s, ",
 			fieldToString(m.Eth1DepositBlockNumber), fieldToString(m.DepositInclusionSlot))
