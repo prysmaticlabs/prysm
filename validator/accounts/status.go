@@ -37,39 +37,39 @@ func FetchAccountStatuses(
 	defer span.End()
 
 	errorChannel := make(chan error, MaxRequestLimit)
-	responseChannel := make(chan *ethpb.MultipleValidatorStatusResponse, MaxRequestLimit)
-	// Fetches statuses in batches.
+	statusChannel := make(chan []ValidatorStatusMetadata, MaxRequestLimit)
+	// Launch routines to fetch statuses.
 	i, numBatches := 0, 0
 	for ; i+MaxRequestKeys < len(pubkeys); i += MaxRequestKeys {
 		go fetchValidatorStatus(
-			ctx, beaconNodeRPCProvider, pubkeys[i:i+MaxRequestKeys], responseChannel, errorChannel)
+			ctx, beaconNodeRPCProvider, pubkeys[i:i+MaxRequestKeys], statusChannel, errorChannel)
 		numBatches++
 	}
 	if i < len(pubkeys) {
 		go fetchValidatorStatus(
-			ctx, beaconNodeRPCProvider, pubkeys[i:], responseChannel, errorChannel)
+			ctx, beaconNodeRPCProvider, pubkeys[i:], statusChannel, errorChannel)
 		numBatches++
 	}
 	// Wait from fetch routines to finish.
 	var err error
-	statuses := make([][]ValidatorStatusMetadata, 0, numBatches)
+	allStatuses := make([][]ValidatorStatusMetadata, 0, numBatches)
 	for i := 0; i < numBatches; i++ {
 		select {
-		case resp := <-responseChannel:
-			statuses = append(statuses, responseToSortedMetadata(resp))
+		case statuses := <-statusChannel:
+			allStatuses = append(allStatuses, statuses)
 		case e := <-errorChannel:
 			err = e
 		}
 	}
 
-	return statuses, err
+	return allStatuses, err
 }
 
 func fetchValidatorStatus(
 	ctx context.Context,
 	rpcProvder ethpb.BeaconNodeValidatorClient,
 	pubkeys [][]byte,
-	responseChannel chan *ethpb.MultipleValidatorStatusResponse,
+	statusChannel chan []ValidatorStatusMetadata,
 	errorChannel chan error) {
 	if ctx.Err() == context.Canceled {
 		errorChannel <- errors.Wrap(ctx.Err(), "context has been canceled.")
@@ -85,18 +85,7 @@ func fetchValidatorStatus(
 		return
 	}
 
-	responseChannel <- resp
-}
-
-// ExtractPublicKeys extracts only the public keys from the decrypted keys from the keystore.
-func ExtractPublicKeys(decryptedKeys map[string]*keystore.Key) [][]byte {
-	i := 0
-	pubkeys := make([][]byte, len(decryptedKeys))
-	for _, key := range decryptedKeys {
-		pubkeys[i] = key.PublicKey.Marshal()
-		i++
-	}
-	return pubkeys
+	statusChannel <- responseToSortedMetadata(resp)
 }
 
 func responseToSortedMetadata(resp *ethpb.MultipleValidatorStatusResponse) []ValidatorStatusMetadata {
@@ -112,6 +101,17 @@ func responseToSortedMetadata(resp *ethpb.MultipleValidatorStatusResponse) []Val
 		return validatorStatuses[i].Metadata.Status < validatorStatuses[j].Metadata.Status
 	})
 	return validatorStatuses
+}
+
+// ExtractPublicKeys extracts only the public keys from the decrypted keys from the keystore.
+func ExtractPublicKeys(decryptedKeys map[string]*keystore.Key) [][]byte {
+	i := 0
+	pubkeys := make([][]byte, len(decryptedKeys))
+	for _, key := range decryptedKeys {
+		pubkeys[i] = key.PublicKey.Marshal()
+		i++
+	}
+	return pubkeys
 }
 
 // MergeStatuses merges k sorted ValidatorStatusMetadata slices to 1.
