@@ -35,7 +35,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//shared/bytesutil:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

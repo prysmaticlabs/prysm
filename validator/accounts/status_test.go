@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 )
 
@@ -18,8 +17,7 @@ func TestFetchAccountStatuses_OK(t *testing.T) {
 	const NumBatches = 5
 	pubkeys := make([][]byte, MaxRequestKeys*NumBatches)
 	for i := 0; i < MaxRequestKeys*NumBatches; i++ {
-		pubkeyBytes := bytesutil.ToBytes48([]byte{byte(i)})
-		pubkeys[i] = pubkeyBytes[:]
+		pubkeys[i] = []byte{byte(i)}
 	}
 	mockClient := internal.NewMockBeaconNodeValidatorClient(ctrl)
 	for i := 0; i+MaxRequestKeys <= len(pubkeys); i += MaxRequestKeys {
@@ -47,17 +45,16 @@ func TestMergeStatuses_OK(t *testing.T) {
 		mockPublicKeys := make([][]byte, MaxRequestKeys)
 		mockStatusResponses := make([]*ethpb.ValidatorStatusResponse, MaxRequestKeys)
 		for j := 0; j < MaxRequestKeys; j++ {
-			mockPubkey := bytesutil.ToBytes48([]byte{byte(j)})
-			mockPublicKeys[j] = mockPubkey[:]
+			mockPublicKeys[j] = []byte{byte(j)}
 			mockStatusResponses[j] = &ethpb.ValidatorStatusResponse{
 				Status: ethpb.ValidatorStatus(j % NumStatusTypes),
 			}
 		}
-		mockValidatorMultipleStatusResponse := &ethpb.MultipleValidatorStatusResponse{
+		mockMultipleValidatorStatusResponse := &ethpb.MultipleValidatorStatusResponse{
 			PublicKeys: mockPublicKeys,
 			Statuses:   mockStatusResponses,
 		}
-		allStatuses[i] = responseToSortedMetadata(mockValidatorMultipleStatusResponse)
+		allStatuses[i] = responseToSortedMetadata(mockMultipleValidatorStatusResponse)
 	}
 	sortedStatuses := MergeStatuses(allStatuses)
 	isSorted := sort.SliceIsSorted(sortedStatuses, func(i, j int) bool {
