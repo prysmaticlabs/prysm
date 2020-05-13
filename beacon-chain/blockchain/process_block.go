@@ -203,7 +203,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	b := signed.Block
 
 	// Retrieve incoming block's pre state.
-	preState, err := s.verifyBlkPreStateSync(ctx, b)
+	preState, err := s.verifyBlkPreState(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	} else {
 		s.initSyncStateLock.Lock()
 		defer s.initSyncStateLock.Unlock()
-		s.initSyncState[blockRoot] = postState
+		s.initSyncState[blockRoot] = postState.Copy()
 		s.filterBoundaryCandidates(ctx, blockRoot, postState)
 	}
 
