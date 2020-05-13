@@ -17,6 +17,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -971,6 +972,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
 		DepositFetcher:     depositCache,
 		HeadFetcher:        &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
@@ -996,16 +998,17 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if response.GetPublicKeys() == nil {
-		t.Fatalf("Recieved <nil> public keys, wanted %d public keys", len(pubKeys))
+	if len(response.PublicKeys) != len(pubKeys) {
+		t.Fatalf(
+			"Recieved %d public keys, wanted %d public keys", len(response.PublicKeys), len(pubKeys))
 	}
 	for i, resp := range response.GetPublicKeys() {
 		if !bytes.Equal(pubKeys[i], resp) {
 			t.Fatalf("Wanted: %v\n Recieved: %v\n", pubKeys[i], resp)
 		}
 	}
-	if response.GetStatuses() == nil {
-		t.Fatalf("Recieved <nil> statuses, wanted %d statuses", len(pubKeys))
+	if len(response.Statuses) != len(pubKeys) {
+		t.Fatalf("Recieved %d statuses, wanted %d statuses", len(response.Statuses), len(pubKeys))
 	}
 	for i, resp := range response.GetStatuses() {
 		if !proto.Equal(want[i], resp) {
@@ -1016,8 +1019,8 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 
 func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-
+	slot := uint64(10000)
+	epoch := helpers.SlotToEpoch(slot)
 	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3), pubKey(4)}
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
@@ -1035,7 +1038,12 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 			{
 				ActivationEligibilityEpoch: 700,
 				ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
-				PublicKey:                  pubKeys[3],
+				PublicKey:                  pubKeys[2],
+			},
+			{
+				Slashed:   true,
+				ExitEpoch: epoch + 1,
+				PublicKey: pubKeys[3],
 			},
 		},
 	}
@@ -1045,34 +1053,6 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey(1),
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-		Amount:                10,
-	}
-
-	dep := &ethpb.Deposit{
-		Data: depData,
-	}
-	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		t.Fatalf("Could not setup deposit trie: %v", err)
-	}
-	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
-	depData = &ethpb.Deposit_Data{
-		PublicKey:             pubKey(3),
-		Signature:             []byte("hi"),
-		WithdrawalCredentials: []byte("hey"),
-		Amount:                10,
-	}
-
-	dep = &ethpb.Deposit{
-		Data: depData,
-	}
-	depositTrie.Insert(dep.Data.Signature, 15)
-	depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root())
 
 	vs := &Server{
 		BeaconDB:           db,
@@ -1081,8 +1061,8 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		ChainStartFetcher:  &mockPOW.POWChain{},
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
-		DepositFetcher:     depositCache,
 		HeadFetcher:        &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
@@ -1095,6 +1075,9 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		&ethpb.ValidatorStatusResponse{
 			Status: ethpb.ValidatorStatus_DEPOSITED,
 		},
+		&ethpb.ValidatorStatusResponse{
+			Status: ethpb.ValidatorStatus_SLASHING,
+		},
 	}
 
 	req := &ethpb.MultipleValidatorStatusRequest{Indices: []int64{0, 1, 2, 3, 4}}
@@ -1103,8 +1086,10 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if response.GetPublicKeys() == nil {
-		t.Fatalf("Recieved <nil> public keys, wanted %d public keys", len(beaconState.Validators))
+	if len(response.PublicKeys) != len(beaconState.Validators) {
+		t.Fatalf(
+			"Recieved %d public keys, wanted %d public keys",
+			len(response.PublicKeys), len(beaconState.Validators))
 	}
 	for i, resp := range response.GetPublicKeys() {
 		expected := beaconState.Validators[i].PublicKey
@@ -1112,8 +1097,9 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 			t.Fatalf("Wanted: %v\n Recieved: %v\n", expected, resp)
 		}
 	}
-	if response.GetStatuses() == nil {
-		t.Fatalf("Recieved <nil> statuses, wanted %d statuses", len(beaconState.Validators))
+	if len(response.Statuses) != len(beaconState.Validators) {
+		t.Fatalf("Recieved %d statuses, wanted %d statuses",
+			len(response.Statuses), len(beaconState.Validators))
 	}
 	for i, resp := range response.GetStatuses() {
 		if !proto.Equal(want[i], resp) {
