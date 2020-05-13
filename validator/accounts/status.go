@@ -50,7 +50,7 @@ func FetchAccountStatuses(
 			ctx, beaconNodeRPCProvider, pubkeys[i:], statusChannel, errorChannel)
 		numBatches++
 	}
-	// Wait from fetch routines to finish.
+	// Wait for fetch routines to finish.
 	var err error
 	allStatuses := make([][]ValidatorStatusMetadata, 0, numBatches)
 	for i := 0; i < numBatches; i++ {
