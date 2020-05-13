@@ -351,8 +351,7 @@ func ProcessBlock(
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-cha"+
-		"in.ChainService.state.ProcessBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
 	state, err := b.ProcessBlockHeader(state, signed)
