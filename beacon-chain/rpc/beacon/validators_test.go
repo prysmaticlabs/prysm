@@ -2154,7 +2154,6 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:]}, Indices: []uint64{1, 2},
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
