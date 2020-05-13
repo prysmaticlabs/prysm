@@ -2149,7 +2149,8 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 		BalancesAfterEpochTransition:  []uint64{extraBal, extraBal + params.BeaconConfig().GweiPerEth},
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
-
+	// Index 2 and publicKey3 points to the same validator.
+	// Should not return duplicates.
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey3[:]}, Indices: []uint64{1, 2},
 	})
