@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -67,16 +68,17 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, finish := setup(t)
 	defer finish()
-	currentTime := uint64(roughtime.Now().Unix())
+	currentTime := roughtime.Now()
 	numOfSlots := uint64(4)
-	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
-	timeToSleep := params.BeaconConfig().SecondsPerSlot * 2 / 3
-	twoThirdTime := currentTime + timeToSleep
-	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
+	validator.genesisTime = uint64(currentTime.Unix()) - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
+	oneThird := slotutil.DivideSlotBy(3 /* one third of slot duration */)
+	timeToSleep := oneThird + oneThird
 
-	currentTime = uint64(roughtime.Now().Unix())
-	if currentTime != twoThirdTime {
-		t.Errorf("Wanted %d time for slot two third but got %d", twoThirdTime, currentTime)
+	twoThirdTime := currentTime.Add(timeToSleep)
+	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
+	currentTime = roughtime.Now()
+	if currentTime.Unix() != twoThirdTime.Unix() {
+		t.Errorf("Wanted %v time for slot two third but got %v", twoThirdTime, currentTime)
 	}
 }
 

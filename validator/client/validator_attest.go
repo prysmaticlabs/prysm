@@ -306,9 +306,7 @@ func (v *validator) waitToSlotOneThird(ctx context.Context, slot uint64) {
 	_, span := trace.StartSpan(ctx, "validator.waitToSlotOneThird")
 	defer span.End()
 
-	twoThird := params.BeaconConfig().SecondsPerSlot * 1 / 3
-	delay := time.Duration(twoThird) * time.Second
-
+	delay := slotutil.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
 	time.Sleep(roughtime.Until(finalTime))
