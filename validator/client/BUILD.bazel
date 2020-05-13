@@ -78,6 +78,7 @@ go_test(
         "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
+        "//shared/slotutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/db:go_default_library",
