@@ -213,6 +213,8 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	return path, passphrase, nil
 }
 
+// Merge merges keys and databases of several validators.
+// Keys are moved to one directory and databases are merged into one database.
 func Merge(cliCtx *cli.Context) error {
 	sources := strings.Split(cliCtx.String(flags.MergeSourceDirectoriesFlag.Name), ",")
 	target := cliCtx.String(flags.MergeTargetDirectoryFlag.Name)
