@@ -97,19 +97,20 @@ func (ds *Service) detectDoubleVote(
 			continue
 		}
 
-		// If there are no shared indices, there is no validator to slash.
-		if len(sliceutil.IntersectionUint64(att.AttestingIndices, []uint64{detectionResult.ValidatorIndex})) == 0 {
+		if !isDoubleVote(incomingAtt, att) {
 			continue
 		}
 
-		if isDoubleVote(incomingAtt, att) {
-			doubleVotesDetected.Inc()
-			return &ethpb.AttesterSlashing{
-				Attestation_1: incomingAtt,
-				Attestation_2: att,
-			}, nil
+		// If there are no shared indices, there is no validator to slash.
+		if !sliceutil.IsInUint64(detectionResult.ValidatorIndex, att.AttestingIndices) {
+			continue
 		}
 
+		doubleVotesDetected.Inc()
+		return &ethpb.AttesterSlashing{
+			Attestation_1: incomingAtt,
+			Attestation_2: att,
+		}, nil
 	}
 	return nil, nil
 }
@@ -135,20 +136,25 @@ func (ds *Service) detectSurroundVotes(
 		if att.Data == nil {
 			continue
 		}
+		isSurround := isSurrounding(incomingAtt, att)
+		isSurrounded := isSurrounding(att, incomingAtt)
+		if !isSurround && !isSurrounded {
+			continue
+		}
 		// If there are no shared indices, there is no validator to slash.
-		if len(sliceutil.IntersectionUint64(att.AttestingIndices, []uint64{detectionResult.ValidatorIndex})) == 0 {
+		if !sliceutil.IsInUint64(detectionResult.ValidatorIndex, att.AttestingIndices) {
 			continue
 		}
 
 		// Slashings must be submitted as the incoming attestation surrounding the saved attestation.
 		// So we swap the order if needed.
-		if isSurrounding(incomingAtt, att) {
+		if isSurround {
 			surroundingVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: incomingAtt,
 				Attestation_2: att,
 			}, nil
-		} else if isSurrounding(att, incomingAtt) {
+		} else if isSurrounded {
 			surroundedVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: att,
