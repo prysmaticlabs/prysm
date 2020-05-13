@@ -218,7 +218,7 @@ func Merge(cliCtx *cli.Context) error {
 	target := cliCtx.String(flags.MergeTargetDirectoryFlag.Name)
 
 	log.Info("Please enter the password for your private keys in target directory")
-	targetPassword, err := cmd.EnterPassword(true)
+	targetPassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
 	if err != nil {
 		return errors.Wrap(err, "Could not read entered passphrase")
 	}
@@ -227,7 +227,7 @@ func Merge(cliCtx *cli.Context) error {
 
 	for _, source := range sources {
 		log.Infof("Please enter the password for your private keys for source directory %s", source)
-		sourcePassword, err := cmd.EnterPassword(true)
+		sourcePassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
 		if err != nil {
 			return errors.Wrap(err, "Could not read entered passphrase")
 		}
