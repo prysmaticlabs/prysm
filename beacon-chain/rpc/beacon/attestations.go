@@ -313,7 +313,7 @@ func (bs *Server) StreamIndexedAttestations(
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 	halfASlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
-	ticker := time.NewTicker(time.Second * halfASlot)
+	ticker := time.NewTicker(halfASlot)
 	for {
 		select {
 		case <-ticker.C:
