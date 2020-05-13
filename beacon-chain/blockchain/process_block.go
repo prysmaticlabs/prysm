@@ -182,6 +182,8 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		s.slashingPool.MarkIncludedAttesterSlashing(b.Body.AttesterSlashings[i])
 	}
 
+	defer reportAttestationInclusion(b)
+
 	return postState, nil
 }
 
@@ -201,7 +203,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	b := signed.Block
 
 	// Retrieve incoming block's pre state.
-	preState, err := s.verifyBlkPreState(ctx, b)
+	preState, err := s.verifyBlkPreStateSync(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -237,7 +239,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	} else {
 		s.initSyncStateLock.Lock()
 		defer s.initSyncStateLock.Unlock()
-		s.initSyncState[blockRoot] = postState.Copy()
+		s.initSyncState[blockRoot] = postState
 		s.filterBoundaryCandidates(ctx, blockRoot, postState)
 	}
 

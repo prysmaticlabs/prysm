@@ -19,6 +19,7 @@ type GlobalFlags struct {
 	MaxPageSize                       int
 	DeploymentBlock                   int
 	BlockBatchLimit                   int
+	BlockBatchLimitBurstFactor        int
 }
 
 var globalConfig *GlobalFlags
@@ -59,6 +60,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 		cfg.DisableDiscv5 = true
 	}
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
+	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
 	cfg.MaxPageSize = ctx.Int(RPCMaxPageSize.Name)
 	cfg.DeploymentBlock = ctx.Int(ContractDeploymentBlock.Name)
 	configureMinimumPeers(ctx, cfg)
