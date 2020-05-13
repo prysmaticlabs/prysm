@@ -120,7 +120,6 @@ func (c *Flags) Copy() *Flags {
 		EnableNoise:                                c.EnableNoise,
 		DontPruneStateStartUp:                      c.DontPruneStateStartUp,
 		NewStateMgmt:                               c.NewStateMgmt,
-		DisableInitSyncQueue:                       c.DisableInitSyncQueue,
 		EnableFieldTrie:                            c.EnableFieldTrie,
 		NoInitSyncBatchSaveBlocks:                  c.NoInitSyncBatchSaveBlocks,
 		EnableStateRefCopy:                         c.EnableStateRefCopy,
