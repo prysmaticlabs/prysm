@@ -43,6 +43,9 @@ func (vs *Server) ValidatorStatus(
 func (vs *Server) MultipleValidatorStatus(
 	ctx context.Context,
 	req *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
