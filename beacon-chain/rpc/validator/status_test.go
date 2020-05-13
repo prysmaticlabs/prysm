@@ -1098,7 +1098,8 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		}
 	}
 	if len(response.Statuses) != len(beaconState.Validators) {
-		t.Fatalf("Recieved %d statuses, wanted %d statuses",
+		t.Fatalf(
+			"Recieved %d statuses, wanted %d statuses",
 			len(response.Statuses), len(beaconState.Validators))
 	}
 	for i, resp := range response.GetStatuses() {
