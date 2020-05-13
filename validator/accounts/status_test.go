@@ -44,18 +44,20 @@ func TestMergeStatuses_OK(t *testing.T) {
 	const NumStatusTypes = int(ethpb.ValidatorStatus_EXITED) + 1
 	allStatuses := make([][]ValidatorStatusMetadata, NumBatches)
 	for i := 0; i < NumBatches; i++ {
-		statuses := make([]ValidatorStatusMetadata, MaxRequestKeys)
+		mockPublicKeys := make([][]byte, MaxRequestKeys)
+		mockStatusResponses := make([]*ethpb.ValidatorStatusResponse, MaxRequestKeys)
 		for j := 0; j < MaxRequestKeys; j++ {
-			statuses[j] = ValidatorStatusMetadata{
-				Metadata: &ethpb.ValidatorStatusResponse{
-					Status: ethpb.ValidatorStatus(j % NumStatusTypes),
-				},
+			mockPubkey := bytesutil.ToBytes48([]byte{byte(j)})
+			mockPublicKeys[j] = mockPubkey[:]
+			mockStatusResponses[j] = &ethpb.ValidatorStatusResponse{
+				Status: ethpb.ValidatorStatus(j % NumStatusTypes),
 			}
 		}
-		sort.Slice(statuses, func(k, l int) bool {
-			return statuses[k].Metadata.Status < statuses[l].Metadata.Status
-		})
-		allStatuses[i] = statuses
+		mockValidatorMultipleStatusResponse := &ethpb.MultipleValidatorStatusResponse{
+			PublicKeys: mockPublicKeys,
+			Statuses:   mockStatusResponses,
+		}
+		allStatuses[i] = responseToSortedMetadata(mockValidatorMultipleStatusResponse)
 	}
 	sortedStatuses := MergeStatuses(allStatuses)
 	isSorted := sort.SliceIsSorted(sortedStatuses, func(i, j int) bool {
