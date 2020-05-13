@@ -298,13 +298,6 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
 func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 	for _, e := range []uint64{epoch, epoch + 1} {
-		shuffledIndices, err := ShuffledIndices(state, e)
-		if err != nil {
-			return err
-		}
-
-		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
-
 		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return err
@@ -312,6 +305,13 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 		if _, exists, err := committeeCache.CommitteeCache.GetByKey(string(seed[:])); err == nil && exists {
 			return nil
 		}
+
+		shuffledIndices, err := ShuffledIndices(state, e)
+		if err != nil {
+			return err
+		}
+
+		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
 
 		// Store the sorted indices as well as shuffled indices. In current spec,
 		// sorted indices is required to retrieve proposer index. This is also
