@@ -349,6 +349,10 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 // UpdateProtections goes through the duties of the given slot and fetches the required validator history,
 // assigning it in validator.
 func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
+	if v.duties == nil {
+		log.Debug("No assigned duties yet for current epoch")
+		return nil
+	}
 	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
 	for _, duty := range v.duties.CurrentEpochDuties {
 		if duty == nil {
