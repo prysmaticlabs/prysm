@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -21,7 +21,7 @@ import (
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
-var processPendingAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
+var processPendingAttsPeriod = slotutil.DivideSlotBy(2 /* twice per slot */)
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {

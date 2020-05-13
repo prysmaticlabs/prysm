@@ -37,8 +37,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +48,7 @@ var _ = shared.Service(&Service{})
 var pollingPeriod = 15 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
-var refreshRate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
+var refreshRate = slotutil.DivideSlotBy(2)
 
 // search limit for number of peers in discovery v5.
 const searchLimit = 100
