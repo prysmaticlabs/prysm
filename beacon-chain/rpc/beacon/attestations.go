@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -159,7 +160,7 @@ func (bs *Server) ListIndexedAttestations(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"Could not retrieve state for attestation data block root %v: %v",
+				"Could not retrieve state for attestation data block root %#x: %v",
 				targetRoot,
 				err,
 			)
@@ -311,8 +312,8 @@ func (bs *Server) StreamIndexedAttestations(
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	halfASlot := time.Duration(params.BeaconConfig().SecondsPerSlot / 2)
-	ticker := time.NewTicker(time.Second * halfASlot)
+	halfASlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
+	ticker := time.NewTicker(halfASlot)
 	for {
 		select {
 		case <-ticker.C:
