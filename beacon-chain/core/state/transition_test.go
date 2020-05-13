@@ -481,7 +481,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	aggBits.SetBitAt(0, true)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Slot:   beaconState.Slot() - 1,
+			Slot:   beaconState.Slot(),
 			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState)},
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -525,20 +525,32 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	exit.Signature = privKeys[exit.Exit.ValidatorIndex].Sign(signingRoot[:]).Marshal()[:]
 
+	header := beaconState.LatestBlockHeader()
+	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	header.StateRoot = prevStateRoot[:]
+	if err := beaconState.SetLatestBlockHeader(header); err != nil {
+		t.Fatal(err)
+	}
 	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	randaoReveal, err := testutil.RandaoReveal(beaconState, currentEpoch, privKeys)
+	copied := beaconState.Copy()
+	if err := copied.SetSlot(beaconState.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	randaoReveal, err := testutil.RandaoReveal(copied, currentEpoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
-			Slot:          beaconState.Slot(),
-			ProposerIndex: 17,
+			Slot:          beaconState.Slot() + 1,
+			ProposerIndex: 13,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
@@ -559,6 +571,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block.Signature = sig.Marshal()
 
+	if beaconState.SetSlot(block.Block.Slot) != nil {
+		t.Fatal(err)
+	}
 	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatalf("Expected block to pass processing conditions: %v", err)
@@ -906,7 +921,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	config.MinAttestationInclusionDelay = 0
 	params.OverrideBeaconConfig(config)
 
-	if s.SetSlot(33) != nil {
+	if s.SetSlot(s.Slot()+1) != nil {
 		t.Fatal(err)
 	}
 	if _, err := state.ProcessBlock(context.Background(), s, blk); err != nil {
