@@ -3,6 +3,7 @@
 package attestationutil
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -166,4 +167,30 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 	return nil
+}
+
+// AttDataIsEqual this function performs an equality check between 2 attestation data, if they're unequal, it will return false.
+func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.AttestationData) bool {
+	if attData1.Slot != attData2.Slot {
+		return false
+	}
+	if attData1.CommitteeIndex != attData2.CommitteeIndex {
+		return false
+	}
+	if !bytes.Equal(attData1.BeaconBlockRoot, attData2.BeaconBlockRoot) {
+		return false
+	}
+	if attData1.Source.Epoch != attData2.Source.Epoch {
+		return false
+	}
+	if !bytes.Equal(attData1.Source.Root, attData2.Source.Root) {
+		return false
+	}
+	if attData1.Target.Epoch != attData2.Target.Epoch {
+		return false
+	}
+	if !bytes.Equal(attData1.Target.Root, attData2.Target.Root) {
+		return false
+	}
+	return true
 }

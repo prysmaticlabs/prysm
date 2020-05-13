@@ -132,10 +132,19 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		)
 
 		for _, att := range indexedAtts {
+			if ctx.Err() == context.Canceled {
+				log.WithError(ctx.Err()).Error("context has been canceled, ending detection")
+				return
+			}
 			slashings, err := ds.DetectAttesterSlashings(ctx, att)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
+			}
+			if len(slashings) < 1 {
+				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, att); err != nil {
+					log.WithError(err).Error("Could not update spans")
+				}
 			}
 			ds.submitAttesterSlashings(ctx, slashings)
 		}
