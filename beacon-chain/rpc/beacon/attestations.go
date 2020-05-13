@@ -25,6 +25,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var log = logrus.WithField("prefix", "rpc")
+
 // sortableAttestations implements the Sort interface to sort attestations
 // by slot as the canonical sorting attribute.
 type sortableAttestations []*ethpb.Attestation
@@ -238,20 +240,41 @@ func (bs *Server) StreamIndexedAttestations(
 	go bs.collectReceivedAttestations(stream.Context())
 	for {
 		select {
-		case event := <-attestationsChannel:
+		case event, ok := <-attestationsChannel:
+			if !ok {
+				log.Error("Indexed attestations stream channel closed")
+			}
 			if event.Type == operation.UnaggregatedAttReceived {
 				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 				if !ok {
 					// Got bad data over the stream.
+					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *UnAggregatedAttReceivedData, received %T", event.Data)
 					continue
 				}
 				if data.Attestation == nil {
 					// One nil attestation shouldn't stop the stream.
+					log.Debug("Indexed attestations stream got a nil attestation")
 					continue
 				}
 				bs.ReceivedAttestationsBuffer <- data.Attestation
+			} else if event.Type == operation.AggregatedAttReceived {
+				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
+				if !ok {
+					// Got bad data over the stream.
+					log.Warningf("Indexed attestations stream got data of wrong type on stream expected *AggregatedAttReceivedData, received %T", event.Data)
+					continue
+				}
+				if data.Attestation == nil || data.Attestation.Aggregate == nil {
+					// One nil attestation shouldn't stop the stream.
+					log.Info("Indexed attestations stream got nil attestation or nil attestation aggregate")
+					continue
+				}
+				bs.CollectedAttestationsBuffer <- []*ethpb.Attestation{data.Attestation.Aggregate}
 			}
-		case atts := <-bs.CollectedAttestationsBuffer:
+		case atts, ok := <-bs.CollectedAttestationsBuffer:
+			if !ok {
+				log.Error("Indexed attestations stream collected attestations channel closed")
+			}
 			// We aggregate the received attestations.
 			aggAtts, err := helpers.AggregateAttestations(atts)
 			if err != nil {
@@ -326,7 +349,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 		case att := <-bs.ReceivedAttestationsBuffer:
 			attDataRoot, err := ssz.HashTreeRoot(att.Data)
 			if err != nil {
-				logrus.Errorf("Could not hash tree root data: %v", err)
+				log.Errorf("Could not hash tree root data: %v", err)
 				continue
 			}
 			attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
