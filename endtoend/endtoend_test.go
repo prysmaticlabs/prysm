@@ -21,6 +21,8 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+
 	"google.golang.org/grpc"
 )
 
@@ -86,10 +88,12 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	epochSecondsHalf := time.Duration(int64(epochSeconds*1000)/2) * time.Millisecond
 	// Adding a half slot here to ensure the requests are in the middle of an epoch.
-	middleOfEpoch := int64(epochSeconds/2 + (params.BeaconConfig().SecondsPerSlot / 2))
+	middleOfEpoch := epochSecondsHalf + slotutil.DivideSlotBy(2 /* half a slot */)
+	genesisTime := time.Unix(genesis.GenesisTime.Seconds, 0)
 	// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
-	tickingStartTime := time.Unix(genesis.GenesisTime.Seconds+middleOfEpoch, 0)
+	tickingStartTime := genesisTime.Add(middleOfEpoch)
 
 	ticker := helpers.GetEpochTicker(tickingStartTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
