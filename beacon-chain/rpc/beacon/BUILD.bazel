@@ -49,6 +49,7 @@ go_library(
         "//shared/pagination:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
+        "//shared/slotutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_patrickmn_go_cache//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
