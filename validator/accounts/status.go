@@ -81,7 +81,7 @@ func fetchValidatorStatus(
 	if err != nil {
 		errorChannel <- errors.Wrap(
 			err,
-			fmt.Sprintf("could not fetch validator statuses for %v", pubkeys))
+			fmt.Sprintf("Failed to fetch validator statuses for %d key(s)", len(pubkeys)))
 		return
 	}
 
@@ -157,7 +157,7 @@ func PrintValidatorStatusMetadata(validatorStatuses []ValidatorStatusMetadata) {
 		m := v.Metadata
 		key := v.PublicKey
 		fmt.Printf(
-			"ValidatorKey: %v, Status: %v, ", hex.EncodeToString(key), m.Status)
+			"ValidatorKey: %v, Status: %v\n", hex.EncodeToString(key), m.Status)
 		fmt.Printf(
 			"Eth1DepositBlockNumber: %s, DepositInclusionSlot: %s, ",
 			fieldToString(m.Eth1DepositBlockNumber), fieldToString(m.DepositInclusionSlot))
