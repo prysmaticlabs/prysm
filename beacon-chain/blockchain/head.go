@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -149,23 +148,17 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
 	} else {
-		s.initSyncStateLock.RLock()
-		cachedHeadState, ok := s.initSyncState[r]
-		if ok {
-			// only copy for states on epoch boundaries.
-			if helpers.IsEpochStart(cachedHeadState.Slot()) {
-				headState = cachedHeadState.Copy()
-			} else {
-				headState = cachedHeadState
-				delete(s.initSyncState, r)
-			}
+		headState, err = s.beaconDB.State(ctx, r)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
-		s.initSyncStateLock.RUnlock()
 		if headState == nil {
-			headState, err = s.beaconDB.State(ctx, r)
-			if err != nil {
-				return errors.Wrap(err, "could not retrieve head state in DB")
+			s.initSyncStateLock.RLock()
+			cachedHeadState, ok := s.initSyncState[r]
+			if ok {
+				headState = cachedHeadState
 			}
+			s.initSyncStateLock.RUnlock()
 		}
 	}
 	if headState == nil {
@@ -244,15 +237,6 @@ func (s *Service) headState() *state.BeaconState {
 	defer s.headLock.RUnlock()
 
 	return s.head.state.Copy()
-}
-
-// This method returns the raw head state without copying
-// it.
-func (s *Service) headStateSync() *state.BeaconState {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	return s.head.state
 }
 
 // This returns the genesis validator root of the head state.
