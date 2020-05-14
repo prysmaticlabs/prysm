@@ -65,6 +65,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	b := signed.Block
 
+	// Exit early if we have already processed this block.
+	if s.beaconDB.HasBlock(ctx, blockRoot) {
+		return nil, errors.Errorf("already processed block with root %#x", blockRoot)
+	}
+
 	// Retrieve incoming block's pre state.
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
@@ -201,6 +206,11 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	b := signed.Block
+
+	// Exit early if we have already processed this block.
+	if s.hasInitSyncBlock(blockRoot) || s.beaconDB.HasBlock(ctx, blockRoot) {
+		return nil
+	}
 
 	// Retrieve incoming block's pre state.
 	preState, err := s.verifyBlkPreState(ctx, b)
