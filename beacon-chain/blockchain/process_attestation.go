@@ -118,7 +118,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot, helpers.TimeShiftTolerance); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1, helpers.TimeShiftTolerance); err != nil {
 		return nil, err
 	}
 

@@ -55,7 +55,6 @@ func (r *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	}
 	msg := new(pb.MetaData)
 	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return nil, err
 	}
 	return msg, nil
