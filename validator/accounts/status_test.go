@@ -51,7 +51,19 @@ func TestMergeStatuses_OK(t *testing.T) {
 			PublicKeys: mockPublicKeys,
 			Statuses:   mockStatusResponses,
 		}
-		allStatuses[i] = responseToSortedMetadata(mockMultipleValidatorStatusResponse)
+		// Convert reponse to ValidatorStatusMetadata and sort.
+		keys := mockMultipleValidatorStatusResponse.GetPublicKeys()
+		statuses := make([]ValidatorStatusMetadata, len(keys))
+		for i, status := range mockMultipleValidatorStatusResponse.GetStatuses() {
+			statuses[i] = ValidatorStatusMetadata{
+				PublicKey: keys[i],
+				Metadata:  status,
+			}
+		}
+		sort.Slice(statuses, func(i, j int) bool {
+			return statuses[i].Metadata.Status < statuses[j].Metadata.Status
+		})
+		allStatuses[i] = statuses
 	}
 	sortedStatuses := mergeStatuses(allStatuses)
 	isSorted := sort.SliceIsSorted(sortedStatuses, func(i, j int) bool {

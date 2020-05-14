@@ -165,23 +165,20 @@ func fetchValidatorStatus(
 			fmt.Sprintf("Failed to fetch validator statuses for %d key(s)", len(pubkeys)))
 		return
 	}
-
-	statusChannel <- responseToSortedMetadata(resp)
-}
-
-func responseToSortedMetadata(resp *ethpb.MultipleValidatorStatusResponse) []ValidatorStatusMetadata {
-	pubkeys := resp.GetPublicKeys()
-	validatorStatuses := make([]ValidatorStatusMetadata, len(pubkeys))
+	// Convert response to ValidatorStatusMetadata and sort.
+	respKeys := resp.GetPublicKeys()
+	statuses := make([]ValidatorStatusMetadata, len(respKeys))
 	for i, status := range resp.GetStatuses() {
-		validatorStatuses[i] = ValidatorStatusMetadata{
-			PublicKey: pubkeys[i],
+		statuses[i] = ValidatorStatusMetadata{
+			PublicKey: respKeys[i],
 			Metadata:  status,
 		}
 	}
-	sort.Slice(validatorStatuses, func(i, j int) bool {
-		return validatorStatuses[i].Metadata.Status < validatorStatuses[j].Metadata.Status
+	sort.Slice(statuses, func(i, j int) bool {
+		return statuses[i].Metadata.Status < statuses[j].Metadata.Status
 	})
-	return validatorStatuses
+
+	statusChannel <- statuses
 }
 
 // ExtractPublicKeys extracts only the public keys from the decrypted keys from the keystore.
