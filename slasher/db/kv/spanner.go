@@ -242,6 +242,18 @@ func (db *Store) SaveEpochsSpanByValidatorsIndices(ctx context.Context, epochsSp
 					return err
 				}
 			}
+			setObservedEpochs(epoch)
+			sm, ok := db.spanCache.Get(epoch)
+			if !ok {
+				continue
+			}
+			// update cache if exists for epoch
+			for k, v := range indicesSpanMaps {
+				sm[k] = v
+			}
+			db.spanCache.Set(epoch, sm)
+			log.Infof("epoch cache updated by SaveEpochsSpanByValidatorsIndices: %d", epoch)
+
 		}
 		return nil
 	})

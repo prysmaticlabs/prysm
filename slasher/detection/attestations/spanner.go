@@ -15,6 +15,7 @@ import (
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -211,8 +212,14 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	spanMap := make(map[uint64]types.Span)
 	epochsSpansMap := make(map[uint64]map[uint64]types.Span)
 	epoch := source - 1
-	untilEpoch := epoch - epochLookback
-	if int(untilEpoch) < 0 || featureconfig.Get().DisableLookback {
+	log.Infof("before loop epoch: %d len(valIndices) %d", epoch, len(valIndices))
+	untilEpoch := uint64(0)
+	lastEpochToCache := uint64(0)
+	if epoch >= epochLookback {
+		untilEpoch = epoch - epochLookback
+		lastEpochToCache = epoch - epochLookback
+	}
+	if featureconfig.Get().DisableLookback {
 		untilEpoch = 0
 	}
 	useCache := true
@@ -225,6 +232,10 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 		if featureconfig.Get().DisableLookback {
 			if useCache {
 				spanMap, useCache, err = s.slasherDB.EpochSpansMap(ctx, epoch)
+			}
+			// If there is more place in cache
+			if lastEpochToCache <= epoch && !useCache && !useDb {
+				useCache = true
 			}
 			// Should happen once when cache is exhausted.
 			if !useCache && !useDb && featureconfig.Get().DisableLookback {
@@ -242,7 +253,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				}
 			}
 
-			indices := valIndices[:0]
+			valNum := 0
 			for _, idx := range valIndices {
 				span := spanMap[idx]
 				newMinSpan := uint16(target - epoch)
@@ -254,21 +265,25 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 						HasAttested: span.HasAttested,
 					}
 					spanMap[idx] = span
-					indices = append(indices, idx)
+					valIndices[valNum] = idx
+					valNum++
 				}
 			}
-			copy(valIndices, indices)
+			valIndices = valIndices[:valNum]
 			if useCache {
 				if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 					return err
 				}
 			}
-			if len(indices) == 0 || epoch == 0 {
+			if len(valIndices) == 0 || epoch == 0 {
+				log.Infof("epoch: %d len(indices) %d", epoch, len(valIndices))
 				if useDb {
+					log.Info("saving to db")
 					// should happen once when finishing update to all epochs and all indices.
 					if err := s.slasherDB.SaveEpochsSpanByValidatorsIndices(ctx, epochsSpansMap); err != nil {
 						return err
 					}
+					log.Info("finished saving to db")
 				}
 				break
 			}
@@ -277,7 +292,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 			if err != nil {
 				return err
 			}
-			indices := valIndices[:0]
+			valNum := 0
 			for _, idx := range valIndices {
 				span := spanMap[idx]
 				newMinSpan := uint16(target - epoch)
@@ -289,13 +304,15 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 						HasAttested: span.HasAttested,
 					}
 					spanMap[idx] = span
-					indices = append(indices, idx)
+					valIndices[valNum] = idx
+					valNum++
 				}
 			}
+			valIndices = valIndices[:valNum]
 			if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 				return err
 			}
-			if len(indices) == 0 {
+			if len(valIndices) == 0 {
 				break
 			}
 			if epoch == 0 {

@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
@@ -831,6 +833,143 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 					t.Errorf("Wanted and received:\n%v \n%v", tt.want, sm)
 				}
 			}
+		})
+	}
+}
+
+func TestNewSpanDetector_UpdateSpans_no_look_back(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableLookback: true})
+	defer resetCfg()
+
+	type testStruct struct {
+		name string
+		att  *ethpb.IndexedAttestation
+		want []map[uint64]types.Span
+	}
+	attesting := make([][]uint64, 6, 6)
+	for i := uint64(0); i < 6; i++ {
+		for x := uint64(0); x < 128; x++ {
+			attesting[i] = append(attesting[i], x+i)
+		}
+	}
+	attEpoch := uint64(5000)
+	targetDisstance := uint64(2)
+	tests := []testStruct{
+		{
+			name: "Distance of 2 should update min spans accordingly",
+			att: &ethpb.IndexedAttestation{
+				AttestingIndices: attesting[0],
+				Data: &ethpb.AttestationData{
+					CommitteeIndex: 0,
+					Source: &ethpb.Checkpoint{
+						Epoch: attEpoch,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: attEpoch + targetDisstance,
+					},
+				},
+				Signature: []byte{1, 2},
+			},
+		},
+	}
+	hasAttested := false
+	sigBytes := [2]byte{0, 0}
+	for epoch := uint64(0); epoch < attEpoch; epoch++ {
+		spans := make(map[uint64]types.Span)
+		for _, attester := range attesting[0] {
+			spans[attester] = types.Span{MinSpan: uint16(attEpoch + targetDisstance - epoch), MaxSpan: 0, SigBytes: sigBytes, HasAttested: hasAttested}
+		}
+		tests[0].want = append(tests[0].want, spans)
+	}
+	spans := make(map[uint64]types.Span)
+	tests[0].want = append(tests[0].want, spans)
+	for epoch := attEpoch + 1; epoch <= attEpoch+targetDisstance; epoch++ {
+		spans := make(map[uint64]types.Span)
+		for _, attester := range attesting[0] {
+			if epoch == attEpoch+targetDisstance {
+				hasAttested = true
+				sigBytes = [2]byte{1, 2}
+			}
+			spans[attester] = types.Span{MinSpan: 0, MaxSpan: uint16(attEpoch + targetDisstance - epoch), SigBytes: sigBytes, HasAttested: hasAttested}
+		}
+		tests[0].want = append(tests[0].want, spans)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := testDB.SetupSlasherDB(t, true)
+			ctx := context.Background()
+			defer func() {
+				if err := db.ClearDB(); err != nil {
+					t.Log(err)
+				}
+			}()
+			defer func() {
+				if err := db.Close(); err != nil {
+					t.Log(err)
+				}
+			}()
+
+			sd := &SpanDetector{
+				slasherDB: db,
+			}
+			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
+				t.Fatal(err)
+			}
+			epoch := attEpoch - 1
+			sm, fromCache, err := sd.slasherDB.EpochSpansMap(ctx, epoch)
+			if err != nil {
+				t.Fatalf("Failed to read from slasherDB: %v", err)
+			}
+			if !fromCache {
+				t.Errorf("Expected epoch: %d to be retievd from cache", epoch)
+			}
+			s := tt.want[epoch]
+			if !reflect.DeepEqual(sm, s) {
+				t.Errorf("Wanted and received:\n%v \n%v", s, sm)
+			}
+			epoch = attEpoch - (epochLookback + 1)
+			sm, fromCache, err = sd.slasherDB.EpochSpansMap(ctx, epoch)
+			if err != nil {
+				t.Fatalf("Failed to read from slasherDB: %v", err)
+			}
+			if !fromCache {
+				t.Errorf("Expected epoch: %d to be retievd from cache", epoch)
+			}
+			s = tt.want[epoch]
+			if !reflect.DeepEqual(sm, s) {
+				t.Errorf("Wanted and received:\n%v \n%v", s, sm)
+			}
+			epoch = attEpoch - (epochLookback + 2)
+			sm, fromCache, err = sd.slasherDB.EpochSpansMap(ctx, epoch)
+			if err != nil {
+				t.Fatalf("Failed to read from slasherDB: %v", err)
+			}
+			if fromCache {
+				t.Errorf("Expected epoch: %d to be retievd from db", epoch)
+			}
+			s = tt.want[epoch]
+			if !reflect.DeepEqual(sm, s) {
+				t.Errorf("Wanted and received:\n%v \n%v", s, sm)
+			}
+			epoch = 0
+			sm, fromCache, err = sd.slasherDB.EpochSpansMap(ctx, epoch)
+			if err != nil {
+				t.Fatalf("Failed to read from slasherDB: %v", err)
+			}
+			if !reflect.DeepEqual(sm, tt.want[0]) {
+				t.Errorf("Wanted and received:\n%v \n%v", tt.want[epoch], sm)
+			}
+			epoch = attEpoch + targetDisstance
+			sm, _, err = sd.slasherDB.EpochSpansMap(ctx, epoch)
+			if err != nil {
+				t.Fatalf("Failed to read from slasherDB: %v", err)
+			}
+			s = tt.want[epoch]
+			if !reflect.DeepEqual(sm, s) {
+				t.Errorf("Wanted and received:\n%v \n%v", s, sm)
+			}
+
 		})
 	}
 }
