@@ -25,7 +25,11 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-	currentEpoch := slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
+	genesisTime := vs.GenesisTimeFetcher.GenesisTime()
+	var currentEpoch uint64
+	if genesisTime.Before(roughtime.Now()) {
+		currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
+	}
 	return vs.duties(ctx, req, currentEpoch)
 }
 
@@ -38,7 +42,11 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	}
 
 	// We compute duties the very first time the endpoint is called.
-	currentEpoch := slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
+	genesisTime := vs.GenesisTimeFetcher.GenesisTime()
+	var currentEpoch uint64
+	if genesisTime.Before(roughtime.Now()) {
+		currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
+	}
 	res, err := vs.duties(stream.Context(), req, currentEpoch)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)

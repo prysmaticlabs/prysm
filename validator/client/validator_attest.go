@@ -58,7 +58,8 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
-	duty, err := v.duty(pubKey)
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	duty, err := v.duty(pubKey, epoch)
 	if err != nil {
 		log.WithError(err).Error("Could not fetch validator assignment")
 		if v.emitAccountMetrics {

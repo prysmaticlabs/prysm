@@ -9,11 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"go.opencensus.io/trace"
 )
 
 // StreamDuties consumes a server-side stream of validator duties from a beacon node
@@ -24,6 +24,7 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.StreamDuties")
 	defer span.End()
 
+	log.Info("Fetching validating keys")
 	validatingKeys, err := v.keyManager.FetchValidatingKeys()
 	if err != nil {
 		return err
@@ -32,6 +33,7 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 	req := &ethpb.DutiesRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
+	log.Info("Requesting stream")
 	stream, err := v.validatorClient.StreamDuties(ctx, req)
 	if err != nil {
 		return errors.Wrap(err, "Could not setup validator duties streaming client")
@@ -59,6 +61,54 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 	return nil
 }
 
+// RolesAt slot returns the validator roles at the given slot. Returns nil if the
+// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
+// validator assignments are unknown. Otherwise returns a valid validatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	rolesAt := make(map[[48]byte][]validatorRole)
+	duty, ok := v.dutiesByEpoch[epoch]
+	if !ok {
+		log.Debugf("No assigned duties yet for epoch %d", epoch)
+		return rolesAt, nil
+	}
+	for _, dt := range duty {
+		var roles []validatorRole
+
+		if dt == nil {
+			continue
+		}
+		if len(dt.ProposerSlots) > 0 {
+			for _, proposerSlot := range dt.ProposerSlots {
+				if proposerSlot != 0 && proposerSlot == slot {
+					roles = append(roles, roleProposer)
+					break
+				}
+			}
+		}
+		if dt.AttesterSlot == slot {
+			roles = append(roles, roleAttester)
+
+			aggregator, err := v.isAggregator(ctx, dt.Committee, slot, bytesutil.ToBytes48(dt.PublicKey))
+			if err != nil {
+				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				roles = append(roles, roleAggregator)
+			}
+
+		}
+		if len(roles) == 0 {
+			roles = append(roles, roleUnknown)
+		}
+
+		var pubKey [48]byte
+		copy(pubKey[:], dt.PublicKey)
+		rolesAt[pubKey] = roles
+	}
+	return rolesAt, nil
+}
+
 // Update duties sets the received validator duties in-memory for the validator client
 // and determines which validating keys were selected as attestation aggregators
 // for the epoch. Additionally, this function uses that information to notify
@@ -66,8 +116,12 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 func (v *validator) updateDuties(ctx context.Context, dutiesResp *ethpb.DutiesResponse, numKeys int) {
 	ctx, span := trace.StartSpan(ctx, "validator.updateDuties")
 	defer span.End()
-	currentSlot := slotutil.SlotsSinceGenesis(time.Unix(int64(v.genesisTime), 0))
-	currentEpoch := currentSlot / params.BeaconConfig().SlotsPerEpoch
+	var currentEpoch uint64
+	genesisTime := time.Unix(int64(v.genesisTime), 0)
+	if genesisTime.Before(roughtime.Now()) {
+		currentEpoch = slotutil.EpochsSinceGenesis(genesisTime)
+	}
+	currentSlot := currentEpoch * params.BeaconConfig().SlotsPerEpoch
 
 	v.dutiesLock.Lock()
 	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty, 2)
@@ -76,10 +130,13 @@ func (v *validator) updateDuties(ctx context.Context, dutiesResp *ethpb.DutiesRe
 	v.dutiesLock.Unlock()
 
 	v.logDuties(currentSlot, dutiesResp.CurrentEpochDuties)
+	v.logDuties(currentSlot+params.BeaconConfig().SlotsPerEpoch, dutiesResp.NextEpochDuties)
 }
 
 // Given the validator public key and an epoch, this gets the validator assignment.
 func (v *validator) duty(pubKey [48]byte, epoch uint64) (*ethpb.DutiesResponse_Duty, error) {
+	v.dutiesLock.RLock()
+	defer v.dutiesLock.RUnlock()
 	duty, ok := v.dutiesByEpoch[epoch]
 	if !ok {
 		return nil, fmt.Errorf("no duty found for epoch %d", epoch)

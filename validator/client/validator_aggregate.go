@@ -50,7 +50,8 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
-	duty, err := v.duty(pubKey)
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	duty, err := v.duty(pubKey, epoch)
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
 		if v.emitAccountMetrics {

@@ -64,13 +64,16 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
+	log.Info("Got activation")
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)
 	}
+	log.Info("Got canonical head slot")
 	// We listen to a server-side stream of validator duties in the
 	// background of the validator client.
 	go func() {
+		log.Info("Requesting duties stream")
 		if err := v.StreamDuties(ctx); err != nil {
 			handleAssignmentError(err, headSlot)
 		}
