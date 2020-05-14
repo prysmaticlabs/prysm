@@ -38,6 +38,9 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9}); err != nil {
 		t.Fatal(err)
 	}
+	if err := beaconState.SetSlot(10); err != nil {
+		t.Error(err)
+	}
 
 	lbhdr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
@@ -52,7 +55,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: proposerIdx,
-			Slot:          0,
+			Slot:          10,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -89,7 +92,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
-		Slot:              0,
+		Slot:              10,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -146,7 +149,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
-		Slot:              0,
+		Slot:              10,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -170,10 +173,14 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	}
 	blockSig := priv.Sign(root[:])
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
+	pID, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Error(err)
+	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 5669,
-			Slot:          0,
+			ProposerIndex: pID,
+			Slot:          10,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -200,7 +207,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
-		Slot:              0,
+		Slot:              10,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -227,11 +234,16 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		t.Error(err)
 	}
 	blockSig := priv.Sign(root[:])
+
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
+	pID, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Error(err)
+	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 5669,
-			Slot:          0,
+			ProposerIndex: pID,
+			Slot:          10,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -258,7 +270,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 
 	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
-		Slot:              0,
+		Slot:              10,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
 		Fork: &pb.Fork{
 			PreviousVersion: []byte{0, 0, 0, 0},
@@ -281,10 +293,14 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Fatalf("Failed to get domain form state: %v", err)
 	}
 	priv := bls.RandKey()
+	pID, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Error(err)
+	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 5669,
-			Slot:          0,
+			ProposerIndex: pID,
+			Slot:          10,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
 			},
@@ -320,7 +336,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	var zeroHash [32]byte
 	nsh := newState.LatestBlockHeader()
 	expected := &ethpb.BeaconBlockHeader{
-		ProposerIndex: 5669,
+		ProposerIndex: pID,
 		Slot:          block.Block.Slot,
 		ParentRoot:    latestBlockSignedRoot[:],
 		BodyRoot:      bodyRoot[:],
@@ -328,6 +344,78 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 	if !proto.Equal(nsh, expected) {
 		t.Errorf("Expected %v, received %v", expected, nsh)
+	}
+}
+
+func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
+		}
+	}
+
+	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Validators:        validators,
+		Slot:              10,
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 10}, // Must be less than block.Slot
+		Fork: &pb.Fork{
+			PreviousVersion: []byte{0, 0, 0, 0},
+			CurrentVersion:  []byte{0, 0, 0, 0},
+		},
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
+	if err != nil {
+		t.Error(err)
+	}
+
+	currentEpoch := helpers.CurrentEpoch(state)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, state.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
+	priv := bls.RandKey()
+	pID, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Error(err)
+	}
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: pID,
+			Slot:          10,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: []byte{'A', 'B', 'C'},
+			},
+			ParentRoot: latestBlockSignedRoot[:],
+		},
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
+	if err != nil {
+		t.Fatalf("Failed to get signing root of block: %v", err)
+	}
+	blockSig := priv.Sign(signingRoot[:])
+	block.Signature = blockSig.Marshal()[:]
+
+	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validators[proposerIdx].Slashed = false
+	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
+	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = blocks.ProcessBlockHeader(state, block)
+	if err == nil || err.Error() != "block.Slot 10 must be greater than state.LatestBlockHeader.Slot 10" {
+		t.Fatalf("did not get expected error, got %v", err)
 	}
 }
 
