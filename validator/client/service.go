@@ -175,6 +175,7 @@ func (v *ValidatorService) Start() {
 	}
 	v.validator = &validator{
 		db:                             valDB,
+		dutiesByEpoch:                  make(map[uint64][]*ethpb.DutiesResponse_Duty, 2), // 2 epochs worth of duties.
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
@@ -200,9 +201,7 @@ func (v *ValidatorService) Stop() error {
 	return nil
 }
 
-// Status ...
-//
-// WIP - not done.
+// Status of the validator service's health.
 func (v *ValidatorService) Status() error {
 	if v.conn == nil {
 		return errors.New("no connection to beacon RPC")
