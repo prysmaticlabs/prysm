@@ -39,10 +39,9 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
 
-	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
-
 	// The initial count for the first batch to be returned back.
 	count := m.Count
+	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
 	if count > uint64(allowedBlocksPerSecond) {
 		count = uint64(allowedBlocksPerSecond)
 	}
