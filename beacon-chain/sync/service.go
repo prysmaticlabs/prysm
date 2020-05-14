@@ -32,9 +32,6 @@ import (
 
 var _ = shared.Service(&Service{})
 
-var allowedBlocksPerSecond float64
-var allowedBlocksBurst int64
-
 const rangeLimit = 1000
 const seenBlockSize = 1000
 const seenAttSize = 10000
@@ -109,8 +106,8 @@ type Service struct {
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
 	// Intialize block limits.
-	allowedBlocksPerSecond = float64(flags.Get().BlockBatchLimit)
-	allowedBlocksBurst = int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
+	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
+	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
