@@ -205,28 +205,16 @@ func mergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMet
 	return mergeTwo(mergeStatuses(leftHalf), mergeStatuses(rightHalf))
 }
 
+// mergeTwo merges two sorted ValidatorStatusMetadata arrays to 1.
+// XXX: This function can be improved to run in linear time.
 func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
-	i, j, k := 0, 0, 0
-	sortedStatuses := make([]ValidatorStatusMetadata, len(s1)+len(s2))
-	for j < len(s1) && k < len(s2) {
-		if s1[j].Metadata.Status < s2[k].Metadata.Status {
-			sortedStatuses[i] = s1[j]
-			j++
-		} else {
-			sortedStatuses[i] = s2[k]
-			k++
-		}
-		i++
-	}
-	for j < len(s1) {
-		sortedStatuses[i] = s1[j]
-		i, j = i+1, j+1
-	}
-	for k < len(s2) {
-		sortedStatuses[i] = s2[k]
-		i, k = i+1, k+1
-	}
-	return sortedStatuses
+	statuses := []ValidatorStatusMetadata{}
+	statuses = append(statuses, s1...)
+	statuses = append(statuses, s2...)
+	sort.Slice(statuses, func(i, j int) bool {
+		return statuses[i].Metadata.Status < statuses[j].Metadata.Status
+	})
+	return statuses
 }
 
 func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
