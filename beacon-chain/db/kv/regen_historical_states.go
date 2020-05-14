@@ -43,18 +43,11 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 	}
 	if lastArchivedIndex > 0 {
 		archivedIndexStart := lastArchivedIndex - 1
-		wantedSlotBelow := archivedIndexStart*slotsPerArchivedPoint + 1
-		states, err := kv.HighestSlotStatesBelow(ctx, wantedSlotBelow)
+		archivedRoot := kv.ArchivedPointRoot(ctx, archivedIndexStart)
+		currentState, err := kv.State(ctx, archivedRoot)
 		if err != nil {
 			return err
 		}
-		if len(states) == 0 {
-			return errors.New("states can't be empty")
-		}
-		if states[0] == nil {
-			return errors.New("nil last state")
-		}
-		currentState = states[0]
 		startSlot = currentState.Slot()
 	}
 
