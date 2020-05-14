@@ -475,9 +475,85 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 				pendingAttesterSlashing: tt.fields.pending,
 			}
 			if got := p.PendingAttesterSlashings(
-				context.Background(),
+				context.Background(), beaconState,
 			); !reflect.DeepEqual(tt.want, got) {
 				t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
+	type fields struct {
+		pending []*PendingAttesterSlashing
+	}
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig()
+	conf.MaxAttesterSlashings = 2
+	params.OverrideBeaconConfig(conf)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	val, err := beaconState.ValidatorAtIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.Slashed = true
+	if err := beaconState.UpdateValidatorAtIndex(0, val); err != nil {
+		t.Fatal(err)
+	}
+	val, err = beaconState.ValidatorAtIndex(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.Slashed = true
+	if err := beaconState.UpdateValidatorAtIndex(3, val); err != nil {
+		t.Fatal(err)
+	}
+	val, err = beaconState.ValidatorAtIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.Slashed = true
+	if err := beaconState.UpdateValidatorAtIndex(5, val); err != nil {
+		t.Fatal(err)
+	}
+	pendingSlashings := make([]*PendingAttesterSlashing, 20)
+	slashings := make([]*ethpb.AttesterSlashing, 20)
+	for i := 0; i < len(pendingSlashings); i++ {
+		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pendingSlashings[i] = &PendingAttesterSlashing{
+			attesterSlashing: sl,
+			validatorToSlash: uint64(i),
+		}
+		slashings[i] = sl
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []*ethpb.AttesterSlashing
+	}{
+		{
+			name: "Skips slashed validator",
+			fields: fields{
+				pending: pendingSlashings,
+			},
+			want: slashings[1:3],
+		},
+		{
+			name: "Skips gapped slashed validators",
+			fields: fields{
+				pending: pendingSlashings[2:],
+			},
+			want: []*ethpb.AttesterSlashing{slashings[4], slashings[6]},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Pool{pendingAttesterSlashing: tt.fields.pending}
+			if got := p.PendingAttesterSlashings(context.Background(), beaconState); !reflect.DeepEqual(tt.want, got) {
+				t.Errorf("Unexpected return from PendingAttesterSlashings, \nwanted %v, \nreceived %v", tt.want, got)
 			}
 		})
 	}
@@ -510,7 +586,7 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	}
 	want := slashings[0:2]
 	if got := p.PendingAttesterSlashings(
-		context.Background(),
+		context.Background(), beaconState,
 	); !reflect.DeepEqual(want, got) {
 		t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", want, got)
 	}
