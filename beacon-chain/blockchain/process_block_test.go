@@ -88,7 +88,7 @@ func TestStore_OnBlock(t *testing.T) {
 	}{
 		{
 			name:          "parent block root does not have a state",
-			blk:           &ethpb.BeaconBlock{},
+			blk:           &ethpb.BeaconBlock{ParentRoot: []byte{'A'}},
 			s:             st.Copy(),
 			wantErrString: "provided block root does not have block saved in the db",
 		},
