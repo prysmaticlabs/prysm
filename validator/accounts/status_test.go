@@ -56,7 +56,7 @@ func TestMergeStatuses_OK(t *testing.T) {
 		}
 		allStatuses[i] = responseToSortedMetadata(mockMultipleValidatorStatusResponse)
 	}
-	sortedStatuses := MergeStatuses(allStatuses)
+	sortedStatuses := mergeStatuses(allStatuses)
 	isSorted := sort.SliceIsSorted(sortedStatuses, func(i, j int) bool {
 		return sortedStatuses[i].Metadata.Status < sortedStatuses[j].Metadata.Status
 	})

@@ -5,11 +5,18 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"strings"
+	"time"
 
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
+	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 // ValidatorStatusMetadata holds all status information about a validator.
@@ -20,12 +27,87 @@ type ValidatorStatusMetadata struct {
 
 // MaxRequestLimit specifies the max grpc requests allowed
 // to fetch account statuses.
-const MaxRequestLimit = 3
+const MaxRequestLimit = 5 // XXX: Should create flag to make parameter configurable.
 
 // MaxRequestKeys specifies the max amount of public keys allowed
 // in a single grpc request, when fetching account statuses.
-const MaxRequestKeys = 2000 // XXX: This is an arbitrary number.
-// Should compute max keys allowed before exceeding GrpcMaxCallRecvMsgSizeFlag
+const MaxRequestKeys = 2048 // XXX: This is an arbitrary number.
+// Should compute max keys allowed before reponse exceeds GrpcMaxCallRecvMsgSizeFlag.
+
+// RunStatusCommand is the entry point to the `validator status` command.
+func RunStatusCommand(
+	ctx context.Context,
+	pubkeys [][]byte,
+	withCert string,
+	endpoint string,
+	maxCallRecvMsgSize int,
+	grpcRetries uint,
+	grpcHeaders []string) error {
+	dialOpts := constructDialOptions(maxCallRecvMsgSize, withCert, grpcHeaders, grpcRetries)
+	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Failed to dial beacon node endpoint at %s", endpoint))
+	}
+	allStatuses, err := FetchAccountStatuses(
+		ctx, ethpb.NewBeaconNodeValidatorClient(conn), pubkeys)
+	if e := conn.Close(); e != nil {
+		log.WithError(e).Error("Could not close connection to beacon node")
+	}
+	if err != nil {
+		return errors.Wrap(err, "Could not fetch account statuses from the beacon node")
+	}
+	sortedStatuses := mergeStatuses(allStatuses)
+	printStatuses(sortedStatuses)
+	return nil
+}
+
+func constructDialOptions(
+	maxCallRecvMsgSize int,
+	withCert string,
+	grpcHeaders []string,
+	grpcRetries uint) []grpc.DialOption {
+	var transportSecurity grpc.DialOption
+	if withCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(withCert, "")
+		if err != nil {
+			log.Errorf("Could not get valid credentials: %v", err)
+			return nil
+		}
+		transportSecurity = grpc.WithTransportCredentials(creds)
+	} else {
+		transportSecurity = grpc.WithInsecure()
+		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+	}
+
+	if maxCallRecvMsgSize == 0 {
+		maxCallRecvMsgSize = 10 * 5 << 20 // Default 50Mb
+	}
+
+	md := make(metadata.MD)
+	for _, hdr := range grpcHeaders {
+		if hdr != "" {
+			ss := strings.Split(hdr, "=")
+			if len(ss) != 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+				continue
+			}
+			md.Set(ss[0], ss[1])
+		}
+	}
+
+	return []grpc.DialOption{
+		transportSecurity,
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
+			grpc_retry.WithMax(grpcRetries),
+			grpc.Header(&md),
+		),
+		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
+		grpc.WithBlock(),
+		grpc.WithTimeout(
+			10 * time.Second /* Block for 10 seconds to see if we can connect to beacon node */),
+	}
+}
 
 // FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient
 // for each validator public key.
@@ -114,8 +196,8 @@ func ExtractPublicKeys(decryptedKeys map[string]*keystore.Key) [][]byte {
 	return pubkeys
 }
 
-// MergeStatuses merges k sorted ValidatorStatusMetadata slices to 1.
-func MergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMetadata {
+// mergeStatuses merges k sorted ValidatorStatusMetadata slices to 1.
+func mergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMetadata {
 	if len(allStatuses) == 0 {
 		return []ValidatorStatusMetadata{}
 	}
@@ -124,7 +206,7 @@ func MergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMet
 	}
 	leftHalf := allStatuses[:len(allStatuses)/2]
 	rightHalf := allStatuses[len(allStatuses)/2:]
-	return mergeTwo(MergeStatuses(leftHalf), MergeStatuses(rightHalf))
+	return mergeTwo(mergeStatuses(leftHalf), mergeStatuses(rightHalf))
 }
 
 func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
@@ -151,8 +233,7 @@ func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
 	return sortedStatuses
 }
 
-// PrintValidatorStatusMetadata prints out validator statuses and its corresponding metadata
-func PrintValidatorStatusMetadata(validatorStatuses []ValidatorStatusMetadata) {
+func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
 	for _, v := range validatorStatuses {
 		m := v.Metadata
 		key := v.PublicKey

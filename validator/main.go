@@ -9,10 +9,8 @@ import (
 	"runtime"
 	runtimeDebug "runtime/debug"
 	"strings"
-	"time"
 
 	joonix "github.com/joonix/log"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -20,13 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
-	"google.golang.org/grpc"
 	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
 )
@@ -154,32 +150,16 @@ contract in order to activate the validator client`,
 						}
 						decryptedKeys, err := accounts.DecryptKeysFromKeystore(keystorePath, passphrase)
 						if err != nil {
-							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
+							log.WithError(err).Fatalf("Could not decrypt keys from keystore in path %s", keystorePath)
 						}
-						endpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-						cert := cliCtx.String(flags.CertFlag.Name)
-						maxCallRecvMsgSize := cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-						grpcHeaders := strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ",")
-						grpcRetries := cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-						timeout := grpc.WithTimeout(
-							10 * time.Second /* Block for 10 seconds to see if we can connect to beacon node */)
-						dialOpts := client.ConstructDialOptions(
-							maxCallRecvMsgSize, cert, grpcHeaders, grpcRetries, grpc.WithBlock(), timeout)
-						conn, err := grpc.DialContext(cliCtx, endpoint, dialOpts...)
-						if err != nil {
-							log.WithError(err).Fatalf("Failed to dial beacon node endpoint at %s", endpoint)
-						}
-						allStatuses, err := accounts.FetchAccountStatuses(
-							cliCtx, ethpb.NewBeaconNodeValidatorClient(conn), accounts.ExtractPublicKeys(decryptedKeys))
-						if e := conn.Close(); e != nil {
-							log.WithError(e).Error("Could not close connection to beacon node.")
-						}
-						if err != nil {
-							log.WithError(err).Fatal("Could not fetch account statuses from the beacon node.")
-						}
-						sortedStatuses := accounts.MergeStatuses(allStatuses)
-						accounts.PrintValidatorStatusMetadata(sortedStatuses)
-						return nil
+						return accounts.RunStatusCommand(
+							cliCtx,
+							accounts.ExtractPublicKeys(decryptedKeys),
+							cliCtx.String(flags.CertFlag.Name),
+							cliCtx.String(flags.BeaconRPCProviderFlag.Name),
+							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
+							cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","))
 					},
 				},
 			},
