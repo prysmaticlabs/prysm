@@ -213,35 +213,46 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	return path, passphrase, nil
 }
 
-// Merge merges keys and databases of several validators.
-// Keys are moved to one directory and databases are merged into one database.
-func Merge(cliCtx *cli.Context) error {
+// GetPasswordsForMerging retrieves passwords for source directories and the target directory.
+// These passwords will be used when merging accounts.
+func GetPasswordsForMerging(cliCtx *cli.Context) (map[string]string, string, error) {
 	sources := strings.Split(cliCtx.String(flags.MergeSourceDirectoriesFlag.Name), ",")
-	target := cliCtx.String(flags.MergeTargetDirectoryFlag.Name)
 
 	log.Info("Please enter the password for your private keys in target directory")
 	targetPassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
 	if err != nil {
-		return errors.Wrap(err, "Could not read entered passphrase")
+		return nil, "", errors.Wrap(err, "Could not read entered passphrase")
 	}
 
-	keyStore := keystore.NewKeystore(target)
+	sourcePasswords := make(map[string]string)
 
 	for _, source := range sources {
 		log.Infof("Please enter the password for your private keys for source directory %s", source)
-		sourcePassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
+		password, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
 		if err != nil {
-			return errors.Wrap(err, "Could not read entered passphrase")
+			return nil, "", errors.Wrap(err, "Could not read entered passphrase")
 		}
 
+		sourcePasswords[source] = password
+	}
+
+	return sourcePasswords, targetPassword, nil
+}
+
+// Merge merges keys and databases of several validators.
+// Keys are moved to one directory and databases are merged into one database.
+func Merge(sourcePasswords map[string]string, target string, targetPassword string) error {
+	keyStore := keystore.NewKeystore(target)
+
+	for source, password := range sourcePasswords {
 		log.Infof("Merging keys from source directory %s ...", source)
 
-		err = mergeKeys(source, sourcePassword, target, targetPassword, params.BeaconConfig().ValidatorPrivkeyFileName, keyStore)
+		err := mergeKeys(source, password, target, targetPassword, params.BeaconConfig().ValidatorPrivkeyFileName, keyStore)
 		if err != nil {
 			return err
 		}
 
-		err = mergeKeys(source, sourcePassword, target, targetPassword, params.BeaconConfig().WithdrawalPrivkeyFileName, keyStore)
+		err = mergeKeys(source, password, target, targetPassword, params.BeaconConfig().WithdrawalPrivkeyFileName, keyStore)
 		if err != nil {
 			return err
 		}
@@ -254,7 +265,7 @@ func Merge(cliCtx *cli.Context) error {
 }
 
 func mergeKeys(sourceDirectory string, sourcePassword string, targetDirectory string, targetPassword string, filePrefix string, keyStore keystore.Store) error {
-	validatorKeys, err := DecryptKeysFromKeystore(sourceDirectory, params.BeaconConfig().ValidatorPrivkeyFileName, sourcePassword)
+	validatorKeys, err := DecryptKeysFromKeystore(sourceDirectory, filePrefix, sourcePassword)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to decrypt keystore keys for source directory %s", sourceDirectory)
 	}

@@ -74,3 +74,65 @@ func TestHandleEmptyFlags_FlagsSet(t *testing.T) {
 		t.Fatalf("Expected set password to be unchanged, expected %s, received %s", passedPassword, passphrase)
 	}
 }
+
+func TestMerge_KeysCopiedToNewDirectory(t *testing.T) {
+	firstSourceDirectory := testutil.TempDir() + "/firstsource"
+	secondSourceDirectory := testutil.TempDir() + "/secondsource"
+	targetDirectory := testutil.TempDir() + "/target"
+	firstSourcePassword := "firstsource"
+	secondSourcePassword := "secondsource"
+	targetPassword := "target"
+
+	defer func() {
+		if err := os.RemoveAll(firstSourceDirectory); err != nil {
+			t.Logf("Could not remove directory %s: %v", firstSourceDirectory, err)
+		}
+		if err := os.RemoveAll(secondSourceDirectory); err != nil {
+			t.Logf("Could not remove directory %s: %v", secondSourceDirectory, err)
+		}
+		if err := os.RemoveAll(targetDirectory); err != nil {
+			t.Logf("Could not remove directory %s: %v", targetDirectory, err)
+		}
+	}()
+
+	if err := NewValidatorAccount(firstSourceDirectory, firstSourcePassword); err != nil {
+		t.Fatal(err)
+	}
+	if err := NewValidatorAccount(secondSourceDirectory, secondSourcePassword); err != nil {
+		t.Fatal(err)
+	}
+
+	sourcePasswords := map[string]string{firstSourceDirectory: firstSourcePassword, secondSourceDirectory: secondSourcePassword}
+
+	err := Merge(sourcePasswords, targetDirectory, targetPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	firstSourceKeys, err := ioutil.ReadDir(firstSourceDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondSourceKeys, err := ioutil.ReadDir(secondSourceDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetKeys, err := ioutil.ReadDir(targetDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, sk := range append(firstSourceKeys, secondSourceKeys...) {
+		found := false
+		for _, tk := range targetKeys {
+			if sk.Name() == tk.Name() {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("Key file %s not found", sk.Name())
+		}
+	}
+}

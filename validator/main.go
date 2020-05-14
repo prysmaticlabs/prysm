@@ -144,10 +144,17 @@ contract in order to activate the validator client`,
 						flags.MergeTargetDirectoryFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						err := accounts.Merge(cliCtx)
+						sourcePasswords, targetPassword, err := accounts.GetPasswordsForMerging(cliCtx)
+						if err != nil {
+							log.WithError(err).Error("Could not read passwords")
+						}
+
+						target := cliCtx.String(flags.MergeTargetDirectoryFlag.Name)
+						err = accounts.Merge(sourcePasswords, target, targetPassword)
 						if err != nil {
 							log.WithError(err).Error("Merging accounts failed")
 						}
+
 						return nil
 					},
 				},
