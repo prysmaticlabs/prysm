@@ -29,7 +29,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	// the number epochs since the genesis time, otherwise 0 by default.
 	genesisTime := vs.GenesisTimeFetcher.GenesisTime()
 	var currentEpoch uint64
-	if genesisTime.Before(roughtime.Now()) {
+	if roughtime.Now().After(genesisTime) {
 		currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
 	}
 	return vs.duties(ctx, req, currentEpoch)
