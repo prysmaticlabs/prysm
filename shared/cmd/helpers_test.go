@@ -8,14 +8,14 @@ import (
 
 func TestEnterPassword(t *testing.T) {
 	type rets struct {
-		pw string
+		pw  string
 		err error
 	}
-	var tt = []struct{
-		name string
-		rets []rets
+	var tt = []struct {
+		name        string
+		rets        []rets
 		expectedErr error
-		expectedPw string
+		expectedPw  string
 	}{
 		{
 			"first_match",
