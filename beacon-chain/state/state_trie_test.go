@@ -5,6 +5,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -159,8 +160,15 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
+			genericHTR, err := ssz.HashTreeRoot(testState.InnerStateUnsafe())
+			if err == nil && tt.error != "" {
+				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
+			}
 			if bytes.Equal(root[:], []byte{}) {
 				t.Error("Received empty hash tree root")
+			}
+			if !bytes.Equal(root[:], genericHTR[:]) {
+				t.Error("Expected hash tree root to match generic")
 			}
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
 				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
@@ -228,8 +236,15 @@ func TestBeaconState_HashTreeRoot_EnableFieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
+			genericHTR, err := ssz.HashTreeRoot(testState.InnerStateUnsafe())
+			if err == nil && tt.error != "" {
+				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
+			}
 			if bytes.Equal(root[:], []byte{}) {
 				t.Error("Received empty hash tree root")
+			}
+			if !bytes.Equal(root[:], genericHTR[:]) {
+				t.Error("Expected hash tree root to match generic")
 			}
 			if len(oldHTR) != 0 && bytes.Equal(root[:], oldHTR) {
 				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
