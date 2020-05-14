@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -183,6 +184,12 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
 	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy, blockRoot); err != nil {
+		if err == errAlreadyProcessed {
+			log.WithFields(logrus.Fields{
+				"root": fmt.Sprintf("%#x", blockRoot),
+			}).Debugf("Skipped processing block: %s", errAlreadyProcessed)
+			return nil
+		}
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
