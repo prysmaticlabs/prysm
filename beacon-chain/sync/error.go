@@ -15,6 +15,7 @@ const stepError = "invalid range or step"
 var errWrongForkDigestVersion = errors.New("wrong fork digest version")
 var errInvalidEpoch = errors.New("invalid epoch")
 var errInvalidFinalizedRoot = errors.New("invalid finalized root")
+var errGeneric = errors.New(genericError)
 
 var responseCodeSuccess = byte(0x00)
 var responseCodeInvalidRequest = byte(0x01)
