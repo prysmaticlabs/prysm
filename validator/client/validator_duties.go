@@ -1,15 +1,19 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 // StreamDuties consumes a server-side stream of validator duties from a beacon node
@@ -24,6 +28,7 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	numValidatingKeys := len(validatingKeys)
 	req := &ethpb.DutiesRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
@@ -44,8 +49,11 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "Could not receive duties from stream")
 		}
-		if err := v.updateDuties(ctx, res, len(validatingKeys)); err != nil {
-			log.WithError(err).Error("Could not update duties from stream")
+		// Updates validator duties and requests the beacon node to subscribe
+		// to attestation subnets in advance.
+		v.updateDuties(ctx, res, numValidatingKeys)
+		if err := v.requestSubnetSubscriptions(ctx, res, numValidatingKeys); err != nil {
+			log.WithError(err).Error("Could not request beacon node to subscribe to subnets")
 		}
 	}
 	return nil
@@ -55,18 +63,40 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 // and determines which validating keys were selected as attestation aggregators
 // for the epoch. Additionally, this function uses that information to notify
 // the beacon node it should subscribe the assigned attestation p2p subnets.
-func (v *validator) updateDuties(ctx context.Context, dutiesResp *ethpb.DutiesResponse, numKeys int) error {
+func (v *validator) updateDuties(ctx context.Context, dutiesResp *ethpb.DutiesResponse, numKeys int) {
 	ctx, span := trace.StartSpan(ctx, "validator.updateDuties")
 	defer span.End()
 	currentSlot := slotutil.SlotsSinceGenesis(time.Unix(int64(v.genesisTime), 0))
+	currentEpoch := currentSlot / params.BeaconConfig().SlotsPerEpoch
 
-	v.duties = dutiesResp
+	v.dutiesLock.Lock()
+	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty, 2)
+	v.dutiesByEpoch[currentEpoch] = dutiesResp.CurrentEpochDuties
+	v.dutiesByEpoch[currentEpoch+1] = dutiesResp.NextEpochDuties
+	v.dutiesLock.Unlock()
+
 	v.logDuties(currentSlot, dutiesResp.CurrentEpochDuties)
+}
+
+// Given the validator public key and an epoch, this gets the validator assignment.
+func (v *validator) duty(pubKey [48]byte, epoch uint64) (*ethpb.DutiesResponse_Duty, error) {
+	duty, ok := v.dutiesByEpoch[epoch]
+	if !ok {
+		return nil, fmt.Errorf("no duty found for epoch %d", epoch)
+	}
+	for _, d := range duty {
+		if bytes.Equal(pubKey[:], d.PublicKey) {
+			return d, nil
+		}
+	}
+	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
+}
+
+func (v *validator) requestSubnetSubscriptions(ctx context.Context, dutiesResp *ethpb.DutiesResponse, numKeys int) error {
 	subscribeSlots := make([]uint64, 0, numKeys)
 	subscribeCommitteeIDs := make([]uint64, 0, numKeys)
 	subscribeIsAggregator := make([]bool, 0, numKeys)
 	alreadySubscribed := make(map[[64]byte]bool)
-
 	for _, duty := range dutiesResp.CurrentEpochDuties {
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot

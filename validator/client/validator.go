@@ -46,6 +46,7 @@ type validator struct {
 	genesisTime                        uint64
 	ticker                             *slotutil.SlotTicker
 	db                                 *db.Store
+	dutiesLock                         sync.RWMutex
 	dutiesByEpoch                      map[uint64][]*ethpb.DutiesResponse_Duty
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	beaconClient                       ethpb.BeaconChainClient

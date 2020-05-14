@@ -1,9 +1,7 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,8 +9,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -21,8 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 var (
@@ -174,21 +173,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
-}
-
-// Given the validator public key, this gets the validator assignment.
-func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
-	if v.duties == nil {
-		return nil, errors.New("no duties for validators")
-	}
-
-	for _, duty := range v.duties.CurrentEpochDuties {
-		if bytes.Equal(pubKey[:], duty.PublicKey) {
-			return duty, nil
-		}
-	}
-
-	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
 }
 
 // Given validator's public key, this returns the signature of an attestation data.
