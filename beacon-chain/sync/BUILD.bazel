@@ -111,6 +111,7 @@ go_test(
         "subscriber_beacon_blocks_test.go",
         "subscriber_committee_index_beacon_attestation_test.go",
         "subscriber_test.go",
+        "sync_test.go",
         "validate_aggregate_proof_test.go",
         "validate_attester_slashing_test.go",
         "validate_beacon_blocks_test.go",
