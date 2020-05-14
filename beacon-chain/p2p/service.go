@@ -59,7 +59,7 @@ const lookupLimit = 15
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
-const maxBadResponses = 3
+const maxBadResponses = 5
 
 const (
 	pubsubFlood  = "flood"

@@ -7,6 +7,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 )
 
 // beaconAggregateProofSubscriber forwards the incoming validated aggregated attestation and proof to the
@@ -21,6 +23,15 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 		return errors.New("nil aggregate")
 	}
 	r.setAggregatorIndexEpochSeen(a.Message.Aggregate.Data.Target.Epoch, a.Message.AggregatorIndex)
+
+	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
+	// of a received aggregated attestation.
+	r.attestationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.AggregatedAttReceived,
+		Data: &operation.AggregatedAttReceivedData{
+			Attestation: a.Message,
+		},
+	})
 
 	return r.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }

@@ -70,7 +70,6 @@ func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 	msg := new(uint64)
 	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return err
 	}
 	valid, err := r.validateSequenceNum(*msg, stream.Conn().RemotePeer())

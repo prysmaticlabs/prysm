@@ -122,8 +122,9 @@ func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 	if err := r.sendRPCStatusRequest(ctx, id); err != nil {
 		return err
 	}
+	// Do not return an error for ping requests.
 	if err := r.sendPingRequest(ctx, id); err != nil {
-		return err
+		log.WithError(err).Error("Could not ping peer")
 	}
 	return nil
 }
@@ -150,11 +151,27 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}
 
 	if err := r.validateStatusMessage(ctx, m, stream); err != nil {
-		log.WithField("peer", stream.Conn().RemotePeer()).Debug("Invalid fork version from peer")
+		log.WithFields(logrus.Fields{
+			"peer":  stream.Conn().RemotePeer(),
+			"error": err}).Debug("Invalid status message from peer")
+
 		respCode := byte(0)
-		switch err.Error() {
-		case genericError:
+		switch err {
+		case errGeneric:
 			respCode = responseCodeServerError
+		case errWrongForkDigestVersion:
+			// Respond with our status and disconnect with the peer.
+			r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
+			if err := r.respondWithStatus(ctx, stream); err != nil {
+				return err
+			}
+			if err := stream.Close(); err != nil { // Close before disconnecting.
+				log.WithError(err).Error("Failed to close stream")
+			}
+			if err := r.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
+				return err
+			}
+			return nil
 		default:
 			respCode = responseCodeInvalidRequest
 			r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
@@ -183,6 +200,10 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}
 	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
 
+	return r.respondWithStatus(ctx, stream)
+}
+
+func (r *Service) respondWithStatus(ctx context.Context, stream network.Stream) error {
 	headRoot, err := r.chain.HeadRoot(ctx)
 	if err != nil {
 		return err
@@ -204,7 +225,6 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		log.WithError(err).Error("Failed to write to stream")
 	}
 	_, err = r.p2p.Encoding().EncodeWithLength(stream, resp)
-
 	return err
 }
 
@@ -238,10 +258,10 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	}
 	blk, err := r.db.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 	if err != nil {
-		return errors.New(genericError)
+		return errGeneric
 	}
 	if blk == nil {
-		return errors.New(genericError)
+		return errGeneric
 	}
 	// TODO(#5827) Verify the finalized block with the epoch in the
 	// status message

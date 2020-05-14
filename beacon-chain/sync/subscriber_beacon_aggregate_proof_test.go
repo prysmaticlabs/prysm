@@ -8,6 +8,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 )
 
@@ -19,6 +20,7 @@ func TestBeaconAggregateProofSubscriber_CanSave(t *testing.T) {
 	r := &Service{
 		attPool:              attestations.NewPool(),
 		seenAttestationCache: c,
+		attestationNotifier:  (&mock.ChainService{}).OperationNotifier(),
 	}
 
 	a := &ethpb.SignedAggregateAttestationAndProof{Message: &ethpb.AggregateAttestationAndProof{Aggregate: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}, AggregationBits: bitfield.Bitlist{0x07}}, AggregatorIndex: 100}}
