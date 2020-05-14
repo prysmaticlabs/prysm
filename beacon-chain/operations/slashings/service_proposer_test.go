@@ -481,7 +481,7 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 			fields: fields{
 				pending: slashings,
 			},
-			want: append(result[1:5], result[6:18g]...),
+			want: append(result[1:5], result[6:18]...),
 		},
 	}
 	for _, tt := range tests {
