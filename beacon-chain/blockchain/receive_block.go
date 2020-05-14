@@ -71,12 +71,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	// Apply state transition on the new block.
 	postState, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
-		if err == errAlreadyProcessed {
-			log.WithFields(logrus.Fields{
-				"root": fmt.Sprintf("%#x", blockRoot),
-			}).Debugf("Skipped processing block: %s", errAlreadyProcessed)
-			return nil
-		}
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -139,12 +133,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	// Apply state transition on the new block.
 	_, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
-		if err == errAlreadyProcessed {
-			log.WithFields(logrus.Fields{
-				"root": fmt.Sprintf("%#x", blockRoot),
-			}).Debugf("Skipped processing block: %s", errAlreadyProcessed)
-			return nil
-		}
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err

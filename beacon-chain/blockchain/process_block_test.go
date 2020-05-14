@@ -132,7 +132,7 @@ func TestStore_OnBlock(t *testing.T) {
 	}
 }
 
-func TestProcessBlock_DuplicateBlocks(t *testing.T) {
+func TestReceiveBlockNoVerify_DuplicateBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
@@ -169,7 +169,7 @@ func TestProcessBlock_DuplicateBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 	// sending a first duplicate block
-	if err := service.ReceiveBlockNoPubsub(ctx, random, root); err != nil {
+	if err := service.ReceiveBlockNoVerify(ctx, random, root); err != nil {
 		t.Fatal(err)
 	}
 	testutil.AssertLogsContain(t, hook, errAlreadyProcessed.Error())
@@ -182,7 +182,7 @@ func TestProcessBlock_DuplicateBlocks(t *testing.T) {
 	}
 
 	// sending a second duplicate block
-	if err := service.ReceiveBlockNoPubsub(ctx, random, root); err != nil {
+	if err := service.ReceiveBlockNoVerify(ctx, random, root); err != nil {
 		t.Fatal(err)
 	}
 	testutil.AssertLogsContain(t, hook, errAlreadyProcessed.Error())
