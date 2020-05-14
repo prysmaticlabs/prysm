@@ -22,8 +22,6 @@ import (
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 
-var errAlreadyProcessed = errors.New("block already processed")
-
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
 // The block's signing root should be computed before calling this method to avoid redundant
 // computation in this method and methods it calls into.
@@ -203,11 +201,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	b := signed.Block
-
-	// Exit early if we have already processed this block.
-	if s.hasInitSyncBlock(blockRoot) || s.beaconDB.HasBlock(ctx, blockRoot) {
-		return errAlreadyProcessed
-	}
 
 	// Retrieve incoming block's pre state.
 	preState, err := s.verifyBlkPreState(ctx, b)
