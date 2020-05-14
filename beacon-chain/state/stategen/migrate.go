@@ -20,7 +20,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 	// Verify migration is sensible. The new finalized point must increase the current split slot, and
 	// on an epoch boundary for hot state summary scheme to work.
 	currentSplitSlot := s.splitInfo.slot
-	if currentSplitSlot == 0 || currentSplitSlot > finalizedSlot {
+	if currentSplitSlot > finalizedSlot {
 		return nil
 	}
 
@@ -74,7 +74,8 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 			// Do not delete the current finalized state in case user wants to
 			// switch back to old state service, deleting the recent finalized state
 			// could cause issue switching back.
-			if s.beaconDB.HasState(ctx, r) && r != finalizedRoot {
+			lastArchivedIndexRoot := s.beaconDB.LastArchivedIndexRoot(ctx)
+			if s.beaconDB.HasState(ctx, r) && r != lastArchivedIndexRoot && r != finalizedRoot {
 				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
 					// For whatever reason if node is unable to delete a state due to
 					// state is finalized, it is more reasonable to continue than to exit.
