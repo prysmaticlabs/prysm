@@ -172,7 +172,7 @@ func TestProcessBlock_DuplicateBlocks(t *testing.T) {
 	if err := service.ReceiveBlockNoPubsub(ctx, random, root); err != nil {
 		t.Fatal(err)
 	}
-	testutil.AssertLogsContain(t, hook, ErrAlreadyProcessed.Error())
+	testutil.AssertLogsContain(t, hook, errAlreadyProcessed.Error())
 	hook.Reset()
 
 	random = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: roots[0]}}
@@ -185,7 +185,7 @@ func TestProcessBlock_DuplicateBlocks(t *testing.T) {
 	if err := service.ReceiveBlockNoPubsub(ctx, random, root); err != nil {
 		t.Fatal(err)
 	}
-	testutil.AssertLogsContain(t, hook, ErrAlreadyProcessed.Error())
+	testutil.AssertLogsContain(t, hook, errAlreadyProcessed.Error())
 }
 
 func TestRemoveStateSinceLastFinalized(t *testing.T) {
