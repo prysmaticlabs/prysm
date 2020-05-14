@@ -119,9 +119,7 @@ func (s *Service) Start() {
 				StartTime: genesis,
 			},
 		})
-		log.WithField(
-			"genesis time", genesis,
-		).Warn("Genesis time is in the future - waiting to start sync...")
+		log.Info("Chain started within the last epoch - not syncing")
 		return
 	}
 	currentSlot := helpers.SlotsSince(genesis)
