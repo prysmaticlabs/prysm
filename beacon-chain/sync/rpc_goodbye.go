@@ -8,6 +8,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -41,6 +42,22 @@ func (r *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Peer has sent a goodbye message")
 	// closes all streams with the peer
 	return r.p2p.Disconnect(stream.Conn().RemotePeer())
+}
+
+func (r *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id peer.ID) error {
+	if err := r.sendGoodByeMessage(ctx, code, id); err != nil {
+		log.WithFields(logrus.Fields{
+			"error": err,
+			"peer":  id,
+		}).Debug("Could not send goodbye message to peer")
+	}
+	// Add a short delay to allow the stream to flush before closing the connection.
+	// There is still a chance that the peer won't receive the message.
+	time.Sleep(50 * time.Millisecond)
+	if err := r.p2p.Disconnect(id); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {
