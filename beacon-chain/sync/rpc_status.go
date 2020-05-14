@@ -122,8 +122,9 @@ func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 	if err := r.sendRPCStatusRequest(ctx, id); err != nil {
 		return err
 	}
+	// Do not return an error for ping requests.
 	if err := r.sendPingRequest(ctx, id); err != nil {
-		return err
+		log.WithError(err).Error("Could not ping peer")
 	}
 	return nil
 }
