@@ -28,12 +28,9 @@ func TestFetchAccountStatuses_OK(t *testing.T) {
 			},
 		)
 	}
-	allStatuses, err := FetchAccountStatuses(ctx, mockClient, pubkeys)
+	_, err := FetchAccountStatuses(ctx, mockClient, pubkeys)
 	if err != nil {
 		t.Fatalf("FetchAccountStatuses failed with error: %v.", err)
-	}
-	if len(allStatuses) != NumBatches {
-		t.Fatalf("Want %d status arrays. Recieved %d", NumBatches, len(allStatuses))
 	}
 }
 

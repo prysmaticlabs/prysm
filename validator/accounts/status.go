@@ -31,7 +31,7 @@ const MaxRequestLimit = 5 // XXX: Should create flag to make parameter configura
 
 // MaxRequestKeys specifies the max amount of public keys allowed
 // in a single grpc request, when fetching account statuses.
-const MaxRequestKeys = 2048 // XXX: This is an arbitrary number.
+const MaxRequestKeys = 2000 // XXX: This is an arbitrary number.
 // Should compute max keys allowed before reponse exceeds GrpcMaxCallRecvMsgSizeFlag.
 
 // RunStatusCommand is the entry point to the `validator status` command.
@@ -48,7 +48,7 @@ func RunStatusCommand(
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("Failed to dial beacon node endpoint at %s", endpoint))
 	}
-	allStatuses, err := FetchAccountStatuses(
+	statuses, err := FetchAccountStatuses(
 		ctx, ethpb.NewBeaconNodeValidatorClient(conn), pubkeys)
 	if e := conn.Close(); e != nil {
 		log.WithError(e).Error("Could not close connection to beacon node")
@@ -56,8 +56,7 @@ func RunStatusCommand(
 	if err != nil {
 		return errors.Wrap(err, "Could not fetch account statuses from the beacon node")
 	}
-	sortedStatuses := mergeStatuses(allStatuses)
-	printStatuses(sortedStatuses)
+	printStatuses(statuses)
 	return nil
 }
 
@@ -114,7 +113,7 @@ func constructDialOptions(
 func FetchAccountStatuses(
 	ctx context.Context,
 	beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient,
-	pubkeys [][]byte) ([][]ValidatorStatusMetadata, error) {
+	pubkeys [][]byte) ([]ValidatorStatusMetadata, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.FetchAccountStatuses")
 	defer span.End()
 
@@ -144,7 +143,7 @@ func FetchAccountStatuses(
 		}
 	}
 
-	return allStatuses, err
+	return mergeStatuses(allStatuses), err
 }
 
 func fetchValidatorStatus(
