@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -70,6 +71,12 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	// Apply state transition on the new block.
 	postState, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
+		if err == ErrAlreadyProcessed {
+			log.WithFields(logrus.Fields{
+				"root": fmt.Sprintf("%#x", blockRoot),
+			}).Debugf("%s", ErrAlreadyProcessed)
+			return nil
+		}
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -132,6 +139,12 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	// Apply state transition on the new block.
 	_, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
+		if err == ErrAlreadyProcessed {
+			log.WithFields(logrus.Fields{
+				"root": fmt.Sprintf("%#x", blockRoot),
+			}).Debugf("%s", ErrAlreadyProcessed)
+			return nil
+		}
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -183,6 +196,12 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
 	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy, blockRoot); err != nil {
+		if err == ErrAlreadyProcessed {
+			log.WithFields(logrus.Fields{
+				"root": fmt.Sprintf("%#x", blockRoot),
+			}).Debugf("%s", ErrAlreadyProcessed)
+			return nil
+		}
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
