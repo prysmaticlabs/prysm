@@ -1915,9 +1915,9 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	if err := headState.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	publicKey1 := bytesutil.ToBytes32([]byte{1})
-	publicKey2 := bytesutil.ToBytes32([]byte{2})
-	publicKey3 := bytesutil.ToBytes32([]byte{3})
+	publicKey1 := bytesutil.ToBytes48([]byte{1})
+	publicKey2 := bytesutil.ToBytes48([]byte{2})
+	publicKey3 := bytesutil.ToBytes48([]byte{3})
 	validators := []*ethpb.Validator{
 		{
 			PublicKey:       publicKey1[:],
@@ -1962,6 +1962,197 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKey1[:], publicKey2[:], publicKey3[:]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v\nReceived %v", want, res)
+	}
+}
+
+func TestGetValidatorPerformance_Indices(t *testing.T) {
+	ctx := context.Background()
+	epoch := uint64(1)
+	defaultBal := params.BeaconConfig().MaxEffectiveBalance
+	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
+	state.ValidatorSummary = []*precompute.Validator{
+		{
+			// nil to make sure it skips inactive validators.
+		},
+		{
+			CurrentEpochEffectiveBalance: defaultBal,
+			BeforeEpochTransitionBalance: defaultBal,
+			AfterEpochTransitionBalance:  extraBal,
+			InclusionSlot:                3,
+			InclusionDistance:            1,
+			IsPrevEpochAttester:          true,
+			IsPrevEpochTargetAttester:    true,
+			IsPrevEpochHeadAttester:      true,
+		},
+		{
+			CurrentEpochEffectiveBalance: defaultBal,
+			BeforeEpochTransitionBalance: extraBal,
+			AfterEpochTransitionBalance:  params.BeaconConfig().MaxEffectiveBalance + (2 * params.BeaconConfig().GweiPerEth),
+			InclusionSlot:                5,
+			InclusionDistance:            2,
+			IsPrevEpochAttester:          false,
+			IsPrevEpochTargetAttester:    false,
+			IsPrevEpochHeadAttester:      true,
+		},
+	}
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(helpers.StartSlot(epoch + 1)); err != nil {
+		t.Fatal(err)
+	}
+	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
+	if err := headState.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
+	publicKey1 := bytesutil.ToBytes48([]byte{1})
+	publicKey2 := bytesutil.ToBytes48([]byte{2})
+	publicKey3 := bytesutil.ToBytes48([]byte{3})
+	validators := []*ethpb.Validator{
+		{
+			PublicKey:       publicKey1[:],
+			ActivationEpoch: 5,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			PublicKey:        publicKey2[:],
+			EffectiveBalance: defaultBal,
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			PublicKey:        publicKey3[:],
+			EffectiveBalance: defaultBal,
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	if err := headState.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			// 10 epochs into the future.
+			State: headState,
+		},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+
+	want := &ethpb.ValidatorPerformanceResponse{
+		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+		InclusionSlots:                []uint64{3, 5},
+		InclusionDistances:            []uint64{1, 2},
+		CorrectlyVotedSource:          []bool{true, false},
+		CorrectlyVotedTarget:          []bool{true, false},
+		CorrectlyVotedHead:            []bool{true, true},
+		BalancesBeforeEpochTransition: []uint64{defaultBal, extraBal},
+		BalancesAfterEpochTransition:  []uint64{extraBal, extraBal + params.BeaconConfig().GweiPerEth},
+		MissingValidators:             [][]byte{publicKey1[:]},
+	}
+
+	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+		Indices: []uint64{0, 1, 2},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v\nReceived %v", want, res)
+	}
+}
+
+func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
+	ctx := context.Background()
+	epoch := uint64(1)
+	defaultBal := params.BeaconConfig().MaxEffectiveBalance
+	extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
+	state.ValidatorSummary = []*precompute.Validator{
+		{
+			// nil to make sure it skips inactive validators.
+		},
+		{
+			CurrentEpochEffectiveBalance: defaultBal,
+			BeforeEpochTransitionBalance: defaultBal,
+			AfterEpochTransitionBalance:  extraBal,
+			InclusionSlot:                3,
+			InclusionDistance:            1,
+			IsPrevEpochAttester:          true,
+			IsPrevEpochTargetAttester:    true,
+			IsPrevEpochHeadAttester:      true,
+		},
+		{
+			CurrentEpochEffectiveBalance: defaultBal,
+			BeforeEpochTransitionBalance: extraBal,
+			AfterEpochTransitionBalance:  params.BeaconConfig().MaxEffectiveBalance + (2 * params.BeaconConfig().GweiPerEth),
+			InclusionSlot:                5,
+			InclusionDistance:            2,
+			IsPrevEpochAttester:          false,
+			IsPrevEpochTargetAttester:    false,
+			IsPrevEpochHeadAttester:      true,
+		},
+	}
+	headState := testutil.NewBeaconState()
+	if err := headState.SetSlot(helpers.StartSlot(epoch + 1)); err != nil {
+		t.Fatal(err)
+	}
+	balances := []uint64{defaultBal, extraBal, extraBal + params.BeaconConfig().GweiPerEth}
+	if err := headState.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
+	publicKey1 := bytesutil.ToBytes48([]byte{1})
+	publicKey2 := bytesutil.ToBytes48([]byte{2})
+	publicKey3 := bytesutil.ToBytes48([]byte{3})
+	validators := []*ethpb.Validator{
+		{
+			PublicKey:       publicKey1[:],
+			ActivationEpoch: 5,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			PublicKey:        publicKey2[:],
+			EffectiveBalance: defaultBal,
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+		},
+		{
+			PublicKey:        publicKey3[:],
+			EffectiveBalance: defaultBal,
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+		},
+	}
+	if err := headState.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			// 10 epochs into the future.
+			State: headState,
+		},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+
+	want := &ethpb.ValidatorPerformanceResponse{
+		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
+		InclusionSlots:                []uint64{3, 5},
+		InclusionDistances:            []uint64{1, 2},
+		CorrectlyVotedSource:          []bool{true, false},
+		CorrectlyVotedTarget:          []bool{true, false},
+		CorrectlyVotedHead:            []bool{true, true},
+		BalancesBeforeEpochTransition: []uint64{defaultBal, extraBal},
+		BalancesAfterEpochTransition:  []uint64{extraBal, extraBal + params.BeaconConfig().GweiPerEth},
+		MissingValidators:             [][]byte{publicKey1[:]},
+	}
+	// Index 2 and publicKey3 points to the same validator.
+	// Should not return duplicates.
+	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
+		PublicKeys: [][]byte{publicKey1[:], publicKey3[:]}, Indices: []uint64{1, 2},
 	})
 	if err != nil {
 		t.Fatal(err)

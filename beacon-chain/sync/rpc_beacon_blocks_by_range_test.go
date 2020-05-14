@@ -33,13 +33,14 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	}
 
 	// Populate the database with blocks that would match the request.
-	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i++ {
+	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
 		if err := d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: i}}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
+	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false)}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -66,6 +67,13 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
+	}
+
+	// Make sure that rate limiter doesn't limit capacity exceedingly.
+	remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
+	expectedCapacity := int64(req.Count*10 - req.Count)
+	if remainingCapacity != expectedCapacity {
+		t.Fatalf("Unexpected rate limiting capacity, expected: %v, got: %v", expectedCapacity, remainingCapacity)
 	}
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
