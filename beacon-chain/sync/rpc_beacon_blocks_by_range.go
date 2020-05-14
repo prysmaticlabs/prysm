@@ -61,7 +61,6 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	)
 	for startSlot <= endReqSlot {
 		remainingBucketCapacity = r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
-
 		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
 			r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 			if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
@@ -75,7 +74,6 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			r.writeErrorResponseToStream(responseCodeInvalidRequest, rateLimitedError, stream)
 			return errors.New(rateLimitedError)
 		}
-		r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(allowedBlocksPerSecond))
 
 		// TODO(3147): Update this with reasonable constraints.
 		if endSlot-startSlot > rangeLimit || m.Step == 0 {
@@ -87,6 +85,12 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 		if err := r.writeBlockRangeToStream(ctx, startSlot, endSlot, m.Step, stream); err != nil {
 			return err
+		}
+
+		// Decrease allowed blocks capacity by the number of streamed blocks.
+		if startSlot <= endSlot {
+			r.blocksRateLimiter.Add(
+				stream.Conn().RemotePeer().String(), int64(1+(endSlot-startSlot)/m.Step))
 		}
 
 		// Recalculate start and end slots for the next batch to be returned to the remote peer.
