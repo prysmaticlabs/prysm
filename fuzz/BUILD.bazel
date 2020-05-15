@@ -186,6 +186,7 @@ go_fuzz_test(
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/mock:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//host:go_default_library",
