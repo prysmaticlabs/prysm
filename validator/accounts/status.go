@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
@@ -219,16 +220,15 @@ func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
 
 func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
 	for _, v := range validatorStatuses {
-		m := v.Metadata
 		key := v.PublicKey
-		fmt.Printf(
-			"ValidatorKey: 0x%s, Status: %v\n", hex.EncodeToString(key), m.Status)
-		fmt.Printf(
-			"Eth1DepositBlockNumber: %s, DepositInclusionSlot: %s, ",
-			fieldToString(m.Eth1DepositBlockNumber), fieldToString(m.DepositInclusionSlot))
-		fmt.Printf(
-			"ActivationEpoch: %s, PositionInActivationQueue: %s\n",
-			fieldToString(m.ActivationEpoch), fieldToString(m.PositionInActivationQueue))
+		m := v.Metadata
+		log.Infof("Status: %v PublicKey=0x%s", m.Status, hex.EncodeToString(key))
+		log.WithFields(logrus.Fields{
+			"Eth1DepositBlockNumber":    fieldToString(m.Eth1DepositBlockNumber),
+			"DepositInclusionSlot":      fieldToString(m.DepositInclusionSlot),
+			"ActivationEpoch":           fieldToString(m.ActivationEpoch),
+			"PositionInActivationQueue": fieldToString(m.PositionInActivationQueue),
+		}).Info("Metadata:")
 	}
 }
 
