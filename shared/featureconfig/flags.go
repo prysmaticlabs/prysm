@@ -147,6 +147,10 @@ var (
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
 	}
+	skipRegenHistoricalStates = &cli.BoolFlag{
+		Name:  "skip-regen-historical-states",
+		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -429,6 +433,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableInitSyncBatchSaveBlocks,
 	enableStateRefCopy,
 	waitForSyncedFlag,
+	skipRegenHistoricalStates,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
