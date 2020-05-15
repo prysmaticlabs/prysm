@@ -272,8 +272,10 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 			return err
 		}
 	} else {
-		if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
-			return err
+		if !featureconfig.Get().SkipRegenHistoricalStates {
+			if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
+				return err
+			}
 		}
 	}
 
