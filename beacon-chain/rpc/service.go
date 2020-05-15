@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -277,7 +278,11 @@ func (s *Service) Start() {
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	if s.enableDebugRPCEndpoints {
 		log.Info("Enabled debug RPC endpoints")
-		pbrpc.RegisterDebugServer(s.grpcServer, beaconChainServer)
+		debugServer := &debug.Server{
+			GenesisTimeFetcher: s.genesisTimeFetcher,
+			StateGen:           s.stateGen,
+		}
+		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
 	}
 	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
