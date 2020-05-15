@@ -26,7 +26,7 @@ type Validator interface {
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
-	UpdateDuties(ctx context.Context, slot uint64) error
+	StreamDuties(ctx context.Context) error
 	UpdateProtections(ctx context.Context, slot uint64) error
 	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
@@ -43,8 +43,8 @@ type Validator interface {
 // Order of operations:
 // 1 - Initialize validator data
 // 2 - Wait for validator activation
-// 3 - Wait for the next slot start
-// 4 - Update assignments
+// 3 - Listen to a server-side stream of validator duties
+// 4 - Wait for the next slot start
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
@@ -64,13 +64,20 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
+	log.Info("Got activation")
 	headSlot, err := v.CanonicalHeadSlot(ctx)
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)
 	}
-	if err := v.UpdateDuties(ctx, headSlot); err != nil {
-		handleAssignmentError(err, headSlot)
-	}
+	log.Info("Got canonical head slot")
+	// We listen to a server-side stream of validator duties in the
+	// background of the validator client.
+	go func() {
+		log.Info("Requesting duties stream")
+		if err := v.StreamDuties(ctx); err != nil {
+			handleAssignmentError(err, headSlot)
+		}
+	}()
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
@@ -81,21 +88,12 @@ func run(ctx context.Context, v Validator) {
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 			deadline := v.SlotDeadline(slot)
-			slotCtx, cancel := context.WithDeadline(ctx, deadline)
+			slotCtx, _ := context.WithDeadline(ctx, deadline)
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.WithError(err).Error("Could not report validator's rewards/penalties")
-			}
-
-			// Keep trying to update assignments if they are nil or if we are past an
-			// epoch transition in the beacon node's state.
-			if err := v.UpdateDuties(ctx, slot); err != nil {
-				handleAssignmentError(err, slot)
-				cancel()
-				span.End()
-				continue
 			}
 
 			if featureconfig.Get().ProtectAttester {
