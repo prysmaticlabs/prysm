@@ -141,6 +141,13 @@ contract in order to activate the validator client`,
 					Name:        "status",
 					Description: `list the validator status for existing validator keys`,
 					Flags: []cli.Flag{
+						cmd.GrpcMaxCallRecvMsgSizeFlag,
+						flags.BeaconRPCProviderFlag,
+						flags.CertFlag,
+						flags.GrpcHeadersFlag,
+						flags.GrpcRetriesFlag,
+						flags.KeyManager,
+						flags.KeyManagerOpts,
 						flags.KeystorePathFlag,
 						flags.PasswordFlag,
 					},
@@ -153,7 +160,7 @@ contract in order to activate the validator client`,
 						} else {
 							keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
 							if err != nil {
-								log.WithError(err).Error("Could not list keys")
+								return err
 							}
 							pubKeys, err = accounts.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
 						}
