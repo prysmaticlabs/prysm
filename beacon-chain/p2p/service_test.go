@@ -111,7 +111,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.stateNotifier = &mock.MockStateNotifier{}
+	s.stateNotifier = &mock.StateNotifier{}
 	s.dv5Listener = &mockListener{}
 	exitRoutine := make(chan bool)
 	go func() {
@@ -222,7 +222,7 @@ func TestListenForNewNodes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.stateNotifier = &mock.MockStateNotifier{}
+	s.stateNotifier = &mock.StateNotifier{}
 	exitRoutine := make(chan bool)
 	go func() {
 		s.Start()

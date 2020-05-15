@@ -44,7 +44,7 @@ type ChainService struct {
 // StateNotifier mocks the same method in the chain service.
 func (ms *ChainService) StateNotifier() statefeed.Notifier {
 	if ms.stateNotifier == nil {
-		ms.stateNotifier = &MockStateNotifier{}
+		ms.stateNotifier = &StateNotifier{}
 	}
 	return ms.stateNotifier
 }
@@ -52,31 +52,31 @@ func (ms *ChainService) StateNotifier() statefeed.Notifier {
 // BlockNotifier mocks the same method in the chain service.
 func (ms *ChainService) BlockNotifier() blockfeed.Notifier {
 	if ms.blockNotifier == nil {
-		ms.blockNotifier = &MockBlockNotifier{}
+		ms.blockNotifier = &BlockNotifier{}
 	}
 	return ms.blockNotifier
 }
 
-// MockBlockNotifier mocks the block notifier.
-type MockBlockNotifier struct {
+// BlockNotifier mocks the block notifier.
+type BlockNotifier struct {
 	feed *event.Feed
 }
 
 // BlockFeed returns a block feed.
-func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
+func (msn *BlockNotifier) BlockFeed() *event.Feed {
 	if msn.feed == nil {
 		msn.feed = new(event.Feed)
 	}
 	return msn.feed
 }
 
-// MockStateNotifier mocks the state notifier.
-type MockStateNotifier struct {
+// StateNotifier mocks the state notifier.
+type StateNotifier struct {
 	feed *event.Feed
 }
 
 // StateFeed returns a state feed.
-func (msn *MockStateNotifier) StateFeed() *event.Feed {
+func (msn *StateNotifier) StateFeed() *event.Feed {
 	if msn.feed == nil {
 		msn.feed = new(event.Feed)
 	}
@@ -86,18 +86,18 @@ func (msn *MockStateNotifier) StateFeed() *event.Feed {
 // OperationNotifier mocks the same method in the chain service.
 func (ms *ChainService) OperationNotifier() opfeed.Notifier {
 	if ms.opNotifier == nil {
-		ms.opNotifier = &MockOperationNotifier{}
+		ms.opNotifier = &OperationNotifier{}
 	}
 	return ms.opNotifier
 }
 
-// MockOperationNotifier mocks the operation notifier.
-type MockOperationNotifier struct {
+// OperationNotifier mocks the operation notifier.
+type OperationNotifier struct {
 	feed *event.Feed
 }
 
 // OperationFeed returns an operation feed.
-func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
+func (mon *OperationNotifier) OperationFeed() *event.Feed {
 	if mon.feed == nil {
 		mon.feed = new(event.Feed)
 	}

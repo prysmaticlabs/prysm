@@ -348,7 +348,7 @@ func TestStreamDuties_OK(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateNotifier: &mock.MockStateNotifier{},
+		StateNotifier: &mock.StateNotifier{},
 	}
 
 	// Test the first validator in registry.
@@ -419,7 +419,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateNotifier: &mock.MockStateNotifier{},
+		StateNotifier: &mock.StateNotifier{},
 	}
 
 	// Test the first validator in registry.

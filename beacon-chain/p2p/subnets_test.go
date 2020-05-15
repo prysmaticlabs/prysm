@@ -78,7 +78,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		MaxPeers:            30,
 		UDPPort:             uint(port),
 	}
-	cfg.StateNotifier = &mock.MockStateNotifier{}
+	cfg.StateNotifier = &mock.StateNotifier{}
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)

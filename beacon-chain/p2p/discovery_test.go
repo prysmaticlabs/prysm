@@ -190,7 +190,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg.TCPPort = 14500
 	cfg.UDPPort = 14501
 	cfg.StaticPeers = staticPeers
-	cfg.StateNotifier = &mock.MockStateNotifier{}
+	cfg.StateNotifier = &mock.StateNotifier{}
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
