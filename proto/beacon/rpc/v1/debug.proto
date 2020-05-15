@@ -21,7 +21,7 @@ service Debug {
     // SetLoggingLevel sets the log-level of the beacon node programmatically.
     rpc SetLoggingLevel(LoggingLevelRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/debug/logging"
+            post: "/eth/v1alpha1/debug/logging"
         };
     }
 }
