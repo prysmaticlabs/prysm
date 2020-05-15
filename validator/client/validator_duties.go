@@ -24,7 +24,6 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.StreamDuties")
 	defer span.End()
 
-	log.Info("Fetching validating keys")
 	validatingKeys, err := v.keyManager.FetchValidatingKeys()
 	if err != nil {
 		return err
@@ -33,7 +32,6 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 	req := &ethpb.DutiesRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
-	log.Info("Requesting stream")
 	stream, err := v.validatorClient.StreamDuties(ctx, req)
 	if err != nil {
 		return errors.Wrap(err, "Could not setup validator duties streaming client")
