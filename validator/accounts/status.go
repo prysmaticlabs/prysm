@@ -26,7 +26,7 @@ type ValidatorStatusMetadata struct {
 	Metadata  *ethpb.ValidatorStatusResponse
 }
 
-// MaxRequestLimit specifies the max grpc requests allowed
+// MaxRequestLimit specifies the max concurrent grpc requests allowed
 // to fetch account statuses.
 const MaxRequestLimit = 5 // XXX: Should create flag to make parameter configurable.
 
@@ -43,7 +43,10 @@ func RunStatusCommand(
 	maxCallRecvMsgSize int,
 	grpcRetries uint,
 	grpcHeaders []string) error {
-	dialOpts := constructDialOptions(maxCallRecvMsgSize, withCert, grpcHeaders, grpcRetries)
+	dialOpts, err := constructDialOptions(maxCallRecvMsgSize, withCert, grpcHeaders, grpcRetries)
+	if err != nil {
+		return err
+	}
 	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("Failed to dial beacon node endpoint at %s", endpoint))
@@ -64,13 +67,12 @@ func constructDialOptions(
 	maxCallRecvMsgSize int,
 	withCert string,
 	grpcHeaders []string,
-	grpcRetries uint) []grpc.DialOption {
+	grpcRetries uint) ([]grpc.DialOption, error) {
 	var transportSecurity grpc.DialOption
 	if withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(withCert, "")
 		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
-			return nil
+			return nil, errors.Wrap(err, fmt.Sprintf("Could not get valid credentials: %v", err))
 		}
 		transportSecurity = grpc.WithTransportCredentials(creds)
 	} else {
@@ -105,7 +107,7 @@ func constructDialOptions(
 		grpc.WithBlock(),
 		grpc.WithTimeout(
 			10 * time.Second /* Block for 10 seconds to see if we can connect to beacon node */),
-	}
+	}, nil
 }
 
 // FetchAccountStatuses fetches validator statuses from the BeaconNodeValidatorClient
