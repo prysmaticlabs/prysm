@@ -15,7 +15,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -23,7 +23,6 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -31,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/grpc/status"
@@ -48,7 +48,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	}
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
+		HeadFetcher: &chainMock.ChainService{
 			State: st,
 		},
 	}
@@ -80,7 +80,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
+		HeadFetcher: &chainMock.ChainService{
 			State: st,
 		},
 	}
@@ -579,7 +579,7 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 
 	bs := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &mock.ChainService{State: state},
+		GenesisTimeFetcher: &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	_, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
@@ -690,7 +690,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &mock.ChainService{State: state},
+		GenesisTimeFetcher: &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
@@ -809,7 +809,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB: db,
-		GenesisTimeFetcher: &mock.ChainService{
+		GenesisTimeFetcher: &chainMock.ChainService{
 			Genesis: time.Now(),
 		},
 		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
@@ -981,7 +981,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	chainService := &mock.ChainService{}
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),
@@ -990,7 +990,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
+	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
 		if err := server.StreamIndexedAttestations(
@@ -1108,14 +1108,14 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		indexedAtts[i] = idxAtt
 	}
 
-	chainService := &mock.ChainService{}
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		BeaconDB: db,
 		Ctx:      context.Background(),
-		HeadFetcher: &mock.ChainService{
+		HeadFetcher: &chainMock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &mock.ChainService{
+		GenesisTimeFetcher: &chainMock.ChainService{
 			Genesis: time.Now(),
 		},
 		AttestationNotifier:         chainService.OperationNotifier(),
@@ -1123,7 +1123,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		StateGen:                    stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
-	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
+	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
 	for i := 0; i < len(indexedAtts); i++ {
 		if i == len(indexedAtts)-1 {
 			mockStream.EXPECT().Send(indexedAtts[i]).Do(func(arg0 interface{}) {
@@ -1149,7 +1149,7 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
-	chainService := &mock.ChainService{}
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),
@@ -1158,7 +1158,7 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
+	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
 		if err := server.StreamAttestations(
@@ -1178,7 +1178,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	chainService := &mock.ChainService{}
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),
@@ -1190,7 +1190,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
 	}
 
-	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
+	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
 	mockStream.EXPECT().Send(atts[0])
 	mockStream.EXPECT().Send(atts[1])
 	mockStream.EXPECT().Send(atts[2]).Do(func(arg0 interface{}) {
