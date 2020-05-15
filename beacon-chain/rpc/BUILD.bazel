@@ -20,6 +20,7 @@ go_library(
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/rpc/beacon:go_default_library",
+        "//beacon-chain/rpc/debug:go_default_library",
         "//beacon-chain/rpc/node:go_default_library",
         "//beacon-chain/rpc/validator:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
