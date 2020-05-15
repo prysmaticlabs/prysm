@@ -115,6 +115,12 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	err = r.validateStatusMessage(ctx, msg, stream)
 	if err != nil {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		// Disconnect if on a wrong fork.
+		if err == errWrongForkDigestVersion {
+			if err := r.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
+				return err
+			}
+		}
 	}
 	return err
 }
@@ -125,7 +131,7 @@ func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 	}
 	// Do not return an error for ping requests.
 	if err := r.sendPingRequest(ctx, id); err != nil {
-		log.WithError(err).Error("Could not ping peer")
+		log.WithError(err).Debug("Could not ping peer")
 	}
 	return nil
 }
