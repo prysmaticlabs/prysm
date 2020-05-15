@@ -11,7 +11,6 @@ import (
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/trace"
@@ -183,17 +182,6 @@ func fetchValidatorStatus(
 	})
 
 	statusChannel <- statuses
-}
-
-// ExtractPublicKeys extracts only the public keys from the decrypted keys from the keystore.
-func ExtractPublicKeys(decryptedKeys map[string]*keystore.Key) [][]byte {
-	i := 0
-	pubkeys := make([][]byte, len(decryptedKeys))
-	for _, key := range decryptedKeys {
-		pubkeys[i] = key.PublicKey.Marshal()
-		i++
-	}
-	return pubkeys
 }
 
 // mergeStatuses merges k sorted ValidatorStatusMetadata slices to 1. Runs in O(nlogk) time.

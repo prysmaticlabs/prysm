@@ -148,13 +148,13 @@ contract in order to activate the validator client`,
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
-						decryptedKeys, err := accounts.DecryptKeysFromKeystore(keystorePath, passphrase)
+						pubkeys, err := accounts.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
 						if err != nil {
-							log.WithError(err).Fatalf("Could not decrypt keys from keystore in path %s", keystorePath)
+							return err
 						}
 						return accounts.RunStatusCommand(
 							cliCtx,
-							accounts.ExtractPublicKeys(decryptedKeys),
+							pubkeys,
 							cliCtx.String(flags.CertFlag.Name),
 							cliCtx.String(flags.BeaconRPCProviderFlag.Name),
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
