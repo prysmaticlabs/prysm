@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -40,6 +41,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 	// The initial count for the first batch to be returned back.
 	count := m.Count
+	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
 	if count > uint64(allowedBlocksPerSecond) {
 		count = uint64(allowedBlocksPerSecond)
 	}
@@ -61,7 +63,6 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	)
 	for startSlot <= endReqSlot {
 		remainingBucketCapacity = r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
-
 		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
 			r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 			if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
@@ -75,7 +76,6 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			r.writeErrorResponseToStream(responseCodeInvalidRequest, rateLimitedError, stream)
 			return errors.New(rateLimitedError)
 		}
-		r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(allowedBlocksPerSecond))
 
 		// TODO(3147): Update this with reasonable constraints.
 		if endSlot-startSlot > rangeLimit || m.Step == 0 {
@@ -87,6 +87,12 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 		if err := r.writeBlockRangeToStream(ctx, startSlot, endSlot, m.Step, stream); err != nil {
 			return err
+		}
+
+		// Decrease allowed blocks capacity by the number of streamed blocks.
+		if startSlot <= endSlot {
+			r.blocksRateLimiter.Add(
+				stream.Conn().RemotePeer().String(), int64(1+(endSlot-startSlot)/m.Step))
 		}
 
 		// Recalculate start and end slots for the next batch to be returned to the remote peer.
