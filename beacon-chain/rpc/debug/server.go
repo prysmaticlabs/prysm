@@ -30,12 +30,12 @@ type Server struct {
 func (ds *Server) SetLoggingLevel(ctx context.Context, req *pbrpc.LoggingLevelRequest) (*ptypes.Empty, error) {
 	var verbosity string
 	switch req.Level {
+	case pbrpc.LoggingLevelRequest_INFO:
+		verbosity = "info"
 	case pbrpc.LoggingLevelRequest_DEBUG:
 		verbosity = "debug"
 	case pbrpc.LoggingLevelRequest_TRACE:
 		verbosity = "trace"
-	case pbrpc.LoggingLevelRequest_INFO:
-		verbosity = "info"
 	default:
 		return nil, status.Error(codes.InvalidArgument, "expected valid verbosity level as argument")
 	}
