@@ -50,7 +50,7 @@ func RunStatusCommand(
 	}
 	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Failed to dial beacon node endpoint at %s", endpoint))
+		return errors.Wrapf(err, "Failed to dial beacon node endpoint at %s", endpoint)
 	}
 	statuses, err := FetchAccountStatuses(
 		ctx, ethpb.NewBeaconNodeValidatorClient(conn), pubkeys)
@@ -73,7 +73,7 @@ func constructDialOptions(
 	if withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(withCert, "")
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Could not get valid credentials: %v", err))
+			return nil, errors.Wrapf(err, "Could not get valid credentials: %v", err)
 		}
 		transportSecurity = grpc.WithTransportCredentials(creds)
 	} else {
@@ -165,9 +165,8 @@ func fetchValidatorStatus(
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pubkeys}
 	resp, err := rpcProvider.MultipleValidatorStatus(ctx, req)
 	if err != nil {
-		errorChannel <- errors.Wrap(
-			err,
-			fmt.Sprintf("Failed to fetch validator statuses for %d key(s)", len(pubkeys)))
+		errorChannel <- errors.Wrapf(
+			err, "Failed to fetch validator statuses for %d key(s)", len(pubkeys))
 		return
 	}
 	// Convert response to ValidatorStatusMetadata and sort.
