@@ -37,11 +37,11 @@ func (ds *Server) SetLoggingLevel(ctx context.Context, req *pbrpc.LoggingLevelRe
 	case pbrpc.LoggingLevelRequest_TRACE:
 		verbosity = "trace"
 	default:
-		return nil, status.Error(codes.InvalidArgument, "expected valid verbosity level as argument")
+		return nil, status.Error(codes.InvalidArgument, "Expected valid verbosity level as argument")
 	}
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "could not parse verbosity level")
+		return nil, status.Error(codes.Internal, "Could not parse verbosity level")
 	}
 	logrus.SetLevel(level)
 	if level == logrus.TraceLevel {

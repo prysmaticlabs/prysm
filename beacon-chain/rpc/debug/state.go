@@ -18,7 +18,7 @@ func (ds *Server) GetBeaconState(
 	req *pbrpc.BeaconStateRequest,
 ) (*pbp2p.BeaconState, error) {
 	if !featureconfig.Get().NewStateMgmt {
-		return nil, status.Error(codes.FailedPrecondition, "requires --enable-new-state-mgmt to function")
+		return nil, status.Error(codes.FailedPrecondition, "Requires --enable-new-state-mgmt to function")
 	}
 
 	switch q := req.QueryFilter.(type) {
@@ -36,16 +36,16 @@ func (ds *Server) GetBeaconState(
 
 		st, err := ds.StateGen.StateBySlot(ctx, q.Slot)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not compute state by slot: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not compute state by slot: %v", err)
 		}
 		return st.CloneInnerState(), nil
 	case *pbrpc.BeaconStateRequest_BlockRoot:
 		st, err := ds.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(q.BlockRoot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not compute state by block root: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not compute state by block root: %v", err)
 		}
 		return st.CloneInnerState(), nil
 	default:
-		return nil, status.Error(codes.InvalidArgument, "need to specify either a block root or slot to request state")
+		return nil, status.Error(codes.InvalidArgument, "Need to specify either a block root or slot to request state")
 	}
 }
