@@ -10,7 +10,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -48,7 +47,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 
 	Server := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: st},
+		HeadFetcher: &mock.ChainService{State: st},
 	}
 
 	req := &ethpb.ValidatorIndexRequest{
@@ -88,7 +87,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		DepositFetcher:     depositcache.NewDepositCache(),
-		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		HeadFetcher:        &mock.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey(1)},
@@ -96,14 +95,14 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockChainStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
-	mockChainStream.EXPECT().Context().Return(context.Background())
-	mockChainStream.EXPECT().Send(gomock.Any()).Return(nil)
-	mockChainStream.EXPECT().Context().Return(context.Background())
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
+	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
+	mockStream.EXPECT().Context().Return(context.Background())
 	exitRoutine := make(chan bool)
 	go func(tt *testing.T) {
 		want := "context canceled"
-		if err := vs.WaitForActivation(req, mockChainStream); err == nil || !strings.Contains(err.Error(), want) {
+		if err := vs.WaitForActivation(req, mockStream); err == nil || !strings.Contains(err.Error(), want) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -175,7 +174,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
 		DepositFetcher:     depositCache,
-		HeadFetcher:        &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		HeadFetcher:        &mock.ChainService{State: trie, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -183,9 +182,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	defer ctrl.Finish()
-	mockChainStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
-	mockChainStream.EXPECT().Context().Return(context.Background())
-	mockChainStream.EXPECT().Send(
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
+	mockStream.EXPECT().Send(
 		&ethpb.ValidatorActivationResponse{
 			Statuses: []*ethpb.ValidatorActivationResponse_Status{
 				{PublicKey: pubKey1,
@@ -202,7 +201,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		},
 	).Return(nil)
 
-	if err := vs.WaitForActivation(req, mockChainStream); err != nil {
+	if err := vs.WaitForActivation(req, mockStream); err != nil {
 		t.Fatalf("Could not setup wait for activation stream: %v", err)
 	}
 }
@@ -254,7 +253,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		ChainStartFetcher:  &mockPOW.POWChain{},
-		HeadFetcher:        &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		HeadFetcher:        &mock.ChainService{State: trie, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2, pubKey3},
@@ -262,9 +261,9 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	defer ctrl.Finish()
-	mockChainStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
-	mockChainStream.EXPECT().Context().Return(context.Background())
-	mockChainStream.EXPECT().Send(
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
+	mockStream.EXPECT().Send(
 		&ethpb.ValidatorActivationResponse{
 			Statuses: []*ethpb.ValidatorActivationResponse_Status{
 				{
@@ -292,7 +291,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 		},
 	).Return(nil)
 
-	if err := vs.WaitForActivation(req, mockChainStream); err != nil {
+	if err := vs.WaitForActivation(req, mockStream); err != nil {
 		t.Fatalf("Could not setup wait for activation stream: %v", err)
 	}
 }
@@ -302,7 +301,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	chainService := &mockChain.ChainService{}
+	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
@@ -342,7 +341,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService := &mockChain.ChainService{State: trie}
+	chainService := &mock.ChainService{State: trie}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
@@ -370,7 +369,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
 	hook := logTest.NewGlobal()
-	chainService := &mockChain.ChainService{}
+	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
@@ -416,7 +415,7 @@ func TestWaitForSynced_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	chainService := &mockChain.ChainService{}
+	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
@@ -456,7 +455,7 @@ func TestWaitForSynced_AlreadySynced(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService := &mockChain.ChainService{State: trie}
+	chainService := &mock.ChainService{State: trie}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
@@ -485,7 +484,7 @@ func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
 	hook := logTest.NewGlobal()
-	chainService := &mockChain.ChainService{}
+	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{

@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -18,6 +17,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -440,12 +440,12 @@ func setupService(t *testing.T) (*Service, db.Database) {
 	ctx, cancel := context.WithCancel(context.Background())
 	validatorCount := uint64(100)
 	totalBalance := validatorCount * params.BeaconConfig().MaxEffectiveBalance
-	mockChainService := &mock.ChainService{}
+	mockService := &mock.ChainService{}
 	return &Service{
 		beaconDB:      beaconDB,
 		ctx:           ctx,
 		cancel:        cancel,
-		stateNotifier: mockChainService.StateNotifier(),
+		stateNotifier: mockService.StateNotifier(),
 		participationFetcher: &mock.ChainService{
 			Balance: &precompute.Balance{ActivePrevEpoch: totalBalance, PrevEpochTargetAttested: 1}},
 	}, beaconDB

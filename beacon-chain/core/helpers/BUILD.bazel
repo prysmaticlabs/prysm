@@ -18,11 +18,12 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//endtoend/evaluators:__pkg__",
+        "//shared/attestationutil:__pkg__",
         "//shared/benchutil/benchmark_files:__subpackages__",
         "//shared/interop:__pkg__",
         "//shared/keystore:__pkg__",
+        "//shared/mock:__pkg__",
         "//shared/p2putils:__pkg__",
-        "//shared/attestationutil:__pkg__",
         "//shared/testutil:__pkg__",
         "//slasher:__subpackages__",
         "//tools:__subpackages__",

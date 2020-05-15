@@ -7,6 +7,9 @@ go_library(
         "notifier.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/mock:go_default_library",
+    ],
     deps = ["//shared/event:go_default_library"],
 )

@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -53,7 +52,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		},
 	}
 
-	chain := &mockChain.ChainService{
+	chain := &mock.ChainService{
 		State: beaconState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
@@ -109,7 +108,7 @@ func TestGetDuties_OK(t *testing.T) {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
 
-	chain := &mockChain.ChainService{
+	chain := &mock.ChainService{
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
@@ -196,7 +195,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	chain := &mockChain.ChainService{
+	chain := &mock.ChainService{
 		State: bState, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
@@ -249,7 +248,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	chain := &mockChain.ChainService{
+	chain := &mock.ChainService{
 		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
@@ -344,12 +343,12 @@ func TestStreamDuties_OK(t *testing.T) {
 	vs := &Server{
 		Ctx:         ctx,
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		HeadFetcher: &mock.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
+		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateNotifier: &mockChain.MockStateNotifier{},
+		StateNotifier: &mock.MockStateNotifier{},
 	}
 
 	// Test the first validator in registry.
@@ -415,12 +414,12 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	vs := &Server{
 		Ctx:         ctx,
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		HeadFetcher: &mock.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mockChain.ChainService{
+		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateNotifier: &mockChain.MockStateNotifier{},
+		StateNotifier: &mock.MockStateNotifier{},
 	}
 
 	// Test the first validator in registry.
@@ -515,7 +514,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 
 	vs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
+		HeadFetcher: &mock.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 

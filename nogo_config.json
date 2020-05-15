@@ -68,9 +68,9 @@
     },
     "exclude_files": {
       ".*/.*_test\\.go": "Tests are OK to use time.Now()",
+      "shared/mock/*": "Test-only package",
       "shared/version/version\\.go": "Used for printing build time",
       "shared/roughtime/roughtime\\.go": "Required to bootstrap roughtime",
-      "beacon-chain/blockchain/testing/*": "Test-only package",
       "beacon-chain/p2p/sender\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
       "beacon-chain/sync/deadlines\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
       "validator/client/grpc_interceptor\\.go": "Uses time.Now() for gRPC duration logging"

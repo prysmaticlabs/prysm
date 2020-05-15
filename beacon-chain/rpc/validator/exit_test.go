@@ -6,7 +6,6 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -45,14 +45,14 @@ func TestSub(t *testing.T) {
 
 	// Set genesis time to be 100 epochs ago.
 	genesisTime := time.Now().Add(time.Duration(-100*int64(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)) * time.Second)
-	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
+	mockService := &mock.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
 		BeaconDB:           db,
-		HeadFetcher:        mockChainService,
+		HeadFetcher:        mockService,
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: mockChainService,
-		StateNotifier:      mockChainService.StateNotifier(),
-		OperationNotifier:  mockChainService.OperationNotifier(),
+		GenesisTimeFetcher: mockService,
+		StateNotifier:      mockService.StateNotifier(),
+		OperationNotifier:  mockService.OperationNotifier(),
 		ExitPool:           voluntaryexits.NewPool(),
 		P2P:                mockp2p.NewTestP2P(t),
 	}
@@ -134,14 +134,14 @@ func TestProposeExit_NoPanic(t *testing.T) {
 
 	// Set genesis time to be 100 epochs ago.
 	genesisTime := time.Now().Add(time.Duration(-100*int64(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)) * time.Second)
-	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
+	mockService := &mock.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
 		BeaconDB:           db,
-		HeadFetcher:        mockChainService,
+		HeadFetcher:        mockService,
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: mockChainService,
-		StateNotifier:      mockChainService.StateNotifier(),
-		OperationNotifier:  mockChainService.OperationNotifier(),
+		GenesisTimeFetcher: mockService,
+		StateNotifier:      mockService.StateNotifier(),
+		OperationNotifier:  mockService.OperationNotifier(),
 		ExitPool:           voluntaryexits.NewPool(),
 		P2P:                mockp2p.NewTestP2P(t),
 	}

@@ -27,7 +27,6 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
@@ -36,6 +35,7 @@ go_test(
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

@@ -107,7 +107,6 @@ go_test(
     flaky = True,
     tags = ["block-network"],
     deps = [
-        "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
@@ -116,6 +115,7 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared/iputils:go_default_library",
+        "//shared/mock:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

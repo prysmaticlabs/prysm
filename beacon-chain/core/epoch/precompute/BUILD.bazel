@@ -12,7 +12,10 @@ go_library(
         "type.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/mock:go_default_library",
+    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/state:go_default_library",

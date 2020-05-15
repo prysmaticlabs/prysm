@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 )
 
 func TestService_StatusZeroEpoch(t *testing.T) {
@@ -19,7 +19,7 @@ func TestService_StatusZeroEpoch(t *testing.T) {
 	r := &Service{
 		p2p:         p2ptest.NewTestP2P(t),
 		initialSync: new(mockSync.Sync),
-		chain: &mockChain.ChainService{
+		chain: &mock.ChainService{
 			Genesis: time.Now(),
 			State:   bState,
 		},

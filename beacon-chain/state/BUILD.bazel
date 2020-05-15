@@ -16,6 +16,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//fuzz:__pkg__",
         "//shared/benchutil:__pkg__",
+        "//shared/mock:__pkg__",
         "//shared/testutil:__pkg__",
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/pcli:__pkg__",

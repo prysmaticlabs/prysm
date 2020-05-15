@@ -12,7 +12,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -23,6 +22,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -34,7 +34,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 		ctx:         context.Background(),
 		p2p:         p2p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain: &mockChain.ChainService{
+		chain: &mock.ChainService{
 			ValidatorsRoot: [32]byte{'A'},
 			Genesis:        time.Now(),
 		},
@@ -72,7 +72,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	d := db.SetupDB(t)
-	chainService := &mockChain.ChainService{
+	chainService := &mock.ChainService{
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
@@ -134,7 +134,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	chainService := &mockChain.ChainService{
+	chainService := &mock.ChainService{
 		ValidatorsRoot: [32]byte{'A'},
 		Genesis:        time.Now(),
 	}
@@ -196,7 +196,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 
 func TestSubscribe_WaitToSync(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
-	chainService := &mockChain.ChainService{
+	chainService := &mock.ChainService{
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
@@ -246,7 +246,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	r := Service{
 		ctx: context.Background(),
-		chain: &mockChain.ChainService{
+		chain: &mock.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},
@@ -279,7 +279,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	hook := logTest.NewGlobal()
 	r := Service{
 		ctx: context.Background(),
-		chain: &mockChain.ChainService{
+		chain: &mock.ChainService{
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		},

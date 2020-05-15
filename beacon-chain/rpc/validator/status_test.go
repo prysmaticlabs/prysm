@@ -8,7 +8,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,6 +16,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -55,7 +55,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 		BeaconDB:       db,
 		DepositFetcher: depositCache,
 		BlockFetcher:   p,
-		HeadFetcher: &mockChain.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: stateObj,
 		},
 		Eth1InfoFetcher: p,
@@ -112,7 +112,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 		BeaconDB:       db,
 		DepositFetcher: depositCache,
 		BlockFetcher:   p,
-		HeadFetcher: &mockChain.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: stateObj,
 		},
 		Eth1InfoFetcher: p,
@@ -192,7 +192,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -269,7 +269,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -347,7 +347,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -417,7 +417,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
 		BlockFetcher:      p,
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -495,7 +495,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		Eth1InfoFetcher:   p,
 		BlockFetcher:      p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -522,7 +522,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	vs := &Server{
 		DepositFetcher:  depositCache,
 		Eth1InfoFetcher: &mockPOW.POWChain{},
-		HeadFetcher: &mockChain.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: stateObj,
 		},
 		BeaconDB: db,
@@ -606,7 +606,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
 		DepositFetcher:     depositCache,
-		HeadFetcher:        &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		HeadFetcher:        &mock.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	activeExists, response, err := vs.multipleValidatorStatus(context.Background(), pubKeys)
 	if err != nil {
@@ -735,7 +735,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pbKey,
@@ -810,7 +810,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	eth1BlockNumBigInt := big.NewInt(1000000)
@@ -885,7 +885,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	eth1BlockNumBigInt := big.NewInt(1000000)

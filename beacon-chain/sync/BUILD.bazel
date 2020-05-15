@@ -122,7 +122,6 @@ go_test(
     embed = [":go_default_library"],
     shard_count = 4,
     deps = [
-        "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
@@ -146,6 +145,7 @@ go_test(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",

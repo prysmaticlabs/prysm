@@ -1,6 +1,4 @@
-// Package testing includes useful mocks for writing unit
-// tests which depend on logic from the blockchain package.
-package testing
+package mock
 
 import (
 	"bytes"
@@ -23,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ChainService defines the mock interface for testing
+// ChainService defines the mock interface for testing the blockchain package.
 type ChainService struct {
 	State                       *stateTrie.BeaconState
 	Root                        []byte

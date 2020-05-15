@@ -19,6 +19,7 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//fuzz:__pkg__",
         "//proto/testing:__subpackages__",
+        "//shared/mock:__subpackages__",
         "//shared/testutil:__subpackages__",
         "//slasher:__subpackages__",
         "//tools/blocktree:__pkg__",
