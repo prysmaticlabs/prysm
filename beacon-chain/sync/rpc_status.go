@@ -46,8 +46,9 @@ func (r *Service) maintainPeerStatuses() {
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
 // in which case we attempt a resync using the initial sync method to catch up.
 func (r *Service) resyncIfBehind() {
+	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
 	// Run sixteen times per epoch.
-	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/16) * time.Second
+	interval := time.Duration(int64(millisecondsPerEpoch)/16) * time.Millisecond
 	runutil.RunEvery(r.ctx, interval, func() {
 		currentEpoch := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
