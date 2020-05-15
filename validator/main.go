@@ -41,8 +41,6 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
-	flags.MergeSourceDirectoriesFlag,
-	flags.MergeTargetDirectoryFlag,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -108,7 +106,7 @@ contract in order to activate the validator client`,
 							params.UseMinimalConfig()
 						}
 
-						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -126,7 +124,7 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -137,22 +135,29 @@ contract in order to activate the validator client`,
 					},
 				},
 				{
-					Name:        "merge",
-					Description: "merges keys and data of multiple validators into a single directory",
+					Name:        "change-password",
+					Description: "changes password for all keys located in a keystore",
 					Flags: []cli.Flag{
-						flags.MergeSourceDirectoriesFlag,
-						flags.MergeTargetDirectoryFlag,
+						flags.KeystorePathFlag,
+						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						sourcePasswords, targetPassword, err := accounts.GetPasswordsForMerging(cliCtx)
+						keystorePath, oldPassword, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false)
 						if err != nil {
-							log.WithError(err).Error("Could not read passwords")
+							log.WithError(err).Error("Could not read keystore path and/or the old password")
 						}
 
-						target := cliCtx.String(flags.MergeTargetDirectoryFlag.Name)
-						err = accounts.Merge(sourcePasswords, target, targetPassword)
+						log.Info("Please enter the new password")
+						newPassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
 						if err != nil {
-							log.WithError(err).Error("Merging accounts failed")
+							log.WithError(err).Error("Could not read the new password")
+						}
+
+						err = accounts.ChangePassword(keystorePath, oldPassword, newPassword)
+						if err != nil {
+							log.WithError(err).Error("Changing password failed")
+						} else {
+							log.Info("Password changed successfully")
 						}
 
 						return nil

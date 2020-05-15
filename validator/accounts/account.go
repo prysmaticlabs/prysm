@@ -28,7 +28,7 @@ var log = logrus.WithField("prefix", "accounts")
 // an encrypted keystore directory and a password string.
 func DecryptKeysFromKeystore(directory string, filePrefix string, password string) (map[string]*keystore.Key, error) {
 	ks := keystore.NewKeystore(directory)
-	validatorKeys, err := ks.GetKeys(directory, filePrefix, password, true /* warnOnFail */)
+	validatorKeys, err := ks.GetKeys(directory, filePrefix, password, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get private key")
 	}
@@ -46,10 +46,10 @@ func VerifyAccountNotExists(directory string, password string) error {
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
-	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password, false /* warnOnFail */); err == nil {
+	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password, false); err == nil {
 		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
 	}
-	if _, err := ks.GetKeys(directory, validatorKeyFile, password, false /* warnOnFail */); err == nil {
+	if _, err := ks.GetKeys(directory, validatorKeyFile, password, false); err == nil {
 		return fmt.Errorf("keystore at path already exists: %s", validatorKeyFile)
 	}
 	return nil
@@ -213,67 +213,31 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	return path, passphrase, nil
 }
 
-// GetPasswordsForMerging retrieves passwords for source directories and the target directory.
-// These passwords will be used when merging accounts.
-func GetPasswordsForMerging(cliCtx *cli.Context) (map[string]string, string, error) {
-	sources := strings.Split(cliCtx.String(flags.MergeSourceDirectoriesFlag.Name), ",")
-
-	log.Info("Please enter the password for your private keys in target directory")
-	targetPassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
+// ChangePassword changes the password for all keys located in a keystore.
+// Password is changed only for keys that can be decrypted using the old password.
+func ChangePassword(keystorePath string, oldPassword string, newPassword string) error {
+	err := changePasswordForKeyType(keystorePath, params.BeaconConfig().ValidatorPrivkeyFileName, oldPassword, newPassword)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "Could not read entered passphrase")
+		return err
 	}
-
-	sourcePasswords := make(map[string]string)
-
-	for _, source := range sources {
-		log.Infof("Please enter the password for your private keys for source directory %s", source)
-		password, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
-		if err != nil {
-			return nil, "", errors.Wrap(err, "Could not read entered passphrase")
-		}
-
-		sourcePasswords[source] = password
+	err = changePasswordForKeyType(keystorePath, params.BeaconConfig().WithdrawalPrivkeyFileName, oldPassword, newPassword)
+	if err != nil {
+		return err
 	}
-
-	return sourcePasswords, targetPassword, nil
-}
-
-// Merge merges keys and databases of several validators.
-// Keys are moved to one directory and databases are merged into one database.
-func Merge(sourcePasswords map[string]string, target string, targetPassword string) error {
-	keyStore := keystore.NewKeystore(target)
-
-	for source, password := range sourcePasswords {
-		log.Infof("Merging keys from source directory %s ...", source)
-
-		err := mergeKeys(source, password, target, targetPassword, params.BeaconConfig().ValidatorPrivkeyFileName, keyStore)
-		if err != nil {
-			return err
-		}
-
-		err = mergeKeys(source, password, target, targetPassword, params.BeaconConfig().WithdrawalPrivkeyFileName, keyStore)
-		if err != nil {
-			return err
-		}
-
-		log.Infof("Finished merging keys from source directory %s", source)
-	}
-
-	log.Info("Finished merging keys from all source directories")
 	return nil
 }
 
-func mergeKeys(sourceDirectory string, sourcePassword string, targetDirectory string, targetPassword string, filePrefix string, keyStore keystore.Store) error {
-	validatorKeys, err := DecryptKeysFromKeystore(sourceDirectory, filePrefix, sourcePassword)
+func changePasswordForKeyType(keystorePath string, filePrefix string, oldPassword string, newPassword string) error {
+	keys, err := DecryptKeysFromKeystore(keystorePath, filePrefix, oldPassword)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to decrypt keystore keys for source directory %s", sourceDirectory)
+		return errors.Wrap(err, "Failed to decrypt keys")
 	}
 
-	for _, key := range validatorKeys {
-		targetValidatorKeyFile := targetDirectory + filePrefix + hex.EncodeToString(key.PublicKey.Marshal())[:12]
-		if err := keyStore.StoreKey(targetValidatorKeyFile, key, targetPassword); err != nil {
-			return errors.Wrapf(err, "Failed to merge keys from source directory %s", sourceDirectory)
+	keyStore := keystore.NewKeystore(keystorePath)
+	for _, key := range keys {
+		keyFileName := keystorePath + filePrefix + hex.EncodeToString(key.PublicKey.Marshal())[:12]
+		if err := keyStore.StoreKey(keyFileName, key, newPassword); err != nil {
+			return errors.Wrapf(err, "Failed to encrypt key %s with the new password", keyFileName)
 		}
 	}
 

@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -75,64 +76,68 @@ func TestHandleEmptyFlags_FlagsSet(t *testing.T) {
 	}
 }
 
-func TestMerge_KeysCopiedToNewDirectory(t *testing.T) {
-	firstSourceDirectory := testutil.TempDir() + "/firstsource"
-	secondSourceDirectory := testutil.TempDir() + "/secondsource"
-	targetDirectory := testutil.TempDir() + "/target"
-	firstSourcePassword := "firstsource"
-	secondSourcePassword := "secondsource"
-	targetPassword := "target"
-
+func TestChangePassword_KeyEncryptedWithNewPassword(t *testing.T) {
+	directory := testutil.TempDir() + "/testkeystore"
 	defer func() {
-		if err := os.RemoveAll(firstSourceDirectory); err != nil {
-			t.Logf("Could not remove directory %s: %v", firstSourceDirectory, err)
-		}
-		if err := os.RemoveAll(secondSourceDirectory); err != nil {
-			t.Logf("Could not remove directory %s: %v", secondSourceDirectory, err)
-		}
-		if err := os.RemoveAll(targetDirectory); err != nil {
-			t.Logf("Could not remove directory %s: %v", targetDirectory, err)
+		if err := os.RemoveAll(directory); err != nil {
+			t.Logf("Could not remove directory: %v", err)
 		}
 	}()
 
-	if err := NewValidatorAccount(firstSourceDirectory, firstSourcePassword); err != nil {
-		t.Fatal(err)
+	oldPassword := "old"
+	newPassword := "new"
+
+	validatorKey, err := keystore.NewKey()
+	if err != nil {
+		t.Fatalf("Cannot create new key: %v", err)
 	}
-	if err := NewValidatorAccount(secondSourceDirectory, secondSourcePassword); err != nil {
+	ks := keystore.NewKeystore(directory)
+	if err := ks.StoreKey(directory + params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, oldPassword); err != nil {
+		t.Fatalf("Unable to store key %v", err)
+	}
+
+	if err := ChangePassword(directory, oldPassword, newPassword); err != nil {
 		t.Fatal(err)
 	}
 
-	sourcePasswords := map[string]string{firstSourceDirectory: firstSourcePassword, secondSourceDirectory: secondSourcePassword}
+	keys, err := DecryptKeysFromKeystore(directory, params.BeaconConfig().ValidatorPrivkeyFileName, newPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := keys[hex.EncodeToString(validatorKey.PublicKey.Marshal())]; !ok {
+		t.Error("Key not encrypted using the new password")
+	}
+}
 
-	err := Merge(sourcePasswords, targetDirectory, targetPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	firstSourceKeys, err := ioutil.ReadDir(firstSourceDirectory)
-	if err != nil {
-		t.Fatal(err)
-	}
-	secondSourceKeys, err := ioutil.ReadDir(secondSourceDirectory)
-	if err != nil {
-		t.Fatal(err)
-	}
-	targetKeys, err := ioutil.ReadDir(targetDirectory)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, sk := range append(firstSourceKeys, secondSourceKeys...) {
-		found := false
-		for _, tk := range targetKeys {
-			if sk.Name() == tk.Name() {
-				found = true
-				break
-			}
+func TestChangePassword_KeyNotMatchingOldPasswordNotEncryptedWithNewPassword(t *testing.T) {
+	directory := testutil.TempDir() + "/testkeystore"
+	defer func() {
+		if err := os.RemoveAll(directory); err != nil {
+			t.Logf("Could not remove directory: %v", err)
 		}
+	}()
 
-		if !found {
-			t.Errorf("Key file %s not found", sk.Name())
-		}
+	oldPassword := "old"
+	newPassword := "new"
+
+	validatorKey, err := keystore.NewKey()
+	if err != nil {
+		t.Fatalf("Cannot create new key: %v", err)
+	}
+	ks := keystore.NewKeystore(directory)
+	if err := ks.StoreKey(directory + params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, "notmatching"); err != nil {
+		t.Fatalf("Unable to store key %v", err)
+	}
+
+	if err := ChangePassword(directory, oldPassword, newPassword); err != nil {
+		t.Fatal(err)
+	}
+
+	keys, err := DecryptKeysFromKeystore(directory, params.BeaconConfig().ValidatorPrivkeyFileName, newPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := keys[hex.EncodeToString(validatorKey.PublicKey.Marshal())]; ok {
+		t.Error("Key incorrectly encrypted using the new password")
 	}
 }

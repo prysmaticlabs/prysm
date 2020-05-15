@@ -62,16 +62,6 @@ var (
 		Name:  "keystore-path",
 		Usage: "Path to the desired keystore directory",
 	}
-	// MergeSourceDirectoriesFlag defines the locations of validators that should be merged.
-	MergeSourceDirectoriesFlag = &cli.StringFlag{
-		Name: "source-dirs",
-		Usage: "A comma-separated list of directories containing validator keys and data that should be merged.",
-	}
-	// MergeTargetDirectoryFlag defines the location of merged validator.
-	MergeTargetDirectoryFlag = &cli.StringFlag{
-		Name: "target-dir",
-		Usage: "The directory which should contain the merged validator keys and data.",
-	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.Int64Flag{
 		Name:  "monitoring-port",
