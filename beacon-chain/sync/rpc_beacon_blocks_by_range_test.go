@@ -49,7 +49,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		for i := req.StartSlot; i < req.Count*req.Step; i += req.Step {
+		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
 			res := &ethpb.SignedBeaconBlock{}
 			if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
@@ -157,6 +157,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 
 func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	d := db.SetupDB(t)
+	hook := logTest.NewGlobal()
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
 		for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
@@ -166,11 +167,17 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			}
 		}
 	}
-	streamHandlerGenerator := func(
-		r *Service, wg *sync.WaitGroup, req *pb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
-		return func(stream network.Stream) {
+	sendRequest := func(p1, p2 *p2ptest.TestP2P, r *Service,
+		req *pb.BeaconBlocksByRangeRequest, validateBlocks bool) error {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		pcl := protocol.ID("/testing")
+		p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
-			for i := req.StartSlot; i < req.Count*req.Step; i += req.Step {
+			if !validateBlocks {
+				return
+			}
+			for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
 				expectSuccess(t, r, stream)
 				res := &ethpb.SignedBeaconBlock{}
 				if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
@@ -180,10 +187,21 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 					t.Errorf("Received unexpected block slot %d", res.Block.Slot)
 				}
 			}
+		})
+		stream, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+		if err != nil {
+			t.Fatal(err)
 		}
+		if err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
+			return err
+		}
+		if testutil.WaitTimeout(&wg, 1*time.Second) {
+			t.Fatal("Did not receive stream within 1 sec")
+		}
+		return nil
 	}
 
-	t.Run("high request count param, no overflow", func(t *testing.T) {
+	t.Run("high request count param and no overflow", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
@@ -192,28 +210,17 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 
 		capacity := int64(flags.Get().BlockBatchLimit * 3)
+		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
+
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
 			Step:      5,
 			Count:     uint64(capacity),
 		}
-
 		saveBlocks(req)
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
-		pcl := protocol.ID("/testing")
 
-		var wg sync.WaitGroup
-		wg.Add(1)
-		p2.Host.SetStreamHandler(pcl, streamHandlerGenerator(r, &wg, req))
-
-		stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		hook := logTest.NewGlobal()
-		err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
-		if err != nil {
+		hook.Reset()
+		if err := sendRequest(p1, p2, r, req, true); err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 		testutil.AssertLogsDoNotContain(t, hook, "Disconnecting bad peer")
@@ -223,13 +230,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		if remainingCapacity != expectedCapacity {
 			t.Fatalf("Unexpected rate limiting capacity, expected: %v, got: %v", expectedCapacity, remainingCapacity)
 		}
-
-		if testutil.WaitTimeout(&wg, 1*time.Second) {
-			t.Fatal("Did not receive stream within 1 sec")
-		}
 	})
 
-	t.Run("high request count param, overflow", func(t *testing.T) {
+	t.Run("high request count param and overflow", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
@@ -238,6 +241,8 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 
 		capacity := int64(flags.Get().BlockBatchLimit * 3)
+		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
+
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
 			Step:      5,
@@ -245,21 +250,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 		saveBlocks(req)
 
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
-		pcl := protocol.ID("/testing")
-
-		var wg sync.WaitGroup
-		wg.Add(1)
-		p2.Host.SetStreamHandler(pcl, streamHandlerGenerator(r, &wg, req))
-
-		stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		hook := logTest.NewGlobal()
+		hook.Reset()
 		for i := 0; i < p2.Peers().MaxBadResponses(); i++ {
-			err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
+			err := sendRequest(p1, p2, r, req, false)
 			if err == nil || err.Error() != rateLimitedError {
 				t.Errorf("Expected error not thrown, want: %v, got: %v", rateLimitedError, err)
 			}
@@ -272,14 +265,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		if remainingCapacity != expectedCapacity {
 			t.Fatalf("Unexpected rate limiting capacity, expected: %v, got: %v", expectedCapacity, remainingCapacity)
 		}
-
-		if testutil.WaitTimeout(&wg, 1*time.Second) {
-			t.Fatal("Did not receive stream within 1 sec")
-		}
 	})
 
-	t.Run("many requests up to max bandwidth, no overflow", func(t *testing.T) {
-		t.Skip()
+	t.Run("many requests with count set to max blocks per second", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
@@ -287,7 +275,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			t.Error("Expected peers to be connected")
 		}
 
-		capacity := int64(flags.Get().BlockBatchLimit * 3)
+		capacity := int64(flags.Get().BlockBatchLimit * flags.Get().BlockBatchLimitBurstFactor)
+		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
+
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
 			Step:      1,
@@ -295,31 +285,28 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 		saveBlocks(req)
 
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
-		pcl := protocol.ID("/testing")
-
-		var wg sync.WaitGroup
-		wg.Add(1)
-		p2.Host.SetStreamHandler(pcl, streamHandlerGenerator(r, &wg, req))
-
-		stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
-		if err != nil {
-			t.Fatal(err)
+		hook.Reset()
+		for i := 0; i < flags.Get().BlockBatchLimitBurstFactor; i++ {
+			if err := sendRequest(p1, p2, r, req, true); err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
 		}
+		testutil.AssertLogsDoNotContain(t, hook, "Disconnecting bad peer")
 
-		err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
-		if err == nil || err.Error() != rateLimitedError {
-			t.Errorf("Expected error not thrown, want: %v, got: %v", rateLimitedError, err)
+		// One more request should result in overflow.
+		hook.Reset()
+		for i := 0; i < p2.Peers().MaxBadResponses(); i++ {
+			err := sendRequest(p1, p2, r, req, false)
+			if err == nil || err.Error() != rateLimitedError {
+				t.Errorf("Expected error not thrown, want: %v, got: %v", rateLimitedError, err)
+			}
 		}
+		testutil.AssertLogsContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used.
 		if remainingCapacity != expectedCapacity {
 			t.Fatalf("Unexpected rate limiting capacity, expected: %v, got: %v", expectedCapacity, remainingCapacity)
-		}
-
-		if testutil.WaitTimeout(&wg, 1*time.Second) {
-			t.Fatal("Did not receive stream within 1 sec")
 		}
 	})
 }
