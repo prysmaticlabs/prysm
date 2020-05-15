@@ -124,7 +124,7 @@ func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 	}
 	// Do not return an error for ping requests.
 	if err := r.sendPingRequest(ctx, id); err != nil {
-		log.WithError(err).Error("Could not ping peer")
+		log.WithError(err).Debug("Could not ping peer")
 	}
 	return nil
 }
