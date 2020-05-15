@@ -106,6 +106,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		beaconDB:           cfg.BeaconDB,
 		depositCache:       cfg.DepositCache,
 		chainStartFetcher:  cfg.ChainStartFetcher,
+		genesisTime:        time.Unix(0, 0),
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
 		slashingPool:       cfg.SlashingPool,

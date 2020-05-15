@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -47,6 +48,9 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 		return nil, status.Errorf(codes.Internal, "Could not retrieve contract address from db: %v", err)
 	}
 	genesisTime := ns.GenesisTimeFetcher.GenesisTime()
+	if genesisTime == time.Unix(0, 0) {
+		return nil, status.Error(codes.FailedPrecondition, "Genesis time yet to be determined")
+	}
 	gt, err := ptypes.TimestampProto(genesisTime)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
