@@ -2,9 +2,10 @@ package keymanager
 
 import (
 	"encoding/json"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"os"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"

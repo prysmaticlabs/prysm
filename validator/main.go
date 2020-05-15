@@ -5,6 +5,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	runtimeDebug "runtime/debug"
+
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -20,9 +24,6 @@ import (
 	_ "go.uber.org/automaxprocs"
 	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
-	"os"
-	"runtime"
-	runtimeDebug "runtime/debug"
 )
 
 var log = logrus.WithField("prefix", "main")

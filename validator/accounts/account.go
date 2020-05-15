@@ -216,15 +216,20 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 // ChangePassword changes the password for all keys located in a keystore.
 // Password is changed only for keys that can be decrypted using the old password.
 func ChangePassword(keystorePath string, oldPassword string, newPassword string) error {
-	err := changePasswordForKeyType(keystorePath, params.BeaconConfig().ValidatorPrivkeyFileName, oldPassword, newPassword)
+	err := changePasswordForKeyType(
+		keystorePath,
+		params.BeaconConfig().ValidatorPrivkeyFileName,
+		oldPassword,
+		newPassword)
 	if err != nil {
 		return err
 	}
-	err = changePasswordForKeyType(keystorePath, params.BeaconConfig().WithdrawalPrivkeyFileName, oldPassword, newPassword)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return changePasswordForKeyType(
+		keystorePath,
+		params.BeaconConfig().WithdrawalPrivkeyFileName,
+		oldPassword,
+		newPassword)
 }
 
 func changePasswordForKeyType(keystorePath string, filePrefix string, oldPassword string, newPassword string) error {

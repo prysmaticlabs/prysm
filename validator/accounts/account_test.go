@@ -92,7 +92,7 @@ func TestChangePassword_KeyEncryptedWithNewPassword(t *testing.T) {
 		t.Fatalf("Cannot create new key: %v", err)
 	}
 	ks := keystore.NewKeystore(directory)
-	if err := ks.StoreKey(directory + params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, oldPassword); err != nil {
+	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, oldPassword); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
 
@@ -125,7 +125,7 @@ func TestChangePassword_KeyNotMatchingOldPasswordNotEncryptedWithNewPassword(t *
 		t.Fatalf("Cannot create new key: %v", err)
 	}
 	ks := keystore.NewKeystore(directory)
-	if err := ks.StoreKey(directory + params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, "notmatching"); err != nil {
+	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, "notmatching"); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
 
