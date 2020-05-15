@@ -15,7 +15,7 @@ type fakeValidator struct {
 	WaitForSyncedCalled              bool
 	NextSlotCalled                   bool
 	CanonicalHeadSlotCalled          bool
-	UpdateDutiesCalled               bool
+	StreamDutiesCalled               bool
 	UpdateProtectionsCalled          bool
 	RoleAtCalled                     bool
 	AttestToBlockHeadCalled          bool
@@ -26,10 +26,9 @@ type fakeValidator struct {
 	ProposeBlockArg1                 uint64
 	AttestToBlockHeadArg1            uint64
 	RoleAtArg1                       uint64
-	UpdateDutiesArg1                 uint64
 	NextSlotRet                      <-chan uint64
 	PublicKey                        string
-	UpdateDutiesRet                  error
+	StreamDutiesRet                  error
 	RolesAtRet                       []validatorRole
 }
 
@@ -72,10 +71,9 @@ func (fv *fakeValidator) NextSlot() <-chan uint64 {
 	return fv.NextSlotRet
 }
 
-func (fv *fakeValidator) UpdateDuties(_ context.Context, slot uint64) error {
-	fv.UpdateDutiesCalled = true
-	fv.UpdateDutiesArg1 = slot
-	return fv.UpdateDutiesRet
+func (fv *fakeValidator) StreamDuties(_ context.Context) error {
+	fv.StreamDutiesCalled = true
+	return fv.StreamDutiesRet
 }
 
 func (fv *fakeValidator) UpdateProtections(_ context.Context, slot uint64) error {
