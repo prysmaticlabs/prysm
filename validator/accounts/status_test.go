@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/validator/internal"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 )
 
 func TestFetchAccountStatuses_OK(t *testing.T) {
@@ -19,7 +19,7 @@ func TestFetchAccountStatuses_OK(t *testing.T) {
 	for i := 0; i < MaxRequestKeys*NumBatches; i++ {
 		pubkeys[i] = []byte{byte(i)}
 	}
-	mockClient := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	mockClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
 	for i := 0; i+MaxRequestKeys <= len(pubkeys); i += MaxRequestKeys {
 		mockClient.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
