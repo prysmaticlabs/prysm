@@ -6,37 +6,38 @@ package mock
 
 import (
 	context "context"
+	reflect "reflect"
+
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
-	reflect "reflect"
 )
 
-// MockNodeClient is a mock of NodeClient interface
+// MockNodeClient is a mock of NodeClient interface.
 type MockNodeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeClientMockRecorder
 }
 
-// MockNodeClientMockRecorder is the mock recorder for MockNodeClient
+// MockNodeClientMockRecorder is the mock recorder for MockNodeClient.
 type MockNodeClientMockRecorder struct {
 	mock *MockNodeClient
 }
 
-// NewMockNodeClient creates a new mock instance
+// NewMockNodeClient creates a new mock instance.
 func NewMockNodeClient(ctrl *gomock.Controller) *MockNodeClient {
 	mock := &MockNodeClient{ctrl: ctrl}
 	mock.recorder = &MockNodeClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNodeClient) EXPECT() *MockNodeClientMockRecorder {
 	return m.recorder
 }
 
-// GetGenesis mocks base method
+// GetGenesis mocks base method.
 func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.Genesis, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -49,14 +50,14 @@ func (m *MockNodeClient) GetGenesis(arg0 context.Context, arg1 *types.Empty, arg
 	return ret0, ret1
 }
 
-// GetGenesis indicates an expected call of GetGenesis
+// GetGenesis indicates an expected call of GetGenesis.
 func (mr *MockNodeClientMockRecorder) GetGenesis(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockNodeClient)(nil).GetGenesis), varargs...)
 }
 
-// GetSyncStatus mocks base method
+// GetSyncStatus mocks base method.
 func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.SyncStatus, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -69,14 +70,14 @@ func (m *MockNodeClient) GetSyncStatus(arg0 context.Context, arg1 *types.Empty, 
 	return ret0, ret1
 }
 
-// GetSyncStatus indicates an expected call of GetSyncStatus
+// GetSyncStatus indicates an expected call of GetSyncStatus.
 func (mr *MockNodeClientMockRecorder) GetSyncStatus(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncStatus", reflect.TypeOf((*MockNodeClient)(nil).GetSyncStatus), varargs...)
 }
 
-// GetVersion mocks base method
+// GetVersion mocks base method.
 func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.Version, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -89,14 +90,14 @@ func (m *MockNodeClient) GetVersion(arg0 context.Context, arg1 *types.Empty, arg
 	return ret0, ret1
 }
 
-// GetVersion indicates an expected call of GetVersion
+// GetVersion indicates an expected call of GetVersion.
 func (mr *MockNodeClientMockRecorder) GetVersion(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockNodeClient)(nil).GetVersion), varargs...)
 }
 
-// ListImplementedServices mocks base method
+// ListImplementedServices mocks base method.
 func (m *MockNodeClient) ListImplementedServices(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.ImplementedServices, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -109,14 +110,14 @@ func (m *MockNodeClient) ListImplementedServices(arg0 context.Context, arg1 *typ
 	return ret0, ret1
 }
 
-// ListImplementedServices indicates an expected call of ListImplementedServices
+// ListImplementedServices indicates an expected call of ListImplementedServices.
 func (mr *MockNodeClientMockRecorder) ListImplementedServices(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListImplementedServices", reflect.TypeOf((*MockNodeClient)(nil).ListImplementedServices), varargs...)
 }
 
-// ListPeers mocks base method
+// ListPeers mocks base method.
 func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*eth.Peers, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -129,7 +130,7 @@ func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *types.Empty, arg2
 	return ret0, ret1
 }
 
-// ListPeers indicates an expected call of ListPeers
+// ListPeers indicates an expected call of ListPeers.
 func (mr *MockNodeClientMockRecorder) ListPeers(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)

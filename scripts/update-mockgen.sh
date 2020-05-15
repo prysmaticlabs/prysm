@@ -3,7 +3,7 @@
 # Script to update mock files after proto/beacon/rpc/v1/services.proto changes.
 # Use a space to separate mock destination from its interfaces.
 
-mock_path="$GOPATH/src/github.com/prysmaticlabs/prysm/shared/mock"
+mock_path="shared/mock"
 mocks=(
       "$mock_path/beacon_service_mock.go BeaconChainClient,BeaconNodeValidatorClient"
       "$mock_path/beacon_chain_service_mock.go BeaconChain_StreamChainHeadServer,BeaconChain_StreamAttestationsServer,BeaconChain_StreamBlocksServer,BeaconChain_StreamValidatorsInfoServer,BeaconChain_StreamIndexedAttestationsServer"
@@ -18,3 +18,6 @@ for ((i = 0; i < ${#mocks[@]}; i++)); do
     echo "generating $file for interfaces: $interfaces";
     GO11MODULE=on mockgen -package=mock -destination=$file github.com/prysmaticlabs/ethereumapis/eth/v1alpha1 $interfaces
 done
+
+goimports -w "$mock_path/."
+gofmt -s -w "$mock_path/."
