@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -144,17 +145,24 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
-						if err != nil {
-							log.WithError(err).Error("Could not list keys")
+						var err error
+						var pubKeys [][]byte
+						if cliCtx.String(flags.KeyManager.Name) != "" {
+							pubKeysBytes48, success := node.ExtractPublicKeysFromKeyManager(cliCtx)
+							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success
+						} else {
+							keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
+							if err != nil {
+								log.WithError(err).Error("Could not list keys")
+							}
+							pubKeys, err = accounts.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
 						}
-						pubkeys, err := accounts.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
 						if err != nil {
 							return err
 						}
 						return accounts.RunStatusCommand(
 							cliCtx,
-							pubkeys,
+							pubKeys,
 							cliCtx.String(flags.CertFlag.Name),
 							cliCtx.String(flags.BeaconRPCProviderFlag.Name),
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
