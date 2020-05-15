@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -54,6 +56,20 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	lastArchivedState, err := s.beaconDB.State(ctx, lastArchivedRoot)
 	if err != nil {
 		return nil, err
+	}
+
+	if featureconfig.Get().SkipRegenHistoricalStates {
+		// If a node doesn't want to regen historical states, the node would
+		// start from last finalized check point.
+		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
+		if err != nil {
+			return nil, err
+		}
+		lastArchivedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
+		if err != nil {
+			return nil, err
+		}
+		lastArchivedRoot = bytesutil.ToBytes32(cp.Root)
 	}
 
 	// Resume as genesis state if there's no last archived state.
