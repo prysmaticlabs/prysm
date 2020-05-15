@@ -149,7 +149,7 @@ func FetchAccountStatuses(
 
 func fetchValidatorStatus(
 	ctx context.Context,
-	rpcProvder ethpb.BeaconNodeValidatorClient,
+	rpcProvider ethpb.BeaconNodeValidatorClient,
 	pubkeys [][]byte,
 	statusChannel chan []ValidatorStatusMetadata,
 	errorChannel chan error) {
@@ -159,7 +159,7 @@ func fetchValidatorStatus(
 	}
 
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pubkeys}
-	resp, err := rpcProvder.MultipleValidatorStatus(ctx, req)
+	resp, err := rpcProvider.MultipleValidatorStatus(ctx, req)
 	if err != nil {
 		errorChannel <- errors.Wrap(
 			err,
