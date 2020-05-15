@@ -154,7 +154,6 @@ var devModeFlags = []cli.Flag{
 	enableStateRefCopy,
 	enableFieldTrie,
 	enableNewStateMgmt,
-	skipRegenHistoricalStates,
 }
 
 // Deprecated flags list.
