@@ -28,3 +28,4 @@ done
 # formats imports properly.
 # https://github.com/gogo/protobuf/issues/554
 goimports -w proto/**/*.pb.go
+gofmt -s -w proto/
