@@ -65,11 +65,14 @@ func (v *validator) StreamDuties(ctx context.Context) error {
 func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	rolesAt := make(map[[48]byte][]validatorRole)
+	v.dutiesLock.RLock()
 	duty, ok := v.dutiesByEpoch[epoch]
 	if !ok {
+		v.dutiesLock.RUnlock()
 		log.Debugf("No assigned duties yet for epoch %d", epoch)
 		return rolesAt, nil
 	}
+	v.dutiesLock.RUnlock()
 	for _, dt := range duty {
 		var roles []validatorRole
 
