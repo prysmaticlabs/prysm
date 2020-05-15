@@ -32,7 +32,8 @@ const MaxRequestLimit = 5 // XXX: Should create flag to make parameter configura
 
 // MaxRequestKeys specifies the max amount of public keys allowed
 // in a single grpc request, when fetching account statuses.
-const MaxRequestKeys = 2000 // XXX: This is an arbitrary number.
+const MaxRequestKeys = 2000 // XXX: This is an arbitrary number. Used to limit time complexity
+// of sorting a single batch of status requests. Do not make this number too big.
 
 // RunStatusCommand is the entry point to the `validator status` command.
 func RunStatusCommand(
@@ -196,7 +197,7 @@ func ExtractPublicKeys(decryptedKeys map[string]*keystore.Key) [][]byte {
 	return pubkeys
 }
 
-// mergeStatuses merges k sorted ValidatorStatusMetadata slices to 1.
+// mergeStatuses merges k sorted ValidatorStatusMetadata slices to 1. Runs in O(nlogk) time.
 func mergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMetadata {
 	if len(allStatuses) == 0 {
 		return []ValidatorStatusMetadata{}
