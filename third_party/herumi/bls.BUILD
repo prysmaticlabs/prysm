@@ -14,7 +14,7 @@ cc_library(
         "src/qcoeff-bn254.hpp",
     ],
     includes = [
-        "include",
+        "include/",
     ],
     copts = [
         "-DBLS_SWAP_G",
