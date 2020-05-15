@@ -144,8 +144,10 @@ func FetchAccountStatuses(
 			err = e
 		}
 	}
-
-	return mergeStatuses(allStatuses), err
+	if err != nil {
+		return nil, err
+	}
+	return mergeStatuses(allStatuses), nil
 }
 
 func fetchValidatorStatus(
