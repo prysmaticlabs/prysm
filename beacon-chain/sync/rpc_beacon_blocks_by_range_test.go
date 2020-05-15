@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
@@ -156,7 +157,6 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 
 func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	d := db.SetupDB(t)
-
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
 		for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
@@ -166,7 +166,6 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			}
 		}
 	}
-
 	streamHandlerGenerator := func(
 		r *Service, wg *sync.WaitGroup, req *pb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
 		return func(stream network.Stream) {
@@ -184,7 +183,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 	}
 
-	t.Run("big count param, no overflow", func(t *testing.T) {
+	t.Run("high request count param, no overflow", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
@@ -195,7 +194,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		capacity := int64(flags.Get().BlockBatchLimit * 3)
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
-			Step:      1,
+			Step:      5,
 			Count:     uint64(capacity),
 		}
 
@@ -212,10 +211,12 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		hook := logTest.NewGlobal()
 		err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
+		testutil.AssertLogsDoNotContain(t, hook, "Disconnecting bad peer")
 
 		remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
 		expectedCapacity := int64(0) // Whole capacity is used, but no overflow.
@@ -228,7 +229,57 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 	})
 
-	t.Run("big count param, overflow", func(t *testing.T) {
+	t.Run("high request count param, overflow", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		p2 := p2ptest.NewTestP2P(t)
+		p1.Connect(p2)
+		if len(p1.Host.Network().Peers()) != 1 {
+			t.Error("Expected peers to be connected")
+		}
+
+		capacity := int64(flags.Get().BlockBatchLimit * 3)
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot: 100,
+			Step:      5,
+			Count:     uint64(capacity + 1),
+		}
+		saveBlocks(req)
+
+		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
+		pcl := protocol.ID("/testing")
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		p2.Host.SetStreamHandler(pcl, streamHandlerGenerator(r, &wg, req))
+
+		stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		hook := logTest.NewGlobal()
+		for i := 0; i < p2.Peers().MaxBadResponses(); i++ {
+			err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
+			if err == nil || err.Error() != rateLimitedError {
+				t.Errorf("Expected error not thrown, want: %v, got: %v", rateLimitedError, err)
+			}
+		}
+		// Make sure that we were blocked indeed.
+		testutil.AssertLogsContain(t, hook, "Disconnecting bad peer")
+
+		remainingCapacity := r.blocksRateLimiter.Remaining(p2.PeerID().String())
+		expectedCapacity := int64(0) // Whole capacity is used.
+		if remainingCapacity != expectedCapacity {
+			t.Fatalf("Unexpected rate limiting capacity, expected: %v, got: %v", expectedCapacity, remainingCapacity)
+		}
+
+		if testutil.WaitTimeout(&wg, 1*time.Second) {
+			t.Fatal("Did not receive stream within 1 sec")
+		}
+	})
+
+	t.Run("many requests up to max bandwidth, no overflow", func(t *testing.T) {
+		t.Skip()
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
@@ -240,7 +291,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
 			Step:      1,
-			Count:     uint64(capacity + 1),
+			Count:     uint64(flags.Get().BlockBatchLimit),
 		}
 		saveBlocks(req)
 
