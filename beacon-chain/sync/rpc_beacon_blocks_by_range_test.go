@@ -160,13 +160,15 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
 		for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
-			if err := d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: i}}); err != nil {
+			block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: i}}
+			if err := d.SaveBlock(context.Background(), block); err != nil {
 				t.Fatal(err)
 			}
 		}
 	}
 
-	streamHandlerGenerator := func(r *Service, wg *sync.WaitGroup, req *pb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
+	streamHandlerGenerator := func(
+		r *Service, wg *sync.WaitGroup, req *pb.BeaconBlocksByRangeRequest) func(stream network.Stream) {
 		return func(stream network.Stream) {
 			defer wg.Done()
 			for i := req.StartSlot; i < req.Count*req.Step; i += req.Step {
