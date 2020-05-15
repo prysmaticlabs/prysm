@@ -594,13 +594,14 @@ func TestUpdateProtections_OK(t *testing.T) {
 	}
 
 	slot := params.BeaconConfig().SlotsPerEpoch
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	v := validator{
 		db:              db,
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-	v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
+	v.dutiesByEpoch[epoch] = []*ethpb.DutiesResponse_Duty{
 		{
 			AttesterSlot:   slot,
 			ValidatorIndex: 200,
