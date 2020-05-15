@@ -306,12 +306,13 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	v.dutiesLock.RLock()
-	defer v.dutiesLock.RUnlock()
 	duty, ok := v.dutiesByEpoch[epoch]
 	if !ok {
+		v.dutiesLock.RUnlock()
 		log.Debugf("No assigned duties yet for epoch %d", epoch)
 		return nil
 	}
+	v.dutiesLock.RUnlock()
 	attestingPubKeys := make([][48]byte, 0, len(duty))
 	for _, dt := range duty {
 		if dt == nil {

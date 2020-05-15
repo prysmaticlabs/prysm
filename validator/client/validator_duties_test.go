@@ -57,6 +57,14 @@ func TestStreamDuties_OK(t *testing.T) {
 				PublicKey:      []byte("testPubKey_1"),
 				ProposerSlots:  []uint64{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
+			{
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 201,
+				CommitteeIndex: 101,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_2"),
+				ProposerSlots:  []uint64{params.BeaconConfig().SlotsPerEpoch + 2},
+			},
 		},
 	}
 	v := validator{
@@ -116,6 +124,13 @@ func TestStreamDuties_OK(t *testing.T) {
 			"Unexpected validator assignments. want=%v got=%v",
 			resp.CurrentEpochDuties[0].ValidatorIndex,
 			v.dutiesByEpoch[0][0].ValidatorIndex,
+		)
+	}
+	if v.dutiesByEpoch[0][1].ValidatorIndex != resp.CurrentEpochDuties[1].ValidatorIndex {
+		t.Errorf(
+			"Unexpected validator assignments. want=%v got=%v",
+			resp.CurrentEpochDuties[1].ValidatorIndex,
+			v.dutiesByEpoch[0][1].ValidatorIndex,
 		)
 	}
 }
