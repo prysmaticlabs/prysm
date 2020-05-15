@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -62,6 +63,8 @@ func TestStreamDuties_OK(t *testing.T) {
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
+	v.genesisTime = uint64(time.Now().Unix()) + 500
+	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
 	stream := internal.NewMockBeaconNodeValidator_StreamDutiesClient(ctrl)
 	client.EXPECT().StreamDuties(
 		gomock.Any(),
