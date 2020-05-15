@@ -22,12 +22,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
 )
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-}
 
 func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
