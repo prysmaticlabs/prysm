@@ -33,7 +33,6 @@ const MaxRequestLimit = 5 // XXX: Should create flag to make parameter configura
 // MaxRequestKeys specifies the max amount of public keys allowed
 // in a single grpc request, when fetching account statuses.
 const MaxRequestKeys = 2000 // XXX: This is an arbitrary number.
-// Should compute max keys allowed before reponse exceeds GrpcMaxCallRecvMsgSizeFlag.
 
 // RunStatusCommand is the entry point to the `validator status` command.
 func RunStatusCommand(
