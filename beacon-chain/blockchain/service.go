@@ -422,6 +422,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}
 		if !featureconfig.Get().SkipRegenHistoricalStates {
+			// Since historical states were skipped, the node should start from last finalized check point.
 			finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
 			if finalizedRoot == params.BeaconConfig().ZeroHash {
 				finalizedRoot = bytesutil.ToBytes32(finalized.Root)
@@ -439,11 +440,13 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 
 	if featureconfig.Get().NewStateMgmt && featureconfig.Get().SkipRegenHistoricalStates {
-		parentState, err := s.generateState(ctx, finalizedRoot, bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot))
+		// To skip the regeneration of historical state, the node has to generate the parent of the last finalized state.
+		parentRoot := bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)
+		parentState, err := s.generateState(ctx, finalizedRoot, parentRoot)
 		if err != nil {
 			return err
 		}
-		if s.beaconDB.SaveState(ctx, parentState, bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)) != nil {
+		if s.beaconDB.SaveState(ctx, parentState, parentRoot) != nil {
 			return err
 		}
 	}
