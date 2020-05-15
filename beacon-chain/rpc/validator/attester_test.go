@@ -18,7 +18,6 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -166,7 +165,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 	attesterServer := &Server{
 		BeaconDB:         db,
 		P2P:              &mockp2p.MockBroadcaster{},
-		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		SyncChecker:      &mock.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher: &mock.ChainService{
 			State: beaconState, Root: blockRoot[:],
@@ -218,7 +217,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 
 func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	as := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		SyncChecker: &mock.Sync{IsSyncing: true},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
@@ -294,7 +293,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:      chainService.StateNotifier(),
 	}
@@ -349,7 +348,7 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	server := &Server{
 		HeadFetcher:        &mock.ChainService{State: state},
 		AttestationCache:   cache.NewAttestationCache(),
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:      chainService.StateNotifier(),
 	}
@@ -401,7 +400,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	attesterServer := &Server{
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 	}
 
@@ -495,7 +494,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	attesterServer := &Server{
 		BeaconDB:            db,
 		P2P:                 &mockp2p.MockBroadcaster{},
-		SyncChecker:         &mockSync.Sync{IsSyncing: false},
+		SyncChecker:         &mock.Sync{IsSyncing: false},
 		AttestationCache:    cache.NewAttestationCache(),
 		HeadFetcher:         &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
@@ -590,7 +589,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	attesterServer := &Server{
 		BeaconDB:         db,
 		P2P:              &mockp2p.MockBroadcaster{},
-		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		SyncChecker:      &mock.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher: &mock.ChainService{
 			State: beaconState, Root: blockRoot[:],

@@ -19,7 +19,6 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -464,7 +463,7 @@ func TestWaitForSynced_AlreadySynced(t *testing.T) {
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
-		SyncChecker:   &mockSync.Sync{IsSyncing: false},
+		SyncChecker:   &mock.Sync{IsSyncing: false},
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

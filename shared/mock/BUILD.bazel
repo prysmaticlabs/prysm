@@ -11,6 +11,7 @@ go_library(
         "beacon_validator_server_mock.go",
         "blockchain_mock.go",
         "node_service_mock.go",
+        "sync_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/mock",
     visibility = ["//visibility:public"],

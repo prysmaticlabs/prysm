@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -33,7 +32,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	r := Service{
 		ctx:         context.Background(),
 		p2p:         p2p,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{
 			ValidatorsRoot: [32]byte{'A'},
 			Genesis:        time.Now(),
@@ -83,7 +82,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	r := Service{
 		ctx:                       ctx,
 		p2p:                       p2p,
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		initialSync:               &mock.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
 		chain:                     chainService,
 		db:                        d,
@@ -146,7 +145,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	r := Service{
 		ctx:                       ctx,
 		p2p:                       p2p,
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		initialSync:               &mock.Sync{IsSyncing: false},
 		slashingPool:              slashings.NewPool(),
 		chain:                     chainService,
 		db:                        d,
@@ -205,7 +204,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
-		initialSync:   &mockSync.Sync{IsSyncing: false},
+		initialSync:   &mock.Sync{IsSyncing: false},
 	}
 
 	topic := "/eth2/%x/beacon_block"

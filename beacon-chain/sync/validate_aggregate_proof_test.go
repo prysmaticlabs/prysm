@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -141,7 +140,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	r := &Service{
 		p2p:                  p,
 		db:                   db,
-		initialSync:          &mockSync.Sync{IsSyncing: false},
+		initialSync:          &mock.Sync{IsSyncing: false},
 		attPool:              attestations.NewPool(),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenAttestationCache: c,
@@ -215,7 +214,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	r := &Service{
 		p2p:         p,
 		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
 		attPool:              attestations.NewPool(),
@@ -305,7 +304,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		attPool:     attestations.NewPool(),
 		p2p:         p,
 		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
 		seenAttestationCache: c,
@@ -429,7 +428,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	r := &Service{
 		p2p:         p,
 		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State:            beaconState,
 			ValidAttestation: true,
@@ -554,7 +553,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	r := &Service{
 		p2p:         p,
 		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			ValidatorsRoot:   [32]byte{'A'},
 			State:            beaconState,

@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -137,7 +136,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: s},
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		initialSync:               &mock.Sync{IsSyncing: false},
 		seenProposerSlashingCache: c,
 	}
 
@@ -179,7 +178,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	r := &Service{
 		p2p:                       p,
 		chain:                     &mock.ChainService{State: state},
-		initialSync:               &mockSync.Sync{IsSyncing: false},
+		initialSync:               &mock.Sync{IsSyncing: false},
 		seenProposerSlashingCache: c,
 	}
 
@@ -210,7 +209,7 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	r := &Service{
 		p2p:         p,
 		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: true},
+		initialSync: &mock.Sync{IsSyncing: true},
 	}
 
 	buf := new(bytes.Buffer)

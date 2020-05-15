@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/sirupsen/logrus"
@@ -60,7 +59,7 @@ func init() {
 		},
 		StateNotifier:       (&mock.ChainService{}).StateNotifier(),
 		AttestationNotifier: (&mock.ChainService{}).OperationNotifier(),
-		InitialSync:         &mockSync.Sync{IsSyncing: false},
+		InitialSync:         &mock.Sync{IsSyncing: false},
 		StateSummaryCache:   cache.NewStateSummaryCache(),
 		BlockNotifier:       nil,
 	})

@@ -16,7 +16,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,7 +37,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &Service{
-		initialSync:          &mockSync.Sync{IsSyncing: false},
+		initialSync:          &mock.Sync{IsSyncing: false},
 		p2p:                  p,
 		db:                   db,
 		chain:                chain,

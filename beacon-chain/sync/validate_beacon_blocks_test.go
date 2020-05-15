@@ -19,7 +19,6 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -53,7 +52,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	r := &Service{
 		db:          db,
 		p2p:         p,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -102,7 +101,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	r := &Service{
 		db:                db,
 		p2p:               p,
-		initialSync:       &mockSync.Sync{IsSyncing: false},
+		initialSync:       &mock.Sync{IsSyncing: false},
 		chain:             &mock.ChainService{Genesis: time.Now()},
 		seenBlockCache:    c,
 		stateSummaryCache: cache.NewStateSummaryCache(),
@@ -186,7 +185,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	r := &Service{
 		db:          db,
 		p2p:         p,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 			State: beaconState,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -241,7 +240,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	r := &Service{
 		db:          db,
 		p2p:         p,
-		initialSync: &mockSync.Sync{IsSyncing: true},
+		initialSync: &mock.Sync{IsSyncing: true},
 		chain: &mock.ChainService{
 			Genesis: time.Now(),
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -292,7 +291,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	r := &Service{
 		p2p:                 p,
 		db:                  db,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
+		initialSync:         &mock.Sync{IsSyncing: false},
 		chain:               &mock.ChainService{Genesis: time.Now()},
 		seenBlockCache:      c,
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
@@ -343,7 +342,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	r := &Service{
 		db:          db,
 		p2p:         p,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{
 			Genesis: time.Unix(genesisTime.Unix()-1000, 0),
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -423,7 +422,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	r := &Service{
 		db:          db,
 		p2p:         p,
-		initialSync: &mockSync.Sync{IsSyncing: false},
+		initialSync: &mock.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 			State: beaconState,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -483,7 +482,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 		blockNotifier:  chain.BlockNotifier(),
 		attPool:        attestations.NewPool(),
 		seenBlockCache: c,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
+		initialSync:    &mock.Sync{IsSyncing: false},
 	}
 
 	b := &ethpb.SignedBeaconBlock{

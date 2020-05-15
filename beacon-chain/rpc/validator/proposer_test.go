@@ -23,7 +23,6 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -69,7 +68,7 @@ func TestGetBlock_OK(t *testing.T) {
 	proposerServer := &Server{
 		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		SyncChecker:       &mock.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
@@ -176,7 +175,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	proposerServer := &Server{
 		BeaconDB:          db,
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		SyncChecker:       &mock.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},

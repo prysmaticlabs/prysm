@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -96,7 +95,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		chain: &mock.ChainService{
 			State: s,
 		},
-		initialSync:   &mockSync.Sync{IsSyncing: false},
+		initialSync:   &mock.Sync{IsSyncing: false},
 		seenExitCache: c,
 	}
 
@@ -133,7 +132,7 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 		chain: &mock.ChainService{
 			State: s,
 		},
-		initialSync: &mockSync.Sync{IsSyncing: true},
+		initialSync: &mock.Sync{IsSyncing: true},
 	}
 	buf := new(bytes.Buffer)
 	if _, err := p.Encoding().Encode(buf, exit); err != nil {

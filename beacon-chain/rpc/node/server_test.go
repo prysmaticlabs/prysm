@@ -11,7 +11,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -21,7 +20,7 @@ import (
 )
 
 func TestNodeServer_GetSyncStatus(t *testing.T) {
-	mSync := &mockSync.Sync{IsSyncing: false}
+	mSync := &mock.Sync{IsSyncing: false}
 	ns := &Server{
 		SyncChecker: mSync,
 	}
@@ -32,7 +31,7 @@ func TestNodeServer_GetSyncStatus(t *testing.T) {
 	if res.Syncing {
 		t.Errorf("Wanted GetSyncStatus() = %v, received %v", false, res.Syncing)
 	}
-	ns.SyncChecker = &mockSync.Sync{IsSyncing: true}
+	ns.SyncChecker = &mock.Sync{IsSyncing: true}
 	res, err = ns.GetSyncStatus(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)

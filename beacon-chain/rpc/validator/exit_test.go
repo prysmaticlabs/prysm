@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -49,7 +48,7 @@ func TestSub(t *testing.T) {
 	server := &Server{
 		BeaconDB:           db,
 		HeadFetcher:        mockService,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 		GenesisTimeFetcher: mockService,
 		StateNotifier:      mockService.StateNotifier(),
 		OperationNotifier:  mockService.OperationNotifier(),
@@ -138,7 +137,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	server := &Server{
 		BeaconDB:           db,
 		HeadFetcher:        mockService,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 		GenesisTimeFetcher: mockService,
 		StateNotifier:      mockService.StateNotifier(),
 		OperationNotifier:  mockService.OperationNotifier(),

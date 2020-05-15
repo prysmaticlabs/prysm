@@ -9,7 +9,6 @@ import (
 	"time"
 
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,7 @@ func TestLifecycle_OK(t *testing.T) {
 		Port:                "7348",
 		CertFlag:            "alice.crt",
 		KeyFlag:             "alice.key",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
+		SyncService:         &mock.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
@@ -62,7 +61,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7777",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
+		SyncService:         &mock.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
 		GenesisTimeFetcher:  chainService,
 		AttestationReceiver: chainService,

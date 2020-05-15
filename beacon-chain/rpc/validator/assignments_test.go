@@ -21,7 +21,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -58,7 +57,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	vs := &Server{
 		BeaconDB:           db,
 		HeadFetcher:        chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 		Eth1InfoFetcher:    p,
 		DepositFetcher:     depositcache.NewDepositCache(),
 		GenesisTimeFetcher: chain,
@@ -115,7 +114,7 @@ func TestGetDuties_OK(t *testing.T) {
 		BeaconDB:           db,
 		HeadFetcher:        chain,
 		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -202,7 +201,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		BeaconDB:           db,
 		HeadFetcher:        chain,
 		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
@@ -255,7 +254,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		BeaconDB:           db,
 		HeadFetcher:        chain,
 		GenesisTimeFetcher: chain,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		SyncChecker:        &mock.Sync{IsSyncing: false},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -283,7 +282,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 
 func TestGetDuties_SyncNotReady(t *testing.T) {
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		SyncChecker: &mock.Sync{IsSyncing: true},
 	}
 	_, err := vs.GetDuties(context.Background(), &ethpb.DutiesRequest{})
 	if err == nil || strings.Contains(err.Error(), "syncing to latest head") {
@@ -293,7 +292,7 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 
 func TestStreamDuties_SyncNotReady(t *testing.T) {
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		SyncChecker: &mock.Sync{IsSyncing: true},
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -344,7 +343,7 @@ func TestStreamDuties_OK(t *testing.T) {
 		Ctx:         ctx,
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		SyncChecker: &mock.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
@@ -415,7 +414,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 		Ctx:         ctx,
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		SyncChecker: &mock.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
@@ -515,7 +514,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	vs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		SyncChecker: &mock.Sync{IsSyncing: false},
 	}
 
 	// Create request for all validators in the system.

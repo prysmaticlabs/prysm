@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -30,7 +29,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
+		SyncChecker: &mock.Sync{IsSyncing: true},
 		BeaconDB:    db,
 	}
 
@@ -54,7 +53,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		SyncChecker: &mock.Sync{IsSyncing: false},
 		BeaconDB:    db,
 	}
 
@@ -84,7 +83,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		SyncChecker: &mock.Sync{IsSyncing: false},
 		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 	}
@@ -129,7 +128,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		SyncChecker: &mock.Sync{IsSyncing: false},
 		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
@@ -181,7 +180,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		SyncChecker: &mock.Sync{IsSyncing: false},
 		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
