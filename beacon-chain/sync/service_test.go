@@ -11,11 +11,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func init() {
-	allowedBlocksPerSecond = 64
-	allowedBlocksBurst = int64(10 * allowedBlocksPerSecond)
-}
-
 func TestService_StatusZeroEpoch(t *testing.T) {
 	bState, err := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 0})
 	if err != nil {

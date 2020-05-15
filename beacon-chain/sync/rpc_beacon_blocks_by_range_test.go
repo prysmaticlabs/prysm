@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
+func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -81,7 +81,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	}
 }
 
-func TestBeaconBlocksRPCHandler_ReturnsGenesisBlock(t *testing.T) {
+func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)

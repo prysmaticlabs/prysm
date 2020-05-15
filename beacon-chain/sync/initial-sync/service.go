@@ -9,6 +9,7 @@ import (
 
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -111,15 +111,19 @@ func (s *Service) Start() {
 	}
 
 	if genesis.After(roughtime.Now()) {
-		log.WithField(
-			"genesis time", genesis,
-		).Warn("Genesis time is in the future - waiting to start sync...")
-		time.Sleep(roughtime.Until(genesis))
+		s.synced = true
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: genesis,
+			},
+		})
+		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
+		return
 	}
-	s.chainStarted = true
 	currentSlot := helpers.SlotsSince(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
-		log.Info("Chain started within the last epoch - not syncing")
+		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
 		s.synced = true
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Synced,
@@ -129,6 +133,7 @@ func (s *Service) Start() {
 		})
 		return
 	}
+	s.chainStarted = true
 	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {
