@@ -47,7 +47,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	}
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &chainMock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
 	}
@@ -79,7 +79,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}
 	bs := &Server{
 		BeaconDB: db,
-		HeadFetcher: &chainMock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
 	}
@@ -578,7 +578,7 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 
 	bs := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &chainMock.ChainService{State: state},
+		GenesisTimeFetcher: &mock.ChainService{State: state},
 		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	_, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
@@ -689,7 +689,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &chainMock.ChainService{State: state},
+		GenesisTimeFetcher: &mock.ChainService{State: state},
 		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
@@ -808,7 +808,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB: db,
-		GenesisTimeFetcher: &chainMock.ChainService{
+		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
 		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
@@ -980,7 +980,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),
@@ -1107,14 +1107,14 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		indexedAtts[i] = idxAtt
 	}
 
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	server := &Server{
 		BeaconDB: db,
 		Ctx:      context.Background(),
-		HeadFetcher: &chainMock.ChainService{
+		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &chainMock.ChainService{
+		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
 		AttestationNotifier:         chainService.OperationNotifier(),
@@ -1148,7 +1148,7 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),
@@ -1177,7 +1177,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),

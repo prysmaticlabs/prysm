@@ -375,8 +375,8 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: &ethpb.SignedBeaconBlock{}, State: s},
-		FinalizationFetcher: &chainMock.ChainService{
+		HeadFetcher: &mock.ChainService{Block: &ethpb.SignedBeaconBlock{}, State: s},
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
@@ -389,7 +389,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 	bs := &Server{
-		HeadFetcher: &chainMock.ChainService{Block: nil},
+		HeadFetcher: &mock.ChainService{Block: nil},
 	}
 	if _, err := bs.GetChainHead(context.Background(), nil); err != nil && !strings.Contains(
 		err.Error(),
@@ -442,8 +442,8 @@ func TestServer_GetChainHead(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
 	bs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: b, State: s},
-		FinalizationFetcher: &chainMock.ChainService{
+		HeadFetcher: &mock.ChainService{Block: b, State: s},
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
@@ -496,7 +496,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	server := &Server{
 		Ctx:           ctx,
 		StateNotifier: chainService.StateNotifier(),
@@ -562,14 +562,14 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	ctx := context.Background()
 	server := &Server{
 		Ctx:           ctx,
-		HeadFetcher:   &chainMock.ChainService{Block: b, State: s},
+		HeadFetcher:   &mock.ChainService{Block: b, State: s},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
-		FinalizationFetcher: &chainMock.ChainService{
+		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
@@ -618,7 +618,7 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	ctx, cancel := context.WithCancel(ctx)
 	server := &Server{
 		Ctx:           ctx,
@@ -648,7 +648,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 		},
 	}
 
-	chainService := &chainMock.ChainService{}
+	chainService := &mock.ChainService{}
 	ctx := context.Background()
 	server := &Server{
 		Ctx:           ctx,
