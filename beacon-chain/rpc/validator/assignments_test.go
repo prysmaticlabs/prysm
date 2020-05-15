@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -287,7 +287,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
 	if err := vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream); err == nil || strings.Contains(
 		err.Error(), "syncing to latest head",
 	) {
@@ -353,7 +353,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	exitRoutine := make(chan bool)
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
 	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
 		exitRoutine <- true
 	})
@@ -425,7 +425,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	exitRoutine := make(chan bool)
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
 	mockStream.EXPECT().Send(wantedRes).Return(nil)
 	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
 		exitRoutine <- true
