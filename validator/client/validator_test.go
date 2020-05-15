@@ -594,29 +594,27 @@ func TestUpdateProtections_OK(t *testing.T) {
 	}
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	duties := &ethpb.DutiesResponse{
-		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{
-				AttesterSlot:   slot,
-				ValidatorIndex: 200,
-				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
-				PublicKey:      pubKey1[:],
-			},
-			{
-				AttesterSlot:   slot,
-				ValidatorIndex: 201,
-				CommitteeIndex: 100,
-				Committee:      []uint64{0, 1, 2, 3},
-				PublicKey:      pubKey2[:],
-			},
-		},
-	}
 	v := validator{
 		db:              db,
 		keyManager:      testKeyManager,
 		validatorClient: client,
-		duties:          duties,
+	}
+	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
+	v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
+		{
+			AttesterSlot:   slot,
+			ValidatorIndex: 200,
+			CommitteeIndex: 100,
+			Committee:      []uint64{0, 1, 2, 3},
+			PublicKey:      pubKey1[:],
+		},
+		{
+			AttesterSlot:   slot,
+			ValidatorIndex: 201,
+			CommitteeIndex: 100,
+			Committee:      []uint64{0, 1, 2, 3},
+			PublicKey:      pubKey2[:],
+		},
 	}
 
 	if err := v.UpdateProtections(context.Background(), slot); err != nil {
@@ -685,29 +683,29 @@ func TestRolesAt_OK(t *testing.T) {
 	sks[2] = bls.RandKey()
 	sks[3] = bls.RandKey()
 	v.keyManager = keymanager.NewDirect(sks)
-	v.duties = &ethpb.DutiesResponse{
-		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   1,
-				PublicKey:      sks[0].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				ProposerSlots:  []uint64{1},
-				PublicKey:      sks[1].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   2,
-				PublicKey:      sks[2].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				AttesterSlot:   1,
-				ProposerSlots:  []uint64{1, 5},
-				PublicKey:      sks[3].PublicKey().Marshal(),
-			},
+
+	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
+	v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
+		{
+			CommitteeIndex: 1,
+			AttesterSlot:   1,
+			PublicKey:      sks[0].PublicKey().Marshal(),
+		},
+		{
+			CommitteeIndex: 2,
+			ProposerSlots:  []uint64{1},
+			PublicKey:      sks[1].PublicKey().Marshal(),
+		},
+		{
+			CommitteeIndex: 1,
+			AttesterSlot:   2,
+			PublicKey:      sks[2].PublicKey().Marshal(),
+		},
+		{
+			CommitteeIndex: 2,
+			AttesterSlot:   1,
+			ProposerSlots:  []uint64{1, 5},
+			PublicKey:      sks[3].PublicKey().Marshal(),
 		},
 	}
 
@@ -755,26 +753,26 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()
 	v.keyManager = keymanager.NewDirect(sks)
-	v.duties = &ethpb.DutiesResponse{
-		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   0,
-				ProposerSlots:  []uint64{0},
-				PublicKey:      sks[0].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 2,
-				AttesterSlot:   4,
-				ProposerSlots:  nil,
-				PublicKey:      sks[1].PublicKey().Marshal(),
-			},
-			{
-				CommitteeIndex: 1,
-				AttesterSlot:   3,
-				ProposerSlots:  nil,
-				PublicKey:      sks[2].PublicKey().Marshal(),
-			},
+
+	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
+	v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
+		{
+			CommitteeIndex: 1,
+			AttesterSlot:   0,
+			ProposerSlots:  []uint64{0},
+			PublicKey:      sks[0].PublicKey().Marshal(),
+		},
+		{
+			CommitteeIndex: 2,
+			AttesterSlot:   4,
+			ProposerSlots:  nil,
+			PublicKey:      sks[1].PublicKey().Marshal(),
+		},
+		{
+			CommitteeIndex: 1,
+			AttesterSlot:   3,
+			ProposerSlots:  nil,
+			PublicKey:      sks[2].PublicKey().Marshal(),
 		},
 	}
 
@@ -890,12 +888,11 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			v := validator{
 				keyManager:      testKeyManager,
 				validatorClient: client,
-				duties: &ethpb.DutiesResponse{
-					CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
-						{
-							CommitteeIndex: 1,
-						},
-					},
+			}
+			v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
+			v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
+				{
+					CommitteeIndex: 1,
 				},
 			}
 
