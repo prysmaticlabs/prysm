@@ -415,14 +415,17 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	var finalizedState *stateTrie.BeaconState
+
 	if featureconfig.Get().NewStateMgmt {
-		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
 		finalizedState, err = s.stateGen.Resume(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}
-		if finalizedRoot == params.BeaconConfig().ZeroHash {
-			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
+		if !featureconfig.Get().SkipRegenHistoricalStates {
+			finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+			if finalizedRoot == params.BeaconConfig().ZeroHash {
+				finalizedRoot = bytesutil.ToBytes32(finalized.Root)
+			}
 		}
 	} else {
 		finalizedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
@@ -430,10 +433,19 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}
 	}
-
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block from db")
+	}
+
+	if featureconfig.Get().NewStateMgmt && featureconfig.Get().SkipRegenHistoricalStates {
+		parentState, err := s.generateState(ctx, finalizedRoot, bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot))
+		if err != nil {
+			return err
+		}
+		if s.beaconDB.SaveState(ctx, parentState, bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)) != nil {
+			return err
+		}
 	}
 
 	if finalizedState == nil || finalizedBlock == nil {
