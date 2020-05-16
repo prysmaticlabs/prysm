@@ -31,6 +31,7 @@ type Node struct {
 	Weight         uint64   // weight of this node.
 	bestChild      uint64   // best child index of this node.
 	BestDescendent uint64   // head index of this node.
+	Graffiti       [32]byte // graffati of the block node.
 }
 
 // Vote defines an individual validator's vote.
