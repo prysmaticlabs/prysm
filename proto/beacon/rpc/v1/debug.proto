@@ -4,6 +4,7 @@ package ethereum.beacon.rpc.v1;
 
 import "proto/beacon/p2p/v1/types.proto";
 import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
 
 // Debug service API
 //
@@ -17,6 +18,12 @@ service Debug {
             get: "/eth/v1alpha1/beacon/state"
         };
     }
+    // SetLoggingLevel sets the log-level of the beacon node programmatically.
+    rpc SetLoggingLevel(LoggingLevelRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/debug/logging"
+        };
+    }
 }
 
 message BeaconStateRequest {
@@ -27,4 +34,14 @@ message BeaconStateRequest {
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;
     }
+}
+
+message LoggingLevelRequest {
+    // The logging levels available in Prysm as an enum.
+    enum Level {
+        INFO = 0;
+        DEBUG = 1;
+        TRACE = 2;
+    }
+    Level level = 1;
 }

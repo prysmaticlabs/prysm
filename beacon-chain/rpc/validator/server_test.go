@@ -18,14 +18,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
-	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -97,7 +96,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockChainStream := mockRPC.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	mockChainStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
 	mockChainStream.EXPECT().Context().Return(context.Background())
 	mockChainStream.EXPECT().Send(gomock.Any()).Return(nil)
 	mockChainStream.EXPECT().Context().Return(context.Background())
@@ -184,7 +183,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	defer ctrl.Finish()
-	mockChainStream := internal.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	mockChainStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
 	mockChainStream.EXPECT().Context().Return(context.Background())
 	mockChainStream.EXPECT().Send(
 		&ethpb.ValidatorActivationResponse{
@@ -263,7 +262,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	defer ctrl.Finish()
-	mockChainStream := internal.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
+	mockChainStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
 	mockChainStream.EXPECT().Context().Return(context.Background())
 	mockChainStream.EXPECT().Send(
 		&ethpb.ValidatorActivationResponse{
@@ -317,7 +316,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
 		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); err == nil || !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
@@ -355,7 +354,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
 			Started:     true,
@@ -384,7 +383,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainStartResponse{
 			Started:     true,
@@ -431,7 +430,7 @@ func TestWaitForSynced_ContextClosed(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
 	go func(tt *testing.T) {
 		if err := Server.WaitForSynced(&ptypes.Empty{}, mockStream); err == nil || !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
@@ -470,7 +469,7 @@ func TestWaitForSynced_AlreadySynced(t *testing.T) {
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.SyncedResponse{
 			Synced:      true,
@@ -499,7 +498,7 @@ func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_WaitForSyncedServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.SyncedResponse{
 			Synced:      true,
