@@ -37,7 +37,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/p2p")
+	pcl := protocol.ID("/testing")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {

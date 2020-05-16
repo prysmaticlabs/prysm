@@ -121,7 +121,7 @@ func main() {
 		listener: listener,
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/p2p", handler.httpHandler)
+	mux.HandleFunc("/testing", handler.httpHandler)
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
 		log.Fatalf("Failed to start server %v", err)

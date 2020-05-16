@@ -43,7 +43,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false)}
-	pcl := protocol.ID("/p2p")
+	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -116,7 +116,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	}
 
 	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
-	pcl := protocol.ID("/p2p")
+	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
 	wg.Add(1)

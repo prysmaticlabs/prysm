@@ -47,7 +47,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	}
 
 	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
-	pcl := protocol.ID("/p2p")
+	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
 	wg.Add(1)

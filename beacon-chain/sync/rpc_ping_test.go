@@ -43,7 +43,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p1.Peers().SetMetadata(p2.Host.ID(), p2.LocalMetadata)
 
 	// Setup streams
-	pcl := protocol.ID("/p2p")
+	pcl := protocol.ID("/testing")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
