@@ -116,7 +116,7 @@ func FetchAccountStatuses(
 	ctx context.Context,
 	beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient,
 	pubkeys [][]byte) ([]ValidatorStatusMetadata, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.FetchAccountStatuses")
+	ctx, span := trace.StartSpan(ctx, "accounts.FetchAccountStatuses")
 	defer span.End()
 
 	errorChannel := make(chan error, MaxRequestLimit)
@@ -142,6 +142,7 @@ func FetchAccountStatuses(
 			allStatuses = append(allStatuses, statuses)
 		case e := <-errorChannel:
 			err = e
+			log.Warnln(err)
 		}
 	}
 	if err != nil {
@@ -184,7 +185,8 @@ func fetchValidatorStatus(
 	statusChannel <- statuses
 }
 
-// mergeStatuses merges k sorted ValidatorStatusMetadata slices to 1. Runs in O(nlogk) time.
+// mergeStatuses merges k sorted ValidatorStatusMetadata slices to 1.
+// XXX: This function should run in O(nlogk) time. For better performance, fix mergeTwo.
 func mergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMetadata {
 	if len(allStatuses) == 0 {
 		return []ValidatorStatusMetadata{}
