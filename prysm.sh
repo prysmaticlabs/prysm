@@ -71,8 +71,6 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
-cat < /dev/null > /dev/tcp/8.8.8.8/53;
-
 readonly wrapper_dir="$(dirname "$(get_realpath "${BASH_SOURCE[0]}")")/dist"
 arch=$(uname -m)
 arch=${arch/x86_64/amd64}
@@ -109,7 +107,7 @@ function get_prysm_version() {
     else
         # Find the latest Prysm version available for download.
         readonly reason="automatically selected latest available version"
-        prysm_version=$(curl -s https://prysmaticlabs.com/releases/latest)
+        prysm_version=$(curl -f -s https://prysmaticlabs.com/releases/latest) || echo "Please make sure you have internet access"
         readonly prysm_version
     fi
 }
