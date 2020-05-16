@@ -1,4 +1,4 @@
-// package testing includes useful helpers for slasher-related
+// Package testing includes useful helpers for slasher-related
 // unit tests.
 package testing
 

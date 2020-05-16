@@ -1,4 +1,4 @@
-// package testing defines useful helper functions for unit tests with
+// Package testing defines useful helper functions for unit tests with
 // the slasher database.
 package testing
 
