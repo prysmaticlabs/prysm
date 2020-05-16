@@ -1,4 +1,4 @@
-package testing
+package p2p
 
 import (
 	"sync"
@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// MockPeersProvider implements PeersProvider for testing.
+// MockPeersProvider implements PeersProvider for p2p.
 type MockPeersProvider struct {
 	lock  sync.Mutex
 	peers *peers.Status

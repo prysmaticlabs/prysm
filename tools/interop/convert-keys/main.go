@@ -1,7 +1,7 @@
-// Used for converting keys.yaml files from eth2.0-pm for interop testing.
+// Used for converting keys.yaml files from eth2.0-pm for interop p2p.
 // See: https://github.com/ethereum/eth2.0-pm/tree/master/interop/mocked_start
 //
-// This code can be discarded after interop testing.
+// This code can be discarded after interop p2p.
 package main
 
 import (

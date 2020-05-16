@@ -11,9 +11,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -41,7 +41,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false)}
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID("/p2p")
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -114,7 +114,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	}
 
 	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID("/p2p")
 
 	var wg sync.WaitGroup
 	wg.Add(1)

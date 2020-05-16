@@ -7,9 +7,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
+	mockp2p "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 

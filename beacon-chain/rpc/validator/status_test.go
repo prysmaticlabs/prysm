@@ -12,7 +12,6 @@ import (
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -42,7 +41,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -92,7 +91,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -181,7 +180,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -258,7 +257,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	}
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 		},
@@ -336,7 +335,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -406,7 +405,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -484,7 +483,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -521,7 +520,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	}
 	vs := &Server{
 		DepositFetcher:  depositCache,
-		Eth1InfoFetcher: &mockPOW.POWChain{},
+		Eth1InfoFetcher: &mock.POWChain{},
 		HeadFetcher: &mock.ChainService{
 			State: stateObj,
 		},
@@ -602,9 +601,9 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		BeaconDB:           db,
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
+		ChainStartFetcher:  &mock.POWChain{},
+		BlockFetcher:       &mock.POWChain{},
+		Eth1InfoFetcher:    &mock.POWChain{},
 		DepositFetcher:     depositCache,
 		HeadFetcher:        &mock.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
@@ -724,7 +723,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	}
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -775,7 +774,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 		},
@@ -850,7 +849,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		TimesByHeight: map[int]uint64{
 			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 		},

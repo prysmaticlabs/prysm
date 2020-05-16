@@ -16,7 +16,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -81,9 +80,9 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	vs := &Server{
 		BeaconDB:           db,
 		Ctx:                ctx,
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
+		ChainStartFetcher:  &mock.POWChain{},
+		BlockFetcher:       &mock.POWChain{},
+		Eth1InfoFetcher:    &mock.POWChain{},
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 		DepositFetcher:     depositcache.NewDepositCache(),
 		HeadFetcher:        &mock.ChainService{State: beaconState, Root: genesisRoot[:]},
@@ -169,9 +168,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		BeaconDB:           db,
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
-		BlockFetcher:       &mockPOW.POWChain{},
-		Eth1InfoFetcher:    &mockPOW.POWChain{},
+		ChainStartFetcher:  &mock.POWChain{},
+		BlockFetcher:       &mock.POWChain{},
+		Eth1InfoFetcher:    &mock.POWChain{},
 		DepositFetcher:     depositCache,
 		HeadFetcher:        &mock.ChainService{State: trie, Root: genesisRoot[:]},
 	}
@@ -251,7 +250,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 		BeaconDB:           db,
 		Ctx:                context.Background(),
 		CanonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-		ChainStartFetcher:  &mockPOW.POWChain{},
+		ChainStartFetcher:  &mock.POWChain{},
 		HeadFetcher:        &mock.ChainService{State: trie, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
@@ -303,7 +302,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		ChainStartFetcher: &mock.FaultymockChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -343,7 +342,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	chainService := &mock.ChainService{State: trie}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{
+		ChainStartFetcher: &mock.POWChain{
 			ChainFeed: new(event.Feed),
 		},
 		BeaconDB:      db,
@@ -371,7 +370,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		ChainStartFetcher: &mock.FaultymockChain{
 			ChainFeed: new(event.Feed),
 		},
 		BeaconDB:      db,
@@ -417,7 +416,7 @@ func TestWaitForSynced_ContextClosed(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		ChainStartFetcher: &mock.FaultymockChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -457,7 +456,7 @@ func TestWaitForSynced_AlreadySynced(t *testing.T) {
 	chainService := &mock.ChainService{State: trie}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{
+		ChainStartFetcher: &mock.POWChain{
 			ChainFeed: new(event.Feed),
 		},
 		BeaconDB:      db,
@@ -486,7 +485,7 @@ func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		ChainStartFetcher: &mock.FaultymockChain{
 			ChainFeed: new(event.Feed),
 		},
 		BeaconDB:      db,

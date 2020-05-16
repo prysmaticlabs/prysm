@@ -16,10 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
+	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -51,7 +51,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		}}
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID("/p2p")
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -167,7 +167,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID("/p2p")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {

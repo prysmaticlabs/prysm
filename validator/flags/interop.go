@@ -4,7 +4,7 @@ import (
 	"gopkg.in/urfave/cli.v2"
 )
 
-// Flags defined for interoperability testing.
+// Flags defined for interoperability p2p.
 var (
 	InteropStartIndex = &cli.Uint64Flag{
 		Name: "interop-start-index",

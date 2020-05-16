@@ -1,4 +1,4 @@
-// Package testing defines useful helper functions for unit tests with
+// Package p2p defines useful helper functions for unit tests with
 // the slasher database.
 package testing
 

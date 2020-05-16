@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -70,9 +69,9 @@ func TestGetBlock_OK(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mock.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		ChainStartFetcher: &mock.POWChain{},
+		Eth1InfoFetcher:   &mock.POWChain{},
+		Eth1BlockFetcher:  &mock.POWChain{},
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
@@ -177,9 +176,9 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mock.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		ChainStartFetcher: &mock.POWChain{},
+		Eth1InfoFetcher:   &mock.POWChain{},
+		Eth1BlockFetcher:  &mock.POWChain{},
 		MockEth1Votes:     true,
 		SlashingsPool:     slashings.NewPool(),
 		AttPool:           attestations.NewPool(),
@@ -292,9 +291,9 @@ func TestProposeBlock_OK(t *testing.T) {
 	c := &mock.ChainService{}
 	proposerServer := &Server{
 		BeaconDB:          db,
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		ChainStartFetcher: &mock.POWChain{},
+		Eth1InfoFetcher:   &mock.POWChain{},
+		Eth1BlockFetcher:  &mock.POWChain{},
 		BlockReceiver:     c,
 		HeadFetcher:       c,
 		BlockNotifier:     c.BlockNotifier(),
@@ -345,9 +344,9 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	proposerServer := &Server{
 		BeaconDB:          db,
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		ChainStartFetcher: &mock.POWChain{},
+		Eth1InfoFetcher:   &mock.POWChain{},
+		Eth1BlockFetcher:  &mock.POWChain{},
 		StateGen:          stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
@@ -402,7 +401,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	newHeight := big.NewInt(height.Int64() + 11000)
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()):    []byte("0x0"),
@@ -504,7 +503,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -636,7 +635,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	newHeight := big.NewInt(height.Int64() + 11000)
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()):    []byte("0x0"),
@@ -780,7 +779,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	ctx := context.Background()
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -890,7 +889,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -997,7 +996,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),
@@ -1110,7 +1109,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := &mockPOW.FaultyMockPOWChain{
+	p := &mock.FaultymockChain{
 		HashesByHeight: make(map[int][]byte),
 	}
 	proposerServer := &Server{
@@ -1160,7 +1159,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
 	}
 
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			0:  []byte("hash0"),
@@ -1197,7 +1196,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 func TestEth1Data(t *testing.T) {
 	slot := uint64(10000)
 
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		BlockNumberByHeight: map[uint64]*big.Int{
 			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
 		},
@@ -1442,7 +1441,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: big.NewInt(int64(currentHeight)),
 		HashesByHeight:    hashesByHeight,
 	}
@@ -1468,7 +1467,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	p := &mockPOW.POWChain{
+	p := &mock.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			int(height.Int64()): []byte("0x0"),

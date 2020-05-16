@@ -8,8 +8,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
-	testp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	testp2p "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 

@@ -10,8 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -43,7 +43,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p1.Peers().SetMetadata(p2.Host.ID(), p2.LocalMetadata)
 
 	// Setup streams
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID("/p2p")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {

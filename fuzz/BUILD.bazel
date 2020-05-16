@@ -183,7 +183,7 @@ go_fuzz_test(
     deps = [
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/sync:go_default_library",
-        "//beacon-chain/sync/initial-sync/testing:go_default_library",
+        "//beacon-chain/sync/initial-sync/p2p:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/mock:go_default_library",
@@ -254,7 +254,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/sync:go_default_library",
-        "//beacon-chain/sync/initial-sync/testing:go_default_library",
+        "//beacon-chain/sync/initial-sync/p2p:go_default_library",
         "//fuzz/testing:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/featureconfig:go_default_library",

@@ -7,10 +7,10 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
+	p2pt "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )

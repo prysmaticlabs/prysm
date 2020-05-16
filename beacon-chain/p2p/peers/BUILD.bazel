@@ -5,7 +5,10 @@ go_library(
     name = "go_default_library",
     srcs = ["status.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/mock/p2p:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",

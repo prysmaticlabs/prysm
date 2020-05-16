@@ -8,7 +8,7 @@ go_library(
         "mock_peersprovider.go",
         "p2p.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing",
+    importpath = "github.com/prysmaticlabs/prysm/shared/mock/p2p",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/p2p/encoder:go_default_library",

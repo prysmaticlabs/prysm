@@ -38,7 +38,7 @@ func main() {
 
 	app := cli.App{}
 	app.Name = "drainContracts"
-	app.Usage = "this is a util to drain all (testing) deposit contracts of their ETH."
+	app.Usage = "this is a util to drain all (p2p) deposit contracts of their ETH."
 	app.Version = version.GetVersion()
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{

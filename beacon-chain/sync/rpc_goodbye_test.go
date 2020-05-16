@@ -9,7 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -29,7 +29,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID("/p2p")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {

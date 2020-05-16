@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -37,7 +37,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/testing")
+	pcl := protocol.ID("/p2p")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {

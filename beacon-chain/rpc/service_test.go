@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -34,7 +33,7 @@ func TestLifecycle_OK(t *testing.T) {
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
 		GenesisTimeFetcher:  chainService,
-		POWChainService:     &mockPOW.POWChain{},
+		POWChainService:     &mock.POWChain{},
 		StateNotifier:       chainService.StateNotifier(),
 	})
 
@@ -66,7 +65,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		GenesisTimeFetcher:  chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
-		POWChainService:     &mockPOW.POWChain{},
+		POWChainService:     &mock.POWChain{},
 		StateNotifier:       chainService.StateNotifier(),
 	})
 

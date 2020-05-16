@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// E2EConfig defines the struct for all configurations needed for E2E testing.
+// E2EConfig defines the struct for all configurations needed for E2E p2p.
 type E2EConfig struct {
 	BeaconFlags    []string
 	ValidatorFlags []string

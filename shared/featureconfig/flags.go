@@ -63,7 +63,7 @@ var (
 	customGenesisDelayFlag = &cli.Uint64Flag{
 		Name: "custom-genesis-delay",
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
-			"This flag should be used for local development and testing only.",
+			"This flag should be used for local development and p2p only.",
 	}
 	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
 		Name: "cache-filtered-block-tree",

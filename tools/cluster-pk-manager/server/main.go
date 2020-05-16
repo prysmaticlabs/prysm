@@ -21,7 +21,7 @@ var (
 	depositContractAddr = flag.String("deposit-contract", "", "Address of the deposit contract")
 	depositAmount       = flag.String("deposit-amount", "", "The amount of wei to deposit into the contract")
 	dbPath              = flag.String("db-path", "", "The file path for database storage")
-	disableWatchtower   = flag.Bool("disable-watchtower", false, "Disable kubernetes pod watcher. Useful for local testing")
+	disableWatchtower   = flag.Bool("disable-watchtower", false, "Disable kubernetes pod watcher. Useful for local p2p")
 	verbose             = flag.Bool("verbose", false, "Enable debug logging")
 	ensureDeposited     = flag.Bool("ensure-deposited", false, "Ensure keys are deposited")
 	allowNewDeposits    = flag.Bool("allow-new-deposits", true, "Allow cluster PK manager to send new deposits or generate new keys")

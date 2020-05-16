@@ -11,8 +11,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/testing"
+	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -52,7 +52,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	topic := "/testing/foobar/1"
+	topic := "/p2p/foobar/1"
 	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 		m, ok := msg.(*pb.TestSimpleMessage)
 		if !ok {

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
 )
 
 func TestRegularSync_generateErrorResponse(t *testing.T) {
