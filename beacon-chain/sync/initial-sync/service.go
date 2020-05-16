@@ -9,7 +9,6 @@ import (
 
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
