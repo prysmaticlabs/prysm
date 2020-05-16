@@ -2,7 +2,6 @@ package initialsync
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 )
 
@@ -99,18 +98,9 @@ func TestStateMachine_trigger(t *testing.T) {
 		{
 			name:   "event not found",
 			events: []event{},
-			epochs: []uint64{},
+			epochs: []uint64{12, 13},
 			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateNew},
-			err:    fmt.Errorf("event not found: %v", eventSchedule),
-		},
-		{
-			name: "epoch not found",
-			events: []event{
-				{stateNew, eventSchedule, stateScheduled, false},
-			},
-			epochs: []uint64{},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
-			err:    fmt.Errorf("state for %v epoch not found", 12),
+			err:    errors.New("epoch state or event is nil"),
 		},
 		{
 			name: "single action",
@@ -176,7 +166,12 @@ func TestStateMachine_trigger(t *testing.T) {
 			for _, epoch := range tt.epochs {
 				sm.addEpochState(epoch)
 			}
-			err := sm.trigger(tt.args.name, tt.args.epoch, tt.args.data)
+			epochInd, ok := sm.findEpochState(tt.args.epoch)
+			if !ok {
+				t.Fatal("epoch state not found")
+			}
+			state := sm.epochs[epochInd]
+			err := state.trigger(sm.events[tt.args.name], tt.args.data)
 			if tt.err != nil && (err == nil || tt.err.Error() != err.Error()) {
 				t.Errorf("unexpected error = '%v', want '%v'", err, tt.err)
 			}
