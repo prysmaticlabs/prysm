@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -53,9 +54,10 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 		slot := strconv.Itoa(int(nodes[i].Slot))
 		weight := strconv.Itoa(int(nodes[i].Weight / 1e9)) // Convert unit Gwei to unit ETH.
 		votes := strconv.Itoa(int(nodes[i].Weight / 1e9 / avgBalance))
-		bestDescendent := strconv.Itoa(int(nodes[i].BestDescendent))
 		index := strconv.Itoa(int(i))
-		label := "slot: " + slot + "\n index: " + index + "\n bestDescendent: " + bestDescendent + "\n votes: " + votes + "\n weight: " + weight
+		g := nodes[i].Graffiti[:]
+		graffiti := hex.EncodeToString(g[:8])
+		label := "slot: " + slot + "\n votes: " + votes + "\n weight: " + weight + "\n graffiti: " + graffiti
 		var dotN dot.Node
 		if nodes[i].Parent != ^uint64(0) {
 			dotN = graph.Node(index).Box().Attr("label", label)
