@@ -71,6 +71,8 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
+cat < /dev/null > /dev/tcp/8.8.8.8/53;
+
 readonly wrapper_dir="$(dirname "$(get_realpath "${BASH_SOURCE[0]}")")/dist"
 arch=$(uname -m)
 arch=${arch/x86_64/amd64}
