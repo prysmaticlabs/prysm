@@ -1,4 +1,4 @@
-package beacon
+package debug
 
 import (
 	"context"
@@ -46,7 +46,6 @@ func TestServer_GetBeaconState(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs := &Server{
-		BeaconDB:           db,
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
@@ -84,14 +83,14 @@ func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	bs := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
 	req := &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
-			Slot: bs.GenesisTimeFetcher.CurrentSlot() + 1,
+			Slot: ds.GenesisTimeFetcher.CurrentSlot() + 1,
 		},
 	}
 	wanted := "Cannot retrieve information about a slot in the future"
-	if _, err := bs.GetBeaconState(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
+	if _, err := ds.GetBeaconState(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }

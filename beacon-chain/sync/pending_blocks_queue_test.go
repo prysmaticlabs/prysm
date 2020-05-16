@@ -16,12 +16,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	p2ptest "github.com/prysmaticlabs/prysm/shared/mock/p2p"
-	"github.com/sirupsen/logrus"
 )
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-}
 
 //    /- b1 - b2
 // b0
@@ -135,8 +130,9 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
-		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
-		seenPendingBlocks: make(map[[32]byte]bool),
+		},
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
@@ -247,8 +243,9 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 1,
 			},
-		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
-		seenPendingBlocks: make(map[[32]byte]bool),
+		},
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 	p1.Peers().Add(new(enr.Record), p1.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)

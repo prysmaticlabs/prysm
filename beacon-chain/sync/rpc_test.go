@@ -38,7 +38,7 @@ func expectSuccess(t *testing.T, r *Service, stream network.Stream) {
 func expectResetStream(t *testing.T, r *Service, stream network.Stream) {
 	expectedErr := "stream reset"
 	_, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
-	if err.Error() != expectedErr {
+	if err == nil || err.Error() != expectedErr {
 		t.Fatalf("Wanted this error %s but got %v instead", expectedErr, err)
 	}
 }
