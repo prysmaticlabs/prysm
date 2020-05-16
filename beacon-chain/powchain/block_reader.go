@@ -7,24 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"go.opencensus.io/trace"
-)
-
-var cachedEth1VotingStartTime uint64
-var cachedEth1DataBlockHeight *big.Int
-
-var (
-	// Metrics
-	votingBlockHeightCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_voting_height_cache_miss",
-		Help: "The number of voting block height requests that aren't present in the cache.",
-	})
-	votingBlockHeightCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_voting_height_cache_hit",
-		Help: "The number of voting block height requests that are present in the cache.",
-	})
 )
 
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
@@ -79,14 +62,6 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	if exists, blkInfo, err := s.blockCache.BlockInfoByHeight(height); exists || err != nil {
-		if err != nil {
-			return 0, err
-		}
-		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
-		return blkInfo.Time, nil
-	}
-	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := s.blockFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, fmt.Sprintf("could not query block with height %d", height.Uint64()))
@@ -99,42 +74,37 @@ func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint6
 // or ETH1. This is called for multiple times but only changes every
 // SlotsPerEth1VotingPeriod (1024 slots) so the whole method should be cached.
 func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big.Int, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockNumberByTimestamp")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	if time != cachedEth1VotingStartTime || cachedEth1DataBlockHeight == nil {
-		votingBlockHeightCacheMiss.Inc()
-		head, err := s.blockFetcher.BlockByNumber(ctx, nil)
+	head, err := s.blockFetcher.BlockByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for bn := head.Number(); ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		exists, info, err := s.blockCache.BlockInfoByHeight(bn)
 		if err != nil {
 			return nil, err
 		}
 
-		for bn := head.Number(); ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-
-			exists, info, err := s.blockCache.BlockInfoByHeight(bn)
+		if !exists {
+			blk, err := s.blockFetcher.BlockByNumber(ctx, bn)
 			if err != nil {
 				return nil, err
 			}
-
-			if !exists {
-				blk, err := s.blockFetcher.BlockByNumber(ctx, bn)
-				if err != nil {
-					return nil, err
-				}
-				info = blockToBlockInfo(blk)
+			if err := s.blockCache.AddBlock(blk); err != nil {
+				return nil, err
 			}
-
-			if info.Time <= time {
-				cachedEth1VotingStartTime = time
-				cachedEth1DataBlockHeight = info.Number
-				return cachedEth1DataBlockHeight, nil
-			}
+			info = blockToBlockInfo(blk)
 		}
-	} else {
-		votingBlockHeightCacheHit.Inc()
+
+		if info.Time <= time {
+			return info.Number, nil
+		}
 	}
-	return cachedEth1DataBlockHeight, nil
 }
