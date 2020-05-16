@@ -64,7 +64,7 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 func TestStore_Insert_UnknownParent(t *testing.T) {
 	// The new node does not have a parent.
 	s := &Store{nodeIndices: make(map[[32]byte]uint64)}
-	if err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, 1, 1); err != nil {
+	if err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, [32]byte{}, 1, 1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -95,7 +95,7 @@ func TestStore_Insert_KnownParent(t *testing.T) {
 	s.nodes = []*Node{{}}
 	p := [32]byte{'B'}
 	s.nodeIndices[p] = 0
-	if err := s.insert(context.Background(), 100, [32]byte{'A'}, p, 1, 1); err != nil {
+	if err := s.insert(context.Background(), 100, [32]byte{'A'}, p, [32]byte{}, 1, 1); err != nil {
 		t.Fatal(err)
 	}
 
