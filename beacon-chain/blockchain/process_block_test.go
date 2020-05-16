@@ -607,7 +607,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	}
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	block := &ethpb.BeaconBlock{Slot: 9, ParentRoot: roots[8]}
+	block := &ethpb.BeaconBlock{Slot: 9, ParentRoot: roots[8], Body: &ethpb.BeaconBlockBody{Graffiti: []byte{}}}
 	if err := service.fillInForkChoiceMissingBlocks(context.Background(), block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -657,7 +657,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	}
 
 	// Define a tree branch, slot 63 <- 64 <- 65
-	b63 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 63}}
+	b63 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 63, Body: &ethpb.BeaconBlockBody{}}}
 	if err := service.beaconDB.SaveBlock(ctx, b63); err != nil {
 		t.Fatal(err)
 	}
@@ -665,7 +665,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b64 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 64, ParentRoot: r63[:]}}
+	b64 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 64, ParentRoot: r63[:], Body: &ethpb.BeaconBlockBody{}}}
 	if err := service.beaconDB.SaveBlock(ctx, b64); err != nil {
 		t.Fatal(err)
 	}
@@ -673,7 +673,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b65 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 65, ParentRoot: r64[:]}}
+	b65 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 65, ParentRoot: r64[:], Body: &ethpb.BeaconBlockBody{}}}
 	if err := service.beaconDB.SaveBlock(ctx, b65); err != nil {
 		t.Fatal(err)
 	}
@@ -743,6 +743,7 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
+		b.Body = &ethpb.BeaconBlockBody{}
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, err
 		}
