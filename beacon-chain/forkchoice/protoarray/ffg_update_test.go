@@ -28,13 +28,13 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- justified: 1, finalized: 0
 	//            |
 	//            3 <- justified: 2, finalized: 1
-	if err := f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, [32]byte{}, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), [32]byte{}, 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 3, indexToHash(3), indexToHash(2), 2, 1); err != nil {
+	if err := f.ProcessBlock(context.Background(), 3, indexToHash(3), indexToHash(2), [32]byte{}, 2, 1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -112,35 +112,35 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//                              |   |
 	//  justified: 2, finalized: 0 -> 9  10 <- justified: 2, finalized: 0
 	// Left branch.
-	if err := f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, [32]byte{}, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 2, indexToHash(3), indexToHash(1), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 2, indexToHash(3), indexToHash(1), [32]byte{}, 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 3, indexToHash(5), indexToHash(3), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 3, indexToHash(5), indexToHash(3), [32]byte{}, 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 4, indexToHash(7), indexToHash(5), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(7), indexToHash(5), [32]byte{}, 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 4, indexToHash(9), indexToHash(7), 2, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(9), indexToHash(7), [32]byte{}, 2, 0); err != nil {
 		t.Fatal(err)
 	}
 	// Right branch.
-	if err := f.ProcessBlock(context.Background(), 1, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 1, indexToHash(2), params.BeaconConfig().ZeroHash, [32]byte{}, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 2, indexToHash(4), indexToHash(2), 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 2, indexToHash(4), indexToHash(2), [32]byte{}, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 3, indexToHash(6), indexToHash(4), 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 3, indexToHash(6), indexToHash(4), [32]byte{}, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 4, indexToHash(8), indexToHash(6), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(8), indexToHash(6), [32]byte{}, 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(context.Background(), 4, indexToHash(10), indexToHash(8), 2, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(10), indexToHash(8), [32]byte{}, 2, 0); err != nil {
 		t.Fatal(err)
 	}
 
