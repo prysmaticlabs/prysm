@@ -243,9 +243,6 @@ func TestBlockNumberByTimestamp(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.client = nil
 
-	if cachedEth1VotingStartTime != 0 {
-		t.Fatalf("Expected cached result to be 0 initially, received %d", cachedEth1VotingStartTime)
-	}
 	ctx := context.Background()
 	bn, err := web3Service.BlockNumberByTimestamp(ctx, 150000 /* time */)
 	if err != nil {
@@ -254,13 +251,5 @@ func TestBlockNumberByTimestamp(t *testing.T) {
 
 	if bn.Cmp(big.NewInt(0)) == 0 {
 		t.Error("Returned a block with zero number, expected to be non zero")
-	}
-
-	if cachedEth1VotingStartTime != 150000 {
-		t.Errorf("Expected cached voting start time to be equal to request, expected: %d, received: %d", 150000, cachedEth1VotingStartTime)
-	}
-
-	if bn.Cmp(cachedEth1DataBlockHeight) != 0 {
-		t.Errorf("Expected cached block height to be equal to result, expected: %d, received: %d", bn, cachedEth1DataBlockHeight)
 	}
 }
