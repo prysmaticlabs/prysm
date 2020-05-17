@@ -3,11 +3,13 @@ package beaconclient
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -62,7 +64,17 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		if res == nil {
 			continue
 		}
-		log.WithField("slot", res.Block.Slot).Info("Received block from beacon node")
+		root, err := ssz.HashTreeRoot(res.Block)
+		if err != nil {
+			log.WithError(err).Error("Could not hash block")
+			return
+		}
+
+		log.WithFields(logrus.Fields{
+			"slot":           res.Block.Slot,
+			"proposer_index": res.Block.ProposerIndex,
+			"root":           fmt.Sprintf("%#x", root),
+		}).Info("Received block from beacon node")
 		// We send the received block over the block feed.
 		bs.blockFeed.Send(res)
 	}
