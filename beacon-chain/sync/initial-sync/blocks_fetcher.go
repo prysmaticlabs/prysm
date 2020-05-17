@@ -487,21 +487,12 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 		return peers
 	}
 
-	if featureconfig.Get().EnableInitSyncWeightedRoundRobin {
-		// Order peers by remaining capacity, effectively turning in-order
-		// round robin peer processing into a weighted one (peers with higher
-		// remaining capacity are preferred).
-		sort.SliceStable(peers, func(i, j int) bool {
-			return f.rateLimiter.Remaining(peers[i].String()) > f.rateLimiter.Remaining(peers[j].String())
-		})
-	} else {
-		// Shuffle peers to prevent a bad peer from
-		// stalling sync with invalid blocks.
-		randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
-		randGenerator.Shuffle(len(peers), func(i, j int) {
-			peers[i], peers[j] = peers[j], peers[i]
-		})
-	}
+	// Shuffle peers to prevent a bad peer from
+	// stalling sync with invalid blocks.
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
+	randGenerator.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
 
 	// Select sub-sample from peers (honoring min-max invariants).
 	required := params.BeaconConfig().MaxPeersToSync
@@ -511,7 +502,18 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 	limit := uint64(math.Round(float64(len(peers)) * peersPercentage))
 	limit = mathutil.Max(limit, uint64(required))
 	limit = mathutil.Min(limit, uint64(len(peers)))
-	return peers[:limit]
+	peers = peers[:limit]
+
+	if featureconfig.Get().EnableInitSyncWeightedRoundRobin {
+		// Order peers by remaining capacity, effectively turning in-order
+		// round robin peer processing into a weighted one (peers with higher
+		// remaining capacity are preferred).
+		sort.SliceStable(peers, func(i, j int) bool {
+			return f.rateLimiter.Remaining(peers[i].String()) > f.rateLimiter.Remaining(peers[j].String())
+		})
+	}
+
+	return peers
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find non-empty future slot.
