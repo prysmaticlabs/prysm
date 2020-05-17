@@ -1,4 +1,4 @@
-package beacon
+package debug
 
 import (
 	"context"
@@ -13,17 +13,17 @@ import (
 
 // GetBeaconState retrieves a beacon state
 // from the beacon node by either a slot or block root.
-func (bs *Server) GetBeaconState(
+func (ds *Server) GetBeaconState(
 	ctx context.Context,
 	req *pbrpc.BeaconStateRequest,
 ) (*pbp2p.BeaconState, error) {
 	if !featureconfig.Get().NewStateMgmt {
-		return nil, status.Error(codes.FailedPrecondition, "requires --enable-new-state-mgmt to function")
+		return nil, status.Error(codes.FailedPrecondition, "Requires --enable-new-state-mgmt to function")
 	}
 
 	switch q := req.QueryFilter.(type) {
 	case *pbrpc.BeaconStateRequest_Slot:
-		currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+		currentSlot := ds.GenesisTimeFetcher.CurrentSlot()
 		requestedSlot := q.Slot
 		if requestedSlot > currentSlot {
 			return nil, status.Errorf(
@@ -34,18 +34,18 @@ func (bs *Server) GetBeaconState(
 			)
 		}
 
-		st, err := bs.StateGen.StateBySlot(ctx, q.Slot)
+		st, err := ds.StateGen.StateBySlot(ctx, q.Slot)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not compute state by slot: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not compute state by slot: %v", err)
 		}
 		return st.CloneInnerState(), nil
 	case *pbrpc.BeaconStateRequest_BlockRoot:
-		st, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(q.BlockRoot))
+		st, err := ds.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(q.BlockRoot))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "could not compute state by block root: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not compute state by block root: %v", err)
 		}
 		return st.CloneInnerState(), nil
 	default:
-		return nil, status.Error(codes.InvalidArgument, "need to specify either a block root or slot to request state")
+		return nil, status.Error(codes.InvalidArgument, "Need to specify either a block root or slot to request state")
 	}
 }

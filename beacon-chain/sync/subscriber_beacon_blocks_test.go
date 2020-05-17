@@ -7,12 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/sirupsen/logrus"
 )
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-}
 
 func TestDeleteAttsInPool(t *testing.T) {
 	r := &Service{
