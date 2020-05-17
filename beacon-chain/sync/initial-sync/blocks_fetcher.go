@@ -509,7 +509,12 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 		// round robin peer processing into a weighted one (peers with higher
 		// remaining capacity are preferred).
 		sort.SliceStable(peers, func(i, j int) bool {
-			return f.rateLimiter.Remaining(peers[i].String()) > f.rateLimiter.Remaining(peers[j].String())
+			cap1 := f.rateLimiter.Remaining(peers[i].String())
+			cap2 := f.rateLimiter.Remaining(peers[j].String())
+			if cap1 == cap2 {
+				return peers[i].String() < peers[j].String()
+			}
+			return cap1 > cap2
 		})
 	}
 
