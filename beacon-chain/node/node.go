@@ -98,7 +98,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
-		c := params.MainnetConfig()
+		c := params.BeaconConfig()
 		c.SlotsPerArchivedPoint = uint64(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
 		params.OverrideBeaconConfig(c)
 	}
