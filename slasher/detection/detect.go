@@ -42,12 +42,12 @@ func (ds *Service) DetectAttesterSlashings(
 		var slashing *ethpb.AttesterSlashing
 		switch result.Kind {
 		case types.DoubleVote:
-			slashing, err = ds.detectDoubleVote(ctx, att, resultsToAtts[resultKey], result)
+			slashing, err = ds.detectDoubleVote(ctx, resultsToAtts[resultKey], att, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect double votes on attestation")
 			}
 		case types.SurroundVote:
-			slashing, err = ds.detectSurroundVotes(ctx, att, resultsToAtts[resultKey], result)
+			slashing, err = ds.detectSurroundVotes(ctx, resultsToAtts[resultKey], att, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 			}
@@ -85,8 +85,8 @@ func (ds *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestatio
 // for every epoch for the validator in order to determine if it is a double vote.
 func (ds *Service) detectDoubleVote(
 	ctx context.Context,
-	incomingAtt *ethpb.IndexedAttestation,
 	possibleAtts []*ethpb.IndexedAttestation,
+	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectDoubleVote")
@@ -122,8 +122,8 @@ func (ds *Service) detectDoubleVote(
 // voting history in order to detect any possible surround votes.
 func (ds *Service) detectSurroundVotes(
 	ctx context.Context,
-	incomingAtt *ethpb.IndexedAttestation,
 	possibleAtts []*ethpb.IndexedAttestation,
+	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectSurroundVotes")
