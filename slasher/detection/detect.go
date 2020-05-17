@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 
+	status "github.com/prysmaticlabs/prysm/slasher/db/types"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/pkg/errors"
@@ -70,7 +72,9 @@ func (ds *Service) DetectAttesterSlashings(
 			slashingList = append(slashingList, ss)
 		}
 	}
-
+	if err = ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+		return nil, err
+	}
 	return slashingList, nil
 }
 
