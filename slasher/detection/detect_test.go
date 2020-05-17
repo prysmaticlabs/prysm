@@ -169,6 +169,9 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			if len(slashings) != tt.slashingsFound {
 				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
 			}
+			if err := db.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+				t.Fatal(err)
+			}
 			attsl, err := db.AttesterSlashings(ctx, status.Active)
 			if len(attsl) != tt.slashingsFound {
 				t.Fatalf("Didnt save slashing to db")
@@ -322,6 +325,9 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 			if len(slashings) != tt.slashingsFound {
 				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
 			}
+			if err := db.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+				t.Fatal(err)
+			}
 			savedSlashings, err := db.AttesterSlashings(ctx, status.Active)
 			if len(savedSlashings) != tt.slashingsFound {
 				t.Fatalf("Did not save slashing to db")
@@ -402,6 +408,12 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			if !reflect.DeepEqual(slashing, tt.slashing) {
 				t.Errorf("Wanted: %v, received %v", tt.slashing, slashing)
 			}
+			if slashing != nil {
+				if err := db.SaveProposerSlashing(ctx, status.Active, slashing); err != nil {
+					t.Error(err)
+				}
+			}
+
 			savedSlashings, err := db.ProposalSlashingsByStatus(ctx, status.Active)
 			if tt.slashing != nil && len(savedSlashings) != 1 {
 				t.Fatalf("Did not save slashing to db")

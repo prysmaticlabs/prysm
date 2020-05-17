@@ -231,6 +231,9 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	if len(slashings.ProposerSlashing) != 0 {
 		t.Fatalf("Found slashings while no slashing should have been found on first block: %v slashing found: %v", savedBlock, slashings)
 	}
+	if err := server.slasherDB.SaveBlockHeader(ctx, savedBlock); err != nil {
+		t.Fatal(err)
+	}
 	slashing, err := server.IsSlashableBlock(ctx, incomingBlock)
 	if err != nil {
 		t.Fatalf("got error while trying to detect slashing: %v", err)
