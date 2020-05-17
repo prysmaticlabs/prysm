@@ -119,3 +119,24 @@ go_test(
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
+
+# gazelle:exclude fsm_benchmark_test.go
+go_test(
+    name = "go_benchmark_test",
+    size = "small",
+    srcs = ["fsm_benchmark_test.go"],
+    args = [
+        "-test.bench=.",
+        "-test.benchmem",
+        "-test.v",
+    ],
+    embed = [":go_default_library"],
+    local = True,
+    tags = [
+        "benchmark",
+        "manual",
+        "no-cache",
+    ],
+    deps = [
+    ],
+)
