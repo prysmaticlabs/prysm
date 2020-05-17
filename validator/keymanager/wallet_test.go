@@ -104,15 +104,30 @@ func TestEnvPassphrases(t *testing.T) {
 		}
 	}()
 
-	if err := os.Setenv("NEITHER", "neither"); err != nil {
-		t.Fatalf("Error setting environment variable NEITHER: %v", err)
+	if err := os.Setenv("TESTENVPASSPHRASES_NEITHER", "neither"); err != nil {
+		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_NEITHER: %v", err)
 	}
-	if err := os.Setenv("FOO", "foo"); err != nil {
-		t.Fatalf("Error setting environment variable FOO: %v", err)
+	defer func() {
+		if err := os.Unsetenv("TESTENVPASSPHRASES_NEITHER"); err != nil {
+			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_NEITHER: %v", err)
+		}
+	}()
+	if err := os.Setenv("TESTENVPASSPHRASES_FOO", "foo"); err != nil {
+		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_FOO: %v", err)
 	}
-	if err := os.Setenv("BAR", "bar"); err != nil {
-		t.Fatalf("Error setting environment variable BAR: %v", err)
+	defer func() {
+		if err := os.Unsetenv("TESTENVPASSPHRASES_FOO"); err != nil {
+			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_FOO: %v", err)
+		}
+	}()
+	if err := os.Setenv("TESTENVPASSPHRASES_BAR", "bar"); err != nil {
+		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_BAR: %v", err)
 	}
+	defer func() {
+		if err := os.Unsetenv("TESTENVPASSPHRASES_BAR"); err != nil {
+			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_BAR: %v", err)
+		}
+	}()
 
 	tests := []struct {
 		name     string
@@ -121,22 +136,22 @@ func TestEnvPassphrases(t *testing.T) {
 	}{
 		{
 			name:     "Neither",
-			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$NEITHER"]}`, path)),
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_NEITHER"]}`, path)),
 			accounts: 0,
 		},
 		{
 			name:     "Foo",
-			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$FOO"]}`, path)),
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_FOO"]}`, path)),
 			accounts: 1,
 		},
 		{
 			name:     "Bar",
-			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$BAR"]}`, path)),
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_BAR"]}`, path)),
 			accounts: 1,
 		},
 		{
 			name:     "Both",
-			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$FOO","$BAR"]}`, path)),
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_FOO","$TESTENVPASSPHRASES_BAR"]}`, path)),
 			accounts: 2,
 		},
 	}
