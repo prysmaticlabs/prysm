@@ -97,6 +97,12 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
+	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
+		c := params.MainnetConfig()
+		c.SlotsPerArchivedPoint = uint64(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
+		params.OverrideBeaconConfig(c)
+	}
+
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
 	registry := shared.NewServiceRegistry()
