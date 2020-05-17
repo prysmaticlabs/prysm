@@ -213,15 +213,16 @@ func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
 
 func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
 	for _, v := range validatorStatuses {
-		key := v.PublicKey
 		m := v.Metadata
-		log.Infof("Status: %v PublicKey=0x%s", m.Status, hex.EncodeToString(key))
-		log.WithFields(logrus.Fields{
-			"Eth1DepositBlockNumber":    fieldToString(m.Eth1DepositBlockNumber),
-			"DepositInclusionSlot":      fieldToString(m.DepositInclusionSlot),
-			"ActivationEpoch":           fieldToString(m.ActivationEpoch),
-			"PositionInActivationQueue": fieldToString(m.PositionInActivationQueue),
-		}).Info("Metadata:")
+		key := v.PublicKey
+		log.WithFields(
+			logrus.Fields{
+				"ActivationEpoch":           fieldToString(m.ActivationEpoch),
+				"DepositInclusionSlot":      fieldToString(m.DepositInclusionSlot),
+				"Eth1DepositBlockNumber":    fieldToString(m.Eth1DepositBlockNumber),
+				"PositionInActivationQueue": fieldToString(m.PositionInActivationQueue),
+			},
+		).Infof("Status=%v\n PublicKey=0x%s\n", m.Status, hex.EncodeToString(key))
 	}
 }
 
