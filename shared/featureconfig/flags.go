@@ -148,7 +148,7 @@ var (
 		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
 	}
 	enableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:  "enable-init-sync-weighted-round-robin",
+		Name:  "enable-init-sync-wrr",
 		Usage: "Enables weighted round robin fetching optimization",
 	}
 )
