@@ -230,7 +230,7 @@ func (f *blocksFetcher) fetchBlocksFromSinglePeer(
 	defer span.End()
 
 	blocks = []*eth.SignedBeaconBlock{}
-	peers = f.filterPeers(peers, 1.0)
+	peers = f.filterPeers(peers, peersPercentagePerRequest)
 	if len(peers) == 0 {
 		return blocks, errNoPeersAvailable
 	}
