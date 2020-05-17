@@ -9,6 +9,8 @@ package detection
 import (
 	"context"
 
+	status "github.com/prysmaticlabs/prysm/slasher/db/types"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -33,12 +35,22 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 				log.WithError(err).Error("Could not get block header from block")
 				continue
 			}
-			slashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, signedBlkHdr)
+			pSlashing, err := ds.proposalsDetector.DetectDoublePropose(ctx, signedBlkHdr)
 			if err != nil {
 				log.WithError(err).Error("Could not perform detection on block header")
 				continue
 			}
-			ds.submitProposerSlashing(ctx, slashing)
+
+			if pSlashing == nil {
+				if err := ds.slasherDB.SaveBlockHeader(ctx, signedBlkHdr); err != nil {
+					log.WithError(err).Error("Could not save incoming block")
+				}
+			} else {
+				if err := ds.slasherDB.SaveProposerSlashing(ctx, status.Active, pSlashing); err != nil {
+					log.WithError(err).Error("Could not save proposer slashing")
+				}
+			}
+			ds.submitProposerSlashing(ctx, pSlashing)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
@@ -69,6 +81,10 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 			if len(slashings) < 1 {
 				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, indexedAtt); err != nil {
 					log.WithError(err).Error("Could not update spans")
+				}
+			} else {
+				if err = ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+					log.WithError(err).Error("Could not save attester slashings")
 				}
 			}
 			ds.submitAttesterSlashings(ctx, slashings)

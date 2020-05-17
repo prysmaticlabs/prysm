@@ -8,7 +8,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
-	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"go.opencensus.io/trace"
 )
 
@@ -40,14 +39,8 @@ func (dd *ProposeDetector) DetectDoublePropose(
 		if bytes.Equal(blockHeader.Signature, incomingBlk.Signature) {
 			continue
 		}
-		ps := &ethpb.ProposerSlashing{Header_1: incomingBlk, Header_2: blockHeader}
-		if err := dd.slasherDB.SaveProposerSlashing(ctx, status.Active, ps); err != nil {
-			return nil, err
-		}
-		return ps, nil
-	}
-	if err := dd.slasherDB.SaveBlockHeader(ctx, incomingBlk); err != nil {
-		return nil, err
+		pSlashing := &ethpb.ProposerSlashing{Header_1: incomingBlk, Header_2: blockHeader}
+		return pSlashing, nil
 	}
 	return nil, nil
 }
