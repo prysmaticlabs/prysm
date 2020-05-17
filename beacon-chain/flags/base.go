@@ -111,7 +111,7 @@ var (
 	SlotsPerArchivedPoint = &cli.IntFlag{
 		Name:  "slots-per-archive-point",
 		Usage: "The slot durations of when an archived state gets saved in the DB.",
-		Value: 128,
+		Value: 2048,
 	}
 	// DisableDiscv5 disables running discv5.
 	DisableDiscv5 = &cli.BoolFlag{
