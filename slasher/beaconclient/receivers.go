@@ -73,7 +73,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		log.WithFields(logrus.Fields{
 			"slot":           res.Block.Slot,
 			"proposer_index": res.Block.ProposerIndex,
-			"root":           fmt.Sprintf("%#x", root),
+			"root":           fmt.Sprintf("%#x...", root[:8]),
 		}).Info("Received block from beacon node")
 		// We send the received block over the block feed.
 		bs.blockFeed.Send(res)
