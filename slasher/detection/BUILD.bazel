@@ -21,7 +21,6 @@ go_library(
         "//shared/sliceutil:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db:go_default_library",
-        "//slasher/db/types:go_default_library",
         "//slasher/detection/attestations:go_default_library",
         "//slasher/detection/attestations/iface:go_default_library",
         "//slasher/detection/attestations/types:go_default_library",
