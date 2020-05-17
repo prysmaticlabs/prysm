@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
 )
@@ -30,17 +31,23 @@ func (ds *Service) DetectAttesterSlashings(
 		return nil, nil
 	}
 
+	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
+	if err != nil {
+		return nil, err
+	}
+
 	var slashings []*ethpb.AttesterSlashing
 	for _, result := range results {
+		resultKey := resultHash(result)
 		var slashing *ethpb.AttesterSlashing
 		switch result.Kind {
 		case types.DoubleVote:
-			slashing, err = ds.detectDoubleVote(ctx, att, result)
+			slashing, err = ds.detectDoubleVote(ctx, att, resultsToAtts[resultKey], result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect double votes on attestation")
 			}
 		case types.SurroundVote:
-			slashing, err = ds.detectSurroundVotes(ctx, att, result)
+			slashing, err = ds.detectSurroundVotes(ctx, att, resultsToAtts[resultKey], result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 			}
@@ -64,9 +71,6 @@ func (ds *Service) DetectAttesterSlashings(
 		}
 	}
 
-	if err = ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
-		return nil, err
-	}
 	return slashingList, nil
 }
 
@@ -80,6 +84,7 @@ func (ds *Service) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestatio
 func (ds *Service) detectDoubleVote(
 	ctx context.Context,
 	incomingAtt *ethpb.IndexedAttestation,
+	possibleAtts []*ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectDoubleVote")
@@ -88,11 +93,7 @@ func (ds *Service) detectDoubleVote(
 		return nil, nil
 	}
 
-	otherAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, detectionResult.SlashableEpoch, detectionResult.SigBytes[:])
-	if err != nil {
-		return nil, err
-	}
-	for _, att := range otherAtts {
+	for _, att := range possibleAtts {
 		if att.Data == nil {
 			continue
 		}
@@ -120,6 +121,7 @@ func (ds *Service) detectDoubleVote(
 func (ds *Service) detectSurroundVotes(
 	ctx context.Context,
 	incomingAtt *ethpb.IndexedAttestation,
+	possibleAtts []*ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectSurroundVotes")
@@ -128,11 +130,7 @@ func (ds *Service) detectSurroundVotes(
 		return nil, nil
 	}
 
-	otherAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, detectionResult.SlashableEpoch, detectionResult.SigBytes[:])
-	if err != nil {
-		return nil, err
-	}
-	for _, att := range otherAtts {
+	for _, att := range possibleAtts {
 		if att.Data == nil {
 			continue
 		}
@@ -168,6 +166,30 @@ func (ds *Service) detectSurroundVotes(
 // DetectDoubleProposals checks if the given signed beacon block is a slashable offense and returns the slashing.
 func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *ethpb.SignedBeaconBlockHeader) (*ethpb.ProposerSlashing, error) {
 	return ds.proposalsDetector.DetectDoublePropose(ctx, incomingBlock)
+}
+
+// mapResultsToAtts handles any duplicate detections by ensuring they reuse the same pool of attestations, instead of re-checking the DB for the same data.
+func (ds *Service) mapResultsToAtts(ctx context.Context, results []*types.DetectionResult) (map[[32]byte][]*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.mapResultsToAtts")
+	defer span.End()
+	resultsToAtts := make(map[[32]byte][]*ethpb.IndexedAttestation)
+	for _, result := range results {
+		resultKey := resultHash(result)
+		if _, ok := resultsToAtts[resultKey]; ok {
+			continue
+		}
+		matchingAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, result.SlashableEpoch, result.SigBytes[:])
+		if err != nil {
+			return nil, err
+		}
+		resultsToAtts[resultKey] = matchingAtts
+	}
+	return resultsToAtts, nil
+}
+
+func resultHash(result *types.DetectionResult) [32]byte {
+	resultBytes := append(bytesutil.Bytes8(result.SlashableEpoch), result.SigBytes[:]...)
+	return hashutil.FastSum256(resultBytes)
 }
 
 func isDoublePropose(
