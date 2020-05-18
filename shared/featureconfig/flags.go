@@ -445,4 +445,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
+	"--enable-init-sync-wrr",
 }
