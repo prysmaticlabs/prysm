@@ -73,7 +73,7 @@
       "beacon-chain/blockchain/testing/*": "Test-only package",
       "beacon-chain/p2p/sender\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
       "beacon-chain/sync/deadlines\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
-      "validator/client/grpc_interceptor\\.go": "Uses time.Now() for gRPC duration logging"
+      "shared/logutil/logutil\\.go": "Uses time.Now() for gRPC duration logging",
     }
   },
   "errcheck": {
