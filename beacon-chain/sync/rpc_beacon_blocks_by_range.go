@@ -144,6 +144,7 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		blks = append([]*ethpb.SignedBeaconBlock{genBlock}, blks...)
 		roots = append([][32]byte{genRoot}, roots...)
 	}
+	blks, roots = r.sortBlocksAndRoots(blks, roots)
 	checkpoint, err := r.db.FinalizedCheckpoint(ctx)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve finalized checkpoint")
