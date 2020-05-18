@@ -138,7 +138,13 @@ func (q *blocksQueue) loop() {
 	ticker := time.NewTicker(pollingInterval)
 	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventExtendWindow}
 	for {
-		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
+		headSlot := q.headFetcher.HeadSlot()
+		log.WithFields(logrus.Fields{
+			"state":           q.state,
+			"headSlot":        headSlot,
+			"lookaheadEpochs": lookaheadEpochs,
+		}).Debug("Blocks queue iteration")
+		if headSlot >= q.highestExpectedSlot {
 			// By the time initial sync is complete, highest slot may increase, re-check.
 			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
 				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
