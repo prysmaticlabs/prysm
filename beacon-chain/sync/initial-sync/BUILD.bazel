@@ -96,6 +96,7 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
+        "//beacon-chain/flags:go_default_library",
         "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
@@ -117,5 +118,26 @@ go_test(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
+    ],
+)
+
+# gazelle:exclude fsm_benchmark_test.go
+go_test(
+    name = "go_benchmark_test",
+    size = "small",
+    srcs = ["fsm_benchmark_test.go"],
+    args = [
+        "-test.bench=.",
+        "-test.benchmem",
+        "-test.v",
+    ],
+    embed = [":go_default_library"],
+    local = True,
+    tags = [
+        "benchmark",
+        "manual",
+        "no-cache",
+    ],
+    deps = [
     ],
 )

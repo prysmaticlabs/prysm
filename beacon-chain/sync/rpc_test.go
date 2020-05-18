@@ -52,7 +52,7 @@ func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	topic := "/p2p/foobar/1"
+	topic := "/testing/foobar/1"
 	handler := func(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 		m, ok := msg.(*pb.TestSimpleMessage)
 		if !ok {

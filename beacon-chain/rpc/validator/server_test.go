@@ -302,7 +302,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
-		ChainStartFetcher: &mock.FaultymockChain{
+		ChainStartFetcher: &mock.FaultyChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -370,7 +370,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mock.FaultymockChain{
+		ChainStartFetcher: &mock.FaultyChain{
 			ChainFeed: new(event.Feed),
 		},
 		BeaconDB:      db,
@@ -416,7 +416,7 @@ func TestWaitForSynced_ContextClosed(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
-		ChainStartFetcher: &mock.FaultymockChain{
+		ChainStartFetcher: &mock.FaultyChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -485,7 +485,7 @@ func TestWaitForSynced_NotStartedThenLogFired(t *testing.T) {
 	chainService := &mock.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mock.FaultymockChain{
+		ChainStartFetcher: &mock.FaultyChain{
 			ChainFeed: new(event.Feed),
 		},
 		BeaconDB:      db,

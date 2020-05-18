@@ -53,7 +53,7 @@ func main() {
 		m[ID] = b
 	}
 
-	res := execTmpl(tpl, input{Package: "p2p", MapStr: sszBytesToMapStr(m)})
+	res := execTmpl(tpl, input{Package: "testing", MapStr: sszBytesToMapStr(m)})
 	if err := ioutil.WriteFile(*output, res.Bytes(), 0644); err != nil {
 		panic(err)
 	}

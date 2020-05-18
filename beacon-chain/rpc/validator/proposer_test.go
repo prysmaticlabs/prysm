@@ -1109,7 +1109,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := &mock.FaultymockChain{
+	p := &mock.FaultyChain{
 		HashesByHeight: make(map[int][]byte),
 	}
 	proposerServer := &Server{

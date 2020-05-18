@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
-// BeaconFuzzSSZCache for p2p critical paths along the ssz cache for beacon state HTR.
+// BeaconFuzzSSZCache for testing critical paths along the ssz cache for beacon state HTR.
 func BeaconFuzzSSZCache(input []byte) {
 	s := &pb.BeaconState{}
 	if err := s.UnmarshalSSZ(input); err != nil {

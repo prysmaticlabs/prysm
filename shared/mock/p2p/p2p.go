@@ -35,7 +35,7 @@ var TopicMappings = map[reflect.Type]string{
 	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/ping/1/",
 }
 
-// TestP2P represents a testing implementation that can be used for p2p.
+// TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
 	t               *testing.T
 	Host            host.Host
@@ -231,7 +231,7 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, topic string, pid p
 	if err := stream.Close(); err != nil {
 		return nil, err
 	}
-	// Delay returning the stream for p2p purposes
+	// Delay returning the stream for testing purposes
 	if p.DelaySend {
 		time.Sleep(1 * time.Second)
 	}

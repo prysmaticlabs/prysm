@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -13,6 +14,7 @@ import (
 )
 
 func TestBlocksQueueInitStartStop(t *testing.T) {
+	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -27,7 +29,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
-			highestExpectedSlot: blockBatchSize,
+			highestExpectedSlot: blockBatchLimit,
 		})
 
 		if err := queue.stop(); err == nil {
@@ -40,7 +42,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
-			highestExpectedSlot: blockBatchSize,
+			highestExpectedSlot: blockBatchLimit,
 		})
 		if err := queue.start(); err != nil {
 			t.Error(err)
@@ -52,7 +54,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			headFetcher:         mc,
-			highestExpectedSlot: blockBatchSize,
+			highestExpectedSlot: blockBatchLimit,
 		})
 		if err := queue.start(); err != nil {
 			t.Error(err)
@@ -68,7 +70,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
-			highestExpectedSlot: blockBatchSize,
+			highestExpectedSlot: blockBatchLimit,
 		})
 
 		if err := queue.start(); err != nil {
@@ -96,7 +98,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
-			highestExpectedSlot: blockBatchSize,
+			highestExpectedSlot: blockBatchLimit,
 		})
 		if err := queue.start(); err != nil {
 			t.Error(err)
@@ -115,7 +117,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
-			highestExpectedSlot: blockBatchSize,
+			highestExpectedSlot: blockBatchLimit,
 		})
 		if err := queue.start(); err != nil {
 			t.Error(err)
@@ -134,7 +136,7 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			headFetcher:         mc,
-			highestExpectedSlot: blockBatchSize,
+			highestExpectedSlot: blockBatchLimit,
 		})
 		if err := queue.start(); err != nil {
 			t.Error(err)

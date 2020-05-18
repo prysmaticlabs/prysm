@@ -17,7 +17,6 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
@@ -174,10 +173,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating proposer slashing")
 	}
-	root, err := stateutil.BlockHeaderRoot(proposerSlashing.Header_1.Header)
-	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
-		t.Fatal(err)
-	}
 	p2p.Digest, err = r.forkDigest()
 	if err != nil {
 		t.Fatal(err)
@@ -189,7 +184,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	}
 	ps := r.slashingPool.PendingProposerSlashings(ctx, beaconState)
 	if len(ps) != 1 {
-		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
+		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps)
 	}
 }
 
@@ -290,7 +285,7 @@ func TestRevalidateSubscription_CorrectlyFormatsTopic(t *testing.T) {
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 
-	defaultTopic := "/eth2/p2p/%#x/committee%d"
+	defaultTopic := "/eth2/testing/%#x/committee%d"
 	// committee index 1
 	fullTopic := fmt.Sprintf(defaultTopic, digest, 1) + r.p2p.Encoding().ProtocolSuffix()
 	err = r.p2p.PubSub().RegisterTopicValidator(fullTopic, r.noopValidator)
