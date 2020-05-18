@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kevinms/leakybucket-go"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -16,13 +16,12 @@ import (
 )
 
 func TestConstants(t *testing.T) {
-	if params.BeaconConfig().MaxPeersToSync*blockBatchSize > 1000 {
+	if params.BeaconConfig().MaxPeersToSync*flags.Get().BlockBatchLimit > 1000 {
 		t.Fatal("rpc rejects requests over 1000 range slots")
 	}
 }
 
 func TestRoundRobinSync(t *testing.T) {
-
 	tests := []struct {
 		name               string
 		currentSlot        uint64
@@ -257,13 +256,12 @@ func TestRoundRobinSync(t *testing.T) {
 				DB:    beaconDB,
 			} // no-op mock
 			s := &Service{
-				chain:             mc,
-				blockNotifier:     mc.BlockNotifier(),
-				p2p:               p,
-				db:                beaconDB,
-				synced:            false,
-				chainStarted:      true,
-				blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
+				chain:         mc,
+				blockNotifier: mc.BlockNotifier(),
+				p2p:           p,
+				db:            beaconDB,
+				synced:        false,
+				chainStarted:  true,
 			}
 			if err := s.roundRobinSync(makeGenesisTime(tt.currentSlot)); err != nil {
 				t.Error(err)
