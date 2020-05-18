@@ -55,8 +55,8 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 		return fmt.Errorf("wrong type, expected: *ethpb.ProposerSlashing got: %T", msg)
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
-	header1IsNil := pSlashing != nil && pSlashing.Header_1 != nil && pSlashing.Header_1.Header != nil
-	header2IsNil := pSlashing != nil && pSlashing.Header_2 != nil && pSlashing.Header_2.Header != nil
+	header1IsNil := pSlashing == nil || pSlashing.Header_1 == nil || pSlashing.Header_1.Header == nil
+	header2IsNil := pSlashing == nil || pSlashing.Header_2 == nil || pSlashing.Header_2.Header == nil
 	if !header1IsNil && !header2IsNil {
 		headState, err := r.chain.HeadState(ctx)
 		if err != nil {
@@ -66,6 +66,8 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 			return errors.Wrap(err, "could not insert proposer slashing into pool")
 		}
 		r.setProposerSlashingIndexSeen(pSlashing.Header_1.Header.ProposerIndex)
+	} else {
+		return errors.New(fmt.Sprintf("h1: %t, h2: %t", header1IsNil, header2IsNil))
 	}
 	return nil
 }
