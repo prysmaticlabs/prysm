@@ -257,14 +257,11 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	}
 	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
 
-	if state.Slot() > slot {
+	// The block must have a higher slot than parent state.
+	if state.Slot() >= slot {
 		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
 		traceutil.AnnotateError(span, err)
 		return nil, err
-	}
-
-	if state.Slot() == slot {
-		return state, nil
 	}
 
 	highestSlot := state.Slot()
