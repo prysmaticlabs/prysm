@@ -4,7 +4,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "grpc_interceptor.go",
         "runner.go",
         "service.go",
         "validator.go",
@@ -24,6 +23,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/logutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/slotutil:go_default_library",

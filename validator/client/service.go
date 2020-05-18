@@ -6,6 +6,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/logutil"
+
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -16,7 +18,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethsl "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,9 +42,6 @@ type ValidatorService struct {
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
-	slasherConn          *grpc.ClientConn
-	slasherEndpoint      string
-	slasherWithCert      string
 	dataDir              string
 	keyManager           keymanager.KeyManager
 	logValidatorBalances bool
@@ -58,8 +56,6 @@ type Config struct {
 	Endpoint                   string
 	DataDir                    string
 	CertFlag                   string
-	SlasherEndpoint            string
-	SlasherCertFlag            string
 	GraffitiFlag               string
 	KeyManager                 keymanager.KeyManager
 	LogValidatorBalances       bool
@@ -78,8 +74,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
-		slasherEndpoint:      cfg.SlasherEndpoint,
-		slasherWithCert:      cfg.SlasherCertFlag,
 		dataDir:              cfg.DataDir,
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
@@ -144,7 +138,7 @@ func (v *ValidatorService) Start() {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			logDebugRequestInfoUnaryInterceptor,
+			logutil.LogDebugRequestInfoUnaryInterceptor,
 		)),
 	}
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)
@@ -181,16 +175,11 @@ func (v *ValidatorService) Start() {
 		log.Errorf("Could not initialize cache: %v", err)
 		return
 	}
-	var slasherClient ethsl.SlasherClient
-	if v.slasherEndpoint != "" {
-		slasherClient = v.startSlasherClient()
-	}
 
 	v.validator = &validator{
 		db:                             valDB,
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
-		slasherClient:                  slasherClient,
 		node:                           ethpb.NewNodeClient(v.conn),
 		keyManager:                     v.keyManager,
 		graffiti:                       v.graffiti,
@@ -202,63 +191,6 @@ func (v *ValidatorService) Start() {
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 	}
 	go run(v.ctx, v.validator)
-}
-
-func (v *ValidatorService) startSlasherClient() ethsl.SlasherClient {
-	var dialOpt grpc.DialOption
-
-	if v.slasherWithCert != "" {
-		creds, err := credentials.NewClientTLSFromFile(v.slasherWithCert, "")
-		if err != nil {
-			log.Errorf("Could not get valid slasher credentials: %v", err)
-			return nil
-		}
-		dialOpt = grpc.WithTransportCredentials(creds)
-	} else {
-		dialOpt = grpc.WithInsecure()
-		log.Warn("You are using an insecure slasher gRPC connection! Please provide a certificate and key to use a secure connection.")
-	}
-
-	md := make(metadata.MD)
-	for _, hdr := range v.grpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
-				continue
-			}
-			md.Set(ss[0], ss[1])
-		}
-	}
-
-	opts := []grpc.DialOption{
-		dialOpt,
-		grpc.WithDefaultCallOptions(
-			grpc_retry.WithMax(v.grpcRetries),
-			grpc.Header(&md),
-		),
-		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
-		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
-			grpc_opentracing.StreamClientInterceptor(),
-			grpc_prometheus.StreamClientInterceptor,
-			grpc_retry.StreamClientInterceptor(),
-		)),
-		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
-			grpc_opentracing.UnaryClientInterceptor(),
-			grpc_prometheus.UnaryClientInterceptor,
-			grpc_retry.UnaryClientInterceptor(),
-			logDebugRequestInfoUnaryInterceptor,
-		)),
-	}
-	conn, err := grpc.DialContext(v.ctx, v.slasherEndpoint, opts...)
-	if err != nil {
-		log.Errorf("Could not dial slasher endpoint: %s, %v", v.slasherEndpoint, err)
-		return nil
-	}
-	log.Debug("Successfully started slasher gRPC connection")
-	v.slasherConn = conn
-	return ethsl.NewSlasherClient(v.slasherConn)
-
 }
 
 // Stop the validator service.

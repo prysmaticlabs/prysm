@@ -63,7 +63,6 @@ type validator struct {
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
 	attesterHistoryByPubKeyLock        sync.RWMutex
-	slasherClient                      slashpb.SlasherClient
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(
