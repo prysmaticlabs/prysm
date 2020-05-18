@@ -7,8 +7,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message) error {
@@ -31,46 +29,43 @@ func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 }
 
 func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Message) error {
-	as, ok := msg.(*ethpb.AttesterSlashing)
+	aSlashing, ok := msg.(*ethpb.AttesterSlashing)
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.AttesterSlashing got: %T", msg)
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
-	if as != nil && as.Attestation_1 != nil && as.Attestation_1.Data != nil {
-		s, err := r.db.State(ctx, bytesutil.ToBytes32(as.Attestation_1.Data.BeaconBlockRoot))
+	aSlashing1IsNil := aSlashing == nil || aSlashing.Attestation_1 == nil || aSlashing.Attestation_1.AttestingIndices == nil
+	aSlashing2IsNil := aSlashing == nil || aSlashing.Attestation_2 == nil || aSlashing.Attestation_2.AttestingIndices == nil
+	if !aSlashing1IsNil && !aSlashing2IsNil {
+		headState, err := r.chain.HeadState(ctx)
 		if err != nil {
 			return err
 		}
-		if s == nil {
-			return fmt.Errorf("no state found for block root %#x", as.Attestation_1.Data.BeaconBlockRoot)
-		}
-		if err := r.slashingPool.InsertAttesterSlashing(ctx, s, as); err != nil {
+		if err := r.slashingPool.InsertAttesterSlashing(ctx, headState, aSlashing); err != nil {
 			return errors.Wrap(err, "could not insert attester slashing into pool")
 		}
-		r.setAttesterSlashingIndicesSeen(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
+		r.setAttesterSlashingIndicesSeen(aSlashing.Attestation_1.AttestingIndices, aSlashing.Attestation_2.AttestingIndices)
 	}
 	return nil
 }
 
 func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Message) error {
-	ps, ok := msg.(*ethpb.ProposerSlashing)
+	pSlashing, ok := msg.(*ethpb.ProposerSlashing)
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.ProposerSlashing got: %T", msg)
 	}
 	// Do some nil checks to prevent easy DoS'ing of this handler.
-	if ps.Header_1 != nil && ps.Header_1.Header != nil {
-		root, err := stateutil.BlockHeaderRoot(ps.Header_1.Header)
-		s, err := r.db.State(ctx, root)
+	header1IsNil := pSlashing != nil && pSlashing.Header_1 != nil && pSlashing.Header_1.Header != nil
+	header2IsNil := pSlashing != nil && pSlashing.Header_2 != nil && pSlashing.Header_2.Header != nil
+	if !header1IsNil && !header2IsNil {
+		headState, err := r.chain.HeadState(ctx)
 		if err != nil {
 			return err
 		}
-		if s == nil {
-			return fmt.Errorf("no state found for block root %#x", root)
-		}
-		if err := r.slashingPool.InsertProposerSlashing(ctx, s, ps); err != nil {
+		if err := r.slashingPool.InsertProposerSlashing(ctx, headState, pSlashing); err != nil {
 			return errors.Wrap(err, "could not insert proposer slashing into pool")
 		}
-		r.setProposerSlashingIndexSeen(ps.Header_1.Header.ProposerIndex)
+		r.setProposerSlashingIndexSeen(pSlashing.Header_1.Header.ProposerIndex)
 	}
 	return nil
 }
