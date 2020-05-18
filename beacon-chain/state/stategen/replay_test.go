@@ -534,16 +534,16 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	}
 }
 
-func TestArchivedRoot_CanGet(t *testing.T) {
+func TestArchivedRoot_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
-	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+	if err := db.SaveArchivedPointRoot(ctx, r, 1); err != nil {
 		t.Fatal(err)
 	}
-	got, err := service.archivedRoot(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	got, err := service.archivedRoot(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -552,7 +552,7 @@ func TestArchivedRoot_CanGet(t *testing.T) {
 	}
 }
 
-func TestArchivedRoot_CanGetOlder(t *testing.T) {
+func TestArchivedRoot_CanGetOlderOlder(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
@@ -574,7 +574,7 @@ func TestArchivedRoot_CanGetOlder(t *testing.T) {
 	}
 }
 
-func TestArchivedRoot_Genesis(t *testing.T) {
+func TestArchivedRoot_CanGetGenesisIndex(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
@@ -599,20 +599,20 @@ func TestArchivedRoot_Genesis(t *testing.T) {
 	}
 }
 
-func TestArchivedState_CanGet(t *testing.T) {
+func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
-	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+	if err := db.SaveArchivedPointRoot(ctx, r, 1); err != nil {
 		t.Fatal(err)
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
-	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
 	if err != nil {
 		t.Fatal(err)
 	}

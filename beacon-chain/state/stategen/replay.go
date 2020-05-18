@@ -314,7 +314,7 @@ func (s *State) archivedRoot(ctx context.Context, slot uint64) ([32]byte, error)
 	if slot/params.BeaconConfig().SlotsPerArchivedPoint > 1 {
 		archivedIndex = slot/params.BeaconConfig().SlotsPerArchivedPoint - 1
 	}
-
+	fmt.Println(archivedIndex)
 	for archivedIndex > 0 {
 		if ctx.Err() != nil {
 			return [32]byte{}, ctx.Err()
