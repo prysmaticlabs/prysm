@@ -63,7 +63,10 @@ func (s *State) loadColdStateBySlot(ctx context.Context, slot uint64) (*state.Be
 		return nil, err
 	}
 	if archivedState == nil {
-		archivedRoot := s.archivedRoot(ctx, slot)
+		archivedRoot, err := s.archivedRoot(ctx, slot)
+		if err != nil {
+			return nil, err
+		}
 		archivedState, err = s.recoverStateByRoot(ctx, archivedRoot)
 		if err != nil {
 			return nil, err
