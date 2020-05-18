@@ -56,6 +56,7 @@ func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*Service, e
 	}, nil
 }
 
+// Start the slasher protection service and grpc client.
 func (s *Service) Start() {
 	if s.endpoint != "" {
 		s.slasherClient = s.startSlasherClient()
