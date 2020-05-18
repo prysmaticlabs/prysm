@@ -194,6 +194,7 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
+		protector:                      v.protector,
 	}
 	go run(v.ctx, v.validator)
 }
