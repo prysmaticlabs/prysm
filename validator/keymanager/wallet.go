@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -54,6 +55,17 @@ func NewWallet(input string) (KeyManager, string, error) {
 
 	if len(opts.Passphrases) == 0 {
 		return nil, walletOptsHelp, errors.New("at least one passphrase is required to decrypt accounts")
+	}
+	for i, passphrase := range opts.Passphrases {
+		if strings.HasPrefix(passphrase, "$") {
+			envPassphrase := os.Getenv(strings.TrimPrefix(passphrase, "$"))
+			if envPassphrase != "" {
+				// N.B.  We do not log here if the environment variable is not found, as it is possible that this is actually a
+				// passphrase that just happens to begin with the '$' character.  If this is a missing environment variable it will
+				// be noticed when the account fails to decrypt.
+				opts.Passphrases[i] = envPassphrase
+			}
+		}
 	}
 
 	km := &Wallet{
