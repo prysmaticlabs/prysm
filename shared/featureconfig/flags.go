@@ -55,6 +55,11 @@ var (
 			"and attestation's aggregated signatures. Without this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
+	enableSlasherFlag = &cli.BoolFlag{
+		Name: "enable-slasher",
+		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
+			"the slasher-provider flag can be used to pass its address.",
+	}
 	customGenesisDelayFlag = &cli.Uint64Flag{
 		Name: "custom-genesis-delay",
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
@@ -146,11 +151,6 @@ var (
 	skipRegenHistoricalStates = &cli.BoolFlag{
 		Name:  "skip-regen-historical-states",
 		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
-	}
-	enableSlasherFlag = &cli.BoolFlag{
-		Name: "enable-slasher",
-		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
-			"the slasher-provider flag can be used to pass its address.",
 	}
 )
 
@@ -418,6 +418,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
+	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
@@ -433,7 +434,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableStateRefCopy,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
-	enableSlasherFlag,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
