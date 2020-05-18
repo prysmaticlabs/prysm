@@ -35,7 +35,7 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		go func() {
 			md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
 			if err != nil {
-				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Error("Failed to send metadata request")
+				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
 				return
 			}
 			// update metadata if there is no error
