@@ -308,7 +308,9 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 	return stateutil.BlockRoot(b.Block)
 }
 
-// This retrieves the highest archived root that represents the input slot in the DB.
+// This returns the highest archived root based on input slot in the DB.
+// If the archived root is not available at that exact input slot due to an event of skip block,
+// this will look back and return the last available archived root (ie. the one with the highest slot below input slot).
 func (s *State) archivedRoot(ctx context.Context, slot uint64) ([32]byte, error) {
 	archivedIndex := uint64(0)
 	if slot/params.BeaconConfig().SlotsPerArchivedPoint > 1 {
