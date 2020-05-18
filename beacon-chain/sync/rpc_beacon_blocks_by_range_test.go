@@ -83,6 +83,66 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	}
 }
 
+func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	if len(p1.Host.Network().Peers()) != 1 {
+		t.Error("Expected peers to be connected")
+	}
+	d := db.SetupDB(t)
+
+	req := &pb.BeaconBlocksByRangeRequest{
+		StartSlot: 200,
+		Step:      21,
+		Count:     33,
+	}
+
+	endSlot := req.StartSlot + (req.Step * (req.Count - 1))
+	// Populate the database with blocks that would match the request.
+	for i := endSlot; i >= req.StartSlot; i -= req.Step {
+		if err := d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: i}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false)}
+	pcl := protocol.ID("/testing")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		prevSlot := uint64(0)
+		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
+			expectSuccess(t, r, stream)
+			res := &ethpb.SignedBeaconBlock{}
+			if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+				t.Error(err)
+			}
+			if res.Block.Slot < prevSlot {
+				t.Errorf("Received block is unsorted with slot %d lower than previous slot %d", res.Block.Slot, prevSlot)
+			}
+			prevSlot = res.Block.Slot
+		}
+	})
+
+	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+}
+
 func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
