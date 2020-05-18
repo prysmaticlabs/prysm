@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// SlashingProtectionService represents a service to manage the validator
+// Service represents a service to manage the validator
 // ￿slashing protection.
 type Service struct {
 	ctx                context.Context
