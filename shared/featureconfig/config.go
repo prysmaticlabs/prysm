@@ -245,7 +245,7 @@ func ConfigureValidator(ctx *cli.Context) {
 	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
-		cfg.ProtectAttester = true
+		cfg.SlasherProtection = true
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")

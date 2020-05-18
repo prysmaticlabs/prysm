@@ -121,6 +121,12 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		return nil, err
 	}
 
+	if featureconfig.Get().SlasherProtection {
+		if err := ValidatorClient.registerSlasherClientService(); err != nil {
+			return nil, err
+		}
+	}
+
 	return ValidatorClient, nil
 }
 
@@ -207,6 +213,10 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 }
 func (s *ValidatorClient) registerSlasherClientService() error {
 	endpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
+	if endpoint == "" {
+		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
+
+	}
 	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
