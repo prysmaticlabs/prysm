@@ -7,9 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -21,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -44,16 +43,15 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	chain             blockchainService
-	p2p               p2p.P2P
-	db                db.ReadOnlyDatabase
-	synced            bool
-	chainStarted      bool
-	stateNotifier     statefeed.Notifier
-	blockNotifier     blockfeed.Notifier
-	blocksRateLimiter *leakybucket.Collector
+	ctx           context.Context
+	cancel        context.CancelFunc
+	chain         blockchainService
+	p2p           p2p.P2P
+	db            db.ReadOnlyDatabase
+	synced        bool
+	chainStarted  bool
+	stateNotifier statefeed.Notifier
+	blockNotifier blockfeed.Notifier
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
@@ -68,8 +66,6 @@ func NewInitialSync(cfg *Config) *Service {
 		db:            cfg.DB,
 		stateNotifier: cfg.StateNotifier,
 		blockNotifier: cfg.BlockNotifier,
-		blocksRateLimiter: leakybucket.NewCollector(
-			allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 	}
 }
 
