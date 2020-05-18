@@ -66,8 +66,6 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 			return errors.Wrap(err, "could not insert proposer slashing into pool")
 		}
 		r.setProposerSlashingIndexSeen(pSlashing.Header_1.Header.ProposerIndex)
-	} else {
-		return errors.New(fmt.Sprintf("h1: %t, h2: %t", header1IsNil, header2IsNil))
 	}
 	return nil
 }
