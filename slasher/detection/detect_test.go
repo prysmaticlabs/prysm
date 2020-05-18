@@ -504,7 +504,7 @@ func TestServer_MapResultsToAtts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(expectedResultsToAtts, resultsToAtts) {
-		t.Errorf("Expected map:")
+		t.Error("Expected map:")
 		for key, value := range resultsToAtts {
 			t.Errorf("Key %#x: %d atts", key, len(value))
 			t.Errorf("%+v", value)
