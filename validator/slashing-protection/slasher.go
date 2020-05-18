@@ -18,6 +18,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// SlashingProtectionService represents a service to manage the validator
+// ￿slashing protection.
 type SlashingProtectionService struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
@@ -39,9 +41,9 @@ type Config struct {
 	GrpcHeadersFlag            string
 }
 
-// NewVSlashingProtectionService creates a new validator service for the service
+// NewSlashingProtectionService creates a new validator service for the service
 // registry.
-func NewVSlashingProtectionService(ctx context.Context, cfg *Config) (*SlashingProtectionService, error) {
+func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*SlashingProtectionService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &SlashingProtectionService{
 		ctx:                ctx,
@@ -120,7 +122,7 @@ func (s *SlashingProtectionService) startSlasherClient() ethsl.SlasherClient {
 // Stop the validator service.
 func (s *SlashingProtectionService) Stop() error {
 	s.cancel()
-	log.Info("Stopping service")
+	log.Info("Stopping slashing protection service")
 	if s.conn != nil {
 		return s.conn.Close()
 	}
@@ -132,7 +134,7 @@ func (s *SlashingProtectionService) Stop() error {
 // WIP - not done.
 func (s *SlashingProtectionService) Status() error {
 	if s.conn == nil {
-		return errors.New("no connection to beacon RPC")
+		return errors.New("no connection to slasher RPC")
 	}
 	return nil
 }

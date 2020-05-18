@@ -220,7 +220,7 @@ func (s *ValidatorClient) registerSlasherClientService() error {
 	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	sp, err := slashing_protection.NewVSlashingProtectionService(context.Background(), &slashing_protection.Config{
+	sp, err := slashing_protection.NewSlashingProtectionService(context.Background(), &slashing_protection.Config{
 		Endpoint:                   endpoint,
 		CertFlag:                   cert,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
