@@ -107,7 +107,7 @@ function get_prysm_version() {
     else
         # Find the latest Prysm version available for download.
         readonly reason="automatically selected latest available version"
-        prysm_version=$(curl -s https://prysmaticlabs.com/releases/latest)
+        prysm_version=$(curl -f -s https://prysmaticlabs.com/releases/latest) || (color "31" "Starting prysm requires an internet connection." && exit 1)
         readonly prysm_version
     fi
 }
