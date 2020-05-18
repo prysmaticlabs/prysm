@@ -534,35 +534,85 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	}
 }
 
-func TestArchivedRoot_CanGet(t *testing.T) {
+func TestArchivedRoot_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
-	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+	if err := db.SaveArchivedPointRoot(ctx, r, 1); err != nil {
 		t.Fatal(err)
 	}
-	got := service.archivedRoot(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	got, err := service.archivedRoot(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if r != got {
 		t.Error("Did not get wanted root")
 	}
 }
 
-func TestArchivedState_CanGet(t *testing.T) {
+func TestArchivedRoot_CanGetOlderOlder(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
-	if err := db.SaveArchivedPointRoot(ctx, r, 0); err != nil {
+	if err := db.SaveArchivedPointRoot(ctx, r, 10); err != nil {
+		t.Fatal(err)
+	}
+	r = [32]byte{'b'}
+	if err := db.SaveArchivedPointRoot(ctx, r, 11); err != nil {
+		t.Fatal(err)
+	}
+	got, err := service.archivedRoot(ctx, 100000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r != got {
+		t.Error("Did not get wanted root")
+	}
+}
+
+func TestArchivedRoot_CanGetGenesisIndex(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	gBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gRoot, err := stateutil.BlockRoot(gBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, gBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	got, err := service.archivedRoot(ctx, 100000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gRoot != got {
+		t.Error("Did not get wanted root")
+	}
+}
+
+func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	service := New(db, cache.NewStateSummaryCache())
+
+	r := [32]byte{'a'}
+	if err := db.SaveArchivedPointRoot(ctx, r, 1); err != nil {
 		t.Fatal(err)
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
-	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
 	if err != nil {
 		t.Fatal(err)
 	}
