@@ -191,7 +191,7 @@ func (ds *Service) mapResultsToAtts(ctx context.Context, results []*types.Detect
 
 func resultHash(result *types.DetectionResult) [32]byte {
 	resultBytes := append(bytesutil.Bytes8(result.SlashableEpoch), result.SigBytes[:]...)
-	return hashutil.FastSum256(resultBytes)
+	return hashutil.Hash(resultBytes)
 }
 
 func isDoublePropose(
