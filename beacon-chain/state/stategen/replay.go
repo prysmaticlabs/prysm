@@ -308,18 +308,36 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 	return stateutil.BlockRoot(b.Block)
 }
 
-// This retrieves the archived root in the DB.
-func (s *State) archivedRoot(ctx context.Context, slot uint64) [32]byte {
+// This retrieves the highest archived root that represents the input slot in the DB.
+func (s *State) archivedRoot(ctx context.Context, slot uint64) ([32]byte, error) {
 	archivedIndex := uint64(0)
 	if slot/params.BeaconConfig().SlotsPerArchivedPoint > 1 {
 		archivedIndex = slot/params.BeaconConfig().SlotsPerArchivedPoint - 1
 	}
-	return s.beaconDB.ArchivedPointRoot(ctx, archivedIndex)
+
+	for archivedIndex > 0 {
+		if ctx.Err() != nil {
+			return [32]byte{}, ctx.Err()
+		}
+		if s.beaconDB.HasArchivedPoint(ctx, archivedIndex) {
+			return s.beaconDB.ArchivedPointRoot(ctx, archivedIndex), nil
+		}
+		archivedIndex--
+	}
+
+	if archivedIndex == 0 {
+		return s.genesisRoot(ctx)
+	}
+
+	return [32]byte{}, errUnknownArchivedState
 }
 
 // This retrieves the archived state in the DB.
 func (s *State) archivedState(ctx context.Context, slot uint64) (*state.BeaconState, error) {
-	archivedRoot := s.archivedRoot(ctx, slot)
+	archivedRoot, err := s.archivedRoot(ctx, slot)
+	if err != nil {
+		return nil, err
+	}
 	return s.beaconDB.State(ctx, archivedRoot)
 }
 
