@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["slasher.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/slashing-protection",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/slashing:go_default_library",
         "//shared/logutil:go_default_library",
