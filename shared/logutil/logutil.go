@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
@@ -42,7 +44,7 @@ func LogDebugRequestInfoUnaryInterceptor(ctx context.Context, method string, req
 		opts,
 		grpc.Header(&header),
 	)
-	start := time.Now()
+	start := roughtime.Now()
 	err := invoker(ctx, method, req, reply, cc, opts...)
 	logrus.WithField("backend", header["x-backend"]).
 		WithField("method", method).WithField("duration", time.Now().Sub(start)).
