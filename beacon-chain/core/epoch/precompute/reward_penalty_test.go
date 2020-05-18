@@ -90,6 +90,14 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	slashedAttestedIndices := []uint64{1413}
+	for _, i := range slashedAttestedIndices {
+		vs := state.Validators()
+		vs[i].Slashed = true
+		if state.SetValidators(vs) != nil {
+			t.Fatal(err)
+		}
+	}
 
 	vp, bp, err := New(context.Background(), state)
 	if err != nil {
@@ -117,12 +125,13 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{55, 1339, 1746, 1811, 1569, 1413}
+	attestedIndices := []uint64{55, 1339, 1746, 1811, 1569}
 	for _, i := range attestedIndices {
 		base, err := epoch.BaseReward(state, i)
 		if err != nil {
 			t.Errorf("Could not get base reward: %v", err)
 		}
+
 		// Base rewards for getting source right
 		wanted := attestedBalance*base/totalBalance +
 			bp.PrevEpochTargetAttested*base/totalBalance +
@@ -130,13 +139,26 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		// Base rewards for proposer and attesters working together getting attestation
 		// on chain in the fatest manner
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
-		wanted += (base - proposerReward) * params.BeaconConfig().MinAttestationInclusionDelay
+		wanted += (base-proposerReward)*params.BeaconConfig().MinAttestationInclusionDelay - 1
 		if rewards[i] != wanted {
 			t.Errorf("Wanted reward balance %d, got %d for validator with index %d", wanted, rewards[i], i)
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
 			t.Errorf("Wanted penalty balance 0, got %d", penalties[i])
+		}
+	}
+
+	for _, i := range slashedAttestedIndices {
+		base, err := epoch.BaseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
+		if rewards[i] != 0 {
+			t.Errorf("Wanted slashed indices reward balance 0, got %d", penalties[i])
+		}
+		if penalties[i] != 3*base {
+			t.Errorf("Wanted slashed indices penalty balance 0, got %d", penalties[i])
 		}
 	}
 
