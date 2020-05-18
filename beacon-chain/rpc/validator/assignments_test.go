@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -53,18 +53,21 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		},
 	}
 
+	chain := &mockChain.ChainService{
+		State: beaconState, Root: genesisRoot[:], Genesis: time.Now(),
+	}
 	vs := &Server{
-		BeaconDB:        db,
-		HeadFetcher:     &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
-		SyncChecker:     &mockSync.Sync{IsSyncing: false},
-		Eth1InfoFetcher: p,
-		DepositFetcher:  depositcache.NewDepositCache(),
+		BeaconDB:           db,
+		HeadFetcher:        chain,
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		Eth1InfoFetcher:    p,
+		DepositFetcher:     depositcache.NewDepositCache(),
+		GenesisTimeFetcher: chain,
 	}
 
 	pubKey := pubKey(99999)
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{pubKey},
-		Epoch:      0,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
 	if _, err := vs.GetDuties(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
@@ -106,39 +109,41 @@ func TestGetDuties_OK(t *testing.T) {
 		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
 	}
 
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
+	}
 	vs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:           db,
+		HeadFetcher:        chain,
+		GenesisTimeFetcher: chain,
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
-		Epoch:      0,
 	}
 	res, err := vs.GetDuties(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
+	if res.CurrentEpochDuties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
+			res.CurrentEpochDuties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
 	lastValidatorIndex := depChainStart - 1
 	req = &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.PublicKey},
-		Epoch:      0,
 	}
 	res, err = vs.GetDuties(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
+	if res.CurrentEpochDuties[0].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
+			res.CurrentEpochDuties[0].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// We request for duties for all validators.
@@ -150,9 +155,9 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	for i := 0; i < len(res.Duties); i++ {
-		if res.Duties[i].ValidatorIndex != uint64(i) {
-			t.Errorf("Wanted %d, received %d", i, res.Duties[i].ValidatorIndex)
+	for i := 0; i < len(res.CurrentEpochDuties); i++ {
+		if res.CurrentEpochDuties[i].ValidatorIndex != uint64(i) {
+			t.Errorf("Wanted %d, received %d", i, res.CurrentEpochDuties[i].ValidatorIndex)
 		}
 	}
 }
@@ -191,22 +196,25 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
+	chain := &mockChain.ChainService{
+		State: bState, Root: genesisRoot[:], Genesis: time.Now(),
+	}
 	vs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bState, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:           db,
+		HeadFetcher:        chain,
+		GenesisTimeFetcher: chain,
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 
 	// Test the first validator in registry.
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
-		Epoch:      0,
 	}
 	res, err := vs.GetDuties(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Duties) != 1 {
+	if len(res.CurrentEpochDuties) != 1 {
 		t.Error("Expected 1 assignment")
 	}
 }
@@ -241,10 +249,14 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
+	}
 	vs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:           db,
+		HeadFetcher:        chain,
+		GenesisTimeFetcher: chain,
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 
 	pubkey0 := deposits[0].Data.PublicKey
@@ -253,21 +265,20 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	// Test the first validator in registry.
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{pubkey0, pubkey1},
-		Epoch:      0,
 	}
 	res, err := vs.GetDuties(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
 
-	if len(res.Duties) != 2 {
-		t.Errorf("expected 2 assignments but got %d", len(res.Duties))
+	if len(res.CurrentEpochDuties) != 2 {
+		t.Errorf("expected 2 assignments but got %d", len(res.CurrentEpochDuties))
 	}
-	if res.Duties[0].AttesterSlot != 2 {
-		t.Errorf("Expected res.Duties[0].AttesterSlot == 7, got %d", res.Duties[0].AttesterSlot)
+	if res.CurrentEpochDuties[0].AttesterSlot != 2 {
+		t.Errorf("Expected res.CurrentEpochDuties[0].AttesterSlot == 7, got %d", res.CurrentEpochDuties[0].AttesterSlot)
 	}
-	if res.Duties[1].AttesterSlot != 1 {
-		t.Errorf("Expected res.Duties[1].AttesterSlot == 1, got %d", res.Duties[1].AttesterSlot)
+	if res.CurrentEpochDuties[1].AttesterSlot != 1 {
+		t.Errorf("Expected res.CurrentEpochDuties[1].AttesterSlot == 1, got %d", res.CurrentEpochDuties[1].AttesterSlot)
 	}
 }
 
@@ -287,7 +298,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
 	if err := vs.StreamDuties(&ethpb.DutiesRequest{}, mockStream); err == nil || strings.Contains(
 		err.Error(), "syncing to latest head",
 	) {
@@ -344,16 +355,15 @@ func TestStreamDuties_OK(t *testing.T) {
 	// Test the first validator in registry.
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
-		Epoch:      0,
 	}
-	wantedRes, err := vs.duties(ctx, req)
+	wantedRes, err := vs.duties(ctx, req, 0 /* epoch */)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	exitRoutine := make(chan bool)
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
 	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
 		exitRoutine <- true
 	})
@@ -416,16 +426,15 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	// Test the first validator in registry.
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
-		Epoch:      0,
 	}
-	wantedRes, err := vs.duties(ctx, req)
+	wantedRes, err := vs.duties(ctx, req, 0 /* epoch */)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	exitRoutine := make(chan bool)
-	mockStream := mockRPC.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamDutiesServer(ctrl)
 	mockStream.EXPECT().Send(wantedRes).Return(nil)
 	mockStream.EXPECT().Send(wantedRes).Do(func(arg0 interface{}) {
 		exitRoutine <- true
