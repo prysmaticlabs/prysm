@@ -142,12 +142,13 @@ func (p *Pool) InsertAttesterSlashing(
 			attesterSlashing: slashing,
 			validatorToSlash: val,
 		}
-
 		// Insert into pending list and sort again.
 		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, pendingSlashing)
 		sort.Slice(p.pendingAttesterSlashing, func(i, j int) bool {
 			return p.pendingAttesterSlashing[i].validatorToSlash < p.pendingAttesterSlashing[j].validatorToSlash
 		})
+		numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
+
 	}
 	return nil
 }
@@ -165,7 +166,7 @@ func (p *Pool) InsertProposerSlashing(
 	defer span.End()
 
 	if err := blocks.VerifyProposerSlashing(state, slashing); err != nil {
-		numPendingAttesterSlashingFailedSigVerify.Inc()
+		numPendingProposerSlashingFailedSigVerify.Inc()
 		return errors.Wrap(err, "could not verify proposer slashing")
 	}
 
@@ -197,6 +198,8 @@ func (p *Pool) InsertProposerSlashing(
 	sort.Slice(p.pendingProposerSlashing, func(i, j int) bool {
 		return p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex < p.pendingProposerSlashing[j].Header_1.Header.ProposerIndex
 	})
+	numPendingProposerSlashings.Set(float64(len(p.pendingProposerSlashing)))
+
 	return nil
 }
 
