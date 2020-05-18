@@ -158,7 +158,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 			t.Errorf("Wanted slashed indices reward balance 0, got %d", penalties[i])
 		}
 		if penalties[i] != 3*base {
-			t.Errorf("Wanted slashed indices penalty balance 0, got %d", penalties[i])
+			t.Errorf("Wanted slashed indices penalty balance %d, got %d", 3*base, penalties[i])
 		}
 	}
 
