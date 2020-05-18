@@ -110,7 +110,7 @@ contract in order to activate the validator client`,
 							params.UseSchlesiTestnet()
 						}
 
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, true /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -128,13 +128,42 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
 						if err := accounts.PrintPublicAndPrivateKeys(keystorePath, passphrase); err != nil {
 							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
 						}
+						return nil
+					},
+				},
+				{
+					Name:        "change-password",
+					Description: "changes password for all keys located in a keystore",
+					Flags: []cli.Flag{
+						flags.KeystorePathFlag,
+						flags.PasswordFlag,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						keystorePath, oldPassword, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false)
+						if err != nil {
+							log.WithError(err).Error("Could not read keystore path and/or the old password")
+						}
+
+						log.Info("Please enter the new password")
+						newPassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
+						if err != nil {
+							log.WithError(err).Error("Could not read the new password")
+						}
+
+						err = accounts.ChangePassword(keystorePath, oldPassword, newPassword)
+						if err != nil {
+							log.WithError(err).Error("Changing password failed")
+						} else {
+							log.Info("Password changed successfully")
+						}
+
 						return nil
 					},
 				},
