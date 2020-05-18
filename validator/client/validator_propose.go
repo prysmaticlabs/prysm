@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
+
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -36,6 +38,16 @@ var (
 		prometheus.CounterOpts{
 			Namespace: "validator",
 			Name:      "failed_proposals",
+		},
+		[]string{
+			// validator pubkey
+			"pubkey",
+		},
+	)
+	validatorProposeFailVecSlasher = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "failed_proposals_external_slasher",
 		},
 		[]string{
 			// validator pubkey
@@ -119,6 +131,20 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	blk := &ethpb.SignedBeaconBlock{
 		Block:     b,
 		Signature: sig,
+	}
+
+	if v.protector != nil {
+		bh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
+		if err != nil {
+			log.WithError(err).Error("Failed to get block header from block")
+		}
+		if !v.protector.VerifyBlock(ctx, bh) {
+			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
+			if v.emitAccountMetrics {
+				validatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
 	}
 
 	// Propose and broadcast block via beacon node

@@ -6,6 +6,8 @@ import (
 	"context"
 	"strings"
 
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 
 	"github.com/dgraph-io/ristretto"
@@ -49,6 +51,7 @@ type ValidatorService struct {
 	maxCallRecvMsgSize   int
 	grpcRetries          uint
 	grpcHeaders          []string
+	protector            slashingprotection.Protector
 }
 
 // Config for the validator service.
@@ -63,6 +66,7 @@ type Config struct {
 	GrpcMaxCallRecvMsgSizeFlag int
 	GrpcRetriesFlag            uint
 	GrpcHeadersFlag            string
+	Protector                  slashingprotection.Protector
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -82,6 +86,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
 		grpcRetries:          cfg.GrpcRetriesFlag,
 		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
+		protector:            cfg.Protector,
 	}, nil
 }
 

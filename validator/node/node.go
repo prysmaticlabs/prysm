@@ -116,15 +116,13 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := ValidatorClient.registerPrometheusService(); err != nil {
 		return nil, err
 	}
-
-	if err := ValidatorClient.registerClientService(keyManager); err != nil {
-		return nil, err
-	}
-
 	if featureconfig.Get().SlasherProtection {
 		if err := ValidatorClient.registerSlasherClientService(); err != nil {
 			return nil, err
 		}
+	}
+	if err := ValidatorClient.registerClientService(keyManager); err != nil {
+		return nil, err
 	}
 
 	return ValidatorClient, nil
@@ -193,6 +191,11 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	var sp *slashing_protection.Service
+	var protector slashing_protection.Protector
+	if err := s.services.FetchService(&sp); err == nil {
+		protector = sp
+	}
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -204,6 +207,7 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		Protector:                  protector,
 	})
 
 	if err != nil {
