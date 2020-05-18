@@ -8,10 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-
-	"github.com/sirupsen/logrus"
 )
 
 // ConfigurePersistentLogging adds a log-to-file writer. File content is identical to stdout.
