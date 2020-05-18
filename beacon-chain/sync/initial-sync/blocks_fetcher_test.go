@@ -735,6 +735,17 @@ func TestBlocksFetcherFilterPeers(t *testing.T) {
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
 			got := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			// Re-arrange deterministically peers with the same remaining capacity.
+			// They are deliberately shuffled - so that on the same capacity any of
+			// such peers can be selected. That's why they are sorted here.
+			sort.SliceStable(got, func(i, j int) bool {
+				cap1 := fetcher.rateLimiter.Remaining(pids[i].String())
+				cap2 := fetcher.rateLimiter.Remaining(pids[j].String())
+				if cap1 == cap2 {
+					return pids[i].String() < pids[j].String()
+				}
+				return i < j
+			})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("filterPeers() got = %#v, want %#v", got, tt.want)
 			}

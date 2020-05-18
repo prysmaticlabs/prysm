@@ -507,13 +507,12 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 	if featureconfig.Get().EnableInitSyncWeightedRoundRobin {
 		// Order peers by remaining capacity, effectively turning in-order
 		// round robin peer processing into a weighted one (peers with higher
-		// remaining capacity are preferred).
+		// remaining capacity are preferred). Peers with the same capacity
+		// are selected at random, since we have already shuffled peers
+		// at this point.
 		sort.SliceStable(peers, func(i, j int) bool {
 			cap1 := f.rateLimiter.Remaining(peers[i].String())
 			cap2 := f.rateLimiter.Remaining(peers[j].String())
-			if cap1 == cap2 {
-				return peers[i].String() < peers[j].String()
-			}
 			return cap1 > cap2
 		})
 	}
