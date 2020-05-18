@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// VerifyBlock implements the slashing protection for block proposals.
 func (s *Service) VerifyBlock(ctx context.Context, blockHeader *ethpb.SignedBeaconBlockHeader) bool {
 	ps, err := s.slasherClient.IsSlashableBlock(ctx, blockHeader)
 	if err != nil {
@@ -18,6 +19,7 @@ func (s *Service) VerifyBlock(ctx context.Context, blockHeader *ethpb.SignedBeac
 	return true
 }
 
+// VerifyAttestation implements the slashing protection for attestations.
 func (s *Service) VerifyAttestation(ctx context.Context, attestation *ethpb.IndexedAttestation) bool {
 	as, err := s.slasherClient.IsSlashableAttestation(ctx, attestation)
 	if err != nil {
