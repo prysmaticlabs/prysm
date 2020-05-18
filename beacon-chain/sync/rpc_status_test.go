@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -21,12 +22,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
 )
-
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-}
 
 func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
@@ -35,9 +31,18 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
+	root := [32]byte{'C'}
 
 	r := &Service{p2p: p1,
 		chain: &mock.ChainService{
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  root[:],
+			},
 			Genesis:        time.Now(),
 			ValidatorsRoot: [32]byte{'A'},
 		}}
@@ -47,17 +52,29 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		code, errMsg, err := ReadStatusCode(stream, p1.Encoding())
-		if err != nil {
+		expectSuccess(t, r, stream)
+		out := &pb.Status{}
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		if code == 0 {
-			t.Error("Expected a non-zero code")
+		if !bytes.Equal(out.FinalizedRoot, root[:]) {
+			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
 		}
-		if errMsg != errWrongForkDigestVersion.Error() {
-			t.Logf("Received error string len %d, wanted error string len %d", len(errMsg), len(errWrongForkDigestVersion.Error()))
-			t.Errorf("Received unexpected message response in the stream: %s. Wanted %s.", errMsg, errWrongForkDigestVersion.Error())
+	})
+
+	pcl2 := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz")
+	var wg2 sync.WaitGroup
+	wg2.Add(1)
+	p2.Host.SetStreamHandler(pcl2, func(stream network.Stream) {
+		defer wg2.Done()
+		msg := new(uint64)
+		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+			t.Error(err)
 		}
+		if *msg != codeWrongNetwork {
+			t.Errorf("Wrong goodbye code: %d", *msg)
+		}
+
 	})
 
 	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
@@ -66,11 +83,14 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	}
 
 	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: []byte("fake")}, stream1)
-	if err != errWrongForkDigestVersion {
-		t.Errorf("Expected error %v, got %v", errWrongForkDigestVersion, err)
+	if err != nil {
+		t.Errorf("Expected no error but got %v", err)
 	}
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+	if testutil.WaitTimeout(&wg2, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
