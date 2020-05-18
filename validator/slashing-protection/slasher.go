@@ -1,4 +1,4 @@
-package slashing_protection
+package slashingprotection
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 
 // SlashingProtectionService represents a service to manage the validator
 // ￿slashing protection.
-type SlashingProtectionService struct {
+type Service struct {
 	ctx                context.Context
 	cancel             context.CancelFunc
 	conn               *grpc.ClientConn
@@ -43,9 +43,9 @@ type Config struct {
 
 // NewSlashingProtectionService creates a new validator service for the service
 // registry.
-func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*SlashingProtectionService, error) {
+func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &SlashingProtectionService{
+	return &Service{
 		ctx:                ctx,
 		cancel:             cancel,
 		endpoint:           cfg.Endpoint,
@@ -56,13 +56,13 @@ func NewSlashingProtectionService(ctx context.Context, cfg *Config) (*SlashingPr
 	}, nil
 }
 
-func (s *SlashingProtectionService) Start() {
+func (s *Service) Start() {
 	if s.endpoint != "" {
 		s.slasherClient = s.startSlasherClient()
 	}
 }
 
-func (s *SlashingProtectionService) startSlasherClient() ethsl.SlasherClient {
+func (s *Service) startSlasherClient() ethsl.SlasherClient {
 	var dialOpt grpc.DialOption
 
 	if s.withCert != "" {
@@ -120,7 +120,7 @@ func (s *SlashingProtectionService) startSlasherClient() ethsl.SlasherClient {
 }
 
 // Stop the validator service.
-func (s *SlashingProtectionService) Stop() error {
+func (s *Service) Stop() error {
 	s.cancel()
 	log.Info("Stopping slashing protection service")
 	if s.conn != nil {
@@ -132,7 +132,7 @@ func (s *SlashingProtectionService) Stop() error {
 // Status ...
 //
 // WIP - not done.
-func (s *SlashingProtectionService) Status() error {
+func (s *Service) Status() error {
 	if s.conn == nil {
 		return errors.New("no connection to slasher RPC")
 	}
