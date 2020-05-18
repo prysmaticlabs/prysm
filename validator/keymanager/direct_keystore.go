@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -73,7 +75,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 		}
 	}
 
-	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, opts.Passphrase)
+	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, params.BeaconConfig().ValidatorPrivkeyFileName, opts.Passphrase)
 	if err != nil {
 		return nil, keystoreOptsHelp, err
 	}
