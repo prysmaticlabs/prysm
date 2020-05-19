@@ -86,60 +86,17 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	var dialOpt grpc.DialOption
-	var maxCallRecvMsgSize int
-
-	if v.withCert != "" {
-		creds, err := credentials.NewClientTLSFromFile(v.withCert, "")
-		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
-			return
-		}
-		dialOpt = grpc.WithTransportCredentials(creds)
-	} else {
-		dialOpt = grpc.WithInsecure()
-		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+	streamInterceptor := grpc.WithStreamInterceptor(middleware.ChainStreamClient(
+		grpc_opentracing.StreamClientInterceptor(),
+		grpc_prometheus.StreamClientInterceptor,
+		grpc_retry.StreamClientInterceptor(),
+	))
+	dialOpts := ConstructDialOptions(
+		v.maxCallRecvMsgSize, v.withCert, v.grpcHeaders, v.grpcRetries, streamInterceptor)
+	if dialOpts == nil {
+		return
 	}
-
-	if v.maxCallRecvMsgSize != 0 {
-		maxCallRecvMsgSize = v.maxCallRecvMsgSize
-	} else {
-		maxCallRecvMsgSize = 10 * 5 << 20 // Default 50Mb
-	}
-
-	md := make(metadata.MD)
-	for _, hdr := range v.grpcHeaders {
-		if hdr != "" {
-			ss := strings.Split(hdr, "=")
-			if len(ss) != 2 {
-				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
-				continue
-			}
-			md.Set(ss[0], ss[1])
-		}
-	}
-
-	opts := []grpc.DialOption{
-		dialOpt,
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
-			grpc_retry.WithMax(v.grpcRetries),
-			grpc.Header(&md),
-		),
-		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
-		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
-			grpc_opentracing.StreamClientInterceptor(),
-			grpc_prometheus.StreamClientInterceptor,
-			grpc_retry.StreamClientInterceptor(),
-		)),
-		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
-			grpc_opentracing.UnaryClientInterceptor(),
-			grpc_prometheus.UnaryClientInterceptor,
-			grpc_retry.UnaryClientInterceptor(),
-			logDebugRequestInfoUnaryInterceptor,
-		)),
-	}
-	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)
+	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return
@@ -224,4 +181,64 @@ func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byt
 		return nil, err
 	}
 	return v.keyManager.Sign(pubKey, root)
+}
+
+// ConstructDialOptions constructs a list of grpc dial options
+func ConstructDialOptions(
+	maxCallRecvMsgSize int,
+	withCert string,
+	grpcHeaders []string,
+	grpcRetries uint,
+	extraOpts ...grpc.DialOption,
+) []grpc.DialOption {
+	var transportSecurity grpc.DialOption
+	if withCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(withCert, "")
+		if err != nil {
+			log.Errorf("Could not get valid credentials: %v", err)
+			return nil
+		}
+		transportSecurity = grpc.WithTransportCredentials(creds)
+	} else {
+		transportSecurity = grpc.WithInsecure()
+		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+	}
+
+	if maxCallRecvMsgSize == 0 {
+		maxCallRecvMsgSize = 10 * 5 << 20 // Default 50Mb
+	}
+
+	md := make(metadata.MD)
+	for _, hdr := range grpcHeaders {
+		if hdr != "" {
+			ss := strings.Split(hdr, "=")
+			if len(ss) != 2 {
+				log.Warnf("Incorrect gRPC header flag format. Skipping %v", hdr)
+				continue
+			}
+			md.Set(ss[0], ss[1])
+		}
+	}
+
+	dialOpts := []grpc.DialOption{
+		transportSecurity,
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
+			grpc_retry.WithMax(grpcRetries),
+			grpc.Header(&md),
+		),
+		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
+		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
+			grpc_opentracing.UnaryClientInterceptor(),
+			grpc_prometheus.UnaryClientInterceptor,
+			grpc_retry.UnaryClientInterceptor(),
+			logDebugRequestInfoUnaryInterceptor,
+		)),
+	}
+
+	for _, opt := range extraOpts {
+		dialOpts = append(dialOpts, opt)
+	}
+
+	return dialOpts
 }

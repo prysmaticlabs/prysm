@@ -38,9 +38,53 @@ func (vs *Server) ValidatorStatus(
 	return vs.validatorStatus(ctx, req.PublicKey, headState), nil
 }
 
-// multipleValidatorStatus returns the validator status response for the set of validators
+// MultipleValidatorStatus is the same as ValidatorStatus. Supports retrieval of multiple
+// validator statuses. Takes a list of public keys or a list of validator indices.
+func (vs *Server) MultipleValidatorStatus(
+	ctx context.Context,
+	req *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	responseCap := len(req.PublicKeys) + len(req.Indices)
+	pubkeys := make([][]byte, 0, responseCap)
+	filtered := make(map[[48]byte]bool)
+	filtered[[48]byte{}] = true // Filter out keys with all zeros.
+	// Filter out duplicate public keys.
+	for _, pubKey := range req.PublicKeys {
+		pubkeyBytes := bytesutil.ToBytes48(pubKey)
+		if !filtered[pubkeyBytes] {
+			pubkeys = append(pubkeys, pubKey)
+			filtered[pubkeyBytes] = true
+		}
+	}
+	// Convert indices to public keys.
+	for _, idx := range req.Indices {
+		pubkeyBytes := headState.PubkeyAtIndex(uint64(idx))
+		if !filtered[pubkeyBytes] {
+			pubkeys = append(pubkeys, pubkeyBytes[:])
+			filtered[pubkeyBytes] = true
+		}
+	}
+	// Fetch statuses from beacon state.
+	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubkeys))
+	for i, pubKey := range pubkeys {
+		statuses[i] = vs.validatorStatus(ctx, pubKey, headState)
+	}
+
+	return &ethpb.MultipleValidatorStatusResponse{
+		PublicKeys: pubkeys,
+		Statuses:   statuses,
+	}, nil
+}
+
+// activationStatus returns the validator status response for the set of validators
 // requested by their pub keys.
-func (vs *Server) multipleValidatorStatus(
+func (vs *Server) activationStatus(
 	ctx context.Context,
 	pubkeys [][]byte,
 ) (bool, []*ethpb.ValidatorActivationResponse_Status, error) {
