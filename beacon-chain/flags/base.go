@@ -104,7 +104,7 @@ var (
 	SlasherProviderFlag = &cli.StringFlag{
 		Name:  "slasher-provider",
 		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
-		Value: "127.0.0.1:5000",
+		Value: "127.0.0.1:4001",
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of DB.

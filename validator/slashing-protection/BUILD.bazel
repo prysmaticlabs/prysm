@@ -11,7 +11,7 @@ go_library(
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//proto/slashing:go_default_library",
-        "//shared/logutil:go_default_library",
+        "//shared/grpcutils:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//retry:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",

@@ -225,11 +225,12 @@ func (s *SlasherNode) registerRPCService() error {
 	if err := s.services.FetchService(&detectionService); err != nil {
 		return err
 	}
-
+	host := s.cliCtx.String(flags.RPCHost.Name)
 	port := s.cliCtx.String(flags.RPCPort.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
 	key := s.cliCtx.String(flags.KeyFlag.Name)
 	rpcService := rpc.NewService(s.ctx, &rpc.Config{
+		Host:      host,
 		Port:      port,
 		CertFlag:  cert,
 		KeyFlag:   key,

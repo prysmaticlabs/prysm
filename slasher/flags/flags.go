@@ -34,11 +34,17 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8082,
 	}
+	// RPCHost defines the host on which the RPC server should listen.
+	RPCHost = &cli.StringFlag{
+		Name:  "rpc-host",
+		Usage: "Host on which the RPC server should listen",
+		Value: "0.0.0.0",
+	}
 	// RPCPort defines a slasher node RPC port to open.
 	RPCPort = &cli.IntFlag{
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by the slasher",
-		Value: 5000,
+		Value: 4001,
 	}
 	// RebuildSpanMapsFlag iterate through all indexed attestations in db and update all validators span maps from scratch.
 	RebuildSpanMapsFlag = &cli.BoolFlag{
