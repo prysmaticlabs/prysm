@@ -224,6 +224,72 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 	}
 }
 
+func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := uint64(2048)
+	base := buildState(e+3, validatorCount)
+	atts := make([]*pb.PendingAttestation, 3)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{},
+				Source: &ethpb.Checkpoint{},
+			},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			InclusionDelay:  1,
+		}
+	}
+	base.PreviousEpochAttestations = atts
+
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.SetSlot(params.BeaconConfig().SlotsPerEpoch * 10); err != nil {
+		t.Fatal(err)
+	}
+
+	slashedAttestedIndices := []uint64{14, 37, 68, 77, 139}
+	for _, i := range slashedAttestedIndices {
+		vs := state.Validators()
+		vs[i].Slashed = true
+		if state.SetValidators(vs) != nil {
+			t.Fatal(err)
+		}
+	}
+
+	vp, bp, err := New(context.Background(), state)
+	if err != nil {
+		t.Error(err)
+	}
+	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rewards, penalties, err := attestationDeltas(state, bp, vp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	finalityDelay := helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	for _, i := range slashedAttestedIndices {
+		base, err := epoch.BaseReward(state, i)
+		if err != nil {
+			t.Errorf("Could not get base reward: %v", err)
+		}
+		penalty := 3 * base
+		penalty += params.BeaconConfig().BaseRewardsPerEpoch * base
+		penalty += vp[i].CurrentEpochEffectiveBalance * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
+		if penalties[i] != penalty {
+			t.Errorf("Wanted slashed indices penalty balance %d, got %d", penalty, penalties[i])
+		}
+
+		if rewards[i] != 0 {
+			t.Errorf("Wanted slashed indices reward balance 0, got %d", penalties[i])
+		}
+	}
+}
+
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {

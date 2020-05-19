@@ -76,11 +76,11 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 		return 0, 0
 	}
 
-	bestRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
+	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	effectiveBalanceIncrement := params.BeaconConfig().EffectiveBalanceIncrement
 	e := helpers.PrevEpoch(state)
 	vb := v.CurrentEpochEffectiveBalance
-	br := vb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch) / bestRewardsPerEpoch
+	br := vb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch) / baseRewardsPerEpoch
 	r, p := uint64(0), uint64(0)
 
 	// Process source reward / penalty
@@ -113,8 +113,9 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 	// Process finality delay penalty
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	finalityDelay := e - finalizedEpoch
+
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
-		p += bestRewardsPerEpoch * br
+		p += baseRewardsPerEpoch * br
 		// Apply an additional penalty to validators that did not vote on the correct target or has been slashed.
 		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
 			p += vb * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
