@@ -69,12 +69,13 @@ func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
 		key := v.PublicKey
 		log.WithFields(
 			logrus.Fields{
+				"PublicKey":                 hex.EncodeToString(key),
 				"ActivationEpoch":           fieldToString(m.ActivationEpoch),
 				"DepositInclusionSlot":      fieldToString(m.DepositInclusionSlot),
 				"Eth1DepositBlockNumber":    fieldToString(m.Eth1DepositBlockNumber),
 				"PositionInActivationQueue": fieldToString(m.PositionInActivationQueue),
 			},
-		).Infof("Status=%v\n PublicKey=0x%s\n", m.Status, hex.EncodeToString(key))
+		).Infof("Status=%s", m.Status)
 	}
 }
 

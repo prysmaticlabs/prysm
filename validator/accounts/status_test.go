@@ -27,5 +27,4 @@ func TestFetchAccountStatuses_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchAccountStatuses failed with error: %v.", err)
 	}
-
 }
