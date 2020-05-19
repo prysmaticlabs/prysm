@@ -5,12 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"google.golang.org/grpc"
-
 	"github.com/gogo/protobuf/proto"
-
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	ethereum_slashing "github.com/prysmaticlabs/prysm/proto/slashing"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"google.golang.org/grpc"
 )
 
 type mockSlasher struct {
@@ -18,7 +16,7 @@ type mockSlasher struct {
 	slashBlock       bool
 }
 
-func (ms mockSlasher) IsSlashableAttestation(ctx context.Context, in *eth.IndexedAttestation, opts ...grpc.CallOption) (*ethereum_slashing.AttesterSlashingResponse, error) {
+func (ms mockSlasher) IsSlashableAttestation(ctx context.Context, in *eth.IndexedAttestation, opts ...grpc.CallOption) (*slashpb.AttesterSlashingResponse, error) {
 	if ms.slashAttestation {
 
 		slashingAtt, ok := proto.Clone(in).(*eth.IndexedAttestation)
@@ -31,13 +29,13 @@ func (ms mockSlasher) IsSlashableAttestation(ctx context.Context, in *eth.Indexe
 			Attestation_2: slashingAtt,
 		},
 		}
-		return &ethereum_slashing.AttesterSlashingResponse{
+		return &slashpb.AttesterSlashingResponse{
 			AttesterSlashing: slashings,
 		}, nil
 	}
 	return nil, nil
 }
-func (ms mockSlasher) IsSlashableBlock(ctx context.Context, in *eth.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*ethereum_slashing.ProposerSlashingResponse, error) {
+func (ms mockSlasher) IsSlashableBlock(ctx context.Context, in *eth.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*slashpb.ProposerSlashingResponse, error) {
 	if ms.slashBlock {
 		slashingBlk, ok := proto.Clone(in).(*eth.SignedBeaconBlockHeader)
 		if !ok {
@@ -49,7 +47,7 @@ func (ms mockSlasher) IsSlashableBlock(ctx context.Context, in *eth.SignedBeacon
 			Header_2: slashingBlk,
 		},
 		}
-		return &ethereum_slashing.ProposerSlashingResponse{
+		return &slashpb.ProposerSlashingResponse{
 			ProposerSlashing: slashings,
 		}, nil
 	}
