@@ -23,6 +23,7 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -365,7 +366,9 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 			}
-			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
+			missing := sliceutil.NotUint64(
+				sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
+			if len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
 			}
 		})
@@ -460,7 +463,10 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 		for _, blk := range blocks {
 			receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 		}
-		if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots); len(missing) > 0 {
+		missing := sliceutil.NotUint64(
+			sliceutil.IntersectionUint64(chainConfig.expectedBlockSlots, receivedBlockSlots),
+			chainConfig.expectedBlockSlots)
+		if len(missing) > 0 {
 			t.Errorf("Missing blocks at slots %v", missing)
 		}
 	})
@@ -797,11 +803,11 @@ func TestBlocksFetcherRequestBlocksRateLimitingLocks(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
 	go func() {
-		// Exhaust available rate for p2 - so that rate limiting is triggered.
+		// Exhaust available rate for p2, so that rate limiting is triggered.
 		for i := uint64(0); i <= burstFactor; i++ {
 			if i == burstFactor {
-				// Next request will trigger rate limiting for p2, allow concurrent p3 to request
-				// data too (p3 shouldn't be rate limited).
+				// The next request will trigger rate limiting for p2. Now, allow concurrent
+				// p3 data request (p3 shouldn't be rate limited).
 				time.AfterFunc(1*time.Second, func() {
 					wg.Done()
 				})
@@ -813,10 +819,10 @@ func TestBlocksFetcherRequestBlocksRateLimitingLocks(t *testing.T) {
 		}
 	}()
 
-	// Wait until p2 exhausts its rate and is hanging on rate limiting timer.
+	// Wait until p2 exhausts its rate and is spinning on rate limiting timer.
 	wg.Wait()
 
-	// The next request should NOT trigger rate limiting for as rate is exhausted for p2, not p3.
+	// The next request should NOT trigger rate limiting as rate is exhausted for p2, not p3.
 	ch := make(chan struct{}, 1)
 	go func() {
 		_, err := fetcher.requestBlocks(ctx, req, p3.PeerID())
@@ -831,5 +837,139 @@ func TestBlocksFetcherRequestBlocksRateLimitingLocks(t *testing.T) {
 		t.Error("p3 takes to long to respond: lock contention")
 	case <-ch:
 		// p3 responded w/o waiting for rate limiter's lock (on which p2 spins).
+	}
+}
+
+func TestBlocksFetcherRemoveStalePeerLocks(t *testing.T) {
+	type peerData struct {
+		peerID   peer.ID
+		accessed time.Time
+	}
+	tests := []struct {
+		name     string
+		age      time.Duration
+		peersIn  []peerData
+		peersOut []peerData
+	}{
+		{
+			name:     "empty map",
+			age:      peerLockMaxAge,
+			peersIn:  []peerData{},
+			peersOut: []peerData{},
+		},
+		{
+			name: "no stale peer locks",
+			age:  peerLockMaxAge,
+			peersIn: []peerData{
+				{
+					peerID:   "abc",
+					accessed: roughtime.Now(),
+				},
+				{
+					peerID:   "def",
+					accessed: roughtime.Now(),
+				},
+				{
+					peerID:   "ghi",
+					accessed: roughtime.Now(),
+				},
+			},
+			peersOut: []peerData{
+				{
+					peerID:   "abc",
+					accessed: roughtime.Now(),
+				},
+				{
+					peerID:   "def",
+					accessed: roughtime.Now(),
+				},
+				{
+					peerID:   "ghi",
+					accessed: roughtime.Now(),
+				},
+			},
+		},
+		{
+			name: "one stale peer lock",
+			age:  peerLockMaxAge,
+			peersIn: []peerData{
+				{
+					peerID:   "abc",
+					accessed: roughtime.Now(),
+				},
+				{
+					peerID:   "def",
+					accessed: roughtime.Now().Add(-peerLockMaxAge),
+				},
+				{
+					peerID:   "ghi",
+					accessed: roughtime.Now(),
+				},
+			},
+			peersOut: []peerData{
+				{
+					peerID:   "abc",
+					accessed: roughtime.Now(),
+				},
+				{
+					peerID:   "ghi",
+					accessed: roughtime.Now(),
+				},
+			},
+		},
+		{
+			name: "all peer locks are stale",
+			age:  peerLockMaxAge,
+			peersIn: []peerData{
+				{
+					peerID:   "abc",
+					accessed: roughtime.Now().Add(-peerLockMaxAge),
+				},
+				{
+					peerID:   "def",
+					accessed: roughtime.Now().Add(-peerLockMaxAge),
+				},
+				{
+					peerID:   "ghi",
+					accessed: roughtime.Now().Add(-peerLockMaxAge),
+				},
+			},
+			peersOut: []peerData{},
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fetcher.peerLocks = make(map[peer.ID]*peerLock, len(tt.peersIn))
+			for _, data := range tt.peersIn {
+				fetcher.peerLocks[data.peerID] = &peerLock{
+					Mutex:    sync.Mutex{},
+					accessed: data.accessed,
+				}
+			}
+
+			fetcher.removeStalePeerLocks(tt.age)
+
+			var peersOut1, peersOut2 []peer.ID
+			for _, data := range tt.peersOut {
+				peersOut1 = append(peersOut1, data.peerID)
+			}
+			for peerID, _ := range fetcher.peerLocks {
+				peersOut2 = append(peersOut2, peerID)
+			}
+			sort.SliceStable(peersOut1, func(i, j int) bool {
+				return peersOut1[i].String() < peersOut1[j].String()
+			})
+			sort.SliceStable(peersOut2, func(i, j int) bool {
+				return peersOut2[i].String() < peersOut2[j].String()
+			})
+			if !reflect.DeepEqual(peersOut1, peersOut2) {
+				t.Errorf("unexpected peers map, want: %#v, got: %#v", peersOut1, peersOut2)
+			}
+		})
 	}
 }

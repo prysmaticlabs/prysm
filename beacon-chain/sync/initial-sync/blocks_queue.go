@@ -21,7 +21,7 @@ const (
 	// staleEpochTimeout is an period after which epoch's state is considered stale.
 	staleEpochTimeout = 5 * pollingInterval
 	// lookaheadEpochs is a default limit on how many forward epochs are loaded into queue.
-	lookaheadEpochs = 4
+	lookaheadEpochs = 8
 )
 
 var (

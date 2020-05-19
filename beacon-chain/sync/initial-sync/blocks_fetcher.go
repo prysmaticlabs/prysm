@@ -36,6 +36,10 @@ const (
 	peersPercentagePerRequest = 0.75
 	// handshakePollingInterval is a polling interval for checking the number of received handshakes.
 	handshakePollingInterval = 5 * time.Second
+	// peerLocksPollingInterval is a polling interval for checking if there are stale peer locks.
+	peerLocksPollingInterval = 5 * time.Minute
+	// peerLockMaxAge is maximum time before stale lock is purged.
+	peerLockMaxAge = 60 * time.Minute
 )
 
 var (
@@ -146,6 +150,21 @@ func (f *blocksFetcher) loop() {
 		close(f.fetchResponses)
 	}()
 
+	// Periodically remove stale peer locks.
+	go func() {
+		ticker := time.NewTicker(peerLocksPollingInterval)
+		for {
+			select {
+			case <-ticker.C:
+				f.removeStalePeerLocks(peerLockMaxAge)
+			case <-f.ctx.Done():
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	// Main loop.
 	for {
 		// Make sure there is are available peers before processing requests.
 		if _, err := f.waitForMinimumPeers(f.ctx); err != nil {
@@ -401,20 +420,6 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 	return resp, nil
 }
 
-func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
-	f.Lock()
-	defer f.Unlock()
-	if lock, ok := f.peerLocks[pid]; ok {
-		lock.accessed = roughtime.Now()
-		return lock
-	}
-	f.peerLocks[pid] = &peerLock{
-		Mutex:    sync.Mutex{},
-		accessed: roughtime.Now(),
-	}
-	return f.peerLocks[pid]
-}
-
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
 func (f *blocksFetcher) requestBlocks(
 	ctx context.Context,
@@ -469,6 +474,35 @@ func (f *blocksFetcher) requestBlocks(
 	}
 
 	return resp, nil
+}
+
+// getPeerLock returns peer lock for a given peer. If lock is not found, it is created.
+func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
+	f.Lock()
+	defer f.Unlock()
+	if lock, ok := f.peerLocks[pid]; ok {
+		lock.accessed = roughtime.Now()
+		return lock
+	}
+	f.peerLocks[pid] = &peerLock{
+		Mutex:    sync.Mutex{},
+		accessed: roughtime.Now(),
+	}
+	return f.peerLocks[pid]
+}
+
+// removeStalePeerLocks is a cleanup procedure which removes stale locks.
+func (f *blocksFetcher) removeStalePeerLocks(age time.Duration) {
+	f.Lock()
+	defer f.Unlock()
+	for peerID, lock := range f.peerLocks {
+		if time.Since(lock.accessed) >= age {
+			lock.Lock()
+			f.peerLocks[peerID] = nil
+			delete(f.peerLocks, peerID)
+			lock.Unlock()
+		}
+	}
 }
 
 // selectFailOverPeer randomly selects fail over peer from the list of available peers.
