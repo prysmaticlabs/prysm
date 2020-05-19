@@ -115,6 +115,7 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 	finalityDelay := e - finalizedEpoch
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
 		p += bestRewardsPerEpoch * br
+		// Apply an additional penalty to validators that did not vote on the correct target or has been slashed.
 		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
 			p += vb * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
 		}
