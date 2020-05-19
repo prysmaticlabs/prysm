@@ -7,10 +7,12 @@ import (
 )
 
 var (
-	// AccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
-	AccountMetricsFlag = &cli.BoolFlag{
-		Name:  "enable-account-metrics",
-		Usage: "Enable prometheus metrics for validator accounts",
+	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
+	DisableAccountMetricsFlag = &cli.BoolFlag{
+		Name: "disable-account-metrics",
+		Usage: "Disable prometheus metrics for validator accounts. Operators with high volumes " +
+			"of validating keys may wish to disable granular prometheus metrics as it increases " +
+			"the data cardinality.",
 	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = &cli.StringFlag{
