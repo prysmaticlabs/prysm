@@ -341,6 +341,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedAccountMetricsFlag = &cli.BoolFlag{
+		Name: "enable-account-metrics",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -379,6 +384,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableInitSyncQueueFlag,
 	deprecatedEnableCustomBlockHTR,
 	deprecatedEnableEth1DataVoteCacheFlag,
+	deprecatedAccountMetricsFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
