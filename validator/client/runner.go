@@ -22,7 +22,6 @@ type Validator interface {
 	WaitForSync(ctx context.Context) error
 	WaitForSynced(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
-	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	CurrentSlot() uint64
 	SlotDeadline(slot uint64) time.Time
@@ -64,10 +63,6 @@ func run(ctx context.Context, v Validator) {
 	}
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
-	}
-	headSlot, err := v.CanonicalHeadSlot(ctx)
-	if err != nil {
-		log.Fatalf("Could not get current canonical head slot: %v", err)
 	}
 	// We listen to a server-side stream of validator duties in the
 	// background of the validator client.

@@ -279,18 +279,6 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 	return activatedKeys
 }
 
-// CanonicalHeadSlot returns the slot of canonical block currently found in the
-// beacon chain via RPC.
-func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
-	defer span.End()
-	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
-	if err != nil {
-		return 0, err
-	}
-	return head.HeadSlot, nil
-}
-
 // NextSlot emits the next slot number at the start time of that slot.
 func (v *validator) NextSlot() <-chan uint64 {
 	return v.ticker.C()
@@ -382,7 +370,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 }
 
 // CurrentSlot based on the chain genesis time.
-func (v *validator) CurrentSlot() {
+func (v *validator) CurrentSlot() uint64 {
 	var currentSlot uint64
 	genesisTime := time.Unix(int64(v.genesisTime), 0)
 	if genesisTime.Before(roughtime.Now()) {

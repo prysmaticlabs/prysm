@@ -14,7 +14,6 @@ type fakeValidator struct {
 	WaitForSyncCalled                bool
 	WaitForSyncedCalled              bool
 	NextSlotCalled                   bool
-	CanonicalHeadSlotCalled          bool
 	StreamDutiesCalled               bool
 	UpdateProtectionsCalled          bool
 	RoleAtCalled                     bool
@@ -54,11 +53,6 @@ func (fv *fakeValidator) WaitForSync(_ context.Context) error {
 func (fv *fakeValidator) WaitForSynced(_ context.Context) error {
 	fv.WaitForSyncedCalled = true
 	return nil
-}
-
-func (fv *fakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
-	fv.CanonicalHeadSlotCalled = true
-	return 0, nil
 }
 
 func (fv *fakeValidator) SlotDeadline(_ uint64) time.Time {

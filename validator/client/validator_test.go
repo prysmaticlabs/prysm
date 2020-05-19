@@ -388,45 +388,6 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
-func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
-	v := validator{
-		keyManager:   testKeyManager,
-		beaconClient: client,
-		genesisTime:  1,
-	}
-	client.EXPECT().GetChainHead(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(nil, errors.New("failed"))
-	if _, err := v.CanonicalHeadSlot(context.Background()); !strings.Contains(err.Error(), "failed") {
-		t.Errorf("Wanted: %v, received: %v", "failed", err)
-	}
-}
-
-func TestCanonicalHeadSlot_OK(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock.NewMockBeaconChainClient(ctrl)
-	v := validator{
-		keyManager:   testKeyManager,
-		beaconClient: client,
-	}
-	client.EXPECT().GetChainHead(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
-	headSlot, err := v.CanonicalHeadSlot(context.Background())
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if headSlot != 0 {
-		t.Errorf("Mismatch slots, wanted: %v, received: %v", 0, headSlot)
-	}
-}
-
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
