@@ -21,6 +21,10 @@ var (
 		Name:  "schlesi-testnet",
 		Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
 	}
+	wittiTestnetFlag = &cli.BoolFlag{
+		Name:  "witti-testnet",
+		Usage: "Use the preconfigured Witti multi-client testnet spec.",
+	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
@@ -389,6 +393,7 @@ var deprecatedFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	schlesiTestnetFlag,
+	wittiTestnetFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
 	enableDomainDataCacheFlag,
@@ -415,6 +420,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	schlesiTestnetFlag,
+	wittiTestnetFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,

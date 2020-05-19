@@ -115,6 +115,9 @@ contract in order to activate the validator client`,
 						} else if featureconfig.Get().SchlesiTestnet {
 							log.Warn("Using Schlesi Testnet")
 							params.UseSchlesiTestnet()
+						} else if featureconfig.Get().WittiTestnet {
+							log.Warn("Using Witti Testnet")
+							params.UseWittiTestnet()
 						}
 
 						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)

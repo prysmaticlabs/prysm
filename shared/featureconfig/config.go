@@ -31,6 +31,7 @@ var log = logrus.WithField("prefix", "flags")
 type Flags struct {
 	MinimalConfig                              bool // MinimalConfig as defined in the spec.
 	SchlesiTestnet                             bool // SchlesiTestnet preconfigured spec.
+	WittiTestnet                               bool // WittiTestnet preconfigured spec.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -105,6 +106,7 @@ func (c *Flags) Copy() *Flags {
 	return &Flags{
 		MinimalConfig:                              c.MinimalConfig,
 		SchlesiTestnet:                             c.SchlesiTestnet,
+		WittiTestnet:                               c.WittiTestnet,
 		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
 		InitSyncNoVerify:                           c.InitSyncNoVerify,
 		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
@@ -322,6 +324,10 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using schlesi testnet config")
 		cfg.SchlesiTestnet = true
 		params.UseSchlesiTestnet()
+	} else if ctx.Bool(wittiTestnetFlag.Name) {
+		log.Warn("Using witti testnet config")
+		cfg.WittiTestnet = true
+		params.UseWittiTestnet()
 	} else {
 		log.Warn("Using default mainnet config")
 	}
