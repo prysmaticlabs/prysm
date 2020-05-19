@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -125,7 +124,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	as := r.slashingPool.PendingAttesterSlashings(ctx)
+	as := r.slashingPool.PendingAttesterSlashings(ctx, beaconState)
 	if len(as) != 1 {
 		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", attesterSlashing, as[0])
 	}
@@ -175,10 +174,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating proposer slashing")
 	}
-	root, err := stateutil.BlockHeaderRoot(proposerSlashing.Header_1.Header)
-	if err := r.db.SaveState(ctx, beaconState, root); err != nil {
-		t.Fatal(err)
-	}
 	p2p.Digest, err = r.forkDigest()
 	if err != nil {
 		t.Fatal(err)
@@ -188,9 +183,9 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	ps := r.slashingPool.PendingProposerSlashings(ctx)
+	ps := r.slashingPool.PendingProposerSlashings(ctx, beaconState)
 	if len(ps) != 1 {
-		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
+		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps)
 	}
 }
 

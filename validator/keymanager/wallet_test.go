@@ -95,3 +95,76 @@ func TestMultiplePassphrases(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvPassphrases(t *testing.T) {
+	path := SetupWallet(t)
+	defer func() {
+		if err := os.RemoveAll(path); err != nil {
+			t.Log(err)
+		}
+	}()
+
+	if err := os.Setenv("TESTENVPASSPHRASES_NEITHER", "neither"); err != nil {
+		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_NEITHER: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TESTENVPASSPHRASES_NEITHER"); err != nil {
+			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_NEITHER: %v", err)
+		}
+	}()
+	if err := os.Setenv("TESTENVPASSPHRASES_FOO", "foo"); err != nil {
+		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_FOO: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TESTENVPASSPHRASES_FOO"); err != nil {
+			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_FOO: %v", err)
+		}
+	}()
+	if err := os.Setenv("TESTENVPASSPHRASES_BAR", "bar"); err != nil {
+		t.Fatalf("Error setting environment variable TESTENVPASSPHRASES_BAR: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TESTENVPASSPHRASES_BAR"); err != nil {
+			t.Fatalf("Error unsetting environment variable TESTENVPASSPHRASES_BAR: %v", err)
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		wallet   keymanager.KeyManager
+		accounts int
+	}{
+		{
+			name:     "Neither",
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_NEITHER"]}`, path)),
+			accounts: 0,
+		},
+		{
+			name:     "Foo",
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_FOO"]}`, path)),
+			accounts: 1,
+		},
+		{
+			name:     "Bar",
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_BAR"]}`, path)),
+			accounts: 1,
+		},
+		{
+			name:     "Both",
+			wallet:   wallet(t, fmt.Sprintf(`{"location":%q,"accounts":["Wallet 1"],"passphrases":["$TESTENVPASSPHRASES_FOO","$TESTENVPASSPHRASES_BAR"]}`, path)),
+			accounts: 2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			keys, err := test.wallet.FetchValidatingKeys()
+			if err != nil {
+				t.Error(err)
+			}
+			if len(keys) != test.accounts {
+				t.Errorf("Found %d keys; expected %d", len(keys), test.accounts)
+			}
+		})
+	}
+}

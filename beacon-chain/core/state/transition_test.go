@@ -481,7 +481,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	aggBits.SetBitAt(0, true)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Slot:   beaconState.Slot() - 1,
+			Slot:   beaconState.Slot(),
 			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState)},
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -525,20 +525,32 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	exit.Signature = privKeys[exit.Exit.ValidatorIndex].Sign(signingRoot[:]).Marshal()[:]
 
+	header := beaconState.LatestBlockHeader()
+	prevStateRoot, err := beaconState.HashTreeRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	header.StateRoot = prevStateRoot[:]
+	if err := beaconState.SetLatestBlockHeader(header); err != nil {
+		t.Fatal(err)
+	}
 	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	randaoReveal, err := testutil.RandaoReveal(beaconState, currentEpoch, privKeys)
+	copied := beaconState.Copy()
+	if err := copied.SetSlot(beaconState.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	randaoReveal, err := testutil.RandaoReveal(copied, currentEpoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
-			Slot:          beaconState.Slot(),
-			ProposerIndex: 17,
+			Slot:          beaconState.Slot() + 1,
+			ProposerIndex: 13,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
@@ -559,6 +571,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block.Signature = sig.Marshal()
 
+	if beaconState.SetSlot(block.Block.Slot) != nil {
+		t.Fatal(err)
+	}
 	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatalf("Expected block to pass processing conditions: %v", err)
@@ -829,6 +844,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	for i := 0; i < len(atts); i++ {
 		att := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
+				Slot:   1,
 				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Epoch: 0}},
 			AggregationBits: aggBits,
@@ -859,18 +875,33 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 		atts[i] = att
 	}
 
-	epochSignature, err := testutil.RandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
+	copied := s.Copy()
+	if err := copied.SetSlot(s.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	epochSignature, err := testutil.RandaoReveal(copied, helpers.CurrentEpoch(copied), privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
+	header := s.LatestBlockHeader()
+	prevStateRoot, err := s.HashTreeRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	header.StateRoot = prevStateRoot[:]
+	if err := s.SetLatestBlockHeader(header); err != nil {
+		t.Fatal(err)
+	}
+
 	parentRoot, err := stateutil.BlockHeaderRoot(s.LatestBlockHeader())
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 72,
-			Slot:          s.Slot(),
+			ProposerIndex: 156,
+			Slot:          s.Slot() + 1,
 			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
 				Eth1Data:     &ethpb.Eth1Data{},
@@ -890,6 +921,9 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	config.MinAttestationInclusionDelay = 0
 	params.OverrideBeaconConfig(config)
 
+	if s.SetSlot(s.Slot()+1) != nil {
+		t.Fatal(err)
+	}
 	if _, err := state.ProcessBlock(context.Background(), s, blk); err != nil {
 		t.Fatal(err)
 	}
@@ -1034,5 +1068,31 @@ func TestProcessOperations_IncorrectDeposits(t *testing.T) {
 		block.Body,
 	); err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
+	slot := uint64(2)
+	parentState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := "expected state.slot 2 < slot 2"
+	if _, err := state.ProcessSlots(context.Background(), parentState, slot); err.Error() != wanted {
+		t.Error("Did not get wanted error")
+	}
+}
+
+func TestProcessSlots_LowerSlotAsParentState(t *testing.T) {
+	slot := uint64(2)
+	parentState, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: slot})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := "expected state.slot 2 < slot 1"
+	if _, err := state.ProcessSlots(context.Background(), parentState, slot-1); err.Error() != wanted {
+		t.Error("Did not get wanted error")
 	}
 }

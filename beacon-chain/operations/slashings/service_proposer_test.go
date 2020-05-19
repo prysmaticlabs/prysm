@@ -432,9 +432,68 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 				pendingProposerSlashing: tt.fields.pending,
 			}
 			if got := p.PendingProposerSlashings(
-				context.Background(),
+				context.Background(), beaconState,
 			); !reflect.DeepEqual(tt.want, got) {
 				t.Errorf("Unexpected return from PendingProposerSlashings, wanted %v, received %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
+	type fields struct {
+		pending []*ethpb.ProposerSlashing
+	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	val, err := beaconState.ValidatorAtIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.Slashed = true
+	if err := beaconState.UpdateValidatorAtIndex(0, val); err != nil {
+		t.Fatal(err)
+	}
+	val, err = beaconState.ValidatorAtIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.Slashed = true
+	if err := beaconState.UpdateValidatorAtIndex(5, val); err != nil {
+		t.Fatal(err)
+	}
+	slashings := make([]*ethpb.ProposerSlashing, 32)
+	for i := 0; i < len(slashings); i++ {
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		slashings[i] = sl
+	}
+	result := make([]*ethpb.ProposerSlashing, 32)
+	copy(result, slashings)
+	tests := []struct {
+		name   string
+		fields fields
+		want   []*ethpb.ProposerSlashing
+	}{
+		{
+			name: "removes slashed",
+			fields: fields{
+				pending: slashings,
+			},
+			want: append(result[1:5], result[6:18]...),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Pool{
+				pendingProposerSlashing: tt.fields.pending,
+			}
+
+			if got := p.PendingProposerSlashings(
+				context.Background(), beaconState,
+			); !reflect.DeepEqual(tt.want, got) {
+				t.Errorf("Unexpected return from PendingProposerSlashings, \nwanted %v, \nreceived %v", tt.want, got)
 			}
 		})
 	}
