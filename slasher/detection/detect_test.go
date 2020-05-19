@@ -10,6 +10,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/proposals"
 	testDetect "github.com/prysmaticlabs/prysm/slasher/detection/testing"
 )
@@ -416,5 +417,115 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestServer_MapResultsToAtts(t *testing.T) {
+	db := testDB.SetupSlasherDB(t, false)
+	ctx := context.Background()
+	ds := Service{
+		ctx:       ctx,
+		slasherDB: db,
+	}
+	// 3 unique results, but 7 validators in total.
+	results := []*types.DetectionResult{
+		// 3 For the same slashable epoch and same sigs.
+		{
+			ValidatorIndex: 1,
+			SlashableEpoch: 5,
+			Kind:           types.DoubleVote,
+			SigBytes:       [2]byte{5, 5},
+		},
+		{
+			ValidatorIndex: 2,
+			SlashableEpoch: 5,
+			Kind:           types.DoubleVote,
+			SigBytes:       [2]byte{5, 5},
+		},
+		{
+			ValidatorIndex: 3,
+			SlashableEpoch: 5,
+			Kind:           types.DoubleVote,
+			SigBytes:       [2]byte{5, 5},
+		},
+		// Different signature.
+		{
+			ValidatorIndex: 5,
+			SlashableEpoch: 5,
+			Kind:           types.DoubleVote,
+			SigBytes:       [2]byte{3, 5},
+		},
+		// Different slashable epoch.
+		{
+			ValidatorIndex: 5,
+			SlashableEpoch: 4,
+			Kind:           types.DoubleVote,
+			SigBytes:       [2]byte{5, 5},
+		},
+		// Different both.
+		{
+			ValidatorIndex: 8,
+			SlashableEpoch: 6,
+			Kind:           types.DoubleVote,
+			SigBytes:       [2]byte{2, 1},
+		},
+		{
+			ValidatorIndex: 7,
+			SlashableEpoch: 6,
+			Kind:           types.DoubleVote,
+			SigBytes:       [2]byte{2, 1},
+		},
+	}
+	expectedResultsToAtts := map[[32]byte][]*ethpb.IndexedAttestation{
+		resultHash(results[0]): {
+			createIndexedAttForResult(results[0]),
+			createIndexedAttForResult(results[1]),
+			createIndexedAttForResult(results[2]),
+		},
+		resultHash(results[3]): {
+			createIndexedAttForResult(results[3]),
+		},
+		resultHash(results[4]): {
+			createIndexedAttForResult(results[4]),
+		},
+		resultHash(results[5]): {
+			createIndexedAttForResult(results[6]),
+			createIndexedAttForResult(results[5]),
+		},
+	}
+	for _, atts := range expectedResultsToAtts {
+		if err := ds.slasherDB.SaveIndexedAttestations(ctx, atts); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	resultsToAtts, err := ds.mapResultsToAtts(ctx, results)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expectedResultsToAtts, resultsToAtts) {
+		t.Error("Expected map:")
+		for key, value := range resultsToAtts {
+			t.Errorf("Key %#x: %d atts", key, len(value))
+			t.Errorf("%+v", value)
+		}
+		t.Error("To equal:")
+		for key, value := range expectedResultsToAtts {
+			t.Errorf("Key %#x: %d atts", key, len(value))
+			t.Errorf("%+v", value)
+		}
+	}
+}
+
+func createIndexedAttForResult(result *types.DetectionResult) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{result.ValidatorIndex},
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: []byte("text block root"),
+			Target: &ethpb.Checkpoint{
+				Epoch: result.SlashableEpoch,
+			},
+		},
+		Signature: append(result.SigBytes[:], []byte{uint8(result.ValidatorIndex), 4, 5, 6, 7, 8}...),
 	}
 }
