@@ -6,9 +6,9 @@ import (
 	"context"
 	"strings"
 
-	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 
-	"github.com/prysmaticlabs/prysm/shared/logutil"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -143,7 +143,7 @@ func (v *ValidatorService) Start() {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			logutil.LogDebugRequestInfoUnaryInterceptor,
+			grpcutils.LogGRPCRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)

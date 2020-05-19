@@ -5,12 +5,13 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethsl "github.com/prysmaticlabs/prysm/proto/slashing"
-	"github.com/prysmaticlabs/prysm/shared/logutil"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -106,7 +107,7 @@ func (s *Service) startSlasherClient() ethsl.SlasherClient {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			logutil.LogDebugRequestInfoUnaryInterceptor,
+			grpcutils.LogGRPCRequests,
 		)),
 	}
 	conn, err := grpc.DialContext(s.ctx, s.endpoint, opts...)

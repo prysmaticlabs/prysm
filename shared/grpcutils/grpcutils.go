@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// LogDebugRequestInfoUnaryInterceptor this method logs the gRPC backend as well as request duration when the log level is set to debug
+// LogGRPCRequests this method logs the gRPC backend as well as request duration when the log level is set to debug
 // or higher.
-func LogDebugRequestInfoUnaryInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+func LogGRPCRequests(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	// Shortcut when debug logging is not enabled.
 	if logrus.GetLevel() < logrus.DebugLevel {
 		return invoker(ctx, method, req, reply, cc, opts...)
