@@ -118,6 +118,8 @@ func FetchAccountStatuses(
 	pubkeys [][]byte) ([]ValidatorStatusMetadata, error) {
 	ctx, span := trace.StartSpan(ctx, "accounts.FetchAccountStatuses")
 	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second /* Cancel if running over thirty seconds. */)
+	defer cancel()
 
 	errorChannel := make(chan error, MaxRequestLimit)
 	statusChannel := make(chan []ValidatorStatusMetadata, MaxRequestLimit)
@@ -143,6 +145,8 @@ func FetchAccountStatuses(
 		case e := <-errorChannel:
 			err = e
 			log.Warnln(err)
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		}
 	}
 	if err != nil {
