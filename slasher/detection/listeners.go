@@ -9,9 +9,8 @@ package detection
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"go.opencensus.io/trace"
 )
 
