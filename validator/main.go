@@ -166,7 +166,6 @@ contract in order to activate the validator client`,
 							return err
 						}
 						return accounts.RunStatusCommand(
-							cliCtx,
 							pubKeys,
 							cliCtx.String(flags.CertFlag.Name),
 							cliCtx.String(flags.BeaconRPCProviderFlag.Name),
@@ -175,6 +174,7 @@ contract in order to activate the validator client`,
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","))
 					},
 				},
+				{
 					Name:        "change-password",
 					Description: "changes password for all keys located in a keystore",
 					Flags: []cli.Flag{
@@ -206,6 +206,7 @@ contract in order to activate the validator client`,
 			},
 		},
 	}
+
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {

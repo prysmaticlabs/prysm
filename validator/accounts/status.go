@@ -36,7 +36,6 @@ const MaxRequestKeys = 2000 // XXX: This is an arbitrary number. Used to limit t
 
 // RunStatusCommand is the entry point to the `validator status` command.
 func RunStatusCommand(
-	ctx context.Context,
 	pubkeys [][]byte,
 	withCert string,
 	endpoint string,
@@ -47,12 +46,15 @@ func RunStatusCommand(
 	if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithTimeout(
+		context.Background(), 10 * time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
+	defer cancel()
 	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to dial beacon node endpoint at %s", endpoint)
 	}
 	statuses, err := FetchAccountStatuses(
-		ctx, ethpb.NewBeaconNodeValidatorClient(conn), pubkeys)
+		context.Background(), ethpb.NewBeaconNodeValidatorClient(conn), pubkeys)
 	if e := conn.Close(); e != nil {
 		log.WithError(e).Error("Could not close connection to beacon node")
 	}
@@ -77,7 +79,8 @@ func constructDialOptions(
 		transportSecurity = grpc.WithTransportCredentials(creds)
 	} else {
 		transportSecurity = grpc.WithInsecure()
-		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+		log.Warn(
+			"You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
 
 	if maxCallRecvMsgSize == 0 {
@@ -105,8 +108,6 @@ func constructDialOptions(
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithBlock(),
-		grpc.WithTimeout(
-			10 * time.Second /* Block for 10 seconds to see if we can connect to beacon node */),
 	}, nil
 }
 
