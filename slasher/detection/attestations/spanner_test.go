@@ -31,6 +31,9 @@ func indexedAttestation(source uint64, target uint64, indices []uint64) *ethpb.I
 }
 
 func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableLookback: true})
+	defer resetCfg()
+
 	type testStruct struct {
 		name        string
 		att         *ethpb.IndexedAttestation
@@ -274,6 +277,9 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 }
 
 func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableLookback: true})
+	defer resetCfg()
+
 	type testStruct struct {
 		name                     string
 		sourceEpoch              uint64
@@ -519,6 +525,9 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 }
 
 func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableLookback: true})
+	defer resetCfg()
+
 	type testStruct struct {
 		name            string
 		incomingAtt     *ethpb.IndexedAttestation

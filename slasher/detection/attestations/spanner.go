@@ -72,11 +72,11 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		)
 	}
 
-	spanMap, _, err := s.slasherDB.EpochSpansMap(ctx, sourceEpoch)
+	spanMap, _, _, err := s.slasherDB.EpochSpans(ctx, sourceEpoch)
 	if err != nil {
 		return nil, err
 	}
-	targetSpanMap, _, err := s.slasherDB.EpochSpansMap(ctx, targetEpoch)
+	targetSpans, _, _, err := s.slasherDB.EpochSpans(ctx, targetEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +87,18 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(ctx.Err(), "could not detect slashings")
 		}
-		span := spanMap[idx]
+		span, err := s.slasherDB.GetValidatorSpan(ctx, spanMap, idx)
+		if err != nil {
+			return nil, err
+		}
 		minSpan := span.MinSpan
 		if minSpan > 0 && minSpan < distance {
 			slashableEpoch := sourceEpoch + uint64(minSpan)
-			targetSpan, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, idx, slashableEpoch)
+			slashableSpans, _, _, err := s.slasherDB.EpochSpans(ctx, slashableEpoch)
+			if err != nil {
+				return nil, err
+			}
+			targetSpan, err := s.slasherDB.GetValidatorSpan(ctx, slashableSpans, idx)
 			if err != nil {
 				return nil, err
 			}
@@ -107,7 +114,11 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		maxSpan := span.MaxSpan
 		if maxSpan > distance {
 			slashableEpoch := sourceEpoch + uint64(maxSpan)
-			targetSpan, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, idx, slashableEpoch)
+			slashableSpans, _, _, err := s.slasherDB.EpochSpans(ctx, slashableEpoch)
+			if err != nil {
+				return nil, err
+			}
+			targetSpan, err := s.slasherDB.GetValidatorSpan(ctx, slashableSpans, idx)
 			if err != nil {
 				return nil, err
 			}
@@ -119,8 +130,10 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 			})
 			continue
 		}
-
-		targetSpan := targetSpanMap[idx]
+		targetSpan, err := s.slasherDB.GetValidatorSpan(ctx, targetSpans, idx)
+		if err != nil {
+			return nil, err
+		}
 		// Check if the validator has attested for this epoch or not.
 		if targetSpan.HasAttested {
 			detections = append(detections, &types.DetectionResult{
@@ -209,53 +222,34 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	// the for loop tries to update min span using cache for as long as there
 	// is a relevant cached epoch. when there is no such epoch in cache batch
 	// db read and write is used.
-	spanMap := make(map[uint64]types.Span)
-	epochsSpansMap := make(map[uint64]map[uint64]types.Span)
 	epoch := source - 1
 	log.Infof("before loop epoch: %d len(valIndices) %d", epoch, len(valIndices))
 	untilEpoch := uint64(0)
-	lastEpochToCache := uint64(0)
 	if epoch >= epochLookback {
 		untilEpoch = epoch - epochLookback
-		lastEpochToCache = epoch - epochLookback
+		//lastEpochToCache = epoch - epochLookback
 	}
 	if featureconfig.Get().DisableLookback {
 		untilEpoch = 0
 	}
-	useCache := true
-	useDb := false
-	var err error
+
 	for ; epoch >= untilEpoch; epoch-- {
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update min spans")
 		}
 		if featureconfig.Get().DisableLookback {
-			if useCache {
-				spanMap, useCache, err = s.slasherDB.EpochSpansMap(ctx, epoch)
-			}
-			// If there is more place in cache
-			if lastEpochToCache <= epoch && !useCache && !useDb {
-				useCache = true
-			}
-			// Should happen once when cache is exhausted.
-			if !useCache && !useDb && featureconfig.Get().DisableLookback {
-				epochsSpansMap, err = s.slasherDB.EpochsSpanByValidatorsIndices(ctx, valIndices, epoch)
-				useDb = true
-			}
-			if err != nil {
-				return err
-			}
-			if useDb && featureconfig.Get().DisableLookback {
-				spanMap = epochsSpansMap[epoch]
-				if spanMap == nil {
-					spanMap = make(map[uint64]types.Span)
-					epochsSpansMap[epoch] = spanMap
-				}
-			}
+
+			spans, valLength, _, err := s.slasherDB.EpochSpans(ctx, epoch)
 
 			valNum := 0
 			for _, idx := range valIndices {
-				span := spanMap[idx]
+				var span types.Span
+				if idx < valLength {
+					span, err = s.slasherDB.GetValidatorSpan(ctx, spans, idx)
+					if err != nil {
+						return err
+					}
+				}
 				newMinSpan := uint16(target - epoch)
 				if span.MinSpan == 0 || span.MinSpan > newMinSpan {
 					span = types.Span{
@@ -264,27 +258,21 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 						SigBytes:    span.SigBytes,
 						HasAttested: span.HasAttested,
 					}
-					spanMap[idx] = span
+					spans, err = s.slasherDB.SetValidatorSpan(ctx, spans, idx, span)
+					if err != nil {
+						return err
+					}
 					valIndices[valNum] = idx
 					valNum++
 				}
 			}
 			valIndices = valIndices[:valNum]
-			if useCache {
-				if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
-					return err
-				}
+			if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spans); err != nil {
+				return err
 			}
+
 			if len(valIndices) == 0 || epoch == 0 {
 				log.Infof("epoch: %d len(indices) %d", epoch, len(valIndices))
-				if useDb {
-					log.Info("saving to db")
-					// should happen once when finishing update to all epochs and all indices.
-					if err := s.slasherDB.SaveEpochsSpanByValidatorsIndices(ctx, epochsSpansMap); err != nil {
-						return err
-					}
-					log.Info("finished saving to db")
-				}
 				break
 			}
 		} else {
@@ -337,13 +325,19 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update max spans")
 		}
-		spanMap, _, err := s.slasherDB.EpochSpansMap(ctx, epoch)
+		spans, valLength, _, err := s.slasherDB.EpochSpans(ctx, epoch)
 		if err != nil {
 			return err
 		}
 		indices := valIndices[:0]
 		for _, idx := range valIndices {
-			span := spanMap[idx]
+			var span types.Span
+			if idx < valLength {
+				span, err = s.slasherDB.GetValidatorSpan(ctx, spans, idx)
+				if err != nil {
+					return err
+				}
+			}
 			newMaxSpan := uint16(target - epoch)
 			if newMaxSpan > span.MaxSpan {
 				span = types.Span{
@@ -352,11 +346,14 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 					SigBytes:    span.SigBytes,
 					HasAttested: span.HasAttested,
 				}
-				spanMap[idx] = span
+				spans, err = s.slasherDB.SetValidatorSpan(ctx, spans, idx, span)
+				if err != nil {
+					return err
+				}
 				indices = append(indices, idx)
 			}
 		}
-		if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
+		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spans); err != nil {
 			return err
 		}
 		if len(indices) == 0 {
