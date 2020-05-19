@@ -297,3 +297,12 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 
 	return nil
 }
+
+// ExtractPublicKeysFromKeyManager extracts only the public keys from the specified key manager.
+func ExtractPublicKeysFromKeyManager(ctx *cli.Context) ([][48]byte, error) {
+	km, err := selectKeyManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return km.FetchValidatingKeys()
+}

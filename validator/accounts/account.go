@@ -260,3 +260,20 @@ func homeDir() string {
 	}
 	return ""
 }
+
+// ExtractPublicKeysFromKeyStore extracts only the public keys from the decrypted keys from the keystore.
+func ExtractPublicKeysFromKeyStore(keystorePath string, passphrase string) ([][]byte, error) {
+	decryptedKeys, err := DecryptKeysFromKeystore(keystorePath, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not decrypt keys from keystore in path %s", keystorePath)
+	}
+
+	i := 0
+	pubkeys := make([][]byte, len(decryptedKeys))
+	for _, key := range decryptedKeys {
+		pubkeys[i] = key.PublicKey.Marshal()
+		i++
+	}
+
+	return pubkeys, nil
+}
