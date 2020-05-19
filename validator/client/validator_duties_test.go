@@ -10,14 +10,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/internal"
 )
 
 func TestStreamDuties_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
@@ -45,7 +45,7 @@ func TestStreamDuties_ReturnsError(t *testing.T) {
 func TestStreamDuties_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
 
 	resp := &ethpb.DutiesResponse{
 		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
@@ -73,7 +73,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	}
 	v.genesisTime = uint64(time.Now().Unix()) + 500
 	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-	stream := internal.NewMockBeaconNodeValidator_StreamDutiesClient(ctrl)
+	stream := mock.NewMockBeaconNodeValidator_StreamDutiesClient(ctrl)
 	client.EXPECT().StreamDuties(
 		gomock.Any(),
 		gomock.Any(),
