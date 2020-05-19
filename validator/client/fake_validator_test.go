@@ -114,3 +114,5 @@ func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64,
 func (fv *fakeValidator) LogAttestationsSubmitted() {}
 
 func (fv *fakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}
+
+func (fv *fakeValidator) CurrentSlot() uint64 { return 0 }

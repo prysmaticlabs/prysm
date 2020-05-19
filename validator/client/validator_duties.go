@@ -5,14 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 )
 
@@ -117,12 +114,8 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 func (v *validator) updateDuties(ctx context.Context, dutiesResp *ethpb.DutiesResponse, numKeys int) {
 	ctx, span := trace.StartSpan(ctx, "validator.updateDuties")
 	defer span.End()
-	var currentEpoch uint64
-	genesisTime := time.Unix(int64(v.genesisTime), 0)
-	if genesisTime.Before(roughtime.Now()) {
-		currentEpoch = slotutil.EpochsSinceGenesis(genesisTime)
-	}
-	currentSlot := currentEpoch * params.BeaconConfig().SlotsPerEpoch
+	currentSlot := v.CurrentSlot()
+	currentEpoch := currentSlot / params.BeaconConfig().SlotsPerEpoch
 
 	v.dutiesLock.Lock()
 	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty, 2)

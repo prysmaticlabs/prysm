@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -378,6 +379,16 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
+}
+
+// CurrentSlot based on the chain genesis time.
+func (v *validator) CurrentSlot() {
+	var currentSlot uint64
+	genesisTime := time.Unix(int64(v.genesisTime), 0)
+	if genesisTime.Before(roughtime.Now()) {
+		currentSlot = slotutil.SlotsSinceGenesis(genesisTime)
+	}
+	return currentSlot
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

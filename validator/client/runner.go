@@ -24,6 +24,7 @@ type Validator interface {
 	WaitForActivation(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
+	CurrentSlot() uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	StreamDuties(ctx context.Context) error
@@ -72,7 +73,7 @@ func run(ctx context.Context, v Validator) {
 	// background of the validator client.
 	go func() {
 		if err := v.StreamDuties(ctx); err != nil {
-			handleAssignmentError(err, headSlot)
+			handleAssignmentError(err, v.CurrentSlot())
 		}
 	}()
 	for {
