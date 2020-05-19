@@ -25,15 +25,6 @@ type ValidatorStatusMetadata struct {
 	Metadata  *ethpb.ValidatorStatusResponse
 }
 
-// MaxRequestLimit specifies the max concurrent grpc requests allowed
-// to fetch account statuses.
-const MaxRequestLimit = 5 // XXX: Should create flag to make parameter configurable.
-
-// MaxRequestKeys specifies the max amount of public keys allowed
-// in a single grpc request, when fetching account statuses.
-const MaxRequestKeys = 2000 // XXX: This is an arbitrary number. Used to limit time complexity
-// of sorting a single batch of status requests. Do not make this number too big.
-
 // RunStatusCommand is the entry point to the `validator status` command.
 func RunStatusCommand(
 	pubkeys [][]byte,
@@ -122,59 +113,12 @@ func FetchAccountStatuses(
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second /* Cancel if running over thirty seconds. */)
 	defer cancel()
 
-	errorChannel := make(chan error, MaxRequestLimit)
-	statusChannel := make(chan []ValidatorStatusMetadata, MaxRequestLimit)
-	// Launch routines to fetch statuses.
-	i, numBatches := 0, 0
-	for ; i+MaxRequestKeys < len(pubkeys); i += MaxRequestKeys {
-		go fetchValidatorStatus(
-			ctx, beaconNodeRPCProvider, pubkeys[i:i+MaxRequestKeys], statusChannel, errorChannel)
-		numBatches++
-	}
-	if i < len(pubkeys) {
-		go fetchValidatorStatus(
-			ctx, beaconNodeRPCProvider, pubkeys[i:], statusChannel, errorChannel)
-		numBatches++
-	}
-	// Wait for fetch routines to finish.
-	var err error
-	allStatuses := make([][]ValidatorStatusMetadata, 0, numBatches)
-	for i := 0; i < numBatches; i++ {
-		select {
-		case statuses := <-statusChannel:
-			allStatuses = append(allStatuses, statuses)
-		case e := <-errorChannel:
-			err = e
-			log.Warnln(err)
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-	}
+	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pubkeys}
+	resp, err := beaconNodeRPCProvider.MultipleValidatorStatus(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return mergeStatuses(allStatuses), nil
-}
 
-func fetchValidatorStatus(
-	ctx context.Context,
-	rpcProvider ethpb.BeaconNodeValidatorClient,
-	pubkeys [][]byte,
-	statusChannel chan []ValidatorStatusMetadata,
-	errorChannel chan error) {
-	if ctx.Err() == context.Canceled {
-		errorChannel <- errors.Wrap(ctx.Err(), "context has been canceled.")
-		return
-	}
-
-	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pubkeys}
-	resp, err := rpcProvider.MultipleValidatorStatus(ctx, req)
-	if err != nil {
-		errorChannel <- errors.Wrapf(
-			err, "Failed to fetch validator statuses for %d key(s)", len(pubkeys))
-		return
-	}
-	// Convert response to ValidatorStatusMetadata and sort.
 	respKeys := resp.GetPublicKeys()
 	statuses := make([]ValidatorStatusMetadata, len(respKeys))
 	for i, status := range resp.GetStatuses() {
@@ -187,33 +131,7 @@ func fetchValidatorStatus(
 		return statuses[i].Metadata.Status < statuses[j].Metadata.Status
 	})
 
-	statusChannel <- statuses
-}
-
-// mergeStatuses merges k sorted ValidatorStatusMetadata slices to 1.
-// XXX: This function should run in O(nlogk) time. For better performance, fix mergeTwo.
-func mergeStatuses(allStatuses [][]ValidatorStatusMetadata) []ValidatorStatusMetadata {
-	if len(allStatuses) == 0 {
-		return []ValidatorStatusMetadata{}
-	}
-	if len(allStatuses) == 1 {
-		return allStatuses[0]
-	}
-	leftHalf := allStatuses[:len(allStatuses)/2]
-	rightHalf := allStatuses[len(allStatuses)/2:]
-	return mergeTwo(mergeStatuses(leftHalf), mergeStatuses(rightHalf))
-}
-
-// mergeTwo merges two sorted ValidatorStatusMetadata arrays to 1.
-// XXX: This function can be improved to run in linear time.
-func mergeTwo(s1, s2 []ValidatorStatusMetadata) []ValidatorStatusMetadata {
-	statuses := []ValidatorStatusMetadata{}
-	statuses = append(statuses, s1...)
-	statuses = append(statuses, s2...)
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Metadata.Status < statuses[j].Metadata.Status
-	})
-	return statuses
+	return statuses, nil
 }
 
 func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
