@@ -958,7 +958,7 @@ func TestBlocksFetcherRemoveStalePeerLocks(t *testing.T) {
 			for _, data := range tt.peersOut {
 				peersOut1 = append(peersOut1, data.peerID)
 			}
-			for peerID, _ := range fetcher.peerLocks {
+			for peerID := range fetcher.peerLocks {
 				peersOut2 = append(peersOut2, peerID)
 			}
 			sort.SliceStable(peersOut1, func(i, j int) bool {
