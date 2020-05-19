@@ -497,7 +497,6 @@ func (f *blocksFetcher) removeStalePeerLocks(age time.Duration) {
 	for peerID, lock := range f.peerLocks {
 		if time.Since(lock.accessed) >= age {
 			lock.Lock()
-			f.peerLocks[peerID] = nil
 			delete(f.peerLocks, peerID)
 			lock.Unlock()
 		}
