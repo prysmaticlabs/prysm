@@ -13,8 +13,6 @@ import (
 	"sync"
 	"syscall"
 
-	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -28,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/urfave/cli.v2"
 )
