@@ -139,7 +139,8 @@ func proposerDeltaPrecompute(state *stateTrie.BeaconState, pBal *Balance, vp []*
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
 	for _, v := range vp {
-		if v.IsPrevEpochAttester {
+		// Only apply inclusion rewards to proposer only if the attested hasn't been slashed.
+		if v.IsPrevEpochAttester && !v.IsSlashed {
 			vBalance := v.CurrentEpochEffectiveBalance
 			baseReward := vBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
 			proposerReward := baseReward / proposerRewardQuotient

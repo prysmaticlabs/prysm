@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -326,5 +327,57 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		FinalizedCheckpoint:         &ethpb.Checkpoint{},
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},
+	}
+}
+
+func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := uint64(10)
+	base := buildState(e, validatorCount)
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposerIndex := uint64(1)
+	b := &Balance{ActiveCurrentEpoch: 1000}
+	v := []*Validator{
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
+	}
+	r, err := proposerDeltaPrecompute(state, b, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	baseReward := v[0].CurrentEpochEffectiveBalance * params.BeaconConfig().BaseRewardFactor /
+		mathutil.IntegerSquareRoot(b.ActiveCurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
+	proposerReward := baseReward / params.BeaconConfig().ProposerRewardQuotient
+
+	if r[proposerIndex] != proposerReward {
+		t.Errorf("Wanted proposer reward %d, got %d", proposerReward, r[proposerIndex])
+	}
+}
+
+func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := uint64(10)
+	base := buildState(e, validatorCount)
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposerIndex := uint64(1)
+	b := &Balance{ActiveCurrentEpoch: 1000}
+	v := []*Validator{
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex, IsSlashed: true},
+	}
+	r, err := proposerDeltaPrecompute(state, b, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r[proposerIndex] != 0 {
+		t.Errorf("Wanted proposer reward for slashed %d, got %d", 0, r[proposerIndex])
 	}
 }
