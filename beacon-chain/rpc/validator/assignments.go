@@ -25,14 +25,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-	// If we are post-genesis time, then set the current epoch to
-	// the number epochs since the genesis time, otherwise 0 by default.
-	genesisTime := vs.GenesisTimeFetcher.GenesisTime()
-	var currentEpoch uint64
-	if roughtime.Now().After(genesisTime) {
-		currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
-	}
-	return vs.duties(ctx, req, currentEpoch)
+	return vs.duties(ctx, req)
 }
 
 // StreamDuties returns the duties assigned to a list of validators specified
@@ -50,7 +43,8 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	if genesisTime.Before(roughtime.Now()) {
 		currentEpoch = slotutil.EpochsSinceGenesis(vs.GenesisTimeFetcher.GenesisTime())
 	}
-	res, err := vs.duties(stream.Context(), req, currentEpoch)
+	req.Epoch = currentEpoch
+	res, err := vs.duties(stream.Context(), req)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
 	}
@@ -69,7 +63,8 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
 		case epoch := <-epochTicker.C():
-			res, err := vs.duties(stream.Context(), req, epoch)
+			req.Epoch = epoch
+			res, err := vs.duties(stream.Context(), req)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
 			}
@@ -92,7 +87,8 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 				if newSlotEpoch >= oldSlotEpoch {
 					continue
 				}
-				res, err := vs.duties(stream.Context(), req, currentEpoch)
+				req.Epoch = currentEpoch
+				res, err := vs.duties(stream.Context(), req)
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not compute validator duties: %v", err)
 				}
@@ -110,25 +106,25 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 
 // Compute the validator duties from the head state's corresponding epoch
 // for validators public key / indices requested.
-func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest, epoch uint64) (*ethpb.DutiesResponse, error) {
+func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	if epochStartSlot := helpers.StartSlot(epoch); s.Slot() < epochStartSlot {
+	if epochStartSlot := helpers.StartSlot(req.Epoch); s.Slot() < epochStartSlot {
 		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
-	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, epoch)
+	committeeAssignments, proposerIndexToSlots, err := helpers.CommitteeAssignments(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 	// Query the next epoch assignments for committee subnet subscriptions.
-	nextCommitteeAssignments, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(s, epoch+1)
+	nextCommitteeAssignments, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
