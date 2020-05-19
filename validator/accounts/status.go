@@ -47,7 +47,7 @@ func RunStatusCommand(
 		return err
 	}
 	ctx, cancel := context.WithTimeout(
-		context.Background(), 10 * time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
+		context.Background(), 10*time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
 	defer cancel()
 	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
 	if err != nil {
