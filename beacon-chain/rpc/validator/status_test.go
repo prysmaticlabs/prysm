@@ -1002,7 +1002,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		t.Fatalf(
 			"Recieved %d public keys, wanted %d public keys", len(response.PublicKeys), len(pubKeys))
 	}
-	for i, resp := range response.GetPublicKeys() {
+	for i, resp := range response.PublicKeys {
 		if !bytes.Equal(pubKeys[i], resp) {
 			t.Fatalf("Wanted: %v\n Recieved: %v\n", pubKeys[i], resp)
 		}
@@ -1010,7 +1010,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	if len(response.Statuses) != len(pubKeys) {
 		t.Fatalf("Recieved %d statuses, wanted %d statuses", len(response.Statuses), len(pubKeys))
 	}
-	for i, resp := range response.GetStatuses() {
+	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
 			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
 		}
@@ -1092,7 +1092,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 			"Recieved %d public keys, wanted %d public keys",
 			len(response.PublicKeys), len(beaconState.Validators))
 	}
-	for i, resp := range response.GetPublicKeys() {
+	for i, resp := range response.PublicKeys {
 		expected := beaconState.Validators[i].PublicKey
 		if !bytes.Equal(expected, resp) {
 			t.Fatalf("Wanted: %v\n Recieved: %v\n", expected, resp)
@@ -1103,7 +1103,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 			"Recieved %d statuses, wanted %d statuses",
 			len(response.Statuses), len(beaconState.Validators))
 	}
-	for i, resp := range response.GetStatuses() {
+	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
 			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
 		}

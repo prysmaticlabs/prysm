@@ -50,12 +50,12 @@ func (vs *Server) MultipleValidatorStatus(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	responseCap := len(req.GetPublicKeys()) + len(req.GetIndices())
+	responseCap := len(req.PublicKeys) + len(req.Indices)
 	pubkeys := make([][]byte, 0, responseCap)
 	filtered := make(map[[48]byte]bool)
 	filtered[[48]byte{}] = true // Filter out keys with all zeros.
 	// Filter out duplicate public keys.
-	for _, pubKey := range req.GetPublicKeys() {
+	for _, pubKey := range req.PublicKeys {
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)
 		if !filtered[pubkeyBytes] {
 			pubkeys = append(pubkeys, pubKey)
@@ -63,7 +63,7 @@ func (vs *Server) MultipleValidatorStatus(
 		}
 	}
 	// Convert indices to public keys.
-	for _, idx := range req.GetIndices() {
+	for _, idx := range req.Indices {
 		pubkeyBytes := headState.PubkeyAtIndex(uint64(idx))
 		if !filtered[pubkeyBytes] {
 			pubkeys = append(pubkeys, pubkeyBytes[:])
