@@ -83,6 +83,9 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
+	if service.beaconDB.SaveBlock(ctx, blk) != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -119,6 +122,9 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if service.beaconDB.SaveBlock(ctx, blk) != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {

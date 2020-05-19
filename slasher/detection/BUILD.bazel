@@ -13,6 +13,7 @@ go_library(
     visibility = ["//slasher:__subpackages__"],
     deps = [
         "//shared/attestationutil:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/blockutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
@@ -49,6 +50,7 @@ go_test(
         "//slasher/db/testing:go_default_library",
         "//slasher/db/types:go_default_library",
         "//slasher/detection/attestations:go_default_library",
+        "//slasher/detection/attestations/types:go_default_library",
         "//slasher/detection/proposals:go_default_library",
         "//slasher/detection/testing:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
