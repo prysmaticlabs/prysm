@@ -771,16 +771,10 @@ func TestBlocksFetcherRequestBlocksRateLimitingLocks(t *testing.T) {
 	if len(p1.Host.Network().Peers()) != 2 {
 		t.Fatal("Expected peers to be connected")
 	}
-	d := dbtest.SetupDB(t)
 	req := &p2ppb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
 		Step:      1,
 		Count:     64,
-	}
-	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i += req.Step {
-		if err := d.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: i}}); err != nil {
-			t.Fatal(err)
-		}
 	}
 
 	topic := p2pm.RPCBlocksByRangeTopic

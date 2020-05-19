@@ -71,8 +71,7 @@ type blocksFetcher struct {
 	quit            chan struct{} // termination notifier
 }
 
-// peerLock allows to restrict access to peers individually.
-// Currently, used for rate limiting on per peer level.
+// peerLock restricts fetcher actions on per peer basis. Currently, used for rate limiting.
 type peerLock struct {
 	sync.Mutex
 	accessed time.Time
