@@ -435,7 +435,6 @@ func (f *blocksFetcher) requestBlocks(
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
-		fmt.Println(f.rateLimiter.TillEmpty(pid.String()))
 		timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
 		select {
 		case <-f.ctx.Done():
@@ -444,7 +443,6 @@ func (f *blocksFetcher) requestBlocks(
 		case <-timer.C:
 			// Peer has gathered enough capacity to be polled again.
 		}
-		//time.Sleep(f.rateLimiter.TillEmpty(pid.String()))
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
