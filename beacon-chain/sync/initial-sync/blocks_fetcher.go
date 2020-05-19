@@ -61,9 +61,17 @@ type blocksFetcher struct {
 	p2p             p2p.P2P
 	blocksPerSecond uint64
 	rateLimiter     *leakybucket.Collector
+	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
 	fetchResponses  chan *fetchRequestResponse
 	quit            chan struct{} // termination notifier
+}
+
+// peerLock allows to restrict access to peers individually.
+// Currently, used for rate limiting on per peer level.
+type peerLock struct {
+	sync.Mutex
+	accessed time.Time
 }
 
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
@@ -98,6 +106,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		p2p:             cfg.p2p,
 		blocksPerSecond: uint64(blocksPerSecond),
 		rateLimiter:     rateLimiter,
+		peerLocks:       make(map[peer.ID]*peerLock),
 		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
 		fetchResponses:  make(chan *fetchRequestResponse, maxPendingRequests),
 		quit:            make(chan struct{}),
@@ -392,26 +401,53 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 	return resp, nil
 }
 
+func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
+	f.Lock()
+	defer f.Unlock()
+	if lock, ok := f.peerLocks[pid]; ok {
+		lock.accessed = roughtime.Now()
+		return lock
+	}
+	f.peerLocks[pid] = &peerLock{
+		Mutex:    sync.Mutex{},
+		accessed: roughtime.Now(),
+	}
+	return f.peerLocks[pid]
+}
+
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
 func (f *blocksFetcher) requestBlocks(
 	ctx context.Context,
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
 ) ([]*eth.SignedBeaconBlock, error) {
-	f.Lock()
+	l := f.getPeerLock(pid)
+	if l == nil {
+		return nil, errors.New("cannot obtain lock")
+	}
+	l.Lock()
 	log.WithFields(logrus.Fields{
-		"peer":      pid,
-		"start":     req.StartSlot,
-		"count":     req.Count,
-		"step":      req.Step,
-		"remaining": f.rateLimiter.Remaining(pid.String()),
+		"peer":     pid,
+		"start":    req.StartSlot,
+		"count":    req.Count,
+		"step":     req.Step,
+		"capacity": f.rateLimiter.Remaining(pid.String()),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
-		time.Sleep(f.rateLimiter.TillEmpty(pid.String()))
+		fmt.Println(f.rateLimiter.TillEmpty(pid.String()))
+		timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
+		select {
+		case <-f.ctx.Done():
+			timer.Stop()
+			return nil, errFetcherCtxIsDone
+		case <-timer.C:
+			// Peer has gathered enough capacity to be polled again.
+		}
+		//time.Sleep(f.rateLimiter.TillEmpty(pid.String()))
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
-	f.Unlock()
+	l.Unlock()
 	stream, err := f.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
 	if err != nil {
 		return nil, err
