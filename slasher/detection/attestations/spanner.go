@@ -239,16 +239,15 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 		}
 		if featureconfig.Get().DisableLookback {
 
-			spans, valLength, _, err := s.slasherDB.EpochSpans(ctx, epoch)
-
+			spans, _, _, err := s.slasherDB.EpochSpans(ctx, epoch)
+			if err != nil {
+				return err
+			}
 			valNum := 0
 			for _, idx := range valIndices {
-				var span types.Span
-				if idx < valLength {
-					span, err = s.slasherDB.GetValidatorSpan(ctx, spans, idx)
-					if err != nil {
-						return err
-					}
+				span, err := s.slasherDB.GetValidatorSpan(ctx, spans, idx)
+				if err != nil {
+					return err
 				}
 				newMinSpan := uint16(target - epoch)
 				if span.MinSpan == 0 || span.MinSpan > newMinSpan {
@@ -325,19 +324,17 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update max spans")
 		}
-		spans, valLength, _, err := s.slasherDB.EpochSpans(ctx, epoch)
+		spans, _, _, err := s.slasherDB.EpochSpans(ctx, epoch)
 		if err != nil {
 			return err
 		}
 		indices := valIndices[:0]
 		for _, idx := range valIndices {
-			var span types.Span
-			if idx < valLength {
-				span, err = s.slasherDB.GetValidatorSpan(ctx, spans, idx)
-				if err != nil {
-					return err
-				}
+			span, err := s.slasherDB.GetValidatorSpan(ctx, spans, idx)
+			if err != nil {
+				return err
 			}
+
 			newMaxSpan := uint16(target - epoch)
 			if newMaxSpan > span.MaxSpan {
 				span = types.Span{
