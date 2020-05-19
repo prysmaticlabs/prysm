@@ -49,7 +49,7 @@ var (
 	validatorAttestFailVecSlasher = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "validator_attestations_rejected_total",
-			Help: "Count the attestations rejected by protector interface.",
+			Help: "Count the attestations rejected by slashing protection.",
 		},
 		[]string{
 			// validator pubkey
