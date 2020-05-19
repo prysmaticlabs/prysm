@@ -75,7 +75,7 @@ func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
 				"Eth1DepositBlockNumber":    fieldToString(m.Eth1DepositBlockNumber),
 				"PositionInActivationQueue": fieldToString(m.PositionInActivationQueue),
 			},
-		).Infof("Status=%s", m.Status)
+		).Infof("Status: %s", m.Status.String())
 	}
 }
 
