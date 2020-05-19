@@ -180,7 +180,7 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := s.cliCtx.Bool(flags.AccountMetricsFlag.Name)
+	emitAccountMetrics := !s.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
 	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
@@ -296,4 +296,13 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	return nil
+}
+
+// ExtractPublicKeysFromKeyManager extracts only the public keys from the specified key manager.
+func ExtractPublicKeysFromKeyManager(ctx *cli.Context) ([][48]byte, error) {
+	km, err := selectKeyManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return km.FetchValidatingKeys()
 }
