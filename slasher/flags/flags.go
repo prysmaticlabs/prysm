@@ -44,7 +44,7 @@ var (
 	RPCPort = &cli.IntFlag{
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by the slasher",
-		Value: 4001,
+		Value: 4002,
 	}
 	// RebuildSpanMapsFlag iterate through all indexed attestations in db and update all validators span maps from scratch.
 	RebuildSpanMapsFlag = &cli.BoolFlag{

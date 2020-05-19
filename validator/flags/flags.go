@@ -27,7 +27,7 @@ var (
 	SlasherRPCProviderFlag = &cli.StringFlag{
 		Name:  "slasher-rpc-provider",
 		Usage: "Slasher node RPC provider endpoint",
-		Value: "localhost:4001",
+		Value: "localhost:4002",
 	}
 	// SlasherCertFlag defines a flag for the slasher node's TLS certificate.
 	SlasherCertFlag = &cli.StringFlag{
