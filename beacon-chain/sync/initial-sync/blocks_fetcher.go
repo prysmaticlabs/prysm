@@ -36,6 +36,10 @@ const (
 	peersPercentagePerRequest = 0.75
 	// handshakePollingInterval is a polling interval for checking the number of received handshakes.
 	handshakePollingInterval = 5 * time.Second
+	// peerLocksPollingInterval is a polling interval for checking if there are stale peer locks.
+	peerLocksPollingInterval = 5 * time.Minute
+	// peerLockMaxAge is maximum time before stale lock is purged.
+	peerLockMaxAge = 60 * time.Minute
 )
 
 var (
@@ -61,9 +65,16 @@ type blocksFetcher struct {
 	p2p             p2p.P2P
 	blocksPerSecond uint64
 	rateLimiter     *leakybucket.Collector
+	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
 	fetchResponses  chan *fetchRequestResponse
 	quit            chan struct{} // termination notifier
+}
+
+// peerLock restricts fetcher actions on per peer basis. Currently, used for rate limiting.
+type peerLock struct {
+	sync.Mutex
+	accessed time.Time
 }
 
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
@@ -98,6 +109,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		p2p:             cfg.p2p,
 		blocksPerSecond: uint64(blocksPerSecond),
 		rateLimiter:     rateLimiter,
+		peerLocks:       make(map[peer.ID]*peerLock),
 		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
 		fetchResponses:  make(chan *fetchRequestResponse, maxPendingRequests),
 		quit:            make(chan struct{}),
@@ -137,6 +149,21 @@ func (f *blocksFetcher) loop() {
 		close(f.fetchResponses)
 	}()
 
+	// Periodically remove stale peer locks.
+	go func() {
+		ticker := time.NewTicker(peerLocksPollingInterval)
+		for {
+			select {
+			case <-ticker.C:
+				f.removeStalePeerLocks(peerLockMaxAge)
+			case <-f.ctx.Done():
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	// Main loop.
 	for {
 		// Make sure there is are available peers before processing requests.
 		if _, err := f.waitForMinimumPeers(f.ctx); err != nil {
@@ -398,20 +425,31 @@ func (f *blocksFetcher) requestBlocks(
 	req *p2ppb.BeaconBlocksByRangeRequest,
 	pid peer.ID,
 ) ([]*eth.SignedBeaconBlock, error) {
-	f.Lock()
+	l := f.getPeerLock(pid)
+	if l == nil {
+		return nil, errors.New("cannot obtain lock")
+	}
+	l.Lock()
 	log.WithFields(logrus.Fields{
-		"peer":      pid,
-		"start":     req.StartSlot,
-		"count":     req.Count,
-		"step":      req.Step,
-		"remaining": f.rateLimiter.Remaining(pid.String()),
+		"peer":     pid,
+		"start":    req.StartSlot,
+		"count":    req.Count,
+		"step":     req.Step,
+		"capacity": f.rateLimiter.Remaining(pid.String()),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		log.WithField("peer", pid).Debug("Slowing down for rate limit")
-		time.Sleep(f.rateLimiter.TillEmpty(pid.String()))
+		timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
+		select {
+		case <-f.ctx.Done():
+			timer.Stop()
+			return nil, errFetcherCtxIsDone
+		case <-timer.C:
+			// Peer has gathered enough capacity to be polled again.
+		}
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
-	f.Unlock()
+	l.Unlock()
 	stream, err := f.p2p.Send(ctx, req, p2p.RPCBlocksByRangeTopic, pid)
 	if err != nil {
 		return nil, err
@@ -435,6 +473,35 @@ func (f *blocksFetcher) requestBlocks(
 	}
 
 	return resp, nil
+}
+
+// getPeerLock returns peer lock for a given peer. If lock is not found, it is created.
+func (f *blocksFetcher) getPeerLock(pid peer.ID) *peerLock {
+	f.Lock()
+	defer f.Unlock()
+	if lock, ok := f.peerLocks[pid]; ok {
+		lock.accessed = roughtime.Now()
+		return lock
+	}
+	f.peerLocks[pid] = &peerLock{
+		Mutex:    sync.Mutex{},
+		accessed: roughtime.Now(),
+	}
+	return f.peerLocks[pid]
+}
+
+// removeStalePeerLocks is a cleanup procedure which removes stale locks.
+func (f *blocksFetcher) removeStalePeerLocks(age time.Duration) {
+	f.Lock()
+	defer f.Unlock()
+	for peerID, lock := range f.peerLocks {
+		if time.Since(lock.accessed) >= age {
+			lock.Lock()
+			f.peerLocks[peerID] = nil
+			delete(f.peerLocks, peerID)
+			lock.Unlock()
+		}
+	}
 }
 
 // selectFailOverPeer randomly selects fail over peer from the list of available peers.
