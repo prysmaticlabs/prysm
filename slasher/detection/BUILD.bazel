@@ -13,8 +13,8 @@ go_library(
     visibility = ["//slasher:__subpackages__"],
     deps = [
         "//shared/attestationutil:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/blockutil:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
