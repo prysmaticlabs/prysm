@@ -21,8 +21,8 @@ func (bs *Service) RequestHistoricalAttestations(
 	res := &ethpb.ListIndexedAttestationsResponse{}
 	var err error
 	for {
-		if ctx.Err() == context.Canceled {
-			return nil, errors.Wrap(err, "context cancelled")
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
 		}
 		if res == nil {
 			res = &ethpb.ListIndexedAttestationsResponse{}

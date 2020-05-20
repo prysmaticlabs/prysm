@@ -161,7 +161,7 @@ func (bs *Server) ListIndexedAttestations(
 		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
 		if err != nil && strings.Contains(err.Error(), "unknown state summary") {
 			// We shouldn't stop the request if we encounter an attestation we don't have the state for.
-			log.Debugf("could not get state for attestation target root %#x", targetRoot)
+			log.Debugf("Could not get state for attestation target root %#x", targetRoot)
 			continue
 		} else if err != nil {
 			return nil, status.Errorf(
