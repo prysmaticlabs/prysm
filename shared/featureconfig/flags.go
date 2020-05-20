@@ -97,9 +97,9 @@ var (
 		Name:  "enable-byte-mempool",
 		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
 	}
-	enableDomainDataCacheFlag = &cli.BoolFlag{
-		Name: "enable-domain-data-cache",
-		Usage: "Enable caching of domain data requests per epoch. This feature reduces the total " +
+	disableDomainDataCacheFlag = &cli.BoolFlag{
+		Name: "disable-domain-data-cache",
+		Usage: "Disable caching of domain data requests per epoch. This feature reduces the total " +
 			"calls to the beacon node for each assignment.",
 	}
 	enableStateGenSigVerify = &cli.BoolFlag{
@@ -351,6 +351,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableDomainDataCacheFlag = &cli.BoolFlag{
+		Name: "enable-domain-data-cache",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -390,6 +395,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableCustomBlockHTR,
 	deprecatedEnableEth1DataVoteCacheFlag,
 	deprecatedAccountMetricsFlag,
+	deprecatedEnableDomainDataCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -398,7 +404,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
 	enableExternalSlasherProtectionFlag,
-	enableDomainDataCacheFlag,
+	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 }...)
 
@@ -410,7 +416,6 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
-	"--enable-domain-data-cache",
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
