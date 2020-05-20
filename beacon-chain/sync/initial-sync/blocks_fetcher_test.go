@@ -828,7 +828,7 @@ func TestBlocksFetcherRequestBlocksRateLimitingLocks(t *testing.T) {
 	timer := time.NewTimer(2 * time.Second)
 	select {
 	case <-timer.C:
-		t.Error("p3 takes to long to respond: lock contention")
+		t.Error("p3 takes too long to respond: lock contention")
 	case <-ch:
 		// p3 responded w/o waiting for rate limiter's lock (on which p2 spins).
 	}
