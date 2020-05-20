@@ -74,6 +74,12 @@ func TestTopazRewardsRegression_StateRootValid(t *testing.T) {
 	}
 }
 
+// This test is to test a regression for a consensus split that was found in
+// schlesi due to differences in how we handled slashed validators
+// in epoch transitions from the pyspec. We use lighthouse's block
+// as that was the block which triggered the split. The post state
+// is from the pyspec which helps us validate that we are indeed
+// performing the state transition correctly.
 func TestSchlesiRewardsRegression_PyspecState(t *testing.T) {
 	regressionPath := "beacon-chain/core/state/regression_files"
 	blockFile := "schlesi_lighthouse_block.ssz"
