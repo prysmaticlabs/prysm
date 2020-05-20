@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/protolambda/zrnt/eth2/phase0"
 	"github.com/protolambda/zssz"
@@ -16,12 +18,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+const timeout = 60*time.Second
+
 // BeaconFuzzBlock using the corpora from sigp/beacon-fuzz.
 func BeaconFuzzBlock(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputBlockHeader{}
 	if err := ssz.Unmarshal(b, input); err != nil {
-		return fail(err)
+		return nil, false
 	}
 	sb, err := prylabs_testing.GetBeaconFuzzStateBytes(input.StateID)
 	if err != nil || len(sb) == 0 {
@@ -48,15 +52,23 @@ func BeaconFuzzBlock(b []byte) ([]byte, bool) {
 }
 
 func beaconFuzzBlockPrysm(input *InputBlockHeader, sb []byte) ([]byte, bool) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runutil.RunAfter(ctx, timeout, func() {
+		panic("Deadline exceeded")
+	})
+
 	s := &pb.BeaconState{}
 	if err := s.UnmarshalSSZ(sb); err != nil {
-		return fail(err)
+		return nil, false
 	}
 	st, err := stateTrie.InitializeFromProto(s)
 	if err != nil {
 		return fail(err)
 	}
-	post, err := state.ProcessBlock(context.Background(), st, input.Block)
+	ctx, cancel2 := context.WithTimeout(ctx, timeout/2)
+	defer cancel2()
+	post, err := state.ExecuteStateTransition(ctx, st, input.Block)
 	if err != nil {
 		return fail(err)
 	}
@@ -64,12 +76,18 @@ func beaconFuzzBlockPrysm(input *InputBlockHeader, sb []byte) ([]byte, bool) {
 }
 
 func beaconFuzzBlockZrnt(bb []byte, sb []byte) ([]byte, bool) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runutil.RunAfter(ctx, timeout, func() {
+		panic("Deadline exceeded")
+	})
+
 	st := &phase0.BeaconState{}
 	if err := zssz.Decode(bytes.NewReader(sb), uint64(len(sb)), st, phase0.BeaconStateSSZ); err != nil {
 		return fail(err)
 	}
 	blk := &phase0.SignedBeaconBlock{}
-	if err := zssz.Decode(bytes.NewReader(bb), uint64(len(bb)), blk, phase0.BeaconBlockSSZ); err != nil {
+	if err := zssz.Decode(bytes.NewReader(bb), uint64(len(bb)), blk, phase0.SignedBeaconBlockSSZ); err != nil {
 		return fail(err)
 	}
 	ffstate := phase0.NewFullFeaturedState(st)

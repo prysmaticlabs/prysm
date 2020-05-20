@@ -118,6 +118,7 @@ go_fuzz_test(
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/state:go_default_library",
+        "//shared/runutil:go_default_library",
         "//fuzz/testing:go_default_library",
         "//shared/params:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
