@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -11,6 +10,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {

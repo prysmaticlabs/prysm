@@ -20,6 +20,7 @@ go_library(
         "//fuzz:__pkg__",
         "//proto/testing:__subpackages__",
         "//shared/testutil:__subpackages__",
+        "//shared/blockutil:__subpackages__",
         "//slasher:__subpackages__",
         "//tools/blocktree:__pkg__",
         "//tools/pcli:__pkg__",
