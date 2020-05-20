@@ -210,9 +210,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	PruneSlasherStoragePeriod: 10,
 
 	// Fork related values.
-	GenesisForkVersion:  []byte{0, 0, 0, 0},
-	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
-	NextForkEpoch:       1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
+	// @TODO reset this back to {0,0,0,0} after https://github.com/prysmaticlabs/prysm/issues/5922
+	GenesisForkVersion:  []byte{0, 0, 1, 19},
+	NextForkVersion:     []byte{0, 0, 1, 19}, // Set to GenesisForkVersion unless there is a scheduled fork
+	NextForkEpoch:       1<<64 - 1,           // Set to FarFutureEpoch unless there is a scheduled fork.
 	ForkVersionSchedule: map[uint64][]byte{
 		// Any further forks must be specified here by their epoch number.
 	},
