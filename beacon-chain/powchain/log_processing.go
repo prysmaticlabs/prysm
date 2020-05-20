@@ -191,7 +191,14 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		if !s.chainStartData.Chainstarted {
 			deposits := len(s.chainStartData.ChainstartDeposits)
 			if deposits%512 == 0 {
-				log.WithField("deposits", deposits).Info("Processing deposits from Ethereum 1 chain")
+				valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+				if err != nil {
+					log.WithError(err).Error("Could not determine active validator count from pre genesis state")
+				}
+				log.WithFields(logrus.Fields{
+					"deposits":          deposits,
+					"genesisValidators": valCount,
+				}).Info("Processing deposits from Ethereum 1 chain")
 			}
 		}
 	} else {
