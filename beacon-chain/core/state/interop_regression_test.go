@@ -80,6 +80,9 @@ func TestTopazRewardsRegression_StateRootValid(t *testing.T) {
 // as that was the block which triggered the split. The post state
 // is from the pyspec which helps us validate that we are indeed
 // performing the state transition correctly.
+// Related issues:
+// https://github.com/prysmaticlabs/prysm/issues/5901
+// https://github.com/prysmaticlabs/prysm/issues/5897
 func TestSchlesiRewardsRegression_PyspecState(t *testing.T) {
 	regressionPath := "beacon-chain/core/state/regression_files"
 	blockFile := "schlesi_lighthouse_block.ssz"
