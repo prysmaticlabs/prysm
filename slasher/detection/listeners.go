@@ -9,9 +9,8 @@ package detection
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"go.opencensus.io/trace"
 )
 
@@ -28,7 +27,7 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 		select {
 		case signedBlock := <-ch:
 			log.Debug("Running detection on block...")
-			signedBlkHdr, err := signedBeaconBlockHeaderFromBlock(signedBlock)
+			signedBlkHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(signedBlock)
 			if err != nil {
 				log.WithError(err).Error("Could not get block header from block")
 				continue
@@ -80,21 +79,4 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 			return
 		}
 	}
-}
-
-func signedBeaconBlockHeaderFromBlock(block *ethpb.SignedBeaconBlock) (*ethpb.SignedBeaconBlockHeader, error) {
-	bodyRoot, err := stateutil.BlockBodyRoot(block.Block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get body root of block")
-	}
-	return &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			Slot:          block.Block.Slot,
-			ProposerIndex: block.Block.ProposerIndex,
-			ParentRoot:    block.Block.ParentRoot,
-			StateRoot:     block.Block.StateRoot,
-			BodyRoot:      bodyRoot[:],
-		},
-		Signature: block.Signature,
-	}, nil
 }
