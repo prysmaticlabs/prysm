@@ -19,21 +19,28 @@ import (
 // InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
 var InjectDoubleVote = types.Evaluator{
 	Name:       "inject_double_vote_%d",
-	Policy:     beforeEpoch(2),
+	Policy:     onEpoch(1),
 	Evaluation: insertDoubleAttestationIntoPool,
+}
+
+// ProposeDoubleBlock broadcasts a double block to the beacon node for the slasher to detect.
+var ProposeDoubleBlock = types.Evaluator{
+	Name:       "propose_double_block_%d",
+	Policy:     onEpoch(1),
+	Evaluation: proposeDoubleBlock,
 }
 
 // ValidatorsSlashed ensures the expected amount of validators are slashed.
 var ValidatorsSlashed = types.Evaluator{
 	Name:       "validators_slashed_epoch_%d",
-	Policy:     afterNthEpoch(0),
+	Policy:     afterNthEpoch(1),
 	Evaluation: validatorsSlashed,
 }
 
 // SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
 var SlashedValidatorsLoseBalance = types.Evaluator{
 	Name:       "slashed_validators_lose_valance_epoch_%d",
-	Policy:     afterNthEpoch(0),
+	Policy:     afterNthEpoch(1),
 	Evaluation: validatorsLoseBalance,
 }
 
@@ -179,4 +186,99 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		slashedIndices = append(slashedIndices, committee[i])
 	}
 	return nil
+}
+
+func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	valClient := eth.NewBeaconNodeValidatorClient(conn)
+	beaconClient := eth.NewBeaconChainClient(conn)
+
+	ctx := context.Background()
+	chainHead, err := beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	if err != nil {
+		return err
+	}
+
+	_, privKeys, err := testutil.DeterministicDepositsAndKeys(64)
+	if err != nil {
+		return err
+	}
+	pubKeys := make([][]byte, len(privKeys))
+	for i, priv := range privKeys {
+		pubKeys[i] = priv.PublicKey().Marshal()
+	}
+	duties, err := valClient.GetDuties(ctx, &eth.DutiesRequest{
+		Epoch:      chainHead.HeadEpoch,
+		PublicKeys: pubKeys,
+	})
+	if err != nil {
+		return err
+	}
+
+	var proposerIndex uint64
+	for i, duty := range duties.CurrentEpochDuties {
+		if sliceutil.IsInUint64(chainHead.HeadSlot-1, duty.ProposerSlots) {
+			proposerIndex = uint64(i)
+			break
+		}
+	}
+
+	blk := &eth.BeaconBlock{
+		Slot:          chainHead.HeadSlot - 1,
+		ParentRoot:    to32BytesSlice([]byte("bad parent root")),
+		StateRoot:     to32BytesSlice([]byte("bad state root")),
+		ProposerIndex: proposerIndex,
+		Body: &eth.BeaconBlockBody{
+			Eth1Data: &eth.Eth1Data{
+				BlockHash:    to32BytesSlice([]byte("bad block hash")),
+				DepositRoot:  to32BytesSlice([]byte("bad deposit root")),
+				DepositCount: 1,
+			},
+			RandaoReveal:      to96BytesSlice([]byte("bad randao")),
+			Graffiti:          to32BytesSlice([]byte("teehee")),
+			ProposerSlashings: []*eth.ProposerSlashing{},
+			AttesterSlashings: []*eth.AttesterSlashing{},
+			Attestations:      []*eth.Attestation{},
+			Deposits:          []*eth.Deposit{},
+			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
+		},
+	}
+
+	req := &eth.DomainRequest{
+		Epoch:  chainHead.HeadEpoch,
+		Domain: params.BeaconConfig().DomainBeaconProposer[:],
+	}
+	resp, err := valClient.DomainData(ctx, req)
+	if err != nil {
+		return err
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(blk, resp.SignatureDomain)
+	if err != nil {
+		return err
+	}
+	sig := privKeys[proposerIndex].Sign(signingRoot[:]).Marshal()
+	signedBlk := &eth.SignedBeaconBlock{
+		Block:     blk,
+		Signature: sig,
+	}
+
+	for _, conn := range conns {
+		client := eth.NewBeaconNodeValidatorClient(conn)
+		_, err = client.ProposeBlock(ctx, signedBlk)
+		if err != nil {
+			return err
+		}
+	}
+	slashedIndices = append(slashedIndices, proposerIndex)
+	return nil
+}
+
+func to32BytesSlice(byteArray []byte) []byte {
+	bytes32 := bytesutil.PadTo(byteArray, 32)
+	return bytes32[:]
+}
+
+func to96BytesSlice(byteArray []byte) []byte {
+	bytes96 := bytesutil.PadTo(byteArray, 96)
+	return bytes96[:]
 }
