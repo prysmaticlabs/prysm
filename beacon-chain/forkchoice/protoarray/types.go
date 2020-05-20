@@ -14,9 +14,9 @@ type Store struct {
 	pruneThreshold  uint64              // do not prune tree unless threshold is reached.
 	justifiedEpoch  uint64              // latest justified epoch in store.
 	finalizedEpoch  uint64              // latest finalized epoch in store.
-	finalizedRoot   [32]byte            // latest finalized Root in store.
+	finalizedRoot   [32]byte            // latest finalized root in store.
 	nodes           []*Node             // list of block nodes, each node is a representation of one block.
-	nodeIndices     map[[32]byte]uint64 // the Root of block node and the nodes index in the list.
+	nodeIndices     map[[32]byte]uint64 // the root of block node and the nodes index in the list.
 	nodeIndicesLock sync.RWMutex
 }
 
@@ -36,8 +36,8 @@ type Node struct {
 
 // Vote defines an individual validator's vote.
 type Vote struct {
-	currentRoot [32]byte // current voting Root.
-	nextRoot    [32]byte // next voting Root.
+	currentRoot [32]byte // current voting root.
+	nextRoot    [32]byte // next voting root.
 	nextEpoch   uint64   // epoch of next voting period.
 }
 

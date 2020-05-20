@@ -12,7 +12,7 @@ import (
 // before getting pruned upon new finalization.
 const defaultPruneThreshold = 256
 
-// This tracks the last reported head Root. Used for metrics.
+// This tracks the last reported head root. Used for metrics.
 var lastHeadRoot [32]byte
 
 // New initializes a new fork choice store.
@@ -32,8 +32,8 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
-// Head returns the head Root from fork choice store.
-// It firsts computes validator's balance changes then recalculates block tree from leaves to Root.
+// Head returns the head root from fork choice store.
+// It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
@@ -71,7 +71,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 			f.votes = append(f.votes, Vote{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash})
 		}
 
-		// Newly allocated vote if the Root fields are untouched.
+		// Newly allocated vote if the root fields are untouched.
 		newVote := f.votes[index].nextRoot == params.BeaconConfig().ZeroHash &&
 			f.votes[index].currentRoot == params.BeaconConfig().ZeroHash
 
@@ -93,8 +93,8 @@ func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot [3
 	return f.store.insert(ctx, slot, blockRoot, parentRoot, graffiti, justifiedEpoch, finalizedEpoch)
 }
 
-// Prune prunes the fork choice store with the new finalized Root. The store is only pruned if the input
-// Root is different than the current store finalized Root, and the number of the store has met prune threshold.
+// Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
+// root is different than the current store finalized root, and the number of the store has met prune threshold.
 func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 	return f.store.prune(ctx, finalizedRoot)
 }

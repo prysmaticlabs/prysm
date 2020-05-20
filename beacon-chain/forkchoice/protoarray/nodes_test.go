@@ -48,7 +48,7 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 	indices := make(map[[32]byte]uint64)
 	indices[r] = 0
 
-	// Since the justified node's best descendent is at index 1 and it's Root is `best`,
+	// Since the justified node's best descendent is at index 1 and it's root is `best`,
 	// the head should be `best`.
 	s := &Store{nodeIndices: indices, nodes: []*Node{{Root: r, BestDescendent: 1}, {Root: best}}}
 	h, err := s.head(context.Background(), r)
@@ -84,7 +84,7 @@ func TestStore_Insert_UnknownParent(t *testing.T) {
 		t.Error("Incorrect finalization")
 	}
 	if s.nodes[0].Root != [32]byte{'A'} {
-		t.Error("Incorrect Root")
+		t.Error("Incorrect root")
 	}
 }
 
@@ -115,7 +115,7 @@ func TestStore_Insert_KnownParent(t *testing.T) {
 		t.Error("Incorrect finalization")
 	}
 	if s.nodes[1].Root != [32]byte{'A'} {
-		t.Error("Incorrect Root")
+		t.Error("Incorrect root")
 	}
 }
 
@@ -397,7 +397,7 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 
 	s := &Store{nodes: nodes, nodeIndices: indices, pruneThreshold: 100}
 
-	// Finalized Root is at index 99 so everything before 99 should be pruned,
+	// Finalized root is at index 99 so everything before 99 should be pruned,
 	// but pruneThreshold is at 100 so nothing will be pruned.
 	if err := s.prune(context.Background(), indexToHash(99)); err != nil {
 		t.Fatal(err)
@@ -424,7 +424,7 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 
 	s := &Store{nodes: nodes, nodeIndices: indices}
 
-	// Finalized Root is at index 99 so everything before 99 should be pruned.
+	// Finalized root is at index 99 so everything before 99 should be pruned.
 	if err := s.prune(context.Background(), indexToHash(99)); err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +450,7 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 
 	s := &Store{nodes: nodes, nodeIndices: indices}
 
-	// Finalized Root is at index 11 so everything before 11 should be pruned.
+	// Finalized root is at index 11 so everything before 11 should be pruned.
 	if err := s.prune(context.Background(), indexToHash(10)); err != nil {
 		t.Fatal(err)
 	}
