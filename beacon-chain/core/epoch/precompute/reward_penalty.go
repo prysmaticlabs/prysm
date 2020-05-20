@@ -76,16 +76,17 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 		return 0, 0
 	}
 
+	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
+	effectiveBalanceIncrement := params.BeaconConfig().EffectiveBalanceIncrement
 	e := helpers.PrevEpoch(state)
 	vb := v.CurrentEpochEffectiveBalance
-	br := vb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch) / params.BeaconConfig().BaseRewardsPerEpoch
+	br := vb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch) / baseRewardsPerEpoch
 	r, p := uint64(0), uint64(0)
 
 	// Process source reward / penalty
 	if v.IsPrevEpochAttester && !v.IsSlashed {
-		inc := params.BeaconConfig().EffectiveBalanceIncrement
-		rewardNumerator := br * (pBal.PrevEpochAttested / inc)
-		r += rewardNumerator / (pBal.ActiveCurrentEpoch / inc)
+		rewardNumerator := br * (pBal.PrevEpochAttested / effectiveBalanceIncrement)
+		r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		maxAttesterReward := br - proposerReward
 		r += maxAttesterReward / v.InclusionDistance
@@ -95,18 +96,16 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
-		inc := params.BeaconConfig().EffectiveBalanceIncrement
-		rewardNumerator := br * (pBal.PrevEpochTargetAttested / inc)
-		r += rewardNumerator / (pBal.ActiveCurrentEpoch / inc)
+		rewardNumerator := br * (pBal.PrevEpochTargetAttested / effectiveBalanceIncrement)
+		r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
 	} else {
 		p += br
 	}
 
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
-		inc := params.BeaconConfig().EffectiveBalanceIncrement
-		rewardNumerator := br * (pBal.PrevEpochHeadAttested / inc)
-		r += rewardNumerator / (pBal.ActiveCurrentEpoch / inc)
+		rewardNumerator := br * (pBal.PrevEpochHeadAttested / effectiveBalanceIncrement)
+		r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
 	} else {
 		p += br
 	}
@@ -114,9 +113,13 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 	// Process finality delay penalty
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	finalityDelay := e - finalizedEpoch
+
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
-		p += params.BeaconConfig().BaseRewardsPerEpoch * br
-		if !v.IsPrevEpochTargetAttester {
+		p += baseRewardsPerEpoch * br
+		// Apply an additional penalty to validators that did not vote on the correct target or has been slashed.
+		// Equivalent to the following condition from the spec:
+		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`
+		if !v.IsPrevEpochTargetAttester || v.IsSlashed {
 			p += vb * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
 		}
 	}
@@ -141,7 +144,8 @@ func proposerDeltaPrecompute(state *stateTrie.BeaconState, pBal *Balance, vp []*
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
 	for _, v := range vp {
-		if v.IsPrevEpochAttester {
+		// Only apply inclusion rewards to proposer only if the attested hasn't been slashed.
+		if v.IsPrevEpochAttester && !v.IsSlashed {
 			vBalance := v.CurrentEpochEffectiveBalance
 			baseReward := vBalance * baseRewardFactor / balanceSqrt / baseRewardsPerEpoch
 			proposerReward := baseReward / proposerRewardQuotient
