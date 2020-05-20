@@ -246,11 +246,11 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 				slasherDB: db,
 			}
 
-			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
+			if err := sd.UpdateSpansNew(ctx, tt.att); err != nil {
 				t.Fatal(err)
 			}
 
-			res, err := sd.DetectSlashingsForAttestation(ctx, tt.incomingAtt)
+			res, err := sd.DetectSlashingsForAttestationNew(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -664,11 +664,11 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				slasherDB: db,
 			}
 			for _, att := range tt.atts {
-				if err := spanDetector.UpdateSpans(ctx, att); err != nil {
+				if err := spanDetector.UpdateSpansNew(ctx, att); err != nil {
 					t.Fatalf("Failed to save to slasherDB: %v", err)
 				}
 			}
-			res, err := spanDetector.DetectSlashingsForAttestation(ctx, tt.incomingAtt)
+			res, err := spanDetector.DetectSlashingsForAttestationNew(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
 			}

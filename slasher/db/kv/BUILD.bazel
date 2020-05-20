@@ -39,6 +39,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attester_slashings_test.go",
+        "benchmark_test.go",
         "block_header_test.go",
         "chain_data_test.go",
         "indexed_attestations_test.go",
@@ -51,6 +52,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/mputil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//slasher/db/types:go_default_library",
