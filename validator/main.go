@@ -106,6 +106,11 @@ contract in order to activate the validator client`,
 					Flags: []cli.Flag{
 						flags.KeystorePathFlag,
 						flags.PasswordFlag,
+						// @TODO expose these flags, ref https://github.com/prysmaticlabs/prysm/issues/5922
+						// flags.ChainConfigFileFlag,
+						// flags.minimalConfigFlag,
+						// flags.schlesiTestnetFlag,
+						// flags.wittiTestnetFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
 						featureconfig.ConfigureValidator(cliCtx)
