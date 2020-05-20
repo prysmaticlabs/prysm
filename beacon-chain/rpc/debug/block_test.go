@@ -34,11 +34,23 @@ func TestServer_GetBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted, err := ssz.Marshal(b.Block)
+	wanted, err := ssz.Marshal(b)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(wanted, res.Encoded) {
 		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
+	}
+
+	// Checking for nil block.
+	blockRoot = [32]byte{}
+	res, err = bs.GetBlock(ctx, &pbrpc.BlockRequest{
+		BlockRoot: blockRoot[:],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal([]byte{}, res.Encoded) {
+		t.Errorf("Wanted empty, received %v", res.Encoded)
 	}
 }

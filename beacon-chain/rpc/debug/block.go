@@ -20,7 +20,10 @@ func (ds *Server) GetBlock(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve block by root: %v", err)
 	}
-	encoded, err := ssz.Marshal(signedBlock.Block)
+	if signedBlock == nil {
+		return &pbrpc.SSZResponse{Encoded: make([]byte, 0)}, nil
+	}
+	encoded, err := ssz.Marshal(signedBlock)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not marshal block: %v", err)
 	}
