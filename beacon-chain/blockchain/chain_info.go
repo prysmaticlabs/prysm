@@ -21,6 +21,7 @@ type ChainInfoFetcher interface {
 	HeadFetcher
 	FinalizationFetcher
 	GenesisFetcher
+	CanonicalFetcher
 }
 
 // TimeFetcher retrieves the Eth2 data that's related to time.
@@ -49,6 +50,11 @@ type HeadFetcher interface {
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
 	CurrentFork() *pb.Fork
+}
+
+// ForkFetcher retrieves the current chain's canonical information.
+type CanonicalFetcher interface {
+	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
@@ -221,4 +227,18 @@ func (s *Service) Participation(epoch uint64) *precompute.Balance {
 	defer s.epochParticipationLock.RUnlock()
 
 	return s.epochParticipation[epoch]
+}
+
+// IsCanonical returns true if the input block root is part of the canonical chain.
+func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	// If the block has been finalized, the block will always be part of the canonical chain.
+	if s.beaconDB.IsFinalizedBlock(ctx, blockRoot) {
+		return true, nil
+	}
+
+	// If the block has not been finalized, the block must be recent. Check recent canonical roots
+	// mapping which uses proto array fork choice.
+	s.recentCanonicalBlocksLock.RLock()
+	defer s.recentCanonicalBlocksLock.RUnlock()
+	return s.recentCanonicalBlocks[blockRoot], nil
 }
