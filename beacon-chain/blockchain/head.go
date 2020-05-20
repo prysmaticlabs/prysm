@@ -270,6 +270,10 @@ func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]
 	s.recentCanonicalBlocks[headRoot] = true
 	nodes := s.forkChoiceStore.Nodes()
 	node := s.forkChoiceStore.Node(headRoot)
+	if node == nil {
+		return nil
+	}
+
 	for node.Parent != protoarray.NonExistentNode {
 		if ctx.Err() != nil {
 			return ctx.Err()
