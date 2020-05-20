@@ -163,6 +163,13 @@ func (bs *Server) ListIndexedAttestations(
 			// We shouldn't stop the request if we encounter an attestation we don't have the state for.
 			log.Debugf("could not get state for attestation target root %#x", targetRoot)
 			continue
+		} else if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not retrieve state for attestation target root %#x: %v",
+				targetRoot,
+				err,
+			)
 		}
 		for i := 0; i < len(atts); i++ {
 			att := atts[i]
