@@ -13,7 +13,7 @@ func (s *Service) VerifyBlock(ctx context.Context, blockHeader *ethpb.SignedBeac
 	if err != nil {
 		log.Warnf("External slashing block protection returned an error: %v", err)
 	}
-	if ps != nil {
+	if ps != nil && ps.ProposerSlashing != nil {
 		return false
 	}
 	return true
@@ -25,7 +25,8 @@ func (s *Service) VerifyAttestation(ctx context.Context, attestation *ethpb.Inde
 	if err != nil {
 		log.Warnf("External slashing attestation protection returned an error: %v", err)
 	}
-	if as != nil {
+	if as != nil && as.AttesterSlashing != nil {
+		log.Warnf("External slashing attestation protection found the attestation to be slashable: %v", as)
 		return false
 	}
 	return true

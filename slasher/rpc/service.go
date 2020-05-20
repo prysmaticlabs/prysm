@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -37,16 +39,18 @@ type Service struct {
 	withCert        string
 	withKey         string
 	credentialError error
+	beaconclient    *beaconclient.Service
 }
 
 // Config options for the slasher node RPC server.
 type Config struct {
-	Host      string
-	Port      string
-	CertFlag  string
-	KeyFlag   string
-	Detector  *detection.Service
-	SlasherDB db.Database
+	Host         string
+	Port         string
+	CertFlag     string
+	KeyFlag      string
+	Detector     *detection.Service
+	SlasherDB    db.Database
+	BeaconClient *beaconclient.Service
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -54,12 +58,13 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:       ctx,
-		cancel:    cancel,
-		host:      cfg.Host,
-		port:      cfg.Port,
-		detector:  cfg.Detector,
-		slasherDB: cfg.SlasherDB,
+		ctx:          ctx,
+		cancel:       cancel,
+		host:         cfg.Host,
+		port:         cfg.Port,
+		detector:     cfg.Detector,
+		slasherDB:    cfg.SlasherDB,
+		beaconclient: cfg.BeaconClient,
 	}
 }
 
@@ -106,9 +111,10 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	slasherServer := &Server{
-		ctx:       s.ctx,
-		detector:  s.detector,
-		slasherDB: s.slasherDB,
+		ctx:          s.ctx,
+		detector:     s.detector,
+		slasherDB:    s.slasherDB,
+		beaconClient: s.beaconclient,
 	}
 	slashpb.RegisterSlasherServer(s.grpcServer, slasherServer)
 
