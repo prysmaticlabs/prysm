@@ -220,7 +220,7 @@ func TestProcessAttestations(t *testing.T) {
 	if err := beaconState.SetBlockRoots(br); err != nil {
 		t.Fatal(err)
 	}
-	att2.Data.Target.Root = rt[:]
+	att2.Data.Target.Root = newRt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
 	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}})
 	if err != nil {
@@ -259,6 +259,9 @@ func TestProcessAttestations(t *testing.T) {
 	for _, i := range indices {
 		if !pVals[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")
+		}
+		if !pVals[i].IsPrevEpochTargetAttester {
+			t.Error("Not a prev epoch head attester")
 		}
 		if !pVals[i].IsPrevEpochHeadAttester {
 			t.Error("Not a prev epoch head attester")
