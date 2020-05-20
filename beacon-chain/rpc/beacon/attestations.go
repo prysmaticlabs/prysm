@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -158,8 +159,9 @@ func (bs *Server) ListIndexedAttestations(
 	indexedAtts := make([]*ethpb.IndexedAttestation, 0, numAttestations)
 	for targetRoot, atts := range mappedAttestations {
 		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
-		if err != nil {
-			log.WithError(err).Errorf("could not get state attestation target root %#x", targetRoot)
+		if err != nil && strings.Contains(err.Error(), "unknown state summary") {
+			// We shouldn't stop the request if we encounter an attestation we don't have the state for.
+			log.Debugf("could not get state for attestation target root %#x", targetRoot)
 			continue
 		}
 		for i := 0; i < len(atts); i++ {
