@@ -39,6 +39,9 @@ func (ds *Server) GetBeaconState(
 			return nil, status.Errorf(codes.Internal, "Could not compute state by slot: %v", err)
 		}
 		encoded, err := ssz.Marshal(st.CloneInnerState())
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not ssz encode beacon state: %v", err)
+		}
 		return &pbrpc.SSZResponse{
 			Encoded: encoded,
 		}, nil
@@ -48,6 +51,9 @@ func (ds *Server) GetBeaconState(
 			return nil, status.Errorf(codes.Internal, "Could not compute state by block root: %v", err)
 		}
 		encoded, err := ssz.Marshal(st.CloneInnerState())
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not ssz encode beacon state: %v", err)
+		}
 		return &pbrpc.SSZResponse{
 			Encoded: encoded,
 		}, nil
