@@ -5,8 +5,9 @@
 package cmd
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockPasswordReader is a mock of PasswordReader interface
