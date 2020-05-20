@@ -1,9 +1,10 @@
 package cmd
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"testing"
 )
 
 func TestEnterPassword(t *testing.T) {

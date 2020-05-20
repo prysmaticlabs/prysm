@@ -18,9 +18,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -47,6 +49,7 @@ type ValidatorService struct {
 	maxCallRecvMsgSize   int
 	grpcRetries          uint
 	grpcHeaders          []string
+	protector            slashingprotection.Protector
 }
 
 // Config for the validator service.
@@ -61,6 +64,7 @@ type Config struct {
 	GrpcMaxCallRecvMsgSizeFlag int
 	GrpcRetriesFlag            uint
 	GrpcHeadersFlag            string
+	Protector                  slashingprotection.Protector
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -80,6 +84,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
 		grpcRetries:          cfg.GrpcRetriesFlag,
 		grpcHeaders:          strings.Split(cfg.GrpcHeadersFlag, ","),
+		protector:            cfg.Protector,
 	}, nil
 }
 
@@ -130,6 +135,7 @@ func (v *ValidatorService) Start() {
 		log.Errorf("Could not initialize cache: %v", err)
 		return
 	}
+
 	v.validator = &validator{
 		db:                             valDB,
 		dutiesByEpoch:                  make(map[uint64][]*ethpb.DutiesResponse_Duty, 2), // 2 epochs worth of duties.
@@ -144,6 +150,7 @@ func (v *ValidatorService) Start() {
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
+		protector:                      v.protector,
 	}
 	go run(v.ctx, v.validator)
 }
@@ -232,7 +239,7 @@ func ConstructDialOptions(
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			logDebugRequestInfoUnaryInterceptor,
+			grpcutils.LogGRPCRequests,
 		)),
 	}
 

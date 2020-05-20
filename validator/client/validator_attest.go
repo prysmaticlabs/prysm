@@ -44,6 +44,16 @@ var (
 			"pubkey",
 		},
 	)
+	validatorAttestFailVecSlasher = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "validator_attestations_rejected_total",
+			Help: "Count the attestations rejected by slashing protection.",
+		},
+		[]string{
+			// validator pubkey
+			"pubkey",
+		},
+	)
 )
 
 // SubmitAttestation completes the validator client's attester responsibility at a given slot.
@@ -136,6 +146,23 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Signature:       sig,
 	}
 
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
+		indexedAtt := &ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{duty.ValidatorIndex},
+			Data:             data,
+			Signature:        sig,
+		}
+		if !v.protector.VerifyAttestation(ctx, indexedAtt) {
+			log.WithFields(logrus.Fields{
+				"sourceEpoch": data.Source.Epoch,
+				"targetEpoch": data.Target.Epoch,
+			}).Error("Attempted to make a slashable attestation, rejected by external slasher service")
+			if v.emitAccountMetrics {
+				validatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+	}
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
