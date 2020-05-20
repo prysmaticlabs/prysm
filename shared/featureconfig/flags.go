@@ -84,6 +84,11 @@ var (
 		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 any slashable attestations.",
 	}
+	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
+		Name: "enable-external-slasher-protection",
+		Usage: "Enables the validator to connect to external slasher to prevent it from " +
+			"transmitting a slashable offence over the network.",
+	}
 	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
 		Name:  "disable-strict-attestation-pubsub-verification",
 		Usage: "Disable strict signature verification of attestations in pubsub. See PR 4782 for details.",
@@ -346,8 +351,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedAccountMetricsFlag = &cli.BoolFlag{
-		Name: "enable-account-metrics",
-		Usage: deprecatedUsage,
+		Name:   "enable-account-metrics",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -397,6 +402,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	schlesiTestnetFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
+	enableExternalSlasherProtectionFlag,
 	enableDomainDataCacheFlag,
 	waitForSyncedFlag,
 }...)

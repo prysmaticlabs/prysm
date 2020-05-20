@@ -40,6 +40,7 @@ type Flags struct {
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
 	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableByteMempool                          bool // EnaableByteMempool memory management.
@@ -285,6 +286,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.Bool(enableProtectAttesterFlag.Name) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
+	}
+	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
+		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
+		cfg.SlasherProtection = true
 	}
 	if ctx.Bool(enableDomainDataCacheFlag.Name) {
 		log.Warn("Enabled domain data cache.")

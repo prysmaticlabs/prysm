@@ -59,6 +59,8 @@ var appFlags = []cli.Flag{
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
+	flags.SlasherRPCProviderFlag,
+	flags.SlasherCertFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
