@@ -146,7 +146,8 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		AggregationBits: aggregationBitfield,
 		Signature:       sig,
 	}
-	if v.protector != nil {
+
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		indexedAtt := &ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{duty.ValidatorIndex},
 			Data:             data,

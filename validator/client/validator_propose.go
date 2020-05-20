@@ -132,7 +132,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if v.protector != nil {
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		bh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
 		if err != nil {
 			log.WithError(err).Error("Failed to get block header from block")
