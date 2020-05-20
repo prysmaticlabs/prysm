@@ -23,7 +23,7 @@ func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessBlockHeaderNoVerify(st, input.Block)
+	post, err := blocks.ProcessBlockHeaderNoVerify(st, input.Block.Block)
 	if err != nil {
 		return fail(err)
 	}
