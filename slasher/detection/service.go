@@ -3,8 +3,6 @@ package detection
 import (
 	"context"
 
-	status "github.com/prysmaticlabs/prysm/slasher/db/types"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -87,13 +85,6 @@ func (ds *Service) Start() {
 	sub := ds.notifier.ClientReadyFeed().Subscribe(ch)
 	<-ch
 	sub.Unsubscribe()
-
-	slashings, err := ds.slasherDB.AttesterSlashings(ds.ctx, status.Active)
-	if err != nil {
-		log.WithError(err).Error("Could not detect attester slashings")
-		panic(err)
-	}
-	ds.submitAttesterSlashings(ds.ctx, slashings)
 
 	if !featureconfig.Get().DisableHistoricalDetection {
 		// The detection service runs detection on all historical
