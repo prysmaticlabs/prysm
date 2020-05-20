@@ -133,6 +133,11 @@ func proposerDeltaPrecompute(state *stateTrie.BeaconState, pBal *Balance, vp []*
 
 	baseRewardFactor := params.BeaconConfig().BaseRewardFactor
 	balanceSqrt := mathutil.IntegerSquareRoot(totalBalance)
+	// Balance square root cannot be 0, this prevents division by 0.
+	if balanceSqrt == 0 {
+		balanceSqrt = 1
+	}
+
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
 	for _, v := range vp {
