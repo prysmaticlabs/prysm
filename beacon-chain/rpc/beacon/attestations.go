@@ -155,17 +155,12 @@ func (bs *Server) ListIndexedAttestations(
 	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
 	mappedAttestations := mapAttestationsByTargetRoot(ctx, attsArray)
-	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations)
-	attIndex := 0
+	indexedAtts := make([]*ethpb.IndexedAttestation, 0, numAttestations)
 	for targetRoot, atts := range mappedAttestations {
 		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
 		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve state for attestation target root %#x: %v",
-				targetRoot,
-				err,
-			)
+			log.WithError(err).Errorf("could not get state attestation target root %#x", targetRoot)
+			continue
 		}
 		for i := 0; i < len(atts); i++ {
 			att := atts[i]
@@ -178,8 +173,7 @@ func (bs *Server) ListIndexedAttestations(
 				)
 			}
 			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
-			indexedAtts[attIndex] = idxAtt
-			attIndex++
+			indexedAtts = append(indexedAtts, idxAtt)
 		}
 	}
 
