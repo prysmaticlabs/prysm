@@ -25,7 +25,7 @@ func computeDeltas(
 		oldBalance := uint64(0)
 		newBalance := uint64(0)
 
-		// Skip if validator has never voted for current root and next root (ie. if the
+		// Skip if validator has never voted for current Root and next Root (ie. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
 			continue
@@ -78,11 +78,11 @@ func copyNode(node *Node) *Node {
 	}
 
 	copiedRoot := [32]byte{}
-	copy(copiedRoot[:], node.root[:])
+	copy(copiedRoot[:], node.Root[:])
 
 	return &Node{
 		Slot:           node.Slot,
-		root:           copiedRoot,
+		Root:           copiedRoot,
 		Parent:         node.Parent,
 		justifiedEpoch: node.justifiedEpoch,
 		finalizedEpoch: node.finalizedEpoch,

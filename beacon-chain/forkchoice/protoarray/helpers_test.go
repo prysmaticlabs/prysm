@@ -147,11 +147,11 @@ func TestComputeDelta_MovingVotes(t *testing.T) {
 	for i, d := range delta {
 		if i == 0 {
 			if d != -int(balance*validatorCount) {
-				t.Error("First root should have negative delta")
+				t.Error("First Root should have negative delta")
 			}
 		} else if i == int(lastIndex) {
 			if d != int(balance*validatorCount) {
-				t.Error("Last root should have positive delta")
+				t.Error("Last Root should have positive delta")
 			}
 		} else {
 			if d != 0 {
@@ -226,11 +226,11 @@ func TestComputeDelta_ChangingBalances(t *testing.T) {
 	for i, d := range delta {
 		if i == 0 {
 			if d != -int(oldBalance*validatorCount) {
-				t.Error("First root should have negative delta")
+				t.Error("First Root should have negative delta")
 			}
 		} else if i == 1 {
 			if d != int(newBalance*validatorCount) {
-				t.Error("Last root should have positive delta")
+				t.Error("Last Root should have positive delta")
 			}
 		} else {
 			if d != 0 {
