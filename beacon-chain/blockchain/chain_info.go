@@ -52,7 +52,7 @@ type ForkFetcher interface {
 	CurrentFork() *pb.Fork
 }
 
-// ForkFetcher retrieves the current chain's canonical information.
+// CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
 }
