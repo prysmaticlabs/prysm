@@ -193,7 +193,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			if deposits%512 == 0 {
 				valCount, err := helpers.ActiveValidatorCount(s.preGenesisState, 0)
 				if err != nil {
-					log.WithError(err).Error("Could not determine active validator count from pref genesis state")
+					log.WithError(err).Error("Could not determine active validator count from pre genesis state")
 				}
 				log.WithFields(logrus.Fields{
 					"deposits":          deposits,
