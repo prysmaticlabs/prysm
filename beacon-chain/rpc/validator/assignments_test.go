@@ -356,7 +356,7 @@ func TestStreamDuties_OK(t *testing.T) {
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
 	}
-	wantedRes, err := vs.duties(ctx, req, 0 /* epoch */)
+	wantedRes, err := vs.duties(ctx, req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -427,7 +427,7 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
 	}
-	wantedRes, err := vs.duties(ctx, req, 0 /* epoch */)
+	wantedRes, err := vs.duties(ctx, req)
 	if err != nil {
 		t.Fatal(err)
 	}
