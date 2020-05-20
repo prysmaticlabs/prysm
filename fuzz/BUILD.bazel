@@ -120,6 +120,9 @@ go_fuzz_test(
         "//beacon-chain/core/state:go_default_library",
         "//fuzz/testing:go_default_library",
         "//shared/params:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_protolambda_zrnt//eth2/phase0:go_default_library",
+        "@com_github_protolambda_zssz//:go_default_library",
     ] + COMMON_DEPS,
 )
 

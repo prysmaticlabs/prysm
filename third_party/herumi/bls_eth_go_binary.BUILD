@@ -148,6 +148,7 @@ go_library(
         # Additional access will require security approval.
         "@prysm//shared/bls:__pkg__",
         "@com_github_wealdtech_go_eth2_types_v2//:__pkg__",
+        "@com_github_protolambda_zrnt//eth2:__subpackages__", # Needed for fuzz testing
     ],
     clinkopts = select({
         "@io_bazel_rules_go//go/platform:linux": ["-Wl,--unresolved-symbols=ignore-all"],

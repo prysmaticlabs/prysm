@@ -1473,8 +1473,9 @@ go_repository(
 
 go_repository(
     name = "com_github_protolambda_zssz",
-    commit = "632f11e5e281660402bd0ac58f76090f3503def0",
     importpath = "github.com/protolambda/zssz",
+    sum = "h1:4jkt8sqwhOVR8B1JebREU/gVX0Ply4GypsV8+RWrDuw=",
+    version = "v0.1.4",
 )
 
 go_repository(
@@ -1743,4 +1744,16 @@ go_repository(
     name = "com_github_golang_gddo",
     commit = "3c2cc9a6329d9842b3bbdaf307a8110d740cf94c",
     importpath = "github.com/golang/gddo",
+)
+
+go_repository(
+    name = "com_github_protolambda_zrnt",
+    build_directives = [
+        "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
+        "gazelle:build_tags preset_mainnet",  # Using mainnet config presets. Also requires --define gotags=present_mainnet.
+        "gazelle:go_visibility @prysm//fuzz:__pkg__",  # Only used for fuzz testing.
+    ],
+    importpath = "github.com/protolambda/zrnt",
+    sum = "h1:Xm/FFabauuTayoPN/V2nvYZezB6L7Kj87x+QJ5/Vz2Q=",
+    version = "v0.11.2",
 )

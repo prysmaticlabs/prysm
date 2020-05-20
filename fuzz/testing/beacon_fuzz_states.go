@@ -12,7 +12,7 @@ const fileBase = "0-11-0/mainnet/beaconstate"
 const fileBaseENV = "BEACONSTATES_PATH"
 
 // GetBeaconFuzzState returns a beacon state by ID using the beacon-fuzz corpora.
-func GetBeaconFuzzState(ID uint16) (*pb.BeaconState, error) {
+func GetBeaconFuzzStateBytes(ID uint16) ([]byte, error) {
 	base := fileBase
 	// Using an environment variable allows a host image to specify the path when only the binary
 	// executable was uploaded (without the runfiles). i.e. fuzzit's platform.
@@ -26,7 +26,13 @@ func GetBeaconFuzzState(ID uint16) (*pb.BeaconState, error) {
 	if !ok {
 		panic(fmt.Sprintf("Beacon states directory (%s) does not exist or has no files.", base))
 	}
-	b, err := testutil.BazelFileBytes(base, strconv.Itoa(int(ID)))
+	return testutil.BazelFileBytes(base, strconv.Itoa(int(ID)))
+}
+
+// GetBeaconFuzzState returns a beacon state by ID using the beacon-fuzz corpora.
+// Deprecated: Prefer GetBeaconFuzzStateBytes(ID) and handle ssz marshal in the caller method.
+func GetBeaconFuzzState(ID uint16) (*pb.BeaconState, error) {
+	b, err := GetBeaconFuzzStateBytes(ID)
 	if err != nil {
 		return nil, err
 	}

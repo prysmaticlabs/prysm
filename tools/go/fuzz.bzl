@@ -36,7 +36,7 @@ func main() {
 """
 
 def _gen_fuzz_main_impl(ctx):
-    if ctx.var.get("gotags") != "libfuzzer":
+    if ctx.var.get("gotags").find("libfuzzer") < 0:
         fail("gotags must be set to libfuzzer. Use --config=fuzz or --config=fuzzit.")
     if ctx.var.get("gc_goopts") != "-d=libfuzzer":
         fail("gc_goopts must be set to -d=libfuzzer. Use --config=fuzz or --config=fuzzit.")
@@ -135,6 +135,9 @@ def go_fuzz_test(
             "-use_value_profile=1",
             "-max_total_time=3540",  # One minute early of 3600.
         ] + additional_args,
-        data = [corpus_name],
+        data = [
+            corpus_name,
+            "@sigp_beacon_fuzz_corpora//:current_mainnet_beaconstate",
+        ],
         timeout = "eternal",
     )

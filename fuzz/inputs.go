@@ -7,7 +7,7 @@ import (
 // InputBlockHeader for fuzz testing beacon block headers.
 type InputBlockHeader struct {
 	StateID uint16
-	Block   *ethpb.BeaconBlock
+	Block   *ethpb.SignedBeaconBlock
 }
 
 // InputAttesterSlashingWrapper for fuzz testing attester slashing.

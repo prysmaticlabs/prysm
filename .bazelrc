@@ -54,7 +54,7 @@ build:llvm-asan --config=llvm
 build:llvm-asan --config=asan
 build:llvm-asan --linkopt -fuse-ld=ld.lld
 
-build:fuzz --define=gotags=libfuzzer
+build:fuzz --define=gotags=libfuzzer,preset_mainnet
 build:fuzz --config=llvm-asan
 build:fuzz --copt=-fsanitize=fuzzer-no-link
 build:fuzz --linkopt=-fsanitize=fuzzer
