@@ -74,7 +74,7 @@ func TestTopazRewardsRegression_StateRootValid(t *testing.T) {
 	}
 }
 
-// This test is to test a regression for a consensus split that was found in
+// Regression test for a consensus split that was found in
 // schlesi due to differences in how we handled slashed validators
 // in epoch transitions from the pyspec. We use lighthouse's block
 // as that was the block which triggered the split. The post state
