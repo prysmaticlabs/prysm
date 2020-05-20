@@ -261,7 +261,7 @@ func TestProcessAttestations(t *testing.T) {
 			t.Error("Not a prev epoch attester")
 		}
 		if !pVals[i].IsPrevEpochTargetAttester {
-			t.Error("Not a prev epoch head attester")
+			t.Error("Not a prev epoch target attester")
 		}
 		if !pVals[i].IsPrevEpochHeadAttester {
 			t.Error("Not a prev epoch head attester")
