@@ -5,53 +5,53 @@ import (
 	"testing"
 )
 
-func TestStateMachine_Stringify(t *testing.T) {
+func TestStateMachineManager_String(t *testing.T) {
 	tests := []struct {
-		name   string
-		epochs []*epochState
-		want   string
+		name     string
+		machines []*stateMachine
+		want     string
 	}{
 		{
 			"empty epoch state list",
-			make([]*epochState, 0, lookaheadEpochs),
+			[]*stateMachine{},
 			"[]",
 		},
 		{
 			"newly created state machine",
-			[]*epochState{
-				{epoch: 8, state: stateNew},
-				{epoch: 9, state: stateScheduled},
-				{epoch: 10, state: stateDataParsed},
-				{epoch: 11, state: stateSkipped},
-				{epoch: 12, state: stateSkippedExt},
-				{epoch: 13, state: stateComplete},
-				{epoch: 14, state: stateSent},
+			[]*stateMachine{
+				{start: 8, state: stateNew},
+				{start: 9, state: stateScheduled},
+				{start: 10, state: stateDataParsed},
+				{start: 11, state: stateSkipped},
+				{start: 12, state: stateSkippedExt},
+				{start: 13, state: stateComplete},
+				{start: 14, state: stateSent},
 			},
 			"[8:new 9:scheduled 10:dataParsed 11:skipped 12:skippedExt 13:complete 14:sent]",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sm := &stateMachine{
-				epochs: tt.epochs,
+			smm := &stateMachineManager{
+				machines: tt.machines,
 			}
-			if got := sm.String(); got != tt.want {
+			if got := smm.String(); got != tt.want {
 				t.Errorf("unexpected output,  got: %v, want: %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestStateMachine_addHandler(t *testing.T) {
-	sm := newStateMachine()
+func TestStateMachineManager_addEventHandler(t *testing.T) {
+	smm := newStateMachineManager()
 
-	sm.addHandler(stateNew, eventSchedule, func(state *epochState, i interface{}) (id stateID, err error) {
+	smm.addEventHandler(eventSchedule, stateNew, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateScheduled, nil
 	})
-	if len(sm.events[eventSchedule].actions) != 1 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(sm.events[eventSchedule].actions), 1)
+	if len(smm.events[eventSchedule].actions) != 1 {
+		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions), 1)
 	}
-	state, err := sm.events[eventSchedule].actions[0].handlerFn(nil, nil)
+	state, err := smm.events[eventSchedule].actions[stateNew][0](nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,16 +60,36 @@ func TestStateMachine_addHandler(t *testing.T) {
 	}
 
 	// Add second handler to the same event
-	sm.addHandler(stateSent, eventSchedule, func(state *epochState, i interface{}) (id stateID, err error) {
+	smm.addEventHandler(eventSchedule, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateDataParsed, nil
 	})
-	if len(sm.events[eventSchedule].actions) != 2 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(sm.events[eventSchedule].actions), 2)
+	if len(smm.events[eventSchedule].actions) != 2 {
+		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions), 2)
 	}
-	state, err = sm.events[eventSchedule].actions[1].handlerFn(nil, nil)
+	state, err = smm.events[eventSchedule].actions[stateSent][0](nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
+	if state != stateDataParsed {
+		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
+	}
+
+	// Add another handler to existing event/state pair.
+	smm.addEventHandler(eventSchedule, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
+		return stateSkippedExt, nil
+	})
+	if len(smm.events[eventSchedule].actions) != 2 {
+		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions), 2)
+	}
+	if len(smm.events[eventSchedule].actions[stateSent]) != 2 {
+		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions[stateSent]), 2)
+	}
+	state, err = smm.events[eventSchedule].actions[stateSent][0](nil, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	// The action that changes state to stateSkippedExt will not be triggered, as previous action
+	// changed state - and machine's state is not applicable anymore.
 	if state != stateDataParsed {
 		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
 	}
@@ -100,7 +120,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			events: []event{},
 			epochs: []uint64{12, 13},
 			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateNew},
-			err:    errors.New("epoch state or event is nil"),
+			err:    errors.New("state machine or event is nil"),
 		},
 		{
 			name: "single action",
@@ -123,14 +143,14 @@ func TestStateMachine_trigger(t *testing.T) {
 			err:    nil,
 		},
 		{
-			name: "multiple actions, no error, cascade",
+			name: "multiple actions, no error, can cascade",
 			events: []event{
 				{stateNew, eventSchedule, stateScheduled, false},
 				{stateScheduled, eventSchedule, stateSent, false},
 				{stateSent, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateComplete},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
@@ -141,37 +161,37 @@ func TestStateMachine_trigger(t *testing.T) {
 				{stateNew, eventSchedule, stateComplete, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateSent},
+			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 	}
 	fn := func(e event) eventHandlerFn {
-		return func(es *epochState, in interface{}) (stateID, error) {
+		return func(m *stateMachine, in interface{}) (stateID, error) {
 			if e.err {
-				return es.state, errors.New("invalid")
+				return m.state, errors.New("invalid")
 			}
 			return e.returnState, nil
 		}
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sm := newStateMachine()
+			smm := newStateMachineManager()
 			expectHandlerError := false
 			for _, event := range tt.events {
-				sm.addHandler(event.state, event.event, fn(event))
+				smm.addEventHandler(event.event, event.state, fn(event))
 				if event.err {
 					expectHandlerError = true
 				}
 			}
 			for _, epoch := range tt.epochs {
-				sm.addEpochState(epoch)
+				smm.addStateMachine(epoch*32, 64)
 			}
-			epochInd, ok := sm.findEpochState(tt.args.epoch)
+			ind, ok := smm.findStateMachineByStartBlock(tt.args.epoch * 32)
 			if !ok {
-				t.Fatal("epoch state not found")
+				t.Fatal("machine state not found")
 			}
-			state := sm.epochs[epochInd]
-			err := state.trigger(sm.events[tt.args.name], tt.args.data)
+			state := smm.machines[ind]
+			err := state.trigger(smm.events[tt.args.name], tt.args.data)
 			if tt.err != nil && (err == nil || tt.err.Error() != err.Error()) {
 				t.Errorf("unexpected error = '%v', want '%v'", err, tt.err)
 			}
@@ -179,114 +199,116 @@ func TestStateMachine_trigger(t *testing.T) {
 				if err != nil && !expectHandlerError {
 					t.Error(err)
 				}
-				ind, ok := sm.findEpochState(tt.args.epoch)
+				ind, ok := smm.findStateMachineByStartBlock(tt.args.epoch * 32)
 				if !ok {
-					t.Errorf("expected epoch not found: %v", tt.args.epoch)
+					t.Errorf("expected machine not found, start block: %v", tt.args.epoch*32)
 					return
 				}
-				if sm.epochs[ind].state != tt.args.returnState {
-					t.Errorf("unexpected final state: %v, want: %v (%v)", sm.epochs[ind].state, tt.args.returnState, sm.epochs)
+				if smm.machines[ind].state != tt.args.returnState {
+					t.Errorf("unexpected final state: %v, want: %v (%v)",
+						smm.machines[ind].state, tt.args.returnState, smm.machines)
 				}
 			}
 		})
 	}
 }
 
-func TestStateMachine_findEpochState(t *testing.T) {
-	sm := newStateMachine()
-	if ind, ok := sm.findEpochState(12); ok || ind != 0 {
-		t.Errorf("unexpected index: %v, want: %v", ind, 0)
-	}
-	sm.addEpochState(12)
-	if ind, ok := sm.findEpochState(12); !ok || ind != 0 {
-		t.Errorf("unexpected index: %v, want: %v", ind, 0)
-	}
-	sm.addEpochState(13)
-	sm.addEpochState(14)
-	sm.addEpochState(15)
-	if ind, ok := sm.findEpochState(14); !ok || ind != 2 {
-		t.Errorf("unexpected index: %v, want: %v", ind, 2)
-	}
-	if ind, ok := sm.findEpochState(16); ok || ind != len(sm.epochs) {
-		t.Errorf("unexpected index: %v, want: %v", ind, len(sm.epochs))
-	}
-}
-
-func TestStateMachine_isLowestEpochState(t *testing.T) {
-	sm := newStateMachine()
-	sm.addEpochState(12)
-	sm.addEpochState(13)
-	sm.addEpochState(14)
-	if res := sm.isLowestEpochState(15); res {
-		t.Errorf("unexpected lowest state: %v", 15)
-	}
-	if res := sm.isLowestEpochState(13); res {
-		t.Errorf("unexpected lowest state: %v", 15)
-	}
-	if res := sm.isLowestEpochState(12); !res {
-		t.Errorf("expected lowest state not found: %v", 12)
-	}
-	if err := sm.removeEpochState(12); err != nil {
-		t.Error(err)
-	}
-	if res := sm.isLowestEpochState(12); res {
-		t.Errorf("unexpected lowest state: %v", 12)
-	}
-	if res := sm.isLowestEpochState(13); !res {
-		t.Errorf("expected lowest state not found: %v", 13)
-	}
-}
-
-func TestStateMachine_highestEpoch(t *testing.T) {
-	sm := newStateMachine()
-	if _, err := sm.highestEpoch(); err == nil {
-		t.Error("expected error")
-	}
-	sm.addEpochState(12)
-	sm.addEpochState(13)
-	sm.addEpochState(14)
-	epoch, err := sm.highestEpoch()
-	if err != nil {
-		t.Error(err)
-	}
-	if epoch != 14 {
-		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 14)
-	}
-	if err := sm.removeEpochState(14); err != nil {
-		t.Error(err)
-	}
-	epoch, err = sm.highestEpoch()
-	if err != nil {
-		t.Error(err)
-	}
-	if epoch != 13 {
-		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
-	}
-}
-
-func TestStateMachine_lowestEpoch(t *testing.T) {
-	sm := newStateMachine()
-	if _, err := sm.highestEpoch(); err == nil {
-		t.Error("expected error")
-	}
-	sm.addEpochState(12)
-	sm.addEpochState(13)
-	sm.addEpochState(14)
-	epoch, err := sm.lowestEpoch()
-	if err != nil {
-		t.Error(err)
-	}
-	if epoch != 12 {
-		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 12)
-	}
-	if err := sm.removeEpochState(12); err != nil {
-		t.Error(err)
-	}
-	epoch, err = sm.lowestEpoch()
-	if err != nil {
-		t.Error(err)
-	}
-	if epoch != 13 {
-		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
-	}
-}
+//
+//func TestStateMachine_findEpochState(t *testing.T) {
+//	smm := newStateMachineManager()
+//	if ind, ok := smm.findEpochState(12); ok || ind != 0 {
+//		t.Errorf("unexpected index: %v, want: %v", ind, 0)
+//	}
+//	smm.addEpochState(12)
+//	if ind, ok := smm.findEpochState(12); !ok || ind != 0 {
+//		t.Errorf("unexpected index: %v, want: %v", ind, 0)
+//	}
+//	smm.addEpochState(13)
+//	smm.addEpochState(14)
+//	smm.addEpochState(15)
+//	if ind, ok := smm.findEpochState(14); !ok || ind != 2 {
+//		t.Errorf("unexpected index: %v, want: %v", ind, 2)
+//	}
+//	if ind, ok := smm.findEpochState(16); ok || ind != len(smm.epochs) {
+//		t.Errorf("unexpected index: %v, want: %v", ind, len(smm.epochs))
+//	}
+//}
+//
+//func TestStateMachine_isLowestEpochState(t *testing.T) {
+//	smm := newStateMachineManager()
+//	smm.addEpochState(12)
+//	smm.addEpochState(13)
+//	smm.addEpochState(14)
+//	if res := smm.isLowestEpochState(15); res {
+//		t.Errorf("unexpected lowest state: %v", 15)
+//	}
+//	if res := smm.isLowestEpochState(13); res {
+//		t.Errorf("unexpected lowest state: %v", 15)
+//	}
+//	if res := smm.isLowestEpochState(12); !res {
+//		t.Errorf("expected lowest state not found: %v", 12)
+//	}
+//	if err := smm.removeEpochState(12); err != nil {
+//		t.Error(err)
+//	}
+//	if res := smm.isLowestEpochState(12); res {
+//		t.Errorf("unexpected lowest state: %v", 12)
+//	}
+//	if res := smm.isLowestEpochState(13); !res {
+//		t.Errorf("expected lowest state not found: %v", 13)
+//	}
+//}
+//
+//func TestStateMachine_highestEpoch(t *testing.T) {
+//	smm := newStateMachineManager()
+//	if _, err := smm.highestEpoch(); err == nil {
+//		t.Error("expected error")
+//	}
+//	smm.addEpochState(12)
+//	smm.addEpochState(13)
+//	smm.addEpochState(14)
+//	epoch, err := smm.highestEpoch()
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	if epoch != 14 {
+//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 14)
+//	}
+//	if err := smm.removeEpochState(14); err != nil {
+//		t.Error(err)
+//	}
+//	epoch, err = smm.highestEpoch()
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	if epoch != 13 {
+//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
+//	}
+//}
+//
+//func TestStateMachine_lowestEpoch(t *testing.T) {
+//	smm := newStateMachineManager()
+//	if _, err := smm.highestEpoch(); err == nil {
+//		t.Error("expected error")
+//	}
+//	smm.addEpochState(12)
+//	smm.addEpochState(13)
+//	smm.addEpochState(14)
+//	epoch, err := smm.lowestEpoch()
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	if epoch != 12 {
+//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 12)
+//	}
+//	if err := smm.removeEpochState(12); err != nil {
+//		t.Error(err)
+//	}
+//	epoch, err = smm.lowestEpoch()
+//	if err != nil {
+//		t.Error(err)
+//	}
+//	if epoch != 13 {
+//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
+//	}
+//}
