@@ -85,6 +85,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GraffitiFlag,
 			flags.GrpcRetriesFlag,
 			flags.GrpcHeadersFlag,
+			flags.SlasherRPCProviderFlag,
+			flags.SlasherCertFlag,
 			flags.DisableAccountMetricsFlag,
 		},
 	},
