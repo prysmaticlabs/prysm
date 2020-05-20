@@ -362,6 +362,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		genesisBlk.Block.Slot,
 		genesisBlkRoot,
 		params.BeaconConfig().ZeroHash,
+		[32]byte{},
 		genesisCheckpoint.Epoch,
 		genesisCheckpoint.Epoch); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
@@ -415,14 +416,18 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	var finalizedState *stateTrie.BeaconState
+
 	if featureconfig.Get().NewStateMgmt {
-		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
 		finalizedState, err = s.stateGen.Resume(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}
-		if finalizedRoot == params.BeaconConfig().ZeroHash {
-			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
+		if !featureconfig.Get().SkipRegenHistoricalStates {
+			// Since historical states were skipped, the node should start from last finalized check point.
+			finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+			if finalizedRoot == params.BeaconConfig().ZeroHash {
+				finalizedRoot = bytesutil.ToBytes32(finalized.Root)
+			}
 		}
 	} else {
 		finalizedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
@@ -430,10 +435,21 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}
 	}
-
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block from db")
+	}
+
+	if featureconfig.Get().NewStateMgmt && featureconfig.Get().SkipRegenHistoricalStates {
+		// To skip the regeneration of historical state, the node has to generate the parent of the last finalized state.
+		parentRoot := bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)
+		parentState, err := s.generateState(ctx, finalizedRoot, parentRoot)
+		if err != nil {
+			return err
+		}
+		if s.beaconDB.SaveState(ctx, parentState, parentRoot) != nil {
+			return err
+		}
 	}
 
 	if finalizedState == nil || finalizedBlock == nil {

@@ -26,10 +26,9 @@ var log = logrus.WithField("prefix", "accounts")
 
 // DecryptKeysFromKeystore extracts a set of validator private keys from
 // an encrypted keystore directory and a password string.
-func DecryptKeysFromKeystore(directory string, password string) (map[string]*keystore.Key, error) {
-	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
+func DecryptKeysFromKeystore(directory string, filePrefix string, password string) (map[string]*keystore.Key, error) {
 	ks := keystore.NewKeystore(directory)
-	validatorKeys, err := ks.GetKeys(directory, validatorPrefix, password, true /* warnOnFail */)
+	validatorKeys, err := ks.GetKeys(directory, filePrefix, password, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get private key")
 	}
@@ -47,10 +46,10 @@ func VerifyAccountNotExists(directory string, password string) error {
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
-	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password, false /* warnOnFail */); err == nil {
+	if _, err := ks.GetKeys(directory, shardWithdrawalKeyFile, password, false); err == nil {
 		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
 	}
-	if _, err := ks.GetKeys(directory, validatorKeyFile, password, false /* warnOnFail */); err == nil {
+	if _, err := ks.GetKeys(directory, validatorKeyFile, password, false); err == nil {
 		return fmt.Errorf("keystore at path already exists: %s", validatorKeyFile)
 	}
 	return nil
@@ -112,6 +111,7 @@ func NewValidatorAccount(directory string, password string) error {
 
 ===================================================================
 `, tx.Data())
+	fmt.Println("***Enter the above Raw Transaction Data into step 3 on https://prylabs.net/participate***")
 	publicKey := validatorKey.PublicKey.Marshal()[:]
 	log.Infof("Deposit data displayed for public key: %#x", publicKey)
 	return nil
@@ -157,7 +157,7 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 
 // PrintPublicAndPrivateKeys uses the passed in path and prints out the public and private keys in that directory.
 func PrintPublicAndPrivateKeys(path string, passphrase string) error {
-	keystores, err := DecryptKeysFromKeystore(path, passphrase)
+	keystores, err := DecryptKeysFromKeystore(path, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
 	if err != nil {
 		return errors.Wrapf(err, "failed to decrypt keystore keys at path %s", path)
 	}
@@ -184,8 +184,8 @@ func DefaultValidatorDir() string {
 	return ""
 }
 
-// HandleEmptyFlags checks what the set flags are and allows the user to manually enter them if they're empty.
-func HandleEmptyFlags(cliCtx *cli.Context, confirmPassword bool) (string, string, error) {
+// HandleEmptyKeystoreFlags checks what the set flags are and allows the user to manually enter them if they're empty.
+func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string, string, error) {
 	path := cliCtx.String(flags.KeystorePathFlag.Name)
 	passphrase := cliCtx.String(flags.PasswordFlag.Name)
 
@@ -214,6 +214,42 @@ func HandleEmptyFlags(cliCtx *cli.Context, confirmPassword bool) (string, string
 	return path, passphrase, nil
 }
 
+// ChangePassword changes the password for all keys located in a keystore.
+// Password is changed only for keys that can be decrypted using the old password.
+func ChangePassword(keystorePath string, oldPassword string, newPassword string) error {
+	err := changePasswordForKeyType(
+		keystorePath,
+		params.BeaconConfig().ValidatorPrivkeyFileName,
+		oldPassword,
+		newPassword)
+	if err != nil {
+		return err
+	}
+
+	return changePasswordForKeyType(
+		keystorePath,
+		params.BeaconConfig().WithdrawalPrivkeyFileName,
+		oldPassword,
+		newPassword)
+}
+
+func changePasswordForKeyType(keystorePath string, filePrefix string, oldPassword string, newPassword string) error {
+	keys, err := DecryptKeysFromKeystore(keystorePath, filePrefix, oldPassword)
+	if err != nil {
+		return errors.Wrap(err, "Failed to decrypt keys")
+	}
+
+	keyStore := keystore.NewKeystore(keystorePath)
+	for _, key := range keys {
+		keyFileName := keystorePath + filePrefix + hex.EncodeToString(key.PublicKey.Marshal())[:12]
+		if err := keyStore.StoreKey(keyFileName, key, newPassword); err != nil {
+			return errors.Wrapf(err, "Failed to encrypt key %s with the new password", keyFileName)
+		}
+	}
+
+	return nil
+}
+
 // homeDir returns home directory path.
 func homeDir() string {
 	if home := os.Getenv("HOME"); home != "" {
@@ -223,4 +259,21 @@ func homeDir() string {
 		return usr.HomeDir
 	}
 	return ""
+}
+
+// ExtractPublicKeysFromKeyStore extracts only the public keys from the decrypted keys from the keystore.
+func ExtractPublicKeysFromKeyStore(keystorePath string, passphrase string) ([][]byte, error) {
+	decryptedKeys, err := DecryptKeysFromKeystore(keystorePath, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not decrypt keys from keystore in path %s", keystorePath)
+	}
+
+	i := 0
+	pubkeys := make([][]byte, len(decryptedKeys))
+	for _, key := range decryptedKeys {
+		pubkeys[i] = key.PublicKey.Marshal()
+		i++
+	}
+
+	return pubkeys, nil
 }

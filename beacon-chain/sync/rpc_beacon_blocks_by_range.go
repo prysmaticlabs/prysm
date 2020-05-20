@@ -42,8 +42,8 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	// The initial count for the first batch to be returned back.
 	count := m.Count
 	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
-	if count > uint64(allowedBlocksPerSecond) {
-		count = uint64(allowedBlocksPerSecond)
+	if count > allowedBlocksPerSecond {
+		count = allowedBlocksPerSecond
 	}
 	// initial batch start and end slots to be returned to remote peer.
 	startSlot := m.StartSlot
@@ -144,6 +144,7 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		blks = append([]*ethpb.SignedBeaconBlock{genBlock}, blks...)
 		roots = append([][32]byte{genRoot}, roots...)
 	}
+	blks, roots = r.sortBlocksAndRoots(blks, roots)
 	checkpoint, err := r.db.FinalizedCheckpoint(ctx)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve finalized checkpoint")

@@ -46,8 +46,9 @@ func (r *Service) maintainPeerStatuses() {
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
 // in which case we attempt a resync using the initial sync method to catch up.
 func (r *Service) resyncIfBehind() {
+	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
 	// Run sixteen times per epoch.
-	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/16) * time.Second
+	interval := time.Duration(int64(millisecondsPerEpoch)/16) * time.Millisecond
 	runutil.RunEvery(r.ctx, interval, func() {
 		currentEpoch := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
@@ -114,6 +115,12 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	err = r.validateStatusMessage(ctx, msg, stream)
 	if err != nil {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		// Disconnect if on a wrong fork.
+		if err == errWrongForkDigestVersion {
+			if err := r.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
+				return err
+			}
+		}
 	}
 	return err
 }
@@ -124,7 +131,7 @@ func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 	}
 	// Do not return an error for ping requests.
 	if err := r.sendPingRequest(ctx, id); err != nil {
-		log.WithError(err).Error("Could not ping peer")
+		log.WithError(err).Debug("Could not ping peer")
 	}
 	return nil
 }

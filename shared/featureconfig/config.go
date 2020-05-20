@@ -52,6 +52,9 @@ type Flags struct {
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
+	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
+	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
+
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -201,6 +204,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(broadcastSlashingFlag.Name) {
 		log.Warn("Enabling broadcast slashing to p2p network")
 		cfg.BroadcastSlashings = true
+	}
+	if ctx.Bool(skipRegenHistoricalStates.Name) {
+		log.Warn("Enabling skipping of historical states regen")
+		cfg.SkipRegenHistoricalStates = true
+	}
+	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
+		log.Warn("Enabling weighted round robin in initial syncing")
+		cfg.EnableInitSyncWeightedRoundRobin = true
 	}
 	Init(cfg)
 }

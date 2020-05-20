@@ -143,6 +143,14 @@ var (
 		Name:  "disable-lookback",
 		Usage: "Disables use of the lookback feature and updates attestation history for validators from head to epoch 0",
 	}
+	skipRegenHistoricalStates = &cli.BoolFlag{
+		Name:  "skip-regen-historical-states",
+		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
+	}
+	enableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:  "enable-init-sync-wrr",
+		Usage: "Enables weighted round robin fetching optimization",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -150,6 +158,7 @@ var devModeFlags = []cli.Flag{
 	enableStateRefCopy,
 	enableFieldTrie,
 	enableNewStateMgmt,
+	enableInitSyncWeightedRoundRobin,
 }
 
 // Deprecated flags list.
@@ -332,6 +341,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedAccountMetricsFlag = &cli.BoolFlag{
+		Name: "enable-account-metrics",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -370,6 +384,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableInitSyncQueueFlag,
 	deprecatedEnableCustomBlockHTR,
 	deprecatedEnableEth1DataVoteCacheFlag,
+	deprecatedAccountMetricsFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -423,6 +438,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableInitSyncBatchSaveBlocks,
 	enableStateRefCopy,
 	waitForSyncedFlag,
+	skipRegenHistoricalStates,
+	enableInitSyncWeightedRoundRobin,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -434,4 +451,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-field-trie",
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
+	"--enable-init-sync-wrr",
 }
