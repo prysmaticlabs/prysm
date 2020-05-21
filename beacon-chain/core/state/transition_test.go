@@ -371,7 +371,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	proposerSlashIdx := uint64(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	err = beaconState.SetSlot((params.BeaconConfig().PersistentCommitteePeriod * slotsPerEpoch) + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot((params.BeaconConfig().ShardCommitteePeriod * slotsPerEpoch) + params.BeaconConfig().MinAttestationInclusionDelay)
 	if err != nil {
 		t.Fatal(err)
 	}
