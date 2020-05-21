@@ -279,7 +279,8 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 			t.Errorf("Could not get base reward: %v", err)
 		}
 		penalty := 3 * base
-		penalty += params.BeaconConfig().BaseRewardsPerEpoch * base
+		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
+		penalty += params.BeaconConfig().BaseRewardsPerEpoch*base - proposerReward
 		penalty += vp[i].CurrentEpochEffectiveBalance * finalityDelay / params.BeaconConfig().InactivityPenaltyQuotient
 		if penalties[i] != penalty {
 			t.Errorf("Wanted slashed indices penalty balance %d, got %d", penalty, penalties[i])
@@ -379,5 +380,63 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 
 	if r[proposerIndex] != 0 {
 		t.Errorf("Wanted proposer reward for slashed %d, got %d", 0, r[proposerIndex])
+	}
+}
+
+func TestFinalityDelay(t *testing.T) {
+	base := buildState(params.BeaconConfig().SlotsPerEpoch*10, 1)
+	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := finalityDelay(state)
+	w := helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	if d != w {
+		t.Error("Did not get wanted finality delay")
+	}
+
+	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}); err != nil {
+		t.Fatal(err)
+	}
+	d = finalityDelay(state)
+	w = helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	if d != w {
+		t.Error("Did not get wanted finality delay")
+	}
+
+	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}); err != nil {
+		t.Fatal(err)
+	}
+	d = finalityDelay(state)
+	w = helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+	if d != w {
+		t.Error("Did not get wanted finality delay")
+	}
+}
+
+func TestIsInInactivityLeak(t *testing.T) {
+	base := buildState(params.BeaconConfig().SlotsPerEpoch*10, 1)
+	base.FinalizedCheckpoint = &ethpb.Checkpoint{Epoch: 3}
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isInInactivityLeak(state) {
+		t.Error("Wanted inactivity leak true")
+	}
+
+	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}); err != nil {
+		t.Fatal(err)
+	}
+	if !isInInactivityLeak(state) {
+		t.Error("Wanted inactivity leak true")
+	}
+
+	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}); err != nil {
+		t.Fatal(err)
+	}
+	if isInInactivityLeak(state) {
+		t.Error("Wanted inactivity leak false")
 	}
 }
