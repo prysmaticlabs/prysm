@@ -47,13 +47,6 @@ var SlashedValidatorsLoseBalance = types.Evaluator{
 
 var slashedIndices []uint64
 
-// Not including first epoch because of issues with genesis.
-func beforeEpoch(epoch uint64) func(uint64) bool {
-	return func(currentEpoch uint64) bool {
-		return currentEpoch < epoch
-	}
-}
-
 func validatorsSlashed(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	ctx := context.Background()
