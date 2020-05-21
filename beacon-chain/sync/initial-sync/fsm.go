@@ -95,14 +95,6 @@ type stateMachineEvent struct {
 	actions map[stateID][]eventHandlerFn
 }
 
-// TODO remove me
-//// stateMachineAction represents actions that can be attached to an event.
-//// Action is applied when the FSM is in an expected start state only.
-//type stateMachineAction struct {
-//	state     stateID
-//	handlerFn eventHandlerFn
-//}
-
 // eventHandlerFn is an event handler function's signature.
 type eventHandlerFn func(*stateMachine, interface{}) (stateID, error)
 
