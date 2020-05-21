@@ -1,13 +1,17 @@
 package attestationutil_test
 
 import (
+	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestAttestingIndices(t *testing.T) {
@@ -42,6 +46,69 @@ func TestAttestingIndices(t *testing.T) {
 			got := attestationutil.AttestingIndices(tt.args.bf, tt.args.committee)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AttestingIndices() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsValidAttestationIndices(t *testing.T) {
+	tests := []struct {
+		name string
+		att  *eth.IndexedAttestation
+		want string
+	}{
+		{
+			name: "Indices should be non-empty",
+			att: &eth.IndexedAttestation{
+				AttestingIndices: []uint64{},
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: nil,
+			},
+			want: "expected non-empty",
+		},
+		{
+			name: "Greater than max validators per committee",
+			att: &eth.IndexedAttestation{
+				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: nil,
+			},
+			want: "indices count exceeds",
+		},
+		{
+			name: "Needs to be sorted",
+			att: &eth.IndexedAttestation{
+				AttestingIndices: []uint64{3, 2, 1},
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: nil,
+			},
+			want: "not uniquely sorted",
+		},
+		{
+			name: "Valid indices",
+			att: &eth.IndexedAttestation{
+				AttestingIndices: []uint64{1, 2, 3},
+				Data: &eth.AttestationData{
+					Target: &eth.Checkpoint{},
+				},
+				Signature: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := attestationutil.IsValidAttestationIndices(context.Background(), tt.att)
+			if tt.want == "" && err != nil {
+				t.Fatal(err)
+			}
+			if tt.want != "" && !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("IsValidAttestationIndices() got = %v, want %v", err, tt.want)
 			}
 		})
 	}
