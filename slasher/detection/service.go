@@ -120,10 +120,12 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	// slasher DB up to the current beacon node's head epoch we retrieved via gRPC.
 	// If no data was persisted from previous sessions, we request data starting from
 	// the genesis epoch.
+	var storedEpoch uint64
 	for epoch := latestStoredEpoch; epoch < currentChainHead.HeadEpoch; epoch++ {
 		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, epoch)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
+			break
 		}
 		log.Debugf(
 			"Running slashing detection on %d attestations in epoch %d...",
@@ -152,8 +154,9 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		if err := ds.slasherDB.SaveChainHead(ctx, latestStoredHead); err != nil {
 			log.WithError(err).Error("Could not persist chain head to disk")
 		}
+		storedEpoch = epoch
 	}
-	log.Infof("Completed slashing detection on historical chain data up to epoch %d", currentChainHead.HeadEpoch)
+	log.Infof("Completed slashing detection on historical chain data up to epoch %d", storedEpoch)
 }
 
 func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
