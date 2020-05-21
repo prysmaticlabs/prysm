@@ -433,7 +433,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: buf, Domain: domain})
+	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: buf, Domain: domain})
 	if err != nil {
 		t.Fatal(err)
 	}
