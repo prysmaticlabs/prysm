@@ -153,7 +153,10 @@ contract in order to activate the validator client`,
 
 						if err := accounts.Merge(context.Background(), sources, target); err != nil {
 							log.WithError(err).Error("Merging validator data failed")
+						} else {
+							log.Info("Merge completed successfully")
 						}
+
 						return nil
 					},
 				},
