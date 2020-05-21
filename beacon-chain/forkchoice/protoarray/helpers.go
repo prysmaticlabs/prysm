@@ -78,11 +78,11 @@ func copyNode(node *Node) *Node {
 	}
 
 	copiedRoot := [32]byte{}
-	copy(copiedRoot[:], node.root[:])
+	copy(copiedRoot[:], node.Root[:])
 
 	return &Node{
 		Slot:           node.Slot,
-		root:           copiedRoot,
+		Root:           copiedRoot,
 		Parent:         node.Parent,
 		justifiedEpoch: node.justifiedEpoch,
 		finalizedEpoch: node.finalizedEpoch,
