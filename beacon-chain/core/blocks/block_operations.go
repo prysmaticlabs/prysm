@@ -1104,11 +1104,11 @@ func VerifyExit(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, fork
 		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
 	}
 	// Verify the validator has been active long enough.
-	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().PersistentCommitteePeriod {
+	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod {
 		return fmt.Errorf(
 			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
-			validator.ActivationEpoch()+params.BeaconConfig().PersistentCommitteePeriod,
+			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)
 	}
 	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
