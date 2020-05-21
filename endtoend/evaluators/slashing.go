@@ -214,19 +214,20 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		}
 	}
 
+	hashLen := 32
 	blk := &eth.BeaconBlock{
 		Slot:          chainHead.HeadSlot - 1,
-		ParentRoot:    to32BytesSlice([]byte("bad parent root")),
-		StateRoot:     to32BytesSlice([]byte("bad state root")),
+		ParentRoot:    bytesutil.PadTo([]byte("bad parent root"), hashLen),
+		StateRoot:     bytesutil.PadTo([]byte("bad state root"), hashLen),
 		ProposerIndex: proposerIndex,
 		Body: &eth.BeaconBlockBody{
 			Eth1Data: &eth.Eth1Data{
-				BlockHash:    to32BytesSlice([]byte("bad block hash")),
-				DepositRoot:  to32BytesSlice([]byte("bad deposit root")),
+				BlockHash:    bytesutil.PadTo([]byte("bad block hash"), hashLen),
+				DepositRoot:  bytesutil.PadTo([]byte("bad deposit root"), hashLen),
 				DepositCount: 1,
 			},
-			RandaoReveal:      to96BytesSlice([]byte("bad randao")),
-			Graffiti:          to32BytesSlice([]byte("teehee")),
+			RandaoReveal:      bytesutil.PadTo([]byte("bad randao"), params.BeaconConfig().BLSSignatureLength),
+			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
 			ProposerSlashings: []*eth.ProposerSlashing{},
 			AttesterSlashings: []*eth.AttesterSlashing{},
 			Attestations:      []*eth.Attestation{},
@@ -259,14 +260,4 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	}
 	slashedIndices = append(slashedIndices, proposerIndex)
 	return nil
-}
-
-func to32BytesSlice(byteArray []byte) []byte {
-	bytes32 := bytesutil.PadTo(byteArray, 32)
-	return bytes32[:]
-}
-
-func to96BytesSlice(byteArray []byte) []byte {
-	bytes96 := bytesutil.PadTo(byteArray, 96)
-	return bytes96[:]
 }
