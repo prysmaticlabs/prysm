@@ -170,6 +170,8 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 			Data:            attData,
 			Signature:       privKeys[committee[i]].Sign(signingRoot[:]).Marshal(),
 		}
+		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
+		// Only broadcasting the attestation to one node also helps test slashing propagation.
 		client := eth.NewBeaconNodeValidatorClient(conns[0])
 		if _, err = client.ProposeAttestation(ctx, att); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
@@ -254,6 +256,8 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		Signature: sig,
 	}
 
+	// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
+	// Only broadcasting the attestation to one node also helps test slashing propagation.
 	client := eth.NewBeaconNodeValidatorClient(conns[0])
 	if _, err = client.ProposeBlock(ctx, signedBlk); err == nil {
 		return errors.New("expected block to fail processing")
