@@ -175,7 +175,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
-	MaxAttesterSlashings: 1,
+	MaxAttesterSlashings: 2,
 	MaxAttestations:      128,
 	MaxDeposits:          16,
 	MaxVoluntaryExits:    16,
