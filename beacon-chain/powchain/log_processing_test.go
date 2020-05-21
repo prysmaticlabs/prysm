@@ -488,18 +488,18 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	}
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
+	web3Service.blockFetcher = &goodFetcher{backend: testAcc.Backend}
 	web3Service.latestEth1Data.LastRequestedBlock = 0
-	web3Service.latestEth1Data.BlockHeight = 0
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
+	bConfig.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(bConfig)
 	flags.Get().DeploymentBlock = 0
 
 	testAcc.Backend.Commit()
-	if err := testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond()))); err != nil {
-		t.Fatal(err)
-	}
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
@@ -529,7 +529,12 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 			testAcc.Backend.Commit()
 		}
 	}
+	// Forward the chain to account for the follow distance
+	for i := uint64(0); i < params.BeaconConfig().Eth1FollowDistance; i++ {
+		testAcc.Backend.Commit()
+	}
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
