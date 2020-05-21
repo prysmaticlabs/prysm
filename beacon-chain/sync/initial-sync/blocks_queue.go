@@ -338,14 +338,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 			return q.smm.machines[i].start < q.smm.machines[j].start
 		})
 		for _, fsm := range q.smm.machines[:len(q.smm.machines)-1] {
-			// When previous machine stays in skipped state for too long - reset it.
-			if time.Since(fsm.updated) > 5*staleEpochTimeout {
-				fsm.setState(stateNew)
-			}
-			// Do not update machine's state if start slot is unchanged (so that machine ages).
-			if fsm.start != startSlot {
-				fsm.setRange(startSlot, blocksPerRequest)
-			}
+			fsm.setRange(startSlot, blocksPerRequest)
 			startSlot += blocksPerRequest
 		}
 
@@ -375,8 +368,14 @@ func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 		}
 
 		// Break out immediately if bucket is not stale.
-		if time.Since(m.updated) < staleEpochTimeout {
+		age := time.Since(m.updated)
+		if age < staleEpochTimeout {
 			return m.state, nil
+		}
+
+		// When a state machine stays in skipped state for too long - reset it.
+		if age > 5*staleEpochTimeout && m.state == stateSkipped {
+			return stateNew, nil
 		}
 
 		return stateSkipped, nil
