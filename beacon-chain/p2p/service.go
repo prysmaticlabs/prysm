@@ -417,9 +417,9 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		return false, nil
 	}
 	iterator := s.dv5Listener.RandomNodes()
+	nodes := enode.ReadNodes(iterator, lookupLimit)
 	exists := false
-	for iterator.Next() {
-		node := iterator.Node()
+	for _, node := range nodes {
 		if node.IP() == nil {
 			continue
 		}
@@ -511,14 +511,7 @@ func (s *Service) awaitStateInitialized() {
 func (s *Service) listenForNewNodes() {
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
 		iterator := s.dv5Listener.RandomNodes()
-		nodes := []*enode.Node{}
-		for iterator.Next() {
-			node := iterator.Node()
-			nodes = append(nodes, node)
-			if len(nodes) >= lookupLimit {
-				break
-			}
-		}
+		nodes := enode.ReadNodes(iterator, lookupLimit)
 		iterator.Close()
 		multiAddresses := s.processPeers(nodes)
 		// do not process a large amount than required peers.
