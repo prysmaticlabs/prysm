@@ -813,7 +813,7 @@ func (bs *Server) getValidatorParticipationUsingOldArchival(
 
 	pBal := bs.ParticipationFetcher.Participation(requestedEpoch)
 	if pBal == nil {
-		pBal = &precompute.Balance{}
+		return nil, status.Errorf(codes.Unavailable, "Participation information for epoch %d is not yet available", requestedEpoch)
 	}
 	participation := &ethpb.ValidatorParticipation{
 		EligibleEther: pBal.ActivePrevEpoch,
