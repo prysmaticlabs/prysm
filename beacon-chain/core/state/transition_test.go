@@ -750,7 +750,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	ctr := &pb.SigningRoot{
+	ctr := &pb.SigningData{
 		ObjectRoot: buf,
 		Domain:     domain,
 	}
