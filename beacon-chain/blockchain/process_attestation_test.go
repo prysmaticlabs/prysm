@@ -531,6 +531,6 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	}
 
 	if err := service.verifyLMDFFGConsistent(context.Background(), 1, r32[:], r33[:]); err != nil {
-		t.Errorf("Could not verify LMD and FFG consistence: %v", err)
+		t.Errorf("Could not verify LMD and FFG votes to be consistent: %v", err)
 	}
 }
