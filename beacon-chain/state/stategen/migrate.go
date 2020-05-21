@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
@@ -55,6 +56,33 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 		nextArchivedPointSlot := (lastArchivedIndex + 1) * s.slotsPerArchivedPoint
 		// Only migrate if current slot is equal to or greater than next archived point slot.
 		if stateSummary.Slot >= nextArchivedPointSlot {
+			if archivedPointIndex-lastArchivedIndex > 1 {
+				// There was a skipped archival index. The node should recover.
+				missingIndex := archivedPointIndex - 1
+				missingIndexSlot := missingIndex * s.slotsPerArchivedPoint
+				blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, missingIndexSlot)
+				if err != nil {
+					return err
+				}
+				missingRoot, err := ssz.HashTreeRoot(blks[0].Block)
+				missingState, err := s.StateByRoot(ctx, missingRoot)
+				if err := s.beaconDB.SaveState(ctx, missingState, missingRoot); err != nil {
+					return err
+				}
+				if err := s.beaconDB.SaveArchivedPointRoot(ctx, missingRoot, missingIndex); err != nil {
+					return err
+				}
+				if err := s.beaconDB.SaveLastArchivedIndex(ctx, missingIndex); err != nil {
+					return err
+				}
+				lastArchivedIndex = missingIndex
+				log.WithFields(logrus.Fields{
+					"slot":         blks[0].Block.Slot,
+					"archiveIndex": missingIndex,
+					"root":         hex.EncodeToString(bytesutil.Trunc(missingRoot[:])),
+				}).Info("Saved recovered archived point during state migration")
+			}
+
 			if !s.beaconDB.HasState(ctx, r) {
 				continue
 			}
