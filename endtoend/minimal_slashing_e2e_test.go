@@ -17,7 +17,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=25"},
 		ValidatorFlags: []string{"--minimal-config"},
-		EpochsToRun:    2,
+		EpochsToRun:    3,
 		TestSync:       false,
 		TestSlasher:    true,
 		Evaluators: []types.Evaluator{
@@ -26,6 +26,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 			ev.ValidatorsSlashed,
 			ev.SlashedValidatorsLoseBalance,
 			ev.InjectDoubleVote,
+			ev.ProposeDoubleBlock,
 		},
 	}
 	if err := e2eParams.Init(2); err != nil {
