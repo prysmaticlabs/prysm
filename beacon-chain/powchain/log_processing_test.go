@@ -726,7 +726,7 @@ func TestConsistentGenesisState(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 
-	for i := 0; i < int(params.BeaconConfig().LogBlockDelay); i++ {
+	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
 		testAcc.Backend.Commit()
 	}
 

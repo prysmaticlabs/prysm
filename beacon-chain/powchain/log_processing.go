@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -284,15 +283,19 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		return nil
 	}
-	for currentBlockNum < s.LatestBlockHeight().Uint64() {
+	latestFollowHeight, err := s.followBlockHeight(ctx)
+	if err != nil {
+		return err
+	}
+	for currentBlockNum < latestFollowHeight {
 		// stop requesting, if we have all the logs
 		if logCount == uint64(s.lastReceivedMerkleIndex+1) {
 			break
 		}
 		start := currentBlockNum
 		end := currentBlockNum + eth1HeaderReqLimit
-		if end > s.LatestBlockHeight().Uint64() {
-			end = s.LatestBlockHeight().Uint64()
+		if end > latestFollowHeight {
+			end = latestFollowHeight
 		}
 		query := ethereum.FilterQuery{
 			Addresses: []common.Address{
@@ -303,9 +306,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
 		// only change the end block if the remaining logs are below the required log limit.
-		if remainingLogs < depositlogRequestLimit && end >= s.LatestBlockHeight().Uint64() {
-			query.ToBlock = s.LatestBlockHeight()
-			end = s.LatestBlockHeight().Uint64()
+		if remainingLogs < depositlogRequestLimit && end >= latestFollowHeight {
+			query.ToBlock = big.NewInt(int64(latestFollowHeight))
+			end = latestFollowHeight
 		}
 		logs, err := s.httpLogger.FilterLogs(ctx, query)
 		if err != nil {
@@ -355,7 +358,10 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 	// We request for the nth block behind the current head, in order to have
 	// stabilized logs when we retrieve it from the 1.0 chain.
 
-	requestedBlock := s.latestEth1Data.BlockHeight - uint64(params.BeaconConfig().LogBlockDelay)
+	requestedBlock, err := s.followBlockHeight(ctx)
+	if err != nil {
+		return err
+	}
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {

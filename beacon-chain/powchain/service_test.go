@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -257,6 +259,68 @@ func TestStop_OK(t *testing.T) {
 		t.Error("context was not canceled")
 	}
 	hook.Reset()
+}
+
+func TestFollowBlock_OK(t *testing.T) {
+	depositcontract.Amount32Eth()
+	testAcc, err := contracts.Setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	beaconDB := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		ETH1Endpoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	// simulated backend sets eth1 block
+	// time as 10 seconds
+	conf := params.BeaconConfig()
+	conf.SecondsPerETH1Block = 10
+	params.OverrideBeaconConfig(conf)
+	defer func() {
+		params.UseMainnetConfig()
+	}()
+
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.blockFetcher = &goodFetcher{backend: testAcc.Backend}
+	baseHeight := testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	// process follow_distance blocks
+	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
+		testAcc.Backend.Commit()
+	}
+	// set current height
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
+
+	h, err := web3Service.followBlockHeight(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h != baseHeight {
+		t.Errorf("Unexpected block height of %d received instead of %d", h, baseHeight)
+	}
+	numToForward := uint64(2)
+	expectedHeight := numToForward + baseHeight
+	// forward 2 blocks
+	for i := uint64(0); i < numToForward; i++ {
+		testAcc.Backend.Commit()
+	}
+	// set current height
+	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
+	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
+
+	h, err = web3Service.followBlockHeight(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h != expectedHeight {
+		t.Errorf("Unexpected block height of %d received instead of %d", h, expectedHeight)
+	}
 }
 
 func TestInitDataFromContract_OK(t *testing.T) {
