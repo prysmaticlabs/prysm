@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "attestation_history.go",
         "db.go",
+        "manage.go",
         "proposal_history.go",
         "schema.go",
         "setup_db.go",
@@ -38,6 +39,7 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )

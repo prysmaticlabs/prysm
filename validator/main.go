@@ -4,10 +4,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 	runtimeDebug "runtime/debug"
+	"strings"
 
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -42,6 +44,8 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
+	flags.MergeSourceDirectories,
+	flags.MergeTargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -131,6 +135,24 @@ contract in order to activate the validator client`,
 						}
 						if err := accounts.PrintPublicAndPrivateKeys(keystorePath, passphrase); err != nil {
 							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
+						}
+						return nil
+					},
+				},
+				{
+					Name:        "merge",
+					Description: "merges data from several validator databases with this client's validator database",
+					Flags: []cli.Flag{
+						flags.MergeSourceDirectories,
+						flags.MergeTargetDirectory,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						passedSources := cliCtx.String(flags.MergeSourceDirectories.Name)
+						sources := strings.Split(passedSources, ",")
+						target := cliCtx.String(flags.MergeTargetDirectory.Name)
+
+						if err := accounts.Merge(context.Background(), sources, target); err != nil {
+							log.WithError(err).Error("Merging validator data failed")
 						}
 						return nil
 					},
