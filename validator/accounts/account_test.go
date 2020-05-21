@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -19,6 +22,18 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"gopkg.in/urfave/cli.v2"
 )
+
+type sourceStoresHistory struct {
+	ProposalEpoch                       uint64
+	FirstStoreFirstPubKeyProposals      bitfield.Bitlist
+	FirstStoreSecondPubKeyProposals     bitfield.Bitlist
+	SecondStoreFirstPubKeyProposals     bitfield.Bitlist
+	SecondStoreSecondPubKeyProposals    bitfield.Bitlist
+	FirstStoreFirstPubKeyAttestations   map[uint64]uint64
+	FirstStoreSecondPubKeyAttestations  map[uint64]uint64
+	SecondStoreFirstPubKeyAttestations  map[uint64]uint64
+	SecondStoreSecondPubKeyAttestations map[uint64]uint64
+}
 
 func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	directory := testutil.TempDir() + "/testkeystore"
@@ -82,27 +97,119 @@ func TestHandleEmptyFlags_FlagsSet(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
-	firstSourcePubKeys := [][48]byte{{1}, {2}}
-	firstStore := db.SetupDB(t, firstSourcePubKeys)
-	secondSourcePubKeys := [][48]byte{{3}, {4}}
-	secondStore := db.SetupDB(t, secondSourcePubKeys)
+	firstStorePubKeys := [][48]byte{{1}, {2}}
+	firstStore := db.SetupDB(t, firstStorePubKeys)
+	secondStorePubKeys := [][48]byte{{3}, {4}}
+	secondStore := db.SetupDB(t, secondStorePubKeys)
 
+	history, err := prepareSourcesForMerging(firstStorePubKeys, firstStore, secondStorePubKeys, secondStore)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("Closing source store failed: %v", err)
+	}
+	if err := secondStore.Close(); err != nil {
+		t.Fatalf("Closing source store failed: %v", err)
+	}
+
+	targetDirectory := testutil.TempDir() + "/target"
+	err = Merge(context.Background(), []string{firstStore.DatabasePath(), secondStore.DatabasePath()}, targetDirectory)
+	if err != nil {
+		t.Fatalf("Merging failed: %v", err)
+	}
+	mergedStore, err := db.GetKVStore(targetDirectory)
+	if err != nil {
+		t.Fatalf("Retrieving the merged store failed: %v", err)
+	}
+
+	assertMergedStore(t, mergedStore, firstStorePubKeys, secondStorePubKeys, history)
+
+	cleanupAfterMerge(t, []string{firstStore.DatabasePath(), secondStore.DatabasePath(), targetDirectory})
+}
+
+func TestMerge_SucceedsWhenNoDatabaseExistsInSomeSourceDirectory(t *testing.T) {
+	firstStorePubKeys := [][48]byte{{1}, {2}}
+	firstStore := db.SetupDB(t, firstStorePubKeys)
+	secondStorePubKeys := [][48]byte{{3}, {4}}
+	secondStore := db.SetupDB(t, secondStorePubKeys)
+
+	history, err := prepareSourcesForMerging(firstStorePubKeys, firstStore, secondStorePubKeys, secondStore)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	if err := firstStore.Close(); err != nil {
+		t.Fatalf("Closing source store failed: %v", err)
+	}
+	if err := secondStore.Close(); err != nil {
+		t.Fatalf("Closing source store failed: %v", err)
+	}
+
+	sourceDirectoryWithoutStore := testutil.TempDir() + "/nodb"
+	if err := os.MkdirAll(sourceDirectoryWithoutStore, 0700); err != nil {
+		t.Fatalf("Could not create directory %s", sourceDirectoryWithoutStore)
+	}
+	targetDirectory := testutil.TempDir() + "/target"
+	err = Merge(
+		context.Background(),
+		[]string{firstStore.DatabasePath(), secondStore.DatabasePath(), sourceDirectoryWithoutStore}, targetDirectory)
+	if err != nil {
+		t.Fatalf("Merging failed: %v", err)
+	}
+	mergedStore, err := db.GetKVStore(targetDirectory)
+	if err != nil {
+		t.Fatalf("Retrieving the merged store failed: %v", err)
+	}
+
+	assertMergedStore(t, mergedStore, firstStorePubKeys, secondStorePubKeys, history)
+
+	cleanupAfterMerge(
+		t,
+		[]string{firstStore.DatabasePath(), secondStore.DatabasePath(), sourceDirectoryWithoutStore, targetDirectory})
+}
+
+func TestMerge_FailsWhenNoDatabaseExistsInAllSourceDirectories(t *testing.T) {
+	sourceDirectory1 := testutil.TempDir() + "/source1"
+	sourceDirectory2 := testutil.TempDir() + "/source2"
+	targetDirectory := testutil.TempDir() + "/target"
+	if err := os.MkdirAll(sourceDirectory1, 0700); err != nil {
+		t.Fatalf("Could not create directory %s", sourceDirectory1)
+	}
+	if err := os.MkdirAll(sourceDirectory2, 0700); err != nil {
+		t.Fatalf("Could not create directory %s", sourceDirectory2)
+	}
+	if err := os.MkdirAll(targetDirectory, 0700); err != nil {
+		t.Fatalf("Could not create directory %s", targetDirectory)
+	}
+
+	err := Merge(context.Background(), []string{sourceDirectory1, sourceDirectory2}, targetDirectory)
+	expected := "No validator databases found in source directories"
+	if err == nil || !strings.Contains(err.Error(), expected) {
+		t.Errorf("Expected: %s vs received %v", expected, err)
+	}
+
+	cleanupAfterMerge(t, []string{sourceDirectory1, sourceDirectory2, targetDirectory})
+}
+
+func prepareSourcesForMerging(firstStorePubKeys [][48]byte, firstStore *db.Store, secondStorePubKeys [][48]byte, secondStore *db.Store) (*sourceStoresHistory, error) {
 	proposalEpoch := uint64(0)
 	proposalHistory1 := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x01}
-	if err := firstStore.SaveProposalHistoryForEpoch(context.Background(), firstSourcePubKeys[0][:], proposalEpoch, proposalHistory1); err != nil {
-		t.Fatalf("Saving proposal history failed: %v", err)
+	if err := firstStore.SaveProposalHistoryForEpoch(context.Background(), firstStorePubKeys[0][:], proposalEpoch, proposalHistory1); err != nil {
+		return nil, errors.Wrapf(err, "Saving proposal history failed")
 	}
 	proposalHistory2 := bitfield.Bitlist{0x02, 0x00, 0x00, 0x00, 0x01}
-	if err := firstStore.SaveProposalHistoryForEpoch(context.Background(), firstSourcePubKeys[1][:], proposalEpoch, proposalHistory2); err != nil {
-		t.Fatalf("Saving proposal history failed: %v", err)
+	if err := firstStore.SaveProposalHistoryForEpoch(context.Background(), firstStorePubKeys[1][:], proposalEpoch, proposalHistory2); err != nil {
+		return nil, errors.Wrapf(err, "Saving proposal history failed")
 	}
 	proposalHistory3 := bitfield.Bitlist{0x03, 0x00, 0x00, 0x00, 0x01}
-	if err := secondStore.SaveProposalHistoryForEpoch(context.Background(), secondSourcePubKeys[0][:], proposalEpoch, proposalHistory3); err != nil {
-		t.Fatalf("Saving proposal history failed: %v", err)
+	if err := secondStore.SaveProposalHistoryForEpoch(context.Background(), secondStorePubKeys[0][:], proposalEpoch, proposalHistory3); err != nil {
+		return nil, errors.Wrapf(err, "Saving proposal history failed")
 	}
 	proposalHistory4 := bitfield.Bitlist{0x04, 0x00, 0x00, 0x00, 0x01}
-	if err := secondStore.SaveProposalHistoryForEpoch(context.Background(), secondSourcePubKeys[1][:], proposalEpoch, proposalHistory4); err != nil {
-		t.Fatalf("Saving proposal history failed: %v", err)
+	if err := secondStore.SaveProposalHistoryForEpoch(context.Background(), secondStorePubKeys[1][:], proposalEpoch, proposalHistory4); err != nil {
+		return nil, errors.Wrapf(err, "Saving proposal history failed")
 	}
 
 	attestationHistoryMap1 := make(map[uint64]uint64)
@@ -118,10 +225,10 @@ func TestMerge(t *testing.T) {
 		LatestEpochWritten: 0,
 	}
 	dbAttestationHistory1 := make(map[[48]byte]*slashpb.AttestationHistory)
-	dbAttestationHistory1[firstSourcePubKeys[0]] = pubKeyAttestationHistory1
-	dbAttestationHistory1[firstSourcePubKeys[1]] = pubKeyAttestationHistory2
+	dbAttestationHistory1[firstStorePubKeys[0]] = pubKeyAttestationHistory1
+	dbAttestationHistory1[firstStorePubKeys[1]] = pubKeyAttestationHistory2
 	if err := firstStore.SaveAttestationHistoryForPubKeys(context.Background(), dbAttestationHistory1); err != nil {
-		t.Fatalf("Saving attestation history failed: %v", err)
+		return nil, errors.Wrapf(err, "Saving attestation history failed")
 	}
 	attestationHistoryMap3 := make(map[uint64]uint64)
 	attestationHistoryMap3[0] = 2
@@ -136,88 +243,119 @@ func TestMerge(t *testing.T) {
 		LatestEpochWritten: 0,
 	}
 	dbAttestationHistory2 := make(map[[48]byte]*slashpb.AttestationHistory)
-	dbAttestationHistory2[secondSourcePubKeys[0]] = pubKeyAttestationHistory3
-	dbAttestationHistory2[secondSourcePubKeys[1]] = pubKeyAttestationHistory4
+	dbAttestationHistory2[secondStorePubKeys[0]] = pubKeyAttestationHistory3
+	dbAttestationHistory2[secondStorePubKeys[1]] = pubKeyAttestationHistory4
 	if err := secondStore.SaveAttestationHistoryForPubKeys(context.Background(), dbAttestationHistory2); err != nil {
-		t.Fatalf("Saving attestation history failed: %v", err)
+		return nil, errors.Wrapf(err, "Saving attestation history failed")
 	}
 
-	if err := firstStore.Close(); err != nil {
-		t.Fatalf("Closing source store failed: %v", err)
-	}
-	if err := secondStore.Close(); err != nil {
-		t.Fatalf("Closing source store failed: %v", err)
+	mergeHistory := &sourceStoresHistory{
+		ProposalEpoch:                       proposalEpoch,
+		FirstStoreFirstPubKeyProposals:      proposalHistory1,
+		FirstStoreSecondPubKeyProposals:     proposalHistory2,
+		SecondStoreFirstPubKeyProposals:     proposalHistory3,
+		SecondStoreSecondPubKeyProposals:    proposalHistory4,
+		FirstStoreFirstPubKeyAttestations:   attestationHistoryMap1,
+		FirstStoreSecondPubKeyAttestations:  attestationHistoryMap2,
+		SecondStoreFirstPubKeyAttestations:  attestationHistoryMap3,
+		SecondStoreSecondPubKeyAttestations: attestationHistoryMap4,
 	}
 
-	targetDirectory := testutil.TempDir() + "/target"
-	err := Merge(context.Background(), []string{firstStore.DatabasePath(), secondStore.DatabasePath()}, targetDirectory)
+	return mergeHistory, nil
+}
+
+func assertMergedStore(
+	t *testing.T,
+	mergedStore *db.Store,
+	firstStorePubKeys [][48]byte,
+	secondStorePubKeys [][48]byte,
+	history *sourceStoresHistory) {
+
+	mergedProposalHistory1, err := mergedStore.ProposalHistoryForEpoch(
+		context.Background(), firstStorePubKeys[0][:], history.ProposalEpoch)
 	if err != nil {
-		t.Fatalf("Merging failed: %v", err)
-	}
-
-	mergedStore, err := db.GetKVStore(targetDirectory)
-	if err != nil {
-		t.Fatalf("Retrieving the merged store failed: %v", err)
-	}
-
-	mergedProposalHistory1, err := mergedStore.ProposalHistoryForEpoch(context.Background(), firstSourcePubKeys[0][:], proposalEpoch)
-	if err != nil {
-		t.Errorf("Retrieving merged proposal history failed for public key %v", firstSourcePubKeys[0])
+		t.Errorf("Retrieving merged proposal history failed for public key %v", firstStorePubKeys[0])
 	} else {
-		if !bytes.Equal(mergedProposalHistory1, proposalHistory1) {
-			t.Errorf("Proposals not merged correctly: expected %v vs received %v", proposalHistory1, mergedProposalHistory1)
+		if !bytes.Equal(mergedProposalHistory1, history.FirstStoreFirstPubKeyProposals) {
+			t.Errorf(
+				"Proposals not merged correctly: expected %v vs received %v",
+				history.FirstStoreFirstPubKeyProposals,
+				mergedProposalHistory1)
 		}
 	}
-	mergedProposalHistory2, err := mergedStore.ProposalHistoryForEpoch(context.Background(), firstSourcePubKeys[1][:], proposalEpoch)
+	mergedProposalHistory2, err := mergedStore.ProposalHistoryForEpoch(
+		context.Background(), firstStorePubKeys[1][:], history.ProposalEpoch)
 	if err != nil {
-		t.Errorf("Retrieving merged proposal history failed for public key %v", firstSourcePubKeys[1])
+		t.Errorf("Retrieving merged proposal history failed for public key %v", firstStorePubKeys[1])
 	} else {
-		if !bytes.Equal(mergedProposalHistory2, proposalHistory2) {
-			t.Errorf("Proposals not merged correctly: expected %v vs received %v", proposalHistory2, mergedProposalHistory2)
+		if !bytes.Equal(mergedProposalHistory2, history.FirstStoreSecondPubKeyProposals) {
+			t.Errorf(
+				"Proposals not merged correctly: expected %v vs received %v",
+				history.FirstStoreSecondPubKeyProposals,
+				mergedProposalHistory2)
 		}
 	}
-	mergedProposalHistory3, err := mergedStore.ProposalHistoryForEpoch(context.Background(), secondSourcePubKeys[0][:], proposalEpoch)
+	mergedProposalHistory3, err := mergedStore.ProposalHistoryForEpoch(
+		context.Background(), secondStorePubKeys[0][:], history.ProposalEpoch)
 	if err != nil {
-		t.Errorf("Retrieving merged proposal history failed for public key %v", secondSourcePubKeys[0])
+		t.Errorf("Retrieving merged proposal history failed for public key %v", secondStorePubKeys[0])
 	} else {
-		if !bytes.Equal(mergedProposalHistory3, proposalHistory3) {
-			t.Errorf("Proposals not merged correctly: expected %v vs received %v", proposalHistory3, mergedProposalHistory3)
+		if !bytes.Equal(mergedProposalHistory3, history.SecondStoreFirstPubKeyProposals) {
+			t.Errorf(
+				"Proposals not merged correctly: expected %v vs received %v",
+				history.SecondStoreFirstPubKeyProposals,
+				mergedProposalHistory3)
 		}
 	}
-	mergedProposalHistory4, err := mergedStore.ProposalHistoryForEpoch(context.Background(), secondSourcePubKeys[1][:], proposalEpoch)
+	mergedProposalHistory4, err := mergedStore.ProposalHistoryForEpoch(
+		context.Background(), secondStorePubKeys[1][:], history.ProposalEpoch)
 	if err != nil {
-		t.Errorf("Retrieving merged proposal history failed for public key %v", secondSourcePubKeys[1])
+		t.Errorf("Retrieving merged proposal history failed for public key %v", secondStorePubKeys[1])
 	} else {
-		if !bytes.Equal(mergedProposalHistory4, proposalHistory4) {
-			t.Errorf("Proposals not merged correctly: expected %v vs received %v", proposalHistory4, mergedProposalHistory4)
+		if !bytes.Equal(mergedProposalHistory4, history.SecondStoreSecondPubKeyProposals) {
+			t.Errorf("Proposals not merged correctly: expected %v vs received %v",
+				history.SecondStoreSecondPubKeyProposals,
+				mergedProposalHistory4)
 		}
 	}
 
 	mergedAttestationHistory, err := mergedStore.AttestationHistoryForPubKeys(
 		context.Background(),
-		append(firstSourcePubKeys, secondSourcePubKeys[0], secondSourcePubKeys[1]))
+		append(firstStorePubKeys, secondStorePubKeys[0], secondStorePubKeys[1]))
 	if err != nil {
 		t.Error("Retrieving merged attestation history failed")
 	} else {
-		if mergedAttestationHistory[firstSourcePubKeys[0]].TargetToSource[0] != attestationHistoryMap1[0] {
-			t.Errorf("Attestations not merged correctly: expected %v vs received %v", 0, mergedAttestationHistory[firstSourcePubKeys[0]].TargetToSource[0])
+		if mergedAttestationHistory[firstStorePubKeys[0]].TargetToSource[0] != history.FirstStoreFirstPubKeyAttestations[0] {
+			t.Errorf(
+				"Attestations not merged correctly: expected %v vs received %v",
+				history.FirstStoreFirstPubKeyAttestations[0],
+				mergedAttestationHistory[firstStorePubKeys[0]].TargetToSource[0])
 		}
-		if mergedAttestationHistory[firstSourcePubKeys[1]].TargetToSource[0] != attestationHistoryMap2[0] {
-			t.Errorf("Attestations not merged correctly: expected %v vs received %v", 0, mergedAttestationHistory[firstSourcePubKeys[1]].TargetToSource[0])
+		if mergedAttestationHistory[firstStorePubKeys[1]].TargetToSource[0] != history.FirstStoreSecondPubKeyAttestations[0] {
+			t.Errorf(
+				"Attestations not merged correctly: expected %v vs received %v",
+				history.FirstStoreSecondPubKeyAttestations,
+				mergedAttestationHistory[firstStorePubKeys[1]].TargetToSource[0])
 		}
-		if mergedAttestationHistory[secondSourcePubKeys[0]].TargetToSource[0] != attestationHistoryMap3[0] {
-			t.Errorf("Attestations not merged correctly: expected %v vs received %v", 0, mergedAttestationHistory[secondSourcePubKeys[0]].TargetToSource[0])
+		if mergedAttestationHistory[secondStorePubKeys[0]].TargetToSource[0] != history.SecondStoreFirstPubKeyAttestations[0] {
+			t.Errorf(
+				"Attestations not merged correctly: expected %v vs received %v",
+				history.SecondStoreFirstPubKeyAttestations,
+				mergedAttestationHistory[secondStorePubKeys[0]].TargetToSource[0])
 		}
-		if mergedAttestationHistory[secondSourcePubKeys[1]].TargetToSource[0] != attestationHistoryMap4[0] {
-			t.Errorf("Attestations not merged correctly: expected %v vs received %v", 0, mergedAttestationHistory[secondSourcePubKeys[1]].TargetToSource[0])
+		if mergedAttestationHistory[secondStorePubKeys[1]].TargetToSource[0] != history.SecondStoreSecondPubKeyAttestations[0] {
+			t.Errorf(
+				"Attestations not merged correctly: expected %v vs received %v",
+				history.SecondStoreSecondPubKeyAttestations,
+				mergedAttestationHistory[secondStorePubKeys[1]].TargetToSource[0])
 		}
 	}
 }
 
-/*func TestMerge_SomeEmptyDirs(){
-
+func cleanupAfterMerge(t *testing.T, directories []string) {
+	for _, dir := range directories {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Logf("Could not remove directory %s: %v", dir, err)
+		}
+	}
 }
-
-func TestMerge_AllEmptyDirs(){
-
-}*/

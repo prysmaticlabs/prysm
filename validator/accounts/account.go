@@ -231,6 +231,10 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 		sourceStores = append(sourceStores, store)
 	}
 
+	if len(sourceStores) == 0 {
+		return errors.New("No validator databases found in source directories")
+	}
+
 	err := db.Merge(ctx, sourceStores, targetDirectory)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to merge validator databases into %s", targetDirectory)
