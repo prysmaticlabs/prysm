@@ -44,11 +44,11 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
-	sigRoot := &pb.SigningRoot{
+	signingData := &pb.SigningData{
 		ObjectRoot: root[:],
 		Domain:     domain,
 	}
-	ctrRoot, err := ssz.HashTreeRoot(sigRoot)
+	ctrRoot, err := ssz.HashTreeRoot(signingData)
 	if err != nil {
 		return errors.Wrap(err, "could not get container root")
 	}
@@ -67,11 +67,11 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	ctr := &pb.SigningRoot{
+	signingData := &pb.SigningData{
 		ObjectRoot: signedData,
 		Domain:     domain,
 	}
-	root, err := ssz.HashTreeRoot(ctr)
+	root, err := ssz.HashTreeRoot(signingData)
 	if err != nil {
 		return errors.Wrap(err, "could not hash container")
 	}
