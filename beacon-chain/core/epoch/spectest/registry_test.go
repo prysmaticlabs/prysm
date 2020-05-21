@@ -11,6 +11,7 @@ import (
 )
 
 func runRegistryUpdatesTests(t *testing.T, config string) {
+	t.Skip("Skipping until #5935 is complete")
 	if err := spectest.SetConfig(t, config); err != nil {
 		t.Fatal(err)
 	}
