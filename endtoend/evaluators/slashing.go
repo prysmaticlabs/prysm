@@ -2,6 +2,7 @@ package evaluators
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -62,8 +63,8 @@ func validatorsSlashed(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if len(changes.SlashedIndices) != 2 && len(changes.SlashedIndices) != 4 {
-		return fmt.Errorf("expected 2 or 4 indices to be slashed, received %d", len(changes.SlashedIndices))
+	if len(changes.SlashedIndices) != len(slashedIndices) {
+		return fmt.Errorf("expected %d indices to be slashed, received %d", len(slashedIndices), len(changes.SlashedIndices))
 	}
 	return nil
 }
@@ -176,12 +177,10 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 			Data:            attData,
 			Signature:       privKeys[committee[i]].Sign(signingRoot[:]).Marshal(),
 		}
-		for _, conn := range conns {
-			client := eth.NewBeaconNodeValidatorClient(conn)
-			_, err = client.ProposeAttestation(ctx, att)
-			if err != nil {
-				return err
-			}
+		client := eth.NewBeaconNodeValidatorClient(conns[0])
+		_, err = client.ProposeAttestation(ctx, att)
+		if err != nil {
+			return err
 		}
 		slashedIndices = append(slashedIndices, committee[i])
 	}
@@ -262,12 +261,10 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		Signature: sig,
 	}
 
-	for _, conn := range conns {
-		client := eth.NewBeaconNodeValidatorClient(conn)
-		_, err = client.ProposeBlock(ctx, signedBlk)
-		if err != nil {
-			return err
-		}
+	client := eth.NewBeaconNodeValidatorClient(conns[0])
+	_, err = client.ProposeBlock(ctx, signedBlk)
+	if err == nil {
+		return errors.New("expected block to fail processing")
 	}
 	slashedIndices = append(slashedIndices, proposerIndex)
 	return nil

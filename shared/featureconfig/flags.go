@@ -342,8 +342,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedAccountMetricsFlag = &cli.BoolFlag{
-		Name: "enable-account-metrics",
-		Usage: deprecatedUsage,
+		Name:   "enable-account-metrics",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -452,4 +452,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
+	"--broadcast-slashing",
 }
