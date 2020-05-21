@@ -550,7 +550,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
 			Slot:          beaconState.Slot() + 1,
-			ProposerIndex: 13,
+			ProposerIndex: 9,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
