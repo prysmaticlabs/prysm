@@ -168,7 +168,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BaseRewardFactor:            64,
 	WhistleBlowerRewardQuotient: 512,
 	ProposerRewardQuotient:      8,
-	InactivityPenaltyQuotient:   1 << 25,
+	InactivityPenaltyQuotient:   1 << 24,
 	MinSlashingPenaltyQuotient:  32,
 
 	// Max operations per block constants.
