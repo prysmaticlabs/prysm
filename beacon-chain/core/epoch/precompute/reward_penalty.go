@@ -2,7 +2,6 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -78,44 +77,62 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	effectiveBalanceIncrement := params.BeaconConfig().EffectiveBalanceIncrement
-	e := helpers.PrevEpoch(state)
 	vb := v.CurrentEpochEffectiveBalance
 	br := vb * params.BeaconConfig().BaseRewardFactor / mathutil.IntegerSquareRoot(pBal.ActiveCurrentEpoch) / baseRewardsPerEpoch
 	r, p := uint64(0), uint64(0)
 
 	// Process source reward / penalty
 	if v.IsPrevEpochAttester && !v.IsSlashed {
-		rewardNumerator := br * (pBal.PrevEpochAttested / effectiveBalanceIncrement)
-		r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
-		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
-		maxAttesterReward := br - proposerReward
-		r += maxAttesterReward / v.InclusionDistance
+		if isInInactivityLeak(state) {
+			// Since full base reward will be canceled out by inactivity penalty deltas,
+			// optimal participation receives full base reward compensation here.
+			r += br
+		} else {
+			rewardNumerator := br * (pBal.PrevEpochAttested / effectiveBalanceIncrement)
+			r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
+			proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
+			maxAttesterReward := br - proposerReward
+			r += maxAttesterReward / v.InclusionDistance
+		}
 	} else {
 		p += br
 	}
 
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
-		rewardNumerator := br * (pBal.PrevEpochTargetAttested / effectiveBalanceIncrement)
-		r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
+		if isInInactivityLeak(state) {
+			// Since full base reward will be canceled out by inactivity penalty deltas,
+			// optimal participation receives full base reward compensation here.
+			r += br
+		} else {
+			rewardNumerator := br * (pBal.PrevEpochTargetAttested / effectiveBalanceIncrement)
+			r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
+		}
 	} else {
 		p += br
 	}
 
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
-		rewardNumerator := br * (pBal.PrevEpochHeadAttested / effectiveBalanceIncrement)
-		r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
+		if isInInactivityLeak(state) {
+			// Since full base reward will be canceled out by inactivity penalty deltas,
+			// optimal participation receives full base reward compensation here.
+			r += br
+		} else {
+			rewardNumerator := br * (pBal.PrevEpochHeadAttested / effectiveBalanceIncrement)
+			r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
+		}
 	} else {
 		p += br
 	}
 
 	// Process finality delay penalty
-	finalizedEpoch := state.FinalizedCheckpointEpoch()
-	finalityDelay := e - finalizedEpoch
+	finalityDelay := finalityDelay(state)
 
-	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
-		p += baseRewardsPerEpoch * br
+	if isInInactivityLeak(state) {
+		// If validator is performing optimally, this cancels all rewards for a neutral balance.
+		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
+		p += baseRewardsPerEpoch*br - proposerReward
 		// Apply an additional penalty to validators that did not vote on the correct target or has been slashed.
 		// Equivalent to the following condition from the spec:
 		// `index not in get_unslashed_attesting_indices(state, matching_target_attestations)`
@@ -153,4 +170,22 @@ func proposerDeltaPrecompute(state *stateTrie.BeaconState, pBal *Balance, vp []*
 		}
 	}
 	return rewards, nil
+}
+
+// isInInactivityLeak returns true if the state is experiencing inactivity leak.
+//
+// Spec code:
+// def is_in_inactivity_leak(state: BeaconState) -> bool:
+//    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
+func isInInactivityLeak(state *stateTrie.BeaconState) bool {
+	return finalityDelay(state) > params.BeaconConfig().MinEpochsToInactivityPenalty
+}
+
+// finalityDelay returns the finality delay using the beacon state.
+//
+// Spec code:
+// def get_finality_delay(state: BeaconState) -> uint64:
+//    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
+func finalityDelay(state *stateTrie.BeaconState) uint64 {
+	return helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
 }
