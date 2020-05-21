@@ -45,6 +45,7 @@ type HeadFetcher interface {
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
+	HeadETH1Data() *ethpb.Eth1Data
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -194,6 +195,14 @@ func (s *Service) HeadGenesisValidatorRoot() [32]byte {
 	}
 
 	return s.headGenesisValidatorRoot()
+}
+
+// HeadETH1Data returns the eth1data of the current head state.
+func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
+	if !s.hasHeadState() {
+		return &ethpb.Eth1Data{}
+	}
+	return s.head.state.Eth1Data()
 }
 
 // GenesisTime returns the genesis time of beacon chain.
