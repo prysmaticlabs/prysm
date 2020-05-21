@@ -13,9 +13,15 @@ import "google/protobuf/empty.proto";
 // to retrieve the beacon state by block root or state root from the node directly.
 service Debug {
     // Returns a beacon state by filter criteria from the beacon node.
-    rpc GetBeaconState(BeaconStateRequest) returns (ethereum.beacon.p2p.v1.BeaconState) {
+    rpc GetBeaconState(BeaconStateRequest) returns (SSZResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/state"
+            get: "/eth/v1alpha1/debug/state"
+        };
+    }
+    // Returns a beacon state by filter criteria from the beacon node.
+    rpc GetBlock(BlockRequest) returns (SSZResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/block"
         };
     }
     // SetLoggingLevel sets the log-level of the beacon node programmatically.
@@ -34,6 +40,15 @@ message BeaconStateRequest {
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;
     }
+}
+
+message BlockRequest {
+    bytes block_root = 1;
+}
+
+message SSZResponse {
+    // Returns an ssz-encoded byte slice as a response.
+    bytes encoded = 1;
 }
 
 message LoggingLevelRequest {
