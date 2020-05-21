@@ -76,7 +76,7 @@ func TestStateMachineManager_addEventHandler(t *testing.T) {
 
 	// Add another handler to existing event/state pair.
 	smm.addEventHandler(eventSchedule, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
-		return stateSkippedExt, nil
+		return stateSkipped, nil
 	})
 	if len(smm.events[eventSchedule].actions) != 2 {
 		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions), 2)

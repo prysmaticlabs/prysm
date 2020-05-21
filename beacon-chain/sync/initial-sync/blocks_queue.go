@@ -89,7 +89,6 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	queue.smm.addEventHandler(eventProcessSkipped, stateSkipped, queue.onProcessSkippedEvent(ctx))
 	queue.smm.addEventHandler(eventCheckStale, stateSent, queue.onCheckStaleEvent(ctx))
 	queue.smm.addEventHandler(eventCheckStale, stateSkipped, queue.onCheckStaleEvent(ctx))
-	queue.smm.addEventHandler(eventCheckStale, stateSkippedExt, queue.onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -244,8 +243,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			// Current window is already too big, re-request previous epochs.
 			if response.err == errSlotIsTooHigh {
 				for _, fsm := range q.smm.machines {
-					isSkipped := fsm.state == stateSkipped || fsm.state == stateSkippedExt
-					if fsm.start < response.start && isSkipped {
+					if fsm.start < response.start && fsm.state == stateSkipped {
 						fsm.setState(stateNew)
 					}
 				}

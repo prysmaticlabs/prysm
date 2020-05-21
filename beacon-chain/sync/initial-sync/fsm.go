@@ -16,7 +16,6 @@ const (
 	stateDataParsed
 	stateSkipped
 	stateSent
-	stateSkippedExt
 	stateComplete
 )
 
@@ -39,8 +38,6 @@ func (s stateID) String() (state string) {
 		state = "dataParsed"
 	case stateSkipped:
 		state = "skipped"
-	case stateSkippedExt:
-		state = "skippedExt"
 	case stateSent:
 		state = "sent"
 	case stateComplete:
