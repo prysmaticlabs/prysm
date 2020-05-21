@@ -139,3 +139,62 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Chain reorg occurred")
 }
+
+func TestUpdateRecentCanonicalBlocks_CanUpdateWithoutParent(t *testing.T) {
+	db := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db)
+
+	r := [32]byte{'a'}
+	if err := service.updateRecentCanonicalBlocks(context.Background(), r); err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := service.IsCanonical(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !canonical {
+		t.Error("Block should be canonical")
+	}
+}
+
+func TestUpdateRecentCanonicalBlocks_CanUpdateWithParent(t *testing.T) {
+	db := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db)
+	oldHead := [32]byte{'a'}
+	if err := service.forkChoiceStore.ProcessBlock(context.Background(), 1, oldHead, [32]byte{'g'}, [32]byte{}, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	currentHead := [32]byte{'b'}
+	if err := service.forkChoiceStore.ProcessBlock(context.Background(), 3, currentHead, oldHead, [32]byte{}, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	forkedRoot := [32]byte{'c'}
+	if err := service.forkChoiceStore.ProcessBlock(context.Background(), 2, forkedRoot, oldHead, [32]byte{}, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.updateRecentCanonicalBlocks(context.Background(), currentHead); err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := service.IsCanonical(context.Background(), currentHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !canonical {
+		t.Error("Block should be canonical")
+	}
+	canonical, err = service.IsCanonical(context.Background(), oldHead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !canonical {
+		t.Error("Block should be canonical")
+	}
+	canonical, err = service.IsCanonical(context.Background(), forkedRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonical {
+		t.Error("Block should not be canonical")
+	}
+}
