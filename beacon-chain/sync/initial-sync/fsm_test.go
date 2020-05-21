@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -23,11 +24,10 @@ func TestStateMachineManager_String(t *testing.T) {
 				{start: 64 * 1, count: 64, state: stateScheduled},
 				{start: 64 * 2, count: 64, state: stateDataParsed},
 				{start: 64 * 3, count: 64, state: stateSkipped},
-				{start: 64 * 4, count: 64, state: stateComplete},
-				{start: 64 * 5, count: 64, state: stateSent},
+				{start: 64 * 4, count: 64, state: stateSent},
 			},
 			"[[0](0..63):new [2](64..127):scheduled [4](128..191):dataParsed [6](192..255):skipped " +
-				"[8](256..319):complete [10](320..383):sent]",
+				"[8](256..319):sent]",
 		},
 	}
 	for _, tt := range tests {
@@ -39,6 +39,22 @@ func TestStateMachineManager_String(t *testing.T) {
 				t.Errorf("unexpected output,  got: %v, want: %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestStateMachine_StateIDString(t *testing.T) {
+	stateIDs := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped, stateSent}
+	want := "[new scheduled dataParsed skipped sent]"
+	if got := fmt.Sprintf("%v", stateIDs); got != want {
+		t.Errorf("unexpected output, got: %q, want: %q", got, want)
+	}
+}
+
+func TestStateMachine_EventIDString(t *testing.T) {
+	eventIDs := []eventID{eventSchedule, eventDataReceived, eventReadyToSend, eventCheckStale, eventProcessSkipped}
+	want := "[schedule dataReceived readyToSend checkStale processSkipped]"
+	if got := fmt.Sprintf("%v", eventIDs); got != want {
+		t.Errorf("unexpected output, got: %q, want: %q", got, want)
 	}
 }
 
@@ -136,7 +152,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			events: []event{
 				{stateNew, eventSchedule, stateScheduled, false},
 				{stateScheduled, eventSchedule, stateSent, true},
-				{stateSent, eventSchedule, stateComplete, false},
+				{stateSent, eventSchedule, stateSkipped, false},
 			},
 			epochs: []uint64{12, 13},
 			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
@@ -147,7 +163,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			events: []event{
 				{stateNew, eventSchedule, stateScheduled, false},
 				{stateScheduled, eventSchedule, stateSent, false},
-				{stateSent, eventSchedule, stateComplete, false},
+				{stateSent, eventSchedule, stateSkipped, false},
 			},
 			epochs: []uint64{12, 13},
 			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
@@ -158,7 +174,7 @@ func TestStateMachine_trigger(t *testing.T) {
 			events: []event{
 				{stateNew, eventSchedule, stateScheduled, false},
 				{stateScheduled, eventSchedule, stateSent, false},
-				{stateNew, eventSchedule, stateComplete, false},
+				{stateNew, eventSchedule, stateSkipped, false},
 			},
 			epochs: []uint64{12, 13},
 			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},

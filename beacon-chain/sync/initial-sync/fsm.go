@@ -16,7 +16,6 @@ const (
 	stateDataParsed
 	stateSkipped
 	stateSent
-	stateComplete
 )
 
 const (
@@ -40,8 +39,6 @@ func (s stateID) String() (state string) {
 		state = "skipped"
 	case stateSent:
 		state = "sent"
-	case stateComplete:
-		state = "complete"
 	}
 	return
 }
@@ -155,33 +152,6 @@ func (sm *stateMachineManager) findStateMachineByStartBlock(start uint64) (int, 
 	}
 	return len(sm.machines), false
 }
-
-//// isLowestStartBlock checks whether a given start block is the lowest for which we have a FSM.
-//func (sm *stateMachineManager) isLowestStartBlock(start uint64) bool {
-//	if _, ok := sm.findStateMachineByStartBlock(start); !ok {
-//		return false
-//	}
-//	for _, fsm := range sm.machines {
-//		if start > fsm.start {
-//			return false
-//		}
-//	}
-//	return true
-//}
-//
-//// lowestStartBlock returns block number for the earliest known start block.
-//func (sm *stateMachineManager) lowestStartBlock() (uint64, error) {
-//	if len(sm.machines) == 0 {
-//		return 0, errors.New("no state machine exist")
-//	}
-//	lowestStartBlock := sm.machines[0].start
-//	for _, fsm := range sm.machines {
-//		if fsm.start < lowestStartBlock {
-//			lowestStartBlock = fsm.start
-//		}
-//	}
-//	return lowestStartBlock, nil
-//}
 
 // highestKnownStartBlock returns the start block number for the latest known state machine.
 func (sm *stateMachineManager) highestKnownStartBlock() (uint64, error) {
