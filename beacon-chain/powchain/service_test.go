@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
