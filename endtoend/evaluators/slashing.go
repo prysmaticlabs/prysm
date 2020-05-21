@@ -2,10 +2,10 @@ package evaluators
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -101,7 +101,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get chain head")
 	}
 
 	_, privKeys, err := testutil.DeterministicDepositsAndKeys(64)
@@ -117,7 +117,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		PublicKeys: pubKeys,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get duties")
 	}
 
 	var committeeIndex uint64
@@ -148,11 +148,11 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	}
 	resp, err := valClient.DomainData(ctx, req)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get domain data")
 	}
 	signingRoot, err := helpers.ComputeSigningRoot(attData, resp.SignatureDomain)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not compute signing root")
 	}
 
 	valsToSlash := uint64(2)
@@ -171,9 +171,8 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 			Signature:       privKeys[committee[i]].Sign(signingRoot[:]).Marshal(),
 		}
 		client := eth.NewBeaconNodeValidatorClient(conns[0])
-		_, err = client.ProposeAttestation(ctx, att)
-		if err != nil {
-			return err
+		if _, err = client.ProposeAttestation(ctx, att); err != nil {
+			return errors.Wrap(err, "could not propose attestation")
 		}
 		slashedIndices = append(slashedIndices, committee[i])
 	}
@@ -188,7 +187,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get chain head")
 	}
 
 	_, privKeys, err := testutil.DeterministicDepositsAndKeys(64)
@@ -204,7 +203,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 		PublicKeys: pubKeys,
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get duties")
 	}
 
 	var proposerIndex uint64
@@ -242,11 +241,11 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	}
 	resp, err := valClient.DomainData(ctx, req)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get domain data")
 	}
 	signingRoot, err := helpers.ComputeSigningRoot(blk, resp.SignatureDomain)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not compute signing root")
 	}
 	sig := privKeys[proposerIndex].Sign(signingRoot[:]).Marshal()
 	signedBlk := &eth.SignedBeaconBlock{
@@ -255,8 +254,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	}
 
 	client := eth.NewBeaconNodeValidatorClient(conns[0])
-	_, err = client.ProposeBlock(ctx, signedBlk)
-	if err == nil {
+	if _, err = client.ProposeBlock(ctx, signedBlk); err == nil {
 		return errors.New("expected block to fail processing")
 	}
 	slashedIndices = append(slashedIndices, proposerIndex)
