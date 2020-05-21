@@ -19,15 +19,15 @@ func TestStateMachineManager_String(t *testing.T) {
 		{
 			"newly created state machine",
 			[]*stateMachine{
-				{start: 8, state: stateNew},
-				{start: 9, state: stateScheduled},
-				{start: 10, state: stateDataParsed},
-				{start: 11, state: stateSkipped},
-				{start: 12, state: stateSkippedExt},
-				{start: 13, state: stateComplete},
-				{start: 14, state: stateSent},
+				{start: 64 * 0, count: 64, state: stateNew},
+				{start: 64 * 1, count: 64, state: stateScheduled},
+				{start: 64 * 2, count: 64, state: stateDataParsed},
+				{start: 64 * 3, count: 64, state: stateSkipped},
+				{start: 64 * 4, count: 64, state: stateComplete},
+				{start: 64 * 5, count: 64, state: stateSent},
 			},
-			"[8:new 9:scheduled 10:dataParsed 11:skipped 12:skippedExt 13:complete 14:sent]",
+			"[[0](0..63):new [2](64..127):scheduled [4](128..191):dataParsed [6](192..255):skipped " +
+				"[8](256..319):complete [10](320..383):sent]",
 		},
 	}
 	for _, tt := range tests {

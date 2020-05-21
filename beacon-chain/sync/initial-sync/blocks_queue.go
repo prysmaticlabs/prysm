@@ -3,13 +3,13 @@ package initialsync
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,8 +20,9 @@ const (
 	pollingInterval = 200 * time.Millisecond
 	// staleEpochTimeout is an period after which epoch's state is considered stale.
 	staleEpochTimeout = 5 * pollingInterval
-	// lookaheadEpochs is a default limit on how many forward epochs are loaded into queue.
-	lookaheadEpochs = 8
+	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
+	// Each step is managed by assigned finite state machine.
+	lookaheadSteps = 8
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
 	errNoEpochState               = errors.New("epoch state not found")
 	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
+	errInvalidInitialState        = errors.New("invalid initial state")
 )
 
 // blocksQueueConfig is a config to setup block queue service.
@@ -46,7 +48,7 @@ type blocksQueue struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	highestExpectedSlot uint64
-	state               *stateMachine
+	smm                 *stateMachineManager
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	fetchedBlocks       chan *eth.SignedBeaconBlock // output channel for ready blocks
@@ -80,14 +82,14 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 	}
 
 	// Configure state machine.
-	queue.state = newStateMachine()
-	queue.state.addHandler(stateNew, eventSchedule, queue.onScheduleEvent(ctx))
-	queue.state.addHandler(stateScheduled, eventDataReceived, queue.onDataReceivedEvent(ctx))
-	queue.state.addHandler(stateDataParsed, eventReadyToSend, queue.onReadyToSendEvent(ctx))
-	queue.state.addHandler(stateSkipped, eventExtendWindow, queue.onExtendWindowEvent(ctx))
-	queue.state.addHandler(stateSent, eventCheckStale, queue.onCheckStaleEvent(ctx))
-	queue.state.addHandler(stateSkipped, eventCheckStale, queue.onCheckStaleEvent(ctx))
-	queue.state.addHandler(stateSkippedExt, eventCheckStale, queue.onCheckStaleEvent(ctx))
+	queue.smm = newStateMachineManager()
+	queue.smm.addEventHandler(eventSchedule, stateNew, queue.onScheduleEvent(ctx))
+	queue.smm.addEventHandler(eventDataReceived, stateScheduled, queue.onDataReceivedEvent(ctx))
+	queue.smm.addEventHandler(eventReadyToSend, stateDataParsed, queue.onReadyToSendEvent(ctx))
+	queue.smm.addEventHandler(eventProcessSkipped, stateSkipped, queue.onProcessSkippedEvent(ctx))
+	queue.smm.addEventHandler(eventCheckStale, stateSent, queue.onCheckStaleEvent(ctx))
+	queue.smm.addEventHandler(eventCheckStale, stateSkipped, queue.onCheckStaleEvent(ctx))
+	queue.smm.addEventHandler(eventCheckStale, stateSkippedExt, queue.onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -127,24 +129,22 @@ func (q *blocksQueue) loop() {
 		log.WithError(err).Debug("Can not start blocks provider")
 	}
 
-	startEpoch := helpers.SlotToEpoch(q.headFetcher.HeadSlot())
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-
-	// Define epoch states as finite state machines.
-	for i := startEpoch; i < startEpoch+lookaheadEpochs; i++ {
-		q.state.addEpochState(i)
+	// Define initial state machines.
+	startSlot := q.headFetcher.HeadSlot()
+	blocksPerRequest := q.blocksFetcher.blocksPerSecond
+	for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
+		q.smm.addStateMachine(i, blocksPerRequest)
 	}
 
 	ticker := time.NewTicker(pollingInterval)
-	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventExtendWindow}
+	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventProcessSkipped}
 	for {
-		headSlot := q.headFetcher.HeadSlot()
 		log.WithFields(logrus.Fields{
-			"state":           q.state,
-			"headSlot":        headSlot,
-			"lookaheadEpochs": lookaheadEpochs,
+			"state":    q.smm,
+			"headSlot": q.headFetcher.HeadSlot(),
 		}).Debug("Blocks queue iteration")
-		if headSlot >= q.highestExpectedSlot {
+		// Check highest expected slot when we approach chain's head slot.
+		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
 			// By the time initial sync is complete, highest slot may increase, re-check.
 			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
 				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
@@ -156,41 +156,30 @@ func (q *blocksQueue) loop() {
 
 		select {
 		case <-ticker.C:
-			for _, state := range q.state.epochs {
-				epochInd, ok := q.state.findEpochState(state.epoch)
-				if !ok {
-					log.WithField("epoch", state.epoch).Debug("Epoch state not found")
-					continue
-				}
-				state := q.state.epochs[epochInd]
-				data := &fetchRequestParams{
-					start: helpers.StartSlot(state.epoch),
-					count: slotsPerEpoch,
-				}
-
-				// Trigger events on each epoch's state machine.
+			for _, fsm := range q.smm.machines {
 				for _, eventID := range tickerEvents {
-					if err := state.trigger(q.state.events[eventID], data); err != nil {
+					if err := fsm.trigger(q.smm.events[eventID], nil); err != nil {
 						log.WithFields(logrus.Fields{
 							"event": eventID,
-							"epoch": state.epoch,
+							"epoch": helpers.SlotToEpoch(fsm.start),
+							"start": fsm.start,
 							"error": err.Error(),
 						}).Debug("Can not trigger event")
 					}
 				}
 
 				// Do garbage collection, and advance sliding window forward.
-				if q.headFetcher.HeadSlot() >= helpers.StartSlot(state.epoch+1) {
-					highestEpoch, err := q.state.highestEpoch()
+				if q.headFetcher.HeadSlot() >= fsm.start+fsm.count {
+					highestStartBlock, err := q.smm.highestKnownStartBlock()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
 						continue
 					}
-					if err := q.state.removeEpochState(state.epoch); err != nil {
+					if err := q.smm.removeStateMachine(fsm); err != nil {
 						log.WithError(err).Debug("Can not remove epoch state")
 					}
-					if len(q.state.epochs) < lookaheadEpochs {
-						q.state.addEpochState(highestEpoch + 1)
+					if len(q.smm.machines) < lookaheadSteps {
+						q.smm.addStateMachine(highestStartBlock+blocksPerRequest, blocksPerRequest)
 					}
 				}
 			}
@@ -201,16 +190,15 @@ func (q *blocksQueue) loop() {
 				return
 			}
 			// Update state of an epoch for which data is received.
-			epoch := helpers.SlotToEpoch(response.start)
-			if ind, ok := q.state.findEpochState(epoch); ok {
-				state := q.state.epochs[ind]
-				if err := state.trigger(q.state.events[eventDataReceived], response); err != nil {
+			if ind, ok := q.smm.findStateMachineByStartBlock(response.start); ok {
+				fsm := q.smm.machines[ind]
+				if err := fsm.trigger(q.smm.events[eventDataReceived], response); err != nil {
 					log.WithFields(logrus.Fields{
 						"event": eventDataReceived,
-						"epoch": state.epoch,
+						"epoch": helpers.SlotToEpoch(fsm.start),
 						"error": err.Error(),
 					}).Debug("Can not process event")
-					state.setState(stateNew)
+					fsm.setState(stateNew)
 					continue
 				}
 			}
@@ -224,13 +212,16 @@ func (q *blocksQueue) loop() {
 
 // onScheduleEvent is an event called on newly arrived epochs. Transforms state to scheduled.
 func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
-	return func(es *epochState, in interface{}) (stateID, error) {
-		data, ok := in.(*fetchRequestParams)
-		if !ok {
-			return 0, errInputNotFetchRequestParams
+	return func(m *stateMachine, in interface{}) (stateID, error) {
+		if m.state != stateNew {
+			return m.state, errInvalidInitialState
 		}
-		if err := q.blocksFetcher.scheduleRequest(ctx, data.start, data.count); err != nil {
-			return es.state, err
+		if m.start > q.highestExpectedSlot {
+			m.setState(stateSkipped)
+			return m.state, errSlotIsTooHigh
+		}
+		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, m.count); err != nil {
+			return m.state, err
 		}
 		return stateScheduled, nil
 	}
@@ -238,63 +229,58 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 
 // onDataReceivedEvent is an event called when data is received from fetcher.
 func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
-	return func(es *epochState, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
-			return es.state, ctx.Err()
+			return m.state, ctx.Err()
 		}
-
+		if m.state != stateScheduled {
+			return m.state, errInvalidInitialState
+		}
 		response, ok := in.(*fetchRequestResponse)
 		if !ok {
 			return 0, errInputNotFetchRequestParams
 		}
-		epoch := helpers.SlotToEpoch(response.start)
 		if response.err != nil {
 			// Current window is already too big, re-request previous epochs.
 			if response.err == errSlotIsTooHigh {
-				for _, state := range q.state.epochs {
-					isSkipped := state.state == stateSkipped || state.state == stateSkippedExt
-					if state.epoch < epoch && isSkipped {
-						state.setState(stateNew)
+				for _, fsm := range q.smm.machines {
+					isSkipped := fsm.state == stateSkipped || fsm.state == stateSkippedExt
+					if fsm.start < response.start && isSkipped {
+						fsm.setState(stateNew)
 					}
 				}
 			}
-			return es.state, response.err
+			return m.state, response.err
 		}
 
-		ind, ok := q.state.findEpochState(epoch)
+		ind, ok := q.smm.findStateMachineByStartBlock(response.start)
 		if !ok {
-			return es.state, errNoEpochState
+			return m.state, errNoEpochState
 		}
-		q.state.epochs[ind].blocks = response.blocks
+		q.smm.machines[ind].blocks = response.blocks
 		return stateDataParsed, nil
 	}
 }
 
 // onReadyToSendEvent is an event called to allow epochs with available blocks to send them downstream.
 func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
-	return func(es *epochState, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
-			return es.state, ctx.Err()
+			return m.state, ctx.Err()
+		}
+		if m.state != stateDataParsed {
+			return m.state, errInvalidInitialState
 		}
 
-		data, ok := in.(*fetchRequestParams)
-		if !ok {
-			return 0, errInputNotFetchRequestParams
-		}
-		epoch := helpers.SlotToEpoch(data.start)
-		ind, ok := q.state.findEpochState(epoch)
-		if !ok {
-			return es.state, errNoEpochState
-		}
-		if len(q.state.epochs[ind].blocks) == 0 {
+		if len(m.blocks) == 0 {
 			return stateSkipped, nil
 		}
 
 		send := func() (stateID, error) {
-			for _, block := range q.state.epochs[ind].blocks {
+			for _, block := range m.blocks {
 				select {
 				case <-ctx.Done():
-					return es.state, ctx.Err()
+					return m.state, ctx.Err()
 				case q.fetchedBlocks <- block:
 				}
 			}
@@ -302,17 +288,18 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 		}
 
 		// Make sure that we send epochs in a correct order.
-		if q.state.isLowestEpochState(epoch) {
+		// If machine is the first (has lowest start block), send.
+		if m.isFirst(q.smm.machines) {
 			return send()
 		}
 
 		// Make sure that previous epoch is already processed.
-		for _, state := range q.state.epochs {
+		for _, fsm := range q.smm.machines {
 			// Review only previous slots.
-			if state.epoch < epoch {
-				switch state.state {
+			if fsm.start < m.start {
+				switch fsm.state {
 				case stateNew, stateScheduled, stateDataParsed:
-					return es.state, nil
+					return m.state, nil
 				default:
 				}
 			}
@@ -322,95 +309,74 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 	}
 }
 
-// onExtendWindowEvent is and event allowing handlers to extend sliding window,
-// in case where progress is not possible otherwise.
-func (q *blocksQueue) onExtendWindowEvent(ctx context.Context) eventHandlerFn {
-	return func(es *epochState, in interface{}) (stateID, error) {
+// onProcessSkippedEvent is an event triggered on skipped machines, allowing handlers to
+// extend lookahead window, in case where progress is not possible otherwise.
+func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn {
+	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
-			return es.state, ctx.Err()
+			return m.state, ctx.Err()
 		}
-
-		data, ok := in.(*fetchRequestParams)
-		if !ok {
-			return 0, errInputNotFetchRequestParams
-		}
-		epoch := helpers.SlotToEpoch(data.start)
-		if _, ok := q.state.findEpochState(epoch); !ok {
-			return es.state, errNoEpochState
+		if m.state != stateSkipped {
+			return m.state, errInvalidInitialState
 		}
 
 		// Only the highest epoch with skipped state can trigger extension.
-		highestEpoch, err := q.state.highestEpoch()
-		if err != nil {
-			return es.state, err
-		}
-		if highestEpoch != epoch {
-			return es.state, nil
+		if !m.isLast(q.smm.machines) {
+			return m.state, nil
 		}
 
-		// Check if window is expanded recently, if so, time to reset and re-request the same blocks.
-		resetWindow := false
-		skippedEpochs := 0
-		for _, state := range q.state.epochs {
-			if state.state == stateSkippedExt {
-				resetWindow = true
-				break
-			}
-			if state.state == stateSkipped || state.state == stateSkippedExt {
-				skippedEpochs++
-			}
-		}
-		// Reset if everything is skipped or extension took place during previous iteration.
-		if resetWindow || (skippedEpochs == len(q.state.epochs)) {
-			for _, state := range q.state.epochs {
-				state.setState(stateNew)
-			}
-			// Fill the gaps between epochs.
-			start, err := q.state.lowestEpoch()
-			if err != nil {
-				return es.state, err
-			}
-			end, err := q.state.highestEpoch()
-			if err != nil {
-				return es.state, err
-			}
-			for i := start; i < end; i++ {
-				if _, ok := q.state.findEpochState(i); !ok {
-					q.state.addEpochState(i)
-				}
-			}
-			return stateNew, nil
+		// Make sure that all machines are in skipped state i.e. manager cannot progress without reset or
+		// moving the last machine's start block forward (in an attempt to find next non-skipped block).
+		if !q.smm.allMachinesInState(stateSkipped) {
+			return m.state, nil
 		}
 
-		// Extend sliding window.
-		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, helpers.StartSlot(highestEpoch+1))
+		// Shift state of all the machines except for the last one.
+		startSlot := q.headFetcher.HeadSlot() + 1
+		blocksPerRequest := q.blocksFetcher.blocksPerSecond
+		sort.Slice(q.smm.machines, func(i, j int) bool {
+			return q.smm.machines[i].start < q.smm.machines[j].start
+		})
+		for _, fsm := range q.smm.machines[:len(q.smm.machines)-1] {
+			// When previous machine stays in skipped state for too long - reset it.
+			if time.Since(fsm.updated) > 5*staleEpochTimeout {
+				fsm.setState(stateNew)
+			}
+			// Do not update machine's state if start slot is unchanged (so that machine ages).
+			if fsm.start != startSlot {
+				fsm.setRange(startSlot, blocksPerRequest)
+			}
+			startSlot += blocksPerRequest
+		}
+
+		// Update the last (currently activated) state machine.
+		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, m.start-1)
 		if err != nil {
-			return es.state, err
+			return m.state, err
+		}
+		if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
+			q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
 		}
 		if nonSkippedSlot > q.highestExpectedSlot {
-			return es.state, nil
+			m.setRange(startSlot, blocksPerRequest)
+			return m.state, nil
 		}
-		q.state.addEpochState(helpers.SlotToEpoch(nonSkippedSlot))
-		return stateSkippedExt, nil
+		m.setRange(nonSkippedSlot, blocksPerRequest)
+		return stateNew, nil
 	}
 }
 
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
 func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
-	return func(es *epochState, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in interface{}) (stateID, error) {
 		if ctx.Err() != nil {
-			return es.state, ctx.Err()
-		}
-		// Break out immediately if bucket is not stale.
-		bucketAge := time.Since(es.updated)
-		if bucketAge < staleEpochTimeout {
-			return es.state, nil
+			return m.state, ctx.Err()
 		}
 
-		// For obviously stale buckets - reset them.
-		if bucketAge > 5*staleEpochTimeout && (es.state == stateSkipped || es.state == stateSkippedExt) {
-			return stateNew, nil
+		// Break out immediately if bucket is not stale.
+		if time.Since(m.updated) < staleEpochTimeout {
+			return m.state, nil
 		}
 
 		return stateSkipped, nil

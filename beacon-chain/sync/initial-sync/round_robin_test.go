@@ -97,23 +97,23 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with many skipped slots",
-			currentSlot:        640, // 10 epochs
-			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...),
+			currentSlot:        1280,
+			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(1000, 1280)...),
 			peers: []*peerData{
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-					finalizedEpoch: 18,
-					headSlot:       640,
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					finalizedEpoch: 36,
+					headSlot:       1280,
 				},
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-					finalizedEpoch: 18,
-					headSlot:       640,
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					finalizedEpoch: 36,
+					headSlot:       1280,
 				},
 				{
-					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-					finalizedEpoch: 18,
-					headSlot:       640,
+					blocks:         append(makeSequence(1, 64), makeSequence(1000, 1280)...),
+					finalizedEpoch: 36,
+					headSlot:       1280,
 				},
 			},
 		},

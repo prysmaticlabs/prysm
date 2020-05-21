@@ -6,6 +6,7 @@ import (
 	"time"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
@@ -24,7 +25,7 @@ const (
 	eventDataReceived
 	eventReadyToSend
 	eventCheckStale
-	eventExtendWindow
+	eventProcessSkipped
 )
 
 // String returns human-readable representation of a state.
@@ -59,8 +60,8 @@ func (e eventID) String() (event string) {
 		event = "readyToSend"
 	case eventCheckStale:
 		event = "checkStale"
-	case eventExtendWindow:
-		event = "extendWindow"
+	case eventProcessSkipped:
+		event = "processSkipped"
 	}
 	return
 }
@@ -166,45 +167,55 @@ func (sm *stateMachineManager) findStateMachineByStartBlock(start uint64) (int, 
 	return len(sm.machines), false
 }
 
-// isLowestStartBlock checks whether a given start block is the lowest for which we have a FSM.
-func (sm *stateMachineManager) isLowestStartBlock(start uint64) bool {
-	if _, ok := sm.findStateMachineByStartBlock(start); !ok {
-		return false
+//// isLowestStartBlock checks whether a given start block is the lowest for which we have a FSM.
+//func (sm *stateMachineManager) isLowestStartBlock(start uint64) bool {
+//	if _, ok := sm.findStateMachineByStartBlock(start); !ok {
+//		return false
+//	}
+//	for _, fsm := range sm.machines {
+//		if start > fsm.start {
+//			return false
+//		}
+//	}
+//	return true
+//}
+//
+//// lowestStartBlock returns block number for the earliest known start block.
+//func (sm *stateMachineManager) lowestStartBlock() (uint64, error) {
+//	if len(sm.machines) == 0 {
+//		return 0, errors.New("no state machine exist")
+//	}
+//	lowestStartBlock := sm.machines[0].start
+//	for _, fsm := range sm.machines {
+//		if fsm.start < lowestStartBlock {
+//			lowestStartBlock = fsm.start
+//		}
+//	}
+//	return lowestStartBlock, nil
+//}
+
+// highestKnownStartBlock returns the start block number for the latest known state machine.
+func (sm *stateMachineManager) highestKnownStartBlock() (uint64, error) {
+	if len(sm.machines) == 0 {
+		return 0, errors.New("no state machine exist")
 	}
+	highestBlock := sm.machines[0].start
 	for _, fsm := range sm.machines {
-		if start > fsm.start {
+		if fsm.start > highestBlock {
+			highestBlock = fsm.start
+		}
+	}
+	return highestBlock, nil
+}
+
+// allMachinesInState checks whether all registered state machines are in the same state.
+func (sm *stateMachineManager) allMachinesInState(state stateID) bool {
+	for _, fsm := range sm.machines {
+		if fsm.state != state {
 			return false
 		}
 	}
 	return true
-}
-
-// lowestStartBlock returns block number for the earliest known start block.
-func (sm *stateMachineManager) lowestStartBlock() (uint64, error) {
-	if len(sm.machines) == 0 {
-		return 0, errors.New("no state machine exist")
-	}
-	lowestStartBlock := sm.machines[0].start
-	for _, fsm := range sm.machines {
-		if fsm.start < lowestStartBlock {
-			lowestStartBlock = fsm.start
-		}
-	}
-	return lowestStartBlock, nil
-}
-
-// highestStartBlock returns block number for the latest known start block.
-func (sm *stateMachineManager) highestStartBlock() (uint64, error) {
-	if len(sm.machines) == 0 {
-		return 0, errors.New("no state machine exist")
-	}
-	highestStartBlock := sm.machines[0].start
-	for _, fsm := range sm.machines {
-		if fsm.start > highestStartBlock {
-			highestStartBlock = fsm.start
-		}
-	}
-	return highestStartBlock, nil
 }
 
 // String returns human readable representation of a FSM collection.
@@ -212,13 +223,23 @@ func (sm *stateMachineManager) String() string {
 	return fmt.Sprintf("%v", sm.machines)
 }
 
-// setState updates the current state of a given FSM.
+// setState updates the current state of a given state machine.
 func (m *stateMachine) setState(name stateID) {
 	if m.state == name {
 		return
 	}
-	m.updated = roughtime.Now()
 	m.state = name
+	m.updated = roughtime.Now()
+}
+
+// setRange updates start and count of a given state machine.
+func (m *stateMachine) setRange(start, count uint64) {
+	if m.start == start && m.count == count {
+		return
+	}
+	m.start = start
+	m.count = count
+	m.updated = roughtime.Now()
 }
 
 // trigger invokes the event on a given state machine.
@@ -237,7 +258,7 @@ func (m *stateMachine) trigger(event *stateMachineEvent, data interface{}) error
 		}
 		if m.state != state {
 			m.setState(state)
-			// No need to apply other actions if machines state has changed
+			// No need to apply other actions if machine's state has changed
 			// (actions are not applicable to machine anymore)
 			break
 		}
@@ -245,7 +266,27 @@ func (m *stateMachine) trigger(event *stateMachineEvent, data interface{}) error
 	return nil
 }
 
+// isFirst checks whether a given machine has the lowest start block.
+func (m *stateMachine) isFirst(machines []*stateMachine) bool {
+	for _, fsm := range machines {
+		if m.start > fsm.start {
+			return false
+		}
+	}
+	return true
+}
+
+// isLast checks whether a given machine has the highest start block.
+func (m *stateMachine) isLast(machines []*stateMachine) bool {
+	for _, fsm := range machines {
+		if m.start < fsm.start {
+			return false
+		}
+	}
+	return true
+}
+
 // String returns human-readable representation of a FSM state.
 func (m *stateMachine) String() string {
-	return fmt.Sprintf("%d:%s", m.start, m.state)
+	return fmt.Sprintf("[%d](%d..%d):%s", helpers.SlotToEpoch(m.start), m.start, m.start+m.count-1, m.state)
 }
