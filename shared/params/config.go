@@ -175,7 +175,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
-	MaxAttesterSlashings: 1,
+	MaxAttesterSlashings: 2,
 	MaxAttestations:      128,
 	MaxDeposits:          16,
 	MaxVoluntaryExits:    16,
@@ -297,7 +297,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
-	minimalConfig.MaxAttesterSlashings = 1
+	minimalConfig.MaxAttesterSlashings = 2
 	minimalConfig.MaxAttestations = 128
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
