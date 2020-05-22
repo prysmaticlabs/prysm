@@ -118,7 +118,9 @@ func NewValidatorAccount(directory string, password string) error {
 }
 
 // Exists checks if a validator account at a given keystore path exists.
-func Exists(keystorePath string) (bool, error) {
+// assertNonEmpty is a boolean used to determine whether to check that 
+// the provided directory exists.
+func Exists(keystorePath string, assertNonEmpty bool) (bool, error) {
 	/* #nosec */
 	f, err := os.Open(keystorePath)
 	if err != nil {
@@ -130,10 +132,13 @@ func Exists(keystorePath string) (bool, error) {
 		}
 	}()
 
-	_, err = f.Readdirnames(1) // Or f.Readdir(1)
-	if err == io.EOF {
-		return false, nil
+	if assertNonEmpty {
+		_, err = f.Readdirnames(1) // Or f.Readdir(1)
+		if err == io.EOF {
+			return false, nil
+		}
 	}
+
 	return true, err
 }
 
@@ -141,7 +146,7 @@ func Exists(keystorePath string) (bool, error) {
 func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
 	// Forces user to create directory if using non-default path.
 	if path != DefaultValidatorDir() {
-		exists, err := Exists(path)
+		exists, err := Exists(path, false /* assertNonEmpty */)
 		if err != nil {
 			return path, passphrase, err
 		}
