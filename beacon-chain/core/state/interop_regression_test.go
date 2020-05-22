@@ -15,6 +15,8 @@ import (
 )
 
 func TestTopazRewardsRegression_StateRootValid(t *testing.T) {
+	t.Skip("Skipping until 5935 is resolved. New v0.12 config invalidates this test")
+
 	regressionPath := "beacon-chain/core/state/regression_files"
 	blockFile := "topaz_lighthouse_block.ssz"
 	preStateFile := "topaz_lighthouse_pre_state.ssz"
@@ -84,6 +86,8 @@ func TestTopazRewardsRegression_StateRootValid(t *testing.T) {
 // https://github.com/prysmaticlabs/prysm/issues/5901
 // https://github.com/prysmaticlabs/prysm/issues/5897
 func TestSchlesiRewardsRegression_PyspecState(t *testing.T) {
+	t.Skip("Skipping until 5935 is resolved. New v0.12 config invalidates this test")
+
 	regressionPath := "beacon-chain/core/state/regression_files"
 	blockFile := "schlesi_lighthouse_block.ssz"
 	preStateFile := "schlesi_lighthouse_pre_state.ssz"
