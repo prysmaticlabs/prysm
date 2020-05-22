@@ -61,9 +61,9 @@ type Flags struct {
 	DisableForkChoice bool
 
 	// Slasher toggles.
-	DisableBroadcastSlashings  bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
-	DisableHistoricalDetection bool // DisableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
-	DisableLookback            bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
+	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
+	EnableHistoricalDetection bool // EnableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
+	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
