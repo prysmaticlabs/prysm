@@ -97,10 +97,6 @@ var (
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
-	enableByteMempool = &cli.BoolFlag{
-		Name:  "enable-byte-mempool",
-		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
-	}
 	disableDomainDataCacheFlag = &cli.BoolFlag{
 		Name: "disable-domain-data-cache",
 		Usage: "Disable caching of domain data requests per epoch. This feature reduces the total " +
@@ -360,6 +356,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableByteMempool = &cli.BoolFlag{
+		Name:   "enable-byte-mempool",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -400,6 +401,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableEth1DataVoteCacheFlag,
 	deprecatedAccountMetricsFlag,
 	deprecatedEnableDomainDataCacheFlag,
+	deprecatedEnableByteMempool,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -444,7 +446,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
-	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
 	enableNoiseHandshake,
