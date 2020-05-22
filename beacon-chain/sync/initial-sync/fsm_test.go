@@ -302,29 +302,62 @@ func TestStateMachine_trigger(t *testing.T) {
 //	}
 //}
 //
-//func TestStateMachine_lowestEpoch(t *testing.T) {
-//	smm := newStateMachineManager()
-//	if _, err := smm.highestEpoch(); err == nil {
-//		t.Error("expected error")
-//	}
-//	smm.addEpochState(12)
-//	smm.addEpochState(13)
-//	smm.addEpochState(14)
-//	epoch, err := smm.lowestEpoch()
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	if epoch != 12 {
-//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 12)
-//	}
-//	if err := smm.removeEpochState(12); err != nil {
-//		t.Error(err)
-//	}
-//	epoch, err = smm.lowestEpoch()
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	if epoch != 13 {
-//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
-//	}
-//}
+func TestStateMachine_isFirstLast(t *testing.T) {
+	checkFirst := func(m *stateMachine, want bool) {
+		if m.isFirst() != want {
+			t.Errorf("isFirst() returned unexpected value, want: %v, got: %v", want, m.start)
+		}
+	}
+	checkLast := func(m *stateMachine, want bool) {
+		if m.isLast() != want {
+			t.Errorf("isLast(%v) returned unexpected value, want: %v, got: %v", m.start, want, m.start)
+		}
+	}
+	smm := newStateMachineManager()
+	m1 := smm.addStateMachine(64)
+	checkFirst(m1, true)
+	checkLast(m1, true)
+
+	m2 := smm.addStateMachine(128)
+	checkFirst(m1, true)
+	checkLast(m1, false)
+	checkFirst(m2, false)
+	checkLast(m2, true)
+
+	m3 := smm.addStateMachine(512)
+	checkFirst(m1, true)
+	checkLast(m1, false)
+	checkFirst(m2, false)
+	checkLast(m2, false)
+	checkFirst(m3, false)
+	checkLast(m3, true)
+
+	// Add machine with lower start block - shouldn't be marked as last.
+	m4 := smm.addStateMachine(196)
+	checkFirst(m1, true)
+	checkLast(m1, false)
+	checkFirst(m2, false)
+	checkLast(m2, false)
+	checkFirst(m3, false)
+	checkLast(m3, true)
+	checkFirst(m4, false)
+	checkLast(m4, false)
+
+	// Add machine with lowest start block - should be marked as first.
+	m5 := smm.addStateMachine(32)
+	checkFirst(m1, false)
+	checkLast(m1, false)
+	checkFirst(m2, false)
+	checkLast(m2, false)
+	checkFirst(m3, false)
+	checkLast(m3, true)
+	checkFirst(m4, false)
+	checkLast(m4, false)
+	checkFirst(m5, true)
+	checkLast(m5, false)
+
+	keys := []uint64{32, 64, 128, 196, 512}
+	if !reflect.DeepEqual(keys, smm.keys) {
+		t.Errorf("keys not sorted, want: %v, got: %v", keys, smm.keys)
+	}
+}
