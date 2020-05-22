@@ -334,6 +334,32 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 	return true, nil
 }
 
+// refers to the latest eth1 block which follows the condition: eth1_timestamp +
+// SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= current_unix_time
+func (s *Service) followBlockHeight(ctx context.Context) (uint64, error) {
+	latestValidBlock := uint64(0)
+	if s.latestEth1Data.BlockHeight > params.BeaconConfig().Eth1FollowDistance {
+		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
+	}
+	blockTime, err := s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
+	if err != nil {
+		return 0, err
+	}
+	followTime := func(t uint64) uint64 {
+		return t + params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block
+	}
+	for followTime(blockTime) > s.latestEth1Data.BlockTime && latestValidBlock > 0 {
+		// reduce block height to get eth1 block which
+		// fulfills stated condition
+		latestValidBlock--
+		blockTime, err = s.BlockTimeByHeight(ctx, big.NewInt(int64(latestValidBlock)))
+		if err != nil {
+			return 0, err
+		}
+	}
+	return latestValidBlock, nil
+}
+
 func (s *Service) connectToPowChain() error {
 	powClient, httpClient, rpcClient, err := s.dialETH1Nodes()
 	if err != nil {
@@ -521,7 +547,7 @@ func safelyHandlePanic() {
 	}
 }
 
-func (s *Service) handleDelayTicker() {
+func (s *Service) handleETH1FollowDistance() {
 	defer safelyHandlePanic()
 
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
@@ -653,7 +679,7 @@ func (s *Service) run(done <-chan struct{}) {
 				s.processSubscribedHeaders(header)
 			}
 		case <-ticker.C:
-			s.handleDelayTicker()
+			s.handleETH1FollowDistance()
 		}
 	}
 }
