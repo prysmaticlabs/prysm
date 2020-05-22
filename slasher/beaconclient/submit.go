@@ -4,6 +4,8 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -44,8 +46,17 @@ func (bs *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch ch
 	for {
 		select {
 		case slashing := <-ch:
-			if _, err := bs.beaconClient.SubmitAttesterSlashing(ctx, slashing); err != nil {
-				log.Error(err)
+			_, err := bs.beaconClient.SubmitAttesterSlashing(ctx, slashing)
+			if err == nil {
+				slash := slashing
+				if slash != nil && slash.Attestation_1 != nil && slash.Attestation_2 != nil {
+					slashableIndices := sliceutil.IntersectionUint64(slash.Attestation_1.AttestingIndices, slash.Attestation_2.AttestingIndices)
+					log.WithFields(logrus.Fields{
+						"sourceEpoch": slash.Attestation_1.Data.Source.Epoch,
+						"targetEpoch": slash.Attestation_1.Data.Target.Epoch,
+						"indices":     slashableIndices,
+					}).Info("Found a valid attester slashing! Submitting to beacon node")
+				}
 			}
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
