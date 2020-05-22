@@ -11,6 +11,7 @@ import (
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
+	t.Skip("Skipping until eth1 changes in v0.12 can work with e2e")
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
