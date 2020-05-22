@@ -251,6 +251,12 @@ func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attes
 	return ms.ValidAttestation
 }
 
+// IsCanonical returns and determines whether a block with the provided root is part of
+// the canonical chain.
+func (ms *ChainService) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	return true, nil
+}
+
 // ClearCachedStates does nothing.
 func (ms *ChainService) ClearCachedStates() {}
 
