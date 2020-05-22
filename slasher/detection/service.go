@@ -149,6 +149,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			log.WithError(err).Error("Could not persist chain head to disk")
 		}
 		storedEpoch = epoch
+		ds.slasherDB.RemoveOldestFromCache(ctx)
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", storedEpoch)
 }
