@@ -10,7 +10,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
 // FieldTrie is the representation of the representative
@@ -109,17 +108,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 			Mutex:     new(sync.Mutex),
 		}
 	}
-	dstFieldTrie := [][]*[32]byte{}
-	switch f.field {
-	case randaoMixes:
-		dstFieldTrie = memorypool.GetRandaoMixesTrie(len(f.fieldLayers))
-	case blockRoots, stateRoots:
-		dstFieldTrie = memorypool.GetRootsTrie(len(f.fieldLayers))
-	case validators:
-		dstFieldTrie = memorypool.GetValidatorsTrie(len(f.fieldLayers))
-	default:
-		dstFieldTrie = make([][]*[32]byte, len(f.fieldLayers))
-	}
+	dstFieldTrie := make([][]*[32]byte, len(f.fieldLayers))
 
 	for i, layer := range f.fieldLayers {
 		if len(dstFieldTrie[i]) < len(layer) {
