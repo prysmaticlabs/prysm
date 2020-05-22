@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
@@ -161,18 +160,6 @@ func (b *BeaconState) Copy() *BeaconState {
 			v.refs--
 			if b.stateFieldLeaves[field].reference != nil {
 				b.stateFieldLeaves[field].MinusRef()
-			}
-			if field == randaoMixes && v.refs == 0 {
-				memorypool.PutDoubleByteSlice(b.state.RandaoMixes)
-				if b.stateFieldLeaves[field].refs == 0 {
-					memorypool.PutRandaoMixesTrie(b.stateFieldLeaves[randaoMixes].fieldLayers)
-				}
-			}
-			if (field == blockRoots || field == stateRoots) && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
-				memorypool.PutRootsTrie(b.stateFieldLeaves[field].fieldLayers)
-			}
-			if field == validators && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
-				memorypool.PutValidatorsTrie(b.stateFieldLeaves[validators].fieldLayers)
 			}
 		}
 	})
