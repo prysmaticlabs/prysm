@@ -93,24 +93,36 @@ func TestGetBlock_OK(t *testing.T) {
 		Graffiti:     graffiti[:],
 	}
 
-	// We include max proposer slashings which is currently 1 in the pool.
-	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
-		beaconState,
-		privKeys[0],
-		0, /* validator index */
-	)
-	if err := proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing); err != nil {
-		t.Fatal(err)
+	proposerSlashings := make([]*ethpb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
+	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings; i++ {
+		proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+			beaconState,
+			privKeys[i],
+			i, /* validator index */
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		proposerSlashings[i] = proposerSlashing
+		if err := proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing); err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	// We include max attester slashings which is currently 1 in the pool.
-	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
-		beaconState,
-		privKeys[1],
-		1, /* validator index */
-	)
-	if err := proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing); err != nil {
-		t.Fatal(err)
+	attSlashings := make([]*ethpb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
+		attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+			beaconState,
+			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
+			i+params.BeaconConfig().MaxProposerSlashings, /* validator index */
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		attSlashings[i] = attesterSlashing
+		if err := proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	block, err := proposerServer.GetBlock(ctx, req)
@@ -130,17 +142,17 @@ func TestGetBlock_OK(t *testing.T) {
 	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
 		t.Fatal("Expected block to have correct graffiti")
 	}
-	if len(block.Body.ProposerSlashings) != 1 {
-		t.Fatalf("Wanted %d proposer slashings, got %d", 1, len(block.Body.ProposerSlashings))
+	if len(block.Body.ProposerSlashings) != int(params.BeaconConfig().MaxProposerSlashings) {
+		t.Fatalf("Wanted %d proposer slashings, got %d", params.BeaconConfig().MaxProposerSlashings, len(block.Body.ProposerSlashings))
 	}
-	if !reflect.DeepEqual(block.Body.ProposerSlashings[0], proposerSlashing) {
-		t.Errorf("Wanted proposer slashing %v, got %v", proposerSlashing, block.Body.ProposerSlashings[0])
+	if !reflect.DeepEqual(block.Body.ProposerSlashings, proposerSlashings) {
+		t.Errorf("Wanted proposer slashing %v, got %v", proposerSlashings, block.Body.ProposerSlashings)
 	}
-	if len(block.Body.AttesterSlashings) != 1 {
-		t.Fatalf("Wanted %d attester slashings, got %d", 1, len(block.Body.AttesterSlashings))
+	if len(block.Body.AttesterSlashings) != int(params.BeaconConfig().MaxAttesterSlashings) {
+		t.Fatalf("Wanted %d attester slashings, got %d", params.BeaconConfig().MaxAttesterSlashings, len(block.Body.AttesterSlashings))
 	}
-	if !reflect.DeepEqual(block.Body.AttesterSlashings[0], attesterSlashing) {
-		t.Errorf("Wanted attester slashing %v, got %v", attesterSlashing, block.Body.AttesterSlashings)
+	if !reflect.DeepEqual(block.Body.AttesterSlashings, attSlashings) {
+		t.Errorf("Wanted attester slashing %v, got %v", attSlashings, block.Body.AttesterSlashings)
 	}
 }
 
