@@ -1080,7 +1080,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		},
 	}
 
-	// Note: Index 4 should be skipped. 
+	// Note: Index 4 should be skipped.
 	req := &ethpb.MultipleValidatorStatusRequest{Indices: []int64{0, 1, 2, 3, 4}}
 	response, err := vs.MultipleValidatorStatus(context.Background(), req)
 	if err != nil {
