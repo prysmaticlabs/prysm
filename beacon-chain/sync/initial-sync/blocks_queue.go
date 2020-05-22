@@ -22,7 +22,7 @@ const (
 	staleEpochTimeout = 1 * time.Second
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine.
-	lookaheadSteps = 4
+	lookaheadSteps = 8
 )
 
 var (
@@ -86,12 +86,11 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 
 	// Configure state machine.
 	queue.smm = newStateMachineManager()
-	queue.smm.addEventHandler(eventSchedule, stateNew, queue.onScheduleEvent(ctx))
+	queue.smm.addEventHandler(eventTick, stateNew, queue.onScheduleEvent(ctx))
 	queue.smm.addEventHandler(eventDataReceived, stateScheduled, queue.onDataReceivedEvent(ctx))
-	queue.smm.addEventHandler(eventReadyToSend, stateDataParsed, queue.onReadyToSendEvent(ctx))
-	queue.smm.addEventHandler(eventProcessSkipped, stateSkipped, queue.onProcessSkippedEvent(ctx))
-	queue.smm.addEventHandler(eventCheckStale, stateSent, queue.onCheckStaleEvent(ctx))
-	queue.smm.addEventHandler(eventCheckStale, stateSkipped, queue.onCheckStaleEvent(ctx))
+	queue.smm.addEventHandler(eventTick, stateDataParsed, queue.onReadyToSendEvent(ctx))
+	queue.smm.addEventHandler(eventTick, stateSkipped, queue.onProcessSkippedEvent(ctx))
+	queue.smm.addEventHandler(eventTick, stateSent, queue.onCheckStaleEvent(ctx))
 
 	return queue
 }
@@ -134,15 +133,15 @@ func (q *blocksQueue) loop() {
 	// Define initial state machines.
 	startSlot := q.headFetcher.HeadSlot()
 	for i := startSlot; i < startSlot+q.blocksPerRequest*lookaheadSteps; i += q.blocksPerRequest {
-		q.smm.addStateMachine(i, q.blocksPerRequest)
+		q.smm.addStateMachine(i)
 	}
 
 	ticker := time.NewTicker(pollingInterval)
-	tickerEvents := []eventID{eventSchedule, eventReadyToSend, eventCheckStale, eventProcessSkipped}
 	for {
 		log.WithFields(logrus.Fields{
-			"state":    q.smm,
-			"headSlot": q.headFetcher.HeadSlot(),
+			"state":               q.smm,
+			"headSlot":            q.headFetcher.HeadSlot(),
+			"highestExpectedSlot": q.highestExpectedSlot,
 		}).Debug("Blocks queue iteration")
 		// Check highest expected slot when we approach chain's head slot.
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
@@ -158,19 +157,17 @@ func (q *blocksQueue) loop() {
 		select {
 		case <-ticker.C:
 			for _, fsm := range q.smm.machines {
-				for _, eventID := range tickerEvents {
-					if err := fsm.trigger(q.smm.events[eventID], nil); err != nil {
-						log.WithFields(logrus.Fields{
-							"event": eventID,
-							"epoch": helpers.SlotToEpoch(fsm.start),
-							"start": fsm.start,
-							"error": err.Error(),
-						}).Debug("Can not trigger event")
-					}
+				if err := fsm.trigger(eventTick, nil); err != nil {
+					log.WithFields(logrus.Fields{
+						"event": eventTick,
+						"epoch": helpers.SlotToEpoch(fsm.start),
+						"start": fsm.start,
+						"error": err.Error(),
+					}).Debug("Can not trigger event")
 				}
 
 				// Do garbage collection, and advance sliding window forward.
-				if q.headFetcher.HeadSlot() >= fsm.start+fsm.count {
+				if q.headFetcher.HeadSlot() >= fsm.start+q.blocksPerRequest {
 					highestStartBlock, err := q.smm.highestKnownStartBlock()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
@@ -180,7 +177,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove epoch state")
 					}
 					if len(q.smm.machines) < lookaheadSteps {
-						q.smm.addStateMachine(highestStartBlock+q.blocksPerRequest, q.blocksPerRequest)
+						q.smm.addStateMachine(highestStartBlock + q.blocksPerRequest)
 					}
 				}
 			}
@@ -193,7 +190,7 @@ func (q *blocksQueue) loop() {
 			// Update state of an epoch for which data is received.
 			if ind, ok := q.smm.findStateMachineByStartBlock(response.start); ok {
 				fsm := q.smm.machines[ind]
-				if err := fsm.trigger(q.smm.events[eventDataReceived], response); err != nil {
+				if err := fsm.trigger(eventDataReceived, response); err != nil {
 					log.WithFields(logrus.Fields{
 						"event": eventDataReceived,
 						"epoch": helpers.SlotToEpoch(fsm.start),
@@ -221,7 +218,7 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 			m.setState(stateSkipped)
 			return m.state, errSlotIsTooHigh
 		}
-		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, m.count); err != nil {
+		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, q.blocksPerRequest); err != nil {
 			return m.state, err
 		}
 		return stateScheduled, nil
@@ -322,6 +319,10 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 		// Only the highest epoch with skipped state can trigger extension.
 		if !m.isLast(q.smm.machines) {
+			// When a state machine stays in skipped state for too long - reset it.
+			if time.Since(m.updated) > 5*staleEpochTimeout {
+				return stateNew, nil
+			}
 			return m.state, nil
 		}
 
@@ -337,7 +338,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 			return q.smm.machines[i].start < q.smm.machines[j].start
 		})
 		for _, fsm := range q.smm.machines[:len(q.smm.machines)-1] {
-			fsm.setRange(startSlot, q.blocksPerRequest)
+			fsm.setStartBlock(startSlot)
 			startSlot += q.blocksPerRequest
 		}
 
@@ -350,10 +351,10 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 			q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
 		}
 		if nonSkippedSlot > q.highestExpectedSlot {
-			m.setRange(startSlot, q.blocksPerRequest)
+			m.setStartBlock(startSlot)
 			return m.state, nil
 		}
-		m.setRange(nonSkippedSlot, q.blocksPerRequest)
+		m.setStartBlock(nonSkippedSlot)
 		return stateNew, nil
 	}
 }
@@ -365,16 +366,13 @@ func (q *blocksQueue) onCheckStaleEvent(ctx context.Context) eventHandlerFn {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()
 		}
-
-		// Break out immediately if bucket is not stale.
-		age := time.Since(m.updated)
-		if age < staleEpochTimeout {
-			return m.state, nil
+		if m.state != stateSent {
+			return m.state, errInvalidInitialState
 		}
 
-		// When a state machine stays in skipped state for too long - reset it.
-		if age > 5*staleEpochTimeout && m.state == stateSkipped {
-			return stateNew, nil
+		// Break out immediately if bucket is not stale.
+		if time.Since(m.updated) < staleEpochTimeout {
+			return m.state, nil
 		}
 
 		return stateSkipped, nil
