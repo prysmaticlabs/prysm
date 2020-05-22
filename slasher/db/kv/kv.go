@@ -41,7 +41,8 @@ func (db *Store) Close() error {
 func (db *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.removeOldestFromCache")
 	defer span.End()
-	return db.spanCache.PruneOldest()
+	epochRemoved := db.spanCache.PruneOldest()
+	return epochRemoved
 }
 
 // ClearSpanCache clears the spans cache.
