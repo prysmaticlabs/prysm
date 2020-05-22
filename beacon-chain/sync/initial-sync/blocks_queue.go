@@ -3,7 +3,6 @@ package initialsync
 import (
 	"context"
 	"errors"
-	"sort"
 	"time"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -28,7 +27,7 @@ const (
 var (
 	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
 	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
-	errNoEpochState               = errors.New("epoch state not found")
+	errNoStateMachine             = errors.New("state machine not found")
 	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
 	errInvalidInitialState        = errors.New("invalid initial state")
 )
@@ -84,7 +83,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		quit:                make(chan struct{}),
 	}
 
-	// Configure state machine.
+	// Configure state machines.
 	queue.smm = newStateMachineManager()
 	queue.smm.addEventHandler(eventTick, stateNew, queue.onScheduleEvent(ctx))
 	queue.smm.addEventHandler(eventDataReceived, stateScheduled, queue.onDataReceivedEvent(ctx))
@@ -168,13 +167,13 @@ func (q *blocksQueue) loop() {
 
 				// Do garbage collection, and advance sliding window forward.
 				if q.headFetcher.HeadSlot() >= fsm.start+q.blocksPerRequest {
-					highestStartBlock, err := q.smm.highestKnownStartBlock()
+					highestStartBlock, err := q.smm.highestStartBlock()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
 						continue
 					}
-					if err := q.smm.removeStateMachine(fsm); err != nil {
-						log.WithError(err).Debug("Can not remove epoch state")
+					if err := q.smm.removeStateMachine(fsm.start); err != nil {
+						log.WithError(err).Debug("Can not remove state machine")
 					}
 					if len(q.smm.machines) < lookaheadSteps {
 						q.smm.addStateMachine(highestStartBlock + q.blocksPerRequest)
@@ -188,8 +187,7 @@ func (q *blocksQueue) loop() {
 				return
 			}
 			// Update state of an epoch for which data is received.
-			if ind, ok := q.smm.findStateMachineByStartBlock(response.start); ok {
-				fsm := q.smm.machines[ind]
+			if fsm, ok := q.smm.findStateMachine(response.start); ok {
 				if err := fsm.trigger(eventDataReceived, response); err != nil {
 					log.WithFields(logrus.Fields{
 						"event": eventDataReceived,
@@ -249,12 +247,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 			}
 			return m.state, response.err
 		}
-
-		ind, ok := q.smm.findStateMachineByStartBlock(response.start)
-		if !ok {
-			return m.state, errNoEpochState
-		}
-		q.smm.machines[ind].blocks = response.blocks
+		m.blocks = response.blocks
 		return stateDataParsed, nil
 	}
 }
@@ -286,7 +279,7 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 
 		// Make sure that we send epochs in a correct order.
 		// If machine is the first (has lowest start block), send.
-		if m.isFirst(q.smm.machines) {
+		if m.isFirst() {
 			return send()
 		}
 
@@ -318,7 +311,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		}
 
 		// Only the highest epoch with skipped state can trigger extension.
-		if !m.isLast(q.smm.machines) {
+		if !m.isLast() {
 			// When a state machine stays in skipped state for too long - reset it.
 			if time.Since(m.updated) > 5*staleEpochTimeout {
 				return stateNew, nil
@@ -332,30 +325,29 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 			return m.state, nil
 		}
 
-		// Shift state of all the machines except for the last one.
+		// Shift start position of all the machines except for the last one.
 		startSlot := q.headFetcher.HeadSlot() + 1
-		sort.Slice(q.smm.machines, func(i, j int) bool {
-			return q.smm.machines[i].start < q.smm.machines[j].start
-		})
-		for _, fsm := range q.smm.machines[:len(q.smm.machines)-1] {
-			fsm.setStartBlock(startSlot)
-			startSlot += q.blocksPerRequest
+		blocksPerRequest := q.blocksPerRequest
+		if err := q.smm.removeAllStateMachines(); err != nil {
+			return stateSkipped, err
+		}
+		for i := startSlot; i < startSlot+blocksPerRequest*(lookaheadSteps-1); i += blocksPerRequest {
+			q.smm.addStateMachine(i)
 		}
 
-		// Update the last (currently activated) state machine.
+		// Replace the last (currently activated) state machine.
 		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot-1)
 		if err != nil {
-			return m.state, err
+			return stateSkipped, err
 		}
 		if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
 			q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
 		}
 		if nonSkippedSlot > q.highestExpectedSlot {
-			m.setStartBlock(startSlot)
-			return m.state, nil
+			nonSkippedSlot = startSlot + blocksPerRequest*(lookaheadSteps-1)
 		}
-		m.setStartBlock(nonSkippedSlot)
-		return stateNew, nil
+		q.smm.addStateMachine(nonSkippedSlot)
+		return stateSkipped, nil
 	}
 }
 

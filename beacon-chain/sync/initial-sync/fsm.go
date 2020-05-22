@@ -93,6 +93,17 @@ func (smm *stateMachineManager) removeStateMachine(start uint64) error {
 	return nil
 }
 
+// removeAllStateMachines removes all managed machines.
+func (smm *stateMachineManager) removeAllStateMachines() error {
+	for _, key := range smm.keys {
+		if err := smm.removeStateMachine(key); err != nil {
+			return err
+		}
+	}
+	smm.recalculateMachineAttribs()
+	return nil
+}
+
 // recalculateMachineAttribs updates cached attributes, which are used for efficiency.
 func (smm *stateMachineManager) recalculateMachineAttribs() {
 	keys := make([]uint64, 0, lookaheadSteps)
@@ -109,6 +120,13 @@ func (smm *stateMachineManager) recalculateMachineAttribs() {
 func (smm *stateMachineManager) findStateMachine(startBlock uint64) (*stateMachine, bool) {
 	fsm, ok := smm.machines[startBlock]
 	return fsm, ok
+}
+
+func (smm *stateMachineManager) firstStateMachine() (*stateMachine, bool) {
+	if len(smm.keys) == 0 {
+		return nil, false
+	}
+	return smm.findStateMachine(smm.keys[0])
 }
 
 // highestStartBlock returns the start block number for the latest known state machine.
@@ -144,14 +162,18 @@ func (m *stateMachine) setState(name stateID) {
 	m.updated = roughtime.Now()
 }
 
-// setStartBlock updates start block of a given state machine.
-func (m *stateMachine) setStartBlock(start uint64) {
-	if m.start == start {
-		return
-	}
-	m.start = start
-	m.updated = roughtime.Now()
-}
+//// setStartBlock updates start block of a given state machine.
+//func (m *stateMachine) setStartBlock(start uint64) {
+//	if m.start == start {
+//		return
+//	}
+//	m.smm.machines[start] = m
+//	if err := m.smm.removeStateMachine(m.start); err != nil {
+//		log.WithError(err).Debug("State machine removal failed")
+//	}
+//	m.start = start
+//	m.updated = roughtime.Now()
+//}
 
 func (m *stateMachine) trigger(event eventID, data interface{}) error {
 	handlers, ok := (*m.smm).handlers[m.state]
