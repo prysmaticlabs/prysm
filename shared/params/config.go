@@ -243,18 +243,6 @@ func WittiTestnetConfig() *BeaconChainConfig {
 	return &wittiTestnet
 }
 
-// SchlesiTestnetConfig returns the mainnet config
-// adapted with Schlesi Testnet specific parameters.
-func SchlesiTestnetConfig() *BeaconChainConfig {
-	schlesiTestnet := *defaultBeaconConfig
-
-	schlesiTestnet.MinGenesisActiveValidatorCount = 4
-	schlesiTestnet.MinGenesisTime = 1587755000
-	schlesiTestnet.MinGenesisDelay = 3600
-
-	return &schlesiTestnet
-}
-
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := *defaultBeaconConfig
@@ -335,11 +323,6 @@ func UseMinimalConfig() {
 // UseWittiTestnet for beacon chain services.
 func UseWittiTestnet() {
 	beaconConfig = WittiTestnetConfig()
-}
-
-// UseSchlesiTestnet for beacon chain services.
-func UseSchlesiTestnet() {
-	beaconConfig = SchlesiTestnetConfig()
 }
 
 // UseMainnetConfig for beacon chain services.
