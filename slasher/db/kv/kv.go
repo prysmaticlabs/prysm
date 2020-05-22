@@ -3,6 +3,7 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 var databaseFileName = "slasher.db"
@@ -31,12 +33,21 @@ type Config struct {
 
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
+	db.spanCache.Purge()
 	return db.db.Close()
+}
+
+// RemoveOldestFromCache clears the oldest key out of the cache only if the cache is at max capacity.
+func (db *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.removeOldestFromCache")
+	defer span.End()
+	epochRemoved := db.spanCache.PruneOldest()
+	return epochRemoved
 }
 
 // ClearSpanCache clears the spans cache.
 func (db *Store) ClearSpanCache() {
-	db.spanCache.Clear()
+	db.spanCache.Purge()
 }
 
 func (db *Store) update(fn func(*bolt.Tx) error) error {
