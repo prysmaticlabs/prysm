@@ -68,7 +68,14 @@ func TestService_SubscribeDetectedAttesterSlashings(t *testing.T) {
 	slashing := &ethpb.AttesterSlashing{
 		Attestation_1: &ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{1, 2, 3},
-			Data:             nil,
+			Data: &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{
+					Epoch: 3,
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: 4,
+				},
+			},
 		},
 		Attestation_2: &ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3, 4, 5},
