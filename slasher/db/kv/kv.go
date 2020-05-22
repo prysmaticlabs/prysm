@@ -37,7 +37,7 @@ func (db *Store) Close() error {
 	return db.db.Close()
 }
 
-// RemoveOldestFromCache clears the oldest key out of the cache obly if the cache is at max capacity.
+// RemoveOldestFromCache clears the oldest key out of the cache only if the cache is at max capacity.
 func (db *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.removeOldestFromCache")
 	defer span.End()
