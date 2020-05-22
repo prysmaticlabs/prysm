@@ -116,7 +116,6 @@ func (c *Flags) Copy() *Flags {
 		ProtectAttester:                            c.ProtectAttester,
 		DisableStrictAttestationPubsubVerification: c.DisableStrictAttestationPubsubVerification,
 		DisableUpdateHeadPerAttestation:            c.DisableUpdateHeadPerAttestation,
-		EnableByteMempool:                          c.EnableByteMempool,
 		EnableDomainDataCache:                      c.EnableDomainDataCache,
 		EnableStateGenSigVerify:                    c.EnableStateGenSigVerify,
 		CheckHeadState:                             c.CheckHeadState,
