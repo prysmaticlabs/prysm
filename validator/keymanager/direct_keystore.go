@@ -49,7 +49,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 	}
 	log.WithField("keystorePath", opts.Path).Info("Checking validator keys")
 
-	exists, err := accounts.Exists(opts.Path)
+	exists, err := accounts.Exists(opts.Path, true /* assertNonEmpty */)
 	if err != nil {
 		return nil, keystoreOptsHelp, err
 	}
