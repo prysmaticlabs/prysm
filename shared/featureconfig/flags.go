@@ -9,9 +9,9 @@ var (
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
 	}
-	broadcastSlashingFlag = &cli.BoolFlag{
-		Name:  "broadcast-slashing",
-		Usage: "Broadcast slashings from slashing pool.",
+	disableBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:  "disable-broadcast-slashings",
+		Usage: "Disables broadcasting slashings submitted to the beacon node.",
 	}
 	minimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
@@ -361,6 +361,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:   "broadcast-slashing",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -402,6 +407,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedAccountMetricsFlag,
 	deprecatedEnableDomainDataCacheFlag,
 	deprecatedEnableByteMempool,
+	deprecatedBroadcastSlashingFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -450,7 +456,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkHeadState,
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
-	broadcastSlashingFlag,
+	disableBroadcastSlashingFlag,
 	enableNewStateMgmt,
 	enableFieldTrie,
 	disableInitSyncBatchSaveBlocks,
@@ -470,5 +476,4 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
-	"--broadcast-slashing",
 }
