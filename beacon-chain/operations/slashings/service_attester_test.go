@@ -528,9 +528,6 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 		pending []*PendingAttesterSlashing
 	}
 	params.SetupTestConfigCleanup(t)
-	conf := params.BeaconConfig()
-	conf.MaxAttesterSlashings = 1
-	params.OverrideBeaconConfig(conf)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
@@ -562,14 +559,14 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			fields: fields{
 				pending: pendingSlashings,
 			},
-			want: slashings[0:1],
+			want: slashings[0:2],
 		},
 		{
 			name: "Multiple indices",
 			fields: fields{
 				pending: pendingSlashings[3:6],
 			},
-			want: slashings[3:4],
+			want: slashings[3:5],
 		},
 	}
 	for _, tt := range tests {
