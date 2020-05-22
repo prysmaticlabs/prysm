@@ -3,9 +3,12 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path"
 	"time"
+
+	"go.opencensus.io/trace"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
@@ -31,12 +34,20 @@ type Config struct {
 
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
+	db.spanCache.Purge()
 	return db.db.Close()
 }
 
 // ClearSpanCache clears the spans cache.
+func (db *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.removeOldestFromCache")
+	defer span.End()
+	return db.spanCache.PruneOldest()
+}
+
+// ClearSpanCache clears the spans cache.
 func (db *Store) ClearSpanCache() {
-	db.spanCache.Clear()
+	db.spanCache.Purge()
 }
 
 func (db *Store) update(fn func(*bolt.Tx) error) error {

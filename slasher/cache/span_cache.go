@@ -64,12 +64,21 @@ func (c *EpochSpansCache) Delete(epoch uint64) bool {
 	return c.cache.Remove(epoch)
 }
 
+// PruneOldest removes the oldest key from the span cache, calling its OnEvict function.
+func (c *EpochSpansCache) PruneOldest() uint64 {
+	if c.cache.Len() == epochSpansCacheSize {
+		epoch, _, _ := c.cache.RemoveOldest()
+		return epoch.(uint64)
+	}
+	return 0
+}
+
 // Has returns true if the key exists in the cache.
 func (c *EpochSpansCache) Has(epoch uint64) bool {
 	return c.cache.Contains(epoch)
 }
 
-// Clear removes all keys from the SpanCache.
-func (c *EpochSpansCache) Clear() {
+// Purge removes all keys from the SpanCache and evicts all current data.
+func (c *EpochSpansCache) Purge() {
 	c.cache.Purge()
 }
