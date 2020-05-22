@@ -8,11 +8,10 @@ import (
 	"path"
 	"time"
 
-	"go.opencensus.io/trace"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 var databaseFileName = "slasher.db"

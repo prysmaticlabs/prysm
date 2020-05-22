@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -80,5 +81,6 @@ func (c *EpochSpansCache) Has(epoch uint64) bool {
 
 // Purge removes all keys from the SpanCache and evicts all current data.
 func (c *EpochSpansCache) Purge() {
+	log.Info("Saving all cached data to DB, please wait for completion.")
 	c.cache.Purge()
 }
