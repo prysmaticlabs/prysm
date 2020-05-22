@@ -3,6 +3,7 @@ package initialsync
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -19,46 +20,9 @@ const (
 )
 
 const (
-	eventSchedule eventID = iota
+	eventTick eventID = iota
 	eventDataReceived
-	eventReadyToSend
-	eventCheckStale
-	eventProcessSkipped
 )
-
-// String returns human-readable representation of a state.
-func (s stateID) String() (state string) {
-	switch s {
-	case stateNew:
-		state = "new"
-	case stateScheduled:
-		state = "scheduled"
-	case stateDataParsed:
-		state = "dataParsed"
-	case stateSkipped:
-		state = "skipped"
-	case stateSent:
-		state = "sent"
-	}
-	return
-}
-
-// String returns human-readable representation of an event.
-func (e eventID) String() (event string) {
-	switch e {
-	case eventSchedule:
-		event = "schedule"
-	case eventDataReceived:
-		event = "dataReceived"
-	case eventReadyToSend:
-		event = "readyToSend"
-	case eventCheckStale:
-		event = "checkStale"
-	case eventProcessSkipped:
-		event = "processSkipped"
-	}
-	return
-}
 
 // stateID is unique handle for a state.
 type stateID uint8
@@ -68,108 +32,97 @@ type eventID uint8
 
 // stateMachineManager is a collection of managed FSMs.
 type stateMachineManager struct {
-	machines []*stateMachine
-	events   map[eventID]*stateMachineEvent
+	keys     []uint64
+	machines map[uint64]*stateMachine
+	handlers map[stateID]map[eventID]eventHandlerFn
 }
 
-// stateMachine holds a state of a single block range processing FSM.
-// Each FSM allows deterministic state transitions:
-// State(S) x Event(E) -> Actions (A), State(S').
+// stateMachine holds a state of a single block processing FSM.
+// Each FSM allows deterministic state transitions: State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
+	smm     *stateMachineManager
 	start   uint64
-	count   uint64
 	state   stateID
 	blocks  []*eth.SignedBeaconBlock
 	updated time.Time
 }
 
-// stateMachineEvent is a container for event data.
-type stateMachineEvent struct {
-	name    eventID
-	actions map[stateID][]eventHandlerFn
-}
-
 // eventHandlerFn is an event handler function's signature.
-type eventHandlerFn func(*stateMachine, interface{}) (stateID, error)
+type eventHandlerFn func(m *stateMachine, data interface{}) (newState stateID, err error)
 
 // newStateMachineManager returns fully initialized state machine manager.
 func newStateMachineManager() *stateMachineManager {
 	return &stateMachineManager{
-		machines: []*stateMachine{},
-		events:   map[eventID]*stateMachineEvent{},
+		keys:     make([]uint64, 0, lookaheadSteps),
+		machines: make(map[uint64]*stateMachine, lookaheadSteps),
+		handlers: make(map[stateID]map[eventID]eventHandlerFn),
 	}
 }
 
 // addHandler attaches an event handler to a state event.
-func (sm *stateMachineManager) addEventHandler(event eventID, state stateID, fn eventHandlerFn) *stateMachineEvent {
-	e, ok := sm.events[event]
-	if !ok {
-		e = &stateMachineEvent{
-			name:    event,
-			actions: make(map[stateID][]eventHandlerFn),
-		}
-		sm.events[event] = e
+func (smm *stateMachineManager) addEventHandler(event eventID, state stateID, fn eventHandlerFn) {
+	if _, ok := smm.handlers[state]; !ok {
+		smm.handlers[state] = make(map[eventID]eventHandlerFn)
 	}
-	e.actions[state] = append(e.actions[state], fn)
-	return e
+	if _, ok := smm.handlers[state][event]; !ok {
+		smm.handlers[state][event] = fn
+	}
 }
 
 // addStateMachine allocates memory for new FSM.
-// Each machine is  tracking state of a given range of blocks.
-func (sm *stateMachineManager) addStateMachine(start, count uint64) {
-	fsm := &stateMachine{
+func (smm *stateMachineManager) addStateMachine(start uint64) *stateMachine {
+	smm.machines[start] = &stateMachine{
+		smm:     smm,
 		start:   start,
-		count:   count,
 		state:   stateNew,
 		blocks:  []*eth.SignedBeaconBlock{},
 		updated: roughtime.Now(),
 	}
-	sm.machines = append(sm.machines, fsm)
+	smm.recalculateMachineAttribs()
+	return smm.machines[start]
 }
 
 // removeStateMachine frees memory of a processed/finished FSM.
-func (sm *stateMachineManager) removeStateMachine(fsm *stateMachine) error {
-	if fsm == nil {
-		return errors.New("nil machine")
+func (smm *stateMachineManager) removeStateMachine(start uint64) error {
+	if _, ok := smm.machines[start]; !ok {
+		return fmt.Errorf("state for machine %v is not found", start)
 	}
-	ind, ok := sm.findStateMachineByStartBlock(fsm.start)
-	if !ok {
-		return fmt.Errorf("state for (%v, %v) machine is not found", fsm.start, fsm.count)
-	}
-	sm.machines[ind].blocks = nil
-	sm.machines[ind] = sm.machines[len(sm.machines)-1]
-	sm.machines = sm.machines[:len(sm.machines)-1]
+	smm.machines[start].blocks = nil
+	delete(smm.machines, start)
+	smm.recalculateMachineAttribs()
 	return nil
 }
 
-// findStateMachineByStartBlock returns index at which fsm.start = start,
-// or len(sm.machines) if not found.
-func (sm *stateMachineManager) findStateMachineByStartBlock(start uint64) (int, bool) {
-	for i, fsm := range sm.machines {
-		if start == fsm.start {
-			return i, true
-		}
+// recalculateMachineAttribs updates cached attributes, which are used for efficiency.
+func (smm *stateMachineManager) recalculateMachineAttribs() {
+	keys := make([]uint64, 0, lookaheadSteps)
+	for key := range smm.machines {
+		keys = append(keys, key)
 	}
-	return len(sm.machines), false
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	smm.keys = keys
 }
 
-// highestKnownStartBlock returns the start block number for the latest known state machine.
-func (sm *stateMachineManager) highestKnownStartBlock() (uint64, error) {
-	if len(sm.machines) == 0 {
+// findStateMachine returns a state machine for a given start block (if exists).
+func (smm *stateMachineManager) findStateMachine(startBlock uint64) (*stateMachine, bool) {
+	fsm, ok := smm.machines[startBlock]
+	return fsm, ok
+}
+
+// highestStartBlock returns the start block number for the latest known state machine.
+func (smm *stateMachineManager) highestStartBlock() (uint64, error) {
+	if len(smm.keys) == 0 {
 		return 0, errors.New("no state machine exist")
 	}
-	highestBlock := sm.machines[0].start
-	for _, fsm := range sm.machines {
-		if fsm.start > highestBlock {
-			highestBlock = fsm.start
-		}
-	}
-	return highestBlock, nil
+	key := smm.keys[len(smm.keys)-1]
+	return smm.machines[key].start, nil
 }
 
 // allMachinesInState checks whether all registered state machines are in the same state.
-func (sm *stateMachineManager) allMachinesInState(state stateID) bool {
-	for _, fsm := range sm.machines {
+func (smm *stateMachineManager) allMachinesInState(state stateID) bool {
+	for _, fsm := range smm.machines {
 		if fsm.state != state {
 			return false
 		}
@@ -178,8 +131,8 @@ func (sm *stateMachineManager) allMachinesInState(state stateID) bool {
 }
 
 // String returns human readable representation of a FSM collection.
-func (sm *stateMachineManager) String() string {
-	return fmt.Sprintf("%v", sm.machines)
+func (smm *stateMachineManager) String() string {
+	return fmt.Sprintf("%v", smm.machines)
 }
 
 // setState updates the current state of a given state machine.
@@ -191,61 +144,74 @@ func (m *stateMachine) setState(name stateID) {
 	m.updated = roughtime.Now()
 }
 
-// setRange updates start and count of a given state machine.
-func (m *stateMachine) setRange(start, count uint64) {
-	if m.start == start && m.count == count {
+// setStartBlock updates start block of a given state machine.
+func (m *stateMachine) setStartBlock(start uint64) {
+	if m.start == start {
 		return
 	}
 	m.start = start
-	m.count = count
 	m.updated = roughtime.Now()
 }
 
-// trigger invokes the event on a given state machine.
-func (m *stateMachine) trigger(event *stateMachineEvent, data interface{}) error {
-	if m == nil || event == nil {
-		return errors.New("state machine or event is nil")
-	}
-	handlerFns, ok := event.actions[m.state]
+func (m *stateMachine) trigger(event eventID, data interface{}) error {
+	handlers, ok := (*m.smm).handlers[m.state]
 	if !ok {
-		return nil
+		return fmt.Errorf("no event handlers registered for event: %v, state: %v", event, m.state)
 	}
-	for _, handlerFn := range handlerFns {
+	if handlerFn, ok := handlers[event]; ok {
 		state, err := handlerFn(m, data)
 		if err != nil {
 			return err
 		}
-		if m.state != state {
-			m.setState(state)
-			// No need to apply other actions if machine's state has changed
-			// (actions are not applicable to machine anymore)
-			break
-		}
+		m.setState(state)
 	}
 	return nil
 }
 
 // isFirst checks whether a given machine has the lowest start block.
-func (m *stateMachine) isFirst(machines []*stateMachine) bool {
-	for _, fsm := range machines {
-		if m.start > fsm.start {
-			return false
-		}
+func (m *stateMachine) isFirst() bool {
+	if m.start == (*m.smm).keys[0] {
+		return true
 	}
-	return true
+	return false
 }
 
 // isLast checks whether a given machine has the highest start block.
-func (m *stateMachine) isLast(machines []*stateMachine) bool {
-	for _, fsm := range machines {
-		if m.start < fsm.start {
-			return false
-		}
+func (m *stateMachine) isLast() bool {
+	if m.start == (*m.smm).keys[len((*m.smm).keys)-1] {
+		return true
 	}
-	return true
+	return false
 }
 
 // String returns human-readable representation of a FSM state.
 func (m *stateMachine) String() string {
-	return fmt.Sprintf("[%d](%d..%d):%s", helpers.SlotToEpoch(m.start), m.start, m.start+m.count-1, m.state)
+	return fmt.Sprintf("{%d:%s}", helpers.SlotToEpoch(m.start), m.state)
+}
+
+// String returns human-readable representation of a state.
+func (s stateID) String() string {
+	states := map[stateID]string{
+		stateNew:        "new",
+		stateScheduled:  "scheduled",
+		stateDataParsed: "dataParsed",
+		stateSkipped:    "skipped",
+		stateSent:       "sent",
+	}
+	if _, ok := states[s]; !ok {
+		return ""
+	}
+	return states[s]
+}
+
+// String returns human-readable representation of an event.
+func (e eventID) String() string {
+	events := map[eventID]string{
+		eventTick:         "tick",
+		eventDataReceived: "dataReceived",
+	}
+	if _, ok := events[e]; !ok {
+		return ""
+	}
+	return events[e]
 }
