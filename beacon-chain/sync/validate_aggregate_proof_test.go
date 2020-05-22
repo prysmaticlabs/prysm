@@ -65,6 +65,37 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	}
 }
 
+func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
+	ctx := context.Background()
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	validators := uint64(64)
+	s, _ := testutil.DeterministicGenesisState(t, validators)
+	if err := s.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+
+	bf := []byte{0xff}
+	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
+
+	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err := validateIndexInCommittee(ctx, s, att, committee[0]); err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := "validator index 1000 is not within the committee"
+	if err := validateIndexInCommittee(ctx, s, att, 1000); err == nil || !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not receive wanted error")
+	}
+}
+
 func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	ctx := context.Background()
 	params.UseMinimalConfig()

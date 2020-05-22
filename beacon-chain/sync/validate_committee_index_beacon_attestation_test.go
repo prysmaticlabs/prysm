@@ -12,6 +12,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -28,7 +29,8 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	db := dbtest.SetupDB(t)
 	chain := &mockChain.ChainService{
-		Genesis:          time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
+		// 1 slot ago.
+		Genesis:          time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second),
 		ValidatorsRoot:   [32]byte{'A'},
 		ValidAttestation: true,
 	}
@@ -53,7 +55,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			Slot: 55,
+			Slot: 1,
 		},
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
@@ -65,10 +67,15 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	savedState := testutil.NewBeaconState()
+	validators := uint64(64)
+	savedState, _ := testutil.DeterministicGenesisState(t, validators)
+	if err := savedState.SetSlot(1); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(context.Background(), savedState, validBlockRoot); err != nil {
 		t.Fatal(err)
 	}
+	chain.State = savedState
 
 	tests := []struct {
 		name                      string
@@ -78,30 +85,34 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		want                      bool
 	}{
 		{
-			name: "validAttestationSignature",
+			name: "valid attestation signature",
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1010},
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: validBlockRoot[:],
-					CommitteeIndex:  1,
-					Slot:            63,
+					CommitteeIndex:  0,
+					Slot:            1,
+					Target: &ethpb.Checkpoint{
+						Epoch: 0,
+						Root:  validBlockRoot[:],
+					},
 				},
 			},
-			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index0_beacon_attestation", digest),
 			validAttestationSignature: true,
 			want:                      true,
 		},
 		{
-			name: "alreadySeen",
+			name: "already seen",
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1010},
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: validBlockRoot[:],
-					CommitteeIndex:  1,
-					Slot:            63,
+					CommitteeIndex:  0,
+					Slot:            1,
 				},
 			},
-			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
+			topic:                     fmt.Sprintf("/eth2/%x/committee_index0_beacon_attestation", digest),
 			validAttestationSignature: true,
 			want:                      false,
 		},
@@ -112,7 +123,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  2,
-					Slot:            63,
+					Slot:            1,
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index3_beacon_attestation", digest),
@@ -126,7 +137,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  1,
-					Slot:            63,
+					Slot:            1,
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
@@ -140,7 +151,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: bytesutil.PadTo([]byte("missing"), 32),
 					CommitteeIndex:  1,
-					Slot:            63,
+					Slot:            1,
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
@@ -154,7 +165,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 				Data: &ethpb.AttestationData{
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  1,
-					Slot:            63,
+					Slot:            1,
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),

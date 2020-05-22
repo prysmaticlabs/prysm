@@ -86,6 +86,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 	committee, err := helpers.BeaconCommitteeFromState(st, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
+		traceutil.AnnotateError(span, err)
 		return false
 	}
 
