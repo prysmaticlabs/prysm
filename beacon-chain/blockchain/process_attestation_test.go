@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -466,5 +467,70 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 	if err := service.verifyBeaconBlock(ctx, d); err != nil {
 		t.Error("Did not receive the wanted error")
+	}
+}
+
+func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b32 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 32}}
+	if err := service.beaconDB.SaveBlock(ctx, b32); err != nil {
+		t.Fatal(err)
+	}
+	r32, err := ssz.HashTreeRoot(b32.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b33 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 33, ParentRoot: r32[:]}}
+	if err := service.beaconDB.SaveBlock(ctx, b33); err != nil {
+		t.Fatal(err)
+	}
+	r33, err := ssz.HashTreeRoot(b33.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := "FFG and LMD votes are not consistent"
+	if err := service.verifyLMDFFGConsistent(context.Background(), 1, []byte{'a'}, r33[:]); err.Error() != wanted {
+		t.Error("Did not get wanted error")
+	}
+}
+
+func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b32 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 32}}
+	if err := service.beaconDB.SaveBlock(ctx, b32); err != nil {
+		t.Fatal(err)
+	}
+	r32, err := ssz.HashTreeRoot(b32.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b33 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 33, ParentRoot: r32[:]}}
+	if err := service.beaconDB.SaveBlock(ctx, b33); err != nil {
+		t.Fatal(err)
+	}
+	r33, err := ssz.HashTreeRoot(b33.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.verifyLMDFFGConsistent(context.Background(), 1, r32[:], r33[:]); err != nil {
+		t.Errorf("Could not verify LMD and FFG votes to be consistent: %v", err)
 	}
 }
