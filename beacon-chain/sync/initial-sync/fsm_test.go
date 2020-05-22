@@ -3,31 +3,31 @@ package initialsync
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
 func TestStateMachineManager_String(t *testing.T) {
 	tests := []struct {
 		name     string
-		machines []*stateMachine
+		machines map[uint64]*stateMachine
 		want     string
 	}{
 		{
 			"empty epoch state list",
-			[]*stateMachine{},
-			"[]",
+			map[uint64]*stateMachine{},
+			"map[]",
 		},
 		{
 			"newly created state machine",
-			[]*stateMachine{
-				{start: 64 * 0, count: 64, state: stateNew},
-				{start: 64 * 1, count: 64, state: stateScheduled},
-				{start: 64 * 2, count: 64, state: stateDataParsed},
-				{start: 64 * 3, count: 64, state: stateSkipped},
-				{start: 64 * 4, count: 64, state: stateSent},
+			map[uint64]*stateMachine{
+				0:   {start: 64 * 0, state: stateNew},
+				64:  {start: 64 * 1, state: stateScheduled},
+				128: {start: 64 * 2, state: stateDataParsed},
+				196: {start: 64 * 3, state: stateSkipped},
+				256: {start: 64 * 4, state: stateSent},
 			},
-			"[[0](0..63):new [2](64..127):scheduled [4](128..191):dataParsed [6](192..255):skipped " +
-				"[8](256..319):sent]",
+			"map[0:{0:new} 64:{2:scheduled} 128:{4:dataParsed} 196:{6:skipped} 256:{8:sent}]",
 		},
 	}
 	for _, tt := range tests {
@@ -51,8 +51,8 @@ func TestStateMachine_StateIDString(t *testing.T) {
 }
 
 func TestStateMachine_EventIDString(t *testing.T) {
-	eventIDs := []eventID{eventSchedule, eventDataReceived, eventReadyToSend, eventCheckStale, eventProcessSkipped}
-	want := "[schedule dataReceived readyToSend checkStale processSkipped]"
+	eventIDs := []eventID{eventTick, eventDataReceived}
+	want := "[tick dataReceived]"
 	if got := fmt.Sprintf("%v", eventIDs); got != want {
 		t.Errorf("unexpected output, got: %q, want: %q", got, want)
 	}
@@ -61,13 +61,13 @@ func TestStateMachine_EventIDString(t *testing.T) {
 func TestStateMachineManager_addEventHandler(t *testing.T) {
 	smm := newStateMachineManager()
 
-	smm.addEventHandler(eventSchedule, stateNew, func(m *stateMachine, i interface{}) (id stateID, err error) {
+	smm.addEventHandler(eventTick, stateNew, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateScheduled, nil
 	})
-	if len(smm.events[eventSchedule].actions) != 1 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions), 1)
+	if len(smm.handlers[stateNew]) != 1 {
+		t.Errorf("unexpected size, got: %v, want: %v", len(smm.handlers[stateNew]), 1)
 	}
-	state, err := smm.events[eventSchedule].actions[stateNew][0](nil, nil)
+	state, err := smm.handlers[stateNew][eventTick](nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,13 +76,13 @@ func TestStateMachineManager_addEventHandler(t *testing.T) {
 	}
 
 	// Add second handler to the same event
-	smm.addEventHandler(eventSchedule, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
+	smm.addEventHandler(eventTick, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateDataParsed, nil
 	})
-	if len(smm.events[eventSchedule].actions) != 2 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions), 2)
+	if len(smm.handlers[stateSent]) != 1 {
+		t.Errorf("unexpected size, got: %v, want: %v", len(smm.handlers[stateSent]), 1)
 	}
-	state, err = smm.events[eventSchedule].actions[stateSent][0](nil, nil)
+	state, err = smm.handlers[stateSent][eventTick](nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,22 +90,18 @@ func TestStateMachineManager_addEventHandler(t *testing.T) {
 		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
 	}
 
-	// Add another handler to existing event/state pair.
-	smm.addEventHandler(eventSchedule, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
+	// Add another handler to existing event/state pair. Should have no effect.
+	smm.addEventHandler(eventTick, stateSent, func(m *stateMachine, i interface{}) (id stateID, err error) {
 		return stateSkipped, nil
 	})
-	if len(smm.events[eventSchedule].actions) != 2 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions), 2)
+	if len(smm.handlers[stateSent]) != 1 {
+		t.Errorf("unexpected size, got: %v, want: %v", len(smm.handlers[stateSent]), 1)
 	}
-	if len(smm.events[eventSchedule].actions[stateSent]) != 2 {
-		t.Errorf("unexpected size, got: %v, want: %v", len(smm.events[eventSchedule].actions[stateSent]), 2)
-	}
-	state, err = smm.events[eventSchedule].actions[stateSent][0](nil, nil)
+	state, err = smm.handlers[stateSent][eventTick](nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	// The action that changes state to stateSkippedExt will not be triggered, as previous action
-	// changed state - and machine's state is not applicable anymore.
+	// No effect, previous handler worked.
 	if state != stateDataParsed {
 		t.Errorf("unexpected state, got: %v, want: %v", state, stateScheduled)
 	}
@@ -135,49 +131,49 @@ func TestStateMachine_trigger(t *testing.T) {
 			name:   "event not found",
 			events: []event{},
 			epochs: []uint64{12, 13},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateNew},
-			err:    errors.New("state machine or event is nil"),
+			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateNew},
+			err:    errors.New("no event handlers registered for event: tick, state: new"),
 		},
 		{
 			name: "single action",
 			events: []event{
-				{stateNew, eventSchedule, stateScheduled, false},
+				{stateNew, eventTick, stateScheduled, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
+			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
 			name: "multiple actions, has error",
 			events: []event{
-				{stateNew, eventSchedule, stateScheduled, false},
-				{stateScheduled, eventSchedule, stateSent, true},
-				{stateSent, eventSchedule, stateSkipped, false},
+				{stateNew, eventTick, stateScheduled, false},
+				{stateScheduled, eventTick, stateSent, true},
+				{stateSent, eventTick, stateSkipped, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
+			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
 			name: "multiple actions, no error, can cascade",
 			events: []event{
-				{stateNew, eventSchedule, stateScheduled, false},
-				{stateScheduled, eventSchedule, stateSent, false},
-				{stateSent, eventSchedule, stateSkipped, false},
+				{stateNew, eventTick, stateScheduled, false},
+				{stateScheduled, eventTick, stateSent, false},
+				{stateSent, eventTick, stateSkipped, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
+			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 		{
 			name: "multiple actions, no error, no cascade",
 			events: []event{
-				{stateNew, eventSchedule, stateScheduled, false},
-				{stateScheduled, eventSchedule, stateSent, false},
-				{stateNew, eventSchedule, stateSkipped, false},
+				{stateNew, eventTick, stateScheduled, false},
+				{stateScheduled, eventTick, stateSent, false},
+				{stateNew, eventTick, stateSkipped, false},
 			},
 			epochs: []uint64{12, 13},
-			args:   args{name: eventSchedule, epoch: 12, data: nil, returnState: stateScheduled},
+			args:   args{name: eventTick, epoch: 12, data: nil, returnState: stateScheduled},
 			err:    nil,
 		},
 	}
@@ -200,14 +196,10 @@ func TestStateMachine_trigger(t *testing.T) {
 				}
 			}
 			for _, epoch := range tt.epochs {
-				smm.addStateMachine(epoch*32, 64)
+				smm.addStateMachine(epoch * 32)
 			}
-			ind, ok := smm.findStateMachineByStartBlock(tt.args.epoch * 32)
-			if !ok {
-				t.Fatal("machine state not found")
-			}
-			state := smm.machines[ind]
-			err := state.trigger(smm.events[tt.args.name], tt.args.data)
+			state := smm.machines[tt.args.epoch*32]
+			err := state.trigger(tt.args.name, tt.args.data)
 			if tt.err != nil && (err == nil || tt.err.Error() != err.Error()) {
 				t.Errorf("unexpected error = '%v', want '%v'", err, tt.err)
 			}
@@ -215,11 +207,7 @@ func TestStateMachine_trigger(t *testing.T) {
 				if err != nil && !expectHandlerError {
 					t.Error(err)
 				}
-				ind, ok := smm.findStateMachineByStartBlock(tt.args.epoch * 32)
-				if !ok {
-					t.Errorf("expected machine not found, start block: %v", tt.args.epoch*32)
-					return
-				}
+				ind := tt.args.epoch * 32
 				if smm.machines[ind].state != tt.args.returnState {
 					t.Errorf("unexpected final state: %v, want: %v (%v)",
 						smm.machines[ind].state, tt.args.returnState, smm.machines)
@@ -229,26 +217,97 @@ func TestStateMachine_trigger(t *testing.T) {
 	}
 }
 
-//
-//func TestStateMachine_findEpochState(t *testing.T) {
-//	smm := newStateMachineManager()
-//	if ind, ok := smm.findEpochState(12); ok || ind != 0 {
-//		t.Errorf("unexpected index: %v, want: %v", ind, 0)
-//	}
-//	smm.addEpochState(12)
-//	if ind, ok := smm.findEpochState(12); !ok || ind != 0 {
-//		t.Errorf("unexpected index: %v, want: %v", ind, 0)
-//	}
-//	smm.addEpochState(13)
-//	smm.addEpochState(14)
-//	smm.addEpochState(15)
-//	if ind, ok := smm.findEpochState(14); !ok || ind != 2 {
-//		t.Errorf("unexpected index: %v, want: %v", ind, 2)
-//	}
-//	if ind, ok := smm.findEpochState(16); ok || ind != len(smm.epochs) {
-//		t.Errorf("unexpected index: %v, want: %v", ind, len(smm.epochs))
-//	}
-//}
+func TestStateMachineManager_QueueLoop(t *testing.T) {
+	smm := newStateMachineManager()
+	smm.addEventHandler(eventTick, stateNew, func(m *stateMachine, data interface{}) (stateID, error) {
+		return stateScheduled, nil
+	})
+	smm.addEventHandler(eventTick, stateScheduled, func(m *stateMachine, data interface{}) (stateID, error) {
+		if m.start < 256 {
+			return stateDataParsed, nil
+		}
+		return stateSkipped, nil
+	})
+	smm.addEventHandler(eventTick, stateDataParsed, func(m *stateMachine, data interface{}) (stateID, error) {
+		return stateSent, nil
+	})
+	smm.addEventHandler(eventTick, stateSkipped, func(m *stateMachine, data interface{}) (stateID, error) {
+		dataParsed, ok := data.(int)
+		if !ok {
+			return m.state, errors.New("invalid data type")
+		}
+		if dataParsed > 41 {
+			return stateNew, nil
+		}
+
+		return stateScheduled, nil
+	})
+	if len(smm.handlers) != 4 {
+		t.Errorf("unexpected number of state events, want: %v, got: %v", 4, len(smm.handlers))
+	}
+	smm.addStateMachine(64)
+	smm.addStateMachine(512)
+
+	assertState := func(startBlock uint64, state stateID) {
+		fsm, ok := smm.findStateMachine(startBlock)
+		if !ok {
+			t.Fatalf("state machine not found: %v", startBlock)
+		}
+		if fsm.state != state {
+			t.Errorf("unexpected state machine state, want: %v, got: %v", state, fsm.state)
+		}
+	}
+
+	triggerTickEvent := func() {
+		for _, fsm := range smm.machines {
+			data := 42
+			if err := fsm.trigger(eventTick, data); err != nil {
+				t.Error(err)
+			}
+		}
+	}
+
+	assertState(64, stateNew)
+	assertState(512, stateNew)
+
+	triggerTickEvent()
+	assertState(64, stateScheduled)
+	assertState(512, stateScheduled)
+
+	triggerTickEvent()
+	assertState(64, stateDataParsed)
+	assertState(512, stateSkipped)
+
+	triggerTickEvent()
+	assertState(64, stateSent)
+	assertState(512, stateNew)
+}
+
+func TestStateMachine_findStateMachine(t *testing.T) {
+	smm := newStateMachineManager()
+	if _, ok := smm.findStateMachine(64); ok {
+		t.Errorf("unexpected returned value: want: %v, got: %v", false, ok)
+	}
+	smm.addStateMachine(64)
+	if fsm, ok := smm.findStateMachine(64); !ok || fsm == nil {
+		t.Errorf("unexpected returned value: want: %v, got: %v", true, ok)
+	}
+	smm.addStateMachine(512)
+	smm.addStateMachine(196)
+	smm.addStateMachine(256)
+	smm.addStateMachine(128)
+	if fsm, ok := smm.findStateMachine(128); !ok || fsm.start != 128 {
+		t.Errorf("unexpected start block: %v, want: %v", fsm.start, 122)
+	}
+	if fsm, ok := smm.findStateMachine(512); !ok || fsm.start != 512 {
+		t.Errorf("unexpected start block: %v, want: %v", fsm.start, 512)
+	}
+	keys := []uint64{64, 128, 196, 256, 512}
+	if !reflect.DeepEqual(keys, smm.keys) {
+		t.Errorf("keys not sorted, want: %v, got: %v", keys, smm.keys)
+	}
+}
+
 //
 //func TestStateMachine_isLowestEpochState(t *testing.T) {
 //	smm := newStateMachineManager()
