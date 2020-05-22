@@ -61,8 +61,8 @@ type Flags struct {
 	// as the chain head. UNSAFE, use with caution.
 	DisableForkChoice bool
 
-	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
-	BroadcastSlashings         bool
+	// DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
+	DisableBroadcastSlashings  bool
 	DisableHistoricalDetection bool // DisableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
 	DisableLookback            bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
@@ -202,9 +202,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state reference copy")
 		cfg.EnableStateRefCopy = true
 	}
-	if ctx.Bool(broadcastSlashingFlag.Name) {
+	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Enabling broadcast slashing to p2p network")
-		cfg.BroadcastSlashings = true
+		cfg.DisableBroadcastSlashings = true
 	}
 	if ctx.Bool(skipRegenHistoricalStates.Name) {
 		log.Warn("Enabling skipping of historical states regen")

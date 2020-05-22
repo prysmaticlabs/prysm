@@ -9,7 +9,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -71,8 +70,6 @@ func TestServer_SubmitProposerSlashing(t *testing.T) {
 
 func TestServer_SubmitProposerSlashingBroadcast(t *testing.T) {
 	ctx := context.Background()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{BroadcastSlashings: true})
-	defer resetCfg()
 
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
@@ -170,8 +167,6 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 
 func TestServer_SubmitAttesterSlashingBroadcast(t *testing.T) {
 	ctx := context.Background()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{BroadcastSlashings: true})
-	defer resetCfg()
 	// We mark the validators at index 5, 6 as already slashed.
 	st, privs := testutil.DeterministicGenesisState(t, 64)
 	slashedVal, err := st.ValidatorAtIndex(5)
