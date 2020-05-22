@@ -60,10 +60,10 @@ type Flags struct {
 	// as the chain head. UNSAFE, use with caution.
 	DisableForkChoice bool
 
-	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
-	BroadcastSlashings         bool
-	DisableHistoricalDetection bool // DisableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
-	DisableLookback            bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
+	// Slasher toggles.
+	BroadcastSlashings        bool // BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
+	EnableHistoricalDetection bool // EnableHistoricalDetection enables historical attestation detection for the slasher.
+	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -218,9 +218,9 @@ func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	if ctx.Bool(disableHistoricalDetectionFlag.Name) {
-		log.Warn("Disabling historical attestation detection")
-		cfg.DisableHistoricalDetection = true
+	if ctx.Bool(enableHistoricalDetectionFlag.Name) {
+		log.Warn("Enabling historical attestation detection")
+		cfg.EnableHistoricalDetection = true
 	}
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")

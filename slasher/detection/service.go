@@ -86,7 +86,7 @@ func (ds *Service) Start() {
 	<-ch
 	sub.Unsubscribe()
 
-	if !featureconfig.Get().DisableHistoricalDetection {
+	if featureconfig.Get().EnableHistoricalDetection {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
 		go ds.detectHistoricalChainData(ds.ctx)
