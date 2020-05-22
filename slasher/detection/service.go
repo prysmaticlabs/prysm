@@ -6,7 +6,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
@@ -127,11 +126,6 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
 			break
 		}
-		log.Debugf(
-			"Running slashing detection on %d attestations in epoch %d...",
-			len(indexedAtts),
-			epoch,
-		)
 
 		for _, att := range indexedAtts {
 			if ctx.Err() == context.Canceled {
@@ -163,17 +157,7 @@ func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*eth
 	ctx, span := trace.StartSpan(ctx, "detection.submitAttesterSlashings")
 	defer span.End()
 	for i := 0; i < len(slashings); i++ {
-		slash := slashings[i]
-		if slash != nil && slash.Attestation_1 != nil && slash.Attestation_2 != nil {
-			slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
-			log.WithFields(logrus.Fields{
-				"sourceEpoch":  slash.Attestation_1.Data.Source.Epoch,
-				"targetEpoch":  slash.Attestation_1.Data.Target.Epoch,
-				"surroundVote": isSurrounding(slash.Attestation_1, slash.Attestation_2),
-				"indices":      slashableIndices,
-			}).Info("Found an attester slashing! Submitting to beacon node")
-			ds.attesterSlashingsFeed.Send(slashings[i])
-		}
+		ds.attesterSlashingsFeed.Send(slashings[i])
 	}
 }
 
