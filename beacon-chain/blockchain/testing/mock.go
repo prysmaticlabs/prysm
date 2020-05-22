@@ -36,6 +36,7 @@ type ChainService struct {
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
 	Fork                        *pb.Fork
+	ETH1Data                    *ethpb.Eth1Data
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
 	blockNotifier               blockfeed.Notifier
@@ -218,6 +219,11 @@ func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 // HeadSeed mocks the same method in the chain service.
 func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
 	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
+}
+
+// HeadETH1Data provides the current ETH1Data of the head state.
+func (ms *ChainService) HeadETH1Data() *ethpb.Eth1Data {
+	return ms.ETH1Data
 }
 
 // GenesisTime mocks the same method in the chain service.

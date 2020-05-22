@@ -1239,6 +1239,71 @@ func TestEth1Data(t *testing.T) {
 	}
 }
 
+func TestEth1Data_SmallerDepositCount(t *testing.T) {
+	slot := uint64(10000)
+	deps := []*dbpb.DepositContainer{
+		{
+			Index:           0,
+			Eth1BlockHeight: 8,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("a"),
+					Signature:             make([]byte, 96),
+					WithdrawalCredentials: make([]byte, 32),
+				}},
+		},
+		{
+			Index:           1,
+			Eth1BlockHeight: 14,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             []byte("b"),
+					Signature:             make([]byte, 96),
+					WithdrawalCredentials: make([]byte, 32),
+				}},
+		},
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("could not setup deposit trie: %v", err)
+	}
+	depositCache := depositcache.NewDepositCache()
+	for _, dp := range deps {
+		depositCache.InsertDeposit(context.Background(), dp.Deposit, dp.Eth1BlockHeight, dp.Index, depositTrie.Root())
+	}
+
+	p := &mockPOW.POWChain{
+		BlockNumberByHeight: map[uint64]*big.Int{
+			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
+		},
+		HashesByHeight: map[int][]byte{
+			4080: []byte("4080"),
+		},
+		Eth1Data: &ethpb.Eth1Data{
+			DepositCount: 55,
+		},
+	}
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{DepositCount: 10}},
+		DepositFetcher:    depositCache,
+	}
+
+	ctx := context.Background()
+	eth1Data, err := ps.eth1Data(ctx, slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Will default to 10 as the current deposit count in the
+	// cache is only 2.
+	if eth1Data.DepositCount != 10 {
+		t.Errorf("Expected deposit count to be 10 but got %d", eth1Data.DepositCount)
+	}
+}
+
 func TestEth1Data_MockEnabled(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	// If a mock eth1 data votes is specified, we use the following for the
