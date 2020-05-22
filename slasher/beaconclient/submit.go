@@ -2,6 +2,9 @@ package beaconclient
 
 import (
 	"context"
+	"strings"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -57,6 +60,8 @@ func (bs *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch ch
 						"indices":     slashableIndices,
 					}).Info("Found a valid attester slashing! Submitting to beacon node")
 				}
+			} else if strings.Contains(err.Error(), helpers.ErrSigFailedToVerify.Error()) {
+				log.WithError(err).Error("Could not submit attester slashing")
 			}
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
