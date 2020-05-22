@@ -127,7 +127,7 @@ func (c *Flags) Copy() *Flags {
 		EnableStateRefCopy:                         c.EnableStateRefCopy,
 		WaitForSynced:                              c.WaitForSynced,
 		DisableForkChoice:                          c.DisableForkChoice,
-		BroadcastSlashings:                         c.BroadcastSlashings,
+		DisableBroadcastSlashings:                  c.DisableBroadcastSlashings,
 		EnableSSZCache:                             c.EnableSSZCache,
 		EnableEth1DataVoteCache:                    c.EnableEth1DataVoteCache,
 		EnableSlasherConnection:                    c.EnableSlasherConnection,
