@@ -145,6 +145,20 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	return nil
 }
 
+// verifyLMDFFGConsistent verifies LMD GHOST and FFG votes are consistent with each other.
+func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot []byte, lmdRoot []byte) error {
+	ffgSlot := helpers.StartSlot(ffgEpoch)
+	r, err := s.ancestor(ctx, lmdRoot, ffgSlot)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(ffgRoot, r) {
+		return errors.New("FFG and LMD votes are not consistent")
+	}
+
+	return nil
+}
+
 // verifyAttestation validates input attestation is valid.
 func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
