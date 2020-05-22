@@ -233,8 +233,8 @@ func MainnetConfig() *BeaconChainConfig {
 func WittiTestnetConfig() *BeaconChainConfig {
 	wittiTestnet := *defaultBeaconConfig
 
-	wittiTestnet.MinGenesisActiveValidatorCount = 96
-	wittiTestnet.MinGenesisTime = 1589965200
+	wittiTestnet.MinGenesisActiveValidatorCount = 6
+	wittiTestnet.MinGenesisTime = 1590148800
 	wittiTestnet.MinGenesisDelay = 3600
 
 	wittiTestnet.GenesisForkVersion = []byte{0, 0, 1, 19}
