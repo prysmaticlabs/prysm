@@ -44,21 +44,27 @@ func persistSpanMapsOnEviction(db *Store) func(key interface{}, value interface{
 	// required by the ristretto cache OnEvict method.
 	// See https://godoc.org/github.com/dgraph-io/ristretto#Config.
 	return func(key interface{}, value interface{}) {
-		log.Tracef("Evicting span map for epoch: %d", key)
-		err := db.update(func(tx *bolt.Tx) error {
-			epoch, keyOK := key.(uint64)
-			spanMap, valueOK := value.(map[uint64]types.Span)
-			if !keyOK || !valueOK {
-				return errors.New("could not cast key and value into needed types")
-			}
+		epoch, keyOK := key.(uint64)
+		spanMap, valueOK := value.(map[uint64]types.Span)
+		if !keyOK || !valueOK {
+			return
+		}
 
+		log.Tracef("Evicting span map for epoch: %d", epoch)
+		marshaledMap := make(map[uint64][7]byte, len(spanMap))
+		for k, v := range spanMap {
+			var marshaledBytes [7]byte
+			copy(marshaledBytes[:], marshalSpan(v))
+			marshaledMap[k] = marshaledBytes
+		}
+		err := db.update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 			epochBucket, err := bucket.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
 			if err != nil {
 				return err
 			}
-			for k, v := range spanMap {
-				if err = epochBucket.Put(bytesutil.Bytes8(k), marshalSpan(v)); err != nil {
+			for k, v := range marshaledMap {
+				if err = epochBucket.Put(bytesutil.Bytes8(k), v[:]); err != nil {
 					return err
 				}
 			}
@@ -295,14 +301,21 @@ func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap ma
 		return nil
 	}
 
+	marshaledMap := make(map[uint64][7]byte, len(spanMap))
+	for k, v := range spanMap {
+		var marshaledBytes [7]byte
+		copy(marshaledBytes[:], marshalSpan(v))
+		marshaledMap[k] = marshaledBytes
+	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
 		if err != nil {
 			return err
 		}
-		for k, v := range spanMap {
-			err = valBucket.Put(bytesutil.Bytes8(k), marshalSpan(v))
+		for k, v := range marshaledMap {
+			err = valBucket.Put(bytesutil.ToBytes(k, 8), v[:])
 			if err != nil {
 				return err
 			}
