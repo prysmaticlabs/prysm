@@ -58,7 +58,10 @@ var appFlags = []cli.Flag{
 	flags.GrpcHeadersFlag,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
-	flags.AccountMetricsFlag,
+	flags.DisableAccountMetricsFlag,
+	flags.MonitoringPortFlag,
+	flags.SlasherRPCProviderFlag,
+	flags.SlasherCertFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
@@ -67,18 +70,17 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	flags.MonitoringPortFlag,
 	cmd.LogFormat,
+	cmd.LogFileName,
+	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
+	cmd.GrpcMaxCallRecvMsgSizeFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
-	cmd.LogFileName,
-	cmd.ConfigFileFlag,
-	cmd.ChainConfigFileFlag,
-	cmd.GrpcMaxCallRecvMsgSizeFlag,
 }
 
 func init() {
@@ -103,27 +105,18 @@ func main() {
 					Description: `creates a new validator account keystore containing private keys for Ethereum 2.0 -
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
-					Flags: []cli.Flag{
-						flags.KeystorePathFlag,
-						flags.PasswordFlag,
-						// @TODO expose these flags, ref https://github.com/prysmaticlabs/prysm/issues/5922
-						// flags.ChainConfigFileFlag,
-						// flags.minimalConfigFlag,
-						// flags.schlesiTestnetFlag,
-						// flags.wittiTestnetFlag,
-					},
+					Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+						[]cli.Flag{
+							flags.KeystorePathFlag,
+							flags.PasswordFlag,
+							cmd.ChainConfigFileFlag,
+						}...),
 					Action: func(cliCtx *cli.Context) error {
-						featureconfig.ConfigureValidator(cliCtx)
-						if featureconfig.Get().MinimalConfig {
-							log.Warn("Using Minimal Config")
-							params.UseMinimalConfig()
-						} else if featureconfig.Get().SchlesiTestnet {
-							log.Warn("Using Schlesi Testnet")
-							params.UseSchlesiTestnet()
-						} else if featureconfig.Get().WittiTestnet {
-							log.Warn("Using Witti Testnet")
-							params.UseWittiTestnet()
+						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+							params.LoadChainConfigFile(chainConfigFileName)
 						}
+						featureconfig.ConfigureValidator(cliCtx)
 
 						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
@@ -298,3 +291,4 @@ contract in order to activate the validator client`,
 		os.Exit(1)
 	}
 }
+

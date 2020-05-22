@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -63,6 +64,7 @@ type validator struct {
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	attesterHistoryByPubKey            map[[48]byte]*slashpb.AttestationHistory
 	attesterHistoryByPubKeyLock        sync.RWMutex
+	protector                          slashingprotection.Protector
 }
 
 var validatorStatusesGaugeVec = promauto.NewGaugeVec(

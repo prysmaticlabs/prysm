@@ -89,7 +89,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSSecretKeyLength        int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	BLSSignatureLength        int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
@@ -97,7 +96,6 @@ type BeaconChainConfig struct {
 	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	RPCSyncCheck              time.Duration // Number of seconds to query the sync service, to find out if the node is synced or not.
-	GoerliBlockTime           uint64        // GoerliBlockTime is the number of seconds on avg a Goerli block is created.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
@@ -191,7 +189,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	LogBlockDelay:             4,
 	BLSSecretKeyLength:        32,
 	BLSPubkeyLength:           48,
 	BLSSignatureLength:        96,
@@ -199,7 +196,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
 	RPCSyncCheck:              1,
-	GoerliBlockTime:           14, // 14 seconds on average for a goerli block to be created.
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
 	MaxPeersToSync:            15,

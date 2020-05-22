@@ -11,7 +11,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
 // SetGenesisTime for the beacon state.
@@ -456,7 +455,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
 		if featureconfig.Get().EnableStateRefCopy {
-			mixes = memorypool.GetDoubleByteSlice(len(b.state.RandaoMixes))
+			mixes = make([][]byte, len(b.state.RandaoMixes))
 			copy(mixes, b.state.RandaoMixes)
 		} else {
 			mixes = b.RandaoMixes()

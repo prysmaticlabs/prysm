@@ -41,9 +41,9 @@ type Flags struct {
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
 	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-	EnableByteMempool                          bool // EnaableByteMempool memory management.
 	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
@@ -118,7 +118,6 @@ func (c *Flags) Copy() *Flags {
 		ProtectAttester:                            c.ProtectAttester,
 		DisableStrictAttestationPubsubVerification: c.DisableStrictAttestationPubsubVerification,
 		DisableUpdateHeadPerAttestation:            c.DisableUpdateHeadPerAttestation,
-		EnableByteMempool:                          c.EnableByteMempool,
 		EnableDomainDataCache:                      c.EnableDomainDataCache,
 		EnableStateGenSigVerify:                    c.EnableStateGenSigVerify,
 		CheckHeadState:                             c.CheckHeadState,
@@ -206,10 +205,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
 	}
-	if ctx.Bool(enableByteMempool.Name) {
-		log.Warn("Enabling experimental memory management for beacon state")
-		cfg.EnableByteMempool = true
-	}
 	if ctx.Bool(enableStateGenSigVerify.Name) {
 		log.Warn("Enabling sig verify for state gen")
 		cfg.EnableStateGenSigVerify = true
@@ -288,9 +283,14 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
 	}
-	if ctx.Bool(enableDomainDataCacheFlag.Name) {
-		log.Warn("Enabled domain data cache.")
-		cfg.EnableDomainDataCache = true
+	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
+		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
+		cfg.SlasherProtection = true
+	}
+	cfg.EnableDomainDataCache = true
+	if ctx.Bool(disableDomainDataCacheFlag.Name) {
+		log.Warn("Disabled domain data cache.")
+		cfg.EnableDomainDataCache = false
 	}
 	Init(cfg)
 }
