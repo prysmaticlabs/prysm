@@ -78,9 +78,7 @@ func persistSpanMapsOnEviction(db *Store) func(key interface{}, value interface{
 }
 
 // Unmarshal a span map from an encoded, flattened array.
-func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.unmarshalSpan")
-	defer span.End()
+func unmarshalSpan(enc []byte) (types.Span, error) {
 	r := types.Span{}
 	if len(enc) != spannerEncodedLength {
 		return r, errors.New("wrong data length for min max span")
@@ -121,27 +119,30 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 	}
 
 	var err error
-	var spanMap map[uint64]types.Span
+	var keysLength int
+	var marshaledSpanMap map[uint64][]byte
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
 		if epochBucket == nil {
 			return nil
 		}
-		keysLength := epochBucket.Stats().KeyN
-		spanMap = make(map[uint64]types.Span, keysLength)
+		keysLength = epochBucket.Stats().KeyN
+		marshaledSpanMap = make(map[uint64][]byte, keysLength)
 		return epochBucket.ForEach(func(k, v []byte) error {
-			key := bytesutil.FromBytes8(k)
-			value, err := unmarshalSpan(ctx, v)
-			if err != nil {
-				return err
-			}
-			spanMap[key] = value
+			marshaledSpanMap[bytesutil.FromBytes8(k)] = v
 			return nil
 		})
 	})
-	if spanMap == nil {
-		spanMap = make(map[uint64]types.Span)
+	if marshaledSpanMap == nil {
+		return make(map[uint64]types.Span), false, nil
+	}
+	spanMap := make(map[uint64]types.Span, keysLength)
+	for k, v := range marshaledSpanMap {
+		spanMap[k], err = unmarshalSpan(v)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 	return spanMap, false, err
 }
@@ -179,7 +180,7 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 		if v == nil {
 			return nil
 		}
-		value, err := unmarshalSpan(ctx, v)
+		value, err := unmarshalSpan(v)
 		if err != nil {
 			return err
 		}
@@ -210,7 +211,7 @@ func (db *Store) EpochsSpanByValidatorsIndices(ctx context.Context, validatorInd
 				if enc == nil {
 					continue
 				}
-				value, err := unmarshalSpan(ctx, enc)
+				value, err := unmarshalSpan(enc)
 				if err != nil {
 					return err
 				}
