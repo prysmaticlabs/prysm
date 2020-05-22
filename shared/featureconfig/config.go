@@ -42,7 +42,6 @@ type Flags struct {
 	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-	EnableByteMempool                          bool // EnaableByteMempool memory management.
 	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
@@ -165,10 +164,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableUpdateHeadPerAttestation.Name) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
-	}
-	if ctx.Bool(enableByteMempool.Name) {
-		log.Warn("Enabling experimental memory management for beacon state")
-		cfg.EnableByteMempool = true
 	}
 	if ctx.Bool(enableStateGenSigVerify.Name) {
 		log.Warn("Enabling sig verify for state gen")
