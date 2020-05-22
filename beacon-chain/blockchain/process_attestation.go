@@ -109,6 +109,11 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
+	// Verify LMG GHOST and FFG votes are consistent with each other.
+	if err := s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot); err != nil {
+		return nil, errors.Wrap(err, "could not verify attestation beacon block")
+	}
+
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1, helpers.TimeShiftTolerance); err != nil {
 		return nil, err
