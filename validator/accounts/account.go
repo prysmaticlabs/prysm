@@ -221,6 +221,7 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	return path, passphrase, nil
 }
 
+// Merge merges data from validator databases in sourceDirectories into a new store, which is created in targetDirectory.
 func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) error {
 	var sourceStores []*db.Store
 
@@ -236,7 +237,7 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 	}
 
 	if len(sourceStores) == 0 {
-		return errors.New("No validator databases found in source directories")
+		return errors.New("no validator databases found in source directories")
 	}
 
 	err := db.Merge(ctx, sourceStores, targetDirectory)

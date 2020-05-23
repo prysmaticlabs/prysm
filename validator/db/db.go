@@ -114,7 +114,7 @@ func GetKVStore(directory string) (*Store, error) {
 	boltDb, err := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		if err == bolt.ErrTimeout {
-			return nil, errors.New("Cannot obtain database lock, database may be in use by another process")
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err
 	}
