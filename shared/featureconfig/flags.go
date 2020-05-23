@@ -9,9 +9,9 @@ var (
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
 	}
-	broadcastSlashingFlag = &cli.BoolFlag{
-		Name:  "broadcast-slashing",
-		Usage: "Broadcast slashings from slashing pool.",
+	disableBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:  "disable-broadcast-slashings",
+		Usage: "Disables broadcasting slashings submitted to the beacon node.",
 	}
 	minimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
@@ -93,10 +93,6 @@ var (
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
-	enableByteMempool = &cli.BoolFlag{
-		Name:  "enable-byte-mempool",
-		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
-	}
 	disableDomainDataCacheFlag = &cli.BoolFlag{
 		Name: "disable-domain-data-cache",
 		Usage: "Disable caching of domain data requests per epoch. This feature reduces the total " +
@@ -140,9 +136,9 @@ var (
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
 	}
-	disableHistoricalDetectionFlag = &cli.BoolFlag{
-		Name:  "disable-historical-detection",
-		Usage: "Disables historical attestation detection for the slasher",
+	enableHistoricalDetectionFlag = &cli.BoolFlag{
+		Name:  "enable-historical-detection",
+		Usage: "Enables historical attestation detection for the slasher",
 	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
@@ -356,6 +352,21 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableByteMempool = &cli.BoolFlag{
+		Name:   "enable-byte-mempool",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:   "broadcast-slashing",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableHistoricalDetectionFlag = &cli.BoolFlag{
+		Name:   "disable-historical-detection",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -396,6 +407,9 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableEth1DataVoteCacheFlag,
 	deprecatedAccountMetricsFlag,
 	deprecatedEnableDomainDataCacheFlag,
+	deprecatedEnableByteMempool,
+	deprecatedBroadcastSlashingFlag,
+	deprecatedDisableHistoricalDetectionFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -410,7 +424,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
-	disableHistoricalDetectionFlag,
+	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
 
@@ -438,12 +452,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
-	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
-	broadcastSlashingFlag,
+	disableBroadcastSlashingFlag,
 	enableNewStateMgmt,
 	enableFieldTrie,
 	disableInitSyncBatchSaveBlocks,
@@ -463,5 +476,4 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
-	"--broadcast-slashing",
 }

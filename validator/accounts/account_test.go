@@ -67,11 +67,25 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 }
 
 func TestNewValidatorAccount_CreateValidatorAccount(t *testing.T) {
-	directory := "foobar"
-	_, _, err := CreateValidatorAccount(directory, "foobar")
-	wantErrString := fmt.Sprintf("path %q does not exist", directory)
+	directory := testutil.TempDir() + "/testkeystore"
+	defer func() {
+		if err := os.RemoveAll(directory); err != nil {
+			t.Logf("Could not remove directory: %v", err)
+		}
+	}()
+	_, _, err := CreateValidatorAccount("foobar", "foobar")
+	wantErrString := fmt.Sprintf("path %q does not exist", "foobar")
 	if err == nil || err.Error() != wantErrString {
 		t.Errorf("expected error not thrown, want: %v, got: %v", wantErrString, err)
+	}
+
+	// Make sure that empty existing directory doesn't trigger any errors.
+	if err := os.Mkdir(directory, 0777); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = CreateValidatorAccount(directory, "foobar")
+	if err != nil {
+		t.Error(err)
 	}
 }
 
