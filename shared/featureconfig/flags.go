@@ -140,9 +140,9 @@ var (
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
 	}
-	disableHistoricalDetectionFlag = &cli.BoolFlag{
-		Name:  "disable-historical-detection",
-		Usage: "Disables historical attestation detection for the slasher",
+	enableHistoricalDetectionFlag = &cli.BoolFlag{
+		Name:  "enable-historical-detection",
+		Usage: "Enables historical attestation detection for the slasher",
 	}
 	disableLookbackFlag = &cli.BoolFlag{
 		Name:  "disable-lookback",
@@ -366,6 +366,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableHistoricalDetectionFlag = &cli.BoolFlag{
+		Name:   "disable-historical-detection",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -408,6 +413,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableDomainDataCacheFlag,
 	deprecatedEnableByteMempool,
 	deprecatedBroadcastSlashingFlag,
+	deprecatedDisableHistoricalDetectionFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -423,7 +429,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
-	disableHistoricalDetectionFlag,
+	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
 
