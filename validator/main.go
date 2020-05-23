@@ -229,7 +229,7 @@ contract in order to activate the validator client`,
 				},
 				{
 					Name:        "merge",
-					Description: "merges data from several validator databases with this client's validator database",
+					Description: "merges data from several validator databases into a new validator database",
 					Flags: []cli.Flag{
 						flags.MergeSourceDirectories,
 						flags.MergeTargetDirectory,
