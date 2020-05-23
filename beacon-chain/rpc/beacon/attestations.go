@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -155,14 +156,17 @@ func (bs *Server) ListIndexedAttestations(
 	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
 	mappedAttestations := mapAttestationsByTargetRoot(ctx, attsArray)
-	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations)
-	attIndex := 0
+	indexedAtts := make([]*ethpb.IndexedAttestation, 0, numAttestations)
 	for targetRoot, atts := range mappedAttestations {
 		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
-		if err != nil {
+		if err != nil && strings.Contains(err.Error(), "unknown state summary") {
+			// We shouldn't stop the request if we encounter an attestation we don't have the state for.
+			log.Debugf("Could not get state for attestation target root %#x", targetRoot)
+			continue
+		} else if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"Could not retrieve state for attestation data block root %#x: %v",
+				"Could not retrieve state for attestation target root %#x: %v",
 				targetRoot,
 				err,
 			)
@@ -178,8 +182,7 @@ func (bs *Server) ListIndexedAttestations(
 				)
 			}
 			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee)
-			indexedAtts[attIndex] = idxAtt
-			attIndex++
+			indexedAtts = append(indexedAtts, idxAtt)
 		}
 	}
 

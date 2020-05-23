@@ -39,6 +39,7 @@ type Flags struct {
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
 	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableByteMempool                          bool // EnaableByteMempool memory management.
@@ -53,6 +54,7 @@ type Flags struct {
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
+	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -208,6 +210,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling skipping of historical states regen")
 		cfg.SkipRegenHistoricalStates = true
 	}
+	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
+		log.Warn("Enabling weighted round robin in initial syncing")
+		cfg.EnableInitSyncWeightedRoundRobin = true
+	}
 	Init(cfg)
 }
 
@@ -242,9 +248,14 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
 	}
-	if ctx.Bool(enableDomainDataCacheFlag.Name) {
-		log.Warn("Enabled domain data cache.")
-		cfg.EnableDomainDataCache = true
+	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
+		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
+		cfg.SlasherProtection = true
+	}
+	cfg.EnableDomainDataCache = true
+	if ctx.Bool(disableDomainDataCacheFlag.Name) {
+		log.Warn("Disabled domain data cache.")
+		cfg.EnableDomainDataCache = false
 	}
 	Init(cfg)
 }

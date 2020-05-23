@@ -24,7 +24,7 @@ type Store struct {
 // This is used as an array based stateful DAG for efficient fork choice look up.
 type Node struct {
 	Slot           uint64   // slot of the block converted to the node.
-	root           [32]byte // root of the block converted to the node.
+	Root           [32]byte // Root of the block converted to the node.
 	Parent         uint64   // the parent index of this node.
 	justifiedEpoch uint64   // justified epoch of this node.
 	finalizedEpoch uint64   // finalized epoch of this node.
@@ -41,5 +41,5 @@ type Vote struct {
 	nextEpoch   uint64   // epoch of next voting period.
 }
 
-// This defines an unknown node which is used for the array based stateful DAG.
-const nonExistentNode = ^uint64(0)
+// NonExistentNode defines an unknown node which is used for the array based stateful DAG.
+const NonExistentNode = ^uint64(0)

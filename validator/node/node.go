@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/urfave/cli.v2"
 )
@@ -114,7 +115,11 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := ValidatorClient.registerPrometheusService(); err != nil {
 		return nil, err
 	}
-
+	if featureconfig.Get().SlasherProtection {
+		if err := ValidatorClient.registerSlasherClientService(); err != nil {
+			return nil, err
+		}
+	}
 	if err := ValidatorClient.registerClientService(keyManager); err != nil {
 		return nil, err
 	}
@@ -180,11 +185,16 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 	endpoint := s.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := s.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !s.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := s.cliCtx.Bool(flags.AccountMetricsFlag.Name)
+	emitAccountMetrics := !s.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
 	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	var sp *slashing_protection.Service
+	var protector slashing_protection.Protector
+	if err := s.services.FetchService(&sp); err == nil {
+		protector = sp
+	}
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -196,11 +206,34 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		Protector:                  protector,
 	})
+
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
 	}
 	return s.services.RegisterService(v)
+}
+func (s *ValidatorClient) registerSlasherClientService() error {
+	endpoint := s.cliCtx.String(flags.SlasherRPCProviderFlag.Name)
+	if endpoint == "" {
+		return errors.New("external slasher feature flag is set but no slasher endpoint is configured")
+
+	}
+	cert := s.cliCtx.String(flags.SlasherCertFlag.Name)
+	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	sp, err := slashing_protection.NewSlashingProtectionService(context.Background(), &slashing_protection.Config{
+		Endpoint:                   endpoint,
+		CertFlag:                   cert,
+		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
+		GrpcRetriesFlag:            grpcRetries,
+		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize client service")
+	}
+	return s.services.RegisterService(sp)
 }
 
 // selectKeyManager selects the key manager depending on the options provided by the user.
@@ -296,4 +329,13 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	return nil
+}
+
+// ExtractPublicKeysFromKeyManager extracts only the public keys from the specified key manager.
+func ExtractPublicKeysFromKeyManager(ctx *cli.Context) ([][48]byte, error) {
+	km, err := selectKeyManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return km.FetchValidatingKeys()
 }

@@ -41,6 +41,12 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, beaconState, bRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot); err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'a'}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Root: r[:],

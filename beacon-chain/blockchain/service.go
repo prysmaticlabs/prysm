@@ -43,40 +43,42 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	beaconDB               db.HeadAccessDatabase
-	depositCache           *depositcache.DepositCache
-	chainStartFetcher      powchain.ChainStartFetcher
-	attPool                attestations.Pool
-	slashingPool           *slashings.Pool
-	exitPool               *voluntaryexits.Pool
-	genesisTime            time.Time
-	p2p                    p2p.Broadcaster
-	maxRoutines            int64
-	head                   *head
-	headLock               sync.RWMutex
-	stateNotifier          statefeed.Notifier
-	genesisRoot            [32]byte
-	epochParticipation     map[uint64]*precompute.Balance
-	epochParticipationLock sync.RWMutex
-	forkChoiceStore        f.ForkChoicer
-	justifiedCheckpt       *ethpb.Checkpoint
-	prevJustifiedCheckpt   *ethpb.Checkpoint
-	bestJustifiedCheckpt   *ethpb.Checkpoint
-	finalizedCheckpt       *ethpb.Checkpoint
-	prevFinalizedCheckpt   *ethpb.Checkpoint
-	nextEpochBoundarySlot  uint64
-	voteLock               sync.RWMutex
-	initSyncState          map[[32]byte]*stateTrie.BeaconState
-	boundaryRoots          [][32]byte
-	initSyncStateLock      sync.RWMutex
-	checkpointState        *cache.CheckpointStateCache
-	checkpointStateLock    sync.Mutex
-	stateGen               *stategen.State
-	opsService             *attestations.Service
-	initSyncBlocks         map[[32]byte]*ethpb.SignedBeaconBlock
-	initSyncBlocksLock     sync.RWMutex
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	beaconDB                  db.HeadAccessDatabase
+	depositCache              *depositcache.DepositCache
+	chainStartFetcher         powchain.ChainStartFetcher
+	attPool                   attestations.Pool
+	slashingPool              *slashings.Pool
+	exitPool                  *voluntaryexits.Pool
+	genesisTime               time.Time
+	p2p                       p2p.Broadcaster
+	maxRoutines               int64
+	head                      *head
+	headLock                  sync.RWMutex
+	stateNotifier             statefeed.Notifier
+	genesisRoot               [32]byte
+	epochParticipation        map[uint64]*precompute.Balance
+	epochParticipationLock    sync.RWMutex
+	forkChoiceStore           f.ForkChoicer
+	justifiedCheckpt          *ethpb.Checkpoint
+	prevJustifiedCheckpt      *ethpb.Checkpoint
+	bestJustifiedCheckpt      *ethpb.Checkpoint
+	finalizedCheckpt          *ethpb.Checkpoint
+	prevFinalizedCheckpt      *ethpb.Checkpoint
+	nextEpochBoundarySlot     uint64
+	voteLock                  sync.RWMutex
+	initSyncState             map[[32]byte]*stateTrie.BeaconState
+	boundaryRoots             [][32]byte
+	initSyncStateLock         sync.RWMutex
+	checkpointState           *cache.CheckpointStateCache
+	checkpointStateLock       sync.Mutex
+	stateGen                  *stategen.State
+	opsService                *attestations.Service
+	initSyncBlocks            map[[32]byte]*ethpb.SignedBeaconBlock
+	initSyncBlocksLock        sync.RWMutex
+	recentCanonicalBlocks     map[[32]byte]bool
+	recentCanonicalBlocksLock sync.RWMutex
 }
 
 // Config options for the service.
@@ -101,25 +103,26 @@ type Config struct {
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                ctx,
-		cancel:             cancel,
-		beaconDB:           cfg.BeaconDB,
-		depositCache:       cfg.DepositCache,
-		chainStartFetcher:  cfg.ChainStartFetcher,
-		attPool:            cfg.AttPool,
-		exitPool:           cfg.ExitPool,
-		slashingPool:       cfg.SlashingPool,
-		p2p:                cfg.P2p,
-		maxRoutines:        cfg.MaxRoutines,
-		stateNotifier:      cfg.StateNotifier,
-		epochParticipation: make(map[uint64]*precompute.Balance),
-		forkChoiceStore:    cfg.ForkChoiceStore,
-		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
-		boundaryRoots:      [][32]byte{},
-		checkpointState:    cache.NewCheckpointStateCache(),
-		opsService:         cfg.OpsService,
-		stateGen:           cfg.StateGen,
-		initSyncBlocks:     make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		ctx:                   ctx,
+		cancel:                cancel,
+		beaconDB:              cfg.BeaconDB,
+		depositCache:          cfg.DepositCache,
+		chainStartFetcher:     cfg.ChainStartFetcher,
+		attPool:               cfg.AttPool,
+		exitPool:              cfg.ExitPool,
+		slashingPool:          cfg.SlashingPool,
+		p2p:                   cfg.P2p,
+		maxRoutines:           cfg.MaxRoutines,
+		stateNotifier:         cfg.StateNotifier,
+		epochParticipation:    make(map[uint64]*precompute.Balance),
+		forkChoiceStore:       cfg.ForkChoiceStore,
+		initSyncState:         make(map[[32]byte]*stateTrie.BeaconState),
+		boundaryRoots:         [][32]byte{},
+		checkpointState:       cache.NewCheckpointStateCache(),
+		opsService:            cfg.OpsService,
+		stateGen:              cfg.StateGen,
+		initSyncBlocks:        make(map[[32]byte]*ethpb.SignedBeaconBlock),
+		recentCanonicalBlocks: make(map[[32]byte]bool),
 	}, nil
 }
 

@@ -10,8 +10,11 @@ import (
 	"runtime"
 	runtimeDebug "runtime/debug"
 	"strings"
+	"time"
 
 	joonix "github.com/joonix/log"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -19,11 +22,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
+	"google.golang.org/grpc"
 	"gopkg.in/urfave/cli.v2"
 	"gopkg.in/urfave/cli.v2/altsrc"
 )
@@ -55,7 +60,10 @@ var appFlags = []cli.Flag{
 	flags.GrpcHeadersFlag,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
-	flags.AccountMetricsFlag,
+	flags.DisableAccountMetricsFlag,
+	flags.MonitoringPortFlag,
+	flags.SlasherRPCProviderFlag,
+	flags.SlasherCertFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
@@ -64,18 +72,17 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	flags.MonitoringPortFlag,
 	cmd.LogFormat,
+	cmd.LogFileName,
+	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
+	cmd.GrpcMaxCallRecvMsgSizeFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
-	cmd.LogFileName,
-	cmd.ConfigFileFlag,
-	cmd.ChainConfigFileFlag,
-	cmd.GrpcMaxCallRecvMsgSizeFlag,
 }
 
 func init() {
@@ -100,18 +107,20 @@ func main() {
 					Description: `creates a new validator account keystore containing private keys for Ethereum 2.0 -
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
-					Flags: []cli.Flag{
-						flags.KeystorePathFlag,
-						flags.PasswordFlag,
-					},
+					Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+						[]cli.Flag{
+							flags.KeystorePathFlag,
+							flags.PasswordFlag,
+							cmd.ChainConfigFileFlag,
+						}...),
 					Action: func(cliCtx *cli.Context) error {
-						featureconfig.ConfigureValidator(cliCtx)
-						if featureconfig.Get().MinimalConfig {
-							log.Warn("Using Minimal Config")
-							params.UseMinimalConfig()
+						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+							params.LoadChainConfigFile(chainConfigFileName)
 						}
+						featureconfig.ConfigureValidator(cliCtx)
 
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, true /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -129,7 +138,7 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, passphrase, err := accounts.HandleEmptyFlags(cliCtx, false /*confirmPassword*/)
+						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
@@ -140,6 +149,79 @@ contract in order to activate the validator client`,
 					},
 				},
 				{
+					Name:        "status",
+					Description: `list the validator status for existing validator keys`,
+					Flags: []cli.Flag{
+						cmd.GrpcMaxCallRecvMsgSizeFlag,
+						flags.BeaconRPCProviderFlag,
+						flags.CertFlag,
+						flags.GrpcHeadersFlag,
+						flags.GrpcRetriesFlag,
+						flags.KeyManager,
+						flags.KeyManagerOpts,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						var err error
+						var pubKeys [][]byte
+						if cliCtx.String(flags.KeyManager.Name) != "" {
+							pubKeysBytes48, success := node.ExtractPublicKeysFromKeyManager(cliCtx)
+							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success
+						} else {
+							keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
+							if err != nil {
+								return err
+							}
+							pubKeys, err = accounts.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
+						}
+						if err != nil {
+							return err
+						}
+						ctx, cancel := context.WithTimeout(
+							context.Background(), 10*time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
+						defer cancel()
+						dialOpts := client.ConstructDialOptions(
+							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
+							cliCtx.String(flags.CertFlag.Name),
+							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
+							cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+							grpc.WithBlock())
+						endpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+						conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
+						if err != nil {
+							log.WithError(err).Fatalf("Failed to dial beacon node endpoint at %s", endpoint)
+							return err
+						}
+						err = accounts.RunStatusCommand(pubKeys, ethpb.NewBeaconNodeValidatorClient(conn))
+						if closed := conn.Close(); closed != nil {
+							log.WithError(closed).Error("Could not close connection to beacon node")
+						}
+						return err
+					},
+				},
+				{
+					Name:        "change-password",
+					Description: "changes password for all keys located in a keystore",
+					Flags: []cli.Flag{
+						flags.KeystorePathFlag,
+						flags.PasswordFlag,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						keystorePath, oldPassword, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
+						if err != nil {
+							log.WithError(err).Error("Could not read keystore path and/or the old password")
+						}
+
+						log.Info("Please enter the new password")
+						newPassword, err := cmd.EnterPassword(true, cmd.StdInPasswordReader{})
+						if err != nil {
+							log.WithError(err).Error("Could not read the new password")
+						}
+
+						err = accounts.ChangePassword(keystorePath, oldPassword, newPassword)
+						if err != nil {
+							log.WithError(err).Error("Changing password failed")
+						} else {
+							log.Info("Password changed successfully")
 					Name:        "merge",
 					Description: "merges data from several validator databases with this client's validator database",
 					Flags: []cli.Flag{
@@ -163,6 +245,7 @@ contract in order to activate the validator client`,
 			},
 		},
 	}
+
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {

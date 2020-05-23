@@ -115,6 +115,7 @@ func (p *Pool) InsertAttesterSlashing(
 	}
 
 	slashedVal := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+	cantSlash := make([]uint64, 0, len(slashedVal))
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
 		ok, err := p.validatorSlashingPreconditionCheck(state, val)
@@ -122,11 +123,11 @@ func (p *Pool) InsertAttesterSlashing(
 			return err
 		}
 		// If the validator has already exited, has already been slashed, or if its index
-		// has been recently included in the pool of slashings, do not process this new
-		// slashing.
+		// has been recently included in the pool of slashings, skip including this indice.
 		if !ok {
 			attesterSlashingReattempts.Inc()
-			return fmt.Errorf("validator at index %d cannot be slashed", val)
+			cantSlash = append(cantSlash, val)
+			continue
 		}
 
 		// Check if the validator already exists in the list of slashings.
@@ -135,6 +136,8 @@ func (p *Pool) InsertAttesterSlashing(
 			return p.pendingAttesterSlashing[i].validatorToSlash >= val
 		})
 		if found != len(p.pendingAttesterSlashing) && p.pendingAttesterSlashing[found].validatorToSlash == val {
+			attesterSlashingReattempts.Inc()
+			cantSlash = append(cantSlash, val)
 			continue
 		}
 
@@ -142,12 +145,15 @@ func (p *Pool) InsertAttesterSlashing(
 			attesterSlashing: slashing,
 			validatorToSlash: val,
 		}
-
 		// Insert into pending list and sort again.
 		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, pendingSlashing)
 		sort.Slice(p.pendingAttesterSlashing, func(i, j int) bool {
 			return p.pendingAttesterSlashing[i].validatorToSlash < p.pendingAttesterSlashing[j].validatorToSlash
 		})
+		numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
+	}
+	if len(cantSlash) == len(slashedVal) {
+		return fmt.Errorf("could not slash any of %d validators in submitted slashing", len(slashedVal))
 	}
 	return nil
 }
@@ -165,7 +171,7 @@ func (p *Pool) InsertProposerSlashing(
 	defer span.End()
 
 	if err := blocks.VerifyProposerSlashing(state, slashing); err != nil {
-		numPendingAttesterSlashingFailedSigVerify.Inc()
+		numPendingProposerSlashingFailedSigVerify.Inc()
 		return errors.Wrap(err, "could not verify proposer slashing")
 	}
 
@@ -197,6 +203,8 @@ func (p *Pool) InsertProposerSlashing(
 	sort.Slice(p.pendingProposerSlashing, func(i, j int) bool {
 		return p.pendingProposerSlashing[i].Header_1.Header.ProposerIndex < p.pendingProposerSlashing[j].Header_1.Header.ProposerIndex
 	})
+	numPendingProposerSlashings.Set(float64(len(p.pendingProposerSlashing)))
+
 	return nil
 }
 
