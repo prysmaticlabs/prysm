@@ -3,6 +3,7 @@ package helpers_test
 import (
 	"bytes"
 	"sort"
+	"strconv"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -346,5 +347,54 @@ func TestAggregateSignature_False(t *testing.T) {
 	}
 	if aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)) {
 		t.Error("Signature not suppose to verify")
+	}
+}
+
+func TestComputeSubnetForAttestation_ComputeForAttestation(t *testing.T) {
+	// Create 10 committees
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
+	validators := make([]*ethpb.Validator, validatorCount)
+
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey:             k,
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		Slot:        200,
+		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		StateRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	att := &ethpb.Attestation{
+		AggregationBits: []byte{'A'},
+		Data: &ethpb.AttestationData{
+			Slot:            34,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: []byte{'C'},
+			Source:          nil,
+			Target:          nil,
+		},
+		Signature:            []byte{'B'},
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	sub, err := helpers.ComputeSubnetForAttestation(state, att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sub != 6 {
+		t.Errorf("Did not get correct subnet for attestation, wanted %d but got %d", 6, sub)
 	}
 }

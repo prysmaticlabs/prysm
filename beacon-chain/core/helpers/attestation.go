@@ -176,3 +176,27 @@ func AggregateSignature(attestations []*ethpb.Attestation) (*bls.Signature, erro
 func IsAggregated(attestation *ethpb.Attestation) bool {
 	return attestation.AggregationBits.Count() > 1
 }
+
+// ComputeSubnetForAttestation returns the subnet for which the provided attestation will be broadcasted to.
+//
+// Spec pseudocode definition:
+// def compute_subnet_for_attestation(state: BeaconState, attestation: Attestation) -> uint64:
+//    """
+//    Compute the correct subnet for an attestation for Phase 0.
+//    Note, this mimics expected Phase 1 behavior where attestations will be mapped to their shard subnet.
+//    """
+//    slots_since_epoch_start = attestation.data.slot % SLOTS_PER_EPOCH
+//    committees_since_epoch_start = get_committee_count_at_slot(state, attestation.data.slot) * slots_since_epoch_start
+//    return (committees_since_epoch_start + attestation.data.index) % ATTESTATION_SUBNET_COUNT
+func ComputeSubnetForAttestation(bState *stateTrie.BeaconState, att *ethpb.Attestation) (uint64, error) {
+	slotSinceStart := SlotsSinceEpochStarts(att.Data.Slot)
+	wantedEpoch := SlotToEpoch(att.Data.Slot)
+	activeCount, err := ActiveValidatorCount(bState, wantedEpoch)
+	if err != nil {
+		return 0, err
+	}
+	comCount := SlotCommitteeCount(activeCount)
+	commsSinceStart := comCount * slotSinceStart
+	computedSubnet := (commsSinceStart + att.Data.CommitteeIndex) % params.BeaconNetworkConfig().AttestationSubnetCount
+	return computedSubnet, nil
+}
