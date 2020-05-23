@@ -9,9 +9,9 @@ var (
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
 	}
-	broadcastSlashingFlag = &cli.BoolFlag{
-		Name:  "broadcast-slashing",
-		Usage: "Broadcast slashings from slashing pool.",
+	disableBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:  "disable-broadcast-slashings",
+		Usage: "Disables broadcasting slashings submitted to the beacon node.",
 	}
 	minimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
@@ -80,6 +80,11 @@ var (
 		Usage: "Enables functionality to prevent the validator client from signing and " +
 			"broadcasting 2 any slashable attestations.",
 	}
+	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
+		Name: "enable-external-slasher-protection",
+		Usage: "Enables the validator to connect to external slasher to prevent it from " +
+			"transmitting a slashable offence over the network.",
+	}
 	disableStrictAttestationPubsubVerificationFlag = &cli.BoolFlag{
 		Name:  "disable-strict-attestation-pubsub-verification",
 		Usage: "Disable strict signature verification of attestations in pubsub. See PR 4782 for details.",
@@ -88,13 +93,9 @@ var (
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
-	enableByteMempool = &cli.BoolFlag{
-		Name:  "enable-byte-mempool",
-		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
-	}
-	enableDomainDataCacheFlag = &cli.BoolFlag{
-		Name: "enable-domain-data-cache",
-		Usage: "Enable caching of domain data requests per epoch. This feature reduces the total " +
+	disableDomainDataCacheFlag = &cli.BoolFlag{
+		Name: "disable-domain-data-cache",
+		Usage: "Disable caching of domain data requests per epoch. This feature reduces the total " +
 			"calls to the beacon node for each assignment.",
 	}
 	enableStateGenSigVerify = &cli.BoolFlag{
@@ -342,8 +343,23 @@ var (
 		Hidden: true,
 	}
 	deprecatedAccountMetricsFlag = &cli.BoolFlag{
-		Name: "enable-account-metrics",
-		Usage: deprecatedUsage,
+		Name:   "enable-account-metrics",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableDomainDataCacheFlag = &cli.BoolFlag{
+		Name:   "enable-domain-data-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableByteMempool = &cli.BoolFlag{
+		Name:   "enable-byte-mempool",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedBroadcastSlashingFlag = &cli.BoolFlag{
+		Name:   "broadcast-slashing",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -385,6 +401,9 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableCustomBlockHTR,
 	deprecatedEnableEth1DataVoteCacheFlag,
 	deprecatedAccountMetricsFlag,
+	deprecatedEnableDomainDataCacheFlag,
+	deprecatedEnableByteMempool,
+	deprecatedBroadcastSlashingFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -392,7 +411,8 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
-	enableDomainDataCacheFlag,
+	enableExternalSlasherProtectionFlag,
+	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 }...)
 
@@ -404,7 +424,6 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
-	"--enable-domain-data-cache",
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
@@ -427,12 +446,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
-	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
-	broadcastSlashingFlag,
+	disableBroadcastSlashingFlag,
 	enableNewStateMgmt,
 	enableFieldTrie,
 	disableInitSyncBatchSaveBlocks,

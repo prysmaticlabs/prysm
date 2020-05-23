@@ -11,6 +11,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	golog "github.com/ipfs/go-log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -23,6 +24,7 @@ import (
 // providing RPC endpoints for runtime debugging of a node, this server is
 // gated behind the feature flag --enable-debug-rpc-endpoints.
 type Server struct {
+	BeaconDB           db.NoHeadAccessDatabase
 	GenesisTimeFetcher blockchain.TimeFetcher
 	StateGen           *stategen.State
 }
