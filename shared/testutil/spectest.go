@@ -30,6 +30,12 @@ var json = jsoniter.Config{
 	TagKey:                 "spec-name",
 }.Froze()
 
+// The spec BLS setting for the following test has been changed to 2 which is "BLS ignore", it's dependent on BLS being off in:
+// https://github.com/ethereum/eth2.0-specs/pull/1803
+// The new data for this test has not been resinged. It's recommended in 1814 to skip BLS verify for the following path:
+// https://github.com/ethereum/eth2.0-specs/issues/1841
+var skipBlsVerify = "tests/mainnet/phase0/operations/attester_slashing/pyspec_tests/success_surround"
+
 // UnmarshalYaml using a customized json encoder that supports "spec-name"
 // override tag.
 func UnmarshalYaml(y []byte, dest interface{}) error {
@@ -114,7 +120,8 @@ func RunBlockOperationTest(
 
 	helpers.ClearCache()
 	beaconState, err := operationFn(context.Background(), preState, body)
-	if postSSZExists {
+
+	if postSSZExists && !(folderPath == skipBlsVerify) {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
