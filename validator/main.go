@@ -222,6 +222,12 @@ contract in order to activate the validator client`,
 							log.WithError(err).Error("Changing password failed")
 						} else {
 							log.Info("Password changed successfully")
+						}
+
+						return nil
+					},
+				},
+				{
 					Name:        "merge",
 					Description: "merges data from several validator databases with this client's validator database",
 					Flags: []cli.Flag{
