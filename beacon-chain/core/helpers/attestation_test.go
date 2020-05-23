@@ -390,10 +390,11 @@ func TestComputeSubnetForAttestation_ComputeForAttestation(t *testing.T) {
 		XXX_unrecognized:     nil,
 		XXX_sizecache:        0,
 	}
-	sub, err := helpers.ComputeSubnetForAttestation(state, att)
+	valCount, err := helpers.ActiveValidatorCount(state, helpers.SlotToEpoch(att.Data.Slot))
 	if err != nil {
 		t.Fatal(err)
 	}
+	sub := helpers.ComputeSubnetForAttestation(valCount, att)
 	if sub != 6 {
 		t.Errorf("Did not get correct subnet for attestation, wanted %d but got %d", 6, sub)
 	}

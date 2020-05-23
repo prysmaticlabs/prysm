@@ -178,6 +178,8 @@ func IsAggregated(attestation *ethpb.Attestation) bool {
 }
 
 // ComputeSubnetForAttestation returns the subnet for which the provided attestation will be broadcasted to.
+//	This differs from the spec definition by instead passing in the active validators indices in the attestation's
+// 	given epoch.
 //
 // Spec pseudocode definition:
 // def compute_subnet_for_attestation(state: BeaconState, attestation: Attestation) -> uint64:
@@ -188,15 +190,26 @@ func IsAggregated(attestation *ethpb.Attestation) bool {
 //    slots_since_epoch_start = attestation.data.slot % SLOTS_PER_EPOCH
 //    committees_since_epoch_start = get_committee_count_at_slot(state, attestation.data.slot) * slots_since_epoch_start
 //    return (committees_since_epoch_start + attestation.data.index) % ATTESTATION_SUBNET_COUNT
-func ComputeSubnetForAttestation(bState *stateTrie.BeaconState, att *ethpb.Attestation) (uint64, error) {
-	slotSinceStart := SlotsSinceEpochStarts(att.Data.Slot)
-	wantedEpoch := SlotToEpoch(att.Data.Slot)
-	activeCount, err := ActiveValidatorCount(bState, wantedEpoch)
-	if err != nil {
-		return 0, err
-	}
-	comCount := SlotCommitteeCount(activeCount)
+func ComputeSubnetForAttestation(activeValCount uint64, att *ethpb.Attestation) uint64 {
+	return ComputeSubnetFromCommitteeAndSlot(activeValCount, att.Data.CommitteeIndex, att.Data.Slot)
+}
+
+// ComputeSubnetFromCommitteeAndSlot is a flattened version of ComputeSubnetForAttestation where we only pass in
+// the relevant fields from the attestation as function arguments.
+//
+// Spec pseudocode definition:
+// def compute_subnet_for_attestation(state: BeaconState, attestation: Attestation) -> uint64:
+//    """
+//    Compute the correct subnet for an attestation for Phase 0.
+//    Note, this mimics expected Phase 1 behavior where attestations will be mapped to their shard subnet.
+//    """
+//    slots_since_epoch_start = attestation.data.slot % SLOTS_PER_EPOCH
+//    committees_since_epoch_start = get_committee_count_at_slot(state, attestation.data.slot) * slots_since_epoch_start
+//    return (committees_since_epoch_start + attestation.data.index) % ATTESTATION_SUBNET_COUNT
+func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) uint64 {
+	slotSinceStart := SlotsSinceEpochStarts(attSlot)
+	comCount := SlotCommitteeCount(activeValCount)
 	commsSinceStart := comCount * slotSinceStart
-	computedSubnet := (commsSinceStart + att.Data.CommitteeIndex) % params.BeaconNetworkConfig().AttestationSubnetCount
-	return computedSubnet, nil
+	computedSubnet := (commsSinceStart + comIdx) % params.BeaconNetworkConfig().AttestationSubnetCount
+	return computedSubnet
 }

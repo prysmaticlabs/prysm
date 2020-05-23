@@ -102,7 +102,7 @@ func (r *Service) registerSubscribers() {
 	if featureconfig.Get().DisableDynamicCommitteeSubnets {
 		r.subscribeDynamic(
 			"/eth2/%x/beacon_attestation_%d",
-			r.committeesCount,                           /* determineSubsLen */
+			r.subnetCount,                               /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)
@@ -241,9 +241,9 @@ func (r *Service) subscribeDynamicWithSubnets(
 				}
 
 				// Persistent subscriptions from validators
-				persistentSubs := r.persistentCommitteeIndices()
+				persistentSubs := r.persistentSubnetIndices()
 				// Update desired topic indices for aggregator
-				wantedSubs := r.aggregatorCommitteeIndices(currentSlot)
+				wantedSubs := r.aggregatorSubnetIndices(currentSlot)
 
 				// Combine subscriptions to get all requested subscriptions
 				wantedSubs = sliceutil.SetUint64(append(persistentSubs, wantedSubs...))
@@ -255,7 +255,7 @@ func (r *Service) subscribeDynamicWithSubnets(
 					r.subscribeAggregatorSubnet(subscriptions, idx, base, digest, validate, handle)
 				}
 				// find desired subs for attesters
-				attesterSubs := r.attesterCommitteeIndices(currentSlot)
+				attesterSubs := r.attesterSubnetIndices(currentSlot)
 				for _, idx := range attesterSubs {
 					r.lookupAttesterSubnets(digest, idx)
 				}

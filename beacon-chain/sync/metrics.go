@@ -89,7 +89,7 @@ func (r *Service) updateMetrics() {
 	if err != nil {
 		log.WithError(err).Errorf("Could not compute fork digest")
 	}
-	indices := r.aggregatorCommitteeIndices(r.chain.CurrentSlot())
+	indices := r.aggregatorSubnetIndices(r.chain.CurrentSlot())
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	attTopic += r.p2p.Encoding().ProtocolSuffix()
 	for _, committeeIdx := range indices {
