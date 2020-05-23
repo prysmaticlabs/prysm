@@ -99,7 +99,7 @@ func (r *Service) updateMetrics() {
 	// We update all other gossip topics.
 	for topic := range p2p.GossipTopicMappings {
 		// We already updated attestation subnet topics.
-		if strings.Contains(topic, "committee_index") {
+		if strings.Contains(topic, "beacon_attestation") {
 			continue
 		}
 		topic += r.p2p.Encoding().ProtocolSuffix()

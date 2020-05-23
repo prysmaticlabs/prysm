@@ -101,14 +101,14 @@ func (r *Service) registerSubscribers() {
 	)
 	if featureconfig.Get().DisableDynamicCommitteeSubnets {
 		r.subscribeDynamic(
-			"/eth2/%x/committee_index%d_beacon_attestation",
+			"/eth2/%x/beacon_attestation_%d",
 			r.committeesCount,                           /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)
 	} else {
 		r.subscribeDynamicWithSubnets(
-			"/eth2/%x/committee_index%d_beacon_attestation",
+			"/eth2/%x/beacon_attestation_%d",
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)

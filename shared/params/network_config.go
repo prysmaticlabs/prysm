@@ -6,7 +6,6 @@ import "time"
 type NetworkConfig struct {
 	GossipMaxSize                     uint64        `yaml:"GOSSIP_MAX_SIZE"`                       // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
 	MaxChunkSize                      uint64        `yaml:"MAX_CHUNK_SIZE"`                        // MaxChunkSize is the the maximum allowed size of uncompressed req/resp chunked responses.
-	AttestationSubnetCount            uint64        `yaml:"ATTESTATION_SUBNET_COUNT"`              // AttestationSubnetCount is the number of attestation subnets used in the gossipsub protocol.
 	AttestationPropagationSlotRange   uint64        `yaml:"ATTESTATION_PROPAGATION_SLOT_RANGE"`    // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
 	RandomSubnetsPerValidator         uint64        `yaml:"RANDOM_SUBNETS_PER_VALIDATOR"`          // RandomSubnetsPerValidator specifies the amount of subnets a validator has to be subscribed to at one time.
 	EpochsPerRandomSubnetSubscription uint64        `yaml:"EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION"` // EpochsPerRandomSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
@@ -22,7 +21,6 @@ type NetworkConfig struct {
 var defaultNetworkConfig = &NetworkConfig{
 	GossipMaxSize:                     1 << 20, // 1 MiB
 	MaxChunkSize:                      1 << 20, // 1 MiB
-	AttestationSubnetCount:            64,
 	AttestationPropagationSlotRange:   32,
 	RandomSubnetsPerValidator:         1 << 0,
 	EpochsPerRandomSubnetSubscription: 1 << 8,

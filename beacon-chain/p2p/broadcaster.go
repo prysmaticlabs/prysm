@@ -64,7 +64,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	return nil
 }
 
-const attestationSubnetTopicFormat = "/eth2/%x/committee_index%d_beacon_attestation"
+const attestationSubnetTopicFormat = "/eth2/%x/beacon_attestation_%d"
 
 func attestationToTopic(att *eth.Attestation, forkDigest [4]byte) string {
 	if att == nil || att.Data == nil {

@@ -111,7 +111,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					CommitteeIndex: 0,
 				},
 			},
-			topic: "/eth2/00000000/committee_index0_beacon_attestation",
+			topic: "/eth2/00000000/beacon_attestation_0",
 		},
 		{
 			att: &eth.Attestation{
@@ -119,7 +119,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					CommitteeIndex: 11,
 				},
 			},
-			topic: "/eth2/00000000/committee_index11_beacon_attestation",
+			topic: "/eth2/00000000/beacon_attestation_11",
 		},
 		{
 			att: &eth.Attestation{
@@ -127,7 +127,7 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					CommitteeIndex: 55,
 				},
 			},
-			topic: "/eth2/00000000/committee_index55_beacon_attestation",
+			topic: "/eth2/00000000/beacon_attestation_55",
 		},
 		{
 			att:   &eth.Attestation{},
