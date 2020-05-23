@@ -178,8 +178,8 @@ func IsAggregated(attestation *ethpb.Attestation) bool {
 }
 
 // ComputeSubnetForAttestation returns the subnet for which the provided attestation will be broadcasted to.
-//	This differs from the spec definition by instead passing in the active validators indices in the attestation's
-// 	given epoch.
+// This differs from the spec definition by instead passing in the active validators indices in the attestation's
+// given epoch.
 //
 // Spec pseudocode definition:
 // def compute_subnet_for_attestation(state: BeaconState, attestation: Attestation) -> uint64:
