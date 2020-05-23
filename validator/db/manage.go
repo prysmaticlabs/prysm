@@ -35,26 +35,11 @@ func Merge(ctx context.Context, sourceStores []*Store, targetDirectory string) e
 		if err := store.db.View(func(tx *bolt.Tx) error {
 			proposalsBucket := tx.Bucket(historicProposalsBucket)
 			if err := proposalsBucket.ForEach(func(pubKey, _ []byte) error {
-				pubKeyProposals := pubKeyProposals{
-					PubKey:    pubKey,
-					Proposals: []epochProposals{},
+				pubKeyProposals, err := getPubKeyProposals(pubKey, proposalsBucket)
+				if err != nil {
+					return errors.Wrapf(err,"Could not retrieve proposals for database in %s", store.databasePath)
 				}
-				pubKeyBucket := proposalsBucket.Bucket(pubKey)
-				if err := pubKeyBucket.ForEach(func(epoch, v []byte) error {
-					epochProposals := epochProposals{
-						Epoch:     make([]byte, len(epoch)),
-						Proposals: make([]byte, len(v)),
-					}
-					copy(epochProposals.Epoch, epoch)
-					copy(epochProposals.Proposals, v)
-					pubKeyProposals.Proposals = append(pubKeyProposals.Proposals, epochProposals)
-					return nil
-				}); err != nil {
-					return errors.Wrapf(
-						err,
-						"Could not retrieve proposals for database in %s", store.databasePath)
-				}
-				allProposals = append(allProposals, pubKeyProposals)
+				allProposals = append(allProposals, *pubKeyProposals)
 				return nil
 			}); err != nil {
 				return errors.Wrapf(err, "Could not retrieve proposals for database in %s", store.databasePath)
@@ -79,6 +64,41 @@ func Merge(ctx context.Context, sourceStores []*Store, targetDirectory string) e
 			return err
 		}
 	}
+
+	if err := createTargetStore(targetDirectory, allProposals, allAttestations); err != nil {
+		return errors.Wrapf(err, "Could not create target store")
+	}
+
+	return nil
+}
+
+func getPubKeyProposals(pubKey []byte, proposalsBucket *bolt.Bucket) (*pubKeyProposals, error) {
+	pubKeyProposals := pubKeyProposals{
+		PubKey:    pubKey,
+		Proposals: []epochProposals{},
+	}
+
+	pubKeyBucket := proposalsBucket.Bucket(pubKey)
+	if err := pubKeyBucket.ForEach(func(epoch, v []byte) error {
+		epochProposals := epochProposals{
+			Epoch:     make([]byte, len(epoch)),
+			Proposals: make([]byte, len(v)),
+		}
+		copy(epochProposals.Epoch, epoch)
+		copy(epochProposals.Proposals, v)
+		pubKeyProposals.Proposals = append(pubKeyProposals.Proposals, epochProposals)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return &pubKeyProposals, nil
+}
+
+func createTargetStore(
+	targetDirectory string,
+	allProposals []pubKeyProposals,
+	allAttestations []pubKeyAttestations) error {
 
 	newStore, err := NewKVStore(targetDirectory)
 	defer func() {
@@ -113,6 +133,5 @@ func Merge(ctx context.Context, sourceStores []*Store, targetDirectory string) e
 	}); err != nil {
 		return err
 	}
-
 	return nil
 }
