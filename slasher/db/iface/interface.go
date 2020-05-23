@@ -44,6 +44,9 @@ type ReadOnlyDatabase interface {
 
 	// Chain data related methods.
 	ChainHead(ctx context.Context) (*ethpb.ChainHead, error)
+
+	// Cache management methods.
+	RemoveOldestFromCache(ctx context.Context) uint64
 }
 
 // WriteAccessDatabase represents a write access database with only functions that can modify the DB.
