@@ -34,7 +34,7 @@ var json = jsoniter.Config{
 // https://github.com/ethereum/eth2.0-specs/pull/1803
 // The new data for this test has not been resinged. It's recommended in 1814 to skip BLS verify for the following path:
 // https://github.com/ethereum/eth2.0-specs/issues/1841
-var skipBlsVerify = "tests/mainnet/phase0/operations/attester_slashing/pyspec_tests/success_surround"
+var skipBlsVerify = "success_surround"
 
 // UnmarshalYaml using a customized json encoder that supports "spec-name"
 // override tag.
@@ -120,8 +120,8 @@ func RunBlockOperationTest(
 
 	helpers.ClearCache()
 	beaconState, err := operationFn(context.Background(), preState, body)
-
-	if postSSZExists && !(folderPath == skipBlsVerify) {
+	ss := strings.Split(folderPath, "/")
+	if postSSZExists && !(ss[len(ss)-1] == skipBlsVerify) {
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
