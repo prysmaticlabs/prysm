@@ -266,7 +266,7 @@ func TestMerge_FailsWhenNoDatabaseExistsInAllSourceDirectories(t *testing.T) {
 	}
 
 	err := Merge(context.Background(), []string{sourceDirectory1, sourceDirectory2}, targetDirectory)
-	expected := "No validator databases found in source directories"
+	expected := "no validator databases found in source directories"
 	if err == nil || !strings.Contains(err.Error(), expected) {
 		t.Errorf("Expected: %s vs received %v", expected, err)
 	}
