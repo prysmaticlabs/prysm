@@ -54,15 +54,21 @@ genrule(
 cc_library(
     name = "lib",
     srcs = [
+        "@herumi_mcl//:src/fp.cpp",
+        "@herumi_bls//:src/bls_c384_256.cpp",
+        "@herumi_bls//:src/bls_c_impl.hpp",
         ":base64_o",
     ],
-    deps = [
-        "@herumi_mcl//:bn",
-        "@herumi_mcl//:fp",
-        "@herumi_bls//:bls_c384_256",
+    deps = ["@herumi_mcl//:bn"],
+    includes = [
+        "bls/include",
     ],
     hdrs = [
-        "@herumi_bls//:include/bls/bls.h",
+        "bls/include/bls/bls.h",
+        "bls/include/bls/bls384_256.h",
+        "bls/include/mcl/bn.h",
+        "bls/include/mcl/bn_c384_256.h",
+        "@herumi_mcl//:include/mcl/curve_type.h",
     ],
     copts = OPTS + [
         "-std=c++03",
