@@ -124,6 +124,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	// the genesis epoch.
 	var storedEpoch uint64
 	for epoch := latestStoredEpoch; epoch < currentChainHead.HeadEpoch; epoch++ {
+		go ds.slasherDB.RemoveOldestFromCache(ctx)
 		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, epoch)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
@@ -152,7 +153,6 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			log.WithError(err).Error("Could not persist chain head to disk")
 		}
 		storedEpoch = epoch
-		ds.slasherDB.RemoveOldestFromCache(ctx)
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", storedEpoch)
 }
