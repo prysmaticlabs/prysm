@@ -283,19 +283,20 @@ func (bs *Server) StreamIndexedAttestations(
 			// have the same data root, so we just use the target epoch from
 			// the first one to determine committees for converting into indexed
 			// form.
-			targetCheckpoint := aggAtts[0].Data.Target
-			committeesBySlot, _, err := bs.retrieveCommitteesForCheckpoint(stream.Context(), targetCheckpoint)
+			targetRoot := aggAtts[0].Data.Target.Root
+			targetEpoch := aggAtts[0].Data.Target.Epoch
+			committeesBySlot, _, err := bs.retrieveCommitteesForRoot(stream.Context(), targetRoot)
 			if err != nil {
 				return status.Errorf(
 					codes.Internal,
 					"Could not retrieve committees for epoch %d: %v",
-					targetCheckpoint.Epoch,
+					targetEpoch,
 					err,
 				)
 			}
 			// We use the retrieved committees for the epoch to convert all attestations
 			// into indexed form effectively.
-			startSlot := helpers.StartSlot(targetCheckpoint.Epoch)
+			startSlot := helpers.StartSlot(targetEpoch)
 			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 			for _, att := range aggAtts {
 				// Out of range check, the attestation slot cannot be greater
