@@ -166,7 +166,7 @@ func (q *blocksQueue) loop() {
 				}
 
 				// Do garbage collection, and advance sliding window forward.
-				if q.headFetcher.HeadSlot() >= fsm.start+q.blocksPerRequest {
+				if q.headFetcher.HeadSlot() >= fsm.start+q.blocksPerRequest-1 {
 					highestStartBlock, err := q.smm.highestStartBlock()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
