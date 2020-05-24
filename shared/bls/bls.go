@@ -242,18 +242,18 @@ func NewAggregateSignature() *Signature {
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
-func AggregateSignatures(sig []*Signature) *Signature {
-	if len(sig) == 0 {
+func AggregateSignatures(sigs []*Signature) *Signature {
+	if len(sigs) == 0 {
 		return nil
 	}
 	if featureconfig.Get().SkipBLSVerify {
-		return sig[0]
+		return sigs[0]
 	}
 
 	// Copy signature
-	signature := *sig[0].s
-	for i := 1; i < len(sig); i++ {
-		signature.Add(sig[i].s)
+	signature := *sigs[0].s
+	for i := 1; i < len(sigs); i++ {
+		signature.Add(sigs[i].s)
 	}
 	return &Signature{s: &signature}
 }
