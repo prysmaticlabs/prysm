@@ -335,7 +335,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 		}
 
 		// Replace the last (currently activated) state machine.
-		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot-1)
+		nonSkippedSlot, err := q.blocksFetcher.nonSkippedSlotAfter(ctx, startSlot+blocksPerRequest*(lookaheadSteps-1)-1)
 		if err != nil {
 			return stateSkipped, err
 		}
