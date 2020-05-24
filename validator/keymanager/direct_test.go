@@ -72,7 +72,7 @@ func TestSign(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !sig.Verify(bytesutil.FromBytes32(msg), sks[0].PublicKey()) {
+	if !sig.Verify(sks[0].PublicKey(), bytesutil.FromBytes32(msg)) {
 		t.Fatal("Failed to verify generated signature")
 	}
 }
