@@ -335,10 +335,10 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 			aggregatedByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			var roots [][32]byte
 			for root, atts := range attsByRoot {
-				// We aggregate the received attestations.
+				// We aggregate the received attestations, we know they all have the same data root.
 				aggAtts, err := helpers.AggregateAttestations(atts)
 				if err != nil {
-					log.WithError(err).Error("Could not aggregate")
+					log.WithError(err).Error("Could not aggregate collected attestations")
 					continue
 				}
 				if len(aggAtts) == 0 {
