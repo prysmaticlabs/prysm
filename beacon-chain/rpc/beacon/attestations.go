@@ -272,7 +272,7 @@ func (bs *Server) StreamIndexedAttestations(
 					log.Info("Indexed attestations stream got nil attestation or nil attestation aggregate")
 					continue
 				}
-				bs.CollectedAttestationsBuffer <- []*ethpb.Attestation{data.Attestation.Aggregate}
+				bs.ReceivedAttestationsBuffer <- data.Attestation.Aggregate
 			}
 		case atts, ok := <-bs.CollectedAttestationsBuffer:
 			if !ok {

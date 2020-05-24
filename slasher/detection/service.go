@@ -85,7 +85,7 @@ func (ds *Service) Start() {
 	<-ch
 	sub.Unsubscribe()
 
-	if !featureconfig.Get().DisableHistoricalDetection {
+	if featureconfig.Get().EnableHistoricalDetection {
 		// The detection service runs detection on all historical
 		// chain data since genesis.
 		go ds.detectHistoricalChainData(ds.ctx)
@@ -149,6 +149,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			log.WithError(err).Error("Could not persist chain head to disk")
 		}
 		storedEpoch = epoch
+		ds.slasherDB.RemoveOldestFromCache(ctx)
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", storedEpoch)
 }
