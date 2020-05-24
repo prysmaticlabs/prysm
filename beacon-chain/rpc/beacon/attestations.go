@@ -332,7 +332,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			aggregatedByTarget := make(map[[32]byte][]*ethpb.Attestation)
+			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			var roots [][32]byte
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
@@ -345,10 +345,10 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 					continue
 				}
 				targetRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
-				aggregatedByTarget[targetRoot] = append(aggregatedByTarget[targetRoot], aggAtts...)
+				aggregatedAttsByTarget[targetRoot] = append(aggregatedAttsByTarget[targetRoot], aggAtts...)
 				roots = append(roots, root)
 			}
-			for _, atts := range aggregatedByTarget {
+			for _, atts := range aggregatedAttsByTarget {
 				bs.CollectedAttestationsBuffer <- atts
 			}
 			for _, root := range roots {
