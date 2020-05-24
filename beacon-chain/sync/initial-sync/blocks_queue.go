@@ -27,7 +27,6 @@ const (
 var (
 	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
 	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
-	errNoStateMachine             = errors.New("state machine not found")
 	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
 	errInvalidInitialState        = errors.New("invalid initial state")
 )
