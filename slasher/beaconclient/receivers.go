@@ -136,8 +136,8 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	defer span.End()
 
 	var atts []*ethpb.IndexedAttestation
-	quarterSlot := slotutil.DivideSlotBy(4 /* 1/4 slot duration */)
-	ticker := time.NewTicker(quarterSlot)
+	halfSlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
+	ticker := time.NewTicker(halfSlot)
 	for {
 		select {
 		case <-ticker.C:
