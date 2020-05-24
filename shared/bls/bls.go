@@ -81,12 +81,12 @@ func PublicKeyFromBytes(pubKey []byte) (*PublicKey, error) {
 	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy()
 	}
-	pubKey := &bls12.PublicKey{}
-	err := pubKey.Deserialize(pubKey)
+	p := &bls12.PublicKey{}
+	err := p.Deserialize(pubKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	pubKeyObj := &PublicKey{p: pubKey}
+	pubKeyObj := &PublicKey{p: p}
 	copiedKey, err := pubKeyObj.Copy()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not copy public key")
