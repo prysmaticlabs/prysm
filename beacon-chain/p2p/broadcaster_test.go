@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -109,36 +111,33 @@ func TestService_Attestation_Subnet(t *testing.T) {
 			att: &eth.Attestation{
 				Data: &eth.AttestationData{
 					CommitteeIndex: 0,
+					Slot:           2,
 				},
 			},
-			topic: "/eth2/00000000/committee_index0_beacon_attestation",
+			topic: "/eth2/00000000/beacon_attestation_2",
 		},
 		{
 			att: &eth.Attestation{
 				Data: &eth.AttestationData{
 					CommitteeIndex: 11,
+					Slot:           10,
 				},
 			},
-			topic: "/eth2/00000000/committee_index11_beacon_attestation",
+			topic: "/eth2/00000000/beacon_attestation_21",
 		},
 		{
 			att: &eth.Attestation{
 				Data: &eth.AttestationData{
 					CommitteeIndex: 55,
+					Slot:           529,
 				},
 			},
-			topic: "/eth2/00000000/committee_index55_beacon_attestation",
-		},
-		{
-			att:   &eth.Attestation{},
-			topic: "",
-		},
-		{
-			topic: "",
+			topic: "/eth2/00000000/beacon_attestation_8",
 		},
 	}
 	for _, tt := range tests {
-		if res := attestationToTopic(tt.att, [4]byte{} /* fork digest */); res != tt.topic {
+		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(100, tt.att.Data.CommitteeIndex, tt.att.Data.Slot)
+		if res := attestationToTopic(subnet, [4]byte{} /* fork digest */); res != tt.topic {
 			t.Errorf("Wrong topic, got %s wanted %s", res, tt.topic)
 		}
 	}

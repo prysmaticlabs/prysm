@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -28,6 +29,7 @@ type P2P interface {
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
 type Broadcaster interface {
 	Broadcast(context.Context, proto.Message) error
+	BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error
 }
 
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.

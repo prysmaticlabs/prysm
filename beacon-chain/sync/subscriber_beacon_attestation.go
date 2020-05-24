@@ -46,34 +46,30 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	return r.attPool.SaveUnaggregatedAttestation(a)
 }
 
-func (r *Service) committeesCount() int {
-	activeValidatorIndices, err := r.chain.HeadValidatorsIndices(helpers.SlotToEpoch(r.chain.HeadSlot()))
-	if err != nil {
-		panic(err)
-	}
-	return int(helpers.SlotCommitteeCount(uint64(len(activeValidatorIndices))))
+func (r *Service) subnetCount() int {
+	return int(params.BeaconNetworkConfig().AttestationSubnetCount)
 }
 
-func (r *Service) persistentCommitteeIndices() []uint64 {
+func (r *Service) persistentSubnetIndices() []uint64 {
 	return cache.CommitteeIDs.GetAllCommittees()
 }
 
-func (r *Service) aggregatorCommitteeIndices(currentSlot uint64) []uint64 {
+func (r *Service) aggregatorSubnetIndices(currentSlot uint64) []uint64 {
 	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
 	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
 	commIds := []uint64{}
 	for i := currentSlot; i <= endSlot; i++ {
-		commIds = append(commIds, cache.CommitteeIDs.GetAggregatorCommitteeIDs(i)...)
+		commIds = append(commIds, cache.CommitteeIDs.GetAggregatorSubnetIDs(i)...)
 	}
 	return sliceutil.SetUint64(commIds)
 }
 
-func (r *Service) attesterCommitteeIndices(currentSlot uint64) []uint64 {
+func (r *Service) attesterSubnetIndices(currentSlot uint64) []uint64 {
 	endEpoch := helpers.SlotToEpoch(currentSlot) + 1
 	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
 	commIds := []uint64{}
 	for i := currentSlot; i <= endSlot; i++ {
-		commIds = append(commIds, cache.CommitteeIDs.GetAttesterCommitteeIDs(i)...)
+		commIds = append(commIds, cache.CommitteeIDs.GetAttesterSubnetIDs(i)...)
 	}
 	return sliceutil.SetUint64(commIds)
 }
