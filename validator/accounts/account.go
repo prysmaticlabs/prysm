@@ -105,17 +105,17 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to create deposit transaction")
 	}
-	log.Info(`Account creation complete! Copy and paste the raw transaction data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
+	log.Info(`Account creation complete! Copy and paste the raw deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`
-========================Raw Transaction Data=======================
+========================Deposit Data=======================
 
 %#x
 
 ===================================================================
 `, tx.Data())
-	fmt.Println("***Enter the above Raw Transaction Data into step 3 on https://prylabs.net/participate***")
+	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
 	publicKey := validatorKey.PublicKey.Marshal()[:]
-	log.Infof("Deposit data displayed for public key: %#x", publicKey)
+	log.Infof("Public key: %#x", publicKey)
 	return nil
 }
 
