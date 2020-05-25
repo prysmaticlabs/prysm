@@ -11,12 +11,11 @@ import (
 )
 
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
-	t.Skip("Skipping until eth1 changes in v0.12 can work with e2e")
 	testutil.ResetCache()
 	params.UseE2EConfig()
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--custom-genesis-delay=25"},
+		BeaconFlags:    []string{"--custom-genesis-delay=35"},
 		ValidatorFlags: []string{},
 		EpochsToRun:    3,
 		TestSync:       false,
