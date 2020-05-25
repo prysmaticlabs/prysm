@@ -263,7 +263,7 @@ buildifier_dependencies()
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "d74b93584564161b2de771089ee697f07d8bd5b5",  # v1.3.1
+    commit = "3a35fb6e3e18b9dbfee291262260dee7372d2a92",  # v1.4.3
     importpath = "github.com/golang/mock",
 )
 
@@ -339,7 +339,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
+    commit = "0b1645d91e851e735d3e23330303ce81f70adbe3",  # v2.3.0
     importpath = "github.com/go-yaml/yaml",
 )
 
@@ -388,7 +388,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "91b837264c0f35dd4e2be341d711316b91d3573d",  # v0.0.1
+    commit = "cc39b17c0260d16f2bb69f67fdf6b846df24c5fb",  # v2.0.8
     importpath = "github.com/ipfs/go-log",
 )
 
@@ -490,7 +490,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "d504ab2e22d97cb9f10b1d146a1e6a063f4a5f43",  # v1.1.2
+    commit = "b1dd383fd2c02d7933db93f157e339f1899b5163",  # v1.1.3
     importpath = "github.com/mr-tron/base58",
 )
 
@@ -623,7 +623,7 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    commit = "839c75faf7f98a33d445d181f3018b5c3409a45e",  # v1.4.2
+    commit = "60c74ad9be0d874af0ab0daef6ab07c5c5911f0d",  # v1.6.0
     importpath = "github.com/sirupsen/logrus",
 )
 
@@ -647,7 +647,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    commit = "cbcf4e3f3baee7952fc386c8b2534af4d267c875",  # v1.0.5
+    commit = "5ceb358a720efa82a5692470f37874b1f48035ad",  # v1.0.6
     importpath = "github.com/jackpal/gateway",
 )
 
@@ -672,7 +672,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
+    commit = "059203efa1edd7130293a583541b8308e7c640c4",  # v1.0.2
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -690,7 +690,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gorilla_websocket",
-    commit = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b",  # v1.4.1
+    commit = "b65e62901fc1c0d968042419e74789f6af455eb9",  # v1.4.2
     importpath = "github.com/gorilla/websocket",
 )
 
@@ -759,7 +759,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "4ab88e80c249ed361d3299e2930427d9ac43ef8d",  # v1.0.0
+    commit = "6edbbd9e560190e318cdc5b4d3e630b442858380",  # v1.6.0
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -920,7 +920,7 @@ go_repository(
 
 go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
-    commit = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e",  # v1.0.2
+    commit = "edb144dfd453055e1e49a3d8b410a660b5a87613",  # v1.0.3
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
 )
 
@@ -953,7 +953,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_klog",
-    commit = "2ca9ad30301bf30a8a6e0fa2110db6b8df699a91",  # v1.0.0
+    commit = "4cae117fdf5d65aeb3f638b8d8c87cd1cf8c8d41",  # v2.0.0
     importpath = "k8s.io/klog",
 )
 
@@ -979,7 +979,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_yaml_v2",
-    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
+    commit = "0b1645d91e851e735d3e23330303ce81f70adbe3",  # v2.3.0
     importpath = "gopkg.in/yaml.v2",
 )
 
@@ -991,7 +991,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5",  # v0.0.5
+    commit = "a684a6d7f5e37385d954dd3b5a14fc6912c6ab9d",  # v1.0.0
     importpath = "github.com/spf13/cobra",
 )
 
@@ -1017,7 +1017,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",  # v1.0.0
+    commit = "2004d9dba6b07a5b8d133209244f376680f9d472",  # v1.1.0
     importpath = "github.com/hashicorp/go-multierror",
 )
 
@@ -1107,7 +1107,7 @@ go_repository(
 
 go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_middleware",
-    commit = "dd15ed025b6054e5253963e355991f3070d4e593",  # v1.1.0
+    commit = "3c51f7f332123e8be5a157c0802a228ac85bf9db",  # v1.2.0
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
 )
 
@@ -1150,7 +1150,7 @@ go_repository(
 
 go_repository(
     name = "org_uber_go_automaxprocs",
-    commit = "946a8391268aea0a60a86403988ff3ab4b604a83",  # v1.2.0
+    commit = "e393bb0ea0644204c502247d647e428742196ebe",  # v1.3.0
     importpath = "go.uber.org/automaxprocs",
 )
 
@@ -1199,7 +1199,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_yamux",
-    commit = "663972181d409e7263040f0b668462f87c85e1bd",  # v1.2.3
+    commit = "7bf6d4a1d537d0319dddd29d3eb180851c83b5c5",  # v1.3.7
     importpath = "github.com/libp2p/go-yamux",
 )
 
@@ -1289,7 +1289,7 @@ go_repository(
 
 go_repository(
     name = "io_k8s_sigs_yaml",
-    commit = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480",  # v1.1.0
+    commit = "9fc95527decd95bb9d28cc2eab08179b2d0f6971",  # v1.2.0
     importpath = "sigs.k8s.io/yaml",
 )
 
@@ -1307,7 +1307,7 @@ go_repository(
 
 go_repository(
     name = "com_github_json_iterator_go",
-    commit = "4f2e55fcf87ba29ab80379002316db67620ff622",
+    commit = "0ff49de124c6f76f8494e194af75bde0f1a49a29",  # v1.1.6
     importpath = "github.com/json-iterator/go",
     remote = "https://github.com/prestonvanloon/go",
     vcs = "git",
@@ -1327,7 +1327,7 @@ go_repository(
 
 go_repository(
     name = "com_github_patrickmn_go_cache",
-    commit = "46f407853014144407b6c2ec7ccc76bf67958d93",
+    commit = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0",  # v2.1.0
     importpath = "github.com/patrickmn/go-cache",
 )
 
@@ -1512,7 +1512,7 @@ go_repository(
 
 go_repository(
     name = "com_github_cespare_xxhash",
-    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",  # v2.1.1
     importpath = "github.com/cespare/xxhash",
 )
 
