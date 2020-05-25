@@ -652,11 +652,11 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		if err != nil {
 			return 0, err
 		}
+		pidInd++
 		if nextSlot > slot && upperBoundSlot >= nextSlot {
 			upperBoundSlot = nextSlot
 			break
 		}
-		pidInd++
 	}
 
 	// Epoch with non-empty slot is located. Check all slots within two nearby epochs.
@@ -664,7 +664,6 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		upperBoundSlot -= slotsPerEpoch
 	}
 	upperBoundSlot = helpers.StartSlot(helpers.SlotToEpoch(upperBoundSlot))
-	pidInd++
 	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch*2, 1)
 	if err != nil {
 		return 0, err
