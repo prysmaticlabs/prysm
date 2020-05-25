@@ -50,7 +50,7 @@ func TestVerifyMessageYaml(t *testing.T) {
 				t.Fatalf("Cannot unmarshal input to signature: %v", err)
 			}
 
-			verified := sig.Verify(msgBytes, pk)
+			verified := sig.Verify(pk, msgBytes)
 			if verified != test.Output {
 				t.Fatalf("Signature does not match the expected verification output. "+
 					"Expected %#v but received %#v for test case %d", test.Output, verified, i)

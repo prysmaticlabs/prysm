@@ -44,7 +44,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !sig.Verify(root[:], k1.PublicKey) {
+	if !sig.Verify(k1.PublicKey, root[:]) {
 		t.Error("Invalid proof of deposit input signature")
 	}
 }
