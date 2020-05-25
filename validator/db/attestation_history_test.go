@@ -53,7 +53,7 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 	}
 
 	newMap2 := make(map[uint64]uint64)
-	// The validator attested at target epoch 2 but had no attestations for target epochs 0 and 1.
+	// The validator attested at target epoch 1 and 3 but had no attestations for target epochs 0 and 2.
 	newMap2[0] = farFuture
 	newMap2[1] = 0
 	newMap2[2] = farFuture

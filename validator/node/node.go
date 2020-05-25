@@ -317,7 +317,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := db.NewKVStore(dataDir, pubkeys)
+		valDB, err := db.NewKVStoreWithPublicKeyBuckets(dataDir, pubkeys)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}
