@@ -17,6 +17,10 @@ var (
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
+	e2eConfigFlag = &cli.BoolFlag{
+		Name:  "e2e-config",
+		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
+	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
@@ -415,6 +419,7 @@ var deprecatedFlags = []cli.Flag{
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
+	e2eConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
 	enableExternalSlasherProtectionFlag,
@@ -424,6 +429,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
+	e2eConfigFlag,
 	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
@@ -440,6 +446,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
+	e2eConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,

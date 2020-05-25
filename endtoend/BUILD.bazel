@@ -7,8 +7,7 @@ go_test(
     srcs = [
         "endtoend_test.go",
         "long_minimal_e2e_test.go",
-        "minimal_antiflake_e2e_1_test.go",
-        "minimal_antiflake_e2e_2_test.go",
+        "minimal_e2e_genesis_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],

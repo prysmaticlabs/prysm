@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second
+	maxPollingWaitTime  = 90 * time.Second
 	filePollingInterval = 500 * time.Millisecond
 )
 
