@@ -79,6 +79,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeyManager,
 			flags.KeyManagerOpts,
 			flags.KeystorePathFlag,
+			flags.MergeSourceDirectories,
+			flags.MergeTargetDirectory,
 			flags.PasswordFlag,
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
