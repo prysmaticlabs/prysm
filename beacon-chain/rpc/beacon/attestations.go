@@ -280,7 +280,9 @@ func (bs *Server) StreamIndexedAttestations(
 				log.Error("Indexed attestations stream collected attestations channel closed")
 				continue
 			}
-
+			if len(aggAtts) == 0 {
+				continue
+			}
 			// All attestations we receive have the same target epoch given they
 			// have the same data root, so we just use the target epoch from
 			// the first one to determine committees for converting into indexed
@@ -291,8 +293,8 @@ func (bs *Server) StreamIndexedAttestations(
 			if err != nil {
 				return status.Errorf(
 					codes.Internal,
-					"Could not retrieve committees for epoch %d: %v",
-					targetEpoch,
+					"Could not retrieve committees for target epoch %#x: %v",
+					targetRoot,
 					err,
 				)
 			}
