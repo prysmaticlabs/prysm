@@ -385,7 +385,6 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 			return errors.Wrap(ctx.Err(), "could not update min spans")
 		}
 		spans, _, _, err := s.slasherDB.EpochSpans(ctx, epoch)
-		log.Infof("getting EpochSpans %d", epoch)
 		if err != nil {
 			return err
 		}
@@ -415,7 +414,6 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spans); err != nil {
 			return err
 		}
-		log.Infof("after SaveEpochSpans %d", epoch)
 		if len(valIndices) == 0 || epoch == 0 {
 			log.Infof("epoch: %d len(indices) %d", epoch, len(valIndices))
 			break
