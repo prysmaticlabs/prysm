@@ -21,6 +21,10 @@ var (
 		Name:  "schlesi-testnet",
 		Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
 	}
+	e2eConfigFlag = &cli.BoolFlag{
+		Name:  "e2e-config",
+		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
+	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
@@ -420,6 +424,7 @@ var deprecatedFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	schlesiTestnetFlag,
+	e2eConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
 	enableExternalSlasherProtectionFlag,
@@ -429,6 +434,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
+	e2eConfigFlag,
 	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
@@ -446,6 +452,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	schlesiTestnetFlag,
+	e2eConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,
