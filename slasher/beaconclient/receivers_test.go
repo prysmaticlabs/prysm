@@ -10,7 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 )
 
@@ -105,7 +105,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		nil,
 	).Do(func() {
 		// Let a slot pass for the ticker.
-		time.Sleep(slotutil.DivideSlotBy(1))
+		time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 		cancel()
 	})
 
