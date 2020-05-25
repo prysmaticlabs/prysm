@@ -641,10 +641,6 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		}
 		pidInd++
 	}
-	log.WithFields(logrus.Fields{
-		"old": slot,
-		"new": slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch + 1,
-	}).Debug("Updating slot value, and resorting to random sampling")
 
 	// Quickly find the close enough epoch where a non-empty slot definitely exists.
 	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
