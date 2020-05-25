@@ -40,6 +40,9 @@ const (
 	peerLocksPollingInterval = 5 * time.Minute
 	// peerLockMaxAge is maximum time before stale lock is purged.
 	peerLockMaxAge = 60 * time.Minute
+	// nonSkippedSlotsFullSearchEpochs how many epochs to check in full, before resorting to random
+	// sampling of slots once per epoch
+	nonSkippedSlotsFullSearchEpochs = 10
 )
 
 var (
@@ -586,45 +589,89 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 	return peers
 }
 
-// nonSkippedSlotAfter checks slots after the given one in an attempt to find non-empty future slot.
+// nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
+// For efficiency only one random slot is checked per epoch, so returned slot might not be the first
+// non-skipped slot. This shouldn't be a problem, as in case of adversary peer, we might get incorrect
+// data anyway, so code that relies on this function must be robust enough to re-request, if no progress
+// is possible with a returned value.
 func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "initialsync.nonSkippedSlotAfter")
+	defer span.End()
+
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	_, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	peers = f.filterPeers(peers, peersPercentagePerRequest)
 	if len(peers) == 0 {
 		return 0, errNoPeersAvailable
 	}
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().UnixNano()))
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	pidInd := 0
 
-	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
-	nextPID := func() peer.ID {
-		randGenerator.Shuffle(len(peers), func(i, j int) {
-			peers[i], peers[j] = peers[j], peers[i]
-		})
-		return peers[0]
-	}
-
-	for slot <= helpers.StartSlot(epoch+1) {
+	fetch := func(pid peer.ID, start, count, step uint64) (uint64, error) {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
-			StartSlot: slot + 1,
-			Count:     f.blocksPerSecond,
-			Step:      1,
+			StartSlot: start,
+			Count:     count,
+			Step:      step,
 		}
-
-		blocks, err := f.requestBlocks(ctx, req, nextPID())
+		blocks, err := f.requestBlocks(ctx, req, pid)
 		if err != nil {
-			return slot, err
+			return 0, err
 		}
-
 		if len(blocks) > 0 {
-			slots := make([]uint64, len(blocks))
-			for i, block := range blocks {
-				slots[i] = block.Block.Slot
+			for _, block := range blocks {
+				if block.Block.Slot > slot {
+					return block.Block.Slot, nil
+				}
 			}
-			return blocks[0].Block.Slot, nil
 		}
-		slot += f.blocksPerSecond
+		return 0, nil
 	}
 
-	return slot, nil
+	// Start by checking several epochs fully, w/o resorting to random sampling.
+	start := slot + 1
+	end := start + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
+	for ind := start; ind < end; ind += slotsPerEpoch {
+		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, slotsPerEpoch, 1)
+		if err != nil {
+			return 0, err
+		}
+		if nextSlot > slot {
+			return nextSlot, nil
+		}
+		pidInd++
+	}
+
+	// Quickly find the close enough epoch where a non-empty slot definitely exists.
+	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
+	slot = slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
+	upperBoundSlot := helpers.StartSlot(epoch + 1)
+	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
+		start := ind + uint64(randGenerator.Intn(int(slotsPerEpoch)))
+		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch/2, slotsPerEpoch)
+		if err != nil {
+			return 0, err
+		}
+		pidInd++
+		if nextSlot > slot && upperBoundSlot >= nextSlot {
+			upperBoundSlot = nextSlot
+			break
+		}
+	}
+
+	// Epoch with non-empty slot is located. Check all slots within two nearby epochs.
+	if upperBoundSlot > slotsPerEpoch {
+		upperBoundSlot -= slotsPerEpoch
+	}
+	upperBoundSlot = helpers.StartSlot(helpers.SlotToEpoch(upperBoundSlot))
+	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch*2, 1)
+	if err != nil {
+		return 0, err
+	}
+	if nextSlot < slot || helpers.StartSlot(epoch+1) < nextSlot {
+		return 0, errors.New("invalid range for non-skipped slot")
+	}
+	return nextSlot, nil
 }
 
 // bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
