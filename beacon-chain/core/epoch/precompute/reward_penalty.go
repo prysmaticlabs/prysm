@@ -56,7 +56,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	return state, nil
 }
 
-// This computes the rewards and penalties differences for individual validators based on the
+// AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
 func AttestationsDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator) ([]uint64, []uint64, error) {
 	numOfVals := state.NumValidators()
@@ -145,7 +145,7 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 	return r, p
 }
 
-// This computes the rewards and penalties differences for individual validators based on the
+// ProposersDelta computes and returns the rewards and penalties differences for individual validators based on the
 // proposer inclusion records.
 func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator) ([]uint64, error) {
 	numofVals := state.NumValidators()
