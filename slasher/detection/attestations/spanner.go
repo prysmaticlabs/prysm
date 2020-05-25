@@ -385,6 +385,7 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 			return errors.Wrap(ctx.Err(), "could not update min spans")
 		}
 		spans, _, _, err := s.slasherDB.EpochSpans(ctx, epoch)
+		log.Infof("getting EpochSpans %d", epoch)
 		if err != nil {
 			return err
 		}
