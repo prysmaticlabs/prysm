@@ -20,6 +20,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	peers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -139,6 +140,12 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 
 // Broadcast a message.
 func (p *TestP2P) Broadcast(ctx context.Context, msg proto.Message) error {
+	p.BroadcastCalled = true
+	return nil
+}
+
+// BroadcastAttestation broadcasts an attestation.
+func (p *TestP2P) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
 	p.BroadcastCalled = true
 	return nil
 }

@@ -40,12 +40,12 @@ func newCommitteeIDs() *committeeIDs {
 	return &committeeIDs{attester: attesterCache, aggregator: aggregatorCache, persistentSubnets: persistentCache}
 }
 
-// AddAttesterCommiteeID adds committee ID for subscribing subnet for the attester of a given slot.
-func (c *committeeIDs) AddAttesterCommiteeID(slot uint64, committeeID uint64) {
+// AddAttesterSubnetID adds the subnet index for subscribing subnet for the attester of a given slot.
+func (c *committeeIDs) AddAttesterSubnetID(slot uint64, subnetID uint64) {
 	c.attesterLock.Lock()
 	defer c.attesterLock.Unlock()
 
-	ids := []uint64{committeeID}
+	ids := []uint64{subnetID}
 	val, exists := c.attester.Get(slot)
 	if exists {
 		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
@@ -53,8 +53,8 @@ func (c *committeeIDs) AddAttesterCommiteeID(slot uint64, committeeID uint64) {
 	c.attester.Add(slot, ids)
 }
 
-// GetAttesterCommitteeIDs gets the committee ID for subscribing subnet for attester of the slot.
-func (c *committeeIDs) GetAttesterCommitteeIDs(slot uint64) []uint64 {
+// GetAttesterSubnetIDs gets the subnet IDs for subscribed subnets for attesters of the slot.
+func (c *committeeIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
 	c.attesterLock.RLock()
 	defer c.attesterLock.RUnlock()
 
@@ -68,12 +68,12 @@ func (c *committeeIDs) GetAttesterCommitteeIDs(slot uint64) []uint64 {
 	return nil
 }
 
-// AddAggregatorCommiteeID adds committee ID for subscribing subnet for the aggregator of a given slot.
-func (c *committeeIDs) AddAggregatorCommiteeID(slot uint64, committeeID uint64) {
+// AddAggregatorSubnetID adds the subnet ID for subscribing subnet for the aggregator of a given slot.
+func (c *committeeIDs) AddAggregatorSubnetID(slot uint64, subnetID uint64) {
 	c.aggregatorLock.Lock()
 	defer c.aggregatorLock.Unlock()
 
-	ids := []uint64{committeeID}
+	ids := []uint64{subnetID}
 	val, exists := c.aggregator.Get(slot)
 	if exists {
 		ids = sliceutil.UnionUint64(append(val.([]uint64), ids...))
@@ -81,8 +81,8 @@ func (c *committeeIDs) AddAggregatorCommiteeID(slot uint64, committeeID uint64) 
 	c.aggregator.Add(slot, ids)
 }
 
-// GetAggregatorCommitteeIDs gets the committee ID for subscribing subnet for aggregator of the slot.
-func (c *committeeIDs) GetAggregatorCommitteeIDs(slot uint64) []uint64 {
+// GetAggregatorSubnetIDs gets the subnet IDs for subscribing subnet for aggregator of the slot.
+func (c *committeeIDs) GetAggregatorSubnetIDs(slot uint64) []uint64 {
 	c.aggregatorLock.RLock()
 	defer c.aggregatorLock.RUnlock()
 
