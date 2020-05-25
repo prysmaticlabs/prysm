@@ -40,6 +40,9 @@ const (
 	peerLocksPollingInterval = 5 * time.Minute
 	// peerLockMaxAge is maximum time before stale lock is purged.
 	peerLockMaxAge = 60 * time.Minute
+	// nonSkippedSlotsFullSearchEpochs how many epochs to check in full, before resorting to random
+	// sampling of slots once per epoch
+	nonSkippedSlotsFullSearchEpochs = 10
 )
 
 var (
@@ -592,12 +595,18 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 // data anyway, so code that relies on this function must be robust enough to re-request, if no progress
 // is possible with a returned value.
 func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "initialsync.nonSkippedSlotAfter")
+	defer span.End()
+
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	_, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	peers = f.filterPeers(peers, peersPercentagePerRequest)
 	if len(peers) == 0 {
 		return 0, errNoPeersAvailable
 	}
+	randGenerator := rand.New(rand.NewSource(roughtime.Now().UnixNano()))
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	pidInd := 0
 
 	fetch := func(pid peer.ID, start, count, step uint64) (uint64, error) {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
@@ -623,18 +632,30 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		return 0, nil
 	}
 
+	// Start by checking several epochs fully, w/o resorting to random sampling.
+	start := slot + 1
+	end := start + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
+	for ind := start; ind < end; ind += slotsPerEpoch {
+		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, slotsPerEpoch, 1)
+		if err != nil {
+			return 0, err
+		}
+		if nextSlot > slot {
+			return nextSlot, nil
+		}
+		pidInd++
+	}
+	log.WithFields(logrus.Fields{
+		"old": slot,
+		"new": slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch + 1,
+	}).Debug("Updating slot value, and resorting to random sampling")
+
 	// Quickly find the close enough epoch where a non-empty slot definitely exists.
 	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
-	rand.Seed(roughtime.Now().Unix())
+	slot = slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
 	upperBoundSlot := helpers.StartSlot(epoch + 1)
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	pidInd := 0
-	for ind := slot + 1; ind <= upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind
-		// For all checked epochs, except the first one, randomly pick slots to check (w/i the epoch).
-		if ind != slot+1 {
-			start = ind + uint64(rand.Intn(int(slotsPerEpoch)))
-		}
+	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
+		start := ind + uint64(randGenerator.Intn(int(slotsPerEpoch)))
 		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch/2, slotsPerEpoch)
 		if err != nil {
 			return 0, err
@@ -651,12 +672,13 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		upperBoundSlot -= slotsPerEpoch
 	}
 	upperBoundSlot = helpers.StartSlot(helpers.SlotToEpoch(upperBoundSlot))
-	nextSlot, err := fetch(peers[0], upperBoundSlot, slotsPerEpoch*2, 1)
+	pidInd++
+	nextSlot, err := fetch(peers[pidInd%len(peers)], upperBoundSlot, slotsPerEpoch*2, 1)
 	if err != nil {
-		return slot, err
+		return 0, err
 	}
 	if nextSlot < slot || helpers.StartSlot(epoch+1) < nextSlot {
-		return slot, nil
+		return 0, errors.New("invalid range for non-skipped slot")
 	}
 	return nextSlot, nil
 }
