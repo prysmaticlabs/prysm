@@ -469,7 +469,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	k := pubKey(3)
 
 	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
-	coms, ok, exp := cache.CommitteeIDs.GetPersistentCommittees(k)
+	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	if !ok {
 		t.Fatal("No cache entry found for validator")
 	}

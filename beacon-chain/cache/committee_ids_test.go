@@ -6,7 +6,7 @@ import (
 )
 
 func TestCommitteeIDCache_RoundTrip(t *testing.T) {
-	c := newCommitteeIDs()
+	c := newSubnetIDs()
 	slot := uint64(100)
 	committeeIDs := c.GetAggregatorSubnetIDs(slot)
 	if len(committeeIDs) != 0 {
@@ -57,7 +57,7 @@ func TestCommitteeIDCache_RoundTrip(t *testing.T) {
 
 func TestCommitteeIDs_PersistentCommitteeRoundtrip(t *testing.T) {
 	pubkeySet := [][48]byte{}
-	c := newCommitteeIDs()
+	c := newSubnetIDs()
 
 	for i := 0; i < 20; i++ {
 		pubkey := [48]byte{byte(i)}
@@ -68,7 +68,7 @@ func TestCommitteeIDs_PersistentCommitteeRoundtrip(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		pubkey := [48]byte{byte(i)}
 
-		idxs, ok, _ := c.GetPersistentCommittees(pubkey[:])
+		idxs, ok, _ := c.GetPersistentSubnets(pubkey[:])
 		if !ok {
 			t.Errorf("Couldn't find entry in cache for pubkey %#x", pubkey)
 			continue
@@ -77,7 +77,7 @@ func TestCommitteeIDs_PersistentCommitteeRoundtrip(t *testing.T) {
 			t.Fatalf("Wanted index of %d but got %d", i, idxs[0])
 		}
 	}
-	coms := c.GetAllCommittees()
+	coms := c.GetAllSubnets()
 	if len(coms) != 20 {
 		t.Errorf("Number of committees is not %d but is %d", 20, len(coms))
 	}
