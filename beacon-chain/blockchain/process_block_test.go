@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -88,7 +87,7 @@ func TestStore_OnBlock(t *testing.T) {
 	}{
 		{
 			name:          "parent block root does not have a state",
-			blk:           &ethpb.BeaconBlock{ParentRoot: []byte{'A'}},
+			blk:           &ethpb.BeaconBlock{},
 			s:             st.Copy(),
 			wantErrString: "provided block root does not have block saved in the db",
 		},
@@ -130,62 +129,6 @@ func TestStore_OnBlock(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestReceiveBlockNoVerify_DuplicateBlocks(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-
-	cfg := &Config{
-		BeaconDB: db,
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
-	}
-	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	genesisStateRoot := [32]byte{}
-	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	if err := db.SaveBlock(ctx, genesis); err != nil {
-		t.Error(err)
-	}
-	validGenesisRoot, err := stateutil.BlockRoot(genesis.Block)
-	if err != nil {
-		t.Error(err)
-	}
-	st := testutil.NewBeaconState()
-	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
-		t.Fatal(err)
-	}
-	roots, err := blockTree1(db, validGenesisRoot[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-	random := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: roots[0]}}
-	root, err := stateutil.BlockRoot(random.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// sending a first duplicate block
-	if err := service.ReceiveBlockNoVerify(ctx, random, root); err != nil {
-		t.Fatal(err)
-	}
-	testutil.AssertLogsContain(t, hook, errAlreadyProcessed.Error())
-	hook.Reset()
-
-	random = &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: roots[0]}}
-	root, err = stateutil.BlockRoot(random.Block)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// sending a second duplicate block
-	if err := service.ReceiveBlockNoVerify(ctx, random, root); err != nil {
-		t.Fatal(err)
-	}
-	testutil.AssertLogsContain(t, hook, errAlreadyProcessed.Error())
 }
 
 func TestRemoveStateSinceLastFinalized(t *testing.T) {
@@ -664,7 +607,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	}
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	block := &ethpb.BeaconBlock{Slot: 9, ParentRoot: roots[8]}
+	block := &ethpb.BeaconBlock{Slot: 9, ParentRoot: roots[8], Body: &ethpb.BeaconBlockBody{Graffiti: []byte{}}}
 	if err := service.fillInForkChoiceMissingBlocks(context.Background(), block, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -714,7 +657,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	}
 
 	// Define a tree branch, slot 63 <- 64 <- 65
-	b63 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 63}}
+	b63 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 63, Body: &ethpb.BeaconBlockBody{}}}
 	if err := service.beaconDB.SaveBlock(ctx, b63); err != nil {
 		t.Fatal(err)
 	}
@@ -722,7 +665,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b64 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 64, ParentRoot: r63[:]}}
+	b64 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 64, ParentRoot: r63[:], Body: &ethpb.BeaconBlockBody{}}}
 	if err := service.beaconDB.SaveBlock(ctx, b64); err != nil {
 		t.Fatal(err)
 	}
@@ -730,7 +673,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b65 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 65, ParentRoot: r64[:]}}
+	b65 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 65, ParentRoot: r64[:], Body: &ethpb.BeaconBlockBody{}}}
 	if err := service.beaconDB.SaveBlock(ctx, b65); err != nil {
 		t.Fatal(err)
 	}
@@ -800,6 +743,7 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
+		b.Body = &ethpb.BeaconBlockBody{}
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, err
 		}

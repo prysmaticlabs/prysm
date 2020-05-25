@@ -3,11 +3,14 @@ package beaconclient
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -62,7 +65,17 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		if res == nil {
 			continue
 		}
-		log.WithField("slot", res.Block.Slot).Info("Received block from beacon node")
+		root, err := stateutil.BlockRoot(res.Block)
+		if err != nil {
+			log.WithError(err).Error("Could not hash block")
+			return
+		}
+
+		log.WithFields(logrus.Fields{
+			"slot":           res.Block.Slot,
+			"proposer_index": res.Block.ProposerIndex,
+			"root":           fmt.Sprintf("%#x...", root[:8]),
+		}).Info("Received block from beacon node")
 		// We send the received block over the block feed.
 		bs.blockFeed.Send(res)
 	}
@@ -104,7 +117,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 					break
 				default:
 					log.WithError(err).Errorf("Could not receive attestations from beacon node. rpc status: %v", e.Code())
-					break
+					return
 				}
 			} else {
 				log.WithError(err).Error("Could not receive attestations from beacon node")
@@ -123,7 +136,8 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	defer span.End()
 
 	var atts []*ethpb.IndexedAttestation
-	ticker := time.NewTicker(500 * time.Millisecond)
+	quarterSlot := slotutil.DivideSlotBy(4 /* 1/4 slot duration */)
+	ticker := time.NewTicker(quarterSlot)
 	for {
 		select {
 		case <-ticker.C:

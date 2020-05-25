@@ -1,12 +1,13 @@
-package beacon
+package debug
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -46,7 +47,6 @@ func TestServer_GetBeaconState(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs := &Server{
-		BeaconDB:           db,
 		StateGen:           gen,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
@@ -62,9 +62,13 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := st.CloneInnerState()
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+	wanted, err := ssz.Marshal(st.CloneInnerState())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(wanted, res.Encoded) {
+		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
 	}
 	req = &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
@@ -75,8 +79,8 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+	if !bytes.Equal(wanted, res.Encoded) {
+		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
 	}
 }
 
@@ -84,14 +88,14 @@ func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	bs := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
 	req := &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
-			Slot: bs.GenesisTimeFetcher.CurrentSlot() + 1,
+			Slot: ds.GenesisTimeFetcher.CurrentSlot() + 1,
 		},
 	}
 	wanted := "Cannot retrieve information about a slot in the future"
-	if _, err := bs.GetBeaconState(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
+	if _, err := ds.GetBeaconState(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }

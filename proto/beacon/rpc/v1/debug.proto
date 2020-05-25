@@ -4,6 +4,7 @@ package ethereum.beacon.rpc.v1;
 
 import "proto/beacon/p2p/v1/types.proto";
 import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
 
 // Debug service API
 //
@@ -12,9 +13,21 @@ import "google/api/annotations.proto";
 // to retrieve the beacon state by block root or state root from the node directly.
 service Debug {
     // Returns a beacon state by filter criteria from the beacon node.
-    rpc GetBeaconState(BeaconStateRequest) returns (ethereum.beacon.p2p.v1.BeaconState) {
+    rpc GetBeaconState(BeaconStateRequest) returns (SSZResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/state"
+            get: "/eth/v1alpha1/debug/state"
+        };
+    }
+    // Returns a beacon state by filter criteria from the beacon node.
+    rpc GetBlock(BlockRequest) returns (SSZResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/block"
+        };
+    }
+    // SetLoggingLevel sets the log-level of the beacon node programmatically.
+    rpc SetLoggingLevel(LoggingLevelRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/debug/logging"
         };
     }
 }
@@ -27,4 +40,23 @@ message BeaconStateRequest {
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;
     }
+}
+
+message BlockRequest {
+    bytes block_root = 1;
+}
+
+message SSZResponse {
+    // Returns an ssz-encoded byte slice as a response.
+    bytes encoded = 1;
+}
+
+message LoggingLevelRequest {
+    // The logging levels available in Prysm as an enum.
+    enum Level {
+        INFO = 0;
+        DEBUG = 1;
+        TRACE = 2;
+    }
+    Level level = 1;
 }

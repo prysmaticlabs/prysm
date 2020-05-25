@@ -7,8 +7,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -19,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -97,8 +96,8 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			Deposits:          deposits,
 			Attestations:      atts,
 			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx),
-			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx),
+			ProposerSlashings: vs.SlashingsPool.PendingProposerSlashings(ctx, head),
+			AttesterSlashings: vs.SlashingsPool.PendingAttesterSlashings(ctx, head),
 			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot),
 			Graffiti:          graffiti[:],
 		},

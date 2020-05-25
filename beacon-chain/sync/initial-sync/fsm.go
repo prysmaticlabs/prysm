@@ -88,32 +88,6 @@ func (sm *stateMachine) addHandler(state stateID, event eventID, fn eventHandler
 	return e
 }
 
-// trigger invokes the event on a given epoch's state machine.
-func (sm *stateMachine) trigger(name eventID, epoch uint64, data interface{}) error {
-	event, ok := sm.events[name]
-	if !ok {
-		return fmt.Errorf("event not found: %v", name)
-	}
-
-	ind, ok := sm.findEpochState(epoch)
-	if !ok {
-		return fmt.Errorf("state for %v epoch not found", epoch)
-	}
-
-	for _, action := range event.actions {
-		if action.state != sm.epochs[ind].state {
-			continue
-		}
-		state, err := action.handlerFn(sm.epochs[ind], data)
-		if err != nil {
-			return err
-		}
-		sm.epochs[ind].setState(state)
-	}
-
-	return nil
-}
-
 // addEpochState allocates memory for tracking epoch state.
 func (sm *stateMachine) addEpochState(epoch uint64) {
 	state := &epochState{
@@ -217,6 +191,24 @@ func (s stateID) String() (state string) {
 		state = "complete"
 	}
 	return
+}
+
+// trigger invokes the event on a given epoch's state machine.
+func (es *epochState) trigger(event *stateMachineEvent, data interface{}) error {
+	if es == nil || event == nil {
+		return errors.New("epoch state or event is nil")
+	}
+	for _, action := range event.actions {
+		if action.state != es.state {
+			continue
+		}
+		state, err := action.handlerFn(es, data)
+		if err != nil {
+			return err
+		}
+		es.setState(state)
+	}
+	return nil
 }
 
 // setState updates the current state of a given epoch.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
@@ -20,7 +21,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 	// Verify migration is sensible. The new finalized point must increase the current split slot, and
 	// on an epoch boundary for hot state summary scheme to work.
 	currentSplitSlot := s.splitInfo.slot
-	if currentSplitSlot == 0 || currentSplitSlot > finalizedSlot {
+	if currentSplitSlot > finalizedSlot {
 		return nil
 	}
 
@@ -55,6 +56,15 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 		nextArchivedPointSlot := (lastArchivedIndex + 1) * s.slotsPerArchivedPoint
 		// Only migrate if current slot is equal to or greater than next archived point slot.
 		if stateSummary.Slot >= nextArchivedPointSlot {
+			// If was a skipped archival index. The node should recover previous last archived index and state.
+			if skippedArchivedPoint(archivedPointIndex, lastArchivedIndex) {
+				recoveredIndex, err := s.recoverArchivedPoint(ctx, archivedPointIndex)
+				if err != nil {
+					return err
+				}
+				lastArchivedIndex = recoveredIndex
+			}
+
 			if !s.beaconDB.HasState(ctx, r) {
 				continue
 			}
@@ -74,7 +84,8 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 			// Do not delete the current finalized state in case user wants to
 			// switch back to old state service, deleting the recent finalized state
 			// could cause issue switching back.
-			if s.beaconDB.HasState(ctx, r) && r != finalizedRoot {
+			lastArchivedIndexRoot := s.beaconDB.LastArchivedIndexRoot(ctx)
+			if s.beaconDB.HasState(ctx, r) && r != lastArchivedIndexRoot && r != finalizedRoot {
 				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
 					// For whatever reason if node is unable to delete a state due to
 					// state is finalized, it is more reasonable to continue than to exit.
@@ -97,4 +108,49 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 	}).Info("Set hot and cold state split point")
 
 	return nil
+}
+
+// This recovers the last archived point. By passing in the current archived point, this recomputes
+// the state of last skipped archived point and save the missing state, archived point root, archived index to the DB.
+func (s *State) recoverArchivedPoint(ctx context.Context, currentArchivedPoint uint64) (uint64, error) {
+	missingIndex := currentArchivedPoint - 1
+	missingIndexSlot := missingIndex * s.slotsPerArchivedPoint
+	blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, missingIndexSlot)
+	if err != nil {
+		return 0, err
+	}
+	if len(blks) != 1 {
+		return 0, errUnknownBlock
+	}
+	missingRoot, err := ssz.HashTreeRoot(blks[0].Block)
+	if err != nil {
+		return 0, err
+	}
+	missingState, err := s.StateByRoot(ctx, missingRoot)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := s.beaconDB.SaveState(ctx, missingState, missingRoot); err != nil {
+		return 0, err
+	}
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, missingRoot, missingIndex); err != nil {
+		return 0, err
+	}
+	if err := s.beaconDB.SaveLastArchivedIndex(ctx, missingIndex); err != nil {
+		return 0, err
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":         blks[0].Block.Slot,
+		"archiveIndex": missingIndex,
+		"root":         hex.EncodeToString(bytesutil.Trunc(missingRoot[:])),
+	}).Info("Saved recovered archived point during state migration")
+
+	return missingIndex, nil
+}
+
+// This returns true if the last archived point was skipped.
+func skippedArchivedPoint(currentArchivedPoint uint64, lastArchivedPoint uint64) bool {
+	return currentArchivedPoint-lastArchivedPoint > 1
 }

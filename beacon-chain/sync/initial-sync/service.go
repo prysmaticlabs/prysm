@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -44,16 +43,15 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	chain             blockchainService
-	p2p               p2p.P2P
-	db                db.ReadOnlyDatabase
-	synced            bool
-	chainStarted      bool
-	stateNotifier     statefeed.Notifier
-	blockNotifier     blockfeed.Notifier
-	blocksRateLimiter *leakybucket.Collector
+	ctx           context.Context
+	cancel        context.CancelFunc
+	chain         blockchainService
+	p2p           p2p.P2P
+	db            db.ReadOnlyDatabase
+	synced        bool
+	chainStarted  bool
+	stateNotifier statefeed.Notifier
+	blockNotifier blockfeed.Notifier
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
@@ -68,8 +66,6 @@ func NewInitialSync(cfg *Config) *Service {
 		db:            cfg.DB,
 		stateNotifier: cfg.StateNotifier,
 		blockNotifier: cfg.BlockNotifier,
-		blocksRateLimiter: leakybucket.NewCollector(
-			allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 	}
 }
 
@@ -111,15 +107,19 @@ func (s *Service) Start() {
 	}
 
 	if genesis.After(roughtime.Now()) {
-		log.WithField(
-			"genesis time", genesis,
-		).Warn("Genesis time is in the future - waiting to start sync...")
-		time.Sleep(roughtime.Until(genesis))
+		s.synced = true
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Synced,
+			Data: &statefeed.SyncedData{
+				StartTime: genesis,
+			},
+		})
+		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
+		return
 	}
-	s.chainStarted = true
 	currentSlot := helpers.SlotsSince(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
-		log.Info("Chain started within the last epoch - not syncing")
+		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
 		s.synced = true
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Synced,
@@ -129,6 +129,7 @@ func (s *Service) Start() {
 		})
 		return
 	}
+	s.chainStarted = true
 	log.Info("Starting initial chain sync...")
 	// Are we already in sync, or close to it?
 	if helpers.SlotToEpoch(s.chain.HeadSlot()) == helpers.SlotToEpoch(currentSlot) {

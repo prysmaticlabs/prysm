@@ -10,22 +10,22 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mocks struct {
-	validatorClient *internal.MockBeaconNodeValidatorClient
+	validatorClient *mock.MockBeaconNodeValidatorClient
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
 	valDB := db.SetupDB(t, [][48]byte{validatorPubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: internal.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 	}
 
 	aggregatedSlotCommitteeIDCache, err := lru.New(int(params.BeaconConfig().MaxCommitteesPerSlot))

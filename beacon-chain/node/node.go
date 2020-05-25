@@ -97,6 +97,12 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
+	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
+		c := params.BeaconConfig()
+		c.SlotsPerArchivedPoint = uint64(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
+		params.OverrideBeaconConfig(c)
+	}
+
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
 	registry := shared.NewServiceRegistry()
@@ -272,8 +278,12 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 			return err
 		}
 	} else {
-		if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
-			return err
+		if !featureconfig.Get().SkipRegenHistoricalStates {
+			// Only check if historical states were deleted and needed to recompute when
+			// user doesn't want to skip.
+			if err := d.HistoricalStatesDeleted(b.ctx); err != nil {
+				return err
+			}
 		}
 	}
 
