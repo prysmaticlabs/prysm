@@ -62,10 +62,21 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	return nil
 }
 
-// NewKVStore initializes a new boltDB key-value store at the directory
-// path specified, creates the kv-buckets based on the schema, and stores
-// an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
+// NewKVStoreWithPublicKeyBuckets initializes a new boltDB key-value store at the directory
+// path specified, creates the kv-buckets based on the schema and provided public keys,
+// and stores an open connection db object as a property of the Store struct.
+func NewKVStoreWithPublicKeyBuckets(dirPath string, pubKeys [][48]byte) (*Store, error) {
+	kv, err := NewKVStore(dirPath)
+	// Initialize the required public keys into the DB to ensure they're not empty.
+	if err := kv.initializeSubBuckets(pubKeys); err != nil {
+		return nil, err
+	}
+	return kv, err
+}
+
+// NewKVStore initializes a new boltDB key-value store at the directory path specified
+// and stores an open connection db object as a property of the Store struct.
+func NewKVStore(dirPath string) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -90,12 +101,24 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 		return nil, err
 	}
 
-	// Initialize the required public keys into the DB to ensure they're not empty.
-	if err := kv.initializeSubBuckets(pubKeys); err != nil {
+	return kv, err
+}
+
+// GetKVStore returns the validator boltDB key-value store from directory. Returns nil if no such store exists.
+func GetKVStore(directory string) (*Store, error) {
+	fileName := filepath.Join(directory, databaseFileName)
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return nil, nil
+	}
+	boltDb, err := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		if err == bolt.ErrTimeout {
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
+		}
 		return nil, err
 	}
 
-	return kv, err
+	return &Store{db: boltDb, databasePath: directory}, nil
 }
 
 // Size returns the db size in bytes.

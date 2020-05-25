@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "attestation_history.go",
         "db.go",
+        "manage.go",
         "proposal_history.go",
         "schema.go",
         "setup_db.go",

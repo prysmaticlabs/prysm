@@ -49,6 +49,8 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
+	flags.MergeSourceDirectories,
+	flags.MergeTargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -220,6 +222,27 @@ contract in order to activate the validator client`,
 							log.WithError(err).Error("Changing password failed")
 						} else {
 							log.Info("Password changed successfully")
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:        "merge",
+					Description: "merges data from several validator databases into a new validator database",
+					Flags: []cli.Flag{
+						flags.MergeSourceDirectories,
+						flags.MergeTargetDirectory,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						passedSources := cliCtx.String(flags.MergeSourceDirectories.Name)
+						sources := strings.Split(passedSources, ",")
+						target := cliCtx.String(flags.MergeTargetDirectory.Name)
+
+						if err := accounts.Merge(context.Background(), sources, target); err != nil {
+							log.WithError(err).Error("Merging validator data failed")
+						} else {
+							log.Info("Merge completed successfully")
 						}
 
 						return nil

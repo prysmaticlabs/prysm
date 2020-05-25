@@ -39,7 +39,7 @@ func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, 
 	return slotBitlist, err
 }
 
-// SaveProposalHistoryForEpoch returns the proposal history for the requested validator public key.
+// SaveProposalHistoryForEpoch saves the proposal history for the requested validator public key.
 func (db *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte, epoch uint64, slotBits bitfield.Bitlist) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
