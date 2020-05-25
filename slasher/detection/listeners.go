@@ -60,11 +60,13 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 	for {
 		select {
 		case indexedAtt := <-ch:
+			log.Info("indexed att...")
 			slashings, err := ds.DetectAttesterSlashings(ctx, indexedAtt)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
+			log.Info("finished detection")
 			if len(slashings) < 1 {
 				if err := ds.minMaxSpanDetector.UpdateSpansNew(ctx, indexedAtt); err != nil {
 					log.WithError(err).Error("Could not update spans")

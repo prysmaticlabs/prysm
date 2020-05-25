@@ -15,7 +15,10 @@ type SpanDetector interface {
 		ctx context.Context,
 		att *ethpb.IndexedAttestation,
 	) ([]*types.DetectionResult, error)
-
+	DetectSlashingsForAttestationNew(
+		ctx context.Context,
+		att *ethpb.IndexedAttestation,
+	) ([]*types.DetectionResult, error)
 	// Write functions.
 	UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error
 	UpdateSpansNew(ctx context.Context, att *ethpb.IndexedAttestation) error

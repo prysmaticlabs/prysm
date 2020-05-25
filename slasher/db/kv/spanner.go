@@ -18,6 +18,8 @@ import (
 // used for attester slashing detection. This value is purely used
 // as a cache key and only needs to be maintained in memory.
 var highestObservedEpoch uint64
+var highestObservedValidatorIdx uint64
+
 var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
 
 var (
@@ -170,15 +172,25 @@ func (db *Store) SetValidatorSpan(ctx context.Context, spans []byte, validatorId
 	if len(spans)%spannerEncodedLength != 0 {
 		return nil, errors.New("wrong data length for min max span byte array")
 	}
-	origLength := uint64(len(spans)) / spannerEncodedLength
-	requestedLength := validatorIdx + 1
-	if origLength < requestedLength {
-		diff := (requestedLength - origLength) * spannerEncodedLength
-		b := make([]byte, diff, diff)
-		spans = append(spans, b...)
+	if highestObservedValidatorIdx < validatorIdx {
+		highestObservedValidatorIdx = validatorIdx
+		origLength := uint64(len(spans)) / spannerEncodedLength
+		requestedLength := validatorIdx + 1
+		if origLength < requestedLength {
+			diff := (requestedLength - origLength) * spannerEncodedLength
+			b := make([]byte, diff, diff)
+			spans = append(spans, b...)
+		}
+	}
+	if len(spans) == 0 {
+		requestedLength := highestObservedValidatorIdx * spannerEncodedLength
+		b := make([]byte, requestedLength, requestedLength)
+		spans = b
+
 	}
 	cursor := validatorIdx * spannerEncodedLength
 	enc := marshalSpan(newSpan)
+	log.Infof("spans length %d , cursor %d, enc length %d", len(spans), cursor, len(enc))
 	copy(spans[cursor:], enc)
 
 	return spans, nil

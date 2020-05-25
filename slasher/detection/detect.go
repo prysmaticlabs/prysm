@@ -22,7 +22,7 @@ func (ds *Service) DetectAttesterSlashings(
 ) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.DetectAttesterSlashings")
 	defer span.End()
-	results, err := ds.minMaxSpanDetector.DetectSlashingsForAttestation(ctx, att)
+	results, err := ds.minMaxSpanDetector.DetectSlashingsForAttestationNew(ctx, att)
 	if err != nil {
 		return nil, err
 	}

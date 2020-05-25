@@ -255,13 +255,17 @@ func (s *SpanDetector) UpdateSpansNew(ctx context.Context, att *ethpb.IndexedAtt
 	if err := s.saveSigBytesNew(ctx, att); err != nil {
 		return err
 	}
+	log.Info("saveSigBytesNew")
 	// Update min and max spans.
 	if err := s.updateMinSpanNew(ctx, att); err != nil {
 		return err
 	}
+	log.Info("updateMinSpanNew")
+
 	if err := s.updateMaxSpanNew(ctx, att); err != nil {
 		return err
 	}
+	log.Info("updateMaxSpanNew")
 	return nil
 }
 
@@ -410,7 +414,7 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spans); err != nil {
 			return err
 		}
-
+		log.Infof("after SaveEpochSpans %d", epoch)
 		if len(valIndices) == 0 || epoch == 0 {
 			log.Infof("epoch: %d len(indices) %d", epoch, len(valIndices))
 			break
