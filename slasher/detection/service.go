@@ -142,7 +142,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				continue
 			}
 			if len(slashings) < 1 {
-				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, att); err != nil {
+				if err := ds.minMaxSpanDetector.UpdateSpansNew(ctx, att); err != nil {
 					log.WithError(err).Error("Could not update spans")
 				}
 			}

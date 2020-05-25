@@ -18,4 +18,5 @@ type SpanDetector interface {
 
 	// Write functions.
 	UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error
+	UpdateSpansNew(ctx context.Context, att *ethpb.IndexedAttestation) error
 }
