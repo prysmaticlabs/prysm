@@ -293,7 +293,7 @@ func (bs *Server) StreamIndexedAttestations(
 			if err != nil {
 				return status.Errorf(
 					codes.Internal,
-					"Could not retrieve committees for target epoch %#x: %v",
+					"Could not retrieve committees for target root %#x: %v",
 					targetRoot,
 					err,
 				)
