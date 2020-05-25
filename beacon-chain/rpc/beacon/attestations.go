@@ -328,13 +328,12 @@ func (bs *Server) StreamIndexedAttestations(
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	slotDuration := slotutil.DivideSlotBy(1 /* slot duration */)
-	ticker := time.NewTicker(slotDuration)
+	halfASlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
+	ticker := time.NewTicker(halfASlot)
 	for {
 		select {
 		case <-ticker.C:
 			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
-			var roots [][32]byte
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
 				aggAtts, err := helpers.AggregateAttestations(atts)
@@ -347,15 +346,11 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 				}
 				targetRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
 				aggregatedAttsByTarget[targetRoot] = append(aggregatedAttsByTarget[targetRoot], aggAtts...)
-				roots = append(roots, root)
+				attsByRoot[root] = make([]*ethpb.Attestation, 0)
 			}
 			for _, atts := range aggregatedAttsByTarget {
 				bs.CollectedAttestationsBuffer <- atts
 			}
-			for _, root := range roots {
-				attsByRoot[root] = make([]*ethpb.Attestation, 0)
-			}
-
 		case att := <-bs.ReceivedAttestationsBuffer:
 			attDataRoot, err := ssz.HashTreeRoot(att.Data)
 			if err != nil {

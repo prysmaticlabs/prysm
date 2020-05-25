@@ -98,6 +98,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
+			log.Info("Attestation stream closed")
 			break
 		}
 		// If context is canceled we stop the loop.
