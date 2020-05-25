@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -626,26 +627,23 @@ func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
 }
 
 func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
+	blocks := append(makeSequence(1, 64), makeSequence(500, 640)...)
+	blocks = append(blocks, makeSequence(51200, 51264)...)
+	var peers []*peerData
+	for i := 0; i < 10; i++ {
+		peers = append(peers, &peerData{
+			blocks:         blocks,
+			finalizedEpoch: 1600,
+			headSlot:       52000,
+		})
+	}
 	chainConfig := struct {
-		expectedBlockSlots []uint64
-		peers              []*peerData
+		peers []*peerData
 	}{
-		expectedBlockSlots: makeSequence(1, 320),
-		peers: []*peerData{
-			{
-				blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-				finalizedEpoch: 18,
-				headSlot:       320,
-			},
-			{
-				blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-				finalizedEpoch: 18,
-				headSlot:       320,
-			},
-		},
+		peers: peers,
 	}
 
-	mc, p2p, _ := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	mc, p2p, _ := initializeTestServices(t, []uint64{}, chainConfig.peers)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -657,20 +655,30 @@ func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
 		})
 
 	seekSlots := map[uint64]uint64{
-		0:  1,
-		10: 11,
-		32: 33,
-		63: 64,
-		64: 500,
+		0:     1,
+		10:    11,
+		31:    32,
+		32:    33,
+		63:    64,
+		64:    500,
+		352:   500,
+		480:   500,
+		512:   513,
+		639:   640,
+		640:   51200,
+		6640:  51200,
+		51200: 51201,
 	}
 	for seekSlot, expectedSlot := range seekSlots {
-		slot, err := fetcher.nonSkippedSlotAfter(ctx, seekSlot)
-		if err != nil {
-			t.Error(err)
-		}
-		if slot != expectedSlot {
-			t.Errorf("unexpected slot, want: %v, got: %v", expectedSlot, slot)
-		}
+		t.Run(fmt.Sprintf("range: %d (%d-%d)", expectedSlot-seekSlot, seekSlot, expectedSlot), func(t *testing.T) {
+			slot, err := fetcher.nonSkippedSlotAfter(ctx, seekSlot)
+			if err != nil {
+				t.Error(err)
+			}
+			if slot != expectedSlot {
+				t.Errorf("unexpected slot, want: %v, got: %v", expectedSlot, slot)
+			}
+		})
 	}
 }
 
