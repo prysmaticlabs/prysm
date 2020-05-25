@@ -528,8 +528,6 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_mapAttestationToTargetRoot(t *testing.T) {
-	ctx := context.Background()
-
 	count := uint64(100)
 	atts := make([]*ethpb.Attestation, count, count)
 	targetRoot1 := bytesutil.ToBytes32([]byte("root1"))
@@ -552,7 +550,7 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 		}
 
 	}
-	mappedAtts := mapAttestationsByTargetRoot(ctx, atts)
+	mappedAtts := mapAttestationsByTargetRoot(atts)
 	wantedMapLen := 2
 	wantedMapNumberOfElements := 50
 	if len(mappedAtts) != wantedMapLen {

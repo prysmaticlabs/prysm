@@ -38,7 +38,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].Data.Slot < s[j].Data.Slot
 }
 
-func mapAttestationsByTargetRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
+func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
 	attsMap := make(map[[32]byte][]*ethpb.Attestation)
 	if len(atts) == 0 {
 		return attsMap
@@ -155,7 +155,7 @@ func (bs *Server) ListIndexedAttestations(
 	}
 	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
-	mappedAttestations := mapAttestationsByTargetRoot(ctx, attsArray)
+	mappedAttestations := mapAttestationsByTargetRoot(attsArray)
 	indexedAtts := make([]*ethpb.IndexedAttestation, 0, numAttestations)
 	for targetRoot, atts := range mappedAttestations {
 		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
@@ -246,6 +246,7 @@ func (bs *Server) StreamIndexedAttestations(
 		case event, ok := <-attestationsChannel:
 			if !ok {
 				log.Error("Indexed attestations stream channel closed")
+				continue
 			}
 			if event.Type == operation.UnaggregatedAttReceived {
 				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
@@ -277,6 +278,7 @@ func (bs *Server) StreamIndexedAttestations(
 		case aggAtts, ok := <-bs.CollectedAttestationsBuffer:
 			if !ok {
 				log.Error("Indexed attestations stream collected attestations channel closed")
+				continue
 			}
 
 			// All attestations we receive have the same target epoch given they
