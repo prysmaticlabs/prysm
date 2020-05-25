@@ -620,10 +620,6 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		}
 		if len(blocks) > 0 {
 			for _, block := range blocks {
-				log.WithFields(logrus.Fields{
-					"start":     start,
-					"blockSlot": block.Block.Slot,
-				}).Debug("--->")
 				if block.Block.Slot > slot {
 					return block.Block.Slot, nil
 				}
