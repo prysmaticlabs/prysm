@@ -120,7 +120,7 @@ func NewValidatorAccount(directory string, password string) error {
 }
 
 // Exists checks if a validator account at a given keystore path exists.
-// assertNonEmpty is a boolean used to determine whether to check that 
+// assertNonEmpty is a boolean used to determine whether to check that
 // the provided directory exists.
 func Exists(keystorePath string, assertNonEmpty bool) (bool, error) {
 	/* #nosec */
@@ -245,11 +245,13 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 		return errors.Wrapf(err, "Failed to merge validator databases into %s", targetDirectory)
 	}
 
-	for _, store := range sourceStores {
-		if err := store.Close(); err != nil {
-			return errors.Wrapf(err,"Failed to close the database in %s", store.DatabasePath())
+	defer func() {
+		for _, store := range sourceStores {
+			if err := store.Close(); err != nil {
+				err = errors.Wrapf(err, "Failed to close the database in %s", store.DatabasePath())
+			}
 		}
-	}
+	}()
 
 	return nil
 }
