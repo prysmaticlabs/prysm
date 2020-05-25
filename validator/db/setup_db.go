@@ -19,7 +19,7 @@ func SetupDB(t testing.TB, pubkeys [][48]byte) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewKVStore(p, pubkeys)
+	db, err := NewKVStoreWithPublicKeyBuckets(p, pubkeys)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
