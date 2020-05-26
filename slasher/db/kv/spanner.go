@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -36,6 +37,7 @@ var (
 		Help: "The number of cache evictions seen by slasher",
 	})
 )
+var spanLock sync.RWMutex
 
 // This function defines a function which triggers upon a span map being
 // evicted from the cache. It allows us to persist the span map by the epoch value
@@ -146,6 +148,7 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 func (db *Store) GetValidatorSpan(ctx context.Context, spans []byte, validatorIdx uint64) (types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.getValidatorSpan")
 	defer span.End()
+
 	r := types.Span{}
 	if len(spans)%spannerEncodedLength != 0 {
 		return r, errors.New("wrong data length for min max span byte array")
@@ -169,33 +172,33 @@ func (db *Store) GetValidatorSpan(ctx context.Context, spans []byte, validatorId
 func (db *Store) SetValidatorSpan(ctx context.Context, spans []byte, validatorIdx uint64, newSpan types.Span) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.setValidatorSpan")
 	defer span.End()
+
 	if len(spans)%spannerEncodedLength != 0 {
 		return nil, errors.New("wrong data length for min max span byte array")
 	}
-	copySpans := make([]byte, len(spans), len(spans))
-	copy(copySpans, spans)
+	//copySpans := make([]byte, len(spans), len(spans))
+	//	//copy(copySpans, spans)
 	if highestObservedValidatorIdx < validatorIdx {
 		highestObservedValidatorIdx = validatorIdx
 	}
-	if len(copySpans) == 0 {
+	if len(spans) == 0 {
 		requestedLength := highestObservedValidatorIdx * spannerEncodedLength
 		b := make([]byte, requestedLength, requestedLength)
-		copySpans = b
+		spans = b
 
 	}
 	cursor := validatorIdx * spannerEncodedLength
 	endCursor := cursor + spannerEncodedLength
-	spansLength := uint64(len(copySpans))
+	spansLength := uint64(len(spans))
 	if endCursor > spansLength {
 		diff := endCursor - spansLength
 		b := make([]byte, diff, diff)
-		copySpans = append(copySpans, b...)
+		spans = append(spans, b...)
 	}
-
 	enc := marshalSpan(newSpan)
-	copy(copySpans[cursor:], enc)
+	copy(spans[cursor:], enc)
 
-	return copySpans, nil
+	return spans, nil
 }
 
 // EpochSpans accepts epoch and returns the corresponding spans map epoch=>spans
