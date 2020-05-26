@@ -109,3 +109,31 @@ func TestSlotTickerGenesis(t *testing.T) {
 		t.Fatalf("Expected %d, got %d", 1, slot)
 	}
 }
+
+func TestGetSlotTickerWithOffset_OK(t *testing.T) {
+	genesisTime := time.Now()
+	secondsPerSlot := uint64(4)
+	offset := time.Duration(secondsPerSlot/2) * time.Second
+
+	offsetTicker := GetSlotTickerWithOffset(genesisTime, offset, secondsPerSlot)
+	normalTicker := GetSlotTicker(genesisTime, secondsPerSlot)
+
+	firstTicked := 0
+	for {
+		select {
+		case _ = <-offsetTicker.C():
+			if firstTicked != 1 {
+				t.Fatal("Expected other ticker to tick first")
+			}
+			firstTicked = 2
+			return
+		case _ = <-normalTicker.C():
+			if firstTicked != 0 {
+				t.Fatal("Expected normal ticker to tick first")
+			}
+			firstTicked = 1
+			break
+		}
+	}
+
+}
