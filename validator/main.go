@@ -291,3 +291,4 @@ contract in order to activate the validator client`,
 		os.Exit(1)
 	}
 }
+
