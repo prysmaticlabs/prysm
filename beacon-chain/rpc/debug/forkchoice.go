@@ -2,6 +2,7 @@ package debug
 
 import (
 	"context"
+	"encoding/hex"
 
 	ptypes "github.com/gogo/protobuf/types"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -29,7 +30,7 @@ func (ds *Server) GetProtoArrayForkChoice(ctx context.Context, _ *ptypes.Empty) 
 
 	indices := make(map[string]uint64)
 	for k, v := range store.NodeIndices {
-		indices[string(k[:])] = v
+		indices[hex.EncodeToString(k[:])] = v
 	}
 
 	return &pbrpc.ProtoArrayForkChoiceResponse{
