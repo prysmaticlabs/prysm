@@ -77,6 +77,7 @@ func StartNewValidatorClient(t *testing.T, config *types.E2EConfig, validatorNum
 		fmt.Sprintf("--beacon-rpc-provider=localhost:%d", beaconRPCPort),
 		"--grpc-headers=dummy=value,foo=bar", // Sending random headers shouldn't break anything.
 		"--force-clear-db",
+		"--e2e-config",
 	}
 	args = append(args, featureconfig.E2EValidatorFlags...)
 	args = append(args, config.ValidatorFlags...)
