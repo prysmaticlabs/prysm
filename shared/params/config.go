@@ -309,11 +309,11 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig := MinimalSpecConfig()
 
 	// Misc.
-	e2eConfig.MinGenesisActiveValidatorCount = 256
-	e2eConfig.MinGenesisDelay = 30 // 30 seconds so E2E has enough time to process deposits and get started.
+	e2eConfig.MinGenesisActiveValidatorCount = 512
+	e2eConfig.MinGenesisDelay = 20 // 30 seconds so E2E has enough time to process deposits and get started.
 
 	// Time parameters.
-	e2eConfig.SecondsPerSlot = 4
+	e2eConfig.SecondsPerSlot = 8
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.Eth1FollowDistance = 4
 	return e2eConfig

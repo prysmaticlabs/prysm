@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var expectedParticipation = 0.97 // 97% to get E2E passing, participation can be flaky sometimes.
+var expectedParticipation = 1 // 100% participation.
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
