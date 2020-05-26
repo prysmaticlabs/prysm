@@ -77,12 +77,6 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	// If head state exists but there hasn't been a finalized check point,
-	// the check point's root should refer to genesis block root.
-	if bytes.Equal(s.finalizedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
-		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
-	}
-
 	return state.CopyCheckpoint(s.finalizedCheckpt)
 }
 
@@ -90,12 +84,6 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	if s.justifiedCheckpt == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	}
-
-	// If head state exists but there hasn't been a justified check point,
-	// the check point root should refer to genesis block root.
-	if bytes.Equal(s.justifiedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
-		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
 	return state.CopyCheckpoint(s.justifiedCheckpt)
