@@ -1045,27 +1045,10 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	// We generate attestations for each validator per slot per epoch.
-	atts := make([]*ethpb.Attestation, 0, count)
+	atts := make(map[[32]byte][]*ethpb.Attestation)
 	for i := uint64(0); i < count; i++ {
 		comms := committees[i].Committees
 		for j := 0; j < numValidators; j++ {
-			attExample := &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
-					Slot:            i,
-					Target: &ethpb.Checkpoint{
-						Epoch: 0,
-						Root:  make([]byte, 32),
-					},
-				},
-			}
-			encoded, err := helpers.ComputeSigningRoot(attExample.Data, []byte{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			sig := privKeys[j].Sign(encoded[:])
-			attExample.Signature = sig.Marshal()
-
 			var indexInCommittee uint64
 			var committeeIndex uint64
 			var committeeLength int
@@ -1084,27 +1067,34 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 			if !found {
 				continue
 			}
+			attExample := &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
+					Slot:            i,
+					Target: &ethpb.Checkpoint{
+						Epoch: 0,
+						Root:  gRoot[:],
+					},
+				},
+			}
+			domain, err := helpers.Domain(headState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, headState.GenesisValidatorRoot())
+			if err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := helpers.ComputeSigningRoot(attExample.Data, domain)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sig := privKeys[j].Sign(encoded[:])
+			attExample.Signature = sig.Marshal()
 			attExample.Data.CommitteeIndex = committeeIndex
 			aggregationBitfield := bitfield.NewBitlist(uint64(committeeLength))
 			aggregationBitfield.SetBitAt(indexInCommittee, true)
 			attExample.AggregationBits = aggregationBitfield
-			atts = append(atts, attExample)
+			atts[encoded] = append(atts[encoded], attExample)
 		}
 	}
-
-	aggAtts, err := helpers.AggregateAttestations(atts)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Next up we convert the test attestations to indexed form.
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(aggAtts), len(aggAtts))
-	for i := 0; i < len(indexedAtts); i++ {
-		att := aggAtts[i]
-		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-		idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
-		indexedAtts[i] = idxAtt
-	}
+	t.Log(len(atts))
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
@@ -1121,16 +1111,50 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		StateGen:                    stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
-	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
-	for i := 0; i < len(indexedAtts); i++ {
-		if i == len(indexedAtts)-1 {
-			mockStream.EXPECT().Send(indexedAtts[i]).Do(func(arg0 interface{}) {
-				exitRoutine <- true
-			})
-		} else {
-			mockStream.EXPECT().Send(indexedAtts[i])
+	for dataRoot, sameDataAtts := range atts {
+		aggAtts, err := helpers.AggregateAttestations(sameDataAtts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		atts[dataRoot] = aggAtts
+	}
+	t.Log(len(atts))
+
+	// Next up we convert the test attestations to indexed form.
+	attsByTarget := make(map[[32]byte][]*ethpb.Attestation)
+	for _, dataRootAtts := range atts {
+		targetRoot := bytesutil.ToBytes32(dataRootAtts[0].Data.Target.Root)
+		attsByTarget[targetRoot] = append(attsByTarget[targetRoot], dataRootAtts...)
+	}
+
+	allAtts := make([]*ethpb.Attestation, 0)
+	indexedAtts := make(map[[32]byte][]*ethpb.IndexedAttestation)
+	for dataRoot, aggAtts := range attsByTarget {
+		allAtts = append(allAtts, aggAtts...)
+		for _, att := range aggAtts {
+			committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
+			idxAtt := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
+			indexedAtts[dataRoot] = append(indexedAtts[dataRoot], idxAtt)
 		}
 	}
+
+	attsSent := 0
+	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
+	for _, atts := range attsByTarget {
+		for _, att := range atts {
+			t.Log(attsSent)
+			if attsSent == len(allAtts)-1 {
+				mockStream.EXPECT().Send(att).Do(func(arg0 interface{}) {
+					exitRoutine <- true
+				})
+				t.Log("cancelled")
+			} else {
+				mockStream.EXPECT().Send(att)
+				attsSent++
+			}
+		}
+	}
+	<-exitRoutine
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
@@ -1139,7 +1163,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		}
 	}(t)
 
-	server.CollectedAttestationsBuffer <- atts
+	server.CollectedAttestationsBuffer <- allAtts
 	<-exitRoutine
 }
 
