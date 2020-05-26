@@ -11,12 +11,12 @@ type ForkChoice struct {
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
-	pruneThreshold  uint64              // do not prune tree unless threshold is reached.
-	justifiedEpoch  uint64              // latest justified epoch in store.
-	finalizedEpoch  uint64              // latest finalized epoch in store.
+	PruneThreshold  uint64              // do not prune tree unless threshold is reached.
+	JustifiedEpoch  uint64              // latest justified epoch in store.
+	FinalizedEpoch  uint64              // latest finalized epoch in store.
 	finalizedRoot   [32]byte            // latest finalized root in store.
-	nodes           []*Node             // list of block nodes, each node is a representation of one block.
-	nodeIndices     map[[32]byte]uint64 // the root of block node and the nodes index in the list.
+	Nodes           []*Node             // list of block nodes, each node is a representation of one block.
+	NodeIndices     map[[32]byte]uint64 // the root of block node and the Nodes index in the list.
 	nodeIndicesLock sync.RWMutex
 }
 
@@ -26,10 +26,10 @@ type Node struct {
 	Slot           uint64   // slot of the block converted to the node.
 	Root           [32]byte // Root of the block converted to the node.
 	Parent         uint64   // the parent index of this node.
-	justifiedEpoch uint64   // justified epoch of this node.
-	finalizedEpoch uint64   // finalized epoch of this node.
+	JustifiedEpoch uint64   // justified epoch of this node.
+	FinalizedEpoch uint64   // finalized epoch of this node.
 	Weight         uint64   // weight of this node.
-	bestChild      uint64   // best child index of this node.
+	BestChild      uint64   // best child index of this node.
 	BestDescendent uint64   // head index of this node.
 	Graffiti       [32]byte // graffati of the block node.
 }
