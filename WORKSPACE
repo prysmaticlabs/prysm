@@ -815,8 +815,8 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
-    sum = "h1:+Iz8zeI1KO6HX8cexU9g98cCGjae52Vujeg087SkuME=",
-    version = "v0.2.6-0.20191219233527-97846b574895",
+    sum = "h1:K5FSYyfcSrJWrGExgdbogCLMqwC3pQaXEVt2CaUy1SA=",
+    version = "v0.3.0",
 )
 
 go_repository(
@@ -1157,8 +1157,9 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_core",
     build_file_proto_mode = "disable_global",
-    commit = "f7f724862d85ec9f9ee7c58b0f79836abdee8cd9",  # v0.3.0
     importpath = "github.com/libp2p/go-libp2p-core",
+    sum = "h1:IxFH4PmtLlLdPf4fF/i129SnK/C+/v8WEX644MxhC48=",
+    version = "v0.5.6",
 )
 
 go_repository(
