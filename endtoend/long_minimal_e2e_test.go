@@ -29,7 +29,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	}
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--custom-genesis-delay=30"},
+		BeaconFlags:    []string{},
 		ValidatorFlags: []string{},
 		EpochsToRun:    uint64(epochsToRun),
 		TestSync:       false,

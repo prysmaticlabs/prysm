@@ -14,6 +14,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+var expectedParticipation = 0.97 // 97% to get E2E passing, participation can be flaky sometimes.
+
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
 	Name:       "validators_active_epoch_%d",
@@ -126,7 +128,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	}
 
 	partRate := participation.Participation.GlobalParticipationRate
-	expected := float32(0.97)
+	expected := float32(expectedParticipation)
 	if partRate < expected {
 		return fmt.Errorf(
 			"validator participation was below for epoch %d, expected %f, received: %f",

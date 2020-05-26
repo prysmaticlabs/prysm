@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 90 * time.Second
+	maxPollingWaitTime  = 90 * time.Second // 90 seconds to make room for the genesis delay being 30 seconds, plus a minute.
 	filePollingInterval = 500 * time.Millisecond
 )
 
