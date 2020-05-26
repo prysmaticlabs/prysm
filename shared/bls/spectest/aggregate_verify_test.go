@@ -2,9 +2,7 @@ package spectest
 
 import (
 	"encoding/hex"
-	"fmt"
 	"path"
-	"strings"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -18,10 +16,6 @@ func TestAggregateVerifyYaml(t *testing.T) {
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			if !strings.Contains(folder.Name(), "aggregate_verify_valid") {
-				return
-			}
-
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
@@ -31,12 +25,10 @@ func TestAggregateVerifyYaml(t *testing.T) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			pubkeys := make([]*bls.PublicKey, 0, len(test.Input.Pairs))
-			msgs := make([][32]byte, 0, len(test.Input.Pairs))
-			fmt.Println(len(test.Input.Pairs))
-			for _, pair := range test.Input.Pairs {
-				fmt.Printf("pubkey %#x\n", pair.Pubkey)
-				pkBytes, err := hex.DecodeString(pair.Pubkey[2:])
+			pubkeys := make([]*bls.PublicKey, 0, len(test.Input.Pubkeys))
+			msgs := make([][32]byte, 0, len(test.Input.Messages))
+			for _, pubKey := range test.Input.Pubkeys {
+				pkBytes, err := hex.DecodeString(pubKey[2:])
 				if err != nil {
 					t.Fatalf("Cannot decode string to bytes: %v", err)
 				}
@@ -45,9 +37,9 @@ func TestAggregateVerifyYaml(t *testing.T) {
 					t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 				}
 				pubkeys = append(pubkeys, pk)
-				fmt.Printf("message %#x\n", pair.Message)
-				fmt.Println("")
-				msgBytes, err := hex.DecodeString(pair.Message[2:])
+			}
+			for _, msg := range test.Input.Messages {
+				msgBytes, err := hex.DecodeString(msg[2:])
 				if err != nil {
 					t.Fatalf("Cannot decode string to bytes: %v", err)
 				}
