@@ -257,6 +257,86 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	}
 }
 
+func TestRetrieveCommitteesForRoot(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
+	db := dbTest.SetupDB(t)
+	helpers.ClearCache()
+	ctx := context.Background()
+
+	numValidators := 128
+	headState := setupActiveValidators(t, db, numValidators)
+
+	m := &mock.ChainService{
+		Genesis: roughtime.Now().Add(time.Duration(-1*int64((headState.Slot()*params.BeaconConfig().SecondsPerSlot))) * time.Second),
+	}
+	bs := &Server{
+		HeadFetcher:        m,
+		GenesisTimeFetcher: m,
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+	}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	stateSummary := &pbp2p.StateSummary{
+		Slot: 0,
+		Root: gRoot[:],
+	}
+	if err := db.SaveStateSummary(ctx, stateSummary); err != nil {
+		t.Fatal(err)
+	}
+
+	// Store the genesis seed.
+	seed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 10); err != nil {
+		t.Fatal(err)
+	}
+
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted, err := computeCommittees(0, activeIndices, seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committees, activeIndices, err := bs.retrieveCommitteesForRoot(context.Background(), gRoot[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantedRes := &ethpb.BeaconCommittees{
+		Epoch:                0,
+		Committees:           wanted,
+		ActiveValidatorCount: uint64(numValidators),
+	}
+	receivedRes := &ethpb.BeaconCommittees{
+		Epoch:                0,
+		Committees:           committees,
+		ActiveValidatorCount: uint64(len(activeIndices)),
+	}
+	if !reflect.DeepEqual(wantedRes, receivedRes) {
+		t.Errorf("Wanted %v", wantedRes)
+		t.Errorf("Received %v", receivedRes)
+	}
+}
+
 func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.BeaconState {
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)

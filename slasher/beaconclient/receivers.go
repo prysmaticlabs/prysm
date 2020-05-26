@@ -98,6 +98,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
+			log.Info("Attestation stream closed")
 			break
 		}
 		// If context is canceled we stop the loop.
@@ -136,8 +137,8 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	defer span.End()
 
 	var atts []*ethpb.IndexedAttestation
-	quarterSlot := slotutil.DivideSlotBy(4 /* 1/4 slot duration */)
-	ticker := time.NewTicker(quarterSlot)
+	halfSlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
+	ticker := time.NewTicker(halfSlot)
 	for {
 		select {
 		case <-ticker.C:
