@@ -18,7 +18,7 @@ const (
 	// pollingInterval defines how often state machine needs to check for new events.
 	pollingInterval = 200 * time.Millisecond
 	// staleEpochTimeout is an period after which epoch's state is considered stale.
-	staleEpochTimeout = 1 * time.Second
+	staleEpochTimeout = 1 * pollingInterval
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
@@ -27,8 +27,8 @@ const (
 var (
 	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
 	errQueueTakesTooLongToStop    = errors.New("queue takes too long to stop")
-	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
 	errInvalidInitialState        = errors.New("invalid initial state")
+	errInputNotFetchRequestParams = errors.New("input data is not type *fetchRequestParams")
 )
 
 // blocksQueueConfig is a config to setup block queue service.
@@ -45,11 +45,10 @@ type blocksQueueConfig struct {
 type blocksQueue struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
-	highestExpectedSlot uint64
-	blocksPerRequest    uint64
 	smm                 *stateMachineManager
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
+	highestExpectedSlot uint64
 	fetchedBlocks       chan *eth.SignedBeaconBlock // output channel for ready blocks
 	quit                chan struct{}               // termination notifier
 }
@@ -70,15 +69,13 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		highestExpectedSlot = blocksFetcher.bestFinalizedSlot()
 	}
 
-	blocksPerRequest := blocksFetcher.blocksPerSecond
 	queue := &blocksQueue{
 		ctx:                 ctx,
 		cancel:              cancel,
 		highestExpectedSlot: highestExpectedSlot,
-		blocksPerRequest:    blocksPerRequest,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
-		fetchedBlocks:       make(chan *eth.SignedBeaconBlock, blocksPerRequest),
+		fetchedBlocks:       make(chan *eth.SignedBeaconBlock, blocksFetcher.blocksPerSecond),
 		quit:                make(chan struct{}),
 	}
 
@@ -130,17 +127,13 @@ func (q *blocksQueue) loop() {
 
 	// Define initial state machines.
 	startSlot := q.headFetcher.HeadSlot()
-	for i := startSlot; i < startSlot+q.blocksPerRequest*lookaheadSteps; i += q.blocksPerRequest {
+	blocksPerRequest := q.blocksFetcher.blocksPerSecond
+	for i := startSlot; i < startSlot+blocksPerRequest*lookaheadSteps; i += blocksPerRequest {
 		q.smm.addStateMachine(i)
 	}
 
 	ticker := time.NewTicker(pollingInterval)
 	for {
-		log.WithFields(logrus.Fields{
-			"state":               q.smm,
-			"headSlot":            q.headFetcher.HeadSlot(),
-			"highestExpectedSlot": q.highestExpectedSlot,
-		}).Debug("Blocks queue iteration")
 		// Check highest expected slot when we approach chain's head slot.
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
 			// By the time initial sync is complete, highest slot may increase, re-check.
@@ -163,9 +156,8 @@ func (q *blocksQueue) loop() {
 						"error": err.Error(),
 					}).Debug("Can not trigger event")
 				}
-
 				// Do garbage collection, and advance sliding window forward.
-				if q.headFetcher.HeadSlot() >= fsm.start+q.blocksPerRequest-1 {
+				if q.headFetcher.HeadSlot() >= fsm.start+blocksPerRequest-1 {
 					highestStartBlock, err := q.smm.highestStartBlock()
 					if err != nil {
 						log.WithError(err).Debug("Cannot obtain highest epoch state number")
@@ -175,7 +167,7 @@ func (q *blocksQueue) loop() {
 						log.WithError(err).Debug("Can not remove state machine")
 					}
 					if len(q.smm.machines) < lookaheadSteps {
-						q.smm.addStateMachine(highestStartBlock + q.blocksPerRequest)
+						q.smm.addStateMachine(highestStartBlock + blocksPerRequest)
 					}
 				}
 			}
@@ -215,7 +207,8 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 			m.setState(stateSkipped)
 			return m.state, errSlotIsTooHigh
 		}
-		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, q.blocksPerRequest); err != nil {
+		blocksPerRequest := q.blocksFetcher.blocksPerSecond
+		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, blocksPerRequest); err != nil {
 			return m.state, err
 		}
 		return stateScheduled, nil
@@ -326,7 +319,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 		// Shift start position of all the machines except for the last one.
 		startSlot := q.headFetcher.HeadSlot() + 1
-		blocksPerRequest := q.blocksPerRequest
+		blocksPerRequest := q.blocksFetcher.blocksPerSecond
 		if err := q.smm.removeAllStateMachines(); err != nil {
 			return stateSkipped, err
 		}
