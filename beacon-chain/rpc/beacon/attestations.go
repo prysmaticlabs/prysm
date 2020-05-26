@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -332,11 +331,11 @@ func (bs *Server) StreamIndexedAttestations(
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	halfASlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
-	ticker := time.NewTicker(halfASlot)
+	twoThirdsASlot := 2 * slotutil.DivideSlotBy(3) /* 2/3 slot duration */
+	ticker := slotutil.GetSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case <-ticker.C:
+		case _ = <-ticker.C():
 			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
