@@ -388,8 +388,9 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "91b837264c0f35dd4e2be341d711316b91d3573d",  # v0.0.1
     importpath = "github.com/ipfs/go-log",
+    sum = "h1:6nLQdX4W8P9yZZFH7mO+X/PzjN8Laozm/lMJ6esdgzY=",
+    version = "v1.0.4",
 )
 
 go_repository(
@@ -412,8 +413,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    commit = "dee88d7532302c001604811fa3fbb5a7f83225e7",  # v0.1.4
     importpath = "github.com/libp2p/go-libp2p-peerstore",
+    sum = "h1:jU9S4jYN30kdzTpDAR7SlHUD+meDUjTODh4waLWF1ws=",
+    version = "v0.2.4",
 )
 
 go_repository(
@@ -557,8 +559,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport_upgrader",
-    commit = "07ed92ccf9aba3a2e4b2fddc4c17ced060524922",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
+    sum = "h1:q3ULhsknEQ34eVDhv4YwKS8iet69ffs9+Fir6a7weN4=",
+    version = "v0.3.0",
 )
 
 go_repository(
@@ -1744,4 +1747,25 @@ go_repository(
     name = "com_github_golang_gddo",
     commit = "3c2cc9a6329d9842b3bbdaf307a8110d740cf94c",
     importpath = "github.com/golang/gddo",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_pnet",
+    importpath = "github.com/libp2p/go-libp2p-pnet",
+    sum = "h1:J6htxttBipJujEjz1y0a5+eYoiPcFHhSYHH6na5f0/k=",
+    version = "v0.2.0",
+)
+
+go_repository(
+    name = "com_github_davidlazar_go_crypto",
+    importpath = "github.com/davidlazar/go-crypto",
+    sum = "h1:BOaYiTvg8p9vBUXpklC22XSK/mifLF7lG9jtmYYi3Tc=",
+    version = "v0.0.0-20190912175916-7055855a373f",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_log_v2",
+    importpath = "github.com/ipfs/go-log/v2",
+    sum = "h1:7l5yjP7aLl5xr7RmqEvPZy9Skq7PP2fIP0Pa7lU/UII=",
+    version = "v2.1.0",
 )
