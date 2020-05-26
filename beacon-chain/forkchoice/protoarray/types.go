@@ -26,10 +26,10 @@ type Node struct {
 	Slot           uint64   // slot of the block converted to the node.
 	Root           [32]byte // Root of the block converted to the node.
 	Parent         uint64   // the parent index of this node.
-	justifiedEpoch uint64   // justified epoch of this node.
-	finalizedEpoch uint64   // finalized epoch of this node.
+	JustifiedEpoch uint64   // justified epoch of this node.
+	FinalizedEpoch uint64   // finalized epoch of this node.
 	Weight         uint64   // weight of this node.
-	bestChild      uint64   // best child index of this node.
+	BestChiled     uint64   // best child index of this node.
 	BestDescendent uint64   // head index of this node.
 	Graffiti       [32]byte // graffati of the block node.
 }

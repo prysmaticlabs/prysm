@@ -248,9 +248,9 @@ func setup(justifiedEpoch uint64, finalizedEpoch uint64) *ForkChoice {
 		Slot:           0,
 		Root:           params.BeaconConfig().ZeroHash,
 		Parent:         NonExistentNode,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		bestChild:      NonExistentNode,
+		JustifiedEpoch: justifiedEpoch,
+		FinalizedEpoch: finalizedEpoch,
+		BestChiled:     NonExistentNode,
 		BestDescendent: NonExistentNode,
 		Weight:         0,
 	})

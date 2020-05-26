@@ -41,7 +41,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 
 	if !s.viableForHead(bestNode) {
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, FinalizedEpoch %d != %d, JustifiedEpoch %d != %d",
-			bestNode.Slot, bestNode.Weight/10e9, bestNode.finalizedEpoch, s.FinalizedEpoch, bestNode.justifiedEpoch, s.JustifiedEpoch)
+			bestNode.Slot, bestNode.Weight/10e9, bestNode.FinalizedEpoch, s.FinalizedEpoch, bestNode.JustifiedEpoch, s.JustifiedEpoch)
 	}
 
 	// Update metrics.
@@ -85,9 +85,9 @@ func (s *Store) insert(ctx context.Context,
 		Root:           root,
 		Graffiti:       graffiti,
 		Parent:         parentIndex,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		bestChild:      NonExistentNode,
+		JustifiedEpoch: justifiedEpoch,
+		FinalizedEpoch: finalizedEpoch,
+		BestChiled:     NonExistentNode,
 		BestDescendent: NonExistentNode,
 		Weight:         0,
 	}
@@ -200,7 +200,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 
 	// Define 3 variables for the 3 outcomes mentioned above. This is to
-	// set `parent.bestChild` and `parent.bestDescendent` to. These
+	// set `parent.BestChiled` and `parent.bestDescendent` to. These
 	// aliases are to assist readability.
 	changeToNone := []uint64{NonExistentNode, NonExistentNode}
 	bestDescendant := child.BestDescendent
@@ -208,24 +208,24 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 		bestDescendant = childIndex
 	}
 	changeToChild := []uint64{childIndex, bestDescendant}
-	noChange := []uint64{parent.bestChild, parent.BestDescendent}
+	noChange := []uint64{parent.BestChiled, parent.BestDescendent}
 	newParentChild := make([]uint64, 0)
 
-	if parent.bestChild != NonExistentNode {
-		if parent.bestChild == childIndex && !childLeadsToViableHead {
+	if parent.BestChiled != NonExistentNode {
+		if parent.BestChiled == childIndex && !childLeadsToViableHead {
 			// If the child is already the best child of the parent but it's not viable for head,
 			// we should remove it. (Outcome 1)
 			newParentChild = changeToNone
-		} else if parent.bestChild == childIndex {
+		} else if parent.BestChiled == childIndex {
 			// If the child is already the best child of the parent, set it again to ensure best
 			// descendent of the parent is updated. (Outcome 2)
 			newParentChild = changeToChild
 		} else {
 			// Protection against parent's best child going out of bound.
-			if parent.bestChild > uint64(len(s.Nodes)) {
+			if parent.BestChiled > uint64(len(s.Nodes)) {
 				return errInvalidBestDescendantIndex
 			}
-			bestChild := s.Nodes[parent.bestChild]
+			bestChild := s.Nodes[parent.BestChiled]
 			// Is current parent's best child viable to be head? Based on justification and finalization rules.
 			bestChildLeadsToViableHead, err := s.leadsToViableHead(bestChild)
 			if err != nil {
@@ -266,7 +266,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 
 	// Update parent with the outcome.
-	parent.bestChild = newParentChild[0]
+	parent.BestChiled = newParentChild[0]
 	parent.BestDescendent = newParentChild[1]
 	s.Nodes[parentIndex] = parent
 
@@ -326,11 +326,11 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 				node.Parent = NonExistentNode
 			}
 		}
-		if node.bestChild != NonExistentNode {
-			if node.bestChild < finalizedIndex {
+		if node.BestChiled != NonExistentNode {
+			if node.BestChiled < finalizedIndex {
 				return errInvalidBestChildIndex
 			}
-			node.bestChild -= finalizedIndex
+			node.BestChiled -= finalizedIndex
 		}
 		if node.BestDescendent != NonExistentNode {
 			if node.BestDescendent < finalizedIndex {
@@ -376,8 +376,8 @@ func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 func (s *Store) viableForHead(node *Node) bool {
 	// `node` is viable if its justified epoch and finalized epoch are the same as the one in `Store`.
 	// It's also viable if we are in genesis epoch.
-	justified := s.JustifiedEpoch == node.justifiedEpoch || s.JustifiedEpoch == 0
-	finalized := s.FinalizedEpoch == node.finalizedEpoch || s.FinalizedEpoch == 0
+	justified := s.JustifiedEpoch == node.JustifiedEpoch || s.JustifiedEpoch == 0
+	finalized := s.FinalizedEpoch == node.FinalizedEpoch || s.FinalizedEpoch == 0
 
 	return justified && finalized
 }
