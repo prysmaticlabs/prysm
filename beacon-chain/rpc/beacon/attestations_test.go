@@ -1094,7 +1094,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 			atts[encoded] = append(atts[encoded], attExample)
 		}
 	}
-	t.Log(len(atts))
 
 	chainService := &chainMock.ChainService{}
 	server := &Server{
@@ -1118,7 +1117,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		}
 		atts[dataRoot] = aggAtts
 	}
-	t.Log(len(atts))
 
 	// Next up we convert the test attestations to indexed form.
 	attsByTarget := make(map[[32]byte][]*ethpb.Attestation)
@@ -1140,9 +1138,8 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 
 	attsSent := 0
 	mockStream := mock.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
-	for _, atts := range attsByTarget {
+	for _, atts := range indexedAtts {
 		for _, att := range atts {
-			t.Log(attsSent)
 			if attsSent == len(allAtts)-1 {
 				mockStream.EXPECT().Send(att).Do(func(arg0 interface{}) {
 					exitRoutine <- true
@@ -1154,7 +1151,6 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 			}
 		}
 	}
-	<-exitRoutine
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
