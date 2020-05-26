@@ -73,8 +73,10 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "slasher",
 		Flags: []cli.Flag{
 			flags.BeaconCertFlag,
+			flags.CertFlag,
 			flags.KeyFlag,
 			flags.RPCPort,
+			flags.RPCHost,
 			flags.RebuildSpanMapsFlag,
 			flags.BeaconRPCProviderFlag,
 		},

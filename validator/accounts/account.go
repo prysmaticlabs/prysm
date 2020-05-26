@@ -3,6 +3,7 @@ package accounts
 
 import (
 	"bufio"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/urfave/cli.v2"
@@ -118,7 +120,9 @@ func NewValidatorAccount(directory string, password string) error {
 }
 
 // Exists checks if a validator account at a given keystore path exists.
-func Exists(keystorePath string) (bool, error) {
+// assertNonEmpty is a boolean used to determine whether to check that
+// the provided directory exists.
+func Exists(keystorePath string, assertNonEmpty bool) (bool, error) {
 	/* #nosec */
 	f, err := os.Open(keystorePath)
 	if err != nil {
@@ -130,10 +134,13 @@ func Exists(keystorePath string) (bool, error) {
 		}
 	}()
 
-	_, err = f.Readdirnames(1) // Or f.Readdir(1)
-	if err == io.EOF {
-		return false, nil
+	if assertNonEmpty {
+		_, err = f.Readdirnames(1) // Or f.Readdir(1)
+		if err == io.EOF {
+			return false, nil
+		}
 	}
+
 	return true, err
 }
 
@@ -141,7 +148,7 @@ func Exists(keystorePath string) (bool, error) {
 func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
 	// Forces user to create directory if using non-default path.
 	if path != DefaultValidatorDir() {
-		exists, err := Exists(path)
+		exists, err := Exists(path, false /* assertNonEmpty */)
 		if err != nil {
 			return path, passphrase, err
 		}
@@ -212,6 +219,40 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	}
 
 	return path, passphrase, nil
+}
+
+// Merge merges data from validator databases in sourceDirectories into a new store, which is created in targetDirectory.
+func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) error {
+	var sourceStores []*db.Store
+	defer func() {
+		for _, store := range sourceStores {
+			if err := store.Close(); err != nil {
+				err = errors.Wrapf(err, "Failed to close the database in %s", store.DatabasePath())
+			}
+		}
+	}()
+
+	for _, dir := range sourceDirectories {
+		store, err := db.GetKVStore(dir)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to prepare the database in %s for merging", dir)
+		}
+		if store == nil {
+			continue
+		}
+		sourceStores = append(sourceStores, store)
+	}
+
+	if len(sourceStores) == 0 {
+		return errors.New("no validator databases found in source directories")
+	}
+
+	err := db.Merge(ctx, sourceStores, targetDirectory)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to merge validator databases into %s", targetDirectory)
+	}
+
+	return nil
 }
 
 // ChangePassword changes the password for all keys located in a keystore.

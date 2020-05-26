@@ -52,7 +52,7 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	if err != nil {
 		return errors.Wrap(err, "could not get container root")
 	}
-	if !sig.Verify(ctrRoot[:], publicKey) {
+	if !sig.Verify(publicKey, ctrRoot[:]) {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
@@ -75,7 +75,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 	if err != nil {
 		return errors.Wrap(err, "could not hash container")
 	}
-	if !sig.Verify(root[:], publicKey) {
+	if !sig.Verify(publicKey, root[:]) {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil

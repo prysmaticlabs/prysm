@@ -49,6 +49,8 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
+	flags.MergeSourceDirectories,
+	flags.MergeTargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -59,6 +61,9 @@ var appFlags = []cli.Flag{
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
+	flags.MonitoringPortFlag,
+	flags.SlasherRPCProviderFlag,
+	flags.SlasherCertFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
@@ -67,18 +72,17 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	flags.MonitoringPortFlag,
 	cmd.LogFormat,
+	cmd.LogFileName,
+	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
+	cmd.GrpcMaxCallRecvMsgSizeFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
-	cmd.LogFileName,
-	cmd.ConfigFileFlag,
-	cmd.ChainConfigFileFlag,
-	cmd.GrpcMaxCallRecvMsgSizeFlag,
 }
 
 func init() {
@@ -103,16 +107,18 @@ func main() {
 					Description: `creates a new validator account keystore containing private keys for Ethereum 2.0 -
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
-					Flags: []cli.Flag{
-						flags.KeystorePathFlag,
-						flags.PasswordFlag,
-					},
+					Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+						[]cli.Flag{
+							flags.KeystorePathFlag,
+							flags.PasswordFlag,
+							cmd.ChainConfigFileFlag,
+						}...),
 					Action: func(cliCtx *cli.Context) error {
-						featureconfig.ConfigureValidator(cliCtx)
-						if featureconfig.Get().MinimalConfig {
-							log.Warn("Using Minimal Config")
-							params.UseMinimalConfig()
+						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+							params.LoadChainConfigFile(chainConfigFileName)
 						}
+						featureconfig.ConfigureValidator(cliCtx)
 
 						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
@@ -216,6 +222,27 @@ contract in order to activate the validator client`,
 							log.WithError(err).Error("Changing password failed")
 						} else {
 							log.Info("Password changed successfully")
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:        "merge",
+					Description: "merges data from several validator databases into a new validator database",
+					Flags: []cli.Flag{
+						flags.MergeSourceDirectories,
+						flags.MergeTargetDirectory,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						passedSources := cliCtx.String(flags.MergeSourceDirectories.Name)
+						sources := strings.Split(passedSources, ",")
+						target := cliCtx.String(flags.MergeTargetDirectory.Name)
+
+						if err := accounts.Merge(context.Background(), sources, target); err != nil {
+							log.WithError(err).Error("Merging validator data failed")
+						} else {
+							log.Info("Merge completed successfully")
 						}
 
 						return nil
