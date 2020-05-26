@@ -106,6 +106,11 @@ func (f *ForkChoice) Nodes() []*Node {
 	return cpy
 }
 
+// Store returns the fork choice store object which contains all the information regarding proto array fork choice.
+func (f *ForkChoice) Store() *Store {
+	return f.store
+}
+
 // Node returns the copied node in the fork choice store.
 func (f *ForkChoice) Node(root [32]byte) *Node {
 	f.store.nodeIndicesLock.RLock()
