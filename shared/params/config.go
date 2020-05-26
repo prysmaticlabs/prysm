@@ -237,6 +237,7 @@ func WittiTestnetConfig() *BeaconChainConfig {
 	wittiTestnet.MinGenesisDelay = 86400
 
 	wittiTestnet.GenesisForkVersion = []byte{0, 0, 1, 19}
+	wittiTestnet.NextForkVersion = []byte{0, 0, 1, 19}
 	wittiTestnet.BLSWithdrawalPrefixByte = byte(3)
 
 	return &wittiTestnet
