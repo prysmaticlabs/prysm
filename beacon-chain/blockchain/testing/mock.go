@@ -15,6 +15,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -41,6 +42,7 @@ type ChainService struct {
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
 	ValidAttestation            bool
+	ForkChoiceStore             *protoarray.Store
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -218,6 +220,11 @@ func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 // HeadSeed mocks the same method in the chain service.
 func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
 	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
+}
+
+// ProtoArrayStore mocks the same method in the chain service.
+func (ms *ChainService) ProtoArrayStore() *protoarray.Store {
+	return ms.ForkChoiceStore
 }
 
 // GenesisTime mocks the same method in the chain service.
