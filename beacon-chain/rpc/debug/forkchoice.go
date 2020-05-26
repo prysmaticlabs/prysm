@@ -13,6 +13,7 @@ func (ds *Server) GetProtoArrayForkChoice(ctx context.Context, _ *ptypes.Empty) 
 
 	nodes := store.Nodes
 	returnedNodes := make([]*pbrpc.ProtoArrayNode, len(nodes))
+
 	for i := 0; i < len(returnedNodes); i++ {
 		returnedNodes[i] = &pbrpc.ProtoArrayNode{
 			Slot:           nodes[i].Slot,
