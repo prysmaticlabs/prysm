@@ -283,7 +283,54 @@ func TestStateMachineManager_QueueLoop(t *testing.T) {
 	assertState(512, stateNew)
 }
 
-func TestStateMachine_findStateMachine(t *testing.T) {
+func TestStateMachineManager_removeStateMachine(t *testing.T) {
+	smm := newStateMachineManager()
+	if _, ok := smm.findStateMachine(64); ok {
+		t.Error("unexpected machine found")
+	}
+	smm.addStateMachine(64)
+	if _, ok := smm.findStateMachine(64); !ok {
+		t.Error("expected machine not found")
+	}
+	expectedError := fmt.Errorf("state for machine %v is not found", 65)
+	if err := smm.removeStateMachine(65); err == nil || err.Error() != expectedError.Error() {
+		t.Errorf("expected error (%v), got: %v", expectedError, err)
+	}
+	if err := smm.removeStateMachine(64); err != nil {
+		t.Error(err)
+	}
+	if _, ok := smm.findStateMachine(64); ok {
+		t.Error("unexpected machine found")
+	}
+}
+
+func TestStateMachineManager_removeAllStateMachines(t *testing.T) {
+	smm := newStateMachineManager()
+	smm.addStateMachine(64)
+	smm.addStateMachine(128)
+	smm.addStateMachine(196)
+	keys := []uint64{64, 128, 196}
+	if !reflect.DeepEqual(keys, smm.keys) {
+		t.Errorf("keys not sorted, want: %v, got: %v", keys, smm.keys)
+	}
+	if len(smm.machines) != 3 {
+		t.Errorf("unexpected list size: %v", len(smm.machines))
+	}
+
+	if err := smm.removeAllStateMachines(); err != nil {
+		t.Error(err)
+	}
+
+	keys = []uint64{}
+	if !reflect.DeepEqual(keys, smm.keys) {
+		t.Errorf("unexpected keys, want: %v, got: %v", keys, smm.keys)
+	}
+	if len(smm.machines) != 0 {
+		t.Error("expected empty list")
+	}
+}
+
+func TestStateMachineManager_findStateMachine(t *testing.T) {
 	smm := newStateMachineManager()
 	if _, ok := smm.findStateMachine(64); ok {
 		t.Errorf("unexpected returned value: want: %v, got: %v", false, ok)
@@ -419,59 +466,7 @@ func TestStateMachineManager_allMachinesInState(t *testing.T) {
 		})
 	}
 }
-//
-//func TestStateMachine_isLowestEpochState(t *testing.T) {
-//	smm := newStateMachineManager()
-//	smm.addEpochState(12)
-//	smm.addEpochState(13)
-//	smm.addEpochState(14)
-//	if res := smm.isLowestEpochState(15); res {
-//		t.Errorf("unexpected lowest state: %v", 15)
-//	}
-//	if res := smm.isLowestEpochState(13); res {
-//		t.Errorf("unexpected lowest state: %v", 15)
-//	}
-//	if res := smm.isLowestEpochState(12); !res {
-//		t.Errorf("expected lowest state not found: %v", 12)
-//	}
-//	if err := smm.removeEpochState(12); err != nil {
-//		t.Error(err)
-//	}
-//	if res := smm.isLowestEpochState(12); res {
-//		t.Errorf("unexpected lowest state: %v", 12)
-//	}
-//	if res := smm.isLowestEpochState(13); !res {
-//		t.Errorf("expected lowest state not found: %v", 13)
-//	}
-//}
-//
-//func TestStateMachine_highestEpoch(t *testing.T) {
-//	smm := newStateMachineManager()
-//	if _, err := smm.highestEpoch(); err == nil {
-//		t.Error("expected error")
-//	}
-//	smm.addEpochState(12)
-//	smm.addEpochState(13)
-//	smm.addEpochState(14)
-//	epoch, err := smm.highestEpoch()
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	if epoch != 14 {
-//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 14)
-//	}
-//	if err := smm.removeEpochState(14); err != nil {
-//		t.Error(err)
-//	}
-//	epoch, err = smm.highestEpoch()
-//	if err != nil {
-//		t.Error(err)
-//	}
-//	if epoch != 13 {
-//		t.Errorf("incorrect highest epoch: %v, want: %v", epoch, 13)
-//	}
-//}
-//
+
 func TestStateMachine_isFirstLast(t *testing.T) {
 	checkFirst := func(m *stateMachine, want bool) {
 		if m.isFirst() != want {
