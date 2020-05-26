@@ -40,4 +40,5 @@ type Getter interface {
 	Nodes() []*protoarray.Node
 	Node([32]byte) *protoarray.Node
 	HasNode([32]byte) bool
+	Store() *protoarray.Store
 }
