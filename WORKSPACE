@@ -922,8 +922,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "60bf479cf6bc73c939f4db97ad711756e949e522",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-autonat",
+    sum = "h1:w46bKK3KTOUWDe5mDYMRjJu1uryqBp8HCNDp/TWMqKw=",
+    version = "v0.2.3",
 )
 
 go_repository(
@@ -1800,5 +1801,10 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_tls",
     importpath = "github.com/libp2p/go-libp2p-tls",
     sum = "h1:twKMhMu44jQO+HgQK9X8NHO5HkeJu2QbhLzLJpa8oNM=",
+    patch_args = ["-p1"],
+    patches = [
+        "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
+        "//third_party:libp2p_tls.patch",
+    ],
     version = "v0.1.3",
 )
