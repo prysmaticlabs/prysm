@@ -94,7 +94,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 74,
+			ProposerIndex: 60,
 			Slot:          beaconState.Slot() + 1,
 			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
@@ -550,7 +550,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
 			Slot:          beaconState.Slot() + 1,
-			ProposerIndex: 9,
+			ProposerIndex: 22,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
@@ -900,7 +900,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 156,
+			ProposerIndex: 125,
 			Slot:          s.Slot() + 1,
 			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{

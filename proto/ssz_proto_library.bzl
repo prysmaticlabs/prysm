@@ -20,7 +20,7 @@ mainnet = {
 minimal = {
     "block_roots.size": "64,32",
     "state_roots.size": "64,32",
-    "eth1_data_votes.size": "16",
+    "eth1_data_votes.size": "32",
     "randao_mixes.size": "64,32",
     "previous_epoch_attestations.max": "1024",
     "current_epoch_attestations.max": "1024",
