@@ -77,12 +77,12 @@ var (
 	}
 	// MergeSourceDirectories defines the locations of source validator databases that will be merged.
 	MergeSourceDirectories = &cli.StringFlag{
-		Name: "source-dirs",
+		Name:  "source-dirs",
 		Usage: "A comma-separated list of directories containing validator databases that will be merged.",
 	}
 	// MergeTargetDirectory defines the locations where the merged database will be stored.
 	MergeTargetDirectory = &cli.StringFlag{
-		Name: "target-dir",
+		Name:  "target-dir",
 		Usage: "The directory where the merged database will be stored.",
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
