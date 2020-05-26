@@ -60,6 +60,7 @@ var appFlags = []cli.Flag{
 	debug.TraceFlag,
 	flags.RPCPort,
 	flags.RPCHost,
+	flags.CertFlag,
 	flags.KeyFlag,
 	flags.RebuildSpanMapsFlag,
 	flags.BeaconCertFlag,
