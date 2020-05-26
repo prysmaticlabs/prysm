@@ -983,6 +983,9 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),
+		GenesisTimeFetcher: &chainMock.ChainService{
+			Genesis: time.Now(),
+		},
 	}
 
 	exitRoutine := make(chan bool)
