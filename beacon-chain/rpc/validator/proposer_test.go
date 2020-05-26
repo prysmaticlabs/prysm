@@ -1215,7 +1215,7 @@ func TestEth1Data(t *testing.T) {
 			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
 		},
 		HashesByHeight: map[int][]byte{
-			8160: []byte("8160"),
+			8180: []byte("8180"),
 		},
 		Eth1Data: &ethpb.Eth1Data{
 			DepositCount: 55,
@@ -1246,7 +1246,7 @@ func TestEth1Data(t *testing.T) {
 }
 
 func TestEth1Data_SmallerDepositCount(t *testing.T) {
-	slot := uint64(10000)
+	slot := uint64(20000)
 	deps := []*dbpb.DepositContainer{
 		{
 			Index:           0,

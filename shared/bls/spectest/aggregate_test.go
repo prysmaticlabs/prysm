@@ -21,12 +21,10 @@ func TestAggregateYaml(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}
-
 			test := &AggregateTest{}
 			if err := yaml.Unmarshal(file, test); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-
 			var sigs []*bls.Signature
 			for _, s := range test.Input {
 				sigBytes, err := hex.DecodeString(s[2:])
@@ -38,6 +36,12 @@ func TestAggregateYaml(t *testing.T) {
 					t.Fatalf("Unable to unmarshal signature from bytes: %v", err)
 				}
 				sigs = append(sigs, sig)
+			}
+			if len(test.Input) == 0 {
+				if test.Output != "" {
+					t.Fatalf("Output Aggregate is not of zero length:Output %s", test.Output)
+				}
+				return
 			}
 			sig := bls.AggregateSignatures(sigs)
 			if strings.Contains(folder.Name(), "aggregate_na_pubkeys") {
