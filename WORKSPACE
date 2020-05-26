@@ -363,8 +363,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "76944c4fc848530530f6be36fb22b70431ca506c",  # v0.5.1
     importpath = "github.com/libp2p/go-libp2p",
+    sum = "h1:5rViLwtjkaEWcIBbk6oII39cVjPTElo3F78SSLf9yho=",
+    version = "v0.9.2",
 )
 
 go_repository(
@@ -382,8 +383,9 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "8c6cee15b340d7210c30a82a19231ee333b69b1d",  # v0.2.0
     importpath = "github.com/multiformats/go-multiaddr",
+    sum = "h1:XZLDTszBIJe6m0zF6ITBrEcZR73OPUhCBBS9rYAuUzI=",
+    version = "v0.2.2",
 )
 
 go_repository(
@@ -401,8 +403,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "4f59859086ea4bfd750cf40ff2598fe8e6256f78",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-swarm",
+    sum = "h1:PinJOL2Haz0USGg6Z7wGALe4E6tJmAaUmKPxYWQSi68=",
+    version = "v0.2.5",
 )
 
 go_repository(
@@ -462,8 +465,9 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "c9acf9f27c5020e78925937dc3de142d2d393cd1",  # v0.1.1
     importpath = "github.com/multiformats/go-multiaddr-net",
+    sum = "h1:QoRKvu0xHN1FCFJcMQLbG/yQE2z441L5urvG3+qyz7g=",
+    version = "v0.1.5",
 )
 
 go_repository(
@@ -1768,4 +1772,32 @@ go_repository(
     importpath = "github.com/ipfs/go-log/v2",
     sum = "h1:7l5yjP7aLl5xr7RmqEvPZy9Skq7PP2fIP0Pa7lU/UII=",
     version = "v2.1.0",
+)
+
+go_repository(
+    name = "org_uber_go_zap",
+    importpath = "go.uber.org/zap",
+    sum = "h1:ZZCA22JRF2gQE5FoNmhmrf7jeJJ2uhqDUNRYKm8dvmM=",
+    version = "v1.15.0",
+)
+
+go_repository(
+    name = "org_uber_go_atomic",
+    importpath = "go.uber.org/atomic",
+    sum = "h1:Ezj3JGmsOnG1MoRWQkPBsKLe9DwWD9QeXzTRzzldNVk=",
+    version = "v1.6.0",
+)
+
+go_repository(
+    name = "org_uber_go_multierr",
+    importpath = "go.uber.org/multierr",
+    sum = "h1:KCa4XfM8CWFCpxXRGok+Q0SS/0XBhMDbHHGABQLvD2A=",
+    version = "v1.5.0",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_tls",
+    importpath = "github.com/libp2p/go-libp2p-tls",
+    sum = "h1:twKMhMu44jQO+HgQK9X8NHO5HkeJu2QbhLzLJpa8oNM=",
+    version = "v0.1.3",
 )
