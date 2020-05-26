@@ -242,7 +242,7 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 	if err != nil {
 		return err
 	}
-	if !slotSig.Verify(slotMsg[:], pubKey) {
+	if !slotSig.Verify(pubKey, slotMsg[:]) {
 		return errors.New("could not validate slot signature")
 	}
 

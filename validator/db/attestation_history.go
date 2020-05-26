@@ -55,7 +55,7 @@ func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys []
 	return attestationHistoryForVals, err
 }
 
-// SaveAttestationHistoryForPubKeys returns the attestation histories for the requested validator public keys.
+// SaveAttestationHistoryForPubKeys saves the attestation histories for the requested validator public keys.
 func (db *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*slashpb.AttestationHistory) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistory")
 	defer span.End()

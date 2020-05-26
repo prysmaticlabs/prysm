@@ -822,7 +822,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 		t.Fatalf("Could not get the deposit block slot %v", err)
 	}
 
-	expected := uint64(53)
+	expected := uint64(69)
 
 	if resp != expected {
 		t.Errorf("Wanted %v, got %v", expected, resp)
@@ -984,7 +984,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		},
 		&ethpb.ValidatorStatusResponse{
 			Status:               ethpb.ValidatorStatus_DEPOSITED,
-			DepositInclusionSlot: 53,
+			DepositInclusionSlot: 69,
 			ActivationEpoch:      18446744073709551615,
 		},
 		&ethpb.ValidatorStatusResponse{

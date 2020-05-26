@@ -431,11 +431,11 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig := privKeys[33].Sign(slotRoot[:])
+	sig := privKeys[22].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 33,
+		AggregatorIndex: 22,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
@@ -447,7 +447,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
 	signedAggregateAndProof.Signature = aggreSig[:]
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
@@ -555,11 +555,11 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig := privKeys[33].Sign(slotRoot[:])
+	sig := privKeys[22].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 33,
+		AggregatorIndex: 22,
 	}
 	signedAggregateAndProof := &ethpb.SignedAggregateAttestationAndProof{Message: aggregateAndProof}
 
@@ -571,7 +571,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	aggreSig := privKeys[33].Sign(signingRoot[:]).Marshal()
+	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
 	signedAggregateAndProof.Signature = aggreSig[:]
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {

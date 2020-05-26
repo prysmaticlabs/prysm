@@ -83,6 +83,10 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 
 	// Process source reward / penalty
 	if v.IsPrevEpochAttester && !v.IsSlashed {
+		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
+		maxAttesterReward := br - proposerReward
+		r += maxAttesterReward / v.InclusionDistance
+
 		if isInInactivityLeak(state) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
@@ -90,9 +94,6 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 		} else {
 			rewardNumerator := br * (pBal.PrevEpochAttested / effectiveBalanceIncrement)
 			r += rewardNumerator / (pBal.ActiveCurrentEpoch / effectiveBalanceIncrement)
-			proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
-			maxAttesterReward := br - proposerReward
-			r += maxAttesterReward / v.InclusionDistance
 		}
 	} else {
 		p += br

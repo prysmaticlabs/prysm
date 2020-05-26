@@ -5,11 +5,9 @@ package spectest
 
 type AggregateVerifyTest struct {
 	Input struct {
-		Pairs []struct {
-			Pubkey  string `json:"pubkey"`
-			Message string `json:"message"`
-		} `json:"pairs"`
-		Signature string `json:"signature"`
+		Pubkeys   []string `json:"pubkeys"`
+		Messages  []string `json:"messages"`
+		Signature string   `json:"signature"`
 	} `json:"input"`
 	Output bool `json:"output"`
 }
