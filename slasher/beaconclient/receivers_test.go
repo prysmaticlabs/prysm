@@ -92,6 +92,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 			Slot: 5,
 			Target: &ethpb.Checkpoint{
 				Epoch: 5,
+				Root:  []byte("test root 1"),
 			},
 		},
 		Signature: []byte{1, 2},
@@ -106,15 +107,15 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		nil,
 	).Do(func() {
 		// Let a slot pass for the ticker.
-		time.Sleep(slotutil.DivideSlotBy(2))
+		time.Sleep(slotutil.DivideSlotBy(1))
 		cancel()
 	})
 
 	go bs.receiveAttestations(ctx)
 	bs.receivedAttestationsBuffer <- att
-	att.Data.Target.Epoch = 6
+	att.Data.Target.Root = []byte("test root 2")
 	bs.receivedAttestationsBuffer <- att
-	att.Data.Target.Epoch = 8
+	att.Data.Target.Root = []byte("test root 3")
 	bs.receivedAttestationsBuffer <- att
 	atts := <-bs.collectedAttestationsBuffer
 	if len(atts) != 3 {
