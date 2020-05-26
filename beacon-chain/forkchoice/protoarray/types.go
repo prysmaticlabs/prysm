@@ -29,7 +29,7 @@ type Node struct {
 	JustifiedEpoch uint64   // justified epoch of this node.
 	FinalizedEpoch uint64   // finalized epoch of this node.
 	Weight         uint64   // weight of this node.
-	BestChiled     uint64   // best child index of this node.
+	BestChild      uint64   // best child index of this node.
 	BestDescendent uint64   // head index of this node.
 	Graffiti       [32]byte // graffati of the block node.
 }

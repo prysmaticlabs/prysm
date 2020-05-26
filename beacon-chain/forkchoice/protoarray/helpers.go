@@ -87,7 +87,7 @@ func copyNode(node *Node) *Node {
 		JustifiedEpoch: node.JustifiedEpoch,
 		FinalizedEpoch: node.FinalizedEpoch,
 		Weight:         node.Weight,
-		BestChiled:     node.BestChiled,
+		BestChild:      node.BestChild,
 		BestDescendent: node.BestDescendent,
 	}
 }

@@ -87,7 +87,7 @@ func (s *Store) insert(ctx context.Context,
 		Parent:         parentIndex,
 		JustifiedEpoch: justifiedEpoch,
 		FinalizedEpoch: finalizedEpoch,
-		BestChiled:     NonExistentNode,
+		BestChild:      NonExistentNode,
 		BestDescendent: NonExistentNode,
 		Weight:         0,
 	}
@@ -200,7 +200,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 
 	// Define 3 variables for the 3 outcomes mentioned above. This is to
-	// set `parent.BestChiled` and `parent.bestDescendent` to. These
+	// set `parent.BestChild` and `parent.bestDescendent` to. These
 	// aliases are to assist readability.
 	changeToNone := []uint64{NonExistentNode, NonExistentNode}
 	bestDescendant := child.BestDescendent
@@ -208,24 +208,24 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 		bestDescendant = childIndex
 	}
 	changeToChild := []uint64{childIndex, bestDescendant}
-	noChange := []uint64{parent.BestChiled, parent.BestDescendent}
+	noChange := []uint64{parent.BestChild, parent.BestDescendent}
 	newParentChild := make([]uint64, 0)
 
-	if parent.BestChiled != NonExistentNode {
-		if parent.BestChiled == childIndex && !childLeadsToViableHead {
+	if parent.BestChild != NonExistentNode {
+		if parent.BestChild == childIndex && !childLeadsToViableHead {
 			// If the child is already the best child of the parent but it's not viable for head,
 			// we should remove it. (Outcome 1)
 			newParentChild = changeToNone
-		} else if parent.BestChiled == childIndex {
+		} else if parent.BestChild == childIndex {
 			// If the child is already the best child of the parent, set it again to ensure best
 			// descendent of the parent is updated. (Outcome 2)
 			newParentChild = changeToChild
 		} else {
 			// Protection against parent's best child going out of bound.
-			if parent.BestChiled > uint64(len(s.Nodes)) {
+			if parent.BestChild > uint64(len(s.Nodes)) {
 				return errInvalidBestDescendantIndex
 			}
-			bestChild := s.Nodes[parent.BestChiled]
+			bestChild := s.Nodes[parent.BestChild]
 			// Is current parent's best child viable to be head? Based on justification and finalization rules.
 			bestChildLeadsToViableHead, err := s.leadsToViableHead(bestChild)
 			if err != nil {
@@ -266,7 +266,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 
 	// Update parent with the outcome.
-	parent.BestChiled = newParentChild[0]
+	parent.BestChild = newParentChild[0]
 	parent.BestDescendent = newParentChild[1]
 	s.Nodes[parentIndex] = parent
 
@@ -326,11 +326,11 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 				node.Parent = NonExistentNode
 			}
 		}
-		if node.BestChiled != NonExistentNode {
-			if node.BestChiled < finalizedIndex {
+		if node.BestChild != NonExistentNode {
+			if node.BestChild < finalizedIndex {
 				return errInvalidBestChildIndex
 			}
-			node.BestChiled -= finalizedIndex
+			node.BestChild -= finalizedIndex
 		}
 		if node.BestDescendent != NonExistentNode {
 			if node.BestDescendent < finalizedIndex {
