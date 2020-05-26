@@ -24,9 +24,9 @@ import (
 
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
-func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	if pid == r.p2p.PeerID() {
-		return true
+		return pubsub.ValidationAccept
 	}
 
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregateAndProof")
@@ -35,66 +35,67 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	// To process the following it requires the recent blocks to be present in the database, so we'll skip
 	// validating or processing aggregated attestations until fully synced.
 	if r.initialSync.Syncing() {
-		return false
+		return pubsub.ValidationIgnore
 	}
 
 	raw, err := r.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode message")
 		traceutil.AnnotateError(span, err)
-		return false
+		return pubsub.ValidationReject
 	}
 	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
-		return false
+		return pubsub.ValidationReject
 	}
 
 	if m.Message == nil || m.Message.Aggregate == nil || m.Message.Aggregate.Data == nil {
-		return false
+		return pubsub.ValidationReject
 	}
 	// Verify this is the first aggregate received from the aggregator with index and slot.
 	if r.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
-		return false
+		return pubsub.ValidationIgnore
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
 	seen, err := r.attPool.HasAggregatedAttestation(m.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
-		return false
+		return pubsub.ValidationIgnore
 	}
 	if seen {
-		return false
+		return pubsub.ValidationIgnore
 	}
 	if !r.validateBlockInAttestation(ctx, m) {
-		return false
+		return pubsub.ValidationIgnore
 	}
 
-	if !r.validateAggregatedAtt(ctx, m) {
-		return false
+	validationRes := r.validateAggregatedAtt(ctx, m)
+	if validationRes != pubsub.ValidationAccept {
+		return validationRes
 	}
 
 	r.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
 
-	return true
+	return pubsub.ValidationAccept
 }
 
-func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) bool {
+func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregatedAtt")
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
 	if err := validateAggregateAttTime(attSlot, uint64(r.chain.GenesisTime().Unix())); err != nil {
 		traceutil.AnnotateError(span, err)
-		return false
+		return pubsub.ValidationIgnore
 	}
 
 	s, err := r.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
-		return false
+		return pubsub.ValidationIgnore
 	}
 
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
@@ -102,37 +103,37 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		s, err = state.ProcessSlots(ctx, s, helpers.StartSlot(helpers.SlotToEpoch(attSlot)))
 		if err != nil {
 			traceutil.AnnotateError(span, err)
-			return false
+			return pubsub.ValidationIgnore
 		}
 	}
 
 	// Verify validator index is within the aggregate's committee.
 	if err := validateIndexInCommittee(ctx, s, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate index in committee"))
-		return false
+		return pubsub.ValidationReject
 	}
 
 	// Verify selection proof reflects to the right validator and signature is valid.
 	if err := validateSelection(ctx, s, signed.Message.Aggregate.Data, signed.Message.AggregatorIndex, signed.Message.SelectionProof); err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex))
-		return false
+		return pubsub.ValidationReject
 	}
 
 	// Verify the aggregator's signature is valid.
 	if err := validateAggregatorSignature(s, signed); err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not verify aggregator signature %d", signed.Message.AggregatorIndex))
-		return false
+		return pubsub.ValidationReject
 	}
 
 	// Verify aggregated attestation has a valid signature.
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
 		if err := blocks.VerifyAttestation(ctx, s, signed.Message.Aggregate); err != nil {
 			traceutil.AnnotateError(span, err)
-			return false
+			return pubsub.ValidationReject
 		}
 	}
 
-	return true
+	return pubsub.ValidationAccept
 }
 
 func (r *Service) validateBlockInAttestation(ctx context.Context, s *ethpb.SignedAggregateAttestationAndProof) bool {
