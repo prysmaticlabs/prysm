@@ -126,7 +126,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	}
 
 	partRate := participation.Participation.GlobalParticipationRate
-	expected := float32(1)
+	expected := float32(0.97)
 	if partRate < expected {
 		return fmt.Errorf(
 			"validator participation was below for epoch %d, expected %f, received: %f",

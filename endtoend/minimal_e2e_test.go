@@ -15,7 +15,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	params.UseE2EConfig()
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--custom-genesis-delay=25"},
+		BeaconFlags:    []string{"--custom-genesis-delay=30"},
 		ValidatorFlags: []string{},
 		EpochsToRun:    8,
 		TestSync:       true,
