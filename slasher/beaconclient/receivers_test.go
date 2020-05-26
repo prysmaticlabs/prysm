@@ -2,6 +2,7 @@ package beaconclient
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"testing"
 	"time"
 
@@ -105,7 +106,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		nil,
 	).Do(func() {
 		// Let a slot pass for the ticker.
-		time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+		time.Sleep(slotutil.DivideSlotBy(2)))
 		cancel()
 	})
 
