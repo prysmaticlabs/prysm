@@ -37,7 +37,7 @@ func (s sortableAttestations) Less(i, j int) bool {
 	return s[i].Data.Slot < s[j].Data.Slot
 }
 
-func mapAttestationsByTargetRoot(ctx context.Context, atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
+func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethpb.Attestation {
 	attsMap := make(map[[32]byte][]*ethpb.Attestation)
 	if len(atts) == 0 {
 		return attsMap
@@ -154,7 +154,7 @@ func (bs *Server) ListIndexedAttestations(
 	}
 	// We use the retrieved committees for the block root to convert all attestations
 	// into indexed form effectively.
-	mappedAttestations := mapAttestationsByTargetRoot(ctx, attsArray)
+	mappedAttestations := mapAttestationsByTargetRoot(attsArray)
 	indexedAtts := make([]*ethpb.IndexedAttestation, 0, numAttestations)
 	for targetRoot, atts := range mappedAttestations {
 		attState, err := bs.StateGen.StateByRoot(ctx, targetRoot)
@@ -245,6 +245,7 @@ func (bs *Server) StreamIndexedAttestations(
 		case event, ok := <-attestationsChannel:
 			if !ok {
 				log.Error("Indexed attestations stream channel closed")
+				continue
 			}
 			if event.Type == operation.UnaggregatedAttReceived {
 				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
@@ -273,18 +274,10 @@ func (bs *Server) StreamIndexedAttestations(
 				}
 				bs.ReceivedAttestationsBuffer <- data.Attestation.Aggregate
 			}
-		case atts, ok := <-bs.CollectedAttestationsBuffer:
+		case aggAtts, ok := <-bs.CollectedAttestationsBuffer:
 			if !ok {
 				log.Error("Indexed attestations stream collected attestations channel closed")
-			}
-			// We aggregate the received attestations.
-			aggAtts, err := helpers.AggregateAttestations(atts)
-			if err != nil {
-				return status.Errorf(
-					codes.Internal,
-					"Could not aggregate attestations: %v",
-					err,
-				)
+				continue
 			}
 			if len(aggAtts) == 0 {
 				continue
@@ -293,19 +286,20 @@ func (bs *Server) StreamIndexedAttestations(
 			// have the same data root, so we just use the target epoch from
 			// the first one to determine committees for converting into indexed
 			// form.
-			epoch := aggAtts[0].Data.Target.Epoch
-			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
+			targetRoot := aggAtts[0].Data.Target.Root
+			targetEpoch := aggAtts[0].Data.Target.Epoch
+			committeesBySlot, _, err := bs.retrieveCommitteesForRoot(stream.Context(), targetRoot)
 			if err != nil {
 				return status.Errorf(
 					codes.Internal,
-					"Could not retrieve committees for epoch %d: %v",
-					epoch,
+					"Could not retrieve committees for target root %#x: %v",
+					targetRoot,
 					err,
 				)
 			}
 			// We use the retrieved committees for the epoch to convert all attestations
 			// into indexed form effectively.
-			startSlot := helpers.StartSlot(epoch)
+			startSlot := helpers.StartSlot(targetEpoch)
 			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 			for _, att := range aggAtts {
 				// Out of range check, the attestation slot cannot be greater
@@ -342,11 +336,23 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	for {
 		select {
 		case _ = <-ticker.C():
+			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			for root, atts := range attsByRoot {
-				if len(atts) > 0 {
-					bs.CollectedAttestationsBuffer <- atts
-					attsByRoot[root] = make([]*ethpb.Attestation, 0)
+				// We aggregate the received attestations, we know they all have the same data root.
+				aggAtts, err := helpers.AggregateAttestations(atts)
+				if err != nil {
+					log.WithError(err).Error("Could not aggregate collected attestations")
+					continue
 				}
+				if len(aggAtts) == 0 {
+					continue
+				}
+				targetRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
+				aggregatedAttsByTarget[targetRoot] = append(aggregatedAttsByTarget[targetRoot], aggAtts...)
+				attsByRoot[root] = make([]*ethpb.Attestation, 0)
+			}
+			for _, atts := range aggregatedAttsByTarget {
+				bs.CollectedAttestationsBuffer <- atts
 			}
 		case att := <-bs.ReceivedAttestationsBuffer:
 			attDataRoot, err := ssz.HashTreeRoot(att.Data)
