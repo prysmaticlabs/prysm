@@ -308,6 +308,90 @@ func TestStateMachine_findStateMachine(t *testing.T) {
 	}
 }
 
+func TestStateMachineManager_allMachinesInState(t *testing.T) {
+	tests := []struct {
+		name             string
+		smmGen           func() *stateMachineManager
+		expectedStates   []stateID
+		unexpectedStates []stateID
+	}{
+		{
+			name: "empty manager",
+			smmGen: func() *stateMachineManager {
+				return newStateMachineManager()
+			},
+			expectedStates:   []stateID{},
+			unexpectedStates: []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped, stateSent},
+		},
+		{
+			name: "single machine default state",
+			smmGen: func() *stateMachineManager {
+				smm := newStateMachineManager()
+				smm.addStateMachine(64)
+				return smm
+			},
+			expectedStates:   []stateID{stateNew},
+			unexpectedStates: []stateID{stateScheduled, stateDataParsed, stateSkipped, stateSent},
+		},
+		{
+			name: "single machine updated state",
+			smmGen: func() *stateMachineManager {
+				smm := newStateMachineManager()
+				m1 := smm.addStateMachine(64)
+				m1.setState(stateSkipped)
+				return smm
+			},
+			expectedStates:   []stateID{stateSkipped},
+			unexpectedStates: []stateID{stateNew, stateScheduled, stateDataParsed, stateSent},
+		},
+		{
+			name: "multiple machines false",
+			smmGen: func() *stateMachineManager {
+				smm := newStateMachineManager()
+				smm.addStateMachine(64)
+				smm.addStateMachine(128)
+				smm.addStateMachine(196)
+				for _, fsm := range smm.machines {
+					fsm.setState(stateSkipped)
+				}
+				smm.addStateMachine(256)
+				return smm
+			},
+			expectedStates:   []stateID{},
+			unexpectedStates: []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped, stateSent},
+		},
+		{
+			name: "multiple machines true",
+			smmGen: func() *stateMachineManager {
+				smm := newStateMachineManager()
+				smm.addStateMachine(64)
+				smm.addStateMachine(128)
+				smm.addStateMachine(196)
+				for _, fsm := range smm.machines {
+					fsm.setState(stateSkipped)
+				}
+				return smm
+			},
+			expectedStates:   []stateID{stateSkipped},
+			unexpectedStates: []stateID{stateNew, stateScheduled, stateDataParsed, stateSent},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			smm := tt.smmGen()
+			for _, state := range tt.expectedStates {
+				if !smm.allMachinesInState(state) {
+					t.Errorf("expected all machines be in state: %v", state)
+				}
+			}
+			for _, state := range tt.unexpectedStates {
+				if smm.allMachinesInState(state) {
+					t.Errorf("unexpected state: %v", state)
+				}
+			}
+		})
+	}
+}
 //
 //func TestStateMachine_isLowestEpochState(t *testing.T) {
 //	smm := newStateMachineManager()

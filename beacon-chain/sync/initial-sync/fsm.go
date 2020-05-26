@@ -122,13 +122,6 @@ func (smm *stateMachineManager) findStateMachine(startBlock uint64) (*stateMachi
 	return fsm, ok
 }
 
-func (smm *stateMachineManager) firstStateMachine() (*stateMachine, bool) {
-	if len(smm.keys) == 0 {
-		return nil, false
-	}
-	return smm.findStateMachine(smm.keys[0])
-}
-
 // highestStartBlock returns the start block number for the latest known state machine.
 func (smm *stateMachineManager) highestStartBlock() (uint64, error) {
 	if len(smm.keys) == 0 {
@@ -140,6 +133,9 @@ func (smm *stateMachineManager) highestStartBlock() (uint64, error) {
 
 // allMachinesInState checks whether all registered state machines are in the same state.
 func (smm *stateMachineManager) allMachinesInState(state stateID) bool {
+	if len(smm.machines) == 0 {
+		return false
+	}
 	for _, fsm := range smm.machines {
 		if fsm.state != state {
 			return false
@@ -162,19 +158,7 @@ func (m *stateMachine) setState(name stateID) {
 	m.updated = roughtime.Now()
 }
 
-//// setStartBlock updates start block of a given state machine.
-//func (m *stateMachine) setStartBlock(start uint64) {
-//	if m.start == start {
-//		return
-//	}
-//	m.smm.machines[start] = m
-//	if err := m.smm.removeStateMachine(m.start); err != nil {
-//		log.WithError(err).Debug("State machine removal failed")
-//	}
-//	m.start = start
-//	m.updated = roughtime.Now()
-//}
-
+// trigger invokes the event handler on a given state machine.
 func (m *stateMachine) trigger(event eventID, data interface{}) error {
 	handlers, ok := (*m.smm).handlers[m.state]
 	if !ok {
