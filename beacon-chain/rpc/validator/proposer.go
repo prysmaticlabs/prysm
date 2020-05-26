@@ -383,6 +383,11 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 	if depositsTillHeight == 0 {
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
+	// Check for the validity of deposit count.
+	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
+	if depositsTillHeight < currentETH1Data.DepositCount {
+		return currentETH1Data, nil
+	}
 	return &ethpb.Eth1Data{
 		DepositRoot:  depositRoot[:],
 		BlockHash:    blockHash[:],

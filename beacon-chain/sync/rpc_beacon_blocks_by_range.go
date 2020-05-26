@@ -7,7 +7,6 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -145,24 +144,27 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		roots = append([][32]byte{genRoot}, roots...)
 	}
 	blks, roots = r.sortBlocksAndRoots(blks, roots)
-	checkpoint, err := r.db.FinalizedCheckpoint(ctx)
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve finalized checkpoint")
-		r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
-		traceutil.AnnotateError(span, err)
-		return err
-	}
 	for i, b := range blks {
 		if b == nil || b.Block == nil {
 			continue
 		}
 		blk := b.Block
 
+		// check that the block is valid according to the request
+		// and part of the canonical chain.
 		isRequestedSlotStep := (blk.Slot-startSlot)%step == 0
-		isRecentUnfinalizedSlot := blk.Slot >= helpers.StartSlot(checkpoint.Epoch+1) || checkpoint.Epoch == 0
-		if isRequestedSlotStep && (isRecentUnfinalizedSlot || r.db.IsFinalizedBlock(ctx, roots[i])) {
+		isCanonical, err := r.chain.IsCanonical(ctx, roots[i])
+		if err != nil {
+			log.WithError(err).Error("Failed to determine canonical block")
+			r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		if isRequestedSlotStep && isCanonical {
 			if err := r.chunkWriter(stream, b); err != nil {
 				log.WithError(err).Error("Failed to send a chunked response")
+				r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+				traceutil.AnnotateError(span, err)
 				return err
 			}
 		}

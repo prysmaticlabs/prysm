@@ -94,7 +94,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 74,
+			ProposerIndex: 60,
 			Slot:          beaconState.Slot() + 1,
 			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
@@ -371,7 +371,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	proposerSlashIdx := uint64(3)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	err = beaconState.SetSlot((params.BeaconConfig().PersistentCommitteePeriod * slotsPerEpoch) + params.BeaconConfig().MinAttestationInclusionDelay)
+	err = beaconState.SetSlot((params.BeaconConfig().ShardCommitteePeriod * slotsPerEpoch) + params.BeaconConfig().MinAttestationInclusionDelay)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -550,7 +550,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
 			Slot:          beaconState.Slot() + 1,
-			ProposerIndex: 13,
+			ProposerIndex: 22,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,
@@ -750,7 +750,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	ctr := &pb.SigningRoot{
+	ctr := &pb.SigningData{
 		ObjectRoot: buf,
 		Domain:     domain,
 	}
@@ -900,7 +900,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 156,
+			ProposerIndex: 125,
 			Slot:          s.Slot() + 1,
 			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{

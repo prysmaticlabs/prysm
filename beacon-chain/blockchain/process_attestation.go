@@ -35,14 +35,12 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //    current_epoch = compute_epoch_at_slot(get_current_slot(store))
 //    # Use GENESIS_EPOCH for previous when genesis to avoid underflow
 //    previous_epoch = current_epoch - 1 if current_epoch > GENESIS_EPOCH else GENESIS_EPOCH
+//    # If attestation target is from a future epoch, delay consideration until the epoch arrives
 //    assert target.epoch in [current_epoch, previous_epoch]
 //    assert target.epoch == compute_epoch_at_slot(attestation.data.slot)
 //
 //    # Attestations target be for a known block. If target block is unknown, delay consideration until the block is found
 //    assert target.root in store.blocks
-//    # Attestations cannot be from future epochs. If they are, delay consideration until the epoch arrives
-//    base_state = store.block_states[target.root].copy()
-//    assert store.time >= base_state.genesis_time + compute_start_slot_at_epoch(target.epoch) * SECONDS_PER_SLOT
 //
 //    # Attestations must be for a known block. If block is unknown, delay consideration until the block is found
 //    assert attestation.data.beacon_block_root in store.blocks
@@ -82,7 +80,6 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
-	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
 	if helpers.SlotToEpoch(a.Data.Slot) != a.Data.Target.Epoch {
 		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
@@ -107,13 +104,13 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, err
 	}
 
-	// Verify Attestations cannot be from future epochs.
-	if err := helpers.VerifySlotTime(genesisTime, tgtSlot, helpers.TimeShiftTolerance); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestation target slot")
-	}
-
 	// Verify attestation beacon block is known and not from the future.
 	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
+		return nil, errors.Wrap(err, "could not verify attestation beacon block")
+	}
+
+	// Verify LMG GHOST and FFG votes are consistent with each other.
+	if err := s.verifyLMDFFGConsistent(ctx, a.Data.Target.Epoch, a.Data.Target.Root, a.Data.BeaconBlockRoot); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
 	}
 

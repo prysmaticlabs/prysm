@@ -90,12 +90,14 @@ func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool
 			votedTarget = true
 		}
 
-		same, err = SameHead(s, a)
-		if err != nil {
-			return false, false, false, errors.Wrap(err, "could not check same head")
-		}
-		if same {
-			votedHead = true
+		if votedTarget {
+			same, err = SameHead(s, a)
+			if err != nil {
+				return false, false, false, errors.Wrap(err, "could not check same head")
+			}
+			if same {
+				votedHead = true
+			}
 		}
 	}
 	return votedPrevEpoch, votedTarget, votedHead, nil
@@ -130,6 +132,10 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb
 	inclusionSlot := aSlot + a.InclusionDelay
 
 	for _, i := range indices {
+		if int(i) >= len(vp) {
+			return vp
+		}
+
 		if record.IsCurrentEpochAttester {
 			vp[i].IsCurrentEpochAttester = true
 		}
