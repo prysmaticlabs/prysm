@@ -18,7 +18,7 @@ const (
 	// pollingInterval defines how often state machine needs to check for new events.
 	pollingInterval = 200 * time.Millisecond
 	// staleEpochTimeout is an period after which epoch's state is considered stale.
-	staleEpochTimeout = 1 * pollingInterval
+	staleEpochTimeout = 1 * time.Second
 	// lookaheadSteps is a limit on how many forward steps are loaded into queue.
 	// Each step is managed by assigned finite state machine.
 	lookaheadSteps = 8
