@@ -308,6 +308,33 @@ func TestStateMachine_findStateMachine(t *testing.T) {
 	}
 }
 
+func TestStateMachineManager_highestStartBlock(t *testing.T) {
+	smm := newStateMachineManager()
+	if _, err := smm.highestStartBlock(); err == nil {
+		t.Error("expected error")
+	}
+	smm.addStateMachine(64)
+	smm.addStateMachine(128)
+	smm.addStateMachine(196)
+	start, err := smm.highestStartBlock()
+	if err != nil {
+		t.Error(err)
+	}
+	if start != 196 {
+		t.Errorf("incorrect highest start block: %v, want: %v", start, 196)
+	}
+	if err := smm.removeStateMachine(196); err != nil {
+		t.Error(err)
+	}
+	start, err = smm.highestStartBlock()
+	if err != nil {
+		t.Error(err)
+	}
+	if start != 128 {
+		t.Errorf("incorrect highest start block: %v, want: %v", start, 128)
+	}
+}
+
 func TestStateMachineManager_allMachinesInState(t *testing.T) {
 	tests := []struct {
 		name             string
