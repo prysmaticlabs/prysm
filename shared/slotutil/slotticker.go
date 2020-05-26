@@ -51,6 +51,20 @@ func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 	return ticker
 }
 
+// GetSlotTickerWithOffset is a constructor for SlotTicker that allows a offset of time from genesis,
+// entering a offset greater than secondsPerSlot is not allowed.
+func GetSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, secondsPerSlot uint64) *SlotTicker {
+	if genesisTime.Unix() == 0 {
+		panic("zero genesis time")
+	}
+	ticker := &SlotTicker{
+		c:    make(chan uint64),
+		done: make(chan struct{}),
+	}
+	ticker.start(genesisTime.Add(offset), secondsPerSlot, roughtime.Since, roughtime.Until, time.After)
+	return ticker
+}
+
 func (s *SlotTicker) start(
 	genesisTime time.Time,
 	secondsPerSlot uint64,

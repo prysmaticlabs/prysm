@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -339,10 +338,10 @@ func (bs *Server) StreamIndexedAttestations(
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 	halfASlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
-	ticker := time.NewTicker(halfASlot)
+	ticker := slotutil.GetSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), halfASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case <-ticker.C:
+		case _ = <-ticker.C():
 			for root, atts := range attsByRoot {
 				if len(atts) > 0 {
 					bs.CollectedAttestationsBuffer <- atts
