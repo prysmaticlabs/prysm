@@ -57,6 +57,9 @@ func GetSlotTickerWithOffset(genesisTime time.Time, offset time.Duration, second
 	if genesisTime.Unix() == 0 {
 		panic("zero genesis time")
 	}
+	if offset > time.Duration(secondsPerSlot)*time.Second {
+		panic("invalid ticker offset")
+	}
 	ticker := &SlotTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),
