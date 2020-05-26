@@ -280,8 +280,6 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		params.UseMinimalConfig()
-	} else {
-		log.Warn("Using default mainnet config")
 	}
 	return cfg
 }
