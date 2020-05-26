@@ -33,7 +33,7 @@ service Debug {
     // Returns a proto array fork choice object from the beacon node.
     rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
         option (google.api.http) = {
-            post: "/eth/v1alpha1/debug/forkchoice"
+            get: "/eth/v1alpha1/debug/forkchoice"
         };
     }
 }
