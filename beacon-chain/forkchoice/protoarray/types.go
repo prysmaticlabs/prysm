@@ -2,21 +2,21 @@ package protoarray
 
 import "sync"
 
-// ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
+// ForkChoice defines the overall fork choice store which includes all block Nodes, validator's latest votes and balances.
 type ForkChoice struct {
 	store    *Store
 	votes    []Vote   // tracks individual validator's last vote.
 	balances []uint64 // tracks individual validator's last justified balances.
 }
 
-// Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
+// Store defines the fork choice store which includes block Nodes and the last view of checkpoint information.
 type Store struct {
-	pruneThreshold  uint64              // do not prune tree unless threshold is reached.
-	justifiedEpoch  uint64              // latest justified epoch in store.
-	finalizedEpoch  uint64              // latest finalized epoch in store.
+	PruneThreshold  uint64              // do not prune tree unless threshold is reached.
+	JustifiedEpoch  uint64              // latest justified epoch in store.
+	FinalizedEpoch  uint64              // latest finalized epoch in store.
 	finalizedRoot   [32]byte            // latest finalized root in store.
-	nodes           []*Node             // list of block nodes, each node is a representation of one block.
-	nodeIndices     map[[32]byte]uint64 // the root of block node and the nodes index in the list.
+	Nodes           []*Node             // list of block Nodes, each node is a representation of one block.
+	NodeIndices     map[[32]byte]uint64 // the root of block node and the Nodes index in the list.
 	nodeIndicesLock sync.RWMutex
 }
 

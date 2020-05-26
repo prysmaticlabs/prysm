@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block.go",
+        "forkchoice.go",
         "server.go",
         "state.go",
     ],

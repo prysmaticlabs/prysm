@@ -33,3 +33,4 @@ password.txt
 
 # Dist files
 dist
+/proto/

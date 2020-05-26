@@ -15,7 +15,7 @@ var (
 	nodeCount = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "proto_array_node_count",
-			Help: "The number of nodes in the DAG array based store structure.",
+			Help: "The number of Nodes in the DAG array based store structure.",
 		},
 	)
 	headChangesCount = promauto.NewCounter(

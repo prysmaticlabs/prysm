@@ -30,6 +30,12 @@ service Debug {
             post: "/eth/v1alpha1/debug/logging"
         };
     }
+    // Returns a proto array fork choice object from the beacon node.
+    rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/forkchoice"
+        };
+    }
 }
 
 message BeaconStateRequest {
@@ -59,4 +65,23 @@ message LoggingLevelRequest {
         TRACE = 2;
     }
     Level level = 1;
+}
+
+message ProtoArrayForkChoiceResponse {
+    uint64 prune_threshold = 1;
+    uint64 justified_epoch = 2;
+    uint64 finalized_epoch = 3;
+    repeated ProtoArrayNode proto_array_nodes = 4;
+    map<uint64, bytes> indices = 5;
+}
+
+message ProtoArrayNode {
+    uint64 slot = 1;
+    bytes root = 2;
+    uint64 parent = 3;
+    uint64 justified_epoch = 4;
+    uint64 finalized_epoch = 5;
+    uint64 weight = 6;
+    uint64 best_child = 7;
+    uint64 best_descendant = 8;
 }
