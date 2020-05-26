@@ -30,7 +30,7 @@ func TestSignVerify(t *testing.T) {
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
-	if !sig.Verify(msg, pub) {
+	if !sig.Verify(pub, msg) {
 		t.Error("Signature did not verify")
 	}
 }

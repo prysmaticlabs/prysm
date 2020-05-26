@@ -318,12 +318,11 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		params.UseMinimalConfig()
-	} else if ctx.Bool(schlesiTestnetFlag.Name) {
+	}
+	if ctx.Bool(schlesiTestnetFlag.Name) {
 		log.Warn("Using schlesi testnet config")
 		cfg.SchlesiTestnet = true
 		params.UseSchlesiTestnet()
-	} else {
-		log.Warn("Using default mainnet config")
 	}
 	return cfg
 }

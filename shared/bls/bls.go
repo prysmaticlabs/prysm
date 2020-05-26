@@ -58,12 +58,12 @@ func RandKey() *SecretKey {
 }
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
-func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
-	if len(priv) != params.BeaconConfig().BLSSecretKeyLength {
+func SecretKeyFromBytes(privKey []byte) (*SecretKey, error) {
+	if len(privKey) != params.BeaconConfig().BLSSecretKeyLength {
 		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretKeyLength)
 	}
 	secKey := &bls12.SecretKey{}
-	err := secKey.Deserialize(priv)
+	err := secKey.Deserialize(privKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into secret key")
 	}
@@ -71,27 +71,27 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
-func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
+func PublicKeyFromBytes(pubKey []byte) (*PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
-	if len(pub) != params.BeaconConfig().BLSPubkeyLength {
+	if len(pubKey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
-	if cv, ok := pubkeyCache.Get(string(pub)); ok {
+	if cv, ok := pubkeyCache.Get(string(pubKey)); ok {
 		return cv.(*PublicKey).Copy()
 	}
-	pubKey := &bls12.PublicKey{}
-	err := pubKey.Deserialize(pub)
+	p := &bls12.PublicKey{}
+	err := p.Deserialize(pubKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
-	pubKeyObj := &PublicKey{p: pubKey}
+	pubKeyObj := &PublicKey{p: p}
 	copiedKey, err := pubKeyObj.Copy()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not copy public key")
 	}
-	pubkeyCache.Set(string(pub), copiedKey, 48)
+	pubkeyCache.Set(string(pubKey), copiedKey, 48)
 	return pubKeyObj, nil
 }
 
@@ -171,11 +171,11 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 //
 // In ETH2.0 specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
-func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
+func (s *Signature) Verify(pubKey *PublicKey, msg []byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	return s.s.VerifyByte(pub.p, msg)
+	return s.s.VerifyByte(pubKey.p, msg)
 }
 
 // AggregateVerify verifies each public key against its respective message.
