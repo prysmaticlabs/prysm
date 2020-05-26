@@ -263,7 +263,7 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 
 	// Handle condition where there hasn't been a finalized check point. The finalized root should be zeroed hash
 	// and the finalized epoch should be 0. Exit early for this case.
-	finalizedRootZeroHash := bytesutil.ToBytes32(r.chain.FinalizedCheckpt().Root == params.BeaconConfig().ZeroHash
+	finalizedRootZeroHash := bytesutil.ToBytes32(r.chain.FinalizedCheckpt().Root) == params.BeaconConfig().ZeroHash
 	finalizedEpochZero := r.chain.FinalizedCheckpt().Epoch == 0
 	if finalizedEpochZero && finalizedRootZeroHash {
 		return nil
