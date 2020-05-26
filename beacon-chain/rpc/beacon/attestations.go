@@ -337,8 +337,8 @@ func (bs *Server) StreamIndexedAttestations(
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	halfASlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
-	ticker := slotutil.GetSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), halfASlot, params.BeaconConfig().SecondsPerSlot)
+	twoThirdsASlot := 2 * slotutil.DivideSlotBy(3) /* 2/3 slot duration */
+	ticker := slotutil.GetSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case _ = <-ticker.C():
