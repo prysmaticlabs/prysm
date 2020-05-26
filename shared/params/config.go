@@ -269,7 +269,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
-	minimalConfig.EpochsPerEth1VotingPeriod = 2
+	minimalConfig.EpochsPerEth1VotingPeriod = 4
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.ShardCommitteePeriod = 64
@@ -288,7 +288,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
-	minimalConfig.InactivityPenaltyQuotient = 33554432
+	minimalConfig.InactivityPenaltyQuotient = 1 << 24
 	minimalConfig.MinSlashingPenaltyQuotient = 32
 
 	// Max operations per block

@@ -45,7 +45,7 @@ func BenchmarkSignature_Verify(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if !sig.Verify(msg, sk.PublicKey()) {
+		if !sig.Verify(sk.PublicKey(), msg) {
 			b.Fatal("could not verify sig")
 		}
 	}

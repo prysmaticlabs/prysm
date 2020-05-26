@@ -267,7 +267,7 @@ func TestSlotSignature_Verify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !sig.Verify(msg[:], pub) {
+	if !sig.Verify(pub, msg[:]) {
 		t.Error("Could not verify slot signature")
 	}
 }
