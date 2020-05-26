@@ -11,17 +11,12 @@ In order to "evaluate" the state of the beacon chain while the E2E is running, t
 Evaluators have 3 parts, the name for it's test name, a `policy` which declares which epoch(s) the evaluator should run, and then the `evaluation` which uses the beacon chain API to determine if the beacon chain passes certain conditions like finality.
 
 ## Current end-to-end tests
-* Minimal Config - 4 beacon nodes, 64 validators, running for 6 epochs
-* ~~Mainnet Config - 2 beacon nodes, 16,384 validators, running for 5 epochs~~ Disabled for now
+* Minimal Config - 2 beacon nodes, 256 validators, running for 8 epochs
+* Minimal Config Slashing Test - 2 beacon nodes, 256 validators, tests attester and proposer slashing
 
 ## Instructions
 If you wish to run all the E2E tests, you can run them through bazel with:
 
 ```
 bazel test //endtoend:go_default_test --test_output=streamed --test_arg=-test.v --nocache_test_results
-```
-
-To run the anti-flake E2E tests, run:
-```
-bazel test //endtoend:go_default_test --test_output=streamed --test_filter=TestEndToEnd_AntiFlake_MinimalConfig --test_arg=-test.v --nocache_test_results
 ```
