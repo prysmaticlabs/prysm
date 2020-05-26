@@ -8,7 +8,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// This defines the minimal number of block Nodes that can be in the tree
+// This defines the minimal number of block nodes that can be in the tree
 // before getting pruned upon new finalization.
 const defaultPruneThreshold = 256
 
@@ -99,7 +99,7 @@ func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 	return f.store.prune(ctx, finalizedRoot)
 }
 
-// Nodes returns the copied list of block Nodes in the fork choice store.
+// Nodes returns the copied list of block nodes in the fork choice store.
 func (f *ForkChoice) Nodes() []*Node {
 	cpy := make([]*Node, len(f.store.Nodes))
 	copy(cpy, f.store.Nodes)
