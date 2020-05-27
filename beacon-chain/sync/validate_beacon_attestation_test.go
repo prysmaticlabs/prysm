@@ -97,7 +97,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					},
 				},
 			},
-			topic:                     fmt.Sprintf("/eth2/%x/beacon_attestation_1", digest),
+			topic:                     fmt.Sprintf("/eth2/%x/beacon_attestation_0", digest),
 			validAttestationSignature: true,
 			want:                      true,
 		},
