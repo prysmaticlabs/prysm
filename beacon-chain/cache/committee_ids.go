@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-type committeeIDs struct {
+type subnetIDs struct {
 	attester          *lru.Cache
 	attesterLock      sync.RWMutex
 	aggregator        *lru.Cache
@@ -19,10 +19,10 @@ type committeeIDs struct {
 	subnetsLock       sync.RWMutex
 }
 
-// CommitteeIDs for attester and aggregator.
-var CommitteeIDs = newCommitteeIDs()
+// SubnetIDs for attester and aggregator.
+var SubnetIDs = newSubnetIDs()
 
-func newCommitteeIDs() *committeeIDs {
+func newSubnetIDs() *subnetIDs {
 	// Given a node can calculate committee assignments of current epoch and next epoch.
 	// Max size is set to 2 epoch length.
 	cacheSize := int(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch * 2)
@@ -37,11 +37,11 @@ func newCommitteeIDs() *committeeIDs {
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	subLength := epochDuration * time.Duration(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
 	persistentCache := cache.New(subLength*time.Second, epochDuration*time.Second)
-	return &committeeIDs{attester: attesterCache, aggregator: aggregatorCache, persistentSubnets: persistentCache}
+	return &subnetIDs{attester: attesterCache, aggregator: aggregatorCache, persistentSubnets: persistentCache}
 }
 
 // AddAttesterSubnetID adds the subnet index for subscribing subnet for the attester of a given slot.
-func (c *committeeIDs) AddAttesterSubnetID(slot uint64, subnetID uint64) {
+func (c *subnetIDs) AddAttesterSubnetID(slot uint64, subnetID uint64) {
 	c.attesterLock.Lock()
 	defer c.attesterLock.Unlock()
 
@@ -54,7 +54,7 @@ func (c *committeeIDs) AddAttesterSubnetID(slot uint64, subnetID uint64) {
 }
 
 // GetAttesterSubnetIDs gets the subnet IDs for subscribed subnets for attesters of the slot.
-func (c *committeeIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
+func (c *subnetIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
 	c.attesterLock.RLock()
 	defer c.attesterLock.RUnlock()
 
@@ -69,7 +69,7 @@ func (c *committeeIDs) GetAttesterSubnetIDs(slot uint64) []uint64 {
 }
 
 // AddAggregatorSubnetID adds the subnet ID for subscribing subnet for the aggregator of a given slot.
-func (c *committeeIDs) AddAggregatorSubnetID(slot uint64, subnetID uint64) {
+func (c *subnetIDs) AddAggregatorSubnetID(slot uint64, subnetID uint64) {
 	c.aggregatorLock.Lock()
 	defer c.aggregatorLock.Unlock()
 
@@ -82,7 +82,7 @@ func (c *committeeIDs) AddAggregatorSubnetID(slot uint64, subnetID uint64) {
 }
 
 // GetAggregatorSubnetIDs gets the subnet IDs for subscribing subnet for aggregator of the slot.
-func (c *committeeIDs) GetAggregatorSubnetIDs(slot uint64) []uint64 {
+func (c *subnetIDs) GetAggregatorSubnetIDs(slot uint64) []uint64 {
 	c.aggregatorLock.RLock()
 	defer c.aggregatorLock.RUnlock()
 
@@ -93,9 +93,9 @@ func (c *committeeIDs) GetAggregatorSubnetIDs(slot uint64) []uint64 {
 	return val.([]uint64)
 }
 
-// GetPersistentCommittees retrieves the persistent committee and expiration time of that validator's
+// GetPersistentSubnets retrieves the persistent subnet and expiration time of that validator's
 // subscription.
-func (c *committeeIDs) GetPersistentCommittees(pubkey []byte) ([]uint64, bool, time.Time) {
+func (c *subnetIDs) GetPersistentSubnets(pubkey []byte) ([]uint64, bool, time.Time) {
 	c.subnetsLock.RLock()
 	defer c.subnetsLock.RUnlock()
 
@@ -106,9 +106,9 @@ func (c *committeeIDs) GetPersistentCommittees(pubkey []byte) ([]uint64, bool, t
 	return id.([]uint64), ok, duration
 }
 
-// GetAllCommittees retrieves all the non-expired subscribed committees of all the validators
+// GetAllSubnets retrieves all the non-expired subscribed subnets of all the validators
 // in the cache.
-func (c *committeeIDs) GetAllCommittees() []uint64 {
+func (c *subnetIDs) GetAllSubnets() []uint64 {
 	c.subnetsLock.RLock()
 	defer c.subnetsLock.RUnlock()
 
@@ -126,7 +126,7 @@ func (c *committeeIDs) GetAllCommittees() []uint64 {
 
 // AddPersistentCommittee adds the relevant committee for that particular validator along with its
 // expiration period.
-func (c *committeeIDs) AddPersistentCommittee(pubkey []byte, comIndex []uint64, duration time.Duration) {
+func (c *subnetIDs) AddPersistentCommittee(pubkey []byte, comIndex []uint64, duration time.Duration) {
 	c.subnetsLock.Lock()
 	defer c.subnetsLock.Unlock()
 
