@@ -112,7 +112,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateVoluntaryExit(ctx, "", m)
+	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
 	if !valid {
 		t.Error("Failed validation")
 	}
@@ -147,7 +147,7 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateVoluntaryExit(ctx, "", m)
+	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
 	if valid {
 		t.Error("Validation should have failed")
 	}

@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"

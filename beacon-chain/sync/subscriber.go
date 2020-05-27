@@ -34,14 +34,14 @@ var maximumGossipClockDisparity = params.BeaconNetworkConfig().MaximumGossipCloc
 type subHandler func(context.Context, proto.Message) error
 
 // noopValidator is a no-op that only decodes the message, but does not check its contents.
-func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) bool {
+func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	m, err := r.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode message")
-		return false
+		return pubsub.ValidationReject
 	}
 	msg.ValidatorData = m
-	return true
+	return pubsub.ValidationAccept
 }
 
 // Register PubSub subscribers
@@ -117,7 +117,7 @@ func (r *Service) registerSubscribers() {
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (r *Service) subscribe(topic string, validator pubsub.Validator, handle subHandler) *pubsub.Subscription {
+func (r *Service) subscribe(topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
@@ -125,7 +125,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 	return r.subscribeWithBase(base, r.addDigestToTopic(topic), validator, handle)
 }
 
-func (r *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.Validator, handle subHandler) *pubsub.Subscription {
+func (r *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.ValidatorEx, handle subHandler) *pubsub.Subscription {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
@@ -196,13 +196,13 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 
 // Wrap the pubsub validator with a metric monitoring function. This function increments the
 // appropriate counter if the particular message fails to validate.
-func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.Validator) {
-	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+func wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
+	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 		defer messagehandler.HandlePanic(ctx, msg)
 		ctx, _ = context.WithTimeout(ctx, pubsubMessageTimeout)
 		messageReceivedCounter.WithLabelValues(topic).Inc()
 		b := v(ctx, pid, msg)
-		if !b {
+		if b == pubsub.ValidationReject {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
 		return b
@@ -214,7 +214,7 @@ func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.V
 // maintained.
 func (r *Service) subscribeDynamicWithSubnets(
 	topicFormat string,
-	validate pubsub.Validator,
+	validate pubsub.ValidatorEx,
 	handle subHandler,
 ) {
 	base := p2p.GossipTopicMappings[topicFormat]
@@ -269,7 +269,7 @@ func (r *Service) subscribeDynamicWithSubnets(
 // maintained. As the state feed emits a newly updated state, the maxID function will be called to
 // determine the appropriate number of topics. This method supports only sequential number ranges
 // for topics.
-func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.Validator, handle subHandler) {
+func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.ValidatorEx, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
@@ -339,7 +339,7 @@ func (r *Service) reValidateSubscriptions(subscriptions map[uint64]*pubsub.Subsc
 
 // subscribe missing subnets for our aggregators.
 func (r *Service) subscribeAggregatorSubnet(subscriptions map[uint64]*pubsub.Subscription, idx uint64,
-	base proto.Message, digest [4]byte, validate pubsub.Validator, handle subHandler) {
+	base proto.Message, digest [4]byte, validate pubsub.ValidatorEx, handle subHandler) {
 	// do not subscribe if we have no peers in the same
 	// subnet
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
