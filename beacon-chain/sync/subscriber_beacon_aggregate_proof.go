@@ -22,7 +22,6 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 	if a.Message.Aggregate == nil || a.Message.Aggregate.Data == nil {
 		return errors.New("nil aggregate")
 	}
-	r.setAggregatorIndexEpochSeen(a.Message.Aggregate.Data.Target.Epoch, a.Message.AggregatorIndex)
 
 	// Broadcast the aggregated attestation on a feed to notify other services in the beacon node
 	// of a received aggregated attestation.
