@@ -132,6 +132,10 @@ var (
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
 	}
+	disableStateRefCopy = &cli.BoolFlag{
+		Name:  "disable-state-ref-copy",
+		Usage: "Disables the usage of a new copying method for our state fields.",
+	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -471,6 +475,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	enableInitSyncWeightedRoundRobin,
+	disableStateRefCopy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
