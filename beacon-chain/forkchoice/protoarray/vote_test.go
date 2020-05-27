@@ -327,11 +327,11 @@ func TestVotes_CanFindHead(t *testing.T) {
 	}
 
 	// Verify pruning below the prune threshold does not affect head.
-	f.store.pruneThreshold = 1000
+	f.store.PruneThreshold = 1000
 	if err := f.store.prune(context.Background(), indexToHash(5)); err != nil {
 		t.Fatal(err)
 	}
-	if len(f.store.nodes) != 11 {
+	if len(f.store.Nodes) != 11 {
 		t.Error("Incorrect no length after prune")
 	}
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
@@ -358,11 +358,11 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//          8
 	//         / \
 	//        9  10
-	f.store.pruneThreshold = 1
+	f.store.PruneThreshold = 1
 	if err := f.store.prune(context.Background(), indexToHash(5)); err != nil {
 		t.Fatal(err)
 	}
-	if len(f.store.nodes) != 6 {
+	if len(f.store.Nodes) != 6 {
 		t.Error("Incorrect no length after prune")
 	}
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
