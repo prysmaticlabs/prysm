@@ -55,6 +55,7 @@ type Flags struct {
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
+	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
@@ -245,6 +246,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
 		log.Warn("Enabling weighted round robin in initial syncing")
 		cfg.EnableInitSyncWeightedRoundRobin = true
+	}
+	cfg.EnableStateRefCopy = true
+	if ctx.Bool(disableStateRefCopy.Name) {
+		log.Warn("Disabling state reference copy")
+		cfg.EnableStateRefCopy = false
 	}
 	Init(cfg)
 }
