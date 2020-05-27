@@ -83,15 +83,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	var graffiti []byte
-	if len(v.graffiti) > 0 {
-		graffiti = []byte(v.graffiti[v.graffitiOffset])
-	}
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti,
+		Graffiti:     v.graffiti[v.graffitiOffset],
 	})
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")

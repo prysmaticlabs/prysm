@@ -254,27 +254,25 @@ func ConstructDialOptions(
 	return dialOpts
 }
 
-// fetch Graffiti from a file or path.
+// fetch Graffiti from a file or flag.
 func fetchGraffiti(flag string) [][]byte {
-	var graffitiData [][]byte
 	if flag == "" {
 		// No graffiti.
-		return graffitiData
+		return make([][]byte, 1)
 	}
 
 	data, err := ioutil.ReadFile(flag)
 	if err != nil {
-		// Use graffiti as a static value.
-		graffitiData = append(graffitiData, []byte(flag))
-	} else {
-		// Use graffiti from the file.
-		graffitiData = bytes.Split(bytes.Replace(data, []byte("\r\n"), []byte("\n"), -1), []byte("\n"))
-		// Shuffle the entries.
-		for i := range graffitiData {
-			j := rand.Intn(i + 1)
-			graffitiData[i], graffitiData[j] = graffitiData[j], graffitiData[i]
-		}
+		// Single graffiti.
+		return [][]byte{[]byte(flag)}
 	}
 
+	// Multiple graffiti.
+	graffitiData := bytes.Split(bytes.Replace(data, []byte("\r\n"), []byte("\n"), -1), []byte("\n"))
+	// Shuffle the entries.
+	for i := range graffitiData {
+		j := rand.Intn(i + 1)
+		graffitiData[i], graffitiData[j] = graffitiData[j], graffitiData[i]
+	}
 	return graffitiData
 }
