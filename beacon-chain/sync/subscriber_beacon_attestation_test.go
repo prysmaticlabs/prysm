@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 	"time"
 
@@ -87,14 +89,23 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		Data: &eth.AttestationData{
 			Slot:            0,
 			BeaconBlockRoot: root[:],
+			Target:          &eth.Checkpoint{},
 		},
 		AggregationBits: bitfield.Bitlist{0b0101},
-		Signature:       sKeys[0].Sign([]byte("foo")).Marshal(),
 	}
+	domain, err := helpers.Domain(s.Fork(), att.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	attRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att.Signature = sKeys[16].Sign(attRoot[:]).Marshal()
 
 	p.ReceivePubSub("/eth2/%x/beacon_attestation_0", att)
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * 1)
 
 	ua := r.attPool.UnaggregatedAttestations()
 	if len(ua) == 0 {

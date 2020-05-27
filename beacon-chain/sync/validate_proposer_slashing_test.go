@@ -154,7 +154,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 		},
 	}
 
-	valid := r.validateProposerSlashing(ctx, "", m)
+	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
 	if !valid {
 		t.Error("Failed validation")
 	}
@@ -195,7 +195,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateProposerSlashing(ctx, "", m)
+	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
 	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}
@@ -225,8 +225,7 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateProposerSlashing(ctx, "", m)
-
+	valid := r.validateProposerSlashing(ctx, "", m) == pubsub.ValidationAccept
 	if valid {
 		t.Error("Did not fail validation")
 	}

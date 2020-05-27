@@ -34,14 +34,14 @@ var maximumGossipClockDisparity = params.BeaconNetworkConfig().MaximumGossipCloc
 type subHandler func(context.Context, proto.Message) error
 
 // noopValidator is a no-op that only decodes the message, but does not check its contents.
-func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) bool {
+func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	m, err := r.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode message")
-		return false
+		return pubsub.ValidationReject
 	}
 	msg.ValidatorData = m
-	return true
+	return pubsub.ValidationAccept
 }
 
 // Register PubSub subscribers
