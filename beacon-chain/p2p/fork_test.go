@@ -258,3 +258,33 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 		t.Errorf("Wanted next for epoch: %d, received: %d", nextForkEpoch, resp.NextForkEpoch)
 	}
 }
+
+func TestAddForkEntry_Genesis(t *testing.T) {
+	temp := testutil.TempDir()
+	randNum := rand.Int()
+	tempPath := path.Join(temp, strconv.Itoa(randNum))
+	if err := os.Mkdir(tempPath, 0700); err != nil {
+		t.Fatal(err)
+	}
+	pkey, err := privKey(&Config{Encoding: "ssz", DataDir: tempPath})
+	if err != nil {
+		t.Fatalf("Could not get private key: %v", err)
+	}
+	db, err := enode.OpenDB("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	localNode := enode.NewLocalNode(db, pkey)
+	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), []byte{'A', 'B', 'C', 'D'})
+	if err != nil {
+		t.Fatal(err)
+	}
+	forkEntry, err := retrieveForkEntry(localNode.Node().Record())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(forkEntry.NextForkVersion, params.BeaconConfig().GenesisForkVersion) {
+		t.Errorf("Wanted Next Fork Version to be equal to genesis fork version, instead got %#x", forkEntry.NextForkVersion)
+	}
+}
