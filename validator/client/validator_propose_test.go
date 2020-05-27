@@ -44,7 +44,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		db:                             valDB,
 		validatorClient:                m.validatorClient,
 		keyManager:                     testKeyManager,
-		graffiti:                       []byte{},
+		graffiti:                       [][]byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		attesterHistoryByPubKey:        attHistoryByPubKey,
@@ -309,7 +309,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 
-	validator.graffiti = []byte("12345678901234567890123456789012")
+	validator.graffiti = [][]byte{[]byte("12345678901234567890123456789012")}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -319,7 +319,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Graffiti: validator.graffiti}}, nil /*err*/)
+	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Graffiti: validator.graffiti[0]}}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -338,7 +338,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 
-	if string(sentBlock.Block.Body.Graffiti) != string(validator.graffiti) {
-		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
+	if string(sentBlock.Block.Body.Graffiti) != string(validator.graffiti[0]) {
+		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti[0]), string(sentBlock.Block.Body.Graffiti))
 	}
 }

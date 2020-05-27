@@ -3,7 +3,10 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
+	"math/rand"
 	"strings"
 
 	"github.com/dgraph-io/ristretto"
@@ -38,7 +41,7 @@ type ValidatorService struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	validator            Validator
-	graffiti             []byte
+	graffiti             [][]byte
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
@@ -71,13 +74,14 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	graffitiData := fetchGraffiti(cfg.GraffitiFlag)
 	return &ValidatorService{
 		ctx:                  ctx,
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
 		dataDir:              cfg.DataDir,
-		graffiti:             []byte(cfg.GraffitiFlag),
+		graffiti:             graffitiData,
 		keyManager:           cfg.KeyManager,
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
@@ -249,4 +253,29 @@ func ConstructDialOptions(
 	}
 
 	return dialOpts
+}
+
+// fetch Graffiti from a file or path.
+func fetchGraffiti(flag string) [][]byte {
+	var graffitiData [][]byte
+	if flag == "" {
+		// No graffiti.
+		return graffitiData
+	}
+
+	data, err := ioutil.ReadFile(flag)
+	if err != nil {
+		// Use graffiti as a static value.
+		graffitiData = append(graffitiData, []byte(flag))
+	} else {
+		// Use graffiti from the file.
+		graffitiData = bytes.Split(bytes.Replace(data, []byte("\r\n"), []byte("\n"), -1), []byte("\n"))
+		// Shuffle the entries.
+		for i := range graffitiData {
+			j := rand.Intn(i + 1)
+			graffitiData[i], graffitiData[j] = graffitiData[j], graffitiData[i]
+		}
+	}
+
+	return graffitiData
 }

@@ -50,7 +50,8 @@ type validator struct {
 	duties                             *ethpb.DutiesResponse
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	beaconClient                       ethpb.BeaconChainClient
-	graffiti                           []byte
+	graffiti                           [][]byte
+	graffitiOffset                     int
 	node                               ethpb.NodeClient
 	keyManager                         keymanager.KeyManager
 	prevBalance                        map[[48]byte]uint64
