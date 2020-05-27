@@ -11,7 +11,9 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -20,7 +22,7 @@ import (
 
 // Validation
 // - The attestation's committee index (attestation.data.index) is for the correct subnet.
-// - The attestation is unaggregated -- that is, it has exactly one participating validator (len([bit for bit in attestation.aggregation_bits if bit == 0b1]) == 1).
+// - The attestation is unaggregated -- that is, it has exactly one participating validator (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1).
 // - The block being voted for (attestation.data.beacon_block_root) passes validation.
 // - attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot).
 // - The signature of attestation is valid.
@@ -58,6 +60,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if att.Data == nil {
 		return pubsub.ValidationReject
 	}
+
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
 		return pubsub.ValidationIgnore
@@ -88,8 +91,23 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
+	// Attestation aggregation bits must exist.
+	if att.AggregationBits == nil {
+		return pubsub.ValidationReject
+	}
+	st, err := s.chain.AttestationPreState(ctx, att)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+	committee, err := helpers.BeaconCommitteeFromState(st, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
+
 	// Attestation must be unaggregated.
-	if att.AggregationBits == nil || att.AggregationBits.Count() != 1 {
+	if len(attestationutil.AttestingIndices(att.AggregationBits, committee)) != 1 {
 		return pubsub.ValidationReject
 	}
 

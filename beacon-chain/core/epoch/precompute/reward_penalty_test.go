@@ -113,7 +113,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	// See: https://github.com/prysmaticlabs/prysm/issues/5593
 	bp.PrevEpochTargetAttested = bp.PrevEpochTargetAttested / 2
 	bp.PrevEpochHeadAttested = bp.PrevEpochHeadAttested * 2 / 3
-	rewards, penalties, err := attestationDeltas(state, bp, vp)
+	rewards, penalties, err := AttestationsDelta(state, bp, vp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 
 	pBal.ActiveCurrentEpoch = 0 // Could cause a divide by zero panic.
 
-	_, _, err = attestationDeltas(state, pBal, pVals)
+	_, _, err = AttestationsDelta(state, pBal, pVals)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	rewards, penalties, err := attestationDeltas(state, bp, vp)
+	rewards, penalties, err := AttestationsDelta(state, bp, vp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex},
 	}
-	r, err := proposerDeltaPrecompute(state, b, v)
+	r, err := ProposersDelta(state, b, v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	v := []*Validator{
 		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 32, ProposerIndex: proposerIndex, IsSlashed: true},
 	}
-	r, err := proposerDeltaPrecompute(state, b, v)
+	r, err := ProposersDelta(state, b, v)
 	if err != nil {
 		t.Fatal(err)
 	}

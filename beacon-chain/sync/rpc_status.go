@@ -260,6 +260,7 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	if finalizedEpoch < msg.FinalizedEpoch {
 		return nil
 	}
+
 	if !r.db.IsFinalizedBlock(context.Background(), bytesutil.ToBytes32(msg.FinalizedRoot)) {
 		return errInvalidFinalizedRoot
 	}

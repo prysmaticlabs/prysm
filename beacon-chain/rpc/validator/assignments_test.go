@@ -274,11 +274,11 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if len(res.CurrentEpochDuties) != 2 {
 		t.Errorf("expected 2 assignments but got %d", len(res.CurrentEpochDuties))
 	}
-	if res.CurrentEpochDuties[0].AttesterSlot != 2 {
-		t.Errorf("Expected res.CurrentEpochDuties[0].AttesterSlot == 7, got %d", res.CurrentEpochDuties[0].AttesterSlot)
+	if res.CurrentEpochDuties[0].AttesterSlot != 4 {
+		t.Errorf("Expected res.CurrentEpochDuties[0].AttesterSlot == 4, got %d", res.CurrentEpochDuties[0].AttesterSlot)
 	}
-	if res.CurrentEpochDuties[1].AttesterSlot != 1 {
-		t.Errorf("Expected res.CurrentEpochDuties[1].AttesterSlot == 1, got %d", res.CurrentEpochDuties[1].AttesterSlot)
+	if res.CurrentEpochDuties[1].AttesterSlot != 4 {
+		t.Errorf("Expected res.CurrentEpochDuties[1].AttesterSlot == 4, got %d", res.CurrentEpochDuties[1].AttesterSlot)
 	}
 }
 
@@ -469,7 +469,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	k := pubKey(3)
 
 	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
-	coms, ok, exp := cache.CommitteeIDs.GetPersistentCommittees(k)
+	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	if !ok {
 		t.Fatal("No cache entry found for validator")
 	}

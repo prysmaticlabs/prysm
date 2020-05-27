@@ -50,21 +50,23 @@ func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
 
 func TestUpdateBalance(t *testing.T) {
 	vp := []*precompute.Validator{
-		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
-		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
-		{IsCurrentEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100},
-		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 100},
-		{IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100},
-		{IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100},
-		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100},
-		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100},
+		{IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsCurrentEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochTargetAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsPrevEpochAttester: true, IsPrevEpochHeadAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
+		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
 	}
 	wantedPBal := &precompute.Balance{
-		CurrentEpochAttested:       200,
-		CurrentEpochTargetAttested: 200,
-		PrevEpochAttested:          300,
-		PrevEpochTargetAttested:    100,
-		PrevEpochHeadAttested:      200,
+		ActiveCurrentEpoch:         params.BeaconConfig().EffectiveBalanceIncrement,
+		ActivePrevEpoch:            params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochAttested:       200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		CurrentEpochTargetAttested: 200 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochAttested:          300 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochTargetAttested:    100 * params.BeaconConfig().EffectiveBalanceIncrement,
+		PrevEpochHeadAttested:      200 * params.BeaconConfig().EffectiveBalanceIncrement,
 	}
 	pBal := precompute.UpdateBalance(vp, &precompute.Balance{})
 	if !reflect.DeepEqual(pBal, wantedPBal) {
@@ -266,5 +268,31 @@ func TestProcessAttestations(t *testing.T) {
 		if !pVals[i].IsPrevEpochHeadAttester {
 			t.Error("Not a prev epoch head attester")
 		}
+	}
+}
+
+func TestEnsureBalancesLowerBound(t *testing.T) {
+	b := &precompute.Balance{}
+	b = precompute.EnsureBalancesLowerBound(b)
+	if b.ActiveCurrentEpoch != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted active current balance")
+	}
+	if b.ActivePrevEpoch != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted active previous balance")
+	}
+	if b.CurrentEpochAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted current attested balance")
+	}
+	if b.CurrentEpochTargetAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted target attested balance")
+	}
+	if b.PrevEpochAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted prev attested balance")
+	}
+	if b.PrevEpochTargetAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted prev target attested balance")
+	}
+	if b.PrevEpochHeadAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted prev head attested balance")
 	}
 }

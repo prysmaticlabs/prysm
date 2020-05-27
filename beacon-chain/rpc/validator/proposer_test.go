@@ -366,7 +366,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 41,
+			ProposerIndex: 21,
 			ParentRoot:    parentRoot[:],
 			Slot:          1,
 			Body: &ethpb.BeaconBlockBody{
@@ -1208,24 +1208,30 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 
 // TODO(2312): Add more tests for edge cases and better coverage.
 func TestEth1Data(t *testing.T) {
-	slot := uint64(10000)
+	slot := uint64(20000)
 
 	p := &mockPOW.POWChain{
 		BlockNumberByHeight: map[uint64]*big.Int{
-			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
+			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(8196),
 		},
 		HashesByHeight: map[int][]byte{
-			4080: []byte("4080"),
+			8180: []byte("8180"),
 		},
 		Eth1Data: &ethpb.Eth1Data{
 			DepositCount: 55,
 		},
+	}
+
+	headState := testutil.NewBeaconState()
+	if err := headState.SetEth1Data(&ethpb.Eth1Data{DepositCount: 55}); err != nil {
+		t.Fatal(err)
 	}
 	ps := &Server{
 		ChainStartFetcher: p,
 		Eth1InfoFetcher:   p,
 		Eth1BlockFetcher:  p,
 		DepositFetcher:    depositcache.NewDepositCache(),
+		HeadFetcher:       &mock.ChainService{State: headState},
 	}
 
 	ctx := context.Background()
@@ -1240,7 +1246,7 @@ func TestEth1Data(t *testing.T) {
 }
 
 func TestEth1Data_SmallerDepositCount(t *testing.T) {
-	slot := uint64(10000)
+	slot := uint64(20000)
 	deps := []*dbpb.DepositContainer{
 		{
 			Index:           0,
