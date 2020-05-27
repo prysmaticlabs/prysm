@@ -270,3 +270,29 @@ func TestProcessAttestations(t *testing.T) {
 		}
 	}
 }
+
+func TestEnsureBalancesLowerBound(t *testing.T) {
+	b := &precompute.Balance{}
+	b = precompute.EnsureBalancesLowerBound(b)
+	if b.ActiveCurrentEpoch != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted active current balance")
+	}
+	if b.ActivePrevEpoch != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted active previous balance")
+	}
+	if b.CurrentEpochAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted current attested balance")
+	}
+	if b.CurrentEpochTargetAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted target attested balance")
+	}
+	if b.PrevEpochAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted prev attested balance")
+	}
+	if b.PrevEpochTargetAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted prev target attested balance")
+	}
+	if b.PrevEpochHeadAttested != params.BeaconConfig().EffectiveBalanceIncrement {
+		t.Error("Did not get wanted prev head attested balance")
+	}
+}
