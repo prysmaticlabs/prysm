@@ -174,7 +174,7 @@ func NewService(cfg *Config) (*Service, error) {
 	} else if cfg.PubSub == pubsubGossip {
 		gs, err = pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	} else if cfg.PubSub == pubsubRandom {
-		gs, err = pubsub.NewRandomSub(s.ctx, s.host, psOpts...)
+		gs, err = pubsub.NewRandomSub(s.ctx, s.host, int(cfg.MaxPeers), psOpts...)
 	} else {
 		return nil, fmt.Errorf("unknown pubsub type %s", cfg.PubSub)
 	}
