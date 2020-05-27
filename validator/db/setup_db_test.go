@@ -19,7 +19,7 @@ func TestClearDB(t *testing.T) {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewKVStore(p, [][48]byte{})
+	db, err := NewKVStoreWithPublicKeyBuckets(p, [][48]byte{})
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}

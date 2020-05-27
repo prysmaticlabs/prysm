@@ -105,6 +105,40 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	return committeesListsBySlot, activeIndices, nil
 }
 
+// retrieveCommitteesForRoot uses the provided state root to get the current epoch committees.
+// Note: This function is always recommended over retrieveCommitteesForEpoch as states are
+// retrieved from the DB for this function, rather than generated.
+func (bs *Server) retrieveCommitteesForRoot(
+	ctx context.Context,
+	root []byte,
+) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, []uint64, error) {
+	requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(root))
+	if err != nil {
+		return nil, nil, status.Error(codes.Internal, "Could not get state")
+	}
+	epoch := helpers.CurrentEpoch(requestedState)
+	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, nil, status.Error(codes.Internal, "Could not get seed")
+	}
+	activeIndices, err := helpers.ActiveValidatorIndices(requestedState, epoch)
+	if err != nil {
+		return nil, nil, status.Error(codes.Internal, "Could not get active indices")
+	}
+
+	startSlot := helpers.StartSlot(epoch)
+	committeesListsBySlot, err := computeCommittees(startSlot, activeIndices, seed)
+	if err != nil {
+		return nil, nil, status.Errorf(
+			codes.InvalidArgument,
+			"Could not compute committees for epoch %d: %v",
+			epoch,
+			err,
+		)
+	}
+	return committeesListsBySlot, activeIndices, nil
+}
+
 func (bs *Server) retrieveCommitteesForEpochUsingOldArchival(
 	ctx context.Context,
 	epoch uint64,

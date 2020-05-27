@@ -21,6 +21,12 @@ func (bs *Service) RequestHistoricalAttestations(
 	res := &ethpb.ListIndexedAttestationsResponse{}
 	var err error
 	for {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if res == nil {
+			res = &ethpb.ListIndexedAttestationsResponse{}
+		}
 		res, err = bs.beaconClient.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 			QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 				Epoch: epoch,
@@ -29,7 +35,8 @@ func (bs *Service) RequestHistoricalAttestations(
 			PageToken: res.NextPageToken,
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not request indexed attestations for epoch: %d", epoch)
+			log.WithError(err).Errorf("could not request indexed attestations for epoch: %d", epoch)
+			continue
 		}
 		indexedAtts = append(indexedAtts, res.IndexedAttestations...)
 		log.Infof(

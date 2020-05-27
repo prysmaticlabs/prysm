@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"golang.org/x/crypto/ssh/terminal"
 	"os"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // PasswordReader reads a password from a mock or stdin.

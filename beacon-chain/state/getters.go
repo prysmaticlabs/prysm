@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -579,7 +578,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := memorypool.GetDoubleByteSlice(len(b.state.RandaoMixes))
+	mixes := make([][]byte, len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
 		tmpRt := make([]byte, len(r))
 		copy(tmpRt, r)

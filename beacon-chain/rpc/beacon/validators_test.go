@@ -1803,13 +1803,9 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 		StateGen:             stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if res.Participation.VotedEther != 0 || res.Participation.EligibleEther != 0 {
-		t.Error("Incorrect validator participation response")
+	wanted := "Participation information for epoch 0 is not yet available"
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}}); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 

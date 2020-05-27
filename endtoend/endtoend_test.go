@@ -44,6 +44,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	defer helpers.LogOutput(t, config)
 	defer helpers.KillProcesses(t, processIDs)
 
+	// Sleep depending on the count of validators, as generating the genesis state could take some time.
+	time.Sleep(time.Duration(params.BeaconConfig().MinGenesisDelay) * time.Second)
 	beaconLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, 0)))
 	if err != nil {
 		t.Fatal(err)

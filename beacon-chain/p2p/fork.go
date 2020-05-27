@@ -101,8 +101,7 @@ func addForkEntry(
 
 	nextForkEpoch := params.BeaconConfig().NextForkEpoch
 	nextForkVersion := params.BeaconConfig().NextForkVersion
-	// set to current fork version if our next
-	// fork is not planned
+	// Set to the current fork version if our next fork is not planned.
 	if nextForkEpoch == math.MaxUint64 {
 		nextForkVersion = fork.CurrentVersion
 	}
