@@ -31,7 +31,7 @@ func (kv *Store) HistoricalStatesDeleted(ctx context.Context) error {
 	}
 
 	if historicalStateDeleted {
-		log.Warn("Regenerating and saving historical states. This may take a while.")
+		log.Warn("Regenerating and saving historical states. This may take a while. Skip this with --skip-regen-historical-states")
 		if err := kv.regenHistoricalStates(ctx); err != nil {
 			return errors.Wrap(err, "could not regenerate historical states, please retry")
 		}
