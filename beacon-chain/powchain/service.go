@@ -628,6 +628,7 @@ func (s *Service) initPOWService() ethereum.Subscription {
 
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
+			s.latestEth1Data.BlockTime = header.Time
 
 			if err := s.processPastLogs(context.Background()); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
