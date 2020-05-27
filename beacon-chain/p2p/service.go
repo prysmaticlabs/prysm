@@ -390,7 +390,7 @@ func (s *Service) RefreshENR() {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	committees := cache.CommitteeIDs.GetAllCommittees()
+	committees := cache.SubnetIDs.GetAllSubnets()
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}

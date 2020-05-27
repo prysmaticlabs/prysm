@@ -51,7 +51,7 @@ func (r *Service) subnetCount() int {
 }
 
 func (r *Service) persistentSubnetIndices() []uint64 {
-	return cache.CommitteeIDs.GetAllCommittees()
+	return cache.SubnetIDs.GetAllSubnets()
 }
 
 func (r *Service) aggregatorSubnetIndices(currentSlot uint64) []uint64 {
@@ -59,7 +59,7 @@ func (r *Service) aggregatorSubnetIndices(currentSlot uint64) []uint64 {
 	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
 	commIds := []uint64{}
 	for i := currentSlot; i <= endSlot; i++ {
-		commIds = append(commIds, cache.CommitteeIDs.GetAggregatorSubnetIDs(i)...)
+		commIds = append(commIds, cache.SubnetIDs.GetAggregatorSubnetIDs(i)...)
 	}
 	return sliceutil.SetUint64(commIds)
 }
@@ -69,7 +69,7 @@ func (r *Service) attesterSubnetIndices(currentSlot uint64) []uint64 {
 	endSlot := endEpoch * params.BeaconConfig().SlotsPerEpoch
 	commIds := []uint64{}
 	for i := currentSlot; i <= endSlot; i++ {
-		commIds = append(commIds, cache.CommitteeIDs.GetAttesterSubnetIDs(i)...)
+		commIds = append(commIds, cache.SubnetIDs.GetAttesterSubnetIDs(i)...)
 	}
 	return sliceutil.SetUint64(commIds)
 }

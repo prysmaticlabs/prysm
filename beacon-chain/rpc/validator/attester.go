@@ -219,11 +219,12 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 			if err != nil {
 				return nil, err
 			}
+			currEpoch = helpers.SlotToEpoch(req.Slots[i])
 		}
 		subnet := helpers.ComputeSubnetFromCommitteeAndSlot(currValsLen, req.CommitteeIds[i], req.Slots[i])
-		cache.CommitteeIDs.AddAttesterSubnetID(req.Slots[i], subnet)
+		cache.SubnetIDs.AddAttesterSubnetID(req.Slots[i], subnet)
 		if req.IsAggregator[i] {
-			cache.CommitteeIDs.AddAggregatorSubnetID(req.Slots[i], subnet)
+			cache.SubnetIDs.AddAggregatorSubnetID(req.Slots[i], subnet)
 		}
 	}
 
