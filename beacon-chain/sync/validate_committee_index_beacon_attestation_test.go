@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -99,6 +100,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  1,
 					Slot:            63,
+					Target:          &ethpb.Checkpoint{},
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
@@ -113,6 +115,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  2,
 					Slot:            63,
+					Target:          &ethpb.Checkpoint{},
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index3_beacon_attestation", digest),
@@ -127,6 +130,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  1,
 					Slot:            63,
+					Target:          &ethpb.Checkpoint{},
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
@@ -141,6 +145,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					BeaconBlockRoot: bytesutil.PadTo([]byte("missing"), 32),
 					CommitteeIndex:  1,
 					Slot:            63,
+					Target:          &ethpb.Checkpoint{},
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
@@ -155,6 +160,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					BeaconBlockRoot: validBlockRoot[:],
 					CommitteeIndex:  1,
 					Slot:            63,
+					Target:          &ethpb.Checkpoint{},
 				},
 			},
 			topic:                     fmt.Sprintf("/eth2/%x/committee_index1_beacon_attestation", digest),
@@ -165,6 +171,27 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			chain.ValidAttestation = tt.validAttestationSignature
+			if tt.validAttestationSignature {
+				com, err := helpers.BeaconCommitteeFromState(savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
+				if err != nil {
+					t.Fatal(err)
+				}
+				domain, err := helpers.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorRoot())
+				if err != nil {
+					t.Fatal(err)
+				}
+				attRoot, err := helpers.ComputeSigningRoot(tt.msg.Data, domain)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for i := 0; ; i++ {
+					if tt.msg.AggregationBits.BitAt(uint64(i)) {
+						tt.msg.Signature = keys[com[i]].Sign(attRoot[:]).Marshal()
+						break
+					}
+				}
+			}
 			buf := new(bytes.Buffer)
 			_, err := p.Encoding().Encode(buf, tt.msg)
 			if err != nil {
@@ -176,8 +203,8 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					TopicIDs: []string{tt.topic},
 				},
 			}
-			chain.ValidAttestation = tt.validAttestationSignature
-			if s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) != tt.want {
+			received := s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) == pubsub.ValidationAccept
+			if received != tt.want {
 				t.Fatalf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)
 			}
 			if tt.want && m.ValidatorData == nil {
