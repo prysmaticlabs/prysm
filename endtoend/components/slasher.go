@@ -36,7 +36,6 @@ func StartSlashers(t *testing.T) []int {
 			fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.SlasherMetricsPort+i),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+i),
 			"--force-clear-db",
-			"--span-map-cache",
 			"--e2e-config",
 		}
 
