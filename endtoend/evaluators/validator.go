@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var expectedParticipation = 0.95 // 100% participation.
+var expectedParticipation = 1 // 100% participation.
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
