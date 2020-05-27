@@ -74,14 +74,13 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	graffitiData := fetchGraffiti(cfg.GraffitiFlag)
 	return &ValidatorService{
 		ctx:                  ctx,
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
 		dataDir:              cfg.DataDir,
-		graffiti:             graffitiData,
+		graffiti:             fetchGraffiti(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
