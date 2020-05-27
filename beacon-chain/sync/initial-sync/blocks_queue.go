@@ -147,7 +147,8 @@ func (q *blocksQueue) loop() {
 
 		select {
 		case <-ticker.C:
-			for _, fsm := range q.smm.machines {
+			for _, key := range q.smm.keys {
+				fsm := q.smm.machines[key]
 				if err := fsm.trigger(eventTick, nil); err != nil {
 					log.WithFields(logrus.Fields{
 						"event": eventTick,
