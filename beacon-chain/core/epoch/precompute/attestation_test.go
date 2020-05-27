@@ -60,6 +60,8 @@ func TestUpdateBalance(t *testing.T) {
 		{IsSlashed: true, IsCurrentEpochAttester: true, CurrentEpochEffectiveBalance: 100 * params.BeaconConfig().EffectiveBalanceIncrement},
 	}
 	wantedPBal := &precompute.Balance{
+		ActiveCurrentEpoch:         params.BeaconConfig().EffectiveBalanceIncrement,
+		ActivePrevEpoch:            params.BeaconConfig().EffectiveBalanceIncrement,
 		CurrentEpochAttested:       200 * params.BeaconConfig().EffectiveBalanceIncrement,
 		CurrentEpochTargetAttested: 200 * params.BeaconConfig().EffectiveBalanceIncrement,
 		PrevEpochAttested:          300 * params.BeaconConfig().EffectiveBalanceIncrement,
