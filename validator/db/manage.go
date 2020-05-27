@@ -37,7 +37,7 @@ func Merge(ctx context.Context, sourceStores []*Store, targetDirectory string) e
 			if err := proposalsBucket.ForEach(func(pubKey, _ []byte) error {
 				pubKeyProposals, err := getPubKeyProposals(pubKey, proposalsBucket)
 				if err != nil {
-					return errors.Wrapf(err,"Could not retrieve proposals for database in %s", store.databasePath)
+					return errors.Wrapf(err, "Could not retrieve proposals for database in %s", store.databasePath)
 				}
 				allProposals = append(allProposals, *pubKeyProposals)
 				return nil
