@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -106,8 +107,12 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
 		// Copy on write since this is a shared array.
-		r = make([][]byte, len(b.state.BlockRoots))
-		copy(r, b.state.BlockRoots)
+		if featureconfig.Get().EnableStateRefCopy {
+			r = make([][]byte, len(b.state.BlockRoots))
+			copy(r, b.state.BlockRoots)
+		} else {
+			r = b.BlockRoots()
+		}
 
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
@@ -159,8 +164,12 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		r = make([][]byte, len(b.state.StateRoots))
-		copy(r, b.state.StateRoots)
+		if featureconfig.Get().EnableStateRefCopy {
+			r = make([][]byte, len(b.state.StateRoots))
+			copy(r, b.state.StateRoots)
+		} else {
+			r = b.StateRoots()
+		}
 
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
@@ -236,9 +245,12 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.lock.RLock()
 	votes := b.state.Eth1DataVotes
 	if b.sharedFieldReferences[eth1DataVotes].refs > 1 {
-		votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
-		copy(votes, b.state.Eth1DataVotes)
-
+		if featureconfig.Get().EnableStateRefCopy {
+			votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+			copy(votes, b.state.Eth1DataVotes)
+		} else {
+			votes = b.Eth1DataVotes()
+		}
 		b.sharedFieldReferences[eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	}
@@ -442,9 +454,12 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
-		mixes = make([][]byte, len(b.state.RandaoMixes))
-		copy(mixes, b.state.RandaoMixes)
-
+		if featureconfig.Get().EnableStateRefCopy {
+			mixes = make([][]byte, len(b.state.RandaoMixes))
+			copy(mixes, b.state.RandaoMixes)
+		} else {
+			mixes = b.RandaoMixes()
+		}
 		b.sharedFieldReferences[randaoMixes].MinusRef()
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
@@ -553,9 +568,12 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	b.lock.RLock()
 	roots := b.state.HistoricalRoots
 	if b.sharedFieldReferences[historicalRoots].refs > 1 {
-		roots = make([][]byte, len(b.state.HistoricalRoots))
-		copy(roots, b.state.HistoricalRoots)
-
+		if featureconfig.Get().EnableStateRefCopy {
+			roots = make([][]byte, len(b.state.HistoricalRoots))
+			copy(roots, b.state.HistoricalRoots)
+		} else {
+			roots = b.HistoricalRoots()
+		}
 		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 	}
@@ -579,9 +597,12 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].refs > 1 {
-		atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
-		copy(atts, b.state.CurrentEpochAttestations)
-
+		if featureconfig.Get().EnableStateRefCopy {
+			atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
+			copy(atts, b.state.CurrentEpochAttestations)
+		} else {
+			atts = b.CurrentEpochAttestations()
+		}
 		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 	}
@@ -605,9 +626,12 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.lock.RLock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
-		atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
-		copy(atts, b.state.PreviousEpochAttestations)
-
+		if featureconfig.Get().EnableStateRefCopy {
+			atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
+			copy(atts, b.state.PreviousEpochAttestations)
+		} else {
+			atts = b.PreviousEpochAttestations()
+		}
 		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}

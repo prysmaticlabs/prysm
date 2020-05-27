@@ -132,6 +132,10 @@ var (
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
 	}
+	enableStateRefCopy = &cli.BoolFlag{
+		Name:  "enable-state-ref-copy",
+		Usage: "Enables the usage of a new copying method for our state fields.",
+	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -156,6 +160,7 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
+	enableStateRefCopy,
 	enableFieldTrie,
 	enableNewStateMgmt,
 	enableInitSyncWeightedRoundRobin,
@@ -366,11 +371,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecateEnableStateRefCopy = &cli.BoolFlag{
-		Name:   "enable-state-ref-copy",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -414,7 +414,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableByteMempool,
 	deprecatedBroadcastSlashingFlag,
 	deprecatedDisableHistoricalDetectionFlag,
-	deprecateEnableStateRefCopy,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -468,6 +467,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNewStateMgmt,
 	enableFieldTrie,
 	disableInitSyncBatchSaveBlocks,
+	enableStateRefCopy,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	enableInitSyncWeightedRoundRobin,
@@ -479,6 +479,7 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--enable-state-field-trie",
+	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
 }
