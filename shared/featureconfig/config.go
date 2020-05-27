@@ -197,10 +197,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
 	}
-	if ctx.Bool(enableStateRefCopy.Name) {
-		log.Warn("Enabling state reference copy")
-		cfg.EnableStateRefCopy = true
-	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
@@ -212,6 +208,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
 		log.Warn("Enabling weighted round robin in initial syncing")
 		cfg.EnableInitSyncWeightedRoundRobin = true
+	}
+	cfg.EnableStateRefCopy = true
+	if ctx.Bool(disableStateRefCopy.Name) {
+		log.Warn("Disabling state reference copy")
+		cfg.EnableStateRefCopy = false
 	}
 	Init(cfg)
 }
