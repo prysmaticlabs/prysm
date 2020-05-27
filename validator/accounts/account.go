@@ -105,17 +105,17 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to create deposit transaction")
 	}
-	log.Info(`Account creation complete! Copy and paste the raw transaction data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
+	log.Info(`Account creation complete! Copy and paste the raw deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`
-========================Raw Transaction Data=======================
+========================Deposit Data=======================
 
 %#x
 
 ===================================================================
 `, tx.Data())
-	fmt.Println("***Enter the above Raw Transaction Data into step 3 on https://prylabs.net/participate***")
+	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
 	publicKey := validatorKey.PublicKey.Marshal()[:]
-	log.Infof("Deposit data displayed for public key: %#x", publicKey)
+	log.Infof("Public key: %#x", publicKey)
 	return nil
 }
 
@@ -224,6 +224,13 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 // Merge merges data from validator databases in sourceDirectories into a new store, which is created in targetDirectory.
 func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) error {
 	var sourceStores []*db.Store
+	defer func() {
+		for _, store := range sourceStores {
+			if err := store.Close(); err != nil {
+				err = errors.Wrapf(err, "Failed to close the database in %s", store.DatabasePath())
+			}
+		}
+	}()
 
 	for _, dir := range sourceDirectories {
 		store, err := db.GetKVStore(dir)
@@ -244,14 +251,6 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 	if err != nil {
 		return errors.Wrapf(err, "Failed to merge validator databases into %s", targetDirectory)
 	}
-
-	defer func() {
-		for _, store := range sourceStores {
-			if err := store.Close(); err != nil {
-				err = errors.Wrapf(err, "Failed to close the database in %s", store.DatabasePath())
-			}
-		}
-	}()
 
 	return nil
 }

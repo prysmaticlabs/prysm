@@ -30,6 +30,12 @@ service Debug {
             post: "/eth/v1alpha1/debug/logging"
         };
     }
+    // Returns a proto array fork choice object from the beacon node.
+    rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/forkchoice"
+        };
+    }
 }
 
 message BeaconStateRequest {
@@ -59,4 +65,36 @@ message LoggingLevelRequest {
         TRACE = 2;
     }
     Level level = 1;
+}
+
+message ProtoArrayForkChoiceResponse {
+    // The prune threshold of how many nodes allowed in proto array store.
+    uint64 prune_threshold = 1;
+    // Latest justified epoch in proto array store.
+    uint64 justified_epoch = 2;
+    // Latest finalized epoch in proto array store.
+    uint64 finalized_epoch = 3;
+    // The list of the proto array nodes in store.
+    repeated ProtoArrayNode proto_array_nodes = 4;
+    // Root to indices mapping of the proto array nodes in store.
+    map<string, uint64> indices = 5;
+}
+
+message ProtoArrayNode {
+    // Slot of the proto array node.
+    uint64 slot = 1;
+    // Root of the proto array node.
+    bytes root = 2;
+    // Parent of the proto array node.
+    uint64 parent = 3;
+    // Justified epoch of the current proto array node.
+    uint64 justified_epoch = 4;
+    // finalized epoch of the current proto array node.
+    uint64 finalized_epoch = 5;
+    // Current weight of the current proto array node.
+    uint64 weight = 6;
+    // Best child of the current proto array node.
+    uint64 best_child = 7;
+    // Best descendant of the proto array node.
+    uint64 best_descendant = 8;
 }

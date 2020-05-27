@@ -29,8 +29,12 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	MinimalConfig                              bool // MinimalConfig as defined in the spec.
+	// Configuration related flags.
+	MinimalConfig bool // MinimalConfig as defined in the spec.
 	SchlesiTestnet                             bool // SchlesiTestnet preconfigured spec.
+	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
+
+	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -323,6 +327,11 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using schlesi testnet config")
 		cfg.SchlesiTestnet = true
 		params.UseSchlesiTestnet()
+	}
+	if ctx.Bool(e2eConfigFlag.Name) {
+		log.Warn("Using end-to-end testing config")
+		cfg.MinimalConfig = true
+		params.UseE2EConfig()
 	}
 	return cfg
 }

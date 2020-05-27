@@ -26,19 +26,12 @@ func CreateForkDigest(
 	currentSlot := helpers.SlotsSince(genesisTime)
 	currentEpoch := helpers.SlotToEpoch(currentSlot)
 
-	// We retrieve a list of scheduled forks by epoch.
-	// We loop through the keys in this map to determine the current
-	// fork version based on the current, time-based epoch number
-	// since the genesis time.
-	currentForkVersion := params.BeaconConfig().GenesisForkVersion
-	scheduledForks := params.BeaconConfig().ForkVersionSchedule
-	for epoch, forkVersion := range scheduledForks {
-		if epoch <= currentEpoch {
-			currentForkVersion = forkVersion
-		}
+	forkData, err := Fork(currentEpoch)
+	if err != nil {
+		return [4]byte{}, err
 	}
 
-	digest, err := helpers.ComputeForkDigest(currentForkVersion, genesisValidatorsRoot)
+	digest, err := helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 	if err != nil {
 		return [4]byte{}, err
 	}
@@ -62,10 +55,8 @@ func Fork(
 			previousForkVersion = retrievedForkVersion
 			retrievedForkVersion = forkVersion
 			forkEpoch = epoch
-
 		}
 	}
-
 	return &pb.Fork{
 		PreviousVersion: previousForkVersion,
 		CurrentVersion:  retrievedForkVersion,

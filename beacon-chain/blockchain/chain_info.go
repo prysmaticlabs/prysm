@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -46,6 +47,7 @@ type HeadFetcher interface {
 	HeadSeed(epoch uint64) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
+	ProtoArrayStore() *protoarray.Store
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -203,6 +205,11 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 		return &ethpb.Eth1Data{}
 	}
 	return s.head.state.Eth1Data()
+}
+
+// ProtoArrayStore returns the proto array store object.
+func (s *Service) ProtoArrayStore() *protoarray.Store {
+	return s.forkChoiceStore.Store()
 }
 
 // GenesisTime returns the genesis time of beacon chain.

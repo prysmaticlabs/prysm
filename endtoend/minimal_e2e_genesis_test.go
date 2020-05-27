@@ -10,14 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_AntiFlake_MinimalConfig_1(t *testing.T) {
-	t.Skip("Skipping until eth1 changes in v0.12 can work with e2e")
+func TestEndToEnd_Genesis_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
-	params.UseMinimalConfig()
+	params.UseE2EConfig()
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=25"},
-		ValidatorFlags: []string{"--minimal-config"},
+		BeaconFlags:    []string{},
+		ValidatorFlags: []string{},
 		EpochsToRun:    4,
 		TestSync:       false,
 		TestSlasher:    false,

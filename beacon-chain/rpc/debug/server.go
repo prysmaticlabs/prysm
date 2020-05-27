@@ -26,6 +26,7 @@ type Server struct {
 	BeaconDB           db.NoHeadAccessDatabase
 	GenesisTimeFetcher blockchain.TimeFetcher
 	StateGen           *stategen.State
+	HeadFetcher        blockchain.HeadFetcher
 }
 
 // SetLoggingLevel of a beacon node according to a request type,

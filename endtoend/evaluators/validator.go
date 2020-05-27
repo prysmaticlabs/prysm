@@ -14,6 +14,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+var expectedParticipation = 1 // 100% participation.
+
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
 	Name:       "validators_active_epoch_%d",
@@ -31,14 +33,14 @@ var ValidatorsParticipating = types.Evaluator{
 // ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
 var ProcessesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     isBetweenEpochs(8, 12),
+	Policy:     isBetweenEpochs(8, 21), //Choosing 8-21 because of the churn limit of 4 per epoch for 256 vals / 4 beacon nodes = 64 deposits. )
 	Evaluation: processesDepositedValidators,
 }
 
 // DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
 var DepositedValidatorsAreActive = types.Evaluator{
 	Name:       "deposited_validators_are_active_epoch_%d",
-	Policy:     afterNthEpoch(12),
+	Policy:     afterNthEpoch(22),
 	Evaluation: depositedValidatorsAreActive,
 }
 
@@ -126,7 +128,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	}
 
 	partRate := participation.Participation.GlobalParticipationRate
-	expected := float32(1)
+	expected := float32(expectedParticipation)
 	if partRate < expected {
 		return fmt.Errorf(
 			"validator participation was below for epoch %d, expected %f, received: %f",
@@ -156,7 +158,7 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
 	}
 
-	churnLimit, err := helpers.ValidatorChurnLimit(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	churnLimit, err := helpers.ValidatorChurnLimit(params.BeaconConfig().MinGenesisActiveValidatorCount + uint64(len(validators.ValidatorList)))
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate churn limit")
 	}
