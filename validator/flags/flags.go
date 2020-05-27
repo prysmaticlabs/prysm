@@ -44,7 +44,7 @@ var (
 	// GraffitiFlag defines the graffiti value included in proposed blocks
 	GraffitiFlag = &cli.StringFlag{
 		Name:  "graffiti",
-		Usage: "String to include in proposed blocks",
+		Usage: "String to include in proposed blocks, or path to a file containing one or more strings to be included",
 	}
 	// GrpcRetriesFlag defines the number of times to retry a failed gRPC request.
 	GrpcRetriesFlag = &cli.UintFlag{
