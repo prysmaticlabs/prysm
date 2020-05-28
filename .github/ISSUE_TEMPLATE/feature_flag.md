@@ -25,7 +25,8 @@ shared/featureconfig/README.md for the latest documentation around feature flags
 
 ### Feature Description
 
-<!-- ✍️--> A clear and concise description of the new feature.
+<!-- ✍️--> A clear and concise description of the new feature. Provide links to your technical
+design document or other supporting information.
 
 ### Tasks
 
