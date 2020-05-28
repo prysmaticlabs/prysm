@@ -47,7 +47,7 @@ if %WinOS%==64BIT (
 mkdir %wrapper_dir%
 
 REM get_prysm_version - Find the latest Prysm version available for download.
-(for /f %%i in ('curl -f -s https://prysmaticlabs.com/releases/latest') do set prysm_version=%%i) || (echo [31mERROR: Starting prysm requires an internet connection. [0m && exit /b 1)
+(for /f %%i in ('curl -f -s https://prysmaticlabs.com/releases/latest') do set prysm_version=%%i) || (echo [31mERROR: Starting prysm requires an internet connection. If you are being blocked by your antivirus, you can re-run with --ssl-no-revoke [0m && exit /b 1)
 echo [37mLatest prysm release is %prysm_version%.[0m
 IF defined USE_PRYSM_VERSION (
     echo [33mdetected variable USE_PRYSM_VERSION=%USE_PRYSM_VERSION%[0m

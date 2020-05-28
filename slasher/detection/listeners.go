@@ -26,7 +26,6 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 	for {
 		select {
 		case signedBlock := <-ch:
-			log.Debug("Running detection on block...")
 			signedBlkHdr, err := blockutil.SignedBeaconBlockHeaderFromBlock(signedBlock)
 			if err != nil {
 				log.WithError(err).Error("Could not get block header from block")
