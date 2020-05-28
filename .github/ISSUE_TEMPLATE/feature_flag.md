@@ -1,9 +1,7 @@
 ---
 name: "\U0001F984Feature Flag Tracking"
-about: Track a new feature, in development, in Prysm. This issue template should only be used by 
-developers or contributors!
+about: Track a new feature, in development, in Prysm. This issue template should only be used by developers or contributors!
 labels: Tracking
-
 ---
 <!--💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎
 

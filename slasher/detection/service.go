@@ -114,6 +114,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	if latestStoredHead != nil {
 		latestStoredEpoch = latestStoredHead.HeadEpoch
 	}
+	log.Infof("Performing historical detection from epoch %d to %d", latestStoredEpoch, currentChainHead.HeadEpoch)
 
 	// We retrieve historical chain data from the last persisted chain head in the
 	// slasher DB up to the current beacon node's head epoch we retrieved via gRPC.
@@ -124,7 +125,11 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, epoch)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
-			break
+			continue
+		}
+		if err := ds.slasherDB.SaveIndexedAttestations(ctx, indexedAtts); err != nil {
+			log.WithError(err).Error("could not save indexed attestations")
+			continue
 		}
 
 		for _, att := range indexedAtts {

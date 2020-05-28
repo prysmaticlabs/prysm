@@ -124,10 +124,11 @@ var (
 		Name:  "enable-new-state-mgmt",
 		Usage: "This enable the usage of state mgmt service across Prysm",
 	}
-	enableFieldTrie = &cli.BoolFlag{
-		Name:  "enable-state-field-trie",
-		Usage: "Enables the usage of state field tries to compute the state root",
+	disableFieldTrie = &cli.BoolFlag{
+		Name:  "disable-state-field-trie",
+		Usage: "Disables the usage of state field tries to compute the state root",
 	}
+
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
@@ -164,7 +165,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableFieldTrie,
 	enableNewStateMgmt,
 	enableInitSyncWeightedRoundRobin,
 	reduceAttesterStateCopy,
@@ -380,6 +380,10 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecateEnableFieldTrie = &cli.BoolFlag{
+		Name:   "enable-state-field-trie",
+		Usage:  deprecatedUsage,
+		Hidden: true}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -424,6 +428,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedBroadcastSlashingFlag,
 	deprecatedDisableHistoricalDetectionFlag,
 	deprecateEnableStateRefCopy,
+	deprecateEnableFieldTrie,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -475,11 +480,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	enableNewStateMgmt,
-	enableFieldTrie,
 	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	enableInitSyncWeightedRoundRobin,
+	disableFieldTrie,
 	disableStateRefCopy,
 	reduceAttesterStateCopy,
 }...)
@@ -489,7 +494,6 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
-	"--enable-state-field-trie",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
 	"--reduce-attester-state-copy",
