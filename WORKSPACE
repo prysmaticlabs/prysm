@@ -1693,13 +1693,6 @@ go_repository(
 )
 
 go_repository(
-    name = "in_gopkg_urfave_cli_v2",
-    importpath = "gopkg.in/urfave/cli.v2",
-    sum = "h1:OvXt/p4cdwNl+mwcWMq/AxaKFkhdxcjx+tx+qf4EOvY=",
-    version = "v2.0.0-20190806201727-b62605953717",
-)
-
-go_repository(
     name = "in_gopkg_urfave_cli_v1",
     importpath = "gopkg.in/urfave/cli.v1",
     sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
@@ -1743,4 +1736,11 @@ go_repository(
     name = "com_github_golang_gddo",
     commit = "3c2cc9a6329d9842b3bbdaf307a8110d740cf94c",
     importpath = "github.com/golang/gddo",
+)
+
+go_repository(
+    name = "com_github_urfave_cli_v2",
+    importpath = "github.com/urfave/cli/v2",
+    sum = "h1:JTTnM6wKzdA0Jqodd966MVj4vWbbquZykeX1sKbe2C4=",
+    version = "v2.2.0",
 )
