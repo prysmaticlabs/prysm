@@ -15,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -27,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
@@ -132,8 +134,7 @@ func NewRegularSync(cfg *Config) *Service {
 		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
-	r.registerRPCHandlers()
-	go r.registerSubscribers()
+	go r.registerHandlers()
 
 	return r
 }
@@ -208,6 +209,40 @@ func (r *Service) initCaches() error {
 	r.seenProposerSlashingCache = proposerSlashingCache
 
 	return nil
+}
+
+func (r *Service) registerHandlers() {
+	// Wait until chain start.
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for r.chainStarted == false {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.Initialized {
+				data, ok := event.Data.(*statefeed.InitializedData)
+				if !ok {
+					log.Error("Event feed data is not type *statefeed.InitializedData")
+					return
+				}
+				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+				if data.StartTime.After(roughtime.Now()) {
+					stateSub.Unsubscribe()
+					time.Sleep(roughtime.Until(data.StartTime))
+				}
+				r.chainStarted = true
+			}
+		case <-r.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Subscription to state notifier failed")
+			return
+		}
+	}
+	// Register respective rpc and pubsub handlers.
+	r.registerRPCHandlers()
+	r.registerSubscribers()
 }
 
 // Checker defines a struct which can verify whether a node is currently

@@ -13,13 +13,11 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -46,34 +44,6 @@ func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Mess
 
 // Register PubSub subscribers
 func (r *Service) registerSubscribers() {
-	// Wait until chain start.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	for r.chainStarted == false {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Initialized {
-				data, ok := event.Data.(*statefeed.InitializedData)
-				if !ok {
-					log.Error("Event feed data is not type *statefeed.InitializedData")
-					return
-				}
-				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-				if data.StartTime.After(roughtime.Now()) {
-					stateSub.Unsubscribe()
-					time.Sleep(roughtime.Until(data.StartTime))
-				}
-				r.chainStarted = true
-			}
-		case <-r.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			return
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Subscription to state notifier failed")
-			return
-		}
-	}
 	r.subscribe(
 		"/eth2/%x/beacon_block",
 		r.validateBeaconBlockPubSub,
