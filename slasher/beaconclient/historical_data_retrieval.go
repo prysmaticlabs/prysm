@@ -3,7 +3,6 @@ package beaconclient
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -36,7 +35,7 @@ func (bs *Service) RequestHistoricalAttestations(
 		})
 		if err != nil {
 			log.WithError(err).Errorf("could not request indexed attestations for epoch: %d", epoch)
-			continue
+			break
 		}
 		indexedAtts = append(indexedAtts, res.IndexedAttestations...)
 		log.Infof(
@@ -48,9 +47,6 @@ func (bs *Service) RequestHistoricalAttestations(
 		if res.NextPageToken == "" || res.TotalSize == 0 || len(indexedAtts) == int(res.TotalSize) {
 			break
 		}
-	}
-	if err := bs.slasherDB.SaveIndexedAttestations(ctx, indexedAtts); err != nil {
-		return nil, errors.Wrap(err, "could not save indexed attestations")
 	}
 	return indexedAtts, nil
 }
