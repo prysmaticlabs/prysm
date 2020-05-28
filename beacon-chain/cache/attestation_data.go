@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -98,7 +99,10 @@ func (c *AttestationCache) Get(ctx context.Context, req *ethpb.AttestationDataRe
 
 	if exists && item != nil && item.(*attestationReqResWrapper).res != nil {
 		attestationCacheHit.Inc()
-		return state.CopyAttestationData(item.(*attestationReqResWrapper).res), nil
+		if featureconfig.Get().ReduceAttesterStateCopy {
+			return state.CopyAttestationData(item.(*attestationReqResWrapper).res), nil
+		}
+		return item.(*attestationReqResWrapper).res, nil
 	}
 	attestationCacheMiss.Inc()
 	return nil, nil
@@ -163,7 +167,10 @@ func wrapperToKey(i interface{}) (string, error) {
 }
 
 func reqToKey(req *ethpb.AttestationDataRequest) (string, error) {
-	return fmt.Sprintf("%d", req.Slot), nil
+	if featureconfig.Get().ReduceAttesterStateCopy {
+		return fmt.Sprintf("%d", req.Slot), nil
+	}
+	return fmt.Sprintf("%d-%d", req.CommitteeIndex, req.Slot), nil
 }
 
 type attestationReqResWrapper struct {

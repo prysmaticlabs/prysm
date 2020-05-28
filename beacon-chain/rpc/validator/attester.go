@@ -47,7 +47,9 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Errorf(codes.Internal, "Could not retrieve data from attestation cache: %v", err)
 	}
 	if res != nil {
-		res.CommitteeIndex = req.CommitteeIndex
+		if featureconfig.Get().ReduceAttesterStateCopy {
+			res.CommitteeIndex = req.CommitteeIndex
+		}
 		return res, nil
 	}
 
@@ -60,7 +62,9 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 			if res == nil {
 				return nil, status.Error(codes.DataLoss, "A request was in progress and resolved to nil")
 			}
-			res.CommitteeIndex = req.CommitteeIndex
+			if featureconfig.Get().ReduceAttesterStateCopy {
+				res.CommitteeIndex = req.CommitteeIndex
+			}
 			return res, nil
 		}
 		return nil, status.Errorf(codes.Internal, "Could not mark attestation as in-progress: %v", err)

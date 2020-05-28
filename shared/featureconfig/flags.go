@@ -156,6 +156,10 @@ var (
 		Name:  "enable-init-sync-wrr",
 		Usage: "Enables weighted round robin fetching optimization",
 	}
+	reduceAttesterStateCopy = &cli.BoolFlag{
+		Name:  "reduce-attester-state-copy",
+		Usage: "Reduces the amount of state copies for attester rpc",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -163,6 +167,7 @@ var devModeFlags = []cli.Flag{
 	enableFieldTrie,
 	enableNewStateMgmt,
 	enableInitSyncWeightedRoundRobin,
+	reduceAttesterStateCopy,
 }
 
 // Deprecated flags list.
@@ -476,6 +481,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipRegenHistoricalStates,
 	enableInitSyncWeightedRoundRobin,
 	disableStateRefCopy,
+	reduceAttesterStateCopy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -486,4 +492,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-field-trie",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
+	"--reduce-attester-state-copy",
 }
