@@ -121,6 +121,7 @@ func (vs *Server) activationStatus(
 	return activeValidatorExists, statusResponses, nil
 }
 
+// validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
 func (vs *Server) validatorStatus(
 	ctx context.Context,
 	headState *stateTrie.BeaconState,
@@ -168,7 +169,7 @@ func (vs *Server) validatorStatus(
 
 		resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
-		depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, headState)
+		depositBlockSlot, err := vs.depositBlockSlot(ctx, headState, eth1BlockNumBigInt)
 		if err != nil {
 			return resp, farFuture
 		}
@@ -237,13 +238,13 @@ func assignmentStatus(beaconState *stateTrie.BeaconState, validatorIdx uint64) e
 	return ethpb.ValidatorStatus_EXITED
 }
 
-func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *stateTrie.BeaconState) (uint64, error) {
+func (vs *Server) depositBlockSlot(ctx context.Context, beaconState *stateTrie.BeaconState, eth1BlockNumBigInt *big.Int) (uint64, error) {
 	var depositBlockSlot uint64
 	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err
 	}
-	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
+	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
 	period := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().EpochsPerEth1VotingPeriod
 	votingPeriod := time.Duration(period*params.BeaconConfig().SecondsPerSlot) * time.Second
