@@ -31,7 +31,7 @@ shared/featureconfig/README.md for the latest documentation around feature flags
 - [ ] Feature flag created as opt-in
 - [ ] Feature implemented / code complete
 - [ ] Feature tested in production for adequate amount of time
-- [ ] Feature flag is inverted to be opt-out. The opt-in flag is deprecated
+- [ ] Feature flag is inverted to be opt-out and the opt-in flag is deprecated
 - [ ] Feature has made it to a tagged production release as an opt-out flag
 - [ ] Opt-out feature flag is deprecated and old code paths are cleaned up
 
