@@ -101,6 +101,16 @@ var (
 		Name:  "password",
 		Usage: "String value of the password for your validator private keys",
 	}
+	// SplitSourceDirectory defines the location of the validator database that will be split.
+	SplitSourceDirectory = &cli.StringFlag{
+		Name: "source-dir",
+		Usage: "The directory containing the validator database that will be split.",
+	}
+	// SplitTargetDirectory defines the location where the split outcome will be stored.
+	SplitTargetDirectory = &cli.StringFlag{
+		Name: "target-dir",
+		Usage: "The directory where the split outcome will be stored.",
+	}
 	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
 	// alternative from launching the validator client from decrypting a keystore directory.
 	UnencryptedKeysFlag = &cli.StringFlag{

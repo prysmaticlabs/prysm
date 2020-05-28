@@ -256,6 +256,32 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 	return nil
 }
 
+// Split splits data from one validator database in sourceDirectory into several validator databases.
+// Each validator database is created in its own subdirectory inside targetDirectory.
+func Split(ctx context.Context, sourceDirectory string, targetDirectory string) (err error) {
+	var sourceStore *db.Store
+	sourceStore, err = db.GetKVStore(sourceDirectory)
+	if err != nil {
+		return errors.Wrap(err, "Failed to prepare the source database for splitting")
+	}
+	if sourceStore == nil {
+		return errors.New("no database found in source directory")
+	}
+	defer func() {
+		if sourceStore != nil {
+			if err := sourceStore.Close(); err != nil {
+				err = errors.Wrap(err, "Failed to close the source database")
+			}
+		}
+	}()
+
+	if err := db.Split(ctx, sourceStore, targetDirectory); err != nil {
+		return errors.Wrapf(err, "Failed to split the validator database")
+	}
+
+	return nil
+}
+
 // ChangePassword changes the password for all keys located in a keystore.
 // Password is changed only for keys that can be decrypted using the old password.
 func ChangePassword(keystorePath string, oldPassword string, newPassword string) error {
