@@ -162,7 +162,7 @@ func wrapperToKey(i interface{}) (string, error) {
 }
 
 func reqToKey(req *ethpb.AttestationDataRequest) (string, error) {
-	return fmt.Sprintf("%d-%d", req.CommitteeIndex, req.Slot), nil
+	return fmt.Sprintf("%d", req.Slot), nil
 }
 
 type attestationReqResWrapper struct {
