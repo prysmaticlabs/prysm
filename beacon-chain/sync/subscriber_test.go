@@ -13,14 +13,11 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -187,54 +184,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if len(ps) != 1 {
 		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps)
 	}
-}
-
-func TestSubscribe_WaitToSync(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
-	chainService := &mockChain.ChainService{
-		Genesis:        time.Now(),
-		ValidatorsRoot: [32]byte{'A'},
-	}
-	r := Service{
-		ctx:           context.Background(),
-		p2p:           p2p,
-		chain:         chainService,
-		stateNotifier: chainService.StateNotifier(),
-		initialSync:   &mockSync.Sync{IsSyncing: false},
-	}
-
-	topic := "/eth2/%x/beacon_block"
-	go r.registerSubscribers()
-	time.Sleep(100 * time.Millisecond)
-	i := r.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime: time.Now(),
-		},
-	})
-	if i == 0 {
-		t.Fatal("didn't send genesis time to subscribers")
-	}
-	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
-	sk, err := bls.SecretKeyFromBytes(b32[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	msg := &pb.SignedBeaconBlock{
-		Block: &pb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: sk.Sign([]byte("data")).Marshal(),
-	}
-	p2p.ReceivePubSub(topic, msg)
-	// wait for chainstart to be sent
-	time.Sleep(400 * time.Millisecond)
-	if !r.chainStarted {
-		t.Fatal("Did not receive chain start event.")
-	}
-
 }
 
 func TestSubscribe_HandlesPanic(t *testing.T) {
