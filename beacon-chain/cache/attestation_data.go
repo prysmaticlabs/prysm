@@ -98,7 +98,6 @@ func (c *AttestationCache) Get(ctx context.Context, req *ethpb.AttestationDataRe
 
 	if exists && item != nil && item.(*attestationReqResWrapper).res != nil {
 		attestationCacheHit.Inc()
-		state.CopyAttestationData(item.(*attestationReqResWrapper).res)
 		return state.CopyAttestationData(item.(*attestationReqResWrapper).res), nil
 	}
 	attestationCacheMiss.Inc()
