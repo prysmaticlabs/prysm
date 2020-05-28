@@ -14,7 +14,7 @@ shared/featureconfig/README.md for the latest documentation around feature flags
 
 💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎💎-->
 
-# 🚀 Feature Tracking
+# 🦄 Feature Tracking
 
 **Current status** (opt-in or opt-out): 
 
