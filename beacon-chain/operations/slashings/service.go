@@ -42,12 +42,13 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.
 		if len(pending) >= int(params.BeaconConfig().MaxAttesterSlashings) {
 			break
 		}
-		valid, err := p.validatorSlashingPreconditionCheck(state, slashing.validatorToSlash)
-		if err != nil {
-			log.WithError(err).Error("could not validate attester slashing")
+		if err := blocks.VerifyAttesterSlashing(ctx, state, slashing.attesterSlashing); err != nil {
+			log.WithError(err).Error("Could not verify attester slashing")
+			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
+			i--
 			continue
 		}
-		if included[slashing.validatorToSlash] || !valid {
+		if included[slashing.validatorToSlash] {
 			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
 			i--
 			continue
@@ -81,12 +82,13 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, state *beaconstate.
 		if len(pending) >= int(params.BeaconConfig().MaxProposerSlashings) {
 			break
 		}
-		valid, err := p.validatorSlashingPreconditionCheck(state, slashing.Header_1.Header.ProposerIndex)
-		if err != nil {
-			log.WithError(err).Error("could not validate proposer slashing")
+		if err := blocks.VerifyProposerSlashing(state, slashing); err != nil {
+			log.WithError(err).Error("Could not verify proposer slashing")
+			p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
+			i--
 			continue
 		}
-		if !valid {
+		if p.included[slashing.Header_1.Header.ProposerIndex] {
 			p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
 			i--
 			continue
@@ -175,15 +177,10 @@ func (p *Pool) InsertProposerSlashing(
 		return errors.Wrap(err, "could not verify proposer slashing")
 	}
 
+	// If the validator has been recently included in the pool of
+	//slashings, do not process this new slashing.
 	idx := slashing.Header_1.Header.ProposerIndex
-	ok, err := p.validatorSlashingPreconditionCheck(state, idx)
-	if err != nil {
-		return err
-	}
-	// If the validator has already exited, has already been slashed, or if its index
-	// has been recently included in the pool of slashings, do not process this new
-	// slashing.
-	if !ok {
+	if p.included[idx] {
 		proposerSlashingReattempts.Inc()
 		return fmt.Errorf("validator at index %d cannot be slashed", idx)
 	}
@@ -245,8 +242,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 
 // this function checks a few items about a validator before proceeding with inserting
 // a proposer/attester slashing into the pool. First, it checks if the validator
-// has been recently included in the pool, then it checks if the validator has exited,
-// finally, it ensures the validator has not yet been slashed.
+// has been recently included in the pool, then it check if the validator is slashable..
 func (p *Pool) validatorSlashingPreconditionCheck(
 	state *beaconstate.BeaconState,
 	valIdx uint64,
@@ -259,12 +255,8 @@ func (p *Pool) validatorSlashingPreconditionCheck(
 	if err != nil {
 		return false, err
 	}
-	// Checking if the validator has already exited.
-	if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
-		return false, nil
-	}
-	// Checking if the validator has already been slashed.
-	if validator.Slashed() {
+	// Checking if the validator is slashable.
+	if !helpers.IsSlashableValidatorUsingTrie(validator, helpers.CurrentEpoch(state)) {
 		return false, nil
 	}
 	return true, nil
