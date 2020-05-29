@@ -97,7 +97,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 		// Recalculate start and end slots for the next batch to be returned to the remote peer.
 		startSlot = endSlot + m.Step
-		endSlot = startSlot + (m.Step * (uint64(allowedBlocksPerSecond) - 1))
+		endSlot = startSlot + (m.Step * (allowedBlocksPerSecond - 1))
 		if endSlot > endReqSlot {
 			endSlot = endReqSlot
 		}
