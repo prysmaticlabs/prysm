@@ -154,19 +154,21 @@ func IntersectionInt64(s ...[]int64) []int64 {
 	if len(s) == 1 {
 		return s[0]
 	}
-	set := make([]int64, 0)
-	m := make(map[int64]bool)
 	for i := 1; i < len(s); i++ {
-		for j := 0; j < len(s[i-1]); j++ {
-			m[s[i-1][j]] = true
-		}
+		m := make(map[int64]bool)
 		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; found {
-				set = append(set, s[i][j])
+			m[s[i][j]] = true
+		}
+		x := 0
+		for _, y := range s[0] {
+			if m[y] {
+				s[0][x] = y
+				x++
 			}
 		}
+		s[0] = s[0][:x]
 	}
-	return set
+	return s[0]
 }
 
 // UnionInt64 of any number of int64 slices with time
