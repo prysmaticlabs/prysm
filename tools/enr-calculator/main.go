@@ -51,11 +51,11 @@ func main() {
 	}
 
 	db, err := enode.OpenDB("")
-	defer db.Close()
 	if err != nil {
 		log.Fatalf("Could not open node's peer database: %v\n", err)
 		return
 	}
+	defer db.Close()
 
 	localNode := enode.NewLocalNode(db, ecdsaPrivKey)
 	ipEntry := enr.IP(net.ParseIP(*ipAddr))
