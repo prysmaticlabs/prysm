@@ -188,15 +188,19 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	mockChainStream.EXPECT().Send(
 		&ethpb.ValidatorActivationResponse{
 			Statuses: []*ethpb.ValidatorActivationResponse_Status{
-				{PublicKey: pubKey1,
+				{
+					PublicKey: pubKey1,
 					Status: &ethpb.ValidatorStatusResponse{
 						Status: ethpb.ValidatorStatus_ACTIVE,
 					},
+					Index: 0,
 				},
-				{PublicKey: pubKey2,
+				{
+					PublicKey: pubKey2,
 					Status: &ethpb.ValidatorStatusResponse{
 						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 					},
+					Index: nonExistentIndex,
 				},
 			},
 		},
@@ -273,6 +277,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 						Status:          ethpb.ValidatorStatus_ACTIVE,
 						ActivationEpoch: 1,
 					},
+					Index: 0,
 				},
 				{
 					PublicKey: pubKey2,
@@ -281,12 +286,14 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 						ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
 						PositionInActivationQueue: 1,
 					},
+					Index: 1,
 				},
 				{
 					PublicKey: pubKey3,
 					Status: &ethpb.ValidatorStatusResponse{
 						Status: ethpb.ValidatorStatus_EXITED,
 					},
+					Index: 2,
 				},
 			},
 		},
