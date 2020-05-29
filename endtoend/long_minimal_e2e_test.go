@@ -43,7 +43,9 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 			ev.FinalizationOccurs,
 			ev.MetricsCheck,
 			ev.ProcessesDepositedValidators,
+			ev.ProposeVoluntaryExit,
 			ev.DepositedValidatorsAreActive,
+			ev.ValidatorHasExited,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {
