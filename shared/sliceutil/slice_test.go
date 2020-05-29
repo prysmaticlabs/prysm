@@ -325,8 +325,9 @@ func TestIntersectionByteSlices(t *testing.T) {
 					{1, 2},
 					{4, 5},
 				},
+				{},
 			},
-			result: [][]byte{{4, 5}},
+			result: [][]byte{},
 		},
 		// Ensure duplicate elements are removed in the resulting set.
 		{
@@ -341,8 +342,12 @@ func TestIntersectionByteSlices(t *testing.T) {
 					{4, 5},
 					{4, 5},
 				},
+				{
+					{4, 5},
+					{4, 5},
+				},
 			},
-			result: [][]byte{{4, 5}},
+			result: [][]byte{{4, 5}, {4, 5}},
 		},
 		// Ensure no intersection returns an empty set.
 		{
@@ -354,12 +359,18 @@ func TestIntersectionByteSlices(t *testing.T) {
 				{
 					{1, 2},
 				},
+				{
+					{1, 2},
+				},
 			},
 			result: [][]byte{},
 		},
 		//  Intersection between A and A should return A.
 		{
 			input: [][][]byte{
+				{
+					{1, 2},
+				},
 				{
 					{1, 2},
 				},

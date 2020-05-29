@@ -259,29 +259,21 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 	if len(s) == 1 {
 		return s[0]
 	}
-	inter := make([][]byte, 0)
 	for i := 1; i < len(s); i++ {
-		hash := make(map[string]bool)
-		for _, e := range s[i-1] {
-			hash[string(e)] = true
+		m := make(map[string]bool)
+		for j := 0; j < len(s[i]); j++ {
+			m[string(s[i][j])] = true
 		}
-		for _, e := range s[i] {
-			if hash[string(e)] {
-				inter = append(inter, e)
+		x := 0
+		for _, y := range s[0] {
+			if m[string(y)] {
+				s[0][x] = y
+				x++
 			}
 		}
-		tmp := make([][]byte, 0)
-		// Remove duplicates from slice.
-		encountered := make(map[string]bool)
-		for _, element := range inter {
-			if !encountered[string(element)] {
-				tmp = append(tmp, element)
-				encountered[string(element)] = true
-			}
-		}
-		inter = tmp
+		s[0] = s[0][:x]
 	}
-	return inter
+	return s[0]
 }
 
 // SplitCommaSeparated values from the list. Example: []string{"a,b", "c,d"} becomes []string{"a", "b", "c", "d"}.
