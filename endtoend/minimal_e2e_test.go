@@ -24,10 +24,10 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,
+			ev.MetricsCheck,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
-			ev.MetricsCheck,
 			ev.ProposeVoluntaryExit,
 			ev.ValidatorHasExited,
 		},
