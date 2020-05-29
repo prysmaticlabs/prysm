@@ -40,19 +40,21 @@ func IntersectionUint64(s ...[]uint64) []uint64 {
 	if len(s) == 1 {
 		return s[0]
 	}
-	intersect := make([]uint64, 0)
 	for i := 1; i < len(s); i++ {
 		m := make(map[uint64]bool)
-		for j := 0; j < len(s[i-1]); j++ {
-			m[s[i-1][j]] = true
-		}
 		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; found {
-				intersect = append(intersect, s[i][j])
+			m[s[i][j]] = true
+		}
+		x := 0
+		for _, y := range s[0] {
+			if m[y] {
+				s[0][x] = y
+				x++
 			}
 		}
+		s[0] = s[0][:x]
 	}
-	return intersect
+	return s[0]
 }
 
 // UnionUint64 of any number of uint64 slices with time
