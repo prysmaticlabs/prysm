@@ -16,7 +16,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-var exitedIndice = params.BeaconConfig().FarFutureEpoch
+// exitedIndice holds the exited indice from ProposeVoluntaryExit in memory so other functions don't confuse it
+// for a normal validator.
+var exitedIndice uint64
+
+// valExited is used to know if exitedIndice is set, since default value is 0.
+var valExited bool
 
 // ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
 var ProcessesDepositedValidators = types.Evaluator{
@@ -75,27 +80,23 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate churn limit")
 	}
-	effBalanceLowCount := 0
-	activeEpoch10Count := 0
-	activeEpoch11Count := 0
-	activeEpoch12Count := 0
-	activeEpoch13Count := 0
-	exitEpochWrongCount := 0
-	withdrawEpochWrongCount := 0
+	var effBalanceLowCount, exitEpochWrongCount, withdrawEpochWrongCount uint64
+	var activeEpoch10Count, activeEpoch11Count, activeEpoch12Count, activeEpoch13Count uint64
 	for _, item := range validators.ValidatorList {
-		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
-			effBalanceLowCount++
-		}
-		if item.Validator.ActivationEpoch == 10 {
+		switch item.Validator.ActivationEpoch {
+		case 10:
 			activeEpoch10Count++
-		} else if item.Validator.ActivationEpoch == 11 {
+		case 11:
 			activeEpoch11Count++
-		} else if item.Validator.ActivationEpoch == 12 {
+		case 12:
 			activeEpoch12Count++
-		} else if item.Validator.ActivationEpoch == 13 {
+		case 13:
 			activeEpoch13Count++
 		}
 
+		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
+			effBalanceLowCount++
+		}
 		if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			exitEpochWrongCount++
 		}
@@ -110,13 +111,13 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 			effBalanceLowCount,
 			params.BeaconConfig().MaxEffectiveBalance,
 		)
-	} else if activeEpoch10Count != int(churnLimit) {
+	} else if activeEpoch10Count != churnLimit {
 		return fmt.Errorf("%d validators did not have activation epoch of 10", activeEpoch10Count)
-	} else if activeEpoch11Count != int(churnLimit) {
+	} else if activeEpoch11Count != churnLimit {
 		return fmt.Errorf("%d validators did not have activation epoch of 11", activeEpoch11Count)
-	} else if activeEpoch12Count != int(churnLimit) {
+	} else if activeEpoch12Count != churnLimit {
 		return fmt.Errorf("%d validators did not have activation epoch of 12", activeEpoch12Count)
-	} else if activeEpoch13Count != int(churnLimit) {
+	} else if activeEpoch13Count != churnLimit {
 		return fmt.Errorf("%d validators did not have activation epoch of 13", activeEpoch13Count)
 	} else if exitEpochWrongCount > 0 {
 		return fmt.Errorf("%d validators did not have an exit epoch of far future epoch", exitEpochWrongCount)
@@ -183,6 +184,7 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	}
 
 	exitedIndice = rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount
+	valExited = true
 
 	voluntaryExit := &eth.VoluntaryExit{
 		Epoch:          chainHead.HeadEpoch,
@@ -205,8 +207,8 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 		Exit:      voluntaryExit,
 		Signature: signature.Marshal(),
 	}
-	_, err = valClient.ProposeExit(ctx, signedExit)
-	if err != nil {
+
+	if _, err = valClient.ProposeExit(ctx, signedExit); err != nil {
 		return errors.Wrap(err, "could not propose exit")
 	}
 	return nil
