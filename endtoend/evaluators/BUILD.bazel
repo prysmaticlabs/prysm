@@ -7,6 +7,7 @@ go_library(
         "finality.go",
         "metrics.go",
         "node.go",
+        "operations.go",
         "slashing.go",
         "validator.go",
     ],
@@ -26,5 +27,6 @@ go_library(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_x_exp//rand:go_default_library",
     ],
 )

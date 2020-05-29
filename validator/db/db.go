@@ -62,21 +62,10 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	return nil
 }
 
-// NewKVStoreWithPublicKeyBuckets initializes a new boltDB key-value store at the directory
-// path specified, creates the kv-buckets based on the schema and provided public keys,
-// and stores an open connection db object as a property of the Store struct.
-func NewKVStoreWithPublicKeyBuckets(dirPath string, pubKeys [][48]byte) (*Store, error) {
-	kv, err := NewKVStore(dirPath)
-	// Initialize the required public keys into the DB to ensure they're not empty.
-	if err := kv.initializeSubBuckets(pubKeys); err != nil {
-		return nil, err
-	}
-	return kv, err
-}
-
-// NewKVStore initializes a new boltDB key-value store at the directory path specified
-// and stores an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string) (*Store, error) {
+// NewKVStore initializes a new boltDB key-value store at the directory
+// path specified, creates the kv-buckets based on the schema, and stores
+// an open connection db object as a property of the Store struct.
+func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -98,6 +87,11 @@ func NewKVStore(dirPath string) (*Store, error) {
 			historicAttestationsBucket,
 		)
 	}); err != nil {
+		return nil, err
+	}
+
+	// Initialize the required public keys into the DB to ensure they're not empty.
+	if err := kv.initializeSubBuckets(pubKeys); err != nil {
 		return nil, err
 	}
 

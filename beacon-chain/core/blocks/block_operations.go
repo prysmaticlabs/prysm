@@ -856,7 +856,7 @@ func ProcessPreGenesisDeposit(
 		validator.ActivationEligibilityEpoch = 0
 		validator.ActivationEpoch = 0
 	}
-	if err := beaconState.UpdateValidatorAtIndex(uint64(index), validator); err != nil {
+	if err := beaconState.UpdateValidatorAtIndex(index, validator); err != nil {
 		return nil, err
 	}
 	return beaconState, nil
@@ -952,7 +952,7 @@ func ProcessDeposit(
 			return nil, err
 		}
 	} else {
-		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
+		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
 			return nil, err
 		}
 	}
