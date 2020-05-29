@@ -324,7 +324,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.SecondsPerSlot = 8
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.Eth1FollowDistance = 4
-	e2eConfig.PersistentCommitteePeriod = 4
+	e2eConfig.ShardCommitteePeriod = 4
 	return e2eConfig
 }
 
