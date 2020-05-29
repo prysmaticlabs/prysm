@@ -98,11 +98,11 @@ func getPubKeyProposals(pubKey []byte, proposalsBucket *bolt.Bucket) (*pubKeyPro
 func createTargetStore(
 	targetDirectory string,
 	allProposals []pubKeyProposals,
-	allAttestations []pubKeyAttestations) error {
+	allAttestations []pubKeyAttestations) (err error) {
 
-	newStore, err := NewKVStore(targetDirectory)
+	newStore, err := NewKVStore(targetDirectory, [][48]byte{})
 	defer func() {
-		if e := newStore.Close(); e != nil {
+		if deferErr := newStore.Close(); deferErr != nil {
 			err = errors.Wrap(err, "Could not close the merged database")
 		}
 	}()
@@ -110,12 +110,14 @@ func createTargetStore(
 		return errors.Wrapf(err, "Could not initialize a new database in %s", targetDirectory)
 	}
 
-	if err := newStore.update(func(tx *bolt.Tx) error {
+	err = newStore.update(func(tx *bolt.Tx) error {
 		proposalsBucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKeyProposals := range allProposals {
 			pubKeyBucket, err := proposalsBucket.CreateBucket(pubKeyProposals.PubKey)
 			if err != nil {
-				return errors.Wrapf(err, "Could not create proposals bucket for public key %v", pubKeyProposals.PubKey)
+				return errors.Wrapf(err,
+					"Could not create proposals bucket for public key %x",
+					pubKeyProposals.PubKey[:12])
 			}
 			for _, epochProposals := range pubKeyProposals.Proposals {
 				if err := pubKeyBucket.Put(epochProposals.Epoch, epochProposals.Proposals); err != nil {
@@ -126,12 +128,14 @@ func createTargetStore(
 		attestationsBucket := tx.Bucket(historicAttestationsBucket)
 		for _, attestations := range allAttestations {
 			if err := attestationsBucket.Put(attestations.PubKey, attestations.Attestations); err != nil {
-				return errors.Wrapf(err, "Could not add public key attestations for public key %v", attestations.PubKey)
+				return errors.Wrapf(
+					err,
+					"Could not add public key attestations for public key %x",
+					attestations.PubKey[:12])
 			}
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
+
+	return err
 }
