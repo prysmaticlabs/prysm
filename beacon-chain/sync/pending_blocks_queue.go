@@ -55,7 +55,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		span.AddAttributes(trace.Int64Attribute("slot", int64(s)))
 
 		r.pendingQueueLock.RLock()
-		b := r.slotToPendingBlocks[uint64(s)]
+		b := r.slotToPendingBlocks[s]
 		// Skip if block does not exist.
 		if b == nil || b.Block == nil {
 			r.pendingQueueLock.RUnlock()
@@ -85,7 +85,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 				if err != nil {
 					return errors.Wrap(err, "failed to read chain state for peer")
 				}
-				if cs != nil && cs.HeadSlot >= uint64(s) {
+				if cs != nil && cs.HeadSlot >= s {
 					pid = p
 					break
 				}
@@ -122,7 +122,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		r.pendingQueueLock.Lock()
-		delete(r.slotToPendingBlocks, uint64(s))
+		delete(r.slotToPendingBlocks, s)
 		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
@@ -137,15 +137,17 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 	return nil
 }
 
-func (r *Service) sortedPendingSlots() []int {
+func (r *Service) sortedPendingSlots() []uint64 {
 	r.pendingQueueLock.RLock()
 	defer r.pendingQueueLock.RUnlock()
 
-	slots := make([]int, 0, len(r.slotToPendingBlocks))
+	slots := make([]uint64, 0, len(r.slotToPendingBlocks))
 	for s := range r.slotToPendingBlocks {
-		slots = append(slots, int(s))
+		slots = append(slots, s)
 	}
-	sort.Ints(slots)
+	sort.Slice(slots, func(i, j int) bool {
+		return slots[i] < slots[j]
+	})
 	return slots
 }
 
