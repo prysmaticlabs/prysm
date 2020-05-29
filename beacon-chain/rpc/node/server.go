@@ -53,14 +53,11 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genes
 	var gt *ptypes.Timestamp
 	if genesisTime == defaultGenesisTime {
 		gt, err = ptypes.TimestampProto(time.Unix(0, 0))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
-		}
 	} else {
 		gt, err = ptypes.TimestampProto(genesisTime)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
-		}
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
 	}
 
 	genValRoot := ns.GenesisFetcher.GenesisValidatorRoot()
