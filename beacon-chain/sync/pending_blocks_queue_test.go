@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"math"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -307,5 +309,23 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 	}
 	if len(r.seenPendingBlocks) != 0 {
 		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
+	}
+}
+
+func TestService_sortedPendingSlots(t *testing.T) {
+	r := &Service{
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+	}
+
+	var lastSlot uint64 = math.MaxUint64
+	r.slotToPendingBlocks[lastSlot] = &ethpb.SignedBeaconBlock{}
+	r.slotToPendingBlocks[lastSlot-3] = &ethpb.SignedBeaconBlock{}
+	r.slotToPendingBlocks[lastSlot-5] = &ethpb.SignedBeaconBlock{}
+	r.slotToPendingBlocks[lastSlot-2] = &ethpb.SignedBeaconBlock{}
+
+	want := []uint64{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
+	got := r.sortedPendingSlots()
+	if !reflect.DeepEqual(want, got) {
+		t.Errorf("unexpected pending slots list, want: %v, got: %v", want, got)
 	}
 }
