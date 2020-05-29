@@ -168,10 +168,10 @@ func main() {
 		validatorKeys := make(map[string]*prysmKeyStore.Key)
 		if randomKey {
 			validatorKey, err := prysmKeyStore.NewKey()
-			validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
 			if err != nil {
 				return errors.Wrap(err, "Could not generate random key")
 			}
+			validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
 		} else {
 			// Load from keystore
 			store := prysmKeyStore.NewKeystore(prysmKeystorePath)
