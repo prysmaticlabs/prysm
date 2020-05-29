@@ -25,10 +25,10 @@ func TestClearDB(t *testing.T) {
 	}
 	cfg := &kv.Config{}
 	db, err := slasherDB.NewDB(p, cfg)
-	db.EnableSpanCache(false)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
+	db.EnableSpanCache(false)
 	if err := db.ClearDB(); err != nil {
 		t.Fatal(err)
 	}
