@@ -41,8 +41,8 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.Sy
 	}, nil
 }
 
-// GetGenesis fetches genesis chain information of Ethereum 2.0. Returns the unit timestamp 0
-// if there a genesis time has yet to be determined.
+// GetGenesis fetches genesis chain information of Ethereum 2.0. Returns unix timestamp 0
+// if a genesis time has yet to be determined.
 func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
 	contractAddr, err := ns.BeaconDB.DepositContractAddress(ctx)
 	if err != nil {
