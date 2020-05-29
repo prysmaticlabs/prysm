@@ -106,11 +106,13 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		t.Fatal(err)
 	}
 	exitedVal.ExitEpoch = 0
+	exitedVal.WithdrawableEpoch = 0
 	futureExitedVal, err := beaconState.ValidatorAtIndex(uint64(4))
 	if err != nil {
 		t.Fatal(err)
 	}
 	futureExitedVal.ExitEpoch = 17
+	futureExitedVal.WithdrawableEpoch = 17
 	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
 	if err != nil {
 		t.Fatal(err)
