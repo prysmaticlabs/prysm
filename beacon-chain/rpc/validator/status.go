@@ -18,6 +18,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var nonExistentIndex = ^uint64(0)
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
@@ -131,7 +132,6 @@ func (vs *Server) validatorStatus(
 	defer span.End()
 
 	// Using ^0 as the default value for index, in case the validators index cannot be determined.
-	nonExistentIndex := ^uint64(0)
 	resp := &ethpb.ValidatorStatusResponse{
 		Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,
 		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,

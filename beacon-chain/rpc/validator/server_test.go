@@ -200,7 +200,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 					Status: &ethpb.ValidatorStatusResponse{
 						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 					},
-					Index: params.BeaconConfig().FarFutureEpoch,
+					Index: nonExistentIndex,
 				},
 			},
 		},
