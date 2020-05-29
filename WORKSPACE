@@ -261,13 +261,6 @@ load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_depen
 
 buildifier_dependencies()
 
-go_repository(
-    name = "com_github_golang_mock",
-    importpath = "github.com/golang/mock",
-    sum = "h1:GV+pQPG/EUUbkh47niozDcADz6go/dUwhVzdUQHIVRw=",
-    version = "v1.4.3",
-)
-
 git_repository(
     name = "com_google_protobuf",
     commit = "4059c61f27eb1b06c4ee979546a238be792df0a4",
@@ -315,32 +308,6 @@ http_archive(
 
 # External dependencies
 
-go_repository(
-    name = "com_github_posener_complete",
-    commit = "699ede78373dfb0168f00170591b698042378437",
-    importpath = "github.com/posener/complete",
-    remote = "https://github.com/shyiko/complete",
-    vcs = "git",
-)
-
-go_repository(
-    name = "com_github_wealdtech_go_eth2_types_v2",
-    build_directives = [
-        "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
-    ],
-    importpath = "github.com/wealdtech/go-eth2-types/v2",
-    sum = "h1:2KSUzducArOynCL2prRf4vWU5GjwaPSnSN9oqNgf+dQ=",
-    version = "v2.3.1",
-)
-
-go_repository(
-    name = "com_github_ferranbt_fastssz",
-    importpath = "github.com/ferranbt/fastssz",
-    nofuzz = True,
-    sum = "h1:maoKvILdMk6CSWHanFcUdxXIZGKD9YpWIaVbUQ/4kfg=",
-    version = "v0.0.0-20200514094935-99fccaf93472",
-)
-
 http_archive(
     name = "sszgen",  # Hack because we don't want to build this binary with libfuzzer, but need it to build.
     build_file_content = """
@@ -376,3 +343,5 @@ prysm_deps()
 load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
 
 go_ssz_dependencies()
+
+# Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!

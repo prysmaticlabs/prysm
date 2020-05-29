@@ -1,6 +1,66 @@
-load("@bazel_gazelle//:deps.bzl", "go_repository")
+load("@prysm//tools/go:def.bzl", "go_repository")  # gazelle:keep
 
+# Prysm's third party / external dependencies.
+#
+##################################################################
+#
+#                    ██████████████████
+#                  ██                  ██
+#                ██  ██████████████████  ██
+#              ██  ██████████████████████  ██
+#            ██  ██████████████████████████  ██
+#          ██  ██████████████████████████████  ██
+#        ██  ██████████████████████████████████  ██
+#      ██  ██████████████████████████████████████  ██
+#      ██  ██████    ██      ████  ████    ██████  ██
+#      ██  ████  ████████  ████  ██  ██  ██  ████  ██
+#      ██  ████  ████████  ████  ██  ██  ██  ████  ██
+#      ██  ██████  ██████  ████  ██  ██    ██████  ██
+#      ██  ████████  ████  ████  ██  ██  ████████  ██
+#      ██  ████████  ████  ████  ██  ██  ████████  ██
+#      ██  ████    ██████  ██████  ████  ████████  ██
+#      ██  ██████████████████████████████████████  ██
+#        ██  ██████████████████████████████████  ██
+#          ██  ██████████████████████████████  ██
+#            ██  ██████████████████████████  ██
+#              ██  ██████████████████████  ██
+#                ██  ██████████████████  ██
+#                  ██                  ██
+#                    ██████████████████
+#
+##################################################################
+#           Make sure you have read DEPENDENCIES.md!
+##################################################################
 def prysm_deps():
+    go_repository(
+        name = "com_github_ferranbt_fastssz",
+        importpath = "github.com/ferranbt/fastssz",
+        nofuzz = True,
+        sum = "h1:maoKvILdMk6CSWHanFcUdxXIZGKD9YpWIaVbUQ/4kfg=",
+        version = "v0.0.0-20200514094935-99fccaf93472",
+    )
+    go_repository(
+        name = "com_github_prysmaticlabs_bazel_go_ethereum",
+        build_file_generation = "off",
+        importpath = "github.com/prysmaticlabs/bazel-go-ethereum",
+        replace = "github.com/ethereum/go-ethereum",
+        sum = "h1:X44ghT3epjsrDWm1PRZ/aaQQcrl4y6/jtuge1sD32HY=",
+        version = "v0.0.0-20200421124922-0beb54b2147b",
+    )
+
+    # Note: It is required to define com_github_ethereum_go_ethereum like this for some reason...
+    go_repository(
+        name = "com_github_ethereum_go_ethereum",
+        commit = "0beb54b2147b3473a4c55e5ce6f02643ce403b14",
+        importpath = "github.com/ethereum/go-ethereum",
+        # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
+        # a fork that has resolved these issues by disabling HID/USB support and
+        # some manual fixes for c imports in the crypto package. This is forked
+        # branch should be updated from time to time with the latest go-ethereum
+        # code.
+        remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
+        vcs = "git",
+    )
     go_repository(
         name = "co_honnef_go_tools",
         importpath = "honnef.co/go/tools",
@@ -864,6 +924,10 @@ def prysm_deps():
         importpath = "github.com/libp2p/go-libp2p-tls",
         sum = "h1:Ge/2CYttU7XdkPPqQ7e3TiuMFneLie1rM/UjRxPPGsI=",
         version = "v0.1.4-0.20200421131144-8a8ad624a291",
+        patch_args = ["-p1"],
+        patches = [
+            "@prysm//third_party:libp2p_tls.patch",  # See: https://github.com/libp2p/go-libp2p-tls/issues/66
+        ],
     )
     go_repository(
         name = "com_github_libp2p_go_netroute",
@@ -3039,6 +3103,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_tls",
         importpath = "github.com/libp2p/go-libp2p-tls",
+        build_file_proto_mode = "disable_global",
         patch_args = ["-p1"],
         patches = [
             "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
@@ -3048,30 +3113,24 @@ def prysm_deps():
         version = "v0.1.3",
     )
     go_repository(
-        name = "com_github_prysmaticlabs_bazel_go_ethereum",
-        importpath = "github.com/prysmaticlabs/bazel-go-ethereum",
-        sum = "h1:X44ghT3epjsrDWm1PRZ/aaQQcrl4y6/jtuge1sD32HY=",
-        version = "v0.0.0-20200421124922-0beb54b2147b",
-        replace = "github.com/ethereum/go-ethereum",
-        build_file_generation = "off",
+        name = "com_github_golang_mock",
+        importpath = "github.com/golang/mock",
+        sum = "h1:GV+pQPG/EUUbkh47niozDcADz6go/dUwhVzdUQHIVRw=",
+        version = "v1.4.3",
     )
-
-#    go_repository(
-#        name = "com_github_ethereum_go_ethereum",
-#        commit = "0beb54b2147b3473a4c55e5ce6f02643ce403b14",
-#        importpath = "github.com/ethereum/go-ethereum",
-#        # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
-#        # a fork that has resolved these issues by disabling HID/USB support and
-#        # some manual fixes for c imports in the crypto package. This is forked
-#        # branch should be updated from time to time with the latest go-ethereum
-#        # code.
-#        remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
-#        vcs = "git",
-#    )
-#    go_repository(
-#        name = "com_github_ethereum_go_ethereum",
-#        importpath = "github.com/ethereum/go-ethereum",
-#        replace = "github.com/prysmaticlabs/bazel-go-ethereum",
-#        sum = "h1:X44ghT3epjsrDWm1PRZ/aaQQcrl4y6/jtuge1sD32HY=",
-#        version = "v0.0.0-20200421124922-0beb54b2147b",
-#    )
+    go_repository(
+        name = "com_github_posener_complete",
+        commit = "699ede78373dfb0168f00170591b698042378437",
+        importpath = "github.com/posener/complete",
+        remote = "https://github.com/shyiko/complete",
+        vcs = "git",
+    )
+    go_repository(
+        name = "com_github_wealdtech_go_eth2_types_v2",
+        build_directives = [
+            "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
+        ],
+        importpath = "github.com/wealdtech/go-eth2-types/v2",
+        sum = "h1:2KSUzducArOynCL2prRf4vWU5GjwaPSnSN9oqNgf+dQ=",
+        version = "v2.3.1",
+    )
