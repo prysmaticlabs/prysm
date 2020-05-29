@@ -28,6 +28,8 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
 			ev.MetricsCheck,
+			ev.ProposeVoluntaryExit,
+			ev.ValidatorHasExited,
 		},
 	}
 	if err := e2eParams.Init(2); err != nil {
