@@ -32,19 +32,21 @@ func TestIntersectionUint64(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
 		setB []uint64
+		setC []uint64
 		out  []uint64
 	}{
-		{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
-		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
-		{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
-		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
-		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
-		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
-		{[]uint64{}, []uint64{}, []uint64{}},
-		{[]uint64{1}, []uint64{1}, []uint64{1}},
+		{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}, []uint64{3}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{5}, []uint64{5}},
+		{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{3, 2, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{}, []uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{}, []uint64{}},
 	}
 	for _, tt := range testCases {
-		result := sliceutil.IntersectionUint64(tt.setA, tt.setB)
+		result := sliceutil.IntersectionUint64(tt.setA, tt.setB, tt.setC)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
