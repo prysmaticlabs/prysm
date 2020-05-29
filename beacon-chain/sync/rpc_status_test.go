@@ -296,7 +296,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		}
 	})
 
-	pcl = protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
+	pcl = "/eth2/beacon_chain/req/ping/1/ssz"
 	var wg2 sync.WaitGroup
 	wg2.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
