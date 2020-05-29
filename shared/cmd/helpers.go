@@ -53,7 +53,7 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "could not read account password")
 	}
-	text := string(bytePassword)
+	text := bytePassword
 	passphrase = strings.Replace(text, "\n", "", -1)
 	if confirmPassword {
 		log.Info("Please re-enter your password:")
@@ -61,7 +61,7 @@ func EnterPassword(confirmPassword bool, pr PasswordReader) (string, error) {
 		if err != nil {
 			return "", errors.Wrap(err, "could not read account password")
 		}
-		text := string(bytePassword)
+		text := bytePassword
 		confirmedPass := strings.Replace(text, "\n", "", -1)
 		if passphrase != confirmedPass {
 			log.Info("Passwords did not match, please try again")
