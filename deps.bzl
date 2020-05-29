@@ -49,17 +49,21 @@ def prysm_deps():
     )
 
     # Note: It is required to define com_github_ethereum_go_ethereum like this for some reason...
+    # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        commit = "0beb54b2147b3473a4c55e5ce6f02643ce403b14",
-        importpath = "github.com/ethereum/go-ethereum",
+        commit = "0beb54b2147b3473a4c55e5ce6f02643ce403b14",  # keep
+        importpath = "github.com/ethereum/go-ethereum",  # keep
         # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
         # a fork that has resolved these issues by disabling HID/USB support and
         # some manual fixes for c imports in the crypto package. This is forked
         # branch should be updated from time to time with the latest go-ethereum
         # code.
-        remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
-        vcs = "git",
+        remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",  # keep
+        replace = None,  # keep
+        sum = None,  # keep
+        vcs = "git",  # keep
+        version = None,  # keep
     )
     go_repository(
         name = "co_honnef_go_tools",
@@ -2738,10 +2742,10 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",
-        importpath = "github.com/prysmaticlabs/ethereumapis",
-        sum = "h1:AvUpoH1sezZmue9NKyHxk7HpD6ajzLVh9m6YCyFwgSw=",
-        version = "v0.0.0-20200528232825-cf963636d24e",
         build_file_generation = "off",
+        importpath = "github.com/prysmaticlabs/ethereumapis",
+        sum = "h1:WYx4msKthEtN21Vr/T1RXaCLQHnTOuP5ccAgcygBODc=",
+        version = "v0.0.0-20200529200550-337049017365",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
