@@ -32,7 +32,7 @@ import (
 // pubKey is a helper to generate a well-formed public key.
 func pubKey(i uint64) []byte {
 	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.LittleEndian.PutUint64(pubKey, uint64(i))
+	binary.LittleEndian.PutUint64(pubKey, i)
 	return pubKey
 }
 func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
