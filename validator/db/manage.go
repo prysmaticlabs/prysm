@@ -116,10 +116,9 @@ func createTargetStore(
 		for _, pubKeyProposals := range allProposals {
 			pubKeyBucket, err := proposalsBucket.CreateBucket(pubKeyProposals.PubKey)
 			if err != nil {
-				return errors.Wrapf(
-					err,
-					"Could not create proposals bucket for public key %v",
-					hex.EncodeToString(pubKeyProposals.PubKey)[:12])
+				return errors.Wrapf(err,
+					"Could not create proposals bucket for public key %x",
+					pubKeyProposals.PubKey[:12])
 			}
 			for _, epochProposals := range pubKeyProposals.Proposals {
 				if err := pubKeyBucket.Put(epochProposals.Epoch, epochProposals.Proposals); err != nil {
@@ -132,8 +131,8 @@ func createTargetStore(
 			if err := attestationsBucket.Put(attestations.PubKey, attestations.Attestations); err != nil {
 				return errors.Wrapf(
 					err,
-					"Could not add public key attestations for public key %v",
-					hex.EncodeToString(attestations.PubKey)[:12])
+					"Could not add public key attestations for public key %x",
+					attestations.PubKey[:12])
 			}
 		}
 		return nil
