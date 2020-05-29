@@ -54,7 +54,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 		slot := strconv.Itoa(int(nodes[i].Slot))
 		weight := strconv.Itoa(int(nodes[i].Weight / 1e9)) // Convert unit Gwei to unit ETH.
 		votes := strconv.Itoa(int(nodes[i].Weight / 1e9 / avgBalance))
-		index := strconv.Itoa(int(i))
+		index := strconv.Itoa(i)
 		g := nodes[i].Graffiti[:]
 		graffiti := hex.EncodeToString(g[:8])
 		label := "slot: " + slot + "\n votes: " + votes + "\n weight: " + weight + "\n graffiti: " + graffiti
