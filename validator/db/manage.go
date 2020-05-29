@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"encoding/hex"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
