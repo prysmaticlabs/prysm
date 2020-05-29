@@ -67,6 +67,9 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // and stores an open connection db object as a property of the Store struct.
 func NewKVStoreWithPublicKeyBuckets(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	kv, err := NewKVStore(dirPath)
+	if err != nil {
+		return nil, err
+	}
 	// Initialize the required public keys into the DB to ensure they're not empty.
 	if err := kv.initializeSubBuckets(pubKeys); err != nil {
 		return nil, err
