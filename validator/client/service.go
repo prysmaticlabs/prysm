@@ -114,7 +114,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	valDB, err := db.NewKVStoreWithPublicKeyBuckets(v.dataDir, pubkeys)
+	valDB, err := db.NewKVStore(v.dataDir, pubkeys)
 	if err != nil {
 		log.Errorf("Could not initialize db: %v", err)
 		return

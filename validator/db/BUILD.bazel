@@ -31,6 +31,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "attestation_history_test.go",
+        "manage_test.go",
         "proposal_history_test.go",
         "setup_db_test.go",
     ],
@@ -39,6 +40,8 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
