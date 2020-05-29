@@ -8,6 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
+	secio "github.com/libp2p/go-libp2p-secio"
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -33,7 +34,9 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	if featureconfig.Get().EnableNoise {
 		// Enable NOISE for the beacon node
-		options = append(options, libp2p.Security(noise.ID, noise.New))
+		options = append(options, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
+	} else {
+		options = append(options, libp2p.Security(secio.ID, secio.New))
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
