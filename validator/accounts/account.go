@@ -222,12 +222,12 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 }
 
 // Merge merges data from validator databases in sourceDirectories into a new store, which is created in targetDirectory.
-func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) error {
+func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) (err error) {
 	var sourceStores []*db.Store
 	defer func() {
 		for _, store := range sourceStores {
-			if err := store.Close(); err != nil {
-				err = errors.Wrapf(err, "Failed to close the database in %s", store.DatabasePath())
+			if deferErr := store.Close(); deferErr != nil {
+				err = errors.Wrapf(deferErr, "Failed to close the database in %s", store.DatabasePath())
 			}
 		}
 	}()
@@ -247,8 +247,7 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 		return errors.New("no validator databases found in source directories")
 	}
 
-	err := db.Merge(ctx, sourceStores, targetDirectory)
-	if err != nil {
+	if err := db.Merge(ctx, sourceStores, targetDirectory); err != nil {
 		return errors.Wrapf(err, "Failed to merge validator databases into %s", targetDirectory)
 	}
 
