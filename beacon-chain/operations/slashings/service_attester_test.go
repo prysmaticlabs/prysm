@@ -105,31 +105,31 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exitedVal.ExitEpoch = 0
-	futureExitedVal, err := beaconState.ValidatorAtIndex(uint64(4))
+	exitedVal.WithdrawableEpoch = 0
+	if err := beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal); err != nil {
+		t.Fatal(err)
+	}
+	futureWithdrawVal, err := beaconState.ValidatorAtIndex(uint64(4))
 	if err != nil {
 		t.Fatal(err)
 	}
-	futureExitedVal.ExitEpoch = 17
+	futureWithdrawVal.WithdrawableEpoch = 17
+	if err := beaconState.UpdateValidatorAtIndex(uint64(4), futureWithdrawVal); err != nil {
+		t.Fatal(err)
+	}
 	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
 	if err != nil {
 		t.Fatal(err)
 	}
 	slashedVal.Slashed = true
+	if err := beaconState.UpdateValidatorAtIndex(uint64(5), slashedVal); err != nil {
+		t.Fatal(err)
+	}
 	slashedVal2, err := beaconState.ValidatorAtIndex(uint64(21))
 	if err != nil {
 		t.Fatal(err)
 	}
 	slashedVal2.Slashed = true
-	if err := beaconState.UpdateValidatorAtIndex(uint64(2), exitedVal); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.UpdateValidatorAtIndex(uint64(4), futureExitedVal); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconState.UpdateValidatorAtIndex(uint64(5), slashedVal); err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconState.UpdateValidatorAtIndex(uint64(21), slashedVal2); err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			want: pendingSlashings[1:2],
 		},
 		{
-			name: "Slashing for already slashed validator",
+			name: "Slashing for already exit validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
 				included: make(map[uint64]bool),
@@ -202,7 +202,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			want: []*PendingAttesterSlashing{},
 		},
 		{
-			name: "Slashing for exited validator",
+			name: "Slashing for withdrawable validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
 				included: make(map[uint64]bool),
@@ -214,7 +214,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			want: []*PendingAttesterSlashing{},
 		},
 		{
-			name: "Slashing for futuristic exited validator",
+			name: "Slashing for slashed validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
 				included: make(map[uint64]bool),
