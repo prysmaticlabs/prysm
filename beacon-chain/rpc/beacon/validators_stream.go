@@ -515,7 +515,7 @@ func (is *infostream) depositQueueTimestamp(eth1BlockNumber *big.Int) (uint64, e
 	}
 	is.eth1BlocktimesMutex.Unlock()
 
-	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
+	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimestamp), 0).Add(followTime)
 
 	period := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().EpochsPerEth1VotingPeriod
