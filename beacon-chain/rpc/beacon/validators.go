@@ -323,7 +323,7 @@ func (bs *Server) ListValidators(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 
 	switch q := req.QueryFilter.(type) {
@@ -333,6 +333,18 @@ func (bs *Server) ListValidators(
 		}
 	case *ethpb.ListValidatorsRequest_Epoch:
 		requestedEpoch = q.Epoch
+	}
+
+	if helpers.StartSlot(requestedEpoch) > headState.Slot() {
+		headState = headState.Copy()
+		headState, err = state.ProcessSlots(ctx, headState, helpers.StartSlot(requestedEpoch))
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not process slots up to %d",
+				helpers.StartSlot(requestedEpoch),
+			)
+		}
 	}
 
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
