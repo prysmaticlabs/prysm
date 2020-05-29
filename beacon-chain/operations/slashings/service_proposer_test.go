@@ -54,12 +54,12 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exitedVal.ExitEpoch = 0
+	exitedVal.WithdrawableEpoch = 0
 	futureExitedVal, err := beaconState.ValidatorAtIndex(uint64(4))
 	if err != nil {
 		t.Fatal(err)
 	}
-	futureExitedVal.ExitEpoch = 17
+	futureExitedVal.WithdrawableEpoch = 17
 	slashedVal, err := beaconState.ValidatorAtIndex(uint64(5))
 	if err != nil {
 		t.Fatal(err)
@@ -111,7 +111,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				pending:  []*ethpb.ProposerSlashing{},
 				included: make(map[uint64]bool),
 				wantErr:  true,
-				err:      "cannot be slashed",
+				err:      "is not slashable",
 			},
 			args: args{
 				slashings: slashings[2:3],
@@ -119,7 +119,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			want: []*ethpb.ProposerSlashing{},
 		},
 		{
-			name: "Slashing for future exited validator",
+			name: "Slashing for exiting validator",
 			fields: fields{
 				pending:  []*ethpb.ProposerSlashing{},
 				included: make(map[uint64]bool),
