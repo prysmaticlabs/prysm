@@ -10,13 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_AntiFlake_MinimalConfig_2(t *testing.T) {
+func TestEndToEnd_Genesis_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
-	params.UseMinimalConfig()
+	params.UseE2EConfig()
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=25"},
-		ValidatorFlags: []string{"--minimal-config"},
+		BeaconFlags:    []string{},
+		ValidatorFlags: []string{},
 		EpochsToRun:    4,
 		TestSync:       false,
 		TestSlasher:    false,

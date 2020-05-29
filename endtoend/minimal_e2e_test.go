@@ -12,12 +12,12 @@ import (
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
-	params.UseMinimalConfig()
+	params.UseE2EConfig()
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=25"},
-		ValidatorFlags: []string{"--minimal-config"},
-		EpochsToRun:    6,
+		BeaconFlags:    []string{},
+		ValidatorFlags: []string{},
+		EpochsToRun:    8,
 		TestSync:       true,
 		TestSlasher:    true,
 		Evaluators: []types.Evaluator{
@@ -27,6 +27,8 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
 			ev.MetricsCheck,
+			ev.ProposeVoluntaryExit,
+			ev.ValidatorHasExited,
 		},
 	}
 	if err := e2eParams.Init(2); err != nil {

@@ -245,8 +245,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 
 // this function checks a few items about a validator before proceeding with inserting
 // a proposer/attester slashing into the pool. First, it checks if the validator
-// has been recently included in the pool, then it checks if the validator has exited,
-// finally, it ensures the validator has not yet been slashed.
+// has been recently included in the pool, then it checks if the validator is slashable.
 func (p *Pool) validatorSlashingPreconditionCheck(
 	state *beaconstate.BeaconState,
 	valIdx uint64,
@@ -259,12 +258,8 @@ func (p *Pool) validatorSlashingPreconditionCheck(
 	if err != nil {
 		return false, err
 	}
-	// Checking if the validator has already exited.
-	if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
-		return false, nil
-	}
-	// Checking if the validator has already been slashed.
-	if validator.Slashed() {
+	// Checking if the validator is slashable.
+	if !helpers.IsSlashableValidatorUsingTrie(validator, helpers.CurrentEpoch(state)) {
 		return false, nil
 	}
 	return true, nil

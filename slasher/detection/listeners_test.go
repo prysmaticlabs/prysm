@@ -55,7 +55,6 @@ func TestService_DetectIncomingBlocks(t *testing.T) {
 	blocksChan <- blk
 	cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Running detection on block")
 	testutil.AssertLogsContain(t, hook, "Context canceled")
 }
 
