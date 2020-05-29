@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -40,17 +41,25 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *ptypes.Empty) (*ethpb.Sy
 	}, nil
 }
 
-// GetGenesis fetches genesis chain information of Ethereum 2.0.
+// GetGenesis fetches genesis chain information of Ethereum 2.0. Returns unix timestamp 0
+// if a genesis time has yet to be determined.
 func (ns *Server) GetGenesis(ctx context.Context, _ *ptypes.Empty) (*ethpb.Genesis, error) {
 	contractAddr, err := ns.BeaconDB.DepositContractAddress(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve contract address from db: %v", err)
 	}
 	genesisTime := ns.GenesisTimeFetcher.GenesisTime()
-	gt, err := ptypes.TimestampProto(genesisTime)
+	var defaultGenesisTime time.Time
+	var gt *ptypes.Timestamp
+	if genesisTime == defaultGenesisTime {
+		gt, err = ptypes.TimestampProto(time.Unix(0, 0))
+	} else {
+		gt, err = ptypes.TimestampProto(genesisTime)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert genesis time to proto: %v", err)
 	}
+
 	genValRoot := ns.GenesisFetcher.GenesisValidatorRoot()
 	return &ethpb.Genesis{
 		GenesisTime:            gt,
