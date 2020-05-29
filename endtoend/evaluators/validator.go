@@ -69,9 +69,6 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
 			effBalanceLowCount++
 		}
-		if item.Validator.ActivationEpoch != 0 {
-			activeEpochWrongCount++
-		}
 		if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			exitEpochWrongCount++
 		}
