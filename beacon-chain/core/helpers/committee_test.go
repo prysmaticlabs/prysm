@@ -203,7 +203,7 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = CommitteeAssignments(state, epoch)
+	_, _, err = CommitteeAssignments(state, epoch+1)
 	if err == nil {
 		t.Fatal("Expected error, received nil")
 	}
