@@ -58,6 +58,7 @@ type Flags struct {
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
+	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -189,17 +190,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.Bool(enableFieldTrie.Name) {
-		log.Warn("Enabling state field trie")
-		cfg.EnableFieldTrie = true
+	cfg.EnableFieldTrie = true
+	if ctx.Bool(disableFieldTrie.Name) {
+		log.Warn("Disabling state field trie")
+		cfg.EnableFieldTrie = false
 	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
-	}
-	if ctx.Bool(enableStateRefCopy.Name) {
-		log.Warn("Enabling state reference copy")
-		cfg.EnableStateRefCopy = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
@@ -212,6 +210,15 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
 		log.Warn("Enabling weighted round robin in initial syncing")
 		cfg.EnableInitSyncWeightedRoundRobin = true
+	}
+	cfg.EnableStateRefCopy = true
+	if ctx.Bool(disableStateRefCopy.Name) {
+		log.Warn("Disabling state reference copy")
+		cfg.EnableStateRefCopy = false
+	}
+	if ctx.Bool(reduceAttesterStateCopy.Name) {
+		log.Warn("Enabling feature that reduces attester state copy")
+		cfg.ReduceAttesterStateCopy = true
 	}
 	Init(cfg)
 }
