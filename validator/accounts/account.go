@@ -267,8 +267,8 @@ func Split(ctx context.Context, sourceDirectory string, targetDirectory string) 
 	}
 	defer func() {
 		if sourceStore != nil {
-			if err := sourceStore.Close(); err != nil {
-				err = errors.Wrap(err, "Failed to close the source database")
+			if deferErr := sourceStore.Close(); deferErr != nil {
+				err = errors.Wrap(deferErr, "Failed to close the source database")
 			}
 		}
 	}()

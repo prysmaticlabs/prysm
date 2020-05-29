@@ -198,8 +198,8 @@ func createSplitTargetStores(
 	var storesToClose []*Store
 	defer(func(){
 		for _, store := range storesToClose {
-			if err := store.Close(); err != nil {
-				err = errors.Wrap(err, "Closing store failed")
+			if deferErr := store.Close(); deferErr != nil {
+				err = errors.Wrap(deferErr, "Closing store failed")
 			}
 		}
 	})()
@@ -207,7 +207,7 @@ func createSplitTargetStores(
 	for _, pubKeyProposals := range allProposals {
 		dirName := hex.EncodeToString(pubKeyProposals.PubKey)[:12]
 		path := filepath.Join(targetDirectory, dirName)
-		newStore, err := NewKVStore(path)
+		newStore, err := NewKVStore(path, [][48]byte{})
 		if err != nil {
 			return errors.Wrapf(err, "Could not create a validator database in %s", path)
 		}
@@ -217,7 +217,10 @@ func createSplitTargetStores(
 			proposalsBucket := tx.Bucket(historicProposalsBucket)
 			var proposalsPubKeyBucket, err = proposalsBucket.CreateBucket(pubKeyProposals.PubKey)
 			if err != nil {
-				return errors.Wrapf(err, "Could not create proposals bucket for public key %v", pubKeyProposals.PubKey)
+				return errors.Wrapf(
+					err,
+					"Could not create proposals bucket for public key %x",
+					pubKeyProposals.PubKey[:12])
 			}
 			for _, epochProposals := range pubKeyProposals.Proposals {
 				if err := proposalsPubKeyBucket.Put(epochProposals.Epoch, epochProposals.Proposals); err != nil {
@@ -229,7 +232,10 @@ func createSplitTargetStores(
 			for _, pubKeyAttestations := range allAttestations {
 				if string(pubKeyAttestations.PubKey) == string(pubKeyProposals.PubKey) {
 					if err := attestationsBucket.Put(pubKeyAttestations.PubKey, pubKeyAttestations.Attestations); err != nil {
-						return errors.Wrapf(err, "Could not add public key attestations for public key %v", pubKeyAttestations.PubKey)
+						return errors.Wrapf(
+							err,
+							"Could not add public key attestations for public key %x",
+							pubKeyAttestations.PubKey[:12])
 					}
 					break
 				}
@@ -253,7 +259,7 @@ func createSplitTargetStores(
 		if !hasMatchingProposals{
 			dirName := hex.EncodeToString(pubKeyAttestations.PubKey)[:12]
 			path := filepath.Join(targetDirectory, dirName)
-			newStore, err := NewKVStore(path)
+			newStore, err := NewKVStore(path, [][48]byte{})
 			if err != nil {
 				return errors.Wrapf(err, "Could not create a validator database in %s", path)
 			}
