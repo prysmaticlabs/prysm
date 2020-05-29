@@ -976,18 +976,18 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status:               ethpb.ValidatorStatus_DEPOSITED,
 			DepositInclusionSlot: 53,
 			ActivationEpoch:      18446744073709551615,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_DEPOSITED,
 		},
 	}
@@ -1066,16 +1066,16 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_DEPOSITED,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_SLASHING,
 		},
 	}
