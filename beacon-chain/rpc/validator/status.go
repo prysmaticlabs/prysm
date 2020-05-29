@@ -130,16 +130,16 @@ func (vs *Server) validatorStatus(
 	ctx, span := trace.StartSpan(ctx, "validatorServer.validatorStatus")
 	defer span.End()
 
-	// Using farFutureEpoch as the default value for index, in case the validators index cannot be determined.
-	farFuture := params.BeaconConfig().FarFutureEpoch
+	// Using ^0 as the default value for index, in case the validators index cannot be determined.
+	nonExistentIndex := ^uint64(0)
 	resp := &ethpb.ValidatorStatusResponse{
 		Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,
-		ActivationEpoch: farFuture,
+		ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 	}
 	vStatus, idx, err := retrieveStatusForPubKey(headState, pubKey)
 	if err != nil && err != errPubkeyDoesNotExist {
 		traceutil.AnnotateError(span, err)
-		return resp, farFuture
+		return resp, nonExistentIndex
 	}
 	resp.Status = vStatus
 	if err != errPubkeyDoesNotExist {
@@ -157,11 +157,11 @@ func (vs *Server) validatorStatus(
 		// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
 		if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
-			return resp, farFuture
+			return resp, nonExistentIndex
 		}
 		_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 		if eth1BlockNumBigInt == nil { // No deposit found in ETH1.
-			return resp, farFuture
+			return resp, nonExistentIndex
 		}
 
 		// Mark a validator as DEPOSITED if their deposit is visible.
@@ -171,10 +171,10 @@ func (vs *Server) validatorStatus(
 
 		depositBlockSlot, err := vs.depositBlockSlot(ctx, headState, eth1BlockNumBigInt)
 		if err != nil {
-			return resp, farFuture
+			return resp, nonExistentIndex
 		}
 		resp.DepositInclusionSlot = depositBlockSlot
-		return resp, farFuture
+		return resp, nonExistentIndex
 	// Deposited and Pending mean the validator has been put into the state.
 	case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING:
 		var lastActivatedValidatorIdx uint64
