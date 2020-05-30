@@ -15,7 +15,8 @@ def go_library(name, **kwargs):
     kwargs["gc_goopts"] = gc_goopts
     _go_library(name = name, **kwargs)
 
-def _maybe(repo_rule, name, **kwargs):
+# Maybe download a repository rule, if it doesn't exist already.
+def maybe(repo_rule, name, **kwargs):
     if name not in native.existing_rules():
         repo_rule(name = name, **kwargs)
 
@@ -26,7 +27,7 @@ def go_repository(name, **kwargs):
     # part of the final binary.
     if "nofuzz" in kwargs:
         kwargs.pop("nofuzz", None)
-        return _maybe(_go_repository, name, **kwargs)
+        return maybe(_go_repository, name, **kwargs)
 
     directives = []
     if "build_directives" in kwargs:
@@ -36,4 +37,4 @@ def go_repository(name, **kwargs):
         "gazelle:map_kind go_library go_library @prysm//tools/go:def.bzl",
     ]
     kwargs["build_directives"] = directives
-    _maybe(_go_repository, name, **kwargs)
+    maybe(_go_repository, name, **kwargs)

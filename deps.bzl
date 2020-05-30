@@ -1,4 +1,5 @@
-load("@prysm//tools/go:def.bzl", "go_repository")  # gazelle:keep
+load("@prysm//tools/go:def.bzl", "go_repository", "maybe")  # gazelle:keep
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # Prysm's third party / external dependencies.
 #
@@ -32,6 +33,30 @@ load("@prysm//tools/go:def.bzl", "go_repository")  # gazelle:keep
 #           Make sure you have read DEPENDENCIES.md!
 ##################################################################
 def prysm_deps():
+    # Note: go_repository is already wrapped with maybe!
+
+    # Override default import in rules_go with special patch until
+    # https://github.com/gogo/protobuf/pull/582 is merged.
+    maybe(
+        git_repository,
+        name = "com_github_gogo_protobuf",
+        commit = "5628607bb4c51c3157aacc3a50f0ab707582b805",
+        patch_args = ["-p1"],
+        patches = [
+            "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
+            "//third_party:com_github_gogo_protobuf-equal.patch",
+        ],
+        remote = "https://github.com/gogo/protobuf",
+        shallow_since = "1571033717 +0200",
+        # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
+    )
+    maybe(
+        git_repository,
+        name = "graknlabs_bazel_distribution",
+        commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
+        remote = "https://github.com/graknlabs/bazel-distribution",
+        shallow_since = "1569509514 +0300",
+    )
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
@@ -3120,7 +3145,6 @@ def prysm_deps():
         build_file_proto_mode = "disable_global",
         patch_args = ["-p1"],
         patches = [
-            "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
             "@prysm//third_party:libp2p_tls.patch",
         ],
         sum = "h1:twKMhMu44jQO+HgQK9X8NHO5HkeJu2QbhLzLJpa8oNM=",

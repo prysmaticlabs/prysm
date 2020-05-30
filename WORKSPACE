@@ -104,21 +104,6 @@ git_repository(
     shallow_since = "1569509514 +0300",
 )
 
-# Override default import in rules_go with special patch until
-# https://github.com/gogo/protobuf/pull/582 is merged.
-git_repository(
-    name = "com_github_gogo_protobuf",
-    commit = "5628607bb4c51c3157aacc3a50f0ab707582b805",
-    patch_args = ["-p1"],
-    patches = [
-        "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
-        "//third_party:com_github_gogo_protobuf-equal.patch",
-    ],
-    remote = "https://github.com/gogo/protobuf",
-    shallow_since = "1571033717 +0200",
-    # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
-)
-
 load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
     container_repositories = "repositories",
@@ -145,10 +130,6 @@ container_pull(
     repository = "fuzzit-public/stretch-llvm8",
 )
 
-load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
-
-bls_dependencies()
-
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
@@ -156,7 +137,6 @@ go_rules_dependencies()
 go_register_toolchains(nogo = "@//:nogo")
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-load("@prysm//tools/go:def.bzl", "go_repository")
 
 gazelle_dependencies()
 
@@ -343,5 +323,9 @@ prysm_deps()
 load("@com_github_prysmaticlabs_go_ssz//:deps.bzl", "go_ssz_dependencies")
 
 go_ssz_dependencies()
+
+load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
+
+bls_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
