@@ -756,12 +756,14 @@ def prysm_deps():
         importpath = "github.com/ipfs/go-ipns",
         sum = "h1:oq4ErrV4hNQ2Eim257RTYRgfOSV/s8BDaf9iIl4NwFs=",
         version = "v0.0.2",
+        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_ipfs_go_log_v2",
         importpath = "github.com/ipfs/go-log/v2",
         sum = "h1:G4TtqN+V9y9HY9TA6BwbCVyyBZ2B9MbCjR2MtGx8FR0=",
         version = "v2.1.1",
+        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_jbenet_go_cienv",
@@ -2412,6 +2414,7 @@ def prysm_deps():
         importpath = "github.com/libp2p/go-libp2p-noise",
         sum = "h1:vqYQWvnIcHpIoWJKC7Al4D6Hgj0H012TuXRhPwSMGpQ=",
         version = "v0.1.1",
+        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_peer",

@@ -2,16 +2,15 @@
 
 # Script to copy ssz.go files from bazel build folder to appropriate location.
 # Bazel builds to bazel-bin/... folder, script copies them back to original folder where target is.
-# This script is limited to the proto directory for now.
 
-bazel query 'kind(ssz_gen_marshal, //proto/...)' | xargs bazel build
+bazel query 'kind(ssz_gen_marshal, //proto/...) union kind(ssz_gen_marshal, //fuzz/...)' | xargs bazel build
 
 # Get locations of proto ssz.go files.
 
 file_list=()
 while IFS= read -d $'\0' -r file ; do
     file_list=("${file_list[@]}" "$file")
-done < <(find -L $(bazel info bazel-bin)/proto -type f -regextype sed -regex ".*ssz\.go$" -print0)
+done < <(find -L $(bazel info bazel-bin)/ -type f -regextype sed -regex ".*ssz\.go$" -print0)
 
 arraylength=${#file_list[@]}
 searchstring="/bin/"
