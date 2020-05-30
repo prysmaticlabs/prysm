@@ -34,22 +34,6 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 ##################################################################
 def prysm_deps():
     # Note: go_repository is already wrapped with maybe!
-
-    # Override default import in rules_go with special patch until
-    # https://github.com/gogo/protobuf/pull/582 is merged.
-    maybe(
-        git_repository,
-        name = "com_github_gogo_protobuf",
-        commit = "5628607bb4c51c3157aacc3a50f0ab707582b805",
-        patch_args = ["-p1"],
-        patches = [
-            "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
-            "//third_party:com_github_gogo_protobuf-equal.patch",
-        ],
-        remote = "https://github.com/gogo/protobuf",
-        shallow_since = "1571033717 +0200",
-        # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
-    )
     maybe(
         git_repository,
         name = "graknlabs_bazel_distribution",
