@@ -331,8 +331,8 @@ def prysm_deps():
         importpath = "github.com/confluentinc/confluent-kafka-go",
         patch_args = ["-p1"],
         patches = ["@prysm//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
-        sum = "h1:HIW7Nkm8IeKRotC34mGY06DwQMf9Mp9PZMyqDxid2wI=",
-        version = "v1.1.0",
+        sum = "h1:13EK9RTujF7lVkvHQ5Hbu6bM+Yfrq8L0MkJNnjHSd4Q=",
+        version = "v1.4.2",
     )
     go_repository(
         name = "com_github_coreos_etcd",
@@ -762,17 +762,17 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_ipfs_go_ipns",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/ipfs/go-ipns",
         sum = "h1:oq4ErrV4hNQ2Eim257RTYRgfOSV/s8BDaf9iIl4NwFs=",
         version = "v0.0.2",
-        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_ipfs_go_log_v2",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/ipfs/go-log/v2",
         sum = "h1:G4TtqN+V9y9HY9TA6BwbCVyyBZ2B9MbCjR2MtGx8FR0=",
         version = "v2.1.1",
-        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_jbenet_go_cienv",
@@ -2234,10 +2234,10 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_ipfs_go_log",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/ipfs/go-log",
         sum = "h1:6nLQdX4W8P9yZZFH7mO+X/PzjN8Laozm/lMJ6esdgzY=",
         version = "v1.0.4",
-        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_jackpal_gateway",
@@ -2421,10 +2421,10 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_noise",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-noise",
         sum = "h1:vqYQWvnIcHpIoWJKC7Al4D6Hgj0H012TuXRhPwSMGpQ=",
         version = "v0.1.1",
-        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_peer",
@@ -3121,8 +3121,8 @@ def prysm_deps():
         importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1",
         patch_args = ["-p1"],
         patches = ["@prysm//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
-        sum = "h1:roy97m/3wj9/o8OuU3sZ5wildk30ep38k2x8nhNbKrI=",
-        version = "v1.1.0",
+        sum = "h1:JabkIV98VYFqYKHHzXtgGMFuRgFBNTNzBytbGByzrJI=",
+        version = "v1.4.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_tls",

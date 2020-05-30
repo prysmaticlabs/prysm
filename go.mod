@@ -13,7 +13,7 @@ require (
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/cloudflare/roughtime v0.0.0-20200205191924-a69ef1dab727
-	github.com/confluentinc/confluent-kafka-go v1.1.0 // indirect
+	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/d4l3k/messagediff v1.2.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.2
@@ -113,7 +113,7 @@ require (
 	google.golang.org/genproto v0.0.0-20200528191852-705c0b31589b
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.24.0
-	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.1.0
+	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200316214253-d7b0ff38cac9 // indirect
