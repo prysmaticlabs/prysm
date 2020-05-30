@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -56,11 +55,6 @@ var (
 // time to wait before trying to reconnect with the eth1 node.
 var backOffPeriod = 6 * time.Second
 
-// Reader defines a struct that can fetch latest header events from a web3 endpoint.
-type Reader interface {
-	SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error)
-}
-
 // ChainStartFetcher retrieves information pertaining to the chain start event
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
@@ -94,7 +88,6 @@ type Chain interface {
 // Client defines a struct that combines all relevant ETH1.0 mainchain interactions required
 // by the beacon chain node.
 type Client interface {
-	Reader
 	RPCBlockFetcher
 	bind.ContractFilterer
 	bind.ContractCaller
@@ -131,8 +124,6 @@ type Service struct {
 	headerChan              chan *gethTypes.Header
 	httpEndpoint            string
 	stateNotifier           statefeed.Notifier
-	reader                  Reader
-	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
 	blockFetcher            RPCBlockFetcher
 	rpcClient               RPCClient
@@ -352,9 +343,6 @@ func (s *Service) initializeConnection(
 	rpcClient *gethRPC.Client,
 	contractCaller *contracts.DepositContractCaller,
 ) {
-	// TODO: remove reader and logger.
-	// s.reader = powClient
-	// s.logger = powClient
 	s.client = httpClient
 	s.httpLogger = httpClient
 	s.blockFetcher = httpClient
@@ -433,9 +421,9 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	return nil
 }
 
-// processSubscribedHeaders adds a newly observed eth1 block to the block cache and
+// processBlockHeader adds a newly observed eth1 block to the block cache and
 // updates the latest blockHeight, blockHash, and blockTime properties of the service.
-func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
+func (s *Service) processBlockHeader(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
 	s.latestEth1Data.BlockHeight = header.Number.Uint64()
@@ -539,10 +527,8 @@ func (s *Service) handleDelayTicker() {
 	}
 }
 
-func (s *Service) initPOWService() ethereum.Subscription {
-	// initialize a nil subscription
-	// headSub := ethereum.Subscription(nil)
-	// reconnect to eth1 node in case of any failure
+func (s *Service) initPOWService() {
+	// Reconnect to eth1 node in case of any failure
 	retryETH1Node := func(err error) {
 		s.runError = err
 		s.connectedETH1 = false
@@ -551,11 +537,11 @@ func (s *Service) initPOWService() ethereum.Subscription {
 		s.runError = nil
 	}
 
-	// run in a select loop to retry in the event of any failures.
+	// Run in a select loop to retry in the event of any failures.
 	for {
 		select {
 		case <-s.ctx.Done():
-			return nil
+			return
 		default:
 			err := s.initDataFromContract()
 			if err != nil {
@@ -563,19 +549,6 @@ func (s *Service) initPOWService() ethereum.Subscription {
 				retryETH1Node(err)
 				continue
 			}
-
-			// headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
-			// if err != nil {
-			// 	log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
-			// 	retryETH1Node(err)
-			// 	continue
-			// }
-
-			// if headSub == nil {
-			// 	log.Errorf("Nil head subscription received: %v", err)
-			// 	retryETH1Node(err)
-			// 	continue
-			// }
 
 			header, err := s.blockFetcher.HeaderByNumber(context.Background(), nil)
 			if err != nil {
@@ -592,27 +565,20 @@ func (s *Service) initPOWService() ethereum.Subscription {
 				retryETH1Node(err)
 				continue
 			}
-			// return headSub
-			return nil
+			return
 		}
 	}
 }
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (s *Service) run(done <-chan struct{}) {
-	var err error
 	s.isRunning = true
 	s.runError = nil
 
-	headSub := s.initPOWService()
-	_ = headSub
-	// if headSub == nil {
-	// 	log.Error("Received a nil head subscription, exiting service")
-	// 	return
-	// }
+	s.initPOWService()
 
 	ticker := time.NewTicker(1 * time.Second)
-	// defer headSub.Unsubscribe()
+	headTicker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -623,21 +589,13 @@ func (s *Service) run(done <-chan struct{}) {
 			s.connectedETH1 = false
 			log.Debug("Context closed, exiting goroutine")
 			return
-		// case s.runError = <-headSub.Err():
-		// 	log.WithError(s.runError).Warn("Subscription to new head notifier failed")
-		// 	s.connectedETH1 = false
-		// 	s.waitForConnection()
-		// 	headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
-		// 	if err != nil {
-		// 		log.WithError(err).Error("Unable to re-subscribe to incoming ETH1.0 chain headers")
-		// 		s.runError = err
-		// 		return
-		// 	}
-		// 	s.runError = nil
-		// case header, ok := <-s.headerChan:
-		// 	if ok {
-		// 		s.processSubscribedHeaders(header)
-		// 	}
+		case <-headTicker.C:
+			head, err := s.blockFetcher.HeaderByNumber(s.ctx, nil)
+			if err != nil {
+				log.WithError(err).Debug("Could not fetch latest eth1 header")
+				continue
+			}
+			s.processBlockHeader(head)
 		case <-ticker.C:
 			s.handleDelayTicker()
 		}

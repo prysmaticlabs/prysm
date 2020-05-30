@@ -16,12 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-var endpoint = "ws://127.0.0.1"
+var endpoint = "http://127.0.0.1"
 
 func setDefaultMocks(service *Service) *Service {
-	service.reader = &goodReader{}
 	service.blockFetcher = &goodFetcher{}
-	service.logger = &goodLogger{}
 	service.httpLogger = &goodLogger{}
 	service.stateNotifier = &goodNotifier{}
 	return service
@@ -34,7 +32,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	}
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
@@ -97,7 +95,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -138,7 +136,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -179,7 +177,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 func TestBlockExists_InvalidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -196,7 +194,7 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -234,7 +232,7 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 func TestBlockNumberByTimestamp(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
