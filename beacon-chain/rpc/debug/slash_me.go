@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// SlashMyProposer gets your proposer to do bad things.
 func (ds *Server) SlashMyProposer(
 	ctx context.Context,
 	_ *ptypes.Empty,
