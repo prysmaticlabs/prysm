@@ -37,6 +37,7 @@ build:kafka_enabled --define gotags=kafka_enabled
 build:release --workspace_status_command=./scripts/workspace_status.sh
 build:release --stamp
 build:release --compilation_mode=opt
+build:release --config=llvm
 
 # LLVM compiler for building C/C++ dependencies.
 build:llvm --crosstool_top=@llvm_toolchain//:toolchain
