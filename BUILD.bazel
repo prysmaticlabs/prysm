@@ -85,7 +85,8 @@ nogo(
         # "@org_golang_x_tools//go/analysis/passes/shadow:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/printf:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/pkgfact:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/nilness:go_tool_library",
+        # does not work with go-ethereum dependency
+        # "@org_golang_x_tools//go/analysis/passes/nilness:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/nilfunc:go_tool_library",
         # lost cancel ignore doesn't seem to work when running with coverage
         #"@org_golang_x_tools//go/analysis/passes/lostcancel:go_tool_library",
