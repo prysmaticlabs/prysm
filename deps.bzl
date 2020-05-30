@@ -2253,6 +2253,7 @@ def prysm_deps():
         importpath = "github.com/ipfs/go-log",
         sum = "h1:6nLQdX4W8P9yZZFH7mO+X/PzjN8Laozm/lMJ6esdgzY=",
         version = "v1.0.4",
+        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_jackpal_gateway",
