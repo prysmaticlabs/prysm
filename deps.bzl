@@ -649,8 +649,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_google_pprof",
         importpath = "github.com/google/pprof",
-        sum = "h1:r3n/h1Zh7Wpk29Q/b+FdrNjDAmr28WaPcxlI0c4NaeA=",
-        version = "v0.0.0-20190309163659-77426154d546",
+        sum = "h1:DLpL8pWq0v4JYoRpEhDfsJhhJyGKCcQM2WPW2TJs31c=",
+        version = "v0.0.0-20191218002539-d4f498aebedc",
     )
     go_repository(
         name = "com_github_google_renameio",
@@ -813,8 +813,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_jstemmer_go_junit_report",
         importpath = "github.com/jstemmer/go-junit-report",
-        sum = "h1:rBMNdlhTLzJjJSDIjNEXX1Pz3Hmwmz91v+zycvx9PJc=",
-        version = "v0.0.0-20190106144839-af01ea7f8024",
+        sum = "h1:6QPYqodiu3GuPL+7mfx+NwDdp2eTkp9IfEUpgAwUN0o=",
+        version = "v0.9.1",
     )
     go_repository(
         name = "com_github_julienschmidt_httprouter",
@@ -1201,8 +1201,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_satori_go_uuid",
         importpath = "github.com/satori/go.uuid",
-        sum = "h1:0uYX9dsZ2yD7q2RtLRtPSdGDWzjeM3TbMJP9utgA0ww=",
-        version = "v1.2.0",
+        sum = "h1:gQZ0qzfKHQIybLANtM3mBXNUtOfsCFXeTsnBqCsx1KM=",
+        version = "v1.2.1-0.20181028125025-b2ce2384e17b",
     )
     go_repository(
         name = "com_github_sergi_go_diff",
@@ -2049,8 +2049,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_elastic_gosigar",
         importpath = "github.com/elastic/gosigar",
-        sum = "h1:XKAhUk/dtp+CV0VO6mhG2V7jA9vbcGcnYF/Ay9NjZrY=",
-        version = "v0.8.1-0.20180330100440-37f05ff46ffa",
+        sum = "h1:GzPQ+78RaAb4J63unidA/JavQRKrB6s8IOzN6Ib59jo=",
+        version = "v0.10.5",
     )
     go_repository(
         name = "com_github_emicklei_dot",
@@ -2061,8 +2061,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_fatih_color",
         importpath = "github.com/fatih/color",
-        sum = "h1:YehCCcyeQ6Km0D6+IapqPinWBK6y+0eB5umvZXK9WPs=",
-        version = "v1.3.0",
+        sum = "h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=",
+        version = "v1.9.0",
     )
     go_repository(
         name = "com_github_fjl_memsize",
@@ -2097,8 +2097,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_golang_groupcache",
         importpath = "github.com/golang/groupcache",
-        sum = "h1:ZgQEtGgCBiWRM39fZuwSd1LwSqqSW0hOdXCYYDX0R3I=",
-        version = "v0.0.0-20190702054246-869f871628b6",
+        sum = "h1:5ZkaAPbicIKTF2I64qf5Fh8Aa83Q/dnOafMYV0OMwjA=",
+        version = "v0.0.0-20191227052852-215e87163ea7",
     )
     go_repository(
         name = "com_github_golang_lint",
@@ -2133,8 +2133,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_googleapis_gax_go_v2",
         importpath = "github.com/googleapis/gax-go/v2",
-        sum = "h1:hU4mGcQI4DaAYW+IbTun+2qEZVFxK0ySjQLTbS0VQKc=",
-        version = "v2.0.4",
+        sum = "h1:sjZBwGj9Jlw33ImPtvFviGYvseOtDM7hkSKB7+Tv3SM=",
+        version = "v2.0.5",
     )
     go_repository(
         name = "com_github_googleapis_gnostic",
@@ -2151,8 +2151,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_graph_gophers_graphql_go",
         importpath = "github.com/graph-gophers/graphql-go",
-        sum = "h1:E0whKxgp2ojts0FDgUA8dl62bmH0LxKanMoBr6MDTDM=",
-        version = "v0.0.0-20191115155744-f33e81362277",
+        sum = "h1:kLnsdud6Fl1/7ZX/5oD23cqYAzBfuZBhNkGr2NvuEsU=",
+        version = "v0.0.0-20200309224638-dae41bde9ef9",
     )
     go_repository(
         name = "com_github_grpc_ecosystem_go_grpc_middleware",
@@ -2199,8 +2199,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_influxdata_influxdb",
         importpath = "github.com/influxdata/influxdb",
-        sum = "h1:FSeK4fZCo8u40n2JMnyAsd6x7+SbvoOMHvQOU/n10P4=",
-        version = "v1.2.3-0.20180221223340-01288bdb0883",
+        sum = "h1:/X+G+i3udzHVxpBMuXdPZcUbkIE0ouT+6U+CzQTsOys=",
+        version = "v1.8.0",
     )
     go_repository(
         name = "com_github_ipfs_go_cid",
@@ -2547,14 +2547,14 @@ def prysm_deps():
     go_repository(
         name = "com_github_mattn_go_colorable",
         importpath = "github.com/mattn/go-colorable",
-        sum = "h1:G1f5SKeVxmagw/IyvzvtZE4Gybcc4Tr1tf7I8z0XgOg=",
-        version = "v0.1.1",
+        sum = "h1:snbPLB8fVfU9iwbbo30TPtbLRzwWu6aJS6Xh4eaaviA=",
+        version = "v0.1.4",
     )
     go_repository(
         name = "com_github_mattn_go_isatty",
         importpath = "github.com/mattn/go-isatty",
-        sum = "h1:tHXDdz1cpzGaovsTB+TVB8q90WEokoVmfMqoVcrLUgw=",
-        version = "v0.0.5",
+        sum = "h1:FxPOTFNqGkuDUGi3H/qkUbQO4ZiBa2brKq5r0l8TGeM=",
+        version = "v0.0.11",
     )
     go_repository(
         name = "com_github_mattn_go_runewidth",
@@ -2709,8 +2709,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_peterh_liner",
         importpath = "github.com/peterh/liner",
-        sum = "h1:oYW+YCJ1pachXTQmzR3rNLYGGz4g/UgFcjb28p/viDM=",
-        version = "v1.1.1-0.20190123174540-a2c9a5303de7",
+        sum = "h1:w/UPXyl5GfahFxcTOz2j9wCIHNI+pUPr2laqpojKNCg=",
+        version = "v1.2.0",
     )
     go_repository(
         name = "com_github_phoreproject_bls",
@@ -2776,8 +2776,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_rjeczalik_notify",
         importpath = "github.com/rjeczalik/notify",
-        sum = "h1:CLCKso/QK1snAlnhNR/CNvNiFU2saUtjV0bx3EwNeCE=",
-        version = "v0.9.1",
+        sum = "h1:MiTWrPj55mNDHEiIX5YUSKefw/+lCQVoAFmD6oQm5w8=",
+        version = "v0.9.2",
     )
     go_repository(
         name = "com_github_rs_cors",
@@ -2932,8 +2932,8 @@ def prysm_deps():
     go_repository(
         name = "com_google_cloud_go",
         importpath = "cloud.google.com/go",
-        sum = "h1:ROfEUZz+Gh5pa62DJWXSaonyu3StP6EA6lPEXPI6mCo=",
-        version = "v0.38.0",
+        sum = "h1:PvKAVQWCtlGUSlZkGW3QLelKaWq7KYv/MW1EboG8bfM=",
+        version = "v0.51.0",
     )
     go_repository(
         name = "in_gopkg_d4l3k_messagediff_v1",
@@ -3004,8 +3004,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_google_api",
         importpath = "google.golang.org/api",
-        sum = "h1:KKgc1aqhV8wDPbDzlDtpvyjZFY3vjz85FP7p4wcQUyI=",
-        version = "v0.4.0",
+        sum = "h1:yzlyyDW/J0w8yNFJIhiAJy4kq74S+1DOLdawELNxFMA=",
+        version = "v0.15.0",
     )
     go_repository(
         name = "org_golang_google_grpc",
