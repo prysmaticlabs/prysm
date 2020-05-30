@@ -2,6 +2,7 @@ package client
 
 // Validator client proposer functions.
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -97,6 +98,42 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	doBadThing := bytesutil.ToBytes32(append([]byte{'s', 'l', 'a', 's', 'h'}, v.graffiti...))
+	if bytes.Equal(b.GetBody().Graffiti, doBadThing[:]) {
+		slashableBlk, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
+			Slot:         slot,
+			RandaoReveal: randaoReveal,
+			Graffiti:     []byte(string("slashable")),
+		})
+		sig, err := v.signBlock(ctx, pubKey, epoch, slashableBlk)
+		if err != nil {
+			log.WithError(err).Error("Failed to sign block")
+			if v.emitAccountMetrics {
+				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+		slashableSignedBlk := &ethpb.SignedBeaconBlock{
+			Block:     slashableBlk,
+			Signature: sig,
+		}
+		blkResp, err := v.validatorClient.ProposeBlock(ctx, slashableSignedBlk)
+		if err != nil {
+			log.WithError(err).Error("Failed to propose block")
+			if v.emitAccountMetrics {
+				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+		blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+		log.WithFields(logrus.Fields{
+			"slot":            b.Slot,
+			"blockRoot":       blkRoot,
+			"numAttestations": len(b.Body.Attestations),
+			"numDeposits":     len(b.Body.Deposits),
+		}).Info("Submitted duplicated block 🙈")
+	}
+
 	var slotBits bitfield.Bitlist
 	if featureconfig.Get().ProtectProposer {
 		slotBits, err = v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
@@ -107,7 +144,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			}
 			return
 		}
-
 		// If the bit for the current slot is marked, do not propose.
 		if slotBits.BitAt(slot % params.BeaconConfig().SlotsPerEpoch) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
@@ -183,7 +219,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-	}).Info("Submitted new block")
+	}).Info("Submitted new block 🙈")
 }
 
 // ProposeExit --
