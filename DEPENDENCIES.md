@@ -21,7 +21,7 @@ could have compiled anything for this archive and detecting undesired behavior w
 impossible. If your risk tolerance is low, always compile everything from source yourself, 
 including complicated c++ dependencies.
 
-*Recommendation: Use go build for development, but bazel build for production.*
+*Recommendation: Use go build only for local development and use bazel build for production.*
 
 ### Caveat 2: Generated gRPC protobuf libraries
 
@@ -37,7 +37,7 @@ also be updated and checked in as frequently.
 ./scripts/update-go-ssz.sh
 ```
 
-*Recommendation: Use go build for development, but bazel build for production.*
+*Recommendation: Use go build only for local development and use bazel build for production.*
 
 ### Caveat 3: Compile-time optimizations 
 
@@ -46,7 +46,7 @@ compile with several compiler optimizations and recommended production build con
 Additionally, the release build properly stamps the built binaries to include helpful metadata
 about how and when the binary was built. 
 
-*Recommendation: Use go build for development, but bazel build for production.*
+*Recommendation: Use go build only for local development and use bazel build for production.*
 
 ```bash
 bazel build //beacon-chain --config=release
