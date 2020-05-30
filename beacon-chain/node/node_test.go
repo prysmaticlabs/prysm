@@ -26,7 +26,6 @@ func TestNodeClose_OK(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	set.Bool("test-skip-pow", true, "skip pow dial")
 	set.String("datadir", tmp, "node data directory")
 	set.String("p2p-encoding", "ssz", "p2p encoding scheme")

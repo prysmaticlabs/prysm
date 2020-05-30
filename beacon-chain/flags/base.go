@@ -13,12 +13,6 @@ var (
 		Usage: "A mainchain web3 provider string http endpoint",
 		Value: "https://goerli.prylabs.net",
 	}
-	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
-	Web3ProviderFlag = &cli.StringFlag{
-		Name:  "web3provider",
-		Usage: "A mainchain web3 provider string endpoint. Can either be an IPC file string or a WebSocket endpoint. Cannot be an HTTP endpoint.",
-		Value: "wss://goerli.prylabs.net/websocket",
-	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",

@@ -83,7 +83,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
 			flags.ContractDeploymentBlock,
-			flags.Web3ProviderFlag,
 			flags.RPCHost,
 			flags.RPCPort,
 			flags.RPCMaxPageSize,

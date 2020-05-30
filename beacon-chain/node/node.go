@@ -407,7 +407,6 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
-		ETH1Endpoint:    b.cliCtx.String(flags.Web3ProviderFlag.Name),
 		HTTPEndPoint:    b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
 		BeaconDB:        b.db,
