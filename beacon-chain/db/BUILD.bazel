@@ -20,12 +20,6 @@ go_library(
             "db_kafka_wrapped.go",
         ],
     }),
-    #    gotags = select({
-    #        "//conditions:default": [
-    #            "kafka_enabled",
-    #        ],
-    #        ":kafka_disabled": [],
-    #    }),
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",
     visibility = [
         "//beacon-chain:__subpackages__",

@@ -113,7 +113,7 @@ require (
 	google.golang.org/genproto v0.0.0-20200528191852-705c0b31589b
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.24.0
-	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
+	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.1.0
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200316214253-d7b0ff38cac9 // indirect

@@ -3108,8 +3108,8 @@ def prysm_deps():
         importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1",
         patch_args = ["-p1"],
         patches = ["@prysm//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
-        sum = "h1:JabkIV98VYFqYKHHzXtgGMFuRgFBNTNzBytbGByzrJI=",
-        version = "v1.4.2",
+        sum = "h1:roy97m/3wj9/o8OuU3sZ5wildk30ep38k2x8nhNbKrI=",
+        version = "v1.1.0",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_tls",
