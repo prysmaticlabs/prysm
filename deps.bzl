@@ -320,8 +320,10 @@ def prysm_deps():
     go_repository(
         name = "com_github_confluentinc_confluent_kafka_go",
         importpath = "github.com/confluentinc/confluent-kafka-go",
-        sum = "h1:13EK9RTujF7lVkvHQ5Hbu6bM+Yfrq8L0MkJNnjHSd4Q=",
-        version = "v1.4.2",
+        patch_args = ["-p1"],
+        patches = ["//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
+        sum = "h1:HIW7Nkm8IeKRotC34mGY06DwQMf9Mp9PZMyqDxid2wI=",
+        version = "v1.1.0",
     )
     go_repository(
         name = "com_github_coreos_etcd",
