@@ -98,16 +98,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	doBadThing := bytesutil.ToBytes32(append([]byte{'s', 'l', 'a', 's', 'h'}, v.graffiti...))
+	doBadThing := bytesutil.ToBytes32(append(params.BeaconConfig().ToBeSlashed, v.graffiti...))
 	if bytes.Equal(b.GetBody().Graffiti, doBadThing[:]) {
 		slashableBlk, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
 			Slot:         slot,
 			RandaoReveal: randaoReveal,
-			Graffiti:     []byte(string("slashable")),
+			Graffiti:     []byte(params.BeaconConfig().Slashable),
 		})
 		sig, err := v.signBlock(ctx, pubKey, epoch, slashableBlk)
 		if err != nil {
-			log.WithError(err).Error("Failed to sign block")
+			log.WithError(err).Error("Failed to sign slashable block")
 			if v.emitAccountMetrics {
 				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
@@ -119,7 +119,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		}
 		blkResp, err := v.validatorClient.ProposeBlock(ctx, slashableSignedBlk)
 		if err != nil {
-			log.WithError(err).Error("Failed to propose block")
+			log.WithError(err).Error("Failed to propose slashable block")
 			if v.emitAccountMetrics {
 				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
@@ -131,7 +131,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			"blockRoot":       blkRoot,
 			"numAttestations": len(b.Body.Attestations),
 			"numDeposits":     len(b.Body.Deposits),
-		}).Info("Submitted duplicated block 🙈")
+		}).Info("Submitted slashable block 🙈")
 	}
 
 	var slotBits bitfield.Bitlist
@@ -219,7 +219,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-	}).Info("Submitted new block 🙈")
+	}).Info("Submitted new block")
 }
 
 // ProposeExit --

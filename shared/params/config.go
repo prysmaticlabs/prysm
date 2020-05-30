@@ -105,6 +105,9 @@ type BeaconChainConfig struct {
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
 	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
+	SlashMyProposerCount      uint64 // SlashMyProposerCount defines how many times to slash my proposer
+	Slashable                 string // Slashable it used on graffti to define when a beacon block is slashable. This is to avoid no more than 2 slashings.
+	ToBeSlashed               []byte // ToBeSlashed is applied to graffiti to signal validator client to create a slashable block.
 
 	// Fork-related values.
 	GenesisForkVersion  []byte            `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
@@ -206,6 +209,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
 	PruneSlasherStoragePeriod: 10,
+	SlashMyProposerCount:      0,
+	Slashable:                 string("slahable"),
+	ToBeSlashed:               []byte{'s', 'l', 'a', 's', 'h'},
 
 	// Fork related values.
 	GenesisForkVersion:  []byte{0, 0, 0, 0},

@@ -71,13 +71,13 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
 	var graffiti [32]byte
-	alreadySlashed := string(req.Graffiti) == string("slashable")
+	alreadySlashed := string(req.Graffiti) == params.BeaconConfig().Slashable
 	if !alreadySlashed && params.BeaconConfig().SlashMyProposerCount > 0 {
 		c := params.BeaconConfig()
 		c.SlashMyProposerCount--
 		params.OverrideBeaconConfig(c)
 
-		g := append([]byte{'s', 'l', 'a', 's', 'h'}, req.Graffiti...)
+		g := append(params.BeaconConfig().ToBeSlashed, req.Graffiti...)
 		graffiti = bytesutil.ToBytes32(g)
 	} else {
 		graffiti = bytesutil.ToBytes32(req.Graffiti)
