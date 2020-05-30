@@ -284,8 +284,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_cespare_cp",
         importpath = "github.com/cespare/cp",
-        sum = "h1:SE+dxFebS7Iik5LK0tsi1k9ZCxEaFX4AjQmoyA+1dJk=",
-        version = "v0.1.0",
+        sum = "h1:nCb6ZLdB7NRaqsm91JtQTAme2SKJzXVsdPIPkyJr1MU=",
+        version = "v1.1.1",
     )
     go_repository(
         name = "com_github_cespare_xxhash_v2",
@@ -2258,8 +2258,9 @@ def prysm_deps():
     go_repository(
         name = "com_github_json_iterator_go",
         importpath = "github.com/json-iterator/go",
-        sum = "h1:9yzud/Ht36ygwatGx56VwCZtlI/2AD15T1X2sjSuGns=",
-        version = "v1.1.9",
+        replace = "github.com/prestonvanloon/go",
+        sum = "h1:Bt5PzQCqfP4xiLXDSrMoqAfj6CBr3N9DAyyq8OiIWsc=",
+        version = "v1.1.7-0.20190722034630-4f2e55fcf87b",
     )
     go_repository(
         name = "com_github_kevinms_leakybucket_go",
@@ -2311,13 +2312,14 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p",
         sum = "h1:5rViLwtjkaEWcIBbk6oII39cVjPTElo3F78SSLf9yho=",
         version = "v0.9.2",
-        build_file_proto_mode = "disable_global",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_autonat",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-autonat",
         sum = "h1:w46bKK3KTOUWDe5mDYMRjJu1uryqBp8HCNDp/TWMqKw=",
         version = "v0.2.3",
@@ -2330,6 +2332,7 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_circuit",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-circuit",
         sum = "h1:3Uw1fPHWrp1tgIhBz0vSOxRUmnKL8L/NGUyEd5WfSGM=",
         version = "v0.2.3",
@@ -2443,6 +2446,7 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_swarm",
+        build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-swarm",
         sum = "h1:PinJOL2Haz0USGg6Z7wGALe4E6tJmAaUmKPxYWQSi68=",
         version = "v0.2.5",
@@ -2943,8 +2947,8 @@ def prysm_deps():
     go_repository(
         name = "in_gopkg_yaml_v2",
         importpath = "gopkg.in/yaml.v2",
-        sum = "h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=",
-        version = "v2.3.0",
+        sum = "h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=",
+        version = "v2.2.8",
     )
     go_repository(
         name = "io_etcd_go_bbolt",
@@ -3138,4 +3142,10 @@ def prysm_deps():
         importpath = "github.com/wealdtech/go-eth2-types/v2",
         sum = "h1:2KSUzducArOynCL2prRf4vWU5GjwaPSnSN9oqNgf+dQ=",
         version = "v2.3.1",
+    )
+    go_repository(
+        name = "io_k8s_sigs_structured_merge_diff",
+        importpath = "sigs.k8s.io/structured-merge-diff",
+        sum = "h1:4Z09Hglb792X0kfOBBJUPFEyvVfQWrYT/l8h5EKA6JQ=",
+        version = "v0.0.0-20190525122527-15d366b2352e",
     )
