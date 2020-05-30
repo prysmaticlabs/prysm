@@ -36,6 +36,12 @@ service Debug {
             get: "/eth/v1alpha1/debug/forkchoice"
         };
     }
+    // SlashMyProposer commits the next proposer to a slashable offense.
+    rpc SlashMyProposer(google.protobuf.Empty) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/debug/slashmyproposer"
+        };
+    }
 }
 
 message BeaconStateRequest {
