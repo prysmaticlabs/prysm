@@ -405,6 +405,18 @@ func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 func TestServer_GetChainHead(t *testing.T) {
 	db := dbTest.SetupDB(t)
 
+	genBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'G'}}}
+	if err := db.SaveBlock(context.Background(), genBlock); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(genBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(context.Background(), gRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	finalizedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}}
 	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
 		t.Fatal(err)
