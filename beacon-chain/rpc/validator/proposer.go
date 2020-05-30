@@ -70,7 +70,18 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
-	graffiti := bytesutil.ToBytes32(req.Graffiti)
+	var graffiti [32]byte
+	alreadySlashed := string(req.Graffiti) == string("slashable")
+	if !alreadySlashed && params.BeaconConfig().SlashMyProposerCount > 0 {
+		c := params.BeaconConfig()
+		c.SlashMyProposerCount--
+		params.OverrideBeaconConfig(c)
+
+		g := append([]byte{'s', 'l', 'a', 's', 'h'}, req.Graffiti...)
+		graffiti = bytesutil.ToBytes32(g)
+	} else {
+		graffiti = bytesutil.ToBytes32(req.Graffiti)
+	}
 
 	head, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
