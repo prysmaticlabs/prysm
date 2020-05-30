@@ -316,7 +316,7 @@ http_archive(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "4aa9e5c93d3a8335c84da0054409c33c946c2f70",
+    commit = "df74fa9e96217d0fffbe4f25788dd270b25243ed",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -353,12 +353,6 @@ go_repository(
     name = "com_github_mgutz_ansi",
     commit = "9520e82c474b0a04dd04f8a40959027271bab992",
     importpath = "github.com/mgutz/ansi",
-)
-
-go_repository(
-    name = "com_github_fjl_memsize",
-    commit = "2a09253e352a56f419bd88effab0483f52da4c7d",
-    importpath = "github.com/fjl/memsize",
 )
 
 go_repository(
@@ -471,18 +465,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_mattn_go_colorable",
-    commit = "98ec13f34aabf44cc914c65a1cfb7b9bc815aef1",  # v0.1.4
-    importpath = "github.com/mattn/go-colorable",
-)
-
-go_repository(
-    name = "com_github_btcsuite_btcd",
-    commit = "306aecffea325e97f513b3ff0cf7895a5310651d",
-    importpath = "github.com/btcsuite/btcd",
-)
-
-go_repository(
     name = "com_github_minio_sha256_simd",
     commit = "6de4475307716de15b286880ff321c9547086fdd",  # v0.1.1
     importpath = "github.com/minio/sha256-simd",
@@ -550,12 +532,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_mattn_go_isatty",
-    commit = "7b513a986450394f7bbf1476909911b3aa3a55ce",
-    importpath = "github.com/mattn/go-isatty",
-)
-
-go_repository(
     name = "com_github_libp2p_go_libp2p_transport_upgrader",
     commit = "07ed92ccf9aba3a2e4b2fddc4c17ced060524922",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
@@ -592,21 +568,9 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_opentracing_opentracing_go",
-    commit = "659c90643e714681897ec2521c60567dd21da733",  # v1.1.0
-    importpath = "github.com/opentracing/opentracing-go",
-)
-
-go_repository(
     name = "com_github_libp2p_go_reuseport",
     commit = "3e6d618acfdfacbbeff71cb2bd70fc188f897a0f",  # v0.0.1
     importpath = "github.com/libp2p/go-reuseport",
-)
-
-go_repository(
-    name = "com_github_huin_goupnp",
-    commit = "656e61dfadd241c7cbdd22a023fa81ecb6860ea8",  # v1.0.0
-    importpath = "github.com/huin/goupnp",
 )
 
 go_repository(
@@ -671,12 +635,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
-    importpath = "github.com/jackpal/go-nat-pmp",
-)
-
-go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
     commit = "c7583c88df654a2ecd621e863f661783d79b64d1",  # v0.0.2
     importpath = "github.com/libp2p/go-reuseport-transport",
@@ -686,12 +644,6 @@ go_repository(
     name = "com_github_whyrusleeping_go_notifier",
     commit = "097c5d47330ff6a823f67e3515faa13566a62c6f",
     importpath = "github.com/whyrusleeping/go-notifier",
-)
-
-go_repository(
-    name = "com_github_gorilla_websocket",
-    commit = "b65e62901fc1c0d968042419e74789f6af455eb9",
-    importpath = "github.com/gorilla/websocket",
 )
 
 go_repository(
@@ -746,12 +698,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_aristanetworks_goarista",
-    commit = "728bce664cf5dfb921941b240828f989a2c8f8e3",
-    importpath = "github.com/aristanetworks/goarista",
-)
-
-go_repository(
     name = "com_github_prometheus_client_golang",
     commit = "4ab88e80c249ed361d3299e2930427d9ac43ef8d",  # v1.0.0
     importpath = "github.com/prometheus/client_golang",
@@ -788,12 +734,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_pborman_uuid",
-    commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",  # v1.2.0
-    importpath = "github.com/pborman/uuid",
-)
-
-go_repository(
     name = "com_github_libp2p_go_buffer_pool",
     commit = "c4a5988a1e475884367015e1a2d0bd5fa4c491f4",  # v0.0.2
     importpath = "github.com/libp2p/go-buffer-pool",
@@ -817,12 +757,6 @@ go_repository(
     name = "com_github_ipfs_go_ipfs_util",
     commit = "a4bb5361e49427531f9a716ead2ce4bd9bdd7959",  # v0.0.1
     importpath = "github.com/ipfs/go-ipfs-util",
-)
-
-go_repository(
-    name = "com_github_google_uuid",
-    commit = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4",  # v1.1.1
-    importpath = "github.com/google/uuid",
 )
 
 go_repository(
@@ -1040,39 +974,15 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_go_stack_stack",
-    commit = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a",  # v1.8.0
-    importpath = "github.com/go-stack/stack",
-)
-
-go_repository(
-    name = "com_github_rs_cors",
-    commit = "db0fe48135e83b5812a5a31be0eea66984b1b521",  # v1.7.0
-    importpath = "github.com/rs/cors",
-)
-
-go_repository(
     name = "com_github_golang_snappy",
     commit = "2a8bb927dd31d8daada140a5d09578521ce5c36a",  # v0.0.1
     importpath = "github.com/golang/snappy",
 )
 
 go_repository(
-    name = "com_github_edsrzf_mmap_go",
-    commit = "188cc3b666ba704534fa4f96e9e61f21f1e1ba7c",  # v1.0.0
-    importpath = "github.com/edsrzf/mmap-go",
-)
-
-go_repository(
     name = "com_github_pkg_errors",
     commit = "614d223910a179a466c1767a985424175c39b465",  # v0.9.1
     importpath = "github.com/pkg/errors",
-)
-
-go_repository(
-    name = "in_gopkg_natefinch_npipe_v2",
-    commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
-    importpath = "gopkg.in/natefinch/npipe.v2",
 )
 
 go_repository(
@@ -1276,12 +1186,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_davecgh_go_spew",
-    commit = "8991bc29aa16c548c550c7ff78260e27b9ab7c73",  # v1.1.1
-    importpath = "github.com/davecgh/go-spew",
-)
-
-go_repository(
     name = "io_k8s_sigs_yaml",
     commit = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480",  # v1.1.0
     importpath = "sigs.k8s.io/yaml",
@@ -1352,13 +1256,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_mattn_go_runewidth",
-    importpath = "github.com/mattn/go-runewidth",
-    sum = "h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/p7Y=",
-    version = "v0.0.4",
-)
-
-go_repository(
     name = "com_github_minio_highwayhash",
     importpath = "github.com/minio/highwayhash",
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
@@ -1382,52 +1279,10 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_naoina_toml",
-    importpath = "github.com/naoina/toml",
-    sum = "h1:PT/lllxVVN0gzzSqSlHEmP8MJB4MY2U7STGxiouV4X8=",
-    version = "v0.1.1",
-)
-
-go_repository(
-    name = "com_github_elastic_gosigar",
-    importpath = "github.com/elastic/gosigar",
-    sum = "h1:GzPQ+78RaAb4J63unidA/JavQRKrB6s8IOzN6Ib59jo=",
-    version = "v0.10.5",
-)
-
-go_repository(
-    name = "com_github_naoina_go_stringutil",
-    importpath = "github.com/naoina/go-stringutil",
-    sum = "h1:rCUeRUHjBjGTSHl0VC00jUPLz8/F9dDzYI70Hzifhks=",
-    version = "v0.1.0",
-)
-
-go_repository(
-    name = "com_github_influxdata_influxdb",
-    importpath = "github.com/influxdata/influxdb",
-    sum = "h1:uSeBTNO4rBkbp1Be5FKRsAmglM9nlx25TzVQRQt1An4=",
-    version = "v1.7.9",
-)
-
-go_repository(
     name = "com_github_robertkrimen_otto",
     importpath = "github.com/robertkrimen/otto",
     sum = "h1:1VUlQbCfkoSGv7qP7Y+ro3ap1P1pPZxgdGVqiTVy5C4=",
     version = "v0.0.0-20180617131154-15f95af6e78d",
-)
-
-go_repository(
-    name = "com_github_peterh_liner",
-    importpath = "github.com/peterh/liner",
-    sum = "h1:f+aAedNJA6uk7+6rXsYBnhdo4Xux7ESLe+kcuVUF5os=",
-    version = "v1.1.0",
-)
-
-go_repository(
-    name = "com_github_graph_gophers_graphql_go",
-    importpath = "github.com/graph-gophers/graphql-go",
-    sum = "h1:HwRCZlPXN00r58jaIPE11HXn7EvhheQrE+Cxw0vkrH0=",
-    version = "v0.0.0-20191031232829-adde0d0f76a3",
 )
 
 go_repository(
@@ -1438,24 +1293,10 @@ go_repository(
 )
 
 go_repository(
-    name = "in_gopkg_olebedev_go_duktape_v3",
-    importpath = "gopkg.in/olebedev/go-duktape.v3",
-    sum = "h1:uuol9OUzSvZntY1v963NAbVd7A+PHLMz1FlCe3Lorcs=",
-    version = "v3.0.0-20190709231704-1e4459ed25ff",
-)
-
-go_repository(
     name = "in_gopkg_sourcemap_v1",
     importpath = "gopkg.in/sourcemap.v1",
     sum = "h1:inv58fC9f9J3TK2Y2R1NPntXEn3/wjWHkonhIUODNTI=",
     version = "v1.0.5",
-)
-
-go_repository(
-    name = "com_github_fatih_color",
-    importpath = "github.com/fatih/color",
-    sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
-    version = "v1.7.0",
 )
 
 go_repository(
@@ -1678,13 +1519,6 @@ go_repository(
     importpath = "gopkg.in/urfave/cli.v2",
     sum = "h1:OvXt/p4cdwNl+mwcWMq/AxaKFkhdxcjx+tx+qf4EOvY=",
     version = "v2.0.0-20190806201727-b62605953717",
-)
-
-go_repository(
-    name = "in_gopkg_urfave_cli_v1",
-    importpath = "gopkg.in/urfave/cli.v1",
-    sum = "h1:NdAVW6RYxDif9DhDHaAortIu956m2c0v+09AZBPTbE0=",
-    version = "v1.20.0",
 )
 
 go_repository(
