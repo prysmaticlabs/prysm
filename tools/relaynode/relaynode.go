@@ -14,10 +14,10 @@ import (
 	"fmt"
 
 	logging "github.com/ipfs/go-log"
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	circuit "github.com/libp2p/go-libp2p-circuit"
 	crypto "github.com/libp2p/go-libp2p-crypto"
-	multiaddr "github.com/multiformats/go-multiaddr"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	_ "go.uber.org/automaxprocs"
 )
