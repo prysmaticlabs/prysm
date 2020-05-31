@@ -48,7 +48,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -107,7 +107,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(cliCtx)
 	registry := shared.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(cliCtx)
+	ctx, cancel := context.WithCancel(context.Background())
 	beacon := &BeaconNode{
 		cliCtx:            cliCtx,
 		ctx:               ctx,

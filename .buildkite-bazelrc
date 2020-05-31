@@ -45,7 +45,7 @@ build --flaky_test_attempts=5
 # build --features=race
 
 # Enable kafka for CI tests only.
-test --define kafka_enabled=true
+test --config=kafka_enabled
 
 build --bes_backend=grpcs://builds.prylabs.net:1985
 build --bes_results_url=https://builds.prylabs.net/invocation/

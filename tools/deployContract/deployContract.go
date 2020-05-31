@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -171,7 +171,7 @@ func main() {
 		}).Info("New contract deployed")
 
 		if k8sConfigMapName != "" {
-			if err := updateKubernetesConfigMap(addr.Hex()); err != nil {
+			if err := updateKubernetesConfigMap(context.Background(), addr.Hex()); err != nil {
 				log.Fatalf("Failed to update kubernetes config map: %v", err)
 			} else {
 				log.Printf("Updated config map %s", k8sConfigMapName)
@@ -188,7 +188,7 @@ func main() {
 
 // updateKubernetesConfigMap in the beacon-chain namespace. This specifically
 // updates the data value for DEPOSIT_CONTRACT_ADDRESS.
-func updateKubernetesConfigMap(contractAddr string) error {
+func updateKubernetesConfigMap(ctx context.Context, contractAddr string) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return err
@@ -199,7 +199,7 @@ func updateKubernetesConfigMap(contractAddr string) error {
 		return err
 	}
 
-	cm, err := client.CoreV1().ConfigMaps("beacon-chain").Get("beacon-config", metav1.GetOptions{})
+	cm, err := client.CoreV1().ConfigMaps("beacon-chain").Get(ctx,"beacon-config", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func updateKubernetesConfigMap(contractAddr string) error {
 	}
 	cm.Data["DEPOSIT_CONTRACT_ADDRESS"] = contractAddr
 
-	_, err = client.CoreV1().ConfigMaps("beacon-chain").Update(cm)
+	_, err = client.CoreV1().ConfigMaps("beacon-chain").Update(ctx, cm, metav1.UpdateOptions{})
 
 	return err
 }
