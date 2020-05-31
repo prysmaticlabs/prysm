@@ -18,7 +18,8 @@ type ForkChoicer interface {
 // HeadRetriever retrieves head root of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, uint64, [32]byte, []uint64, uint64) ([32]byte, error)
-}
+}tools/unencrypted-keys-gen/main.go
+
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {

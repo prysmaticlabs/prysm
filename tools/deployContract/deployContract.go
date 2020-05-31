@@ -18,8 +18,8 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"github.com/urfave/cli/v2"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -199,7 +199,7 @@ func updateKubernetesConfigMap(ctx context.Context, contractAddr string) error {
 		return err
 	}
 
-	cm, err := client.CoreV1().ConfigMaps("beacon-chain").Get(ctx,"beacon-config", metav1.GetOptions{})
+	cm, err := client.CoreV1().ConfigMaps("beacon-chain").Get(ctx, "beacon-config", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

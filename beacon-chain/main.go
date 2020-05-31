@@ -18,10 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	_ "go.uber.org/automaxprocs"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	_ "go.uber.org/automaxprocs"
 )
 
 var appFlags = []cli.Flag{
