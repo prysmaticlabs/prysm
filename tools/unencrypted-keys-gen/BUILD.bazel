@@ -10,6 +10,7 @@ go_library(
     ],
     deps = [
         "//shared/interop:go_default_library",
+        "//tools/unencrypted-keys-gen/keygen:go_default_library",
     ],
 )
 
@@ -23,4 +24,5 @@ go_test(
     name = "go_default_test",
     srcs = ["main_test.go"],
     embed = [":go_default_library"],
+    deps = ["//tools/unencrypted-keys-gen/keygen:go_default_library"],
 )

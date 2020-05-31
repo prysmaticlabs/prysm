@@ -10,7 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"gopkg.in/d4l3k/messagediff.v1"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {

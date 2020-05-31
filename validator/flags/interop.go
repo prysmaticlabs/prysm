@@ -1,7 +1,7 @@
 package flags
 
 import (
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 // Flags defined for interoperability testing.

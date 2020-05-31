@@ -1,4 +1,4 @@
-package state_benchmark_test
+package state_test
 
 import (
 	"context"
@@ -147,6 +147,8 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+
+	ctx := context.Background()
 
 	// Hydrate the HashTreeRootState cache.
 	if _, err := beaconState.HashTreeRoot(ctx); err != nil {
