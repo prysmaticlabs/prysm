@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"sync"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -73,7 +74,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				if helpers.IsAggregated(att.Aggregate) {
 					// Save the pending aggregated attestation to the pool if it passes the aggregated
 					// validation steps.
-					if s.validateBlockInAttestation(ctx, signedAtt) && s.validateAggregatedAtt(ctx, signedAtt) {
+					aggValid := s.validateAggregatedAtt(ctx, signedAtt) == pubsub.ValidationAccept
+					if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							return err
 						}

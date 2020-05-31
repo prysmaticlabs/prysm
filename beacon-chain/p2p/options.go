@@ -8,7 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
-	filter "github.com/libp2p/go-maddr-filter"
+	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
@@ -107,20 +107,16 @@ func whitelistSubnet(cidr string) libp2p.Option {
 			return nil
 		}
 	}
-
-	return func(cfg *libp2p.Config) error {
-		_, ipnet, err := net.ParseCIDR(cidr)
-		if err != nil {
+	_, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return func(_ *libp2p.Config) error {
 			return err
 		}
-
-		if cfg.Filters == nil {
-			cfg.Filters = filter.NewFilters()
-		}
-		cfg.Filters.AddFilter(*ipnet, filter.ActionAccept)
-
-		return nil
 	}
+	filters := filter.NewFilters()
+	filters.AddFilter(*ipnet, filter.ActionAccept)
+
+	return libp2p.Filters(filters)
 }
 
 // blacklistSubnet adds a blacklist multiaddress filter for multiple given CIDR subnets.
@@ -132,18 +128,15 @@ func blacklistSubnets(mulCidrs []string) libp2p.Option {
 			return nil
 		}
 	}
-	return func(cfg *libp2p.Config) error {
-		if cfg.Filters == nil {
-			cfg.Filters = filter.NewFilters()
-		}
-
-		for _, cidr := range mulCidrs {
-			_, ipnet, err := net.ParseCIDR(cidr)
-			if err != nil {
+	ipNets := []*net.IPNet{}
+	for _, cidr := range mulCidrs {
+		_, ipnet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return func(_ *libp2p.Config) error {
 				return err
 			}
-			cfg.Filters.AddFilter(*ipnet, filter.ActionDeny)
 		}
-		return nil
+		ipNets = append(ipNets, ipnet)
 	}
+	return libp2p.FilterAddresses(ipNets...)
 }

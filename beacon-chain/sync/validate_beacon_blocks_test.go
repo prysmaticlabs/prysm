@@ -73,7 +73,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			},
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 
 	if result {
 		t.Error("Expected false result, got true")
@@ -121,7 +121,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 			},
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 	if result {
 		t.Error("Expected false result, got true")
 	}
@@ -211,7 +211,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			},
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 	if !result {
 		t.Error("Expected true result, got false")
 	}
@@ -261,7 +261,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 			},
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 	if result {
 		t.Error("Expected false result, got true")
 	}
@@ -311,7 +311,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 			},
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 	if result {
 		t.Error("Expected false result, got true")
 	}
@@ -364,7 +364,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			},
 		},
 	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 
 	if result {
 		t.Error("Expected false result, got true")
@@ -449,7 +449,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	}
 	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
 	if result {
 		t.Error("Expected false result, got true")
 	}

@@ -36,7 +36,7 @@ import (
 
 	"github.com/fjl/memsize/memsizeui"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 // Handler is the global debugging handler.

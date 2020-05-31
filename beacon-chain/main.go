@@ -8,7 +8,7 @@ import (
 	runtimeDebug "runtime/debug"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
-	golog "github.com/ipfs/go-log"
+	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
@@ -18,11 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	gologging "github.com/whyrusleeping/go-logging"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
-	"gopkg.in/urfave/cli.v2"
-	"gopkg.in/urfave/cli.v2/altsrc"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 var appFlags = []cli.Flag{
@@ -178,7 +177,7 @@ func startNode(ctx *cli.Context) error {
 	logrus.SetLevel(level)
 	if level == logrus.TraceLevel {
 		// libp2p specific logging.
-		golog.SetAllLoggers(gologging.DEBUG)
+		golog.SetAllLoggers(golog.LevelDebug)
 		// Geth specific logging.
 		glogger := gethlog.NewGlogHandler(gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true)))
 		glogger.Verbosity(gethlog.LvlTrace)
