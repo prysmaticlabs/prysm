@@ -95,7 +95,6 @@ func init() {
 		},
 		{
 			name: "Validator 0 not with old spans(disregards the highestObservedValidatorIdx)",
-
 			validatorSpan: types.Span{
 				MinSpan:     65535,
 				MaxSpan:     65535,
