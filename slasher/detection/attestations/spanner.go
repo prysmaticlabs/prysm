@@ -275,17 +275,19 @@ func (s *SpanDetector) saveSigBytesNew(ctx context.Context, att *ethpb.IndexedAt
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.saveSigBytes")
 	defer traceSpan.End()
 	target := att.Data.Target.Epoch
-	spanMap, _, _, err := s.slasherDB.EpochSpans(ctx, target)
+	spans, _, _, err := s.slasherDB.EpochSpans(ctx, target)
 	if err != nil {
 		return err
 	}
+	cSpans := make([]byte, len(spans), len(spans))
+	copy(cSpans, spans)
 
 	// We loop through the indices, instead of constantly locking/unlocking the cache for equivalent accesses.
 	for _, idx := range att.AttestingIndices {
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not save signature bytes")
 		}
-		span, err := s.slasherDB.GetValidatorSpan(ctx, spanMap, idx)
+		span, err := s.slasherDB.GetValidatorSpan(ctx, cSpans, idx)
 		if err != nil {
 			return err
 		}
@@ -306,12 +308,12 @@ func (s *SpanDetector) saveSigBytesNew(ctx context.Context, att *ethpb.IndexedAt
 			HasAttested: true,
 			SigBytes:    sigBytes,
 		}
-		spanMap, err = s.slasherDB.SetValidatorSpan(ctx, spanMap, idx, span)
+		cSpans, err = s.slasherDB.SetValidatorSpan(ctx, cSpans, idx, span)
 		if err != nil {
 			return err
 		}
 	}
-	return s.slasherDB.SaveEpochSpans(ctx, target, spanMap)
+	return s.slasherDB.SaveEpochSpans(ctx, target, cSpans)
 }
 
 // saveSigBytes saves the first 2 bytes of the signature for the att we're updating the spans to.
@@ -388,9 +390,11 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 		if err != nil {
 			return err
 		}
+		cSpans := make([]byte, len(spans), len(spans))
+		copy(cSpans, spans)
 		valNum := 0
 		for _, idx := range valIndices {
-			span, err := s.slasherDB.GetValidatorSpan(ctx, spans, idx)
+			span, err := s.slasherDB.GetValidatorSpan(ctx, cSpans, idx)
 			if err != nil {
 				return err
 			}
@@ -402,7 +406,7 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 					SigBytes:    span.SigBytes,
 					HasAttested: span.HasAttested,
 				}
-				spans, err = s.slasherDB.SetValidatorSpan(ctx, spans, idx, span)
+				cSpans, err = s.slasherDB.SetValidatorSpan(ctx, cSpans, idx, span)
 				if err != nil {
 					return err
 				}
@@ -411,7 +415,7 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 			}
 		}
 		valIndices = valIndices[:valNum]
-		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spans); err != nil {
+		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, cSpans); err != nil {
 			return err
 		}
 		if len(valIndices) == 0 || epoch == 0 {
@@ -419,6 +423,7 @@ func (s *SpanDetector) updateMinSpanNew(ctx context.Context, att *ethpb.IndexedA
 			break
 		}
 	}
+	log.Infof("epoch: %d len(indices) %d", epoch, len(valIndices))
 	return nil
 }
 
@@ -555,9 +560,11 @@ func (s *SpanDetector) updateMaxSpanNew(ctx context.Context, att *ethpb.IndexedA
 		if err != nil {
 			return err
 		}
+		cSpans := make([]byte, len(spans), len(spans))
+		copy(cSpans, spans)
 		indices := valIndices[:0]
 		for _, idx := range valIndices {
-			span, err := s.slasherDB.GetValidatorSpan(ctx, spans, idx)
+			span, err := s.slasherDB.GetValidatorSpan(ctx, cSpans, idx)
 			if err != nil {
 				return err
 			}
@@ -570,14 +577,14 @@ func (s *SpanDetector) updateMaxSpanNew(ctx context.Context, att *ethpb.IndexedA
 					SigBytes:    span.SigBytes,
 					HasAttested: span.HasAttested,
 				}
-				spans, err = s.slasherDB.SetValidatorSpan(ctx, spans, idx, span)
+				cSpans, err = s.slasherDB.SetValidatorSpan(ctx, cSpans, idx, span)
 				if err != nil {
 					return err
 				}
 				indices = append(indices, idx)
 			}
 		}
-		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spans); err != nil {
+		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, cSpans); err != nil {
 			return err
 		}
 		if len(indices) == 0 {
