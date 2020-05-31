@@ -546,11 +546,15 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	proposerIndex, err := helpers.BeaconProposerIndex(copied)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
 			Slot:          beaconState.Slot() + 1,
-			ProposerIndex: 13,
+			ProposerIndex: proposerIndex,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal:      randaoReveal,
 				ProposerSlashings: proposerSlashings,

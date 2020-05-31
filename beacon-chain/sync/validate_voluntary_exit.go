@@ -14,16 +14,16 @@ import (
 
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
-func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == r.p2p.PeerID() {
-		return true
+		return pubsub.ValidationAccept
 	}
 
 	// The head state will be too far away to validate any voluntary exit.
 	if r.initialSync.Syncing() {
-		return false
+		return pubsub.ValidationIgnore
 	}
 
 	ctx, span := trace.StartSpan(ctx, "sync.validateVoluntaryExit")
@@ -33,41 +33,41 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	if err != nil {
 		log.WithError(err).Error("Failed to decode message")
 		traceutil.AnnotateError(span, err)
-		return false
+		return pubsub.ValidationReject
 	}
 
 	exit, ok := m.(*ethpb.SignedVoluntaryExit)
 	if !ok {
-		return false
+		return pubsub.ValidationReject
 	}
 
 	if exit.Exit == nil {
-		return false
+		return pubsub.ValidationReject
 	}
 	if r.hasSeenExitIndex(exit.Exit.ValidatorIndex) {
-		return false
+		return pubsub.ValidationIgnore
 	}
 
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
-		return false
+		return pubsub.ValidationIgnore
 	}
 
 	exitedEpochSlot := exit.Exit.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if int(exit.Exit.ValidatorIndex) >= s.NumValidators() {
-		return false
+		return pubsub.ValidationReject
 	}
 	val, err := s.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
-		return false
+		return pubsub.ValidationIgnore
 	}
 	if err := blocks.VerifyExit(val, exitedEpochSlot, s.Fork(), exit, s.GenesisValidatorRoot()); err != nil {
-		return false
+		return pubsub.ValidationReject
 	}
 
 	msg.ValidatorData = exit // Used in downstream subscriber
 
-	return true
+	return pubsub.ValidationAccept
 }
 
 // Returns true if the node has already received a valid exit request for the validator with index `i`.

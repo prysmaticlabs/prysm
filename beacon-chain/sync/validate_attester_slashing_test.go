@@ -117,7 +117,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "foobar", msg)
+	valid := r.validateAttesterSlashing(ctx, "foobar", msg) == pubsub.ValidationAccept
 
 	if !valid {
 		t.Error("Failed Validation")
@@ -160,7 +160,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg)
+	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
 
 	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
@@ -191,7 +191,7 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, "", msg)
+	valid := r.validateAttesterSlashing(ctx, "", msg) == pubsub.ValidationAccept
 	if valid {
 		t.Error("Passed validation")
 	}

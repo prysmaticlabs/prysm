@@ -9,13 +9,12 @@ import (
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	ptypes "github.com/gogo/protobuf/types"
-	golog "github.com/ipfs/go-log"
+	golog "github.com/ipfs/go-log/v2"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
-	gologging "github.com/whyrusleeping/go-logging"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -51,7 +50,7 @@ func (ds *Server) SetLoggingLevel(ctx context.Context, req *pbrpc.LoggingLevelRe
 	logrus.SetLevel(level)
 	if level == logrus.TraceLevel {
 		// Libp2p specific logging.
-		golog.SetAllLoggers(gologging.DEBUG)
+		golog.SetAllLoggers(golog.LevelDebug)
 		// Geth specific logging.
 		glogger := gethlog.NewGlogHandler(gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true)))
 		glogger.Verbosity(gethlog.LvlTrace)

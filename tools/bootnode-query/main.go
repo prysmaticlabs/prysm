@@ -61,9 +61,9 @@ func main() {
 	}
 }
 
-func pingPeer(ctx context.Context, h host.Host, p *dhtpb.Message_Peer) error {
+func pingPeer(ctx context.Context, h host.Host, p dhtpb.Message_Peer) error {
 	pi := dhtpb.PBPeerToPeerInfo(p)
-	if err := h.Connect(ctx, *pi); err != nil {
+	if err := h.Connect(ctx, pi); err != nil {
 		return err
 	}
 
