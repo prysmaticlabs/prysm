@@ -28,7 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")

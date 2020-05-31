@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	_ "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka/librdkafka" // Required for c++ kafka library.
 )
 
 var _ = iface.Database(&Exporter{})

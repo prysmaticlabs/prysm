@@ -9,7 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 func TestNilDBHistoryBlkHdr(t *testing.T) {

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
-	"io"
+	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 	"log"
 	"os"
 
@@ -17,17 +15,6 @@ var (
 	outputJSON = flag.String("output-json", "", "JSON file to write output to")
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
-
-// UnencryptedKeysContainer defines the structure of the unecrypted key JSON file.
-type UnencryptedKeysContainer struct {
-	Keys []*UnencryptedKeys `json:"keys"`
-}
-
-// UnencryptedKeys is the inner struct of the JSON file.
-type UnencryptedKeys struct {
-	ValidatorKey  []byte `json:"validator_key"`
-	WithdrawalKey []byte `json:"withdrawal_key"`
-}
 
 func main() {
 	flag.Parse()
@@ -55,14 +42,14 @@ func main() {
 	}()
 
 	ctnr := generateUnencryptedKeys(*startIndex)
-	if err := SaveUnencryptedKeysToFile(file, ctnr); err != nil {
+	if err := keygen.SaveUnencryptedKeysToFile(file, ctnr); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func generateUnencryptedKeys(startIndex uint64) *UnencryptedKeysContainer {
-	ctnr := &UnencryptedKeysContainer{
-		Keys: make([]*UnencryptedKeys, *numKeys),
+func generateUnencryptedKeys(startIndex uint64) *keygen.UnencryptedKeysContainer {
+	ctnr := &keygen.UnencryptedKeysContainer{
+		Keys: make([]*keygen.UnencryptedKeys, *numKeys),
 	}
 
 	sks, _, err := interop.DeterministicallyGenerateKeys(startIndex, uint64(*numKeys))
@@ -72,7 +59,7 @@ func generateUnencryptedKeys(startIndex uint64) *UnencryptedKeysContainer {
 	}
 
 	for i, sk := range sks {
-		ctnr.Keys[i] = &UnencryptedKeys{
+		ctnr.Keys[i] = &keygen.UnencryptedKeys{
 			ValidatorKey:  sk.Marshal(),
 			WithdrawalKey: sk.Marshal(),
 		}
@@ -80,18 +67,3 @@ func generateUnencryptedKeys(startIndex uint64) *UnencryptedKeysContainer {
 	return ctnr
 }
 
-// SaveUnencryptedKeysToFile JSON encodes the container and writes to the writer.
-func SaveUnencryptedKeysToFile(w io.Writer, ctnr *UnencryptedKeysContainer) error {
-	enc, err := json.Marshal(ctnr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	n, err := w.Write(enc)
-	if err != nil {
-		return err
-	}
-	if n != len(enc) {
-		return fmt.Errorf("failed to write %d bytes to file, wrote %d", len(enc), n)
-	}
-	return nil
-}
