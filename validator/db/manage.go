@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"path/filepath"
@@ -34,10 +35,7 @@ func Merge(ctx context.Context, sourceStores []*Store, targetDirectory string) e
 	if err != nil {
 		return err
 	}
-	if err := createMergeTargetStore(targetDirectory, allProposals, allAttestations); err != nil {
-		return errors.Wrapf(err, "Could not create target store")
-	}
-	return nil
+	return createMergeTargetStore(targetDirectory, allProposals, allAttestations)
 }
 
 // Split splits data from sourceStore into several stores, one for each public key in sourceStore.
@@ -50,10 +48,7 @@ func Split(ctx context.Context, sourceStore *Store, targetDirectory string) erro
 	if err != nil {
 		return err
 	}
-	if err := createSplitTargetStores(targetDirectory, allProposals, allAttestations); err != nil {
-		return errors.Wrapf(err, "Could not create split target store")
-	}
-	return nil
+	return createSplitTargetStores(targetDirectory, allProposals, allAttestations)
 }
 
 func getPubKeyProposals(pubKey []byte, proposalsBucket *bolt.Bucket) (*pubKeyProposals, error) {
@@ -63,6 +58,10 @@ func getPubKeyProposals(pubKey []byte, proposalsBucket *bolt.Bucket) (*pubKeyPro
 	}
 
 	pubKeyBucket := proposalsBucket.Bucket(pubKey)
+	if pubKeyBucket == nil {
+		return &pubKeyProposals, nil
+	}
+
 	if err := pubKeyBucket.ForEach(func(epoch, v []byte) error {
 		epochProposals := epochProposals{
 			Epoch:     make([]byte, len(epoch)),
@@ -73,7 +72,7 @@ func getPubKeyProposals(pubKey []byte, proposalsBucket *bolt.Bucket) (*pubKeyPro
 		pubKeyProposals.Proposals = append(pubKeyProposals.Proposals, epochProposals)
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "could not retrieve proposals for public key %x", pubKey[:12])
 	}
 
 	return &pubKeyProposals, nil
@@ -86,18 +85,28 @@ func createMergeTargetStore(
 
 	newStore, err := NewKVStore(targetDirectory, [][48]byte{})
 	defer func() {
+		errorMessage := "could not close the merged database"
 		if deferErr := newStore.Close(); deferErr != nil {
-			err = errors.Wrap(err, "Could not close the merged database")
+			if err != nil {
+				err = errors.Wrap(err, errorMessage)
+			} else {
+				err = errors.Wrap(deferErr, errorMessage)
+			}
+
 		}
 	}()
 	if err != nil {
-		return errors.Wrapf(err, "Could not initialize a new database in %s", targetDirectory)
+		return errors.Wrapf(err, "could not initialize a new database in %s", targetDirectory)
 	}
 
 	err = newStore.update(func(tx *bolt.Tx) error {
-		proposalsBucket := tx.Bucket(historicProposalsBucket)
+		allProposalsBucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKeyProposals := range allProposals {
-			if err := addProposals(proposalsBucket, pubKeyProposals); err != nil {
+			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey)
+			if err != nil {
+				return err
+			}
+			if err := addEpochProposals(proposalsBucket, pubKeyProposals.Proposals); err != nil {
 				return err
 			}
 		}
@@ -120,9 +129,18 @@ func createSplitTargetStores(
 
 	var storesToClose []*Store
 	defer (func() {
+		errorMessage := "failed to close one or more stores"
+		failedToClose := false
 		for _, store := range storesToClose {
 			if deferErr := store.Close(); deferErr != nil {
-				err = errors.Wrap(deferErr, "Closing store failed")
+				failedToClose = true
+			}
+		}
+		if failedToClose {
+			if err != nil {
+				err = errors.Wrapf(err, errorMessage)
+			} else {
+				err = errors.New(errorMessage)
 			}
 		}
 	})()
@@ -132,13 +150,17 @@ func createSplitTargetStores(
 		path := filepath.Join(targetDirectory, dirName)
 		newStore, err := NewKVStore(path, [][48]byte{})
 		if err != nil {
-			return errors.Wrapf(err, "Could not create a validator database in %s", path)
+			return errors.Wrapf(err, "could not create a validator database in %s", path)
 		}
 		storesToClose = append(storesToClose, newStore)
 
 		if err := newStore.update(func(tx *bolt.Tx) error {
-			proposalsBucket := tx.Bucket(historicProposalsBucket)
-			if err := addProposals(proposalsBucket, pubKeyProposals); err != nil {
+			allProposalsBucket := tx.Bucket(historicProposalsBucket)
+			proposalsBucket, err := createProposalsBucket(allProposalsBucket, pubKeyProposals.PubKey)
+			if err != nil {
+				return err
+			}
+			if err := addEpochProposals(proposalsBucket, pubKeyProposals.Proposals); err != nil {
 				return err
 			}
 
@@ -172,7 +194,7 @@ func createSplitTargetStores(
 			path := filepath.Join(targetDirectory, dirName)
 			newStore, err := NewKVStore(path, [][48]byte{})
 			if err != nil {
-				return errors.Wrapf(err, "Could not create a validator database in %s", path)
+				return errors.Wrapf(err, "could not create a validator database in %s", path)
 			}
 			storesToClose = append(storesToClose, newStore)
 
@@ -197,50 +219,80 @@ func getAllProposalsAndAllAttestations(stores []*Store) ([]pubKeyProposals, []pu
 	var allAttestations []pubKeyAttestations
 
 	for _, store := range stores {
+		// Storing keys upfront will allow using several short transactions (one for every key)
+		// instead of one long-running transaction for all keys.
+		var allKeys [][]byte
+
 		if err := store.db.View(func(tx *bolt.Tx) error {
 			proposalsBucket := tx.Bucket(historicProposalsBucket)
 			if err := proposalsBucket.ForEach(func(pubKey, _ []byte) error {
-				pubKeyProposals, err := getPubKeyProposals(pubKey, proposalsBucket)
-				if err != nil {
-					return errors.Wrapf(err, "Could not retrieve proposals for source in %s", store.databasePath)
-				}
-				allProposals = append(allProposals, *pubKeyProposals)
+				pubKeyCopy := make([]byte, len(pubKey))
+				copy(pubKeyCopy, pubKey)
+				allKeys = append(allKeys, pubKeyCopy)
 				return nil
 			}); err != nil {
-				return errors.Wrapf(err, "Could not retrieve proposals for source in %s", store.databasePath)
+				return errors.Wrapf(err, "could not retrieve proposals for source in %s", store.databasePath)
 			}
 
 			attestationsBucket := tx.Bucket(historicAttestationsBucket)
-			if err := attestationsBucket.ForEach(func(pubKey, v []byte) error {
-				attestations := pubKeyAttestations{
-					PubKey:       make([]byte, len(pubKey)),
-					Attestations: make([]byte, len(v)),
-				}
-				copy(attestations.PubKey, pubKey)
-				copy(attestations.Attestations, v)
-				allAttestations = append(allAttestations, attestations)
+			if err := attestationsBucket.ForEach(func(pubKey, _ []byte) error {
+				pubKeyCopy := make([]byte, len(pubKey))
+				copy(pubKeyCopy, pubKey)
+				allKeys = append(allKeys, pubKeyCopy)
 				return nil
 			}); err != nil {
-				return errors.Wrapf(err, "Could not retrieve attestations for source in %s", store.databasePath)
+				return errors.Wrapf(err, "could not retrieve attestations for source in %s", store.databasePath)
 			}
 
 			return nil
 		}); err != nil {
 			return nil, nil, err
 		}
+
+		allKeys = removeDuplicateKeys(allKeys)
+
+		for _, pubKey := range allKeys {
+			if err := store.db.View(func(tx *bolt.Tx) error {
+				proposalsBucket := tx.Bucket(historicProposalsBucket)
+				pubKeyProposals, err := getPubKeyProposals(pubKey, proposalsBucket)
+				if err != nil {
+					return err
+				}
+				allProposals = append(allProposals, *pubKeyProposals)
+
+				attestationsBucket := tx.Bucket(historicAttestationsBucket)
+				v := attestationsBucket.Get(pubKey)
+				if v != nil {
+					attestations := pubKeyAttestations{
+						PubKey:       pubKey,
+						Attestations: make([]byte, len(v)),
+					}
+					copy(attestations.Attestations, v)
+					allAttestations = append(allAttestations, attestations)
+				}
+
+				return nil
+			}); err != nil {
+				return nil, nil, errors.Wrapf(err, "could not retrieve data for public key %x", pubKey[:12])
+			}
+		}
 	}
 
 	return allProposals, allAttestations, nil
 }
 
-func addProposals(bucket *bolt.Bucket, proposals pubKeyProposals) error {
-	var proposalsPubKeyBucket, err = bucket.CreateBucket(proposals.PubKey)
+func createProposalsBucket(topLevelBucket *bolt.Bucket, pubKey []byte) (*bolt.Bucket, error) {
+	var bucket, err = topLevelBucket.CreateBucket(pubKey)
 	if err != nil {
-		return errors.Wrapf(err, "Could not create proposals bucket for public key %x", proposals.PubKey[:12])
+		return nil, errors.Wrapf(err, "could not create proposals bucket for public key %x", pubKey[:12])
 	}
-	for _, epochProposals := range proposals.Proposals {
-		if err := proposalsPubKeyBucket.Put(epochProposals.Epoch, epochProposals.Proposals); err != nil {
-			return errors.Wrapf(err, "Could not add epoch proposals for epoch %v", epochProposals.Epoch)
+	return bucket, nil
+}
+
+func addEpochProposals(bucket *bolt.Bucket, proposals []epochProposals) error {
+	for _, singleProposal := range proposals {
+		if err := bucket.Put(singleProposal.Epoch, singleProposal.Proposals); err != nil {
+			return errors.Wrapf(err, "could not add epoch proposals for epoch %v", singleProposal.Epoch)
 		}
 	}
 	return nil
@@ -248,7 +300,27 @@ func addProposals(bucket *bolt.Bucket, proposals pubKeyProposals) error {
 
 func addAttestations(bucket *bolt.Bucket, attestations pubKeyAttestations) error {
 	if err := bucket.Put(attestations.PubKey, attestations.Attestations); err != nil {
-		return errors.Wrapf(err, "Could not add public key attestations for public key %x", attestations.PubKey[:12])
+		return errors.Wrapf(
+			err,
+			"could not add public key attestations for public key %x",
+			attestations.PubKey[:12])
 	}
 	return nil
+}
+
+func removeDuplicateKeys(keys [][]byte) [][]byte {
+	last := 0
+
+next:
+	for _, k1 := range keys {
+		for _, k2 := range keys[:last] {
+			if bytes.Equal(k1, k2) {
+				continue next
+			}
+		}
+		keys[last] = k1
+		last++
+	}
+
+	return keys[:last]
 }

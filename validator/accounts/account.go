@@ -225,9 +225,18 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) (err error) {
 	var sourceStores []*db.Store
 	defer func() {
+		errorMessage := "failed to close one or more source databases"
+		failedToClose := false
 		for _, store := range sourceStores {
 			if deferErr := store.Close(); deferErr != nil {
-				err = errors.Wrapf(deferErr, "Failed to close the database in %s", store.DatabasePath())
+				failedToClose = true
+			}
+		}
+		if failedToClose {
+			if err != nil {
+				err = errors.Wrapf(err, errorMessage)
+			} else {
+				err = errors.New(errorMessage)
 			}
 		}
 	}()
@@ -235,7 +244,7 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 	for _, dir := range sourceDirectories {
 		store, err := db.GetKVStore(dir)
 		if err != nil {
-			return errors.Wrapf(err, "Failed to prepare the database in %s for merging", dir)
+			return errors.Wrapf(err, "failed to prepare the database in %s for merging", dir)
 		}
 		if store == nil {
 			continue
@@ -247,11 +256,7 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 		return errors.New("no validator databases found in source directories")
 	}
 
-	if err := db.Merge(ctx, sourceStores, targetDirectory); err != nil {
-		return errors.Wrapf(err, "Failed to merge validator databases into %s", targetDirectory)
-	}
-
-	return nil
+	return db.Merge(ctx, sourceStores, targetDirectory)
 }
 
 // Split splits data from one validator database in sourceDirectory into several validator databases.
@@ -260,24 +265,25 @@ func Split(ctx context.Context, sourceDirectory string, targetDirectory string) 
 	var sourceStore *db.Store
 	sourceStore, err = db.GetKVStore(sourceDirectory)
 	if err != nil {
-		return errors.Wrap(err, "Failed to prepare the source database for splitting")
+		return errors.Wrap(err, "failed to prepare the source database for splitting")
 	}
 	if sourceStore == nil {
 		return errors.New("no database found in source directory")
 	}
 	defer func() {
 		if sourceStore != nil {
+			errorMessage := "failed to close the source database"
 			if deferErr := sourceStore.Close(); deferErr != nil {
-				err = errors.Wrap(deferErr, "Failed to close the source database")
+				if err != nil {
+					err = errors.Wrap(err, errorMessage)
+				} else {
+					err = errors.Wrap(deferErr, errorMessage)
+				}
 			}
 		}
 	}()
 
-	if err := db.Split(ctx, sourceStore, targetDirectory); err != nil {
-		return errors.Wrapf(err, "Failed to split the validator database")
-	}
-
-	return nil
+	return db.Split(ctx, sourceStore, targetDirectory)
 }
 
 // ChangePassword changes the password for all keys located in a keystore.
@@ -302,14 +308,14 @@ func ChangePassword(keystorePath string, oldPassword string, newPassword string)
 func changePasswordForKeyType(keystorePath string, filePrefix string, oldPassword string, newPassword string) error {
 	keys, err := DecryptKeysFromKeystore(keystorePath, filePrefix, oldPassword)
 	if err != nil {
-		return errors.Wrap(err, "Failed to decrypt keys")
+		return errors.Wrap(err, "failed to decrypt keys")
 	}
 
 	keyStore := keystore.NewKeystore(keystorePath)
 	for _, key := range keys {
 		keyFileName := keystorePath + filePrefix + hex.EncodeToString(key.PublicKey.Marshal())[:12]
 		if err := keyStore.StoreKey(keyFileName, key, newPassword); err != nil {
-			return errors.Wrapf(err, "Failed to encrypt key %s with the new password", keyFileName)
+			return errors.Wrapf(err, "failed to encrypt key %s with the new password", keyFileName)
 		}
 	}
 
@@ -331,7 +337,7 @@ func homeDir() string {
 func ExtractPublicKeysFromKeyStore(keystorePath string, passphrase string) ([][]byte, error) {
 	decryptedKeys, err := DecryptKeysFromKeystore(keystorePath, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not decrypt keys from keystore in path %s", keystorePath)
+		return nil, errors.Wrapf(err, "could not decrypt keys from keystore in path %s", keystorePath)
 	}
 
 	i := 0
