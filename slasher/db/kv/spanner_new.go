@@ -10,7 +10,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var ErrWrongSize = errors.New("wrong data length for min max span byte array")
+var errWrongSize = errors.New("wrong data length for min max span byte array")
 var highestObservedValidatorIdx uint64
 
 // GetValidatorSpan unmarshal a span from an encoded, flattened array.
@@ -20,7 +20,7 @@ func (db *Store) GetValidatorSpan(ctx context.Context, spans []byte, validatorId
 
 	r := types.Span{}
 	if len(spans)%spannerEncodedLength != 0 {
-		return r, ErrWrongSize
+		return r, errWrongSize
 	}
 	origLength := uint64(len(spans)) / spannerEncodedLength
 	requestedLength := validatorIdx + 1
@@ -92,13 +92,13 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64) ([]byte, error) {
 	return spans, err
 }
 
-// SaveEpochSpansMap accepts a epoch and span byte array and writes it to disk.
+// SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
 func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, spans []byte) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpans")
 	defer span.End()
 
 	if len(spans)%spannerEncodedLength != 0 {
-		return ErrWrongSize
+		return errWrongSize
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists(validatorsMinMaxSpanBucketNew)
