@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	amount33Eth        = "33000000000000000000"
 	amount32Eth        = "32000000000000000000"
 	amountLessThan1Eth = "500000000000000000"
 )
