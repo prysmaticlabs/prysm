@@ -9,15 +9,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var input [][]byte
-
 const (
 	benchmarkValidator = 300000
 )
-
-func init() {
-
-}
 
 func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 	app := cli.App{}
