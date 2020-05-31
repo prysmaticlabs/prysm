@@ -21,7 +21,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	peers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
