@@ -51,6 +51,8 @@ var appFlags = []cli.Flag{
 	flags.KeystorePathFlag,
 	flags.MergeSourceDirectories,
 	flags.MergeTargetDirectory,
+	flags.SplitSourceDirectory,
+	flags.SplitTargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
