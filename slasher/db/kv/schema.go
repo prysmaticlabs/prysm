@@ -25,7 +25,8 @@ var (
 	// In order to quickly detect surround and surrounded attestations we need to store
 	// the min and max span for each validator for each epoch.
 	// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-	validatorsMinMaxSpanBucket = []byte("validators-min-max-span-bucket")
+	validatorsMinMaxSpanBucket    = []byte("validators-min-max-span-bucket")
+	validatorsMinMaxSpanBucketNew = []byte("validators-min-max-span-bucket-new")
 )
 
 func encodeSlotValidatorID(slot uint64, validatorID uint64) []byte {
