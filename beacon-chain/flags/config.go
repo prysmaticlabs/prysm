@@ -3,7 +3,7 @@ package flags
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 // GlobalFlags specifies all the global flags for the

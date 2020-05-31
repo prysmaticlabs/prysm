@@ -82,7 +82,8 @@
       "rules_go_work-.*": "Third party code",
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
-      ".*/testmain\\.go": "Test runner generated code"
+      ".*/testmain\\.go": "Test runner generated code",
+      "proto/.*": "Generated protobuf related code"
     }
   },
   "featureconfig": {
