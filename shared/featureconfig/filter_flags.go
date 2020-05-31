@@ -3,7 +3,7 @@ package featureconfig
 import (
 	"reflect"
 
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 // ActiveFlags returns all of the flags that are not Hidden.

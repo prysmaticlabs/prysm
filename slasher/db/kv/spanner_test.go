@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 type spanMapTestStruct struct {

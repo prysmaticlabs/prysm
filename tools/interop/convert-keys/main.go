@@ -11,7 +11,7 @@ import (
 	"log"
 	"os"
 
-	keygen "github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen"
+	keygen "github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 	"gopkg.in/yaml.v2"
 )
 
