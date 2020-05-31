@@ -6,10 +6,6 @@ import (
 )
 
 var (
-	doubleProposalsDetected = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "double_proposals_detected_total",
-		Help: "The # of double propose slashable events detected",
-	})
 	doubleVotesDetected = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "double_votes_detected_total",
 		Help: "The # of double vote slashable events detected",
