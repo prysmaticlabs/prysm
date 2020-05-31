@@ -27,10 +27,7 @@ var (
 		Name: "beacon_clock_time_slot",
 		Help: "The current slot based on the genesis time and current clock",
 	})
-	competingBlks = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "competing_blocks",
-		Help: "The # of blocks received and processed from a competing chain",
-	})
+
 	headFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "head_finalized_epoch",
 		Help: "Last finalized epoch of the head state",

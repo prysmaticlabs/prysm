@@ -91,11 +91,7 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8081,
 	}
-	// NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	NoCustomConfigFlag = &cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
+
 	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
 	PasswordFlag = &cli.StringFlag{
 		Name:  "password",
