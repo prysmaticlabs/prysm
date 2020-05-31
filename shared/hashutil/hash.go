@@ -102,9 +102,6 @@ func HashKeccak256(data []byte) [32]byte {
 	return b
 }
 
-// RepeatHash applies the sha256 hash function repeatedly
-// numTimes on a [32]byte array.
-
 // HashProto hashes a protocol buffer message using sha256.
 func HashProto(msg proto.Message) (result [32]byte, err error) {
 	// Hashing a proto with nil pointers will cause a panic in the unsafe
