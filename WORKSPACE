@@ -343,6 +343,10 @@ load("@prysm//third_party/herumi:herumi.bzl", "bls_dependencies")
 
 bls_dependencies()
 
+load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
+
+geth_dependencies()
+
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
 
 go_repository(
