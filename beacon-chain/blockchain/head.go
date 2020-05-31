@@ -42,11 +42,13 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// Get head from the fork choice service.
 	f := s.finalizedCheckpt
 	j := s.justifiedCheckpt
-	// Skip update head if genesis root is zero hashes (ie. genesis)
-	if bytesutil.ToBytes32(j.Root) == params.BeaconConfig().ZeroHash {
-		return nil
+	// To get head before the first justified epoch, the fork choice will start with genesis root
+	// instead of zero hashes.
+	headStartRoot := bytesutil.ToBytes32(j.Root)
+	if headStartRoot == params.BeaconConfig().ZeroHash {
+		headStartRoot = s.genesisRoot
 	}
-	headRoot, err := s.forkChoiceStore.Head(ctx, j.Epoch, bytesutil.ToBytes32(j.Root), balances, f.Epoch)
+	headRoot, err := s.forkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
 	if err != nil {
 		return err
 	}
