@@ -77,12 +77,12 @@ var (
 	}
 	// MergeSourceDirectories defines the locations of source validator databases that will be merged.
 	MergeSourceDirectories = &cli.StringFlag{
-		Name:  "source-dirs",
+		Name:  "merge-source-dirs",
 		Usage: "A comma-separated list of directories containing validator databases that will be merged.",
 	}
 	// MergeTargetDirectory defines the locations where the merged database will be stored.
 	MergeTargetDirectory = &cli.StringFlag{
-		Name:  "target-dir",
+		Name:  "merge-target-dir",
 		Usage: "The directory where the merged database will be stored.",
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
@@ -103,12 +103,12 @@ var (
 	}
 	// SplitSourceDirectory defines the location of the validator database that will be split.
 	SplitSourceDirectory = &cli.StringFlag{
-		Name: "source-dir",
+		Name: "split-source-dir",
 		Usage: "The directory containing the validator database that will be split.",
 	}
 	// SplitTargetDirectory defines the location where the split outcome will be stored.
 	SplitTargetDirectory = &cli.StringFlag{
-		Name: "target-dir",
+		Name: "split-target-dir",
 		Usage: "The directory where the split outcome will be stored.",
 	}
 	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
