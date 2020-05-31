@@ -3,9 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 )
 
 func TestSavesUnencryptedKeys(t *testing.T) {
