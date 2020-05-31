@@ -128,7 +128,7 @@ func createSplitTargetStores(
 	allAttestations []pubKeyAttestations) (err error) {
 
 	var storesToClose []*Store
-	defer (func() {
+	defer func() {
 		errorMessage := "failed to close one or more stores"
 		failedToClose := false
 		for _, store := range storesToClose {
@@ -143,7 +143,7 @@ func createSplitTargetStores(
 				err = errors.New(errorMessage)
 			}
 		}
-	})()
+	}()
 
 	for _, pubKeyProposals := range allProposals {
 		dirName := hex.EncodeToString(pubKeyProposals.PubKey)[:12]
