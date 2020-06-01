@@ -19,21 +19,21 @@ func (es *EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.S
 	defer span.End()
 
 	r := types.Span{}
-	if len(es.spans)%spannerEncodedLength != 0 {
+	if len(es.Spans)%spannerEncodedLength != 0 {
 		return r, errWrongSize
 	}
-	origLength := uint64(len(es.spans)) / spannerEncodedLength
+	origLength := uint64(len(es.Spans)) / spannerEncodedLength
 	requestedLength := idx + 1
 	if origLength < requestedLength {
 		return r, nil
 	}
 	cursor := idx * spannerEncodedLength
-	r.MinSpan = bytesutil.FromBytes2(es.spans[cursor : cursor+2])
-	r.MaxSpan = bytesutil.FromBytes2(es.spans[cursor+2 : cursor+4])
+	r.MinSpan = bytesutil.FromBytes2(es.Spans[cursor : cursor+2])
+	r.MaxSpan = bytesutil.FromBytes2(es.Spans[cursor+2 : cursor+4])
 	sigB := [2]byte{}
-	copy(sigB[:], es.spans[cursor+4:cursor+6])
+	copy(sigB[:], es.Spans[cursor+4:cursor+6])
 	r.SigBytes = sigB
-	r.HasAttested = bytesutil.ToBool(es.spans[cursor+6])
+	r.HasAttested = bytesutil.ToBool(es.Spans[cursor+6])
 	return r, nil
 }
 
@@ -42,28 +42,28 @@ func (es *EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan 
 	ctx, span := trace.StartSpan(ctx, "slasherDB.setValidatorSpan")
 	defer span.End()
 
-	if len(es.spans)%spannerEncodedLength != 0 {
+	if len(es.Spans)%spannerEncodedLength != 0 {
 		return errors.New("wrong data length for min max span byte array")
 	}
 	if highestObservedValidatorIdx < idx {
 		highestObservedValidatorIdx = idx
 	}
-	if len(es.spans) == 0 {
+	if len(es.Spans) == 0 {
 		requestedLength := highestObservedValidatorIdx*spannerEncodedLength + spannerEncodedLength
 		b := make([]byte, requestedLength, requestedLength)
-		es.spans = b
+		es.Spans = b
 
 	}
 	cursor := idx * spannerEncodedLength
 	endCursor := cursor + spannerEncodedLength
-	spansLength := uint64(len(es.spans))
+	spansLength := uint64(len(es.Spans))
 	if endCursor > spansLength {
 		diff := endCursor - spansLength
 		b := make([]byte, diff, diff)
-		es.spans = append(es.spans, b...)
+		es.Spans = append(es.Spans, b...)
 	}
 	enc := marshalSpan(newSpan)
-	copy(es.spans[cursor:], enc)
+	copy(es.Spans[cursor:], enc)
 
 	return nil
 }
