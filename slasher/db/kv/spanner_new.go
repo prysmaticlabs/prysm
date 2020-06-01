@@ -72,7 +72,7 @@ func (es *EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan 
 // for slashing detection.
 // Returns span byte array, and error in case of db error.
 // returns empty byte array if no entry for this epoch exists in db.
-func (db *Store) EpochSpans(ctx context.Context, epoch uint64) ([]byte, error) {
+func (db *Store) EpochSpans(ctx context.Context, epoch uint64) (EpochStore, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpans")
 	defer span.End()
 
@@ -89,15 +89,16 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64) ([]byte, error) {
 	if spans == nil {
 		spans = []byte{}
 	}
-	return spans, err
+	es := EpochStore{Spans: spans}
+	return es, err
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
-func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, spans []byte) error {
+func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es EpochStore) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpans")
 	defer span.End()
 
-	if len(spans)%spannerEncodedLength != 0 {
+	if len(es.Spans)%spannerEncodedLength != 0 {
 		return errWrongSize
 	}
 	return db.update(func(tx *bolt.Tx) error {
@@ -105,6 +106,6 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, spans []byte)
 		if err != nil {
 			return err
 		}
-		return b.Put(bytesutil.Bytes8(epoch), spans)
+		return b.Put(bytesutil.Bytes8(epoch), es.Spans)
 	})
 }

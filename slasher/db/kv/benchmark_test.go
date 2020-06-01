@@ -34,7 +34,7 @@ func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := db.SaveEpochSpans(ctx, uint64(i%54000), es.Spans)
+		err := db.SaveEpochSpans(ctx, uint64(i%54000), es)
 		if err != nil {
 			b.Fatalf("Save validator span map failed: %v", err)
 		}
@@ -61,7 +61,7 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 	}
 	b.Log(len(es.Spans))
 	for i := 0; i < 200; i++ {
-		err := db.SaveEpochSpans(ctx, uint64(i), es.Spans)
+		err := db.SaveEpochSpans(ctx, uint64(i), es)
 		if err != nil {
 			b.Fatalf("Save validator span map failed: %v", err)
 		}

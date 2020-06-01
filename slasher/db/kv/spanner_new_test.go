@@ -116,11 +116,11 @@ func TestValidatorSpans_NilDB(t *testing.T) {
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
-	vsm, err := db.EpochSpans(ctx, validatorIdx)
+	es, err := db.EpochSpans(ctx, validatorIdx)
 	if err != nil {
 		t.Fatalf("Nil EpochSpansMap should not return error: %v", err)
 	}
-	if !reflect.DeepEqual(vsm, []byte{}) {
+	if !reflect.DeepEqual(es, EpochStore{Spans: []byte{}}) {
 		t.Fatal("EpochSpans should return empty byte array if no record exists in the db")
 	}
 }
@@ -136,7 +136,8 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = db.SaveEpochSpans(ctx, tt.epoch, spans)
+		es := EpochStore{Spans: spans}
+		err = db.SaveEpochSpans(ctx, tt.epoch, es)
 		if err != tt.err {
 			t.Fatalf("Failed to get the right error expected: %v got: %v", tt.err, err)
 		}
@@ -148,10 +149,10 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if sm == nil || !reflect.DeepEqual(sm, spansResult) {
+		if !reflect.DeepEqual(sm.Spans, spansResult) {
 			t.Fatalf("Get should return validator spans: %v got: %v", spansResult, sm)
 		}
-		es := EpochStore{Spans: sm}
+
 		s, err := es.GetValidatorSpan(ctx, 1)
 		if err != nil {
 			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
