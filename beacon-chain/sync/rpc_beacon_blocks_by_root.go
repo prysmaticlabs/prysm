@@ -24,7 +24,7 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	}
 	defer func() {
 		if err := stream.Reset(); err != nil {
-			log.WithError(err).Error("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {

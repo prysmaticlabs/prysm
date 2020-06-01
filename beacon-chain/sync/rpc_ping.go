@@ -60,7 +60,7 @@ func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	}
 	defer func() {
 		if err := stream.Reset(); err != nil {
-			log.WithError(err).Error("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 
