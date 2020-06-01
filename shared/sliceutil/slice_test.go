@@ -442,9 +442,8 @@ func TestIntersectionByteSlices(t *testing.T) {
 			{},
 		}
 		result := sliceutil.IntersectionByteSlices(input...)
-		want := [][]byte{}
-		if !reflect.DeepEqual(result, want) {
-			t.Errorf("IntersectionByteSlices(%v)=%v, wanted: %v", input, result, want)
+		if !reflect.DeepEqual(result, [][]byte{}) {
+			t.Errorf("IntersectionByteSlices(%v)=%v, wanted: %v", input, result, [][]byte{})
 		}
 	})
 }
