@@ -15,9 +15,6 @@ var highestObservedValidatorIdx uint64
 
 // GetValidatorSpan unmarshal a span from an encoded, flattened array.
 func (es *EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.getValidatorSpan")
-	defer span.End()
-
 	r := types.Span{}
 	if len(es.Spans)%spannerEncodedLength != 0 {
 		return r, errWrongSize
@@ -39,9 +36,6 @@ func (es *EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.S
 
 // SetValidatorSpan marshal a validator span into an encoded, flattened array.
 func (es *EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan types.Span) error {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.setValidatorSpan")
-	defer span.End()
-
 	if len(es.Spans)%spannerEncodedLength != 0 {
 		return errors.New("wrong data length for min max span byte array")
 	}
