@@ -95,21 +95,42 @@ func TestIntersectionInt64(t *testing.T) {
 	testCases := []struct {
 		setA []int64
 		setB []int64
+		setC []int64
 		out  []int64
 	}{
-		{[]int64{2, 3, 5}, []int64{3}, []int64{3}},
-		{[]int64{2, 3, 5}, []int64{3, 5}, []int64{3, 5}},
-		{[]int64{2, 3, 5}, []int64{5, 3, 2}, []int64{5, 3, 2}},
-		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{2, 3, 5}},
-		{[]int64{2, 3, 5}, []int64{}, []int64{}},
-		{[]int64{}, []int64{2, 3, 5}, []int64{}},
-		{[]int64{}, []int64{}, []int64{}},
-		{[]int64{1}, []int64{1}, []int64{1}},
+		{[]int64{2, 3, 5}, []int64{3}, []int64{3}, []int64{3}},
+		{[]int64{2, 3, 5}, []int64{3, 5}, []int64{5}, []int64{5}},
+		{[]int64{2, 3, 5}, []int64{3, 5}, []int64{3, 5}, []int64{3, 5}},
+		{[]int64{2, 3, 5}, []int64{5, 3, 2}, []int64{3, 2, 5}, []int64{2, 3, 5}},
+		{[]int64{3, 2, 5}, []int64{5, 3, 2}, []int64{3, 2, 5}, []int64{2, 3, 5}},
+		{[]int64{3, 3, 5}, []int64{5, 3, 2}, []int64{3, 2, 5}, []int64{3, 5}},
+		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{2, 3, 5}, []int64{2, 3, 5}},
+		{[]int64{2, 3, 5}, []int64{}, []int64{}, []int64{}},
+		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{}, []int64{}},
+		{[]int64{}, []int64{2, 3, 5}, []int64{}, []int64{}},
+		{[]int64{}, []int64{}, []int64{}, []int64{}},
+		{[]int64{1}, []int64{1}, []int64{}, []int64{}},
+		{[]int64{1, 1, 1}, []int64{1, 1}, []int64{1, 2, 3}, []int64{1}},
 	}
 	for _, tt := range testCases {
-		result := sliceutil.IntersectionInt64(tt.setA, tt.setB)
+		setA := append([]int64{}, tt.setA...)
+		setB := append([]int64{}, tt.setB...)
+		setC := append([]int64{}, tt.setC...)
+		result := sliceutil.IntersectionInt64(setA, setB, setC)
+		sort.Slice(result, func(i, j int) bool {
+			return result[i] < result[j]
+		})
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
+		}
+		if !reflect.DeepEqual(setA, tt.setA) {
+			t.Errorf("slice modified, got %v, want %v", setA, tt.setA)
+		}
+		if !reflect.DeepEqual(setB, tt.setB) {
+			t.Errorf("slice modified, got %v, want %v", setB, tt.setB)
+		}
+		if !reflect.DeepEqual(setC, tt.setC) {
+			t.Errorf("slice modified, got %v, want %v", setC, tt.setC)
 		}
 	}
 }
@@ -343,8 +364,9 @@ func TestIntersectionByteSlices(t *testing.T) {
 					{1, 2},
 					{4, 5},
 				},
+				{},
 			},
-			result: [][]byte{{4, 5}},
+			result: [][]byte{},
 		},
 		// Ensure duplicate elements are removed in the resulting set.
 		{
@@ -359,8 +381,12 @@ func TestIntersectionByteSlices(t *testing.T) {
 					{4, 5},
 					{4, 5},
 				},
+				{
+					{4, 5},
+					{4, 5},
+				},
 			},
-			result: [][]byte{{4, 5}},
+			result: [][]byte{{4, 5}, {4, 5}},
 		},
 		// Ensure no intersection returns an empty set.
 		{
@@ -372,12 +398,18 @@ func TestIntersectionByteSlices(t *testing.T) {
 				{
 					{1, 2},
 				},
+				{
+					{1, 2},
+				},
 			},
 			result: [][]byte{},
 		},
 		//  Intersection between A and A should return A.
 		{
 			input: [][][]byte{
+				{
+					{1, 2},
+				},
 				{
 					{1, 2},
 				},
