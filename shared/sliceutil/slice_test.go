@@ -45,6 +45,8 @@ func TestIntersectionUint64(t *testing.T) {
 		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
 		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}, []uint64{}},
 		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{2, 3}, []uint64{2, 3, 5}, []uint64{5}, []uint64{}},
+		{[]uint64{2, 2, 2}, []uint64{2, 2, 2}, []uint64{}, []uint64{}},
 		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}, []uint64{}},
 		{[]uint64{}, []uint64{}, []uint64{}, []uint64{}},
 		{[]uint64{1}, []uint64{1}, []uint64{}, []uint64{}},
@@ -107,6 +109,8 @@ func TestIntersectionInt64(t *testing.T) {
 		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{2, 3, 5}, []int64{2, 3, 5}},
 		{[]int64{2, 3, 5}, []int64{}, []int64{}, []int64{}},
 		{[]int64{2, 3, 5}, []int64{2, 3, 5}, []int64{}, []int64{}},
+		{[]int64{2, 3}, []int64{2, 3, 5}, []int64{5}, []int64{}},
+		{[]int64{2, 2, 2}, []int64{2, 2, 2}, []int64{}, []int64{}},
 		{[]int64{}, []int64{2, 3, 5}, []int64{}, []int64{}},
 		{[]int64{}, []int64{}, []int64{}, []int64{}},
 		{[]int64{1}, []int64{1}, []int64{}, []int64{}},
@@ -351,10 +355,12 @@ func TestUnionByteSlices(t *testing.T) {
 
 func TestIntersectionByteSlices(t *testing.T) {
 	testCases := []struct {
+		name   string
 		input  [][][]byte
 		result [][]byte
 	}{
 		{
+			name: "intersect with empty set",
 			input: [][][]byte{
 				{
 					{1, 2, 3},
@@ -368,8 +374,8 @@ func TestIntersectionByteSlices(t *testing.T) {
 			},
 			result: [][]byte{},
 		},
-		// Ensure duplicate elements are removed in the resulting set.
 		{
+			name: "ensure duplicate elements are removed in the resulting set",
 			input: [][][]byte{
 				{
 					{1, 2, 3},
@@ -388,8 +394,8 @@ func TestIntersectionByteSlices(t *testing.T) {
 			},
 			result: [][]byte{{4, 5}},
 		},
-		// Ensure no intersection returns an empty set.
 		{
+			name: "ensure no intersection returns an empty set",
 			input: [][][]byte{
 				{
 					{1, 2, 3},
@@ -404,8 +410,8 @@ func TestIntersectionByteSlices(t *testing.T) {
 			},
 			result: [][]byte{},
 		},
-		//  Intersection between A and A should return A.
 		{
+			name: "intersection between A and A should return A",
 			input: [][][]byte{
 				{
 					{1, 2},
@@ -421,12 +427,26 @@ func TestIntersectionByteSlices(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		result := sliceutil.IntersectionByteSlices(tt.input...)
-		if !reflect.DeepEqual(result, tt.result) {
-			t.Errorf("IntersectionByteSlices(%v)=%v, wanted: %v",
-				tt.input, result, tt.result)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			result := sliceutil.IntersectionByteSlices(tt.input...)
+			if !reflect.DeepEqual(result, tt.result) {
+				t.Errorf("IntersectionByteSlices(%v)=%v, wanted: %v",
+					tt.input, result, tt.result)
+			}
+		})
 	}
+	t.Run("properly handle duplicates", func(t *testing.T) {
+		input := [][][]byte{
+			{{1, 2}, {1, 2}},
+			{{1, 2}, {1, 2}},
+			{},
+		}
+		result := sliceutil.IntersectionByteSlices(input...)
+		want := [][]byte{}
+		if !reflect.DeepEqual(result, want) {
+			t.Errorf("IntersectionByteSlices(%v)=%v, wanted: %v", input, result, want)
+		}
+	})
 }
 
 func TestSplitCommaSeparated(t *testing.T) {
