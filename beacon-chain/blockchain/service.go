@@ -353,9 +353,9 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return errors.Wrap(err, "could save genesis block root")
 	}
 
-	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
+	// Finalized checkpoint at genesis is a zero hash.
+	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
-	// Add the genesis block to the fork choice store.
 	s.justifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 	s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 	s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
