@@ -386,7 +386,7 @@ func TestIntersectionByteSlices(t *testing.T) {
 					{4, 5},
 				},
 			},
-			result: [][]byte{{4, 5}, {4, 5}},
+			result: [][]byte{{4, 5}},
 		},
 		// Ensure no intersection returns an empty set.
 		{

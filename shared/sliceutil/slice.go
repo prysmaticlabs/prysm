@@ -262,26 +262,19 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 		return s[0]
 	}
 	inter := make([][]byte, 0)
-	for i := 1; i < len(s); i++ {
-		hash := make(map[string]bool)
-		for _, e := range s[i-1] {
-			hash[string(e)] = true
-		}
-		for _, e := range s[i] {
-			if hash[string(e)] {
-				inter = append(inter, e)
+	m := make(map[string]int)
+	for _, k := range s[0] {
+		m[string(k)] = 1
+	}
+	for i, num := 1, len(s); i < num; i++ {
+		for _, k := range s[i] {
+			if count, found := m[string(k)]; found && count < num {
+				m[string(k)]++
+				if m[string(k)] == num {
+					inter = append(inter, k)
+				}
 			}
 		}
-		tmp := make([][]byte, 0)
-		// Remove duplicates from slice.
-		encountered := make(map[string]bool)
-		for _, element := range inter {
-			if !encountered[string(element)] {
-				tmp = append(tmp, element)
-				encountered[string(element)] = true
-			}
-		}
-		inter = tmp
 	}
 	return inter
 }
