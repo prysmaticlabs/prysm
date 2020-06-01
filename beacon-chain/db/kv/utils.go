@@ -60,8 +60,9 @@ func deleteValueForIndices(indicesByBucket map[string][]byte, root []byte, tx *b
 		valuesAtIndex := bkt.Get(idx)
 		if valuesAtIndex != nil {
 			start := bytes.Index(valuesAtIndex, root)
-			// if the root was not found inside the values at index slice, we continue.
-			if start == -1 {
+			// If the root was not found inside the values at index slice, we continue.
+			// Root must be correctly aligned to avoid matching to subsequences of adjacent values.
+			if start == -1 || start%len(root) != 0 {
 				continue
 			}
 			// We clear out the root from the values at index slice. For example,
