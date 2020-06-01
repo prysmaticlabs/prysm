@@ -41,14 +41,17 @@ func IntersectionUint64(s ...[]uint64) []uint64 {
 		return s[0]
 	}
 	intersect := make([]uint64, 0)
-	for i := 1; i < len(s); i++ {
-		m := make(map[uint64]bool)
-		for j := 0; j < len(s[i-1]); j++ {
-			m[s[i-1][j]] = true
-		}
-		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; found {
-				intersect = append(intersect, s[i][j])
+	m := make(map[uint64]int)
+	for _, k := range s[0] {
+		m[k] = 1
+	}
+	for i, num := 1, len(s); i < num; i++ {
+		for _, k := range s[i] {
+			if count, found := m[k]; found && count < num {
+				m[k]++
+				if m[k] == num {
+					intersect = append(intersect, k)
+				}
 			}
 		}
 	}
