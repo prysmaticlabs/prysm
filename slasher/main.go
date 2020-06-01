@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var log = logrus.WithField("prefix", "main")

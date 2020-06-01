@@ -15,8 +15,6 @@ import (
 	"strings"
 )
 
-var fset = token.NewFileSet()
-
 func malign(pos token.Pos, str *types.Struct) error {
 	wordSize := int64(8)
 	maxAlign := int64(8)

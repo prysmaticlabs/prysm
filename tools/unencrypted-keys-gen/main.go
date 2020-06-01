@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 	"log"
 	"os"
 
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 )
 
 var (
@@ -66,4 +66,3 @@ func generateUnencryptedKeys(startIndex uint64) *keygen.UnencryptedKeysContainer
 	}
 	return ctnr
 }
-

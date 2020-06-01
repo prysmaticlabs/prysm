@@ -16,9 +16,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"gopkg.in/d4l3k/messagediff.v1"
-	"github.com/urfave/cli/v2"
 )
 
 func main() {
