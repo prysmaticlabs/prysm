@@ -43,10 +43,6 @@ func (mockListener) Resolve(*enode.Node) *enode.Node {
 	panic("implement me")
 }
 
-func (mockListener) LookupRandom() []*enode.Node {
-	panic("implement me")
-}
-
 func (mockListener) Ping(*enode.Node) error {
 	panic("implement me")
 }
@@ -56,6 +52,10 @@ func (mockListener) RequestENR(*enode.Node) (*enode.Node, error) {
 }
 
 func (mockListener) LocalNode() *enode.LocalNode {
+	panic("implement me")
+}
+
+func (mockListener) RandomNodes() enode.Iterator {
 	panic("implement me")
 }
 
