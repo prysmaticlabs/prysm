@@ -22,6 +22,11 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := stream.Reset(); err != nil {
+			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+		}
+	}()
 	for i := 0; i < len(blockRoots); i++ {
 		blk, err := ReadChunkedBlock(stream, r.p2p)
 		if err == io.EOF {
