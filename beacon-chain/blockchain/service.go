@@ -326,6 +326,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
+	s.genesisRoot = genesisBlkRoot
 
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
