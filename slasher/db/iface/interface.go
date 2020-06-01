@@ -7,9 +7,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/prysmaticlabs/prysm/slasher/db/kv"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	detectionTypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
