@@ -151,7 +151,7 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 		if sm == nil || !reflect.DeepEqual(sm, spansResult) {
 			t.Fatalf("Get should return validator spans: %v got: %v", spansResult, sm)
 		}
-		es := EpochStore{spans: sm}
+		es := EpochStore{Spans: sm}
 		s, err := es.GetValidatorSpan(ctx, 1)
 		if err != nil {
 			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
@@ -168,7 +168,7 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es := EpochStore{spans: tooSmall}
+	es := EpochStore{Spans: tooSmall}
 
 	span, err := es.GetValidatorSpan(ctx, 1)
 	if !reflect.DeepEqual(span, types.Span{}) {
@@ -181,7 +181,7 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es.spans = tooBig
+	es.Spans = tooBig
 	span, err = es.GetValidatorSpan(ctx, 1)
 	if !reflect.DeepEqual(span, types.Span{}) {
 		t.Errorf("Expected empty span to be returned: %v", span)
@@ -193,7 +193,7 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es.spans = oneValidator
+	es.Spans = oneValidator
 	span, err = es.GetValidatorSpan(ctx, 0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
@@ -212,7 +212,7 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es.spans = twoValidator
+	es.Spans = twoValidator
 	span, err = es.GetValidatorSpan(ctx, 0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
@@ -236,14 +236,14 @@ func TestStore_SetValidatorSpan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		es := EpochStore{spans: oldSpans}
+		es := EpochStore{Spans: oldSpans}
 
 		err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan)
 		if err != tt.err {
 			t.Errorf("Expected error: %v got: %v", tt.err, err)
 		}
-		if uint64(len(es.spans)) != tt.spansLength {
-			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es.spans))
+		if uint64(len(es.Spans)) != tt.spansLength {
+			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es.Spans))
 		}
 		span, err := es.GetValidatorSpan(ctx, tt.validatorID)
 		if err != nil {
