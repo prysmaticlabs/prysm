@@ -106,7 +106,6 @@ type EpochSpans interface {
 type Database interface {
 	io.Closer
 	FullAccessDatabase
-	EpochSpans
 	DatabasePath() string
 	ClearDB() error
 }
