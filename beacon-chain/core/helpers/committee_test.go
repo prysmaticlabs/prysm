@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -193,6 +194,24 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 	}
 }
 
+func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
+	ClearCache()
+	epoch := uint64(1)
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Slot: 0, // Epoch 0.
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = CommitteeAssignments(state, epoch+1)
+	if err == nil {
+		t.Fatal("Expected error, received nil")
+	}
+	if !strings.Contains(err.Error(), "can't be greater than next epoch") {
+		t.Errorf("Expected unable to get greater than next epoch, received %v", err)
+	}
+}
+
 func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
@@ -280,6 +299,53 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 					tt.committee, cac.Committee, tt.index)
 			}
 		})
+	}
+}
+
+func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
+	// Initialize test with 256 validators, each slot and each index gets 4 validators.
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: 0,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ClearCache()
+	epoch := uint64(1)
+	_, proposerIndexToSlots, err := CommitteeAssignments(state, epoch)
+	if err != nil {
+		t.Fatalf("failed to determine CommitteeAssignments: %v", err)
+	}
+
+	slotsWithProposers := make(map[uint64]bool)
+	for _, proposerSlots := range proposerIndexToSlots {
+		for _, slot := range proposerSlots {
+			slotsWithProposers[slot] = true
+		}
+	}
+	if uint64(len(slotsWithProposers)) != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf(
+			"Expected %d slots with proposers, received %d",
+			params.BeaconConfig().SlotsPerEpoch,
+			len(slotsWithProposers),
+		)
+	}
+	startSlot := StartSlot(epoch)
+	endSlot := StartSlot(epoch + 1)
+	for i := startSlot; i < endSlot; i++ {
+		hasProposer := slotsWithProposers[i]
+		if !hasProposer {
+			t.Errorf("Expected every slot in epoch 1 to have a proposer, slot %d did not", i)
+		}
 	}
 }
 
