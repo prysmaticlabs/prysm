@@ -19,7 +19,7 @@ func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(b, cli.NewContext(&app, set, nil))
-	es := EpochStore{Spans: []byte{}}
+	es := EpochStore{}
 
 	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
@@ -48,7 +48,7 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 	db := setupDB(b, cli.NewContext(&app, set, nil))
 	ctx := context.Background()
 	sigBytes := [2]byte{}
-	es := EpochStore{Spans: []byte{}}
+	es := EpochStore{}
 	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
 		b.Error(err)
@@ -59,7 +59,7 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 			b.Error(err)
 		}
 	}
-	b.Log(len(es.Spans))
+	b.Log(len(es))
 	for i := 0; i < 200; i++ {
 		err := db.SaveEpochSpans(ctx, uint64(i), es)
 		if err != nil {
@@ -82,7 +82,7 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 func BenchmarkStore_GetValidatorSpan(b *testing.B) {
 	ctx := context.Background()
 	sigBytes := [2]byte{}
-	es := EpochStore{Spans: []byte{}}
+	es := EpochStore{}
 	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
 		b.Error(err)
@@ -93,7 +93,7 @@ func BenchmarkStore_GetValidatorSpan(b *testing.B) {
 			b.Error(err)
 		}
 	}
-	b.Log(len(es.Spans))
+	b.Log(len(es))
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -110,7 +110,7 @@ func BenchmarkStore_GetValidatorSpan(b *testing.B) {
 func BenchmarkStore_SetValidatorSpan(b *testing.B) {
 	ctx := context.Background()
 	sigBytes := [2]byte{}
-	es := EpochStore{Spans: []byte{}}
+	es := EpochStore{}
 	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
 		b.Error(err)
@@ -122,7 +122,7 @@ func BenchmarkStore_SetValidatorSpan(b *testing.B) {
 			b.Error(err)
 		}
 	}
-	b.Log(len(es.Spans))
+	b.Log(len(es))
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
