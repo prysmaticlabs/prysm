@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -41,42 +41,6 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-}
-
-type store struct {
-	headRoot []byte
-}
-
-func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
-	return nil, nil
-}
-
-func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
-	return nil, nil
-}
-
-func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
-	return nil, nil
-}
-
-func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
-	return nil, nil
-}
-
-func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {
-	return nil
-}
-
-func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
-	return nil
-}
-
-func (s *store) JustifiedCheckpt() *ethpb.Checkpoint {
-	return nil
-}
-
-func (s *store) Head(ctx context.Context) ([]byte, error) {
-	return s.headRoot, nil
 }
 
 type mockBeaconNode struct {

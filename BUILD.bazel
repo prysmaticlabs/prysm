@@ -14,6 +14,7 @@ exports_files([
 
 # gazelle:prefix github.com/prysmaticlabs/prysm
 # gazelle:map_kind go_library go_library @prysm//tools/go:def.bzl
+# gazelle:map_kind go_repository go_repository @prysm//tools/go:def.bzl
 gazelle(
     name = "gazelle",
     prefix = prefix,
@@ -45,7 +46,7 @@ alias(
 # Protobuf gRPC gateway compiler
 alias(
     name = "grpc_gateway_proto_compiler",
-    actual = "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+    actual = "@com_github_grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     visibility = ["//visibility:public"],
 )
 

@@ -7,7 +7,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/interop/convert-keys",
     visibility = ["//visibility:public"],
     deps = [
-        "//tools/unencrypted-keys-gen:go_default_library",
+        "//tools/unencrypted-keys-gen/keygen:go_default_library",
         "@in_gopkg_yaml_v2//:go_default_library",
     ],
 )

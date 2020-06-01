@@ -1,5 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
+# gazelle:ignore geth_deps.go
+
 go_test(
     name = "go_default_test",
     size = "large",
@@ -15,8 +17,8 @@ go_test(
     data = [
         "//beacon-chain",
         "//slasher",
-        "//validator",
         "//tools/bootnode",
+        "//validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
     shard_count = 4,

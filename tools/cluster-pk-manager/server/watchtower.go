@@ -45,7 +45,7 @@ func (wt *watchtower) queryPodsAndUpdateDB() error {
 	if err != nil {
 		return err
 	}
-	pList, err := wt.client.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: podSelector})
+	pList, err := wt.client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: podSelector})
 	if err != nil {
 		return err
 	}

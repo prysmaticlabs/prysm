@@ -146,11 +146,11 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		idx, ok := s.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if ok {
 			assignment.ValidatorIndex = idx
-			assignment.Status = vs.assignmentStatus(idx, s)
+			assignment.Status = assignmentStatus(s, idx)
 			assignment.ProposerSlots = proposerIndexToSlots[idx]
 
 			nextAssignment.ValidatorIndex = idx
-			nextAssignment.Status = vs.assignmentStatus(idx, s)
+			nextAssignment.Status = assignmentStatus(s, idx)
 			nextAssignment.ProposerSlots = nextProposerIndexToSlots[idx]
 
 			ca, ok := committeeAssignments[idx]
@@ -170,7 +170,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			}
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
-			vStatus := vs.validatorStatus(ctx, pubKey, s)
+			vStatus, _ := vs.validatorStatus(ctx, s, pubKey)
 			assignment.Status = vStatus.Status
 		}
 		validatorAssignments = append(validatorAssignments, assignment)

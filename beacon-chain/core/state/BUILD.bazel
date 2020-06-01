@@ -48,6 +48,7 @@ go_test(
     size = "small",
     srcs = [
         "interop_regression_test.go",
+        "benchmarks_test.go",
         "skip_slot_cache_test.go",
         "state_fuzz_test.go",
         "state_test.go",
@@ -67,6 +68,7 @@ go_test(
         "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
+        "//shared/benchutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",

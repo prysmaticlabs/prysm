@@ -8,11 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/db/iface"
-	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
-
-var log = logrus.WithField("prefix", "db")
 
 var _ = iface.ValidatorDB(&Store{})
 
