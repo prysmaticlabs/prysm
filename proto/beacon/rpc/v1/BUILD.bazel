@@ -8,16 +8,16 @@ go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
         "@io_bazel_rules_go//proto:go_grpc",
-        "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
+        "@com_github_grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     ],
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1_gateway",
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "@go_googleapis//google/api:annotations_go_proto",
         "@com_github_golang_protobuf//descriptor:go_default_library",
         "@com_github_golang_protobuf//ptypes/empty:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
     ],
 )
 
@@ -29,8 +29,8 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "@go_googleapis//google/api:annotations_go_proto",
         "@com_github_golang_protobuf//ptypes/empty:go_default_library",
+        "@go_googleapis//google/api:annotations_go_proto",
     ],
 )
 
@@ -47,7 +47,7 @@ proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:v1_proto",
-        "@go_googleapis//google/api:annotations_proto",
         "@com_google_protobuf//:empty_proto",
+        "@go_googleapis//google/api:annotations_proto",
     ],
 )

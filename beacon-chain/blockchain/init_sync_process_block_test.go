@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	messagediff "gopkg.in/d4l3k/messagediff.v1"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {

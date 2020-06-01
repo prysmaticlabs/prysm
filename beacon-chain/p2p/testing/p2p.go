@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
@@ -21,19 +20,10 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	peers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
-
-// TopicMappings are the protocol ids for the different types of requests.
-var TopicMappings = map[reflect.Type]string{
-	reflect.TypeOf(&pb.Status{}):                     "/eth2/beacon_chain/req/status/1",
-	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/goodbye/1",
-	reflect.TypeOf(&pb.BeaconBlocksByRangeRequest{}): "/eth2/beacon_chain/req/beacon_blocks_by_range/1",
-	reflect.TypeOf([][32]byte{}):                     "/eth2/beacon_chain/req/beacon_blocks_by_root/1",
-	reflect.TypeOf(new(uint64)):                      "/eth2/beacon_chain/req/ping/1/",
-}
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {

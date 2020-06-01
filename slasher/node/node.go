@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -65,7 +65,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 	featureconfig.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(cliCtx)
+	ctx, cancel := context.WithCancel(context.Background())
 	slasher := &SlasherNode{
 		cliCtx:                cliCtx,
 		ctx:                   ctx,

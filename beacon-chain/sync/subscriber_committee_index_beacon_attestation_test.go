@@ -12,16 +12,20 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testing.T) {
+	t.Skip("Temporarily disabled, fixed in v0.12 branch.")
+
 	p := p2ptest.NewTestP2P(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{DisableDynamicCommitteeSubnets: true})
 	defer resetCfg()
@@ -87,14 +91,23 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		Data: &eth.AttestationData{
 			Slot:            0,
 			BeaconBlockRoot: root[:],
+			Target:          &eth.Checkpoint{},
 		},
 		AggregationBits: bitfield.Bitlist{0b0101},
-		Signature:       sKeys[0].Sign([]byte("foo")).Marshal(),
 	}
+	domain, err := helpers.Domain(s.Fork(), att.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	attRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att.Signature = sKeys[16].Sign(attRoot[:]).Marshal()
 
 	p.ReceivePubSub("/eth2/%x/committee_index0_beacon_attestation", att)
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * 1)
 
 	ua := r.attPool.UnaggregatedAttestations()
 	if len(ua) == 0 {
