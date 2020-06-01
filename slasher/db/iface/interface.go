@@ -32,8 +32,6 @@ type ReadOnlyDatabase interface {
 
 	// MinMaxSpan related methods.
 	EpochSpans(ctx context.Context, epoch uint64) ([]byte, error)
-	SetValidatorSpan(ctx context.Context, spans []byte, validatorIdx uint64, newSpan detectionTypes.Span) ([]byte, error)
-	GetValidatorSpan(ctx context.Context, spans []byte, validatorIdx uint64) (detectionTypes.Span, error)
 	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, bool, error)
 	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (detectionTypes.Span, error)
 	EpochsSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]detectionTypes.Span, error)
@@ -98,11 +96,17 @@ type FullAccessDatabase interface {
 	WriteAccessDatabase
 }
 
+// EpochSpans represents a data access layer for marshaling and unmarshaling validator spans for each validator per epoch.
+type EpochSpans interface {
+	SetValidatorSpan(ctx context.Context, idx uint64, newSpan detectionTypes.Span) error
+	GetValidatorSpan(ctx context.Context, idx uint64) (detectionTypes.Span, error)
+}
+
 // Database represents a full access database with the proper DB helper functions.
 type Database interface {
 	io.Closer
 	FullAccessDatabase
-
+	EpochSpans
 	DatabasePath() string
 	ClearDB() error
 }

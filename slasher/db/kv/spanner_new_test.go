@@ -151,7 +151,8 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 		if sm == nil || !reflect.DeepEqual(sm, spansResult) {
 			t.Fatalf("Get should return validator spans: %v got: %v", spansResult, sm)
 		}
-		s, err := db.GetValidatorSpan(ctx, sm, 1)
+		es := EpochStore{spans: sm}
+		s, err := es.GetValidatorSpan(ctx, 1)
 		if err != nil {
 			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
 		}
@@ -162,15 +163,14 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 }
 
 func TestStore_GetValidatorSpan(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
 	ctx := context.Background()
 	tooSmall, err := hex.DecodeString("000000")
 	if err != nil {
 		t.Fatal(err)
 	}
-	span, err := db.GetValidatorSpan(ctx, tooSmall, 1)
+	es := EpochStore{spans: tooSmall}
+
+	span, err := es.GetValidatorSpan(ctx, 1)
 	if !reflect.DeepEqual(span, types.Span{}) {
 		t.Errorf("Expected empty span to be returned: %v", span)
 	}
@@ -181,7 +181,8 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	span, err = db.GetValidatorSpan(ctx, tooBig, 1)
+	es.spans = tooBig
+	span, err = es.GetValidatorSpan(ctx, 1)
 	if !reflect.DeepEqual(span, types.Span{}) {
 		t.Errorf("Expected empty span to be returned: %v", span)
 	}
@@ -192,14 +193,15 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	span, err = db.GetValidatorSpan(ctx, oneValidator, 0)
+	es.spans = oneValidator
+	span, err = es.GetValidatorSpan(ctx, 0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
 	}
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	span, err = db.GetValidatorSpan(ctx, oneValidator, 1)
+	span, err = es.GetValidatorSpan(ctx, 1)
 	if !reflect.DeepEqual(span, types.Span{}) {
 		t.Errorf("Expected empty span to be returned: %v", span)
 	}
@@ -210,14 +212,15 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	span, err = db.GetValidatorSpan(ctx, twoValidator, 0)
+	es.spans = twoValidator
+	span, err = es.GetValidatorSpan(ctx, 0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
 	}
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	span, err = db.GetValidatorSpan(ctx, twoValidator, 1)
+	span, err = es.GetValidatorSpan(ctx, 1)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
 	}
@@ -227,23 +230,22 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 }
 
 func TestStore_SetValidatorSpan(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(&app, set, nil))
 	ctx := context.Background()
 	for _, tt := range exampleSpansValues {
 		oldSpans, err := hex.DecodeString(tt.oldSpans)
 		if err != nil {
 			t.Fatal(err)
 		}
-		spans, err := db.SetValidatorSpan(ctx, oldSpans, tt.validatorID, tt.validatorSpan)
+		es := EpochStore{spans: oldSpans}
+
+		err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan)
 		if err != tt.err {
 			t.Errorf("Expected error: %v got: %v", tt.err, err)
 		}
-		if uint64(len(spans)) != tt.spansLength {
-			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(spans))
+		if uint64(len(es.spans)) != tt.spansLength {
+			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es.spans))
 		}
-		span, err := db.GetValidatorSpan(ctx, spans, tt.validatorID)
+		span, err := es.GetValidatorSpan(ctx, tt.validatorID)
 		if err != nil {
 			t.Errorf("Got error while trying to get span from spans byte array: %v", err)
 		}

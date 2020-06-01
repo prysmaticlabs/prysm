@@ -14,58 +14,58 @@ var errWrongSize = errors.New("wrong data length for min max span byte array")
 var highestObservedValidatorIdx uint64
 
 // GetValidatorSpan unmarshal a span from an encoded, flattened array.
-func (db *Store) GetValidatorSpan(ctx context.Context, spans []byte, validatorIdx uint64) (types.Span, error) {
+func (es *EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.getValidatorSpan")
 	defer span.End()
 
 	r := types.Span{}
-	if len(spans)%spannerEncodedLength != 0 {
+	if len(es.spans)%spannerEncodedLength != 0 {
 		return r, errWrongSize
 	}
-	origLength := uint64(len(spans)) / spannerEncodedLength
-	requestedLength := validatorIdx + 1
+	origLength := uint64(len(es.spans)) / spannerEncodedLength
+	requestedLength := idx + 1
 	if origLength < requestedLength {
 		return r, nil
 	}
-	cursor := validatorIdx * spannerEncodedLength
-	r.MinSpan = bytesutil.FromBytes2(spans[cursor : cursor+2])
-	r.MaxSpan = bytesutil.FromBytes2(spans[cursor+2 : cursor+4])
+	cursor := idx * spannerEncodedLength
+	r.MinSpan = bytesutil.FromBytes2(es.spans[cursor : cursor+2])
+	r.MaxSpan = bytesutil.FromBytes2(es.spans[cursor+2 : cursor+4])
 	sigB := [2]byte{}
-	copy(sigB[:], spans[cursor+4:cursor+6])
+	copy(sigB[:], es.spans[cursor+4:cursor+6])
 	r.SigBytes = sigB
-	r.HasAttested = bytesutil.ToBool(spans[cursor+6])
+	r.HasAttested = bytesutil.ToBool(es.spans[cursor+6])
 	return r, nil
 }
 
 // SetValidatorSpan marshal a validator span into an encoded, flattened array.
-func (db *Store) SetValidatorSpan(ctx context.Context, spans []byte, validatorIdx uint64, newSpan types.Span) ([]byte, error) {
+func (es *EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.setValidatorSpan")
 	defer span.End()
 
-	if len(spans)%spannerEncodedLength != 0 {
-		return nil, errors.New("wrong data length for min max span byte array")
+	if len(es.spans)%spannerEncodedLength != 0 {
+		return errors.New("wrong data length for min max span byte array")
 	}
-	if highestObservedValidatorIdx < validatorIdx {
-		highestObservedValidatorIdx = validatorIdx
+	if highestObservedValidatorIdx < idx {
+		highestObservedValidatorIdx = idx
 	}
-	if len(spans) == 0 {
+	if len(es.spans) == 0 {
 		requestedLength := highestObservedValidatorIdx*spannerEncodedLength + spannerEncodedLength
 		b := make([]byte, requestedLength, requestedLength)
-		spans = b
+		es.spans = b
 
 	}
-	cursor := validatorIdx * spannerEncodedLength
+	cursor := idx * spannerEncodedLength
 	endCursor := cursor + spannerEncodedLength
-	spansLength := uint64(len(spans))
+	spansLength := uint64(len(es.spans))
 	if endCursor > spansLength {
 		diff := endCursor - spansLength
 		b := make([]byte, diff, diff)
-		spans = append(spans, b...)
+		es.spans = append(es.spans, b...)
 	}
 	enc := marshalSpan(newSpan)
-	copy(spans[cursor:], enc)
+	copy(es.spans[cursor:], enc)
 
-	return spans, nil
+	return nil
 }
 
 // EpochSpans accepts epoch and returns the corresponding spans byte array
