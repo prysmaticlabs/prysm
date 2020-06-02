@@ -138,11 +138,10 @@ func NewService(cfg *Config) (*Service, error) {
 
 	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery {
 		dopts := []dhtopts.Option{
-			kaddht.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-			kaddht.ProtocolPrefix(
+			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+			dhtopts.Protocols(
 				prysmProtocolPrefix + "/dht",
 			),
-			kaddht.RoutingTableRefreshPeriod(30 * time.Second),
 		}
 
 		s.dht, err = kaddht.New(ctx, h, dopts...)
@@ -255,7 +254,9 @@ func (s *Service) Start() {
 			}
 			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
-		if err := s.dht.Bootstrap(s.ctx); err != nil {
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = 30 * time.Second
+		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
 			log.WithError(err).Error("Failed to bootstrap DHT")
 		}
 	}
