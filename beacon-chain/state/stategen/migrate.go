@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/hex"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -122,7 +122,7 @@ func (s *State) recoverArchivedPoint(ctx context.Context, currentArchivedPoint u
 	if len(blks) != 1 {
 		return 0, errUnknownBlock
 	}
-	missingRoot, err := ssz.HashTreeRoot(blks[0].Block)
+	missingRoot, err := stateutil.BlockRoot(blks[0].Block)
 	if err != nil {
 		return 0, err
 	}

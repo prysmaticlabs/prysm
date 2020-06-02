@@ -11,7 +11,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -36,7 +35,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blk := &ethpb.BeaconBlock{
 			Slot: uint64(i),
 		}
-		root, err := ssz.HashTreeRoot(blk)
+		root, err := stateutil.BlockRoot(blk)
 		if err != nil {
 			t.Fatal(err)
 		}

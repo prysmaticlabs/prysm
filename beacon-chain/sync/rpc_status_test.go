@@ -12,13 +12,13 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -170,12 +170,12 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
 		t.Fatal(err)
 	}
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	finalizedRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: blkSlot})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	if err := db.SaveBlock(context.Background(), blk); err != nil {
 		t.Fatal(err)
 	}
-	finalizedRoot, err := ssz.HashTreeRoot(blk.Block)
+	finalizedRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,11 +432,11 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
 		t.Fatal(err)
 	}
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
+	finalizedRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: 40})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -515,12 +515,12 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	db := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
 		t.Fatal(err)
 	}
 	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	finalizedRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: blkSlot})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -612,11 +612,11 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 
 	// Set up a head state with data we expect.
-	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	headRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: 111})
 	if err != nil {
 		t.Fatal(err)
 	}
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 40})
+	finalizedRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: 40})
 	if err != nil {
 		t.Fatal(err)
 	}
