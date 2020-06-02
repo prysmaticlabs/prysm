@@ -162,8 +162,8 @@ func startKademliaDHT(privKey crypto.PrivKey) *kaddht.IpfsDHT {
 	}
 
 	dopts := []dhtopts.Option{
-		kaddht.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-		kaddht.ProtocolPrefix(
+		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+		dhtopts.Protocols(
 			dhtProtocol,
 		),
 	}
