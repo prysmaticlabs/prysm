@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"gopkg.in/urfave/cli.v2"
 	"io"
 	"os"
 	"os/user"
