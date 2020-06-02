@@ -458,8 +458,8 @@ func (f *blocksFetcher) requestBlocks(
 		return nil, err
 	}
 	defer func() {
-		if err := stream.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stream")
+		if err := stream.Reset(); err != nil {
+			log.WithError(err).Errorf("Failed to close stream with protocol %s", stream.Protocol())
 		}
 	}()
 

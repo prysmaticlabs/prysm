@@ -95,6 +95,11 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := stream.Reset(); err != nil {
+			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+		}
+	}()
 
 	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
 	if err != nil {
@@ -245,6 +250,7 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	}
 	genesis := r.chain.GenesisTime()
 	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
+	finalizedRoot := r.chain.FinalizedCheckpt().Root
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
@@ -258,6 +264,12 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	// Exit early if the peer's finalized epoch
 	// is less than that of the remote peer's.
 	if finalizedEpoch < msg.FinalizedEpoch {
+		return nil
+	}
+	finalizedAtGenesis := (finalizedEpoch == msg.FinalizedEpoch) && finalizedEpoch == 0
+	rootIsEqual := bytes.Equal(finalizedRoot, msg.FinalizedRoot)
+	// If both peers are at genesis with the same root hash, then exit.
+	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
 	if !r.db.IsFinalizedBlock(context.Background(), bytesutil.ToBytes32(msg.FinalizedRoot)) {

@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	// The time to wait before disconnecting a peer.
-	flushDuration = 50 * time.Millisecond
 	// The time to wait for a status request.
 	timeForStatus = 10 * time.Second
 )
@@ -85,9 +83,6 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					if err := goodbyeFunc(context.Background(), remotePeer); err != nil {
 						log.WithError(err).Trace("Unable to send goodbye message to peer")
 					}
-					// Add a short delay to allow the stream to flush before closing the connection.
-					// There is still a chance that the peer won't receive the message.
-					time.Sleep(flushDuration)
 					disconnectFromPeer()
 					return
 				}

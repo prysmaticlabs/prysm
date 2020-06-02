@@ -162,7 +162,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		},
 	}
 
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 }
@@ -237,7 +237,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		},
 	}
 
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 
@@ -256,7 +256,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			},
 		},
 	}
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 }
@@ -329,7 +329,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	if err := r.attPool.SaveBlockAttestation(att); err != nil {
 		t.Fatal(err)
 	}
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 }
@@ -455,7 +455,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 		},
 	}
 
-	if !r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) != pubsub.ValidationAccept {
 		t.Fatal("Validated status is false")
 	}
 
@@ -582,7 +582,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 		},
 	}
 
-	if !r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) != pubsub.ValidationAccept {
 		t.Fatal("Validated status is false")
 	}
 
@@ -602,7 +602,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	}
 
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Fatal("Validated status is true")
 	}
 }

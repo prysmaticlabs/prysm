@@ -27,9 +27,5 @@ yarn-error.log
 # Ignore password file
 password.txt
 
-# go dependancy
-/go.mod
-/go.sum
-
 # Dist files
 dist

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 type testStruct struct {

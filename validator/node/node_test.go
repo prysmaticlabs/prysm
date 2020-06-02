@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 // Test that the sharding node can build with default flag values.
