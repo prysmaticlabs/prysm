@@ -25,10 +25,6 @@ type Store struct {
 	spanCacheEnabled bool
 }
 
-// EpochStore defines an implementation of the slasher data access interface
-// using byte array as data source to extract and put validator spans into.
-type EpochStore []byte
-
 // Config options for the slasher db.
 type Config struct {
 	// SpanCacheSize determines the span map cache size.

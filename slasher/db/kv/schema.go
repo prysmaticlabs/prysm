@@ -8,7 +8,7 @@ import (
 const (
 	latestEpochKey = "LATEST_EPOCH_DETECTED"
 	chainHeadKey   = "CHAIN_HEAD"
-
+	// spannerEncodedLength the byte length of validator span data structure.
 	spannerEncodedLength = 7
 )
 

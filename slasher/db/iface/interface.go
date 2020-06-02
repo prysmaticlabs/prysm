@@ -97,16 +97,16 @@ type FullAccessDatabase interface {
 	WriteAccessDatabase
 }
 
-// EpochSpansStore represents a data access layer for marshaling and unmarshaling validator spans for each validator per epoch.
-type EpochSpansStore interface {
-	SetValidatorSpan(ctx context.Context, idx uint64, newSpan detectionTypes.Span) error
-	GetValidatorSpan(ctx context.Context, idx uint64) (detectionTypes.Span, error)
-}
-
 // Database represents a full access database with the proper DB helper functions.
 type Database interface {
 	io.Closer
 	FullAccessDatabase
 	DatabasePath() string
 	ClearDB() error
+}
+
+// EpochSpansStore represents a data access layer for marshaling and unmarshaling validator spans for each validator per epoch.
+type EpochSpansStore interface {
+	SetValidatorSpan(ctx context.Context, idx uint64, newSpan types.Span) error
+	GetValidatorSpan(ctx context.Context, idx uint64) (types.Span, error)
 }
