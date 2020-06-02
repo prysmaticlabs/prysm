@@ -59,7 +59,6 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	}
 
 	effBalanceLowCount := 0
-	activeEpochWrongCount := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
@@ -83,12 +82,10 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 			effBalanceLowCount,
 			params.BeaconConfig().MaxEffectiveBalance,
 		)
-	} else if activeEpochWrongCount > 0 {
-		return fmt.Errorf("%d validators did not have genesis validator epoch of 0", activeEpochWrongCount)
 	} else if exitEpochWrongCount > 0 {
 		return fmt.Errorf("%d validators did not have genesis validator exit epoch of far future epoch", exitEpochWrongCount)
-	} else if activeEpochWrongCount > 0 {
-		return fmt.Errorf("%d validators did not have genesis validator withdrawable epoch of far future epoch", activeEpochWrongCount)
+	} else if withdrawEpochWrongCount > 0 {
+		return fmt.Errorf("%d validators did not have genesis validator withdrawable epoch of far future epoch", withdrawEpochWrongCount)
 	}
 
 	return nil
