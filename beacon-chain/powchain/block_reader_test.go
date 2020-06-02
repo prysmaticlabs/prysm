@@ -41,6 +41,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
+	web3Service.blockFetcher = &goodFetcher{backend: testAcc.Backend}
 
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	if err != nil {
@@ -55,12 +56,14 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	header := &gethTypes.Header{
-		Number: big.NewInt(42),
-		Time:   308534400,
+	header, err := web3Service.blockFetcher.HeaderByNumber(web3Service.ctx, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	web3Service.headerChan <- header
+	tickerChan := make(chan time.Time)
+	web3Service.headTicker = &time.Ticker{C: tickerChan}
+	tickerChan <- time.Now()
 	web3Service.cancel()
 	exitRoutine <- true
 

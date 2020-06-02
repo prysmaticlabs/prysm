@@ -13,53 +13,20 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = ChainStartFetcher(&Service{})
 var _ = ChainInfoFetcher(&Service{})
 var _ = POWBlockFetcher(&Service{})
 var _ = Chain(&Service{})
-
-type badReader struct{}
-
-func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return nil, errors.New("subscription has failed")
-}
-
-type goodReader struct {
-	backend *backends.SimulatedBackend
-}
-
-func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	if g.backend == nil {
-		return new(event.Feed).Subscribe(ch), nil
-	}
-	headChan := make(chan core.ChainHeadEvent)
-	eventSub := g.backend.Blockchain().SubscribeChainHeadEvent(headChan)
-	feed := new(event.Feed)
-	sub := feed.Subscribe(ch)
-	go func() {
-		for {
-			select {
-			case blk := <-headChan:
-				feed.Send(blk.Block.Header())
-			case <-ctx.Done():
-				eventSub.Unsubscribe()
-				return
-			}
-		}
-	}()
-	return sub, nil
-}
 
 type goodLogger struct {
 	backend *backends.SimulatedBackend
@@ -150,44 +117,6 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 }
 
 var depositsReqForChainStart = 64
-
-func TestNewWeb3Service_OK(t *testing.T) {
-	endpoint := "http://127.0.0.1"
-	ctx := context.Background()
-	var err error
-	beaconDB := dbutil.SetupDB(t)
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err == nil {
-		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
-	}
-	endpoint = "ftp://127.0.0.1"
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err == nil {
-		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
-	}
-	endpoint = "ws://127.0.0.1"
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err != nil {
-		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
-	}
-	endpoint = "ipc://geth.ipc"
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		HTTPEndPoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err != nil {
-		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
-	}
-}
 
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -326,6 +255,6 @@ func TestHandlePanic_OK(t *testing.T) {
 	}
 	// nil blockFetcher would panic if cached value not used
 	web3Service.blockFetcher = nil
-
+	web3Service.processBlockHeader(nil)
 	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }

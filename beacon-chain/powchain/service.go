@@ -122,6 +122,7 @@ type Service struct {
 	cancel                  context.CancelFunc
 	client                  Client
 	headerChan              chan *gethTypes.Header
+	headTicker              *time.Ticker
 	httpEndpoint            string
 	stateNotifier           statefeed.Notifier
 	httpLogger              bind.ContractFilterer
@@ -186,6 +187,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
 		preGenesisState:         genState,
+		headTicker:              time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
 	}
 
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
@@ -578,7 +580,6 @@ func (s *Service) run(done <-chan struct{}) {
 	s.initPOWService()
 
 	ticker := time.NewTicker(1 * time.Second)
-	headTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -589,7 +590,7 @@ func (s *Service) run(done <-chan struct{}) {
 			s.connectedETH1 = false
 			log.Debug("Context closed, exiting goroutine")
 			return
-		case <-headTicker.C:
+		case <-s.headTicker.C:
 			head, err := s.blockFetcher.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
