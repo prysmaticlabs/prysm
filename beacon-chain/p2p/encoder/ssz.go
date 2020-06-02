@@ -22,7 +22,6 @@ var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize // 1Mib
 var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
 
 var bufWriterPool = new(sync.Pool)
-
 var bufReaderPool = new(sync.Pool)
 
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
