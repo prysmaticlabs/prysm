@@ -202,7 +202,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not setup validator WaitForActivation streaming client")
 	}
-	var validatorActivatedRecords [][]byte
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
@@ -216,24 +215,29 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not receive validator activation from stream")
 		}
-		activatedKeys := v.checkAndLogValidatorStatus(res.Statuses)
+		valActivated := v.checkAndLogValidatorStatus(res.Statuses)
 
-		if len(activatedKeys) > 0 {
-			validatorActivatedRecords = activatedKeys
+		if !valActivated {
+			for _, statusResp := range res.Statuses {
+				if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
+					continue
+				}
+				log.WithFields(logrus.Fields{
+					"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(statusResp.PublicKey)),
+					"index":     statusResp.Index,
+				}).Info("Validator activated")
+			}
 			break
 		}
-	}
-	for _, pubKey := range validatorActivatedRecords {
-		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Info("Validator activated")
 	}
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 
 	return nil
 }
 
-func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) [][]byte {
+func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) bool {
 	nonexistentIndex := ^uint64(0)
-	var activatedKeys [][]byte
+	var validatorActivated bool
 	for _, status := range validatorStatuses {
 		fields := logrus.Fields{
 			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
@@ -272,7 +276,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 				}).Info("Waiting for activation")
 			}
 		case ethpb.ValidatorStatus_ACTIVE:
-			activatedKeys = append(activatedKeys, status.PublicKey)
+			validatorActivated = true
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
 		default:
@@ -281,7 +285,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			}).Info("Validator status")
 		}
 	}
-	return activatedKeys
+	return validatorActivated
 }
 
 // CanonicalHeadSlot returns the slot of canonical block currently found in the

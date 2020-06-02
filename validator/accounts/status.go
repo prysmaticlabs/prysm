@@ -2,7 +2,7 @@ package accounts
 
 import (
 	"context"
-	"encoding/hex"
+	"fmt"
 	"sort"
 	"time"
 
@@ -69,7 +69,7 @@ func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
 		m := v.Metadata
 		key := v.PublicKey
 		fields := logrus.Fields{
-			"publicKey": hex.EncodeToString(key),
+			"publicKey": fmt.Sprintf("%#x", key),
 		}
 		if v.Index != nonexistentIndex {
 			fields["index"] = v.Index
