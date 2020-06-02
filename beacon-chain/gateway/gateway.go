@@ -41,7 +41,7 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
+	log.WithField("address", g.gatewayAddr).Info("Starting JSON-HTTP API")
 
 	conn, err := g.dial(ctx, "tcp", g.remoteAddr)
 	if err != nil {
