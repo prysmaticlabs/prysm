@@ -76,15 +76,14 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es := EpochStore{}
-	es = tooSmall
-
+	es, err := NewEpochStore(tooSmall)
+	if err != ErrWrongSize {
+		t.Error("expected error")
+	}
+	//nil es
 	span, err := es.GetValidatorSpan(ctx, 1)
 	if !reflect.DeepEqual(span, types.Span{}) {
 		t.Errorf("Expected empty span to be returned: %v", span)
-	}
-	if err != ErrWrongSize {
-		t.Error("expected error")
 	}
 	tooBig, err := hex.DecodeString("0000000000000000")
 	if err != nil {
@@ -145,12 +144,11 @@ func TestStore_SetValidatorSpan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		es := EpochStore{}
-		es = oldSpans
-		err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan)
+		es, err := NewEpochStore(oldSpans)
 		if err != tt.err {
 			t.Errorf("Expected error: %v got: %v", tt.err, err)
 		}
+		err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan)
 		if uint64(len(es)) != tt.spansLength {
 			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es))
 		}

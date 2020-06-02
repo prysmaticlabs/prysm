@@ -17,6 +17,15 @@ type EpochStore []byte
 var ErrWrongSize = errors.New("wrong data length for min max span byte array")
 var highestObservedValidatorIdx uint64
 
+func NewEpochStore(spans []byte) (EpochStore, error) {
+	if len(spans)%spannerEncodedLength != 0 {
+		return nil, ErrWrongSize
+	}
+	es := EpochStore{}
+	es = spans
+	return es, nil
+}
+
 // GetValidatorSpan unmarshal a span from an encoded, flattened array.
 func (es EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.Span, error) {
 	r := types.Span{}
