@@ -30,9 +30,9 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Configuration related flags.
-	MinimalConfig bool // MinimalConfig as defined in the spec.
-	SchlesiTestnet                             bool // SchlesiTestnet preconfigured spec.
-	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
+	MinimalConfig  bool // MinimalConfig as defined in the spec.
+	SchlesiTestnet bool // SchlesiTestnet preconfigured spec.
+	E2EConfig      bool //E2EConfig made specifically for testing, do not use except in E2E.
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -224,9 +224,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(enableNewStateMgmt.Name) {
-		log.Warn("Enabling state management service")
-		cfg.NewStateMgmt = true
+	cfg.NewStateMgmt = true
+	if ctx.Bool(disableNewStateMgmt.Name) {
+		log.Warn("Disabling new state management service")
+		cfg.NewStateMgmt = false
 	}
 	cfg.EnableFieldTrie = true
 	if ctx.Bool(disableFieldTrie.Name) {

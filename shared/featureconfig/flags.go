@@ -18,9 +18,9 @@ var (
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
 	schlesiTestnetFlag = &cli.BoolFlag{
-Name:  "schlesi-testnet",
-Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
-}
+		Name:  "schlesi-testnet",
+		Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
+	}
 	e2eConfigFlag = &cli.BoolFlag{
 		Name:  "e2e-config",
 		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
@@ -124,9 +124,9 @@ Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	enableNewStateMgmt = &cli.BoolFlag{
-		Name:  "enable-new-state-mgmt",
-		Usage: "This enable the usage of state mgmt service across Prysm",
+	disableNewStateMgmt = &cli.BoolFlag{
+		Name:  "disable-new-state-mgmt",
+		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
 	disableFieldTrie = &cli.BoolFlag{
 		Name:  "disable-state-field-trie",
@@ -169,7 +169,6 @@ Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableNewStateMgmt,
 	enableInitSyncWeightedRoundRobin,
 	reduceAttesterStateCopy,
 }
@@ -387,7 +386,13 @@ var (
 	deprecateEnableFieldTrie = &cli.BoolFlag{
 		Name:   "enable-state-field-trie",
 		Usage:  deprecatedUsage,
-		Hidden: true}
+		Hidden: true,
+	}
+	deprecateEnableNewStateMgmt = &cli.BoolFlag{
+		Name:   "enable-new-state-mgmt",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -433,6 +438,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableHistoricalDetectionFlag,
 	deprecateEnableStateRefCopy,
 	deprecateEnableFieldTrie,
+	deprecateEnableNewStateMgmt,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -485,7 +491,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
-	enableNewStateMgmt,
 	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
@@ -493,6 +498,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableFieldTrie,
 	disableStateRefCopy,
 	reduceAttesterStateCopy,
+	disableNewStateMgmt,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -500,7 +506,6 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
-	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
 	"--reduce-attester-state-copy",
 }
