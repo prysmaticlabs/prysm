@@ -26,6 +26,9 @@ import (
 
 var log = logrus.WithField("prefix", "accounts")
 
+var failedToCloseDbErr = errors.New("failed to close the database")
+var failedToCloseManyDbErr = errors.New("failed to close one or more databases")
+
 // DecryptKeysFromKeystore extracts a set of validator private keys from
 // an encrypted keystore directory and a password string.
 func DecryptKeysFromKeystore(directory string, filePrefix string, password string) (map[string]*keystore.Key, error) {
@@ -225,7 +228,6 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) (err error) {
 	var sourceStores []*db.Store
 	defer func() {
-		errorMessage := "failed to close one or more source databases"
 		failedToClose := false
 		for _, store := range sourceStores {
 			if deferErr := store.Close(); deferErr != nil {
@@ -234,9 +236,9 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 		}
 		if failedToClose {
 			if err != nil {
-				err = errors.Wrapf(err, errorMessage)
+				err = errors.Wrapf(err, failedToCloseManyDbErr.Error())
 			} else {
-				err = errors.New(errorMessage)
+				err = failedToCloseManyDbErr
 			}
 		}
 	}()
@@ -272,12 +274,11 @@ func Split(ctx context.Context, sourceDirectory string, targetDirectory string) 
 	}
 	defer func() {
 		if sourceStore != nil {
-			errorMessage := "failed to close the source database"
 			if deferErr := sourceStore.Close(); deferErr != nil {
 				if err != nil {
-					err = errors.Wrap(err, errorMessage)
+					err = errors.Wrap(err, failedToCloseDbErr.Error())
 				} else {
-					err = errors.Wrap(deferErr, errorMessage)
+					err = errors.Wrap(deferErr, failedToCloseDbErr.Error())
 				}
 			}
 		}

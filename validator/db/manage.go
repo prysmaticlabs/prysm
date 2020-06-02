@@ -11,6 +11,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var failedToCloseSourceErr = errors.New("failed to close the source")
+var failedToCloseManySourcesErr = errors.New("failed to close one or more stores")
+
 type epochProposals struct {
 	Epoch     []byte
 	Proposals []byte
@@ -85,12 +88,11 @@ func createMergeTargetStore(
 
 	newStore, err := NewKVStore(targetDirectory, [][48]byte{})
 	defer func() {
-		errorMessage := "could not close the merged database"
 		if deferErr := newStore.Close(); deferErr != nil {
 			if err != nil {
-				err = errors.Wrap(err, errorMessage)
+				err = errors.Wrap(err, failedToCloseSourceErr.Error())
 			} else {
-				err = errors.Wrap(deferErr, errorMessage)
+				err = errors.Wrap(deferErr, failedToCloseSourceErr.Error())
 			}
 
 		}
@@ -129,7 +131,6 @@ func createSplitTargetStores(
 
 	var storesToClose []*Store
 	defer func() {
-		errorMessage := "failed to close one or more stores"
 		failedToClose := false
 		for _, store := range storesToClose {
 			if deferErr := store.Close(); deferErr != nil {
@@ -138,9 +139,9 @@ func createSplitTargetStores(
 		}
 		if failedToClose {
 			if err != nil {
-				err = errors.Wrapf(err, errorMessage)
+				err = errors.Wrapf(err, failedToCloseManySourcesErr.Error())
 			} else {
-				err = errors.New(errorMessage)
+				err = failedToCloseManySourcesErr
 			}
 		}
 	}()
