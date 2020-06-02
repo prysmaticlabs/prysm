@@ -17,6 +17,8 @@ type EpochStore []byte
 var ErrWrongSize = errors.New("wrong data length for min max span byte array")
 var highestObservedValidatorIdx uint64
 
+// NewEpochStore initialize epoch store from a byte array
+// returns error if byte length is not a multiple of encoded spanner length.
 func NewEpochStore(spans []byte) (EpochStore, error) {
 	if len(spans)%spannerEncodedLength != 0 {
 		return nil, ErrWrongSize
