@@ -243,6 +243,55 @@ func TestMerge_FailsWhenNoDatabaseExistsInAllSourceDirectories(t *testing.T) {
 	}
 }
 
+func TestSplit(t *testing.T) {
+	pubKeys := [][48]byte{{1}, {2}}
+	sourceStore := db.SetupDB(t, pubKeys)
+
+	proposalEpoch := uint64(0)
+	proposalHistory1 := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x01}
+	if err := sourceStore.SaveProposalHistoryForEpoch(context.Background(), pubKeys[0][:], proposalEpoch, proposalHistory1); err != nil {
+		t.Fatal("Saving proposal history failed")
+	}
+	proposalHistory2 := bitfield.Bitlist{0x02, 0x00, 0x00, 0x00, 0x01}
+	if err := sourceStore.SaveProposalHistoryForEpoch(context.Background(), pubKeys[1][:], proposalEpoch, proposalHistory2); err != nil {
+		t.Fatal("Saving proposal history failed")
+	}
+
+	attestationHistoryMap1 := make(map[uint64]uint64)
+	attestationHistoryMap1[0] = 0
+	pubKeyAttestationHistory1 := &slashpb.AttestationHistory{
+		TargetToSource:     attestationHistoryMap1,
+		LatestEpochWritten: 0,
+	}
+	attestationHistoryMap2 := make(map[uint64]uint64)
+	attestationHistoryMap2[0] = 1
+	pubKeyAttestationHistory2 := &slashpb.AttestationHistory{
+		TargetToSource:     attestationHistoryMap2,
+		LatestEpochWritten: 0,
+	}
+	dbAttestationHistory := make(map[[48]byte]*slashpb.AttestationHistory)
+	dbAttestationHistory[pubKeys[0]] = pubKeyAttestationHistory1
+	dbAttestationHistory[pubKeys[1]] = pubKeyAttestationHistory2
+	if err := sourceStore.SaveAttestationHistoryForPubKeys(context.Background(), dbAttestationHistory); err != nil {
+		t.Fatalf("Saving attestation history failed %v", err)
+	}
+
+	if err := sourceStore.Close(); err != nil {
+		t.Fatalf("Closing source store failed: %v", err)
+	}
+
+	targetDirectory := testutil.TempDir() + "/target"
+	t.Cleanup(func() {
+		if err := os.RemoveAll(targetDirectory); err != nil {
+			t.Errorf("Could not remove target directory : %v", err)
+		}
+	})
+
+	if err := Split(context.Background(), sourceStore.DatabasePath(), targetDirectory); err != nil {
+		t.Fatalf("Splitting failed: %v", err)
+	}
+}
+
 func prepareSourcesForMerging(firstStorePubKey [48]byte, firstStore *db.Store, secondStorePubKey [48]byte, secondStore *db.Store) (*sourceStoresHistory, error) {
 	proposalEpoch := uint64(0)
 	proposalHistory1 := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x01}
