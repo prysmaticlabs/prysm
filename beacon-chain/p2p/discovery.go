@@ -22,9 +22,8 @@ type Listener interface {
 	Self() *enode.Node
 	Close()
 	Lookup(enode.ID) []*enode.Node
-	ReadRandomNodes([]*enode.Node) int
 	Resolve(*enode.Node) *enode.Node
-	LookupRandom() []*enode.Node
+	RandomNodes() enode.Iterator
 	Ping(*enode.Node) error
 	RequestENR(*enode.Node) (*enode.Node, error)
 	LocalNode() *enode.LocalNode
