@@ -115,6 +115,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 			compressedIdxAttsBucket,
 			validatorsPublicKeysBucket,
 			validatorsMinMaxSpanBucket,
+			validatorsMinMaxSpanBucketNew,
 			slashingBucket,
 			chainDataBucket,
 		)

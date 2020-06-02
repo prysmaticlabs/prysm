@@ -8,6 +8,7 @@ import (
 	"io"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	detectionTypes "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
@@ -31,6 +32,7 @@ type ReadOnlyDatabase interface {
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 
 	// MinMaxSpan related methods.
+	EpochSpans(ctx context.Context, epoch uint64) (kv.EpochStore, error)
 	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]detectionTypes.Span, bool, error)
 	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (detectionTypes.Span, error)
 	EpochsSpanByValidatorsIndices(ctx context.Context, validatorIndices []uint64, maxEpoch uint64) (map[uint64]map[uint64]detectionTypes.Span, error)
@@ -68,6 +70,7 @@ type WriteAccessDatabase interface {
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// MinMaxSpan related methods.
+	SaveEpochSpans(ctx context.Context, epoch uint64, spans kv.EpochStore) error
 	SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]detectionTypes.Span) error
 	SaveValidatorEpochSpan(ctx context.Context, validatorIdx uint64, epoch uint64, spans detectionTypes.Span) error
 	SaveCachedSpansMaps(ctx context.Context) error
@@ -98,7 +101,12 @@ type FullAccessDatabase interface {
 type Database interface {
 	io.Closer
 	FullAccessDatabase
-
 	DatabasePath() string
 	ClearDB() error
+}
+
+// EpochSpansStore represents a data access layer for marshaling and unmarshaling validator spans for each validator per epoch.
+type EpochSpansStore interface {
+	SetValidatorSpan(ctx context.Context, idx uint64, newSpan detectionTypes.Span) error
+	GetValidatorSpan(ctx context.Context, idx uint64) (detectionTypes.Span, error)
 }
