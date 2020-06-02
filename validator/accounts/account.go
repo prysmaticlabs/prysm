@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"gopkg.in/urfave/cli.v2"
 	"io"
 	"os"
 	"os/user"
@@ -26,8 +27,8 @@ import (
 
 var log = logrus.WithField("prefix", "accounts")
 
-var failedToCloseDbErr = errors.New("failed to close the database")
-var failedToCloseManyDbErr = errors.New("failed to close one or more databases")
+var errFailedToCloseDb = errors.New("failed to close the database")
+var errFailedToCloseManyDb = errors.New("failed to close one or more databases")
 
 // DecryptKeysFromKeystore extracts a set of validator private keys from
 // an encrypted keystore directory and a password string.
@@ -236,9 +237,9 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 		}
 		if failedToClose {
 			if err != nil {
-				err = errors.Wrapf(err, failedToCloseManyDbErr.Error())
+				err = errors.Wrapf(err, errFailedToCloseManyDb.Error())
 			} else {
-				err = failedToCloseManyDbErr
+				err = errFailedToCloseManyDb
 			}
 		}
 	}()
@@ -276,9 +277,9 @@ func Split(ctx context.Context, sourceDirectory string, targetDirectory string) 
 		if sourceStore != nil {
 			if deferErr := sourceStore.Close(); deferErr != nil {
 				if err != nil {
-					err = errors.Wrap(err, failedToCloseDbErr.Error())
+					err = errors.Wrap(err, errFailedToCloseDb.Error())
 				} else {
-					err = errors.Wrap(deferErr, failedToCloseDbErr.Error())
+					err = errors.Wrap(deferErr, errFailedToCloseDb.Error())
 				}
 			}
 		}
