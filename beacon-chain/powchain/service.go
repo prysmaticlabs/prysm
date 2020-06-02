@@ -578,7 +578,7 @@ func (s *Service) run(done <-chan struct{}) {
 	s.initPOWService()
 
 	ticker := time.NewTicker(1 * time.Second)
-	headTicker := time.NewTicker(10 * time.Second)
+	headTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second)
 	defer ticker.Stop()
 
 	for {
