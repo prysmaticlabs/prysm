@@ -217,7 +217,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 		valActivated := v.checkAndLogValidatorStatus(res.Statuses)
 
-		if !valActivated {
+		if valActivated {
 			for _, statusResp := range res.Statuses {
 				if statusResp.Status.Status != ethpb.ValidatorStatus_ACTIVE {
 					continue
