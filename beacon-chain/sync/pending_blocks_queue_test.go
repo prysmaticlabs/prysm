@@ -11,7 +11,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -159,22 +158,22 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, err := ssz.HashTreeRoot(b2)
+	b2Root, err := stateutil.BlockRoot(b2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, err := ssz.HashTreeRoot(b5)
+	b5Root, err := stateutil.BlockRoot(b5)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, err := ssz.HashTreeRoot(b3)
+	b3Root, err := stateutil.BlockRoot(b3)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, err := ssz.HashTreeRoot(b4)
+	b4Root, err := stateutil.BlockRoot(b4)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,22 +271,22 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, err := ssz.HashTreeRoot(b2)
+	b2Root, err := stateutil.BlockRoot(b2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, err := ssz.HashTreeRoot(b5)
+	b5Root, err := stateutil.BlockRoot(b5)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, err := ssz.HashTreeRoot(b3)
+	b3Root, err := stateutil.BlockRoot(b3)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, err := ssz.HashTreeRoot(b4)
+	b4Root, err := stateutil.BlockRoot(b4)
 	if err != nil {
 		t.Fatal(err)
 	}

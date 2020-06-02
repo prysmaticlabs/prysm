@@ -17,6 +17,8 @@ import (
 var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
+	t.Skip("Skipping we need to regen the files. Pending v0.12 completion")
+
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState1Epoch()
 	if err != nil {

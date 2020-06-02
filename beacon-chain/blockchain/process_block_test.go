@@ -8,7 +8,6 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -400,7 +399,7 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 		if err := s.SetSlot(i); err != nil {
 			t.Fatal(err)
 		}
-		r, err := ssz.HashTreeRoot(b)
+		r, err := stateutil.BlockRoot(b)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -408,7 +407,7 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	}
 
 	// Set finalized root as slot 32
-	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 32})
+	finalizedRoot, err := stateutil.BlockRoot(&ethpb.BeaconBlock{Slot: 32})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -701,42 +700,42 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 // (B1, and B3 are all from the same slots)
 func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
-	r0, err := ssz.HashTreeRoot(b0)
+	r0, err := stateutil.BlockRoot(b0)
 	if err != nil {
 		return nil, err
 	}
 	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
-	r1, err := ssz.HashTreeRoot(b1)
+	r1, err := stateutil.BlockRoot(b1)
 	if err != nil {
 		return nil, err
 	}
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r0[:]}
-	r3, err := ssz.HashTreeRoot(b3)
+	r3, err := stateutil.BlockRoot(b3)
 	if err != nil {
 		return nil, err
 	}
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: r3[:]}
-	r4, err := ssz.HashTreeRoot(b4)
+	r4, err := stateutil.BlockRoot(b4)
 	if err != nil {
 		return nil, err
 	}
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: r4[:]}
-	r5, err := ssz.HashTreeRoot(b5)
+	r5, err := stateutil.BlockRoot(b5)
 	if err != nil {
 		return nil, err
 	}
 	b6 := &ethpb.BeaconBlock{Slot: 6, ParentRoot: r4[:]}
-	r6, err := ssz.HashTreeRoot(b6)
+	r6, err := stateutil.BlockRoot(b6)
 	if err != nil {
 		return nil, err
 	}
 	b7 := &ethpb.BeaconBlock{Slot: 7, ParentRoot: r5[:]}
-	r7, err := ssz.HashTreeRoot(b7)
+	r7, err := stateutil.BlockRoot(b7)
 	if err != nil {
 		return nil, err
 	}
 	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
-	r8, err := ssz.HashTreeRoot(b8)
+	r8, err := stateutil.BlockRoot(b8)
 	if err != nil {
 		return nil, err
 	}

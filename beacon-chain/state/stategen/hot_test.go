@@ -6,7 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -246,22 +245,22 @@ func TestLastAncestorState_CanGet(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 
 	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'a'}}
-	r0, err := ssz.HashTreeRoot(b0)
+	r0, err := stateutil.BlockRoot(b0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
-	r1, err := ssz.HashTreeRoot(b1)
+	r1, err := stateutil.BlockRoot(b1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:]}
-	r2, err := ssz.HashTreeRoot(b2)
+	r2, err := stateutil.BlockRoot(b2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r2[:]}
-	r3, err := ssz.HashTreeRoot(b3)
+	r3, err := stateutil.BlockRoot(b3)
 	if err != nil {
 		t.Fatal(err)
 	}

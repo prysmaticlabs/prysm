@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -484,7 +483,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b32); err != nil {
 		t.Fatal(err)
 	}
-	r32, err := ssz.HashTreeRoot(b32.Block)
+	r32, err := stateutil.BlockRoot(b32.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +491,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b33); err != nil {
 		t.Fatal(err)
 	}
-	r33, err := ssz.HashTreeRoot(b33.Block)
+	r33, err := stateutil.BlockRoot(b33.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +516,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b32); err != nil {
 		t.Fatal(err)
 	}
-	r32, err := ssz.HashTreeRoot(b32.Block)
+	r32, err := stateutil.BlockRoot(b32.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,7 +524,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, b33); err != nil {
 		t.Fatal(err)
 	}
-	r33, err := ssz.HashTreeRoot(b33.Block)
+	r33, err := stateutil.BlockRoot(b33.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
