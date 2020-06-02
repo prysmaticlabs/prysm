@@ -21,7 +21,12 @@ var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize // 1Mib
 // MaxGossipSize allowed for gossip messages.
 var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
 
+// This pool defines the sync pool for our buffered snappy writers, so that they
+// can be constantly reused.
 var bufWriterPool = new(sync.Pool)
+
+// This pool defines the sync pool for our buffered snappy readers, so that they
+// can be constantly reused.
 var bufReaderPool = new(sync.Pool)
 
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
@@ -206,6 +211,8 @@ func writeSnappyBuffer(w io.Writer, b []byte) (int, error) {
 	return num, bufWriter.Close()
 }
 
+// Instantiates a new instance of the snappy buffered reader
+// using our sync pool.
 func newBufferedReader(r io.Reader) *snappy.Reader {
 	rawReader := bufReaderPool.Get()
 	if rawReader == nil {
@@ -219,6 +226,8 @@ func newBufferedReader(r io.Reader) *snappy.Reader {
 	return bufR
 }
 
+// Instantiates a new instance of the snappy buffered writer
+// using our sync pool.
 func newBufferedWriter(w io.Writer) *snappy.Writer {
 	rawBufWriter := bufWriterPool.Get()
 	if rawBufWriter == nil {
