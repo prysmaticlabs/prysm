@@ -232,12 +232,17 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 }
 
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) [][]byte {
+	nonexistentIndex := ^uint64(0)
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
-		log := log.WithFields(logrus.Fields{
+		fields := logrus.Fields{
 			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
 			"status": status.Status.Status.String(),
-		})
+		}
+		if status.Index != nonexistentIndex {
+			fields["index"] = status.Index
+		}
+		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", status.PublicKey)
 			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
