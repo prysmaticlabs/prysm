@@ -72,7 +72,7 @@ func (mb *mockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, _ *
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
-	endpoint := "ws://127.0.0.1"
+	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
@@ -97,7 +97,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	}
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: common.Address{},
 	})
 	if err != nil {
