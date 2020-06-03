@@ -88,15 +88,12 @@ nogo(
         "@org_golang_x_tools//go/analysis/passes/pkgfact:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/nilness:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/nilfunc:go_tool_library",
-        # lost cancel ignore doesn't seem to work when running with coverage
-        #"@org_golang_x_tools//go/analysis/passes/lostcancel:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/loopclosure:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/httpresponse:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/findcall:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/deepequalerrors:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/ctrlflow:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/copylock:go_tool_library",
-        "@org_golang_x_tools//go/analysis/passes/composite:go_tool_library",
         #  "@org_golang_x_tools//go/analysis/passes/cgocall:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/buildtag:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/buildssa:go_tool_library",
@@ -110,7 +107,19 @@ nogo(
         "//tools/analyzers/roughtime:go_tool_library",
         "//tools/analyzers/errcheck:go_tool_library",
         "//tools/analyzers/featureconfig:go_tool_library",
-    ],
+    ] + select({
+        # nogo checks that fail with coverage enabled.
+        ":coverage_enabled": [],
+        "//conditions:default": [
+            "@org_golang_x_tools//go/analysis/passes/lostcancel:go_tool_library",
+            "@org_golang_x_tools//go/analysis/passes/composite:go_tool_library",
+        ],
+    }),
+)
+
+config_setting(
+    name = "coverage_enabled",
+    values = {"define": "coverage_enabled=1"},
 )
 
 common_files = {
