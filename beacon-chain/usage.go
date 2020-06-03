@@ -89,6 +89,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RPCMaxPageSize,
 			flags.CertFlag,
 			flags.KeyFlag,
+			flags.DisableGRPCGateway,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
 			flags.SetGCPercent,
