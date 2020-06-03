@@ -436,7 +436,8 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 			p2p:         p2p,
 		})
 
-		requestCtx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer reqCancel()
 		go func() {
 			response := fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchLimit /* count */)
 			select {
@@ -529,7 +530,8 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 
 		// Test request fail over (error).
 		err = fetcher.p2p.Disconnect(peers[1])
-		ctx, _ = context.WithTimeout(context.Background(), time.Second*1)
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*1)
+		defer cancel()
 		blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[1], root, 1, 1, blockBatchLimit)
 		testutil.AssertLogsContain(t, hook, "Request failed, trying to forward request to another peer")
 		if err == nil || err.Error() != "context deadline exceeded" {
