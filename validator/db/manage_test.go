@@ -16,8 +16,8 @@ import (
 )
 
 type storeHistory struct {
-	Proposals     map[[48]byte]bitfield.Bitlist
-	Attestations  map[[48]byte]map[uint64]uint64
+	Proposals    map[[48]byte]bitfield.Bitlist
+	Attestations map[[48]byte]map[uint64]uint64
 }
 
 func TestMerge(t *testing.T) {
@@ -49,8 +49,8 @@ func TestMerge(t *testing.T) {
 		mergedAttestations[k] = v
 	}
 	mergedStoreHistory := storeHistory{
-		Proposals:     mergedProposals,
-		Attestations:  mergedAttestations,
+		Proposals:    mergedProposals,
+		Attestations: mergedAttestations,
 	}
 
 	targetDirectory := testutil.TempDir() + "/target"
@@ -225,8 +225,8 @@ func prepareStore(store *Store, pubKeys [][48]byte) (*storeHistory, error) {
 		return nil, err
 	}
 	history := storeHistory{
-		Proposals:     proposals,
-		Attestations:  attestations,
+		Proposals:    proposals,
+		Attestations: attestations,
 	}
 	return &history, nil
 }
@@ -250,7 +250,7 @@ func prepareStoreAttestations(store *Store, pubKeys [][48]byte) (map[[48]byte]ma
 	attestations := make(map[[48]byte]map[uint64]uint64)
 
 	for i, key := range pubKeys {
-				attestationHistoryMap := make(map[uint64]uint64)
+		attestationHistoryMap := make(map[uint64]uint64)
 		attestationHistoryMap[0] = uint64(i)
 		attestationHistory := &slashpb.AttestationHistory{
 			TargetToSource:     attestationHistoryMap,
