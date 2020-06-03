@@ -73,6 +73,7 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 		if err := resp.Body.Close(); err != nil {
 			return err
 		}
+		time.Sleep(connTimeDelay)
 
 		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.ValidatorMetricsPort+i))
 		if err != nil {
