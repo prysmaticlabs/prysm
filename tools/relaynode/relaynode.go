@@ -43,7 +43,7 @@ func main() {
 	log.Start(ctx, "main")
 	defer log.Finish(ctx)
 
-	srcMAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *port))
+	srcMAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", *port))
 	if err != nil {
 		log.Fatalf("Unable to construct multiaddr %v", err)
 	}
@@ -75,7 +75,7 @@ func main() {
 		log.Fatalf("Failed to create host %v", err)
 	}
 
-	fmt.Printf("Relay available: /ip4/0.0.0.0/tcp/%v/p2p/%s\n", *port, h.ID().Pretty())
+	fmt.Printf("Relay available: /ip4/127.0.0.1/tcp/%v/p2p/%s\n", *port, h.ID().Pretty())
 
 	select {}
 }

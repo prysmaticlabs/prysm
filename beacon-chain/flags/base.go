@@ -23,7 +23,7 @@ var (
 	RPCHost = &cli.StringFlag{
 		Name:  "rpc-host",
 		Usage: "Host on which the RPC server should listen",
-		Value: "0.0.0.0",
+		Value: "127.0.0.1",
 	}
 	// RPCPort defines a beacon node RPC port to open.
 	RPCPort = &cli.IntFlag{
