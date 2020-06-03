@@ -94,6 +94,7 @@ type Service struct {
 func NewService(cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
+	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,
 		MaxCost:     1000,
