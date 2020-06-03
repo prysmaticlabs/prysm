@@ -4,12 +4,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "go_default_test",
-    size = "large",
+    size = "enormous",
     testonly = True,
     srcs = [
         "endtoend_test.go",
         "long_minimal_e2e_test.go",
-        "minimal_e2e_genesis_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],
@@ -21,7 +20,7 @@ go_test(
         "//validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
-    shard_count = 4,
+    shard_count = 3,
     tags = [
         "block-network",
         "e2e",
