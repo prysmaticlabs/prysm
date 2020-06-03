@@ -134,7 +134,8 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	slashing, state := setupValidAttesterSlashing(t)
 	slashing.Attestation_1.Data.Target.Epoch = 100000000
 
-	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
 
 	c, err := lru.New(10)
 	if err != nil {
