@@ -172,6 +172,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		)
 	}
 	ctx, cancel := context.WithCancel(ctx)
+	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		cancel()
