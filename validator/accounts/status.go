@@ -2,13 +2,13 @@ package accounts
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -16,16 +16,15 @@ import (
 // ValidatorStatusMetadata holds all status information about a validator.
 type ValidatorStatusMetadata struct {
 	PublicKey []byte
+	Index     uint64
 	Metadata  *ethpb.ValidatorStatusResponse
 }
 
 // RunStatusCommand is the entry point to the `validator status` command.
-func RunStatusCommand(
-	pubkeys [][]byte, beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient) error {
-	statuses, err := FetchAccountStatuses(
-		context.Background(), beaconNodeRPCProvider, pubkeys)
+func RunStatusCommand(pubKeys [][]byte, beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient) error {
+	statuses, err := FetchAccountStatuses(context.Background(), beaconNodeRPCProvider, pubKeys)
 	if err != nil {
-		return errors.Wrap(err, "Could not fetch account statuses from the beacon node")
+		return errors.Wrap(err, "could not fetch account statuses from the beacon node")
 	}
 	printStatuses(statuses)
 	return nil
@@ -35,24 +34,25 @@ func RunStatusCommand(
 // for each validator public key.
 func FetchAccountStatuses(
 	ctx context.Context,
-	beaconNodeRPCProvider ethpb.BeaconNodeValidatorClient,
-	pubkeys [][]byte) ([]ValidatorStatusMetadata, error) {
+	beaconClient ethpb.BeaconNodeValidatorClient,
+	pubKeys [][]byte,
+) ([]ValidatorStatusMetadata, error) {
 	ctx, span := trace.StartSpan(ctx, "accounts.FetchAccountStatuses")
 	defer span.End()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second /* Cancel if running over thirty seconds. */)
 	defer cancel()
 
-	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pubkeys}
-	resp, err := beaconNodeRPCProvider.MultipleValidatorStatus(ctx, req)
+	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pubKeys}
+	resp, err := beaconClient.MultipleValidatorStatus(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	respKeys := resp.GetPublicKeys()
-	statuses := make([]ValidatorStatusMetadata, len(respKeys))
-	for i, status := range resp.GetStatuses() {
+	statuses := make([]ValidatorStatusMetadata, len(resp.Statuses))
+	for i, status := range resp.Statuses {
 		statuses[i] = ValidatorStatusMetadata{
-			PublicKey: respKeys[i],
+			PublicKey: resp.PublicKeys[i],
+			Index:     resp.Indices[i],
 			Metadata:  status,
 		}
 	}
@@ -64,25 +64,29 @@ func FetchAccountStatuses(
 }
 
 func printStatuses(validatorStatuses []ValidatorStatusMetadata) {
+	nonexistentIndex := ^uint64(0)
 	for _, v := range validatorStatuses {
 		m := v.Metadata
 		key := v.PublicKey
-		log.WithFields(
-			logrus.Fields{
-				"PublicKey":                 hex.EncodeToString(key),
-				"ActivationEpoch":           fieldToString(m.ActivationEpoch),
-				"DepositInclusionSlot":      fieldToString(m.DepositInclusionSlot),
-				"Eth1DepositBlockNumber":    fieldToString(m.Eth1DepositBlockNumber),
-				"PositionInActivationQueue": fieldToString(m.PositionInActivationQueue),
-			},
-		).Infof("Status: %s", m.Status.String())
+		fields := logrus.Fields{
+			"publicKey": fmt.Sprintf("%#x", key),
+		}
+		if v.Index != nonexistentIndex {
+			fields["index"] = v.Index
+		}
+		if m.Status == ethpb.ValidatorStatus_PENDING || m.Status == ethpb.ValidatorStatus_ACTIVE {
+			fields["activationEpoch"] = m.ActivationEpoch
+			if m.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+				fields["positionInActivationQueue"] = m.PositionInActivationQueue
+			}
+		} else if m.Status == ethpb.ValidatorStatus_DEPOSITED {
+			if m.PositionInActivationQueue != 0 {
+				fields["depositInclusionSlot"] = m.DepositInclusionSlot
+				fields["eth1DepositBlockNumber"] = m.Eth1DepositBlockNumber
+			} else {
+				fields["positionInActivationQueue"] = m.PositionInActivationQueue
+			}
+		}
+		log.WithFields(fields).Infof("Status: %s", m.Status.String())
 	}
-}
-
-func fieldToString(field uint64) string {
-	// Field is missing
-	if field == 0 {
-		return "NA"
-	}
-	return fmt.Sprintf("%d", field)
 }
