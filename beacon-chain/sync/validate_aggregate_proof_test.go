@@ -120,15 +120,17 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
+	root := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: root[:]},
 		},
 	}
 
+	proof := [96]byte{'A'}
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  []byte{'A'},
+		SelectionProof:  proof[:],
 		Aggregate:       att,
 		AggregatorIndex: 0,
 	}
@@ -484,13 +486,14 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	mockRoot := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 		},
 		AggregationBits: aggBits,
 	}
