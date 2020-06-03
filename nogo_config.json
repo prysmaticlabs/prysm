@@ -41,12 +41,12 @@
   "composites": {
     "exclude_files": {
       "external/.*": "Third party code"
-    } 
+    }
   }, 
   "cgocall": {
     "exclude_files": {
       "external/.*": "Third party code"
-    } 
+    }
   },
   "assign": {
     "exclude_files": {
