@@ -170,7 +170,8 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	slashing, state := setupValidProposerSlashing(t)
 	slashing.Header_1.Header.Slot = 100000000
 
-	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
 
 	c, err := lru.New(10)
 	if err != nil {

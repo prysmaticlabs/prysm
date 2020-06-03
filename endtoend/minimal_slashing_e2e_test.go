@@ -21,6 +21,7 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 		EpochsToRun:    3,
 		TestSync:       false,
 		TestSlasher:    true,
+		TestDeposits:   false,
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,

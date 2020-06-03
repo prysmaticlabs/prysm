@@ -13,12 +13,6 @@ var (
 		Usage: "A mainchain web3 provider string http endpoint",
 		Value: "https://goerli.prylabs.net",
 	}
-	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
-	Web3ProviderFlag = &cli.StringFlag{
-		Name:  "web3provider",
-		Usage: "A mainchain web3 provider string endpoint. Can either be an IPC file string or a WebSocket endpoint. Cannot be an HTTP endpoint.",
-		Value: "wss://goerli.prylabs.net/websocket",
-	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
@@ -60,10 +54,16 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
+	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
+	DisableGRPCGateway = &cli.BoolFlag{
+		Name:  "disable-grpc-gateway",
+		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
+	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
+		Value: 3000,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{

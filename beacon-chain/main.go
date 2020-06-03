@@ -26,12 +26,12 @@ import (
 
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
-	flags.Web3ProviderFlag,
 	flags.HTTPWeb3ProviderFlag,
 	flags.RPCHost,
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
+	flags.DisableGRPCGateway,
 	flags.GRPCGatewayPort,
 	flags.MinSyncPeers,
 	flags.RPCMaxPageSize,

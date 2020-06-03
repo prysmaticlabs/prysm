@@ -45,7 +45,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
@@ -119,7 +119,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	}
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
@@ -192,7 +192,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	}
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		BeaconDB:        beaconDB,
 		DepositContract: testAcc.ContractAddr,
 	})
@@ -271,7 +271,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	}
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
@@ -356,7 +356,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	}
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
@@ -473,7 +473,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	}
 	kvStore := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        kvStore,
 		DepositCache:    depositcache.NewDepositCache(),
@@ -582,7 +582,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	}
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
@@ -765,7 +765,7 @@ func TestConsistentGenesisState(t *testing.T) {
 
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: eth1Backend.ContractAddr,
 		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
@@ -780,10 +780,8 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	}
 
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: eth1Backend.Backend}
-	web3Service.reader = &goodReader{backend: eth1Backend.Backend}
 	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
 	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}
-	web3Service.logger = &goodLogger{backend: eth1Backend.Backend}
 	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0

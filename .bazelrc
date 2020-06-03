@@ -5,6 +5,9 @@ test --test_verbose_timeout_warnings
 test --build_tests_only
 test --test_output=errors
 
+# Clearly indicate that coverage is enabled to disable certain nogo checks.
+coverage --define=coverage_enabled=1
+
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
 build --host_force_python=PY2
 test --host_force_python=PY2
