@@ -143,8 +143,13 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
 	defer helpers.KillProcesses(t, []int{processID})
-	if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
-		t.Fatalf("Failed to sync: %v", err)
+	t.Run("sync completed", func(t *testing.T) {
+		if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
+			t.Errorf("Failed to sync: %v", err)
+		}
+	})
+	if t.Failed() {
+		return
 	}
 
 	syncEvaluators := []types.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
