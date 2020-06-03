@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -67,7 +68,22 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	if body == nil {
 		// Treat nil body to be the same as empty. This is mostly for test setup purposes and would
 		// be very unlikely to happen in production workflow.
-		return [32]byte{204, 182, 36, 96, 105, 43, 224, 236, 129, 59, 86, 190, 151, 246, 138, 130, 207, 87, 171, 193, 2, 226, 123, 244, 158, 191, 65, 144, 255, 34, 238, 221}, nil
+		emptyRoot := make([]byte, 32)
+		emptyRandao := make([]byte, 96)
+		body = &ethpb.BeaconBlockBody{
+			RandaoReveal: emptyRandao,
+			Eth1Data: &ethpb.Eth1Data{
+				DepositRoot:  emptyRoot,
+				DepositCount: 0,
+				BlockHash:    emptyRoot,
+			},
+			Graffiti:          emptyRoot,
+			ProposerSlashings: make([]*ethpb.ProposerSlashing, 0),
+			AttesterSlashings: make([]*ethpb.AttesterSlashing, 0),
+			Attestations:      make([]*ethpb.Attestation, 0),
+			Deposits:          make([]*ethpb.Deposit, 0),
+			VoluntaryExits:    make([]*ethpb.SignedVoluntaryExit, 0),
+		}
 	}
 	hasher := hashutil.CustomSHA256Hasher()
 	fieldRoots := make([][32]byte, 8)

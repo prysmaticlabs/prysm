@@ -153,12 +153,12 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		return err
 	}
 
-	err := k.db.Update(func(tx *bolt.Tx) error {
-		attDataRoot, err := ssz.HashTreeRoot(att.Data)
-		if err != nil {
-			return err
-		}
+	attDataRoot, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		return err
+	}
 
+	err = k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		ac := &dbpb.AttestationContainer{
 			Data: att.Data,

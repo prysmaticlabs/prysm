@@ -51,6 +51,8 @@ var appFlags = []cli.Flag{
 	flags.KeystorePathFlag,
 	flags.MergeSourceDirectories,
 	flags.MergeTargetDirectory,
+	flags.SplitSourceDirectory,
+	flags.SplitTargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -243,6 +245,26 @@ contract in order to activate the validator client`,
 							log.WithError(err).Error("Merging validator data failed")
 						} else {
 							log.Info("Merge completed successfully")
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:        "split",
+					Description: "splits one validator database into several databases - one for each public key",
+					Flags: []cli.Flag{
+						flags.SplitSourceDirectory,
+						flags.SplitTargetDirectory,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						source := cliCtx.String(flags.SplitSourceDirectory.Name)
+						target := cliCtx.String(flags.SplitTargetDirectory.Name)
+
+						if err := accounts.Split(context.Background(), source, target); err != nil {
+							log.WithError(err).Error("Splitting validator data failed")
+						} else {
+							log.Info("Split completed successfully")
 						}
 
 						return nil
