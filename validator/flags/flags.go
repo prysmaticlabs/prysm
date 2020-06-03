@@ -91,12 +91,12 @@ var (
 		Name:  "source-dirs",
 		Usage: "The directory of source validator databases",
 	}
-	// SourceDirectory defines the location od the source validator database while managing validators.
+	// SourceDirectory defines the location of the source validator database while managing validators.
 	SourceDirectory = &cli.StringFlag{
 		Name:  "source-dir",
 		Usage: "The directory of the source validator database",
 	}
-	// TargetDirectory defines the location od the target validator database while managing validators.
+	// TargetDirectory defines the location of the target validator database while managing validators.
 	TargetDirectory = &cli.StringFlag{
 		Name:  "target-dir",
 		Usage: "The directory of the target validator database",
