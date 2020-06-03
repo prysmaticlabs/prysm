@@ -94,6 +94,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 		if err := response.Body.Close(); err != nil {
 			return err
 		}
+		time.Sleep(connTimeDelay)
 
 		genesis, err := eth.NewNodeClient(conns[i]).GetGenesis(context.Background(), &ptypes.Empty{})
 		if err != nil {
