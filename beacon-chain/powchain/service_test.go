@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = ChainStartFetcher(&Service{})
@@ -189,14 +189,13 @@ func TestStop_OK(t *testing.T) {
 }
 
 func TestFollowBlock_OK(t *testing.T) {
-	depositcontract.Amount32Eth()
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
