@@ -114,7 +114,8 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipeline := func(msg *pubsub.Message) {
-		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), pubsubMessageTimeout)
+		defer cancel()
 		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
 		defer span.End()
 
@@ -169,7 +170,8 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 func wrapAndReportValidation(topic string, v pubsub.ValidatorEx) (string, pubsub.ValidatorEx) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 		defer messagehandler.HandlePanic(ctx, msg)
-		ctx, _ = context.WithTimeout(ctx, pubsubMessageTimeout)
+		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
+		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
 		b := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {

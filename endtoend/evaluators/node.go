@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -16,6 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"google.golang.org/grpc"
 )
+
+// Allow a very short delay after disconnecting to prevent connection refused issues.
+var connTimeDelay = 50 * time.Millisecond
 
 // PeersConnect checks all beacon nodes and returns whether they are connected to each other as peers.
 var PeersConnect = types.Evaluator{
@@ -69,6 +73,7 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 		if err := resp.Body.Close(); err != nil {
 			return err
 		}
+		time.Sleep(connTimeDelay)
 
 		resp, err = http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.ValidatorMetricsPort+i))
 		if err != nil {
@@ -84,6 +89,7 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 		if err := resp.Body.Close(); err != nil {
 			return err
 		}
+		time.Sleep(connTimeDelay)
 	}
 	return nil
 }
@@ -103,6 +109,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 		if expectedPeers != len(peersResp.Peers) {
 			return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, len(peersResp.Peers))
 		}
+		time.Sleep(connTimeDelay)
 	}
 	return nil
 }
@@ -135,9 +142,7 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 		justifiedRoots[i] = chainHead.JustifiedBlockRoot
 		prevJustifiedRoots[i] = chainHead.PreviousJustifiedBlockRoot
 		finalizedRoots[i] = chainHead.FinalizedBlockRoot
-		if err := conn.Close(); err != nil {
-			return err
-		}
+		time.Sleep(connTimeDelay)
 	}
 
 	for i := 0; i < len(conns); i++ {

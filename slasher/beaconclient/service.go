@@ -75,6 +75,7 @@ type Config struct {
 // NewBeaconClientService instantiation.
 func NewBeaconClientService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
 	publicKeyCache, err := cache.NewPublicKeyCache(0, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new cache")
