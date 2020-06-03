@@ -50,9 +50,12 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
-		t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
-	}
+
+	t.Run("chain started", func(t *testing.T) {
+		if err := helpers.WaitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
+			t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
+		}
+	})
 
 	// Failing early in case chain doesn't start.
 	if t.Failed() {
@@ -132,8 +135,8 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	conns = append(conns, syncConn)
 
-	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
-	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 4 * config.EpochsToRun)
+	// Sleep a second for every 8 blocks that need to be synced for the newly started node.
+	extraSecondsToSync := (config.EpochsToRun)*epochSeconds + (params.BeaconConfig().SlotsPerEpoch / 8 * config.EpochsToRun)
 	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
 	time.Sleep(time.Until(waitForSync))
 
@@ -143,8 +146,13 @@ func runEndToEndTest(t *testing.T, config *types.E2EConfig) {
 	}
 	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
 	defer helpers.KillProcesses(t, []int{processID})
-	if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
-		t.Fatalf("Failed to sync: %v", err)
+	t.Run("sync completed", func(t *testing.T) {
+		if err := helpers.WaitForTextInFile(syncLogFile, "Synced up to"); err != nil {
+			t.Errorf("Failed to sync: %v", err)
+		}
+	})
+	if t.Failed() {
+		return
 	}
 
 	syncEvaluators := []types.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
