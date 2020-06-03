@@ -67,7 +67,22 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	if body == nil {
 		// Treat nil body to be the same as empty. This is mostly for test setup purposes and would
 		// be very unlikely to happen in production workflow.
-		return [32]byte{117, 149, 118, 243, 29, 85, 147, 152, 201, 11, 234, 19, 146, 229, 35, 209, 93, 246, 109, 242, 141, 181, 176, 126, 79, 196, 1, 189, 124, 203, 199, 62}, nil
+		emptyRoot := make([]byte, 32)
+		emptyRandao := make([]byte, 96)
+		body = &ethpb.BeaconBlockBody{
+			RandaoReveal: emptyRandao,
+			Eth1Data: &ethpb.Eth1Data{
+				DepositRoot:  emptyRoot,
+				DepositCount: 0,
+				BlockHash:    emptyRoot,
+			},
+			Graffiti:          emptyRoot,
+			ProposerSlashings: make([]*ethpb.ProposerSlashing, 0),
+			AttesterSlashings: make([]*ethpb.AttesterSlashing, 0),
+			Attestations:      make([]*ethpb.Attestation, 0),
+			Deposits:          make([]*ethpb.Deposit, 0),
+			VoluntaryExits:    make([]*ethpb.SignedVoluntaryExit, 0),
+		}
 	}
 	hasher := hashutil.CustomSHA256Hasher()
 	fieldRoots := make([][32]byte, 8)
