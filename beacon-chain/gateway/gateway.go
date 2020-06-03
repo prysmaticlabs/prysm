@@ -41,7 +41,7 @@ func (g *Gateway) Start() {
 	ctx, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
-	log.WithField("address", g.gatewayAddr).Info("Starting gRPC gateway.")
+	log.WithField("address", g.gatewayAddr).Info("Starting JSON-HTTP API")
 
 	conn, err := g.dial(ctx, "tcp", g.remoteAddr)
 	if err != nil {
@@ -106,8 +106,10 @@ func (g *Gateway) Status() error {
 
 // Stop the gateway with a graceful shutdown.
 func (g *Gateway) Stop() error {
-	if err := g.server.Shutdown(g.ctx); err != nil {
-		log.WithError(err).Error("Failed to shut down server")
+	if g.server != nil {
+		if err := g.server.Shutdown(g.ctx); err != nil {
+			log.WithError(err).Error("Failed to shut down server")
+		}
 	}
 
 	if g.cancel != nil {
