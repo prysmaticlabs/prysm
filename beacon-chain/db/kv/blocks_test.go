@@ -10,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -22,7 +23,7 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	prevBlock := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       slot - 1,
-			ParentRoot: []byte{1, 2, 3},
+			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
 		},
 	}
 	if err := db.SaveBlock(ctx, prevBlock); err != nil {
@@ -31,7 +32,7 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       slot,
-			ParentRoot: []byte{1, 2, 3},
+			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
 		},
 	}
 	// Even with a full cache, saving new blocks should not cause
@@ -59,7 +60,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       20,
-			ParentRoot: []byte{1, 2, 3},
+			ParentRoot: bytesutil.PadTo([]byte{1, 2, 3}, 32),
 		},
 	}
 	blockRoot, err := stateutil.BlockRoot(block.Block)
