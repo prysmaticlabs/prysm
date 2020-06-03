@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var expectedParticipation = 0.98 // 98% participation to make room for small fluctuations.
+var expectedParticipation = 0.95 // 95% participation to make room for fluctuations.
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
@@ -59,7 +59,6 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	}
 
 	effBalanceLowCount := 0
-	activeEpochWrongCount := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
@@ -83,12 +82,10 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 			effBalanceLowCount,
 			params.BeaconConfig().MaxEffectiveBalance,
 		)
-	} else if activeEpochWrongCount > 0 {
-		return fmt.Errorf("%d validators did not have genesis validator epoch of 0", activeEpochWrongCount)
 	} else if exitEpochWrongCount > 0 {
 		return fmt.Errorf("%d validators did not have genesis validator exit epoch of far future epoch", exitEpochWrongCount)
-	} else if activeEpochWrongCount > 0 {
-		return fmt.Errorf("%d validators did not have genesis validator withdrawable epoch of far future epoch", activeEpochWrongCount)
+	} else if withdrawEpochWrongCount > 0 {
+		return fmt.Errorf("%d validators did not have genesis validator withdrawable epoch of far future epoch", withdrawEpochWrongCount)
 	}
 
 	return nil
