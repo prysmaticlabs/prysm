@@ -16,7 +16,7 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 	dhtpb "github.com/libp2p/go-libp2p-kad-dht/pb"
 	net "github.com/libp2p/go-libp2p-net"
-	p2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 )
 
 const dhtProtocol = "/prysm/0.0.0/dht"
@@ -61,9 +61,9 @@ func main() {
 	}
 }
 
-func pingPeer(ctx context.Context, h host.Host, p dhtpb.Message_Peer) error {
+func pingPeer(ctx context.Context, h host.Host, p *dhtpb.Message_Peer) error {
 	pi := dhtpb.PBPeerToPeerInfo(p)
-	if err := h.Connect(ctx, pi); err != nil {
+	if err := h.Connect(ctx, *pi); err != nil {
 		return err
 	}
 

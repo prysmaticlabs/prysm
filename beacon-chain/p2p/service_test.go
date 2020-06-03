@@ -10,10 +10,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	multiaddr "github.com/multiformats/go-multiaddr"
+	"github.com/multiformats/go-multiaddr"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -43,10 +43,6 @@ func (mockListener) Resolve(*enode.Node) *enode.Node {
 	panic("implement me")
 }
 
-func (mockListener) LookupRandom() []*enode.Node {
-	panic("implement me")
-}
-
 func (mockListener) Ping(*enode.Node) error {
 	panic("implement me")
 }
@@ -56,6 +52,10 @@ func (mockListener) RequestENR(*enode.Node) (*enode.Node, error) {
 }
 
 func (mockListener) LocalNode() *enode.LocalNode {
+	panic("implement me")
+}
+
+func (mockListener) RandomNodes() enode.Iterator {
 	panic("implement me")
 }
 

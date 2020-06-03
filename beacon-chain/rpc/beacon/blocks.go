@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -246,24 +247,47 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
 
+	isGenesis := func(cp *ethpb.Checkpoint) bool {
+		return bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0
+	}
+	// Retrieve genesis block in the event we have genesis checkpoints.
+	genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
+	if err != nil || genBlock == nil || genBlock.Block == nil {
+		return nil, status.Error(codes.Internal, "Could not get genesis block")
+	}
+
+	var b *ethpb.SignedBeaconBlock
+
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
-	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
-	if err != nil || b == nil || b.Block == nil {
-		return nil, status.Error(codes.Internal, "Could not get finalized block")
+	if isGenesis(finalizedCheckpoint) {
+		b = genBlock
+	} else {
+		b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+		if err != nil || b == nil || b.Block == nil {
+			return nil, status.Error(codes.Internal, "Could not get finalized block")
+		}
 	}
 	finalizedSlot := b.Block.Slot
 
 	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
-	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
-	if err != nil || b == nil || b.Block == nil {
-		return nil, status.Error(codes.Internal, "Could not get justified block")
+	if isGenesis(justifiedCheckpoint) {
+		b = genBlock
+	} else {
+		b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+		if err != nil || b == nil || b.Block == nil {
+			return nil, status.Error(codes.Internal, "Could not get justified block")
+		}
 	}
 	justifiedSlot := b.Block.Slot
 
 	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
-	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
-	if err != nil || b == nil || b.Block == nil {
-		return nil, status.Error(codes.Internal, "Could not get prev justified block")
+	if isGenesis(prevJustifiedCheckpoint) {
+		b = genBlock
+	} else {
+		b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
+		if err != nil || b == nil || b.Block == nil {
+			return nil, status.Error(codes.Internal, "Could not get prev justified block")
+		}
 	}
 	prevJustifiedSlot := b.Block.Slot
 

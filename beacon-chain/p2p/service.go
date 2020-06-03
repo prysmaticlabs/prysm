@@ -138,11 +138,10 @@ func NewService(cfg *Config) (*Service, error) {
 
 	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery {
 		dopts := []dhtopts.Option{
-			kaddht.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-			kaddht.ProtocolPrefix(
+			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
+			dhtopts.Protocols(
 				prysmProtocolPrefix + "/dht",
 			),
-			kaddht.RoutingTableRefreshPeriod(30 * time.Second),
 		}
 
 		s.dht, err = kaddht.New(ctx, h, dopts...)
@@ -255,7 +254,9 @@ func (s *Service) Start() {
 			}
 			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
-		if err := s.dht.Bootstrap(s.ctx); err != nil {
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = 30 * time.Second
+		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
 			log.WithError(err).Error("Failed to bootstrap DHT")
 		}
 	}
@@ -411,14 +412,14 @@ func (s *Service) RefreshENR() {
 // subscribed to a particular subnet. Then we try to connect
 // with those peers.
 func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
-	nodes := make([]*enode.Node, searchLimit)
 	if s.dv5Listener == nil {
 		// return if discovery isn't set
 		return false, nil
 	}
-	num := s.dv5Listener.ReadRandomNodes(nodes)
+	iterator := s.dv5Listener.RandomNodes()
+	nodes := enode.ReadNodes(iterator, lookupLimit)
 	exists := false
-	for _, node := range nodes[:num] {
+	for _, node := range nodes {
 		if node.IP() == nil {
 			continue
 		}
@@ -509,7 +510,9 @@ func (s *Service) awaitStateInitialized() {
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
-		nodes := s.dv5Listener.LookupRandom()
+		iterator := s.dv5Listener.RandomNodes()
+		nodes := enode.ReadNodes(iterator, lookupLimit)
+		iterator.Close()
 		multiAddresses := s.processPeers(nodes)
 		// do not process a large amount than required peers.
 		if len(multiAddresses) > lookupLimit {

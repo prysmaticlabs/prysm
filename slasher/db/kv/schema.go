@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	latestEpochKey       = "LATEST_EPOCH_DETECTED"
-	chainHeadKey         = "CHAIN_HEAD"
-	cachedSpanerEpochs   = 256
+	latestEpochKey = "LATEST_EPOCH_DETECTED"
+	chainHeadKey   = "CHAIN_HEAD"
+	// spannerEncodedLength the byte length of validator span data structure.
 	spannerEncodedLength = 7
 )
 

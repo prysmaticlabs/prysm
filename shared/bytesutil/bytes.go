@@ -76,18 +76,6 @@ func FromBytes8(x []byte) uint64 {
 	return binary.LittleEndian.Uint64(x)
 }
 
-// LowerThan returns true if byte slice x is lower than byte slice y. (little-endian format)
-// This is used in spec to compare winning block root hash.
-// Mentioned in spec as "ties broken by favoring lower `shard_block_root` values".
-func LowerThan(x []byte, y []byte) bool {
-	for i, b := range x {
-		if b > y[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // ToBytes4 is a convenience method for converting a byte slice to a fix
 // sized 4 byte array. This method will truncate the input if it is larger
 // than 4 bytes.
@@ -183,19 +171,6 @@ func FromBytes48Array(x [][48]byte) [][]byte {
 		y[i] = x[i][:]
 	}
 	return y
-}
-
-// Xor xors the bytes in x and y and returns the result.
-func Xor(x []byte, y []byte) []byte {
-	n := len(x)
-	if len(y) < n {
-		n = len(y)
-	}
-	var result []byte
-	for i := 0; i < n; i++ {
-		result = append(result, x[i]^y[i])
-	}
-	return result
 }
 
 // Trunc truncates the byte slices to 6 bytes.

@@ -41,14 +41,18 @@ func IntersectionUint64(s ...[]uint64) []uint64 {
 		return s[0]
 	}
 	intersect := make([]uint64, 0)
-	for i := 1; i < len(s); i++ {
-		m := make(map[uint64]bool)
-		for j := 0; j < len(s[i-1]); j++ {
-			m[s[i-1][j]] = true
-		}
-		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; found {
-				intersect = append(intersect, s[i][j])
+	m := make(map[uint64]int)
+	for _, k := range s[0] {
+		m[k] = 1
+	}
+	for i, num := 1, len(s); i < num; i++ {
+		for _, k := range s[i] {
+			// Increment and check only if item is present in both, and no increment has happened yet.
+			if _, found := m[k]; found && (i-m[k]) == 0 {
+				m[k]++
+				if m[k] == num {
+					intersect = append(intersect, k)
+				}
 			}
 		}
 	}
@@ -152,19 +156,22 @@ func IntersectionInt64(s ...[]int64) []int64 {
 	if len(s) == 1 {
 		return s[0]
 	}
-	set := make([]int64, 0)
-	m := make(map[int64]bool)
-	for i := 1; i < len(s); i++ {
-		for j := 0; j < len(s[i-1]); j++ {
-			m[s[i-1][j]] = true
-		}
-		for j := 0; j < len(s[i]); j++ {
-			if _, found := m[s[i][j]]; found {
-				set = append(set, s[i][j])
+	intersect := make([]int64, 0)
+	m := make(map[int64]int)
+	for _, k := range s[0] {
+		m[k] = 1
+	}
+	for i, num := 1, len(s); i < num; i++ {
+		for _, k := range s[i] {
+			if _, found := m[k]; found && (i-m[k]) == 0 {
+				m[k]++
+				if m[k] == num {
+					intersect = append(intersect, k)
+				}
 			}
 		}
 	}
-	return set
+	return intersect
 }
 
 // UnionInt64 of any number of int64 slices with time
@@ -256,26 +263,19 @@ func IntersectionByteSlices(s ...[][]byte) [][]byte {
 		return s[0]
 	}
 	inter := make([][]byte, 0)
-	for i := 1; i < len(s); i++ {
-		hash := make(map[string]bool)
-		for _, e := range s[i-1] {
-			hash[string(e)] = true
-		}
-		for _, e := range s[i] {
-			if hash[string(e)] {
-				inter = append(inter, e)
+	m := make(map[string]int)
+	for _, k := range s[0] {
+		m[string(k)] = 1
+	}
+	for i, num := 1, len(s); i < num; i++ {
+		for _, k := range s[i] {
+			if _, found := m[string(k)]; found && (i-m[string(k)]) == 0 {
+				m[string(k)]++
+				if m[string(k)] == num {
+					inter = append(inter, k)
+				}
 			}
 		}
-		tmp := make([][]byte, 0)
-		// Remove duplicates from slice.
-		encountered := make(map[string]bool)
-		for _, element := range inter {
-			if !encountered[string(element)] {
-				tmp = append(tmp, element)
-				encountered[string(element)] = true
-			}
-		}
-		inter = tmp
 	}
 	return inter
 }

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	bls "github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
