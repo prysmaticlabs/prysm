@@ -21,7 +21,7 @@ const pubKeyErr = "could not convert bytes to public key"
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -55,7 +55,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -92,7 +92,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -137,7 +137,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -181,7 +181,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -223,7 +223,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -302,7 +302,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
