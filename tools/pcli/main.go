@@ -28,6 +28,7 @@ func main() {
 	var preStatePath string
 	var expectedPostStatePath string
 	var sszPath string
+	var sszType string
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -49,143 +50,37 @@ func main() {
 					Required:    true,
 					Destination: &sszPath,
 				},
+				&cli.StringFlag{
+					Name:        "data-type",
+					Usage:       "ssz file data type: ",
+					Required:    true,
+					Destination: &sszType,
+				},
 			},
-			Subcommands: []*cli.Command{
-				{
-					Name:  "attestation",
-					Usage: "Pretty print a Attestation",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.Attestation{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "attestation_data",
-					Usage: "Pretty print a AttestationData",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.AttestationData{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "attester_slashing",
-					Usage: "Pretty print a AttesterSlashing",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.AttesterSlashing{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "signed_block",
-					Usage: "Pretty print a SignedBeaconBlock",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.SignedBeaconBlock{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "block",
-					Usage: "Pretty print a BeaconBlock",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.BeaconBlock{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "block_body",
-					Usage: "Pretty print a BlockBody",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.BeaconBlockBody{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "block_header",
-					Usage: "Pretty print a BlockHeader",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.BeaconBlockHeader{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "signed_block_header",
-					Usage: "Pretty print a SignedBeaconBlockHeader",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.SignedBeaconBlockHeader{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "deposit",
-					Usage: "Pretty print a Deposit",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.Deposit{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "deposit_data",
-					Usage: "Pretty print a Deposit_Data",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.Deposit_Data{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "eth1_data",
-					Usage: "Pretty print a Eth1Data",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.Eth1Data{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "fork_data",
-					Usage: "Pretty print a Fork",
-					Action: func(c *cli.Context) error {
-						data := &pb.Fork{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "proposer_slashing",
-					Usage: "Pretty print a ProposerSlashing",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.ProposerSlashing{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "signed_voluntary_exit",
-					Usage: "Pretty print a AttestationData",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.SignedVoluntaryExit{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
-				{
-					Name:  "voluntary_exit",
-					Usage: "Pretty print a VoluntaryExit",
-					Action: func(c *cli.Context) error {
-						data := &ethpb.VoluntaryExit{}
-						prettyPrint(sszPath, data)
-						return nil
-					},
-				},
+			Action: func(c *cli.Context) error {
+				var data interface{}
+				switch sszType {
+				case "BeaconBlock":
+					data = &ethpb.BeaconBlock{}
+				case "SignedBeaconBlock":
+					data = &ethpb.SignedBeaconBlock{}
+				case "Attestation":
+					data = &ethpb.Attestation{}
+				case "BeaconBlockHeader":
+					data = &ethpb.BeaconBlockHeader{}
+				case "Deposit":
+					data = &ethpb.Deposit{}
+				case "ProposerSlashing":
+					data = &ethpb.ProposerSlashing{}
+				case "SignedBeaconBlockHeader":
+					data = &ethpb.SignedBeaconBlockHeader{}
+				case "SignedVoluntaryExit":
+					data = &ethpb.SignedVoluntaryExit{}
+				case "VoluntaryExit":
+					data = &ethpb.VoluntaryExit{}
+				}
+				prettyPrint(sszPath, data)
+				return nil
 			},
 		},
 		{
