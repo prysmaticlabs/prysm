@@ -591,6 +591,9 @@ func (b *BeaconNode) registerPrometheusService() error {
 }
 
 func (b *BeaconNode) registerGRPCGateway() error {
+	if b.cliCtx.Bool(flags.DisableGRPCGateway.Name) {
+		return nil
+	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
 	selfAddress := fmt.Sprintf("127.0.0.1:%d", b.cliCtx.Int(flags.RPCPort.Name))
 	gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)

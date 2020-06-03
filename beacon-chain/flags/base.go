@@ -60,6 +60,11 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
+	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
+	DisableGRPCGateway = &cli.BoolFlag{
+		Name:  "disable-grpc-gateway",
+		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
+	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
