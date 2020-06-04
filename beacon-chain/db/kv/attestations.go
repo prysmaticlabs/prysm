@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -153,7 +154,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		return err
 	}
 
-	attDataRoot, err := ssz.HashTreeRoot(att.Data)
+	attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 	if err != nil {
 		return err
 	}
@@ -196,7 +197,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 
 	err := k.db.Update(func(tx *bolt.Tx) error {
 		for _, att := range atts {
-			attDataRoot, err := ssz.HashTreeRoot(att.Data)
+			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 			if err != nil {
 				return err
 			}
