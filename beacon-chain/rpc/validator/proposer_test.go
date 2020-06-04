@@ -286,7 +286,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -312,13 +312,9 @@ func TestProposeBlock_OK(t *testing.T) {
 		HeadFetcher:       c,
 		BlockNotifier:     c.BlockNotifier(),
 	}
-	req := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       5,
-			ParentRoot: []byte("parent-hash"),
-			Body:       &ethpb.BeaconBlockBody{},
-		},
-	}
+	req := testutil.NewBeaconBlock()
+	req.Block.Slot = 5
+	req.Block.ParentRoot = bytesutil.PadTo([]byte("parent-hash"), 32)
 	if err := db.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
 	}
@@ -1368,7 +1364,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(context.Background(), genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}

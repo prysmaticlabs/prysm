@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -191,7 +192,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 
-	genesisBlk := b.NewGenesisBlock([]byte{})
+	genesisBlk := testutil.NewBeaconBlock()
 	blkRoot, err := stateutil.BlockRoot(genesisBlk.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -288,7 +289,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	genesis := b.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -301,7 +302,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	}
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}}
+	headBlock := testutil.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot
+	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
 	headState := testutil.NewBeaconState()
 	if err := headState.SetSlot(finalizedSlot); err != nil {
 		t.Fatal(err)
@@ -326,9 +329,6 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 		Epoch: helpers.SlotToEpoch(finalizedSlot),
 		Root:  headRoot[:],
 	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveBlock(ctx, headBlock); err != nil {
 		t.Fatal(err)
 	}
 	c := &Service{beaconDB: db, stateGen: stategen.New(db, cache.NewStateSummaryCache())}

@@ -7,7 +7,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -242,7 +241,7 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	}
 
 	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
-	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	genesisBlock := testutil.NewBeaconBlock()
 	bodyRoot, err := stateutil.BlockRoot(genesisBlock.Block)
 	if err != nil {
 		t.Fatal(err)
