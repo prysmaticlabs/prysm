@@ -44,7 +44,6 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		validatorBals[i] = helpers.DecreaseBalanceWithVal(validatorBals[i], attsPenalties[i])
 
 		vp[i].AfterEpochTransitionBalance = validatorBals[i]
-
 	}
 
 	if err := state.SetBalances(validatorBals); err != nil {
