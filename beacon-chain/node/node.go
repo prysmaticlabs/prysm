@@ -407,7 +407,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	if !b.cliCtx.IsSet(flags.HTTPWeb3ProviderFlag.Name) {
-		log.Warn("Using default ETH1 connection provided by Prysmatic Labs. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.net/setup-eth1 for more information.")
+		log.Warn("Using default ETH1 connection provided by Prysmatic Labs. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
 	}
 
 	cfg := &powchain.Web3ServiceConfig{
