@@ -53,6 +53,11 @@ func PendingAttestationRoot(hasher HashFn, att *pb.PendingAttestation) ([32]byte
 	return bitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+// AttestationDataRoot describes a method that serves as a HashTreeRoot function for attestation data.
+func AttestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
+	return attestationDataRoot(hashutil.CustomSHA256Hasher(), data)
+}
+
 func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	enc := make([]byte, 128)
 
