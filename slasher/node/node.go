@@ -12,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/shared/version"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -103,6 +105,10 @@ func (s *SlasherNode) Start() {
 	s.lock.Lock()
 	s.services.StartAll()
 	s.lock.Unlock()
+
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting slasher client")
 
 	stop := s.stop
 	go func() {
