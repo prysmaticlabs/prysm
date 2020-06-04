@@ -18,9 +18,9 @@ var (
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
 	schlesiTestnetFlag = &cli.BoolFlag{
-Name:  "schlesi-testnet",
-Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
-}
+		Name:  "schlesi-testnet",
+		Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
+	}
 	e2eConfigFlag = &cli.BoolFlag{
 		Name:  "e2e-config",
 		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
@@ -164,6 +164,10 @@ Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
 	reduceAttesterStateCopy = &cli.BoolFlag{
 		Name:  "reduce-attester-state-copy",
 		Usage: "Reduces the amount of state copies for attester rpc",
+	}
+	enableKadDht = &cli.BoolFlag{
+		Name:  "enable-kad-dht",
+		Usage: "Enables libp2p's kademlia based discovery to start running",
 	}
 )
 
@@ -499,6 +503,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableFieldTrie,
 	disableStateRefCopy,
 	reduceAttesterStateCopy,
+	enableKadDht,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
