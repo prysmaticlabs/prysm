@@ -117,7 +117,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	GenesisDelay:             172800, // 1 day
+	GenesisDelay:             172800, // 2 days
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -234,7 +234,7 @@ func SchlesiTestnetConfig() *BeaconChainConfig {
 
 	schlesiTestnet.MinGenesisActiveValidatorCount = 4
 	schlesiTestnet.MinGenesisTime = 1587755000
-	schlesiTestnet.GenesisDelay = 3600
+	schlesiTestnet.GenesisDelay = 3600 // 1 hour
 
 	return &schlesiTestnet
 }
