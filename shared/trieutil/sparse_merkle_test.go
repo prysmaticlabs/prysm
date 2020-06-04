@@ -47,7 +47,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 			Signature:             someSig[:],
 		},
 	}
-	enc, err := ssz.Marshal(dep)
+	enc, err := dep.MarshalSSZ()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -39,7 +39,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	_ "go.uber.org/automaxprocs"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
@@ -47,8 +49,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/sirupsen/logrus"
-	_ "go.uber.org/automaxprocs"
 )
 
 var (
@@ -243,7 +243,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		NextForkVersion:   params.BeaconConfig().GenesisForkVersion,
 		NextForkEpoch:     params.BeaconConfig().FarFutureEpoch,
 	}
-	forkEntry, err := ssz.Marshal(forkID)
+	forkEntry, err := forkID.MarshalSSZ()
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not marshal fork id")
 	}

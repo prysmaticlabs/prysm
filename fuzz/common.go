@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
@@ -33,7 +32,7 @@ func success(post *stateTrie.BeaconState) ([]byte, bool) {
 		}
 	}
 
-	result, err := ssz.Marshal(post.InnerStateUnsafe())
+	result, err := post.InnerStateUnsafe().MarshalSSZ()
 	if err != nil {
 		panic(err)
 	}

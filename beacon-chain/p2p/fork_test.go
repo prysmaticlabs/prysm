@@ -12,14 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
@@ -215,7 +215,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 		NextForkVersion:   nextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
-	enc, err := ssz.Marshal(enrForkID)
+	enc, err := enrForkID.MarshalSSZ()
 	if err != nil {
 		t.Fatal(err)
 	}

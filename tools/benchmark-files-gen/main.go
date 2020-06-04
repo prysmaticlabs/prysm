@@ -74,7 +74,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	beaconBytes, err := ssz.Marshal(genesisState)
+	beaconBytes, err := genesisState.MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	beaconBytes, err := ssz.Marshal(beaconState.InnerStateUnsafe())
+	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	blockBytes, err := ssz.Marshal(block)
+	blockBytes, err := block.MarshalSSZ()
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := ssz.Marshal(beaconState.InnerStateUnsafe())
+	beaconBytes, err := beaconState.InnerStateUnsafe().MarshalSSZ()
 	if err != nil {
 		return err
 	}

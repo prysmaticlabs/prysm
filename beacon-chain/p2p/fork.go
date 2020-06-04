@@ -110,7 +110,7 @@ func addForkEntry(
 		NextForkVersion:   nextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
-	enc, err := ssz.Marshal(enrForkID)
+	enc, err := enrForkID.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
