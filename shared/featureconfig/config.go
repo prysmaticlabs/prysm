@@ -30,9 +30,9 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Configuration related flags.
-	MinimalConfig bool // MinimalConfig as defined in the spec.
-	SchlesiTestnet                             bool // SchlesiTestnet preconfigured spec.
-	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
+	MinimalConfig  bool // MinimalConfig as defined in the spec.
+	SchlesiTestnet bool // SchlesiTestnet preconfigured spec.
+	E2EConfig      bool //E2EConfig made specifically for testing, do not use except in E2E.
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -60,7 +60,7 @@ type Flags struct {
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
-
+	EnableKadDHT                               bool // EnableKadDHT stops libp2p's kademlia based discovery from running.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -151,7 +151,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	delay := params.BeaconConfig().MinGenesisDelay
+	delay := params.BeaconConfig().GenesisDelay
 	if ctx.IsSet(customGenesisDelayFlag.Name) {
 		delay = ctx.Uint64(customGenesisDelayFlag.Name)
 		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
@@ -257,6 +257,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(reduceAttesterStateCopy.Name) {
 		log.Warn("Enabling feature that reduces attester state copy")
 		cfg.ReduceAttesterStateCopy = true
+	}
+	if ctx.Bool(enableKadDht.Name) {
+		log.Warn("Enabling libp2p's kademlia discovery")
+		cfg.EnableKadDHT = true
 	}
 	Init(cfg)
 }
