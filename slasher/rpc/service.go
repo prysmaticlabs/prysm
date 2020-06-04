@@ -105,8 +105,6 @@ func (s *Service) Start() {
 			s.credentialError = err
 		}
 		opts = append(opts, grpc.Creds(creds))
-	} else {
-		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
