@@ -533,12 +533,10 @@ func TestStore_SaveBlocks_CanGetHighest(t *testing.T) {
 
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		totalBlocks[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				ParentRoot: bytesutil.PadTo([]byte("parent"), 32),
-				Slot:       uint64(i),
-			},
-		}
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = uint64(i)
+		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		totalBlocks[i] = b
 	}
 
 	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
@@ -589,7 +587,8 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	b50 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 50}}
+	b50 := testutil.NewBeaconBlock()
+	b50.Block.Slot = 50
 	if err := db.SaveBlock(ctx, b50); err != nil {
 		t.Fatal(err)
 	}
@@ -601,7 +600,8 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", b50, highestSavedBlock)
 	}
 
-	b51 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 51}}
+	b51 := testutil.NewBeaconBlock()
+	b51.Block.Slot = 51
 	r51, err := stateutil.BlockRoot(b51.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -635,22 +635,20 @@ func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 	ctx := context.Background()
 
 	var err error
-	b := make([]*ethpb.SignedBeaconBlock, 100)
+	totalBlocks := make([]*ethpb.SignedBeaconBlock, 100)
 	r := make([][32]byte, 100)
 	for i := 0; i < 100; i++ {
-		b[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				ParentRoot: bytesutil.PadTo([]byte("parent"), 32),
-				Slot:       uint64(i),
-			},
-		}
-		r[i], err = stateutil.BlockRoot(b[i].Block)
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = uint64(i)
+		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		totalBlocks[i] = b
+		r[i], err = stateutil.BlockRoot(totalBlocks[i].Block)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 
-	if err := db.SaveBlocks(ctx, b); err != nil {
+	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.DeleteBlocks(ctx, [][32]byte{r[99], r[98], r[97]}); err != nil {
@@ -660,7 +658,7 @@ func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(b[96], highestSavedBlock[0]) {
-		t.Errorf("Wanted %v, received %v", b[len(b)-1], highestSavedBlock)
+	if !proto.Equal(totalBlocks[96], highestSavedBlock[0]) {
+		t.Errorf("Wanted %v, received %v", totalBlocks[len(totalBlocks)-1], highestSavedBlock)
 	}
 }
