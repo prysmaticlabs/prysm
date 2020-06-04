@@ -97,7 +97,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	addrs := []ma.Multiaddr{}
 
 	for _, n := range nodes {
-		if s.filterPeers(n) {
+		if s.filterPeer(n) {
 			addr, err := convertToSingleMultiAddr(n)
 			if err != nil {
 				t.Fatal(err)
@@ -196,7 +196,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	addrs := []ma.Multiaddr{}
 
 	for _, n := range nodes {
-		if s.filterPeers(n) {
+		if s.filterPeer(n) {
 			addr, err := convertToSingleMultiAddr(n)
 			if err != nil {
 				t.Fatal(err)

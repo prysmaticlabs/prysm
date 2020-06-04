@@ -506,7 +506,7 @@ func (s *Service) awaitStateInitialized() {
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	iterator := s.dv5Listener.RandomNodes()
-	iterator = enode.Filter(iterator, s.filterPeers)
+	iterator = enode.Filter(iterator, s.filterPeer)
 	defer iterator.Close()
 	for {
 		exists := iterator.Next()

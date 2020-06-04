@@ -124,8 +124,8 @@ func (s *Service) startDiscoveryV5(
 	return listener, nil
 }
 
-// filter peers coming from our dht
-func (s *Service) filterPeers(node *enode.Node) bool {
+// filter the peer coming from our dht
+func (s *Service) filterPeer(node *enode.Node) bool {
 	if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
 		log.WithFields(logrus.Fields{"peer": node.String(),
 			"reason": "at peer limit"}).Trace("Not dialing peer")
