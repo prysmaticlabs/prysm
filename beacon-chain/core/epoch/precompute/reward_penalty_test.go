@@ -390,7 +390,15 @@ func TestFinalityDelay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := finalityDelay(state)
+	prevEpoch := uint64(0)
+	finalizedEpoch := uint64(0)
+	// Set values for each test case
+	setVal := func() {
+		prevEpoch = helpers.PrevEpoch(state)
+		finalizedEpoch = state.FinalizedCheckpointEpoch()
+	}
+	setVal()
+	d := finalityDelay(prevEpoch, finalizedEpoch)
 	w := helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
 	if d != w {
 		t.Error("Did not get wanted finality delay")
@@ -399,7 +407,8 @@ func TestFinalityDelay(t *testing.T) {
 	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}); err != nil {
 		t.Fatal(err)
 	}
-	d = finalityDelay(state)
+	setVal()
+	d = finalityDelay(prevEpoch, finalizedEpoch)
 	w = helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
 	if d != w {
 		t.Error("Did not get wanted finality delay")
@@ -408,7 +417,8 @@ func TestFinalityDelay(t *testing.T) {
 	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}); err != nil {
 		t.Fatal(err)
 	}
-	d = finalityDelay(state)
+	setVal()
+	d = finalityDelay(prevEpoch, finalizedEpoch)
 	w = helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
 	if d != w {
 		t.Error("Did not get wanted finality delay")
@@ -422,21 +432,31 @@ func TestIsInInactivityLeak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !isInInactivityLeak(state) {
+	prevEpoch := uint64(0)
+	finalizedEpoch := uint64(0)
+	// Set values for each test case
+	setVal := func() {
+		prevEpoch = helpers.PrevEpoch(state)
+		finalizedEpoch = state.FinalizedCheckpointEpoch()
+	}
+	setVal()
+	if !isInInactivityLeak(prevEpoch, finalizedEpoch) {
 		t.Error("Wanted inactivity leak true")
 	}
 
 	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 4}); err != nil {
 		t.Fatal(err)
 	}
-	if !isInInactivityLeak(state) {
+	setVal()
+	if !isInInactivityLeak(prevEpoch, finalizedEpoch) {
 		t.Error("Wanted inactivity leak true")
 	}
 
 	if err := state.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 5}); err != nil {
 		t.Fatal(err)
 	}
-	if isInInactivityLeak(state) {
+	setVal()
+	if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 		t.Error("Wanted inactivity leak false")
 	}
 }

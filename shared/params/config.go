@@ -44,7 +44,7 @@ type BeaconChainConfig struct {
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
-	MinGenesisDelay                  uint64 `yaml:"MIN_GENESIS_DELAY"`                   // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
+	GenesisDelay                     uint64 `yaml:"GENESIS_DELAY"`                       // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
 	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
@@ -117,7 +117,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	MinGenesisDelay:          86400, // 1 day
+	GenesisDelay:             172800, // 2 days
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -234,7 +234,7 @@ func SchlesiTestnetConfig() *BeaconChainConfig {
 
 	schlesiTestnet.MinGenesisActiveValidatorCount = 4
 	schlesiTestnet.MinGenesisTime = 1587755000
-	schlesiTestnet.MinGenesisDelay = 3600
+	schlesiTestnet.GenesisDelay = 3600 // 1 hour
 
 	return &schlesiTestnet
 }
@@ -251,7 +251,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 0
-	minimalConfig.MinGenesisDelay = 300 // 5 minutes
+	minimalConfig.GenesisDelay = 300 // 5 minutes
 	minimalConfig.TargetAggregatorsPerCommittee = 3
 
 	// Gwei values
@@ -318,7 +318,7 @@ func E2ETestConfig() *BeaconChainConfig {
 
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256
-	e2eConfig.MinGenesisDelay = 30 // 30 seconds so E2E has enough time to process deposits and get started.
+	e2eConfig.GenesisDelay = 30 // 30 seconds so E2E has enough time to process deposits and get started.
 
 	// Time parameters.
 	e2eConfig.SecondsPerSlot = 8

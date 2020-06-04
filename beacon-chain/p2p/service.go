@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -137,7 +138,7 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery {
+	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery && featureconfig.Get().EnableKadDHT {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
@@ -236,7 +237,7 @@ func (s *Service) Start() {
 		go s.listenForNewNodes()
 	}
 
-	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery {
+	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery && featureconfig.Get().EnableKadDHT {
 		for _, addr := range s.cfg.KademliaBootStrapAddr {
 			peersToWatch = append(peersToWatch, addr)
 			err := startDHTDiscovery(s.host, addr)
