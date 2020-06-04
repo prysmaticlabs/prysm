@@ -595,7 +595,7 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	}
 	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
 	selfAddress := fmt.Sprintf("127.0.0.1:%d", b.cliCtx.Int(flags.RPCPort.Name))
-	gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
+	gatewayAddress := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
 	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 	return b.services.RegisterService(
