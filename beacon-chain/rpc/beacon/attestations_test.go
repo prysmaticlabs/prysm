@@ -321,10 +321,14 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						Attestations: []*ethpb.Attestation{
 							{
 								Data: &ethpb.AttestationData{
-									CommitteeIndex: s,
-									Slot:           i,
+									CommitteeIndex:  s,
+									Slot:            i,
+									BeaconBlockRoot: make([]byte, 32),
+									Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+									Target:          &ethpb.Checkpoint{Root: make([]byte, 32)},
 								},
 								AggregationBits: bitfield.Bitlist{0b11},
+								Signature:       make([]byte, 96),
 							},
 						},
 					},
