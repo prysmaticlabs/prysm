@@ -52,6 +52,22 @@ func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
 	return atts
 }
 
+// UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
+// filtered by committee index and slot.
+func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+	atts := make([]*ethpb.Attestation, 0)
+
+	p.unAggregatedAtt.RLock()
+	defer p.unAggregatedAtt.RUnlock()
+	for _, a := range p.unAggregatedAtt {
+		if slot == a[0].Data.Slot && committeeIndex == a[0].Data.CommitteeIndex {
+			atts = append(atts, a...)
+		}
+	}
+
+	return atts
+}
+
 // DeleteUnaggregatedAttestation deletes the unaggregated attestations in cache.
 func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error {
 	if att == nil {
