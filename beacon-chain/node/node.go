@@ -406,6 +406,10 @@ func (b *BeaconNode) registerPOWChainService() error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
+	if !b.cliCtx.IsSet(flags.HTTPWeb3ProviderFlag.Name) {
+		log.Warn("Using default ETH1 connection provided by Prysmatic Labs. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.net/setup-eth1 for more information.")
+	}
+
 	cfg := &powchain.Web3ServiceConfig{
 		HTTPEndPoint:    b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
