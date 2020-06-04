@@ -509,6 +509,10 @@ func (s *Service) listenForNewNodes() {
 	iterator = enode.Filter(iterator, s.filterPeer)
 	defer iterator.Close()
 	for {
+		// Exit if service's context is canceled
+		if s.ctx.Err() != nil {
+			break
+		}
 		exists := iterator.Next()
 		if !exists {
 			break
