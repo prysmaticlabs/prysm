@@ -98,8 +98,52 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	if _, err := server.SubmitAggregateSelectionProof(ctx, req); err == nil || !strings.Contains(err.Error(), "No aggregated attestation in beacon node") {
+	if _, err := server.SubmitAggregateSelectionProof(ctx, req); err == nil || !strings.Contains(err.Error(), "Could not find attestation for slot and committee in pool") {
 		t.Error("Did not get wanted error")
+	}
+}
+
+func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	c := params.MinimalSpecConfig()
+	c.TargetAggregatorsPerCommittee = 16
+	params.OverrideBeaconConfig(c)
+
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	att0, err := generateUnaggregatedAtt(beaconState, 0, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatorServer := &Server{
+		HeadFetcher: &mock.ChainService{State: beaconState},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		P2P:         &mockp2p.MockBroadcaster{},
+	}
+
+	priv := bls.RandKey()
+	sig := priv.Sign([]byte{'B'})
+	v, err := beaconState.ValidatorAtIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := v.PublicKey
+	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+
+	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -210,6 +254,45 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			CommitteeIndex: 1,
+			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+			Target:         &ethpb.Checkpoint{Epoch: 0},
+		},
+		AggregationBits: aggBits,
+	}
+	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	attestingIndices := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+	if err != nil {
+		return nil, err
+	}
+
+	sigs := make([]*bls.Signature, len(attestingIndices))
+	zeroSig := [96]byte{}
+	att.Signature = zeroSig[:]
+
+	for i, indice := range attestingIndices {
+		hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
+		if err != nil {
+			return nil, err
+		}
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
+		sigs[i] = sig
+	}
+
+	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+
+	return att, nil
+}
+
+func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) (*ethpb.Attestation, error) {
+	aggBits := bitfield.NewBitlist(4)
+	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 1,
