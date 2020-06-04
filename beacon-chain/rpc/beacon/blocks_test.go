@@ -193,11 +193,8 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	blks := make([]*ethpb.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
-		b := &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot: i,
-			},
-		}
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = i
 		root, err := stateutil.BlockRoot(b.Block)
 		if err != nil {
 			t.Fatal(err)
@@ -236,6 +233,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 							RandaoReveal: make([]byte, 96),
 							Graffiti:     make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
+								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),
 							},
 						},
@@ -257,6 +255,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 							RandaoReveal: make([]byte, 96),
 							Graffiti:     make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
+								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),
 							},
 						},
@@ -274,6 +273,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 							RandaoReveal: make([]byte, 96),
 							Graffiti:     make([]byte, 32),
 							Eth1Data: &ethpb.Eth1Data{
+								BlockHash:   make([]byte, 32),
 								DepositRoot: make([]byte, 32),
 							},
 						},
