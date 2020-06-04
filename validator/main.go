@@ -49,10 +49,9 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
-	flags.MergeSourceDirectories,
-	flags.MergeTargetDirectory,
-	flags.SplitSourceDirectory,
-	flags.SplitTargetDirectory,
+	flags.SourceDirectories,
+	flags.SourceDirectory,
+	flags.TargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -233,13 +232,13 @@ contract in order to activate the validator client`,
 					Name:        "merge",
 					Description: "merges data from several validator databases into a new validator database",
 					Flags: []cli.Flag{
-						flags.MergeSourceDirectories,
-						flags.MergeTargetDirectory,
+						flags.SourceDirectories,
+						flags.TargetDirectory,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						passedSources := cliCtx.String(flags.MergeSourceDirectories.Name)
+						passedSources := cliCtx.String(flags.SourceDirectories.Name)
 						sources := strings.Split(passedSources, ",")
-						target := cliCtx.String(flags.MergeTargetDirectory.Name)
+						target := cliCtx.String(flags.TargetDirectory.Name)
 
 						if err := accounts.Merge(context.Background(), sources, target); err != nil {
 							log.WithError(err).Error("Merging validator data failed")
@@ -254,12 +253,12 @@ contract in order to activate the validator client`,
 					Name:        "split",
 					Description: "splits one validator database into several databases - one for each public key",
 					Flags: []cli.Flag{
-						flags.SplitSourceDirectory,
-						flags.SplitTargetDirectory,
+						flags.SourceDirectory,
+						flags.TargetDirectory,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						source := cliCtx.String(flags.SplitSourceDirectory.Name)
-						target := cliCtx.String(flags.SplitTargetDirectory.Name)
+						source := cliCtx.String(flags.SourceDirectory.Name)
+						target := cliCtx.String(flags.TargetDirectory.Name)
 
 						if err := accounts.Split(context.Background(), source, target); err != nil {
 							log.WithError(err).Error("Splitting validator data failed")
