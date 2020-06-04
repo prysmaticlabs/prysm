@@ -51,11 +51,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return err
 	}
 
-	included := 0
-	votedSource := 0
-	votedTarget := 0
-	votedHead := 0
-
 	if v.emitAccountMetrics {
 		for _, missingPubKey := range resp.MissingValidators {
 			fmtKey := fmt.Sprintf("%#x", missingPubKey[:])
@@ -63,21 +58,25 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 	}
 
+	included := 0
+	votedSource := 0
+	votedTarget := 0
+	votedHead := 0
 	prevEpoch := (slot / params.BeaconConfig().SlotsPerEpoch) - 1
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
 	for i, pubKey := range resp.PublicKeys {
-		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
-		log := log.WithField("pubKey", truncatedKey)
 		pubKeyBytes := bytesutil.ToBytes48(pubKey)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
 
+		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
+				"pubKey":               truncatedKey,
 				"epoch":                prevEpoch,
 				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
 				"correctlyVotedTarget": resp.CorrectlyVotedTarget[i],
