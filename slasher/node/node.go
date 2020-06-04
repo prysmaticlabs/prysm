@@ -12,8 +12,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/shared/version"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -22,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
