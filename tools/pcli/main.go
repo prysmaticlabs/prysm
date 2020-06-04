@@ -53,16 +53,16 @@ func main() {
 				&cli.StringFlag{
 					Name: "data-type",
 					Usage: "ssz file data type: " +
-						"BeaconBlock|" +
-						"SignedBeaconBlock|" +
-						"Attestation|" +
-						"BeaconBlockHeader|" +
-						"Deposit|" +
-						"ProposerSlashing|" +
-						"SignedBeaconBlockHeader|" +
-						"SignedVoluntaryExit|" +
-						"VoluntaryExit|" +
-						"BeaconState",
+						"block|" +
+						"signed_block|" +
+						"attestation|" +
+						"block_header|" +
+						"deposit|" +
+						"proposer_slashing|" +
+						"signed_block_header|" +
+						"signed_voluntary_exit|" +
+						"voluntary_exit|" +
+						"state",
 					Required:    true,
 					Destination: &sszType,
 				},
@@ -70,28 +70,28 @@ func main() {
 			Action: func(c *cli.Context) error {
 				var data interface{}
 				switch sszType {
-				case "BeaconBlock":
+				case "block":
 					data = &ethpb.BeaconBlock{}
-				case "SignedBeaconBlock":
+				case "signed_block":
 					data = &ethpb.SignedBeaconBlock{}
-				case "Attestation":
+				case "attestation":
 					data = &ethpb.Attestation{}
-				case "BeaconBlockHeader":
+				case "block_header":
 					data = &ethpb.BeaconBlockHeader{}
-				case "Deposit":
+				case "deposit":
 					data = &ethpb.Deposit{}
-				case "ProposerSlashing":
+				case "proposer_slashing":
 					data = &ethpb.ProposerSlashing{}
-				case "SignedBeaconBlockHeader":
+				case "signed_block_header":
 					data = &ethpb.SignedBeaconBlockHeader{}
-				case "SignedVoluntaryExit":
+				case "signed_voluntary_exit":
 					data = &ethpb.SignedVoluntaryExit{}
-				case "VoluntaryExit":
+				case "voluntary_exit":
 					data = &ethpb.VoluntaryExit{}
-				case "BeaconState":
+				case "state":
 					data = &pb.BeaconState{}
 				default:
-					log.Fatal("not a valid type valid types are: ")
+					log.Fatal("Invalid type")
 				}
 				prettyPrint(sszPath, data)
 				return nil
