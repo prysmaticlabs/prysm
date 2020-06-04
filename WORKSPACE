@@ -440,13 +440,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_kr_pretty",
-    importpath = "github.com/kr/pretty",
-    sum = "h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=",
-    version = "v0.2.0",
-)
-
-go_repository(
     name = "com_github_dgryski_go_bitstream",
     importpath = "github.com/dgryski/go-bitstream",
     sum = "h1:akOQj8IVgoeFfBTzGOEQakCYshWD6RNo1M5pivFXt70=",

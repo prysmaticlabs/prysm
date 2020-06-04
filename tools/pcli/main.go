@@ -51,8 +51,18 @@ func main() {
 					Destination: &sszPath,
 				},
 				&cli.StringFlag{
-					Name:        "data-type",
-					Usage:       "ssz file data type: ",
+					Name: "data-type",
+					Usage: "ssz file data type: " +
+						"BeaconBlock|" +
+						"SignedBeaconBlock|" +
+						"Attestation|" +
+						"BeaconBlockHeader|" +
+						"Deposit|" +
+						"ProposerSlashing|" +
+						"SignedBeaconBlockHeader|" +
+						"SignedVoluntaryExit|" +
+						"VoluntaryExit|" +
+						"BeaconState",
 					Required:    true,
 					Destination: &sszType,
 				},
@@ -78,6 +88,10 @@ func main() {
 					data = &ethpb.SignedVoluntaryExit{}
 				case "VoluntaryExit":
 					data = &ethpb.VoluntaryExit{}
+				case "BeaconState":
+					data = &pb.BeaconState{}
+				default:
+					log.Fatal("not a valid type valid types are: ")
 				}
 				prettyPrint(sszPath, data)
 				return nil
