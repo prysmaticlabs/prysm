@@ -930,11 +930,12 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
+	nonexistentIndex := ^uint64(0)
 	type statusTest struct {
-		name       string
-		status     *ethpb.ValidatorActivationResponse_Status
-		log        string
-		activeKeys [][]byte
+		name   string
+		status *ethpb.ValidatorActivationResponse_Status
+		log    string
+		active bool
 	}
 	pubKeys := [][]byte{
 		bytesutil.Uint64ToBytes(0),
@@ -947,6 +948,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			name: "UNKNOWN_STATUS, no deposit found yet",
 			status: &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubKeys[0],
+				Index:     nonexistentIndex,
 				Status: &ethpb.ValidatorStatusResponse{
 					Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 				},
@@ -957,6 +959,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			name: "DEPOSITED, deposit found",
 			status: &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubKeys[0],
+				Index:     nonexistentIndex,
 				Status: &ethpb.ValidatorStatusResponse{
 					Status:                 ethpb.ValidatorStatus_DEPOSITED,
 					DepositInclusionSlot:   50,
@@ -969,36 +972,39 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			name: "DEPOSITED into state",
 			status: &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubKeys[0],
+				Index:     30,
 				Status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_DEPOSITED,
 					PositionInActivationQueue: 30,
 				},
 			},
-			log: "Deposit processed, entering activation queue after finalization\" positionInActivationQueue=30",
+			log: "Deposit processed, entering activation queue after finalization\" index=30 positionInActivationQueue=30",
 		},
 		{
 			name: "PENDING",
 			status: &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubKeys[0],
+				Index:     50,
 				Status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_PENDING,
 					ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
 					PositionInActivationQueue: 6,
 				},
 			},
-			log: "Waiting to be assigned activation epoch\" positionInActivationQueue=6",
+			log: "Waiting to be assigned activation epoch\" index=50 positionInActivationQueue=6",
 		},
 		{
 			name: "PENDING",
 			status: &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubKeys[0],
+				Index:     89,
 				Status: &ethpb.ValidatorStatusResponse{
 					Status:                    ethpb.ValidatorStatus_PENDING,
 					ActivationEpoch:           60,
 					PositionInActivationQueue: 5,
 				},
 			},
-			log: "Waiting for activation\" activationEpoch=60",
+			log: "Waiting for activation\" activationEpoch=60 index=89",
 		},
 		{
 			name: "EXITED",
@@ -1029,9 +1035,9 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				},
 			}
 
-			activeKeys := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
-			if !reflect.DeepEqual(activeKeys, test.activeKeys) {
-				t.Fatal("expected active keys to be equal")
+			active := v.checkAndLogValidatorStatus([]*ethpb.ValidatorActivationResponse_Status{test.status})
+			if active != test.active {
+				t.Fatalf("expected key to be active, expected %t, received %t", test.active, active)
 			}
 
 			testutil.AssertLogsContain(t, hook, test.log)
