@@ -8,11 +8,23 @@ on:
 
 jobs:
 
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Gofmt checker
+        id: gofmt
+        uses: ./.github/actions/gofmt
+        with:
+          path: ./
+
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
