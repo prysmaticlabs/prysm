@@ -93,7 +93,16 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
 		t.Fatal(err)
 	}
-	att := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2, CommitteeIndex: 1}}
+	att := &ethpb.Attestation{
+		Signature: make([]byte, 96),
+		Data: &ethpb.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  1,
+			Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+			Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+			BeaconBlockRoot: make([]byte, 32),
+		},
+	}
 
 	parentRoot := [32]byte{1, 2, 3}
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
@@ -159,8 +168,11 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				Body: &ethpb.BeaconBlockBody{
 					Attestations: []*ethpb.Attestation{
 						{
+							Signature: make([]byte, 96),
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: []byte("root"),
+								Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+								Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
 								Slot:            i,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
@@ -197,27 +209,31 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	someRoot := []byte{1, 2, 3}
-	sourceRoot := []byte{4, 5, 6}
+	someRoot := [32]byte{1, 2, 3}
+	sourceRoot := [32]byte{4, 5, 6}
 	sourceEpoch := uint64(5)
-	targetRoot := []byte{7, 8, 9}
+	targetRoot := [32]byte{7, 8, 9}
 	targetEpoch := uint64(7)
 
 	blocks := []*ethpb.SignedBeaconBlock{
 		{
+			Signature: make([]byte, 96),
 			Block: &ethpb.BeaconBlock{
-				Slot: 4,
+				Slot:       4,
+				ParentRoot: make([]byte, 32),
+				StateRoot:  make([]byte, 32),
 				Body: &ethpb.BeaconBlockBody{
+					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: someRoot,
+								BeaconBlockRoot: someRoot[:],
 								Source: &ethpb.Checkpoint{
-									Root:  sourceRoot,
+									Root:  sourceRoot[:],
 									Epoch: sourceEpoch,
 								},
 								Target: &ethpb.Checkpoint{
-									Root:  targetRoot,
+									Root:  targetRoot[:],
 									Epoch: targetEpoch,
 								},
 								Slot: 3,
@@ -229,19 +245,23 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 			},
 		},
 		{
+			Signature: make([]byte, 96),
 			Block: &ethpb.BeaconBlock{
-				Slot: 5 + params.BeaconConfig().SlotsPerEpoch,
+				Slot:       5 + params.BeaconConfig().SlotsPerEpoch,
+				ParentRoot: make([]byte, 32),
+				StateRoot:  make([]byte, 32),
 				Body: &ethpb.BeaconBlockBody{
+					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: someRoot,
+								BeaconBlockRoot: someRoot[:],
 								Source: &ethpb.Checkpoint{
-									Root:  sourceRoot,
+									Root:  sourceRoot[:],
 									Epoch: sourceEpoch,
 								},
 								Target: &ethpb.Checkpoint{
-									Root:  targetRoot,
+									Root:  targetRoot[:],
 									Epoch: targetEpoch,
 								},
 								Slot: 4 + params.BeaconConfig().SlotsPerEpoch,
@@ -253,19 +273,23 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 			},
 		},
 		{
+			Signature: make([]byte, 96),
 			Block: &ethpb.BeaconBlock{
-				Slot: 5,
+				Slot:       5,
+				ParentRoot: make([]byte, 32),
+				StateRoot:  make([]byte, 32),
 				Body: &ethpb.BeaconBlockBody{
+					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: someRoot,
+								BeaconBlockRoot: someRoot[:],
 								Source: &ethpb.Checkpoint{
-									Root:  sourceRoot,
+									Root:  sourceRoot[:],
 									Epoch: sourceEpoch,
 								},
 								Target: &ethpb.Checkpoint{
-									Root:  targetRoot,
+									Root:  targetRoot[:],
 									Epoch: targetEpoch,
 								},
 								Slot: 4,
@@ -427,17 +451,22 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
-
+	testutil.NewBeaconBlock()
 	count := uint64(1)
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
 		blockExample := &ethpb.SignedBeaconBlock{
+			Signature: make([]byte, 96),
 			Block: &ethpb.BeaconBlock{
+				ParentRoot: make([]byte, 32),
+				StateRoot:  make([]byte, 32),
 				Body: &ethpb.BeaconBlockBody{
+					Graffiti:     make([]byte, 32),
+					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: []byte("root"),
+								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
 								Slot:            i,
 							},
 							AggregationBits: bitfield.Bitlist{0b11},
@@ -489,14 +518,21 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
 		blockExample := &ethpb.SignedBeaconBlock{
+			Signature: make([]byte, 96),
 			Block: &ethpb.BeaconBlock{
+				ParentRoot: make([]byte, 32),
+				StateRoot:  make([]byte, 32),
 				Body: &ethpb.BeaconBlockBody{
+					RandaoReveal: make([]byte, 96),
 					Attestations: []*ethpb.Attestation{
 						{
 							Data: &ethpb.AttestationData{
-								BeaconBlockRoot: []byte("root"),
+								BeaconBlockRoot: bytesutil.PadTo([]byte("root"), 32),
+								Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
+								Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("root"), 32)},
 								Slot:            i,
 							},
+							Signature:       bytesutil.PadTo([]byte("root"), 96),
 							AggregationBits: bitfield.Bitlist{0b11},
 						},
 					},
@@ -628,9 +664,14 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 				Body: &ethpb.BeaconBlockBody{
 					Attestations: []*ethpb.Attestation{
 						{
+							Signature: make([]byte, 96),
 							Data: &ethpb.AttestationData{
+								BeaconBlockRoot: make([]byte, 32),
 								Target: &ethpb.Checkpoint{
 									Root: targetRoot[:],
+								},
+								Source: &ethpb.Checkpoint{
+									Root: make([]byte, 32),
 								},
 								Slot:           i,
 								CommitteeIndex: 0,
