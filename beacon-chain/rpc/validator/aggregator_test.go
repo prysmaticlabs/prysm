@@ -196,7 +196,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	pubKey := v.PublicKey
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 
-	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), "No aggregated attestation in beacon node") {
+	if _, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req); !strings.Contains(err.Error(), "Could not find attestation for slot and committee in pool") {
 		t.Error("Did not get wanted error")
 	}
 
