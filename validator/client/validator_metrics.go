@@ -62,6 +62,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	votedSource := 0
 	votedTarget := 0
 	votedHead := 0
+	// This function doesn't run during epoch 0, so the below code is safe.
 	prevEpoch := (slot / params.BeaconConfig().SlotsPerEpoch) - 1
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
 	for i, pubKey := range resp.PublicKeys {
