@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -22,7 +24,7 @@ func TestStore_AttestationCRUD(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 	}
 	ctx := context.Background()
-	attDataRoot, err := ssz.HashTreeRoot(att.Data)
+	attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +73,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 		}
 		if i%2 == 0 {
-			r, err := ssz.HashTreeRoot(totalAtts[i].Data)
+			r, err := stateutil.AttestationDataRoot(totalAtts[i].Data)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -121,7 +123,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		ctx := context.Background()
-		attDataRoot, err := ssz.HashTreeRoot(att.Data)
+		attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,7 +148,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			}
 			ctx := context.Background()
-			attDataRoot, err := ssz.HashTreeRoot(att.Data)
+			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 			if err != nil {
 				t.Fatal(err)
 			}
