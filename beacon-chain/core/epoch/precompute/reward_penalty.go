@@ -34,23 +34,21 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
+	validatorBals := state.Balances()
 	for i := 0; i < numOfVals; i++ {
-		vp[i].BeforeEpochTransitionBalance, err = state.BalanceAtIndex(uint64(i))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get validator balance before epoch")
-		}
+		vp[i].BeforeEpochTransitionBalance = validatorBals[i]
 
-		if err := helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+proposerRewards[i]); err != nil {
-			return nil, err
-		}
-		if err := helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]); err != nil {
-			return nil, err
-		}
+		// Compute the post balance of the validator after accounting for the
+		// attester and proposer rewards and penalties.
+		validatorBals[i] = helpers.IncreaseBalanceWithVal(validatorBals[i], attsRewards[i]+proposerRewards[i])
+		validatorBals[i] = helpers.DecreaseBalanceWithVal(validatorBals[i], attsPenalties[i])
 
-		vp[i].AfterEpochTransitionBalance, err = state.BalanceAtIndex(uint64(i))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get validator balance after epoch")
-		}
+		vp[i].AfterEpochTransitionBalance = validatorBals[i]
+
+	}
+
+	if err := state.SetBalances(validatorBals); err != nil {
+		return nil, errors.Wrap(err, "could not set validator balances")
 	}
 
 	return state, nil
@@ -62,14 +60,16 @@ func AttestationsDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Valida
 	numOfVals := state.NumValidators()
 	rewards := make([]uint64, numOfVals)
 	penalties := make([]uint64, numOfVals)
+	prevEpoch := helpers.PrevEpoch(state)
+	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
 	for i, v := range vp {
-		rewards[i], penalties[i] = attestationDelta(state, pBal, v)
+		rewards[i], penalties[i] = attestationDelta(pBal, v, prevEpoch, finalizedEpoch)
 	}
 	return rewards, penalties, nil
 }
 
-func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator) (uint64, uint64) {
+func attestationDelta(pBal *Balance, v *Validator, prevEpoch uint64, finalizedEpoch uint64) (uint64, uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	if !eligible || pBal.ActiveCurrentEpoch == 0 {
 		return 0, 0
@@ -88,7 +88,7 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 		maxAttesterReward := br - proposerReward
 		r += maxAttesterReward / v.InclusionDistance
 
-		if isInInactivityLeak(state) {
+		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
 			r += br
@@ -103,7 +103,7 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 
 	// Process target reward / penalty
 	if v.IsPrevEpochTargetAttester && !v.IsSlashed {
-		if isInInactivityLeak(state) {
+		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
 			r += br
@@ -117,7 +117,7 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 
 	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
-		if isInInactivityLeak(state) {
+		if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 			// Since full base reward will be canceled out by inactivity penalty deltas,
 			// optimal participation receives full base reward compensation here.
 			r += br
@@ -130,9 +130,9 @@ func attestationDelta(state *stateTrie.BeaconState, pBal *Balance, v *Validator)
 	}
 
 	// Process finality delay penalty
-	finalityDelay := finalityDelay(state)
+	finalityDelay := finalityDelay(prevEpoch, finalizedEpoch)
 
-	if isInInactivityLeak(state) {
+	if isInInactivityLeak(prevEpoch, finalizedEpoch) {
 		// If validator is performing optimally, this cancels all rewards for a neutral balance.
 		proposerReward := br / params.BeaconConfig().ProposerRewardQuotient
 		p += baseRewardsPerEpoch*br - proposerReward
@@ -180,8 +180,8 @@ func ProposersDelta(state *stateTrie.BeaconState, pBal *Balance, vp []*Validator
 // Spec code:
 // def is_in_inactivity_leak(state: BeaconState) -> bool:
 //    return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
-func isInInactivityLeak(state *stateTrie.BeaconState) bool {
-	return finalityDelay(state) > params.BeaconConfig().MinEpochsToInactivityPenalty
+func isInInactivityLeak(prevEpoch uint64, finalizedEpoch uint64) bool {
+	return finalityDelay(prevEpoch, finalizedEpoch) > params.BeaconConfig().MinEpochsToInactivityPenalty
 }
 
 // finalityDelay returns the finality delay using the beacon state.
@@ -189,6 +189,6 @@ func isInInactivityLeak(state *stateTrie.BeaconState) bool {
 // Spec code:
 // def get_finality_delay(state: BeaconState) -> uint64:
 //    return get_previous_epoch(state) - state.finalized_checkpoint.epoch
-func finalityDelay(state *stateTrie.BeaconState) uint64 {
-	return helpers.PrevEpoch(state) - state.FinalizedCheckpointEpoch()
+func finalityDelay(prevEpoch uint64, finalizedEpoch uint64) uint64 {
+	return prevEpoch - finalizedEpoch
 }
