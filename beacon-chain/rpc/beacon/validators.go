@@ -952,6 +952,7 @@ func (bs *Server) GetValidatorPerformance(
 	validatorSummary := state.ValidatorSummary
 
 	responseCap := len(req.Indices) + len(req.PublicKeys)
+	pubKeys := make([][]byte, 0, responseCap)
 	validatorIndices := make([]uint64, 0, responseCap)
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
 	afterTransitionBalances := make([]uint64, 0, responseCap)
@@ -1021,6 +1022,8 @@ func (bs *Server) GetValidatorPerformance(
 		}
 
 		summary := validatorSummary[idx]
+		pubKey := val.PublicKey()
+		pubKeys = append(pubKeys, pubKey[:])
 		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
 		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
@@ -1032,6 +1035,7 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    pubKeys,
 		InclusionSlots:                inclusionSlots,
 		InclusionDistances:            inclusionDistances,
 		CorrectlyVotedSource:          correctlyVotedSource,
