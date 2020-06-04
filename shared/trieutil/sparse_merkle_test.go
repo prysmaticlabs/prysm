@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -52,7 +52,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 		t.Fatal(err)
 	}
 	dec := &ethpb.Deposit{}
-	if err := ssz.Unmarshal(enc, &dec); err != nil {
+	if err := dec.UnmarshalSSZ(enc); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(dec, dep) {
