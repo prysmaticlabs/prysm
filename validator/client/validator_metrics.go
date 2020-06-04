@@ -67,7 +67,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		log := log.WithField("pubKey", pubKey)
 		fmtKey := fmt.Sprintf("%#x", pkey[:])
 		if missingValidators[bytesutil.ToBytes48(pkey)] {
-			log.Info("Validator not in beacon chain")
 			if v.emitAccountMetrics {
 				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
 			}
