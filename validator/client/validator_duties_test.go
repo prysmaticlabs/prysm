@@ -78,7 +78,7 @@ func TestStreamDuties_OK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(stream, nil)
-	ctx, _ := context.WithCancel(context.Background())
+	ctx := context.Background()
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
 		resp,
