@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
