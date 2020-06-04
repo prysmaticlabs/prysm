@@ -224,9 +224,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(enableNewStateMgmt.Name) {
-		log.Warn("Enabling state management service")
-		cfg.NewStateMgmt = true
+	cfg.NewStateMgmt = true
+	if ctx.Bool(disableNewStateMgmt.Name) {
+		log.Warn("Disabling new state management service")
+		cfg.NewStateMgmt = false
 	}
 	cfg.EnableFieldTrie = true
 	if ctx.Bool(disableFieldTrie.Name) {
