@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -19,7 +21,16 @@ import (
 func TestStore_AttestationCRUD(t *testing.T) {
 	db := setupDB(t)
 	att := &ethpb.Attestation{
-		Data:            &ethpb.AttestationData{Slot: 10},
+		Data: &ethpb.AttestationData{
+			Slot:            10,
+			BeaconBlockRoot: make([]byte, 32),
+			Source: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+			Target: &ethpb.Checkpoint{
+				Root: make([]byte, 32),
+			},
+		},
 		AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 	}
 	ctx := context.Background()
@@ -59,6 +70,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numAtts := 10
+	blockRoot := bytesutil.PadTo([]byte("head"), 32)
 	totalAtts := make([]*ethpb.Attestation, numAtts)
 	// We track the data roots for the even indexed attestations.
 	attDataRoots := make([][32]byte, 0)
@@ -66,8 +78,14 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	for i := 0; i < len(totalAtts); i++ {
 		totalAtts[i] = &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: []byte("head"),
 				Slot:            uint64(i),
+				BeaconBlockRoot: blockRoot,
+				Source: &ethpb.Checkpoint{
+					Root: make([]byte, 32),
+				},
+				Target: &ethpb.Checkpoint{
+					Root: make([]byte, 32),
+				},
 			},
 			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
 		}
@@ -84,7 +102,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 	if err := db.SaveAttestations(ctx, totalAtts); err != nil {
 		t.Fatal(err)
 	}
-	retrieved, err := db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
+	retrieved, err := db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(blockRoot))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +114,7 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	// When we retrieve the data, only the odd indexed attestations should remain.
-	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot([]byte("head")))
+	retrieved, err = db.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(blockRoot))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,9 +133,13 @@ func TestStore_BoltDontPanic(t *testing.T) {
 	for i := 0; i <= 100; i++ {
 		att := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:   uint64(i),
-				Source: &ethpb.Checkpoint{},
-				Target: &ethpb.Checkpoint{},
+				Slot:            uint64(i),
+				BeaconBlockRoot: make([]byte, 32),
+				Source: &ethpb.Checkpoint{
+					Root: make([]byte, 32)},
+				Target: &ethpb.Checkpoint{
+					Root: make([]byte, 32),
+				},
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
@@ -143,7 +165,15 @@ func TestStore_BoltDontPanic(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			att := &ethpb.Attestation{
-				Data:            &ethpb.AttestationData{Slot: uint64(startEpoch)},
+				Data: &ethpb.AttestationData{
+					Slot:            uint64(startEpoch),
+					BeaconBlockRoot: make([]byte, 32),
+					Source: &ethpb.Checkpoint{
+						Root: make([]byte, 32)},
+					Target: &ethpb.Checkpoint{
+						Root: make([]byte, 32),
+					},
+				},
 				AggregationBits: bitfield.Bitlist{0b11},
 			}
 			ctx := context.Background()
