@@ -230,13 +230,15 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	if !update {
 		t.Error("Should be able to update justified, received false")
 	}
-
-	lastJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}}
+	lastJustifiedBlk := testutil.NewBeaconBlock()
+	lastJustifiedBlk.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	lastJustifiedRoot, err := stateutil.BlockRoot(lastJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	newJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: lastJustifiedRoot[:]}}
+	newJustifiedBlk := testutil.NewBeaconBlock()
+	newJustifiedBlk.Block.Slot = 1
+	newJustifiedBlk.Block.ParentRoot = bytesutil.PadTo(lastJustifiedRoot[:], 32)
 	newJustifiedRoot, err := stateutil.BlockRoot(newJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -271,12 +273,14 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lastJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}}
+	lastJustifiedBlk := testutil.NewBeaconBlock()
+	lastJustifiedBlk.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	lastJustifiedRoot, err := stateutil.BlockRoot(lastJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	newJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: lastJustifiedRoot[:]}}
+	newJustifiedBlk := testutil.NewBeaconBlock()
+	newJustifiedBlk.Block.ParentRoot = bytesutil.PadTo(lastJustifiedRoot[:], 32)
 	newJustifiedRoot, err := stateutil.BlockRoot(newJustifiedBlk.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -743,11 +747,14 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 	st := testutil.NewBeaconState()
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
-		b.Body = &ethpb.BeaconBlockBody{}
-		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
+		beaconBlock := testutil.NewBeaconBlock()
+		beaconBlock.Block.Slot = b.Slot
+		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.ParentRoot, 32)
+		beaconBlock.Block.Body = &ethpb.BeaconBlockBody{}
+		if err := db.SaveBlock(context.Background(), beaconBlock); err != nil {
 			return nil, err
 		}
-		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, err
 		}
 	}

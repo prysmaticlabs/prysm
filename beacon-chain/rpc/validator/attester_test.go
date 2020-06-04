@@ -23,6 +23,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -41,12 +42,9 @@ func TestProposeAttestation_OK(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
-	head := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       999,
-			ParentRoot: []byte{'a'},
-		},
-	}
+	head := testutil.NewBeaconBlock()
+	head.Block.Slot = 999
+	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}

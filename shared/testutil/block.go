@@ -48,7 +48,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 			ParentRoot: make([]byte, 32),
 			StateRoot:  make([]byte, 32),
 			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal: make([]byte, 32),
+				RandaoReveal: make([]byte, 96),
 				Eth1Data: &ethpb.Eth1Data{
 					DepositRoot: make([]byte, 32),
 					BlockHash:   make([]byte, 32),
