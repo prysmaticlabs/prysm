@@ -178,6 +178,11 @@ var devModeFlags = []cli.Flag{
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedWeb3ProviderFlag = &cli.StringFlag{
+		Name:   "web3provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableDynamicCommitteeSubnets = &cli.BoolFlag{
 		Name:   "enable-dynamic-committee-subnets",
 		Usage:  deprecatedUsage,
@@ -391,6 +396,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedWeb3ProviderFlag,
 	deprecatedEnableDynamicCommitteeSubnets,
 	deprecatedNoCustomConfigFlag,
 	deprecatedEnableInitSyncQueue,
