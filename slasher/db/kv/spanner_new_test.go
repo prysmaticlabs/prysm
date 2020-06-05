@@ -63,7 +63,11 @@ func TestValidatorSpans_NilDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Nil EpochSpansMap should not return error: %v", err)
 	}
-	if !reflect.DeepEqual(es, &types.EpochStore{}) {
+	cleanStore, err := types.NewEpochStore([]byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(es, cleanStore) {
 		t.Fatal("EpochSpans should return empty byte array if no record exists in the db")
 	}
 }

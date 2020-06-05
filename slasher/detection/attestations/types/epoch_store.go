@@ -1,7 +1,6 @@
 package types
 
 import (
-	"context"
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -52,10 +51,10 @@ func (es *EpochStore) GetValidatorSpan(idx uint64) (Span, error) {
 }
 
 // SetValidatorSpan marshal a validator span into an encoded, flattened array.
-func (es *EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan Span) error {
+func (es *EpochStore) SetValidatorSpan(idx uint64, newSpan Span) (*EpochStore, error) {
 	spansLen := uint64(len(es.spans))
 	if spansLen%SpannerEncodedLength != 0 {
-		return errors.New("wrong data length for min max span byte array")
+		return nil, errors.New("wrong data length for min max span byte array")
 	}
 	if es.highestObservedIdx < idx {
 		es.highestObservedIdx = idx
@@ -75,7 +74,7 @@ func (es *EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan 
 	enc := newSpan.Marshal()
 	copy(es.spans[cursor:], enc)
 
-	return nil
+	return es, nil
 }
 
 // HighestObservedIdx returns the highest idx the EpochStore has been used for.

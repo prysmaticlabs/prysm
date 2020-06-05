@@ -21,12 +21,12 @@ func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 	db := setupDB(b, cli.NewContext(&app, set, nil))
 	es := &types.EpochStore{}
 
-	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
+	es, err := es.SetValidatorSpan(benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
 		b.Error(err)
 	}
 	for i := 0; i < benchmarkValidator; i++ {
-		err = es.SetValidatorSpan(ctx, uint64(i), types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
+		es, err = es.SetValidatorSpan(uint64(i), types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 		if err != nil {
 			b.Error(err)
 		}
@@ -39,7 +39,6 @@ func BenchmarkStore_SaveEpochSpans(b *testing.B) {
 			b.Fatalf("Save validator span map failed: %v", err)
 		}
 	}
-
 }
 
 func BenchmarkStore_EpochSpans(b *testing.B) {
@@ -49,12 +48,12 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 	ctx := context.Background()
 	sigBytes := [2]byte{}
 	es := &types.EpochStore{}
-	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
+	es, err := es.SetValidatorSpan(benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
 		b.Error(err)
 	}
 	for i := 0; i < benchmarkValidator; i++ {
-		err = es.SetValidatorSpan(ctx, uint64(i), types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
+		es, err = es.SetValidatorSpan(uint64(i), types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 		if err != nil {
 			b.Error(err)
 		}
@@ -74,21 +73,18 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Read validator span map failed: %v", err)
 		}
-
 	}
-
 }
 
 func BenchmarkStore_GetValidatorSpan(b *testing.B) {
-	ctx := context.Background()
 	sigBytes := [2]byte{}
 	es := &types.EpochStore{}
-	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
+	es, err := es.SetValidatorSpan(benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
 		b.Error(err)
 	}
 	for i := 0; i < benchmarkValidator; i++ {
-		err = es.SetValidatorSpan(ctx, uint64(i), types.Span{MinSpan: uint16(i), MaxSpan: uint16(benchmarkValidator - i), SigBytes: sigBytes, HasAttested: true})
+		es, err = es.SetValidatorSpan(uint64(i), types.Span{MinSpan: uint16(i), MaxSpan: uint16(benchmarkValidator - i), SigBytes: sigBytes, HasAttested: true})
 		if err != nil {
 			b.Error(err)
 		}
@@ -102,22 +98,20 @@ func BenchmarkStore_GetValidatorSpan(b *testing.B) {
 		if err != nil {
 			b.Fatalf("Read validator span map failed: %v", err)
 		}
-
 	}
-
 }
 
 func BenchmarkStore_SetValidatorSpan(b *testing.B) {
-	ctx := context.Background()
 	sigBytes := [2]byte{}
-	es := types.EpochStore{}
-	err := es.SetValidatorSpan(ctx, benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
+	var err error
+	es := &types.EpochStore{}
+	es, err = es.SetValidatorSpan(benchmarkValidator, types.Span{MinSpan: 1, MaxSpan: 2, SigBytes: sigBytes, HasAttested: true})
 	if err != nil {
 		b.Error(err)
 	}
 
 	for i := 0; i < benchmarkValidator; i++ {
-		err = es.SetValidatorSpan(ctx, uint64(i), types.Span{MinSpan: uint16(i), MaxSpan: uint16(benchmarkValidator - i), SigBytes: sigBytes, HasAttested: true})
+		es, err = es.SetValidatorSpan(uint64(i), types.Span{MinSpan: uint16(i), MaxSpan: uint16(benchmarkValidator - i), SigBytes: sigBytes, HasAttested: true})
 		if err != nil {
 			b.Error(err)
 		}
@@ -126,11 +120,9 @@ func BenchmarkStore_SetValidatorSpan(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := es.SetValidatorSpan(ctx, uint64(i%benchmarkValidator), types.Span{MinSpan: uint16(i), MaxSpan: uint16(benchmarkValidator - i), SigBytes: sigBytes, HasAttested: true})
+		es, err = es.SetValidatorSpan(uint64(i%benchmarkValidator), types.Span{MinSpan: uint16(i), MaxSpan: uint16(benchmarkValidator - i), SigBytes: sigBytes, HasAttested: true})
 		if err != nil {
 			b.Fatalf("Read validator span map failed: %v", err)
 		}
-
 	}
-
 }

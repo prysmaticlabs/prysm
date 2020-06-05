@@ -141,7 +141,6 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 }
 
 func TestStore_SetValidatorSpan(t *testing.T) {
-	ctx := context.Background()
 	for _, tt := range exampleSpansValues {
 		t.Run(tt.name, func(t *testing.T) {
 			oldSpans, err := hex.DecodeString(tt.oldSpans)
@@ -152,10 +151,16 @@ func TestStore_SetValidatorSpan(t *testing.T) {
 			if err != tt.err {
 				t.Errorf("Expected error: %v got: %v", tt.err, err)
 			}
-			if err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan); err != nil {
+			es, err = es.SetValidatorSpan(tt.validatorID, tt.validatorSpan)
+			if err != nil {
 				t.Fatal(err)
 			}
-			if uint64(len(es.Bytes())) != tt.spansLength {
+			if es.HighestObservedIdx() != tt.validatorID {
+				t.Fatalf("expected highest idx %d, received %d", tt.validatorID, es.HighestObservedIdx())
+			}
+			spans := es.Bytes()
+			spanLen := len(spans)
+			if uint64(spanLen) != tt.spansLength {
 				t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es.Bytes()))
 			}
 			span, err := es.GetValidatorSpan(tt.validatorID)
@@ -213,7 +218,8 @@ func generateEpochStore(t testing.TB, n uint64) (*types.EpochStore, map[uint64]t
 			HasAttested: true,
 		}
 		spanMap[i] = span
-		if err := epochStore.SetValidatorSpan(context.Background(), i, span); err != nil {
+		epochStore, err = epochStore.SetValidatorSpan(i, span)
+		if err != nil {
 			t.Fatal(err)
 		}
 	}
