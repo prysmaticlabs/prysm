@@ -141,7 +141,7 @@ func (q *blocksQueue) loop() {
 				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
 				continue
 			}
-			log.Debug("Highest expected slot reached")
+			log.WithField("slot", q.highestExpectedSlot).Debug("Highest expected slot reached")
 			q.cancel()
 		}
 
