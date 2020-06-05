@@ -27,10 +27,13 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64) (EpochStore, erro
 		copy(copiedSpans, spans)
 		return nil
 	})
+	if err != nil {
+		return EpochStore{}, err
+	}
 	if copiedSpans == nil {
 		copiedSpans = []byte{}
 	}
-	return copiedSpans, err
+	return NewEpochStore(copiedSpans)
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
@@ -38,7 +41,7 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es EpochStore
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpans")
 	defer span.End()
 
-	if len(es)%spannerEncodedLength != 0 {
+	if len(es.spans)%spannerEncodedLength != 0 {
 		return ErrWrongSize
 	}
 
@@ -47,6 +50,6 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es EpochStore
 		if err != nil {
 			return err
 		}
-		return b.Put(bytesutil.Bytes8(epoch), es)
+		return b.Put(bytesutil.Bytes8(epoch), es.spans)
 	})
 }

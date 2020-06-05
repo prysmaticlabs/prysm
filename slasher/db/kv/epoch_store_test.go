@@ -92,11 +92,7 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es = tooBig
-	span, err = es.GetValidatorSpan(ctx, 1)
-	if !reflect.DeepEqual(span, types.Span{}) {
-		t.Errorf("Expected empty span to be returned: %v", span)
-	}
+	es, err = NewEpochStore(tooBig)
 	if err != ErrWrongSize {
 		t.Error("Expected error")
 	}
@@ -104,7 +100,10 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es = oneValidator
+	es, err = NewEpochStore(oneValidator)
+	if err != nil {
+		t.Fatal(err)
+	}
 	span, err = es.GetValidatorSpan(ctx, 0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
@@ -123,7 +122,10 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es = twoValidator
+	es, err = NewEpochStore(twoValidator)
+	if err != nil {
+		t.Fatal(err)
+	}
 	span, err = es.GetValidatorSpan(ctx, 0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
@@ -152,8 +154,8 @@ func TestStore_SetValidatorSpan(t *testing.T) {
 			t.Errorf("Expected error: %v got: %v", tt.err, err)
 		}
 		err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan)
-		if uint64(len(es)) != tt.spansLength {
-			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es))
+		if uint64(len(es.spans)) != tt.spansLength {
+			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es.spans))
 		}
 		span, err := es.GetValidatorSpan(ctx, tt.validatorID)
 		if err != nil {

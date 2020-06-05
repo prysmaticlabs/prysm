@@ -80,11 +80,12 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			es := EpochStore{}
-			es = spans
-			err = db.SaveEpochSpans(ctx, tt.epoch, es)
+			es, err := NewEpochStore(spans)
 			if err != tt.err {
 				t.Fatalf("Failed to get the right error expected: %v got: %v", tt.err, err)
+			}
+			if err = db.SaveEpochSpans(ctx, tt.epoch, es); err != nil {
+				t.Fatal(err)
 			}
 			sm, err := db.EpochSpans(ctx, tt.epoch)
 			if err != nil {
@@ -94,8 +95,10 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			esr := EpochStore{}
-			esr = spansResult
+			esr, err := NewEpochStore(spansResult)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if !reflect.DeepEqual(sm, esr) {
 				t.Fatalf("Get should return validator spans: %v got: %v", spansResult, sm)
 			}

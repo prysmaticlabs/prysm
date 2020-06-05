@@ -59,7 +59,7 @@ func BenchmarkStore_EpochSpans(b *testing.B) {
 			b.Error(err)
 		}
 	}
-	b.Log(len(es))
+	b.Log(len(es.spans))
 	for i := 0; i < 200; i++ {
 		err := db.SaveEpochSpans(ctx, uint64(i), es)
 		if err != nil {
@@ -93,7 +93,7 @@ func BenchmarkStore_GetValidatorSpan(b *testing.B) {
 			b.Error(err)
 		}
 	}
-	b.Log(len(es))
+	b.Log(len(es.spans))
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -122,7 +122,7 @@ func BenchmarkStore_SetValidatorSpan(b *testing.B) {
 			b.Error(err)
 		}
 	}
-	b.Log(len(es))
+	b.Log(len(es.spans))
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

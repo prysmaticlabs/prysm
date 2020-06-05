@@ -48,7 +48,7 @@ func (es EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.Sp
 	sigB := [2]byte{}
 	copy(sigB[:], es.spans[cursor+4:cursor+6])
 	r.SigBytes = sigB
-	r.HasAttested = bytesutil.ToBool(es[cursor+6])
+	r.HasAttested = bytesutil.ToBool(es.spans[cursor+6])
 	return r, nil
 }
 
@@ -79,8 +79,13 @@ func (es EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan t
 	return nil
 }
 
+// HighestObservedIdx returns the highest idx the EpochStore has been used for.
+func (es EpochStore) HighestObservedIdx() uint64 {
+	return es.highestObservedIdx
+}
+
 // ToMap is a helper function to convert an epoch store to a map, mainly used for testing.
-func (es *EpochStore) ToMap() (map[uint64]types.Span, error) {
+func (es EpochStore) ToMap() (map[uint64]types.Span, error) {
 	spanMap := make(map[uint64]types.Span)
 	var err error
 	for i := uint64(0); i < es.highestObservedIdx; i++ {
