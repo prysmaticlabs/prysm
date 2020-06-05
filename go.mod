@@ -50,6 +50,7 @@ require (
 	github.com/json-iterator/go v1.1.9
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
+	github.com/kr/pretty v0.2.0
 	github.com/libp2p/go-libp2p v0.9.2
 	github.com/libp2p/go-libp2p-blankhost v0.1.6
 	github.com/libp2p/go-libp2p-circuit v0.2.3
