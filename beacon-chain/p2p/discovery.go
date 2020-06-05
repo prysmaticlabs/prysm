@@ -124,7 +124,16 @@ func (s *Service) startDiscoveryV5(
 	return listener, nil
 }
 
-// filter the peer coming from our dht
+// filterPeer validates each node that we retrieve from our dht. We
+// try to ascertain that the peer can be a valid protocol peer.
+// Validity Conditions:
+// 1) The local node is still actively looking for peers to
+//    connect to.
+// 2) Peer has a valid IP and TCP port set in their enr.
+// 3) Peer hasn't been marked as 'bad'
+// 4) Peer is not currently active or connected.
+// 5) Peer's fork digest in their ENR matches that of
+// 	  our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
 	if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
 		log.WithFields(logrus.Fields{"peer": node.String(),
