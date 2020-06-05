@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
