@@ -1,6 +1,4 @@
-// Package streaming represents a gRPC stream-based implementation
-// of an eth2 validator client.
-package streaming
+package polling
 
 import (
 	"context"
@@ -27,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -49,8 +46,7 @@ type validator struct {
 	genesisTime                        uint64
 	ticker                             *slotutil.SlotTicker
 	db                                 *db.Store
-	dutiesLock                         sync.RWMutex
-	dutiesByEpoch                      map[uint64][]*ethpb.DutiesResponse_Duty
+	duties                             *ethpb.DutiesResponse
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	beaconClient                       ethpb.BeaconChainClient
 	graffiti                           []byte
@@ -119,7 +115,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
-	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain genesis")
+	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
 }
 
@@ -291,6 +287,18 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 	return validatorActivated
 }
 
+// CanonicalHeadSlot returns the slot of canonical block currently found in the
+// beacon chain via RPC.
+func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
+	defer span.End()
+	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	if err != nil {
+		return 0, err
+	}
+	return head.HeadSlot, nil
+}
+
 // NextSlot emits the next slot number at the start time of that slot.
 func (v *validator) NextSlot() <-chan uint64 {
 	return v.ticker.C()
@@ -302,25 +310,160 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
 }
 
+// UpdateDuties checks the slot number to determine if the validator's
+// list of upcoming assignments needs to be updated. For example, at the
+// beginning of a new epoch.
+func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.duties != nil {
+		// Do nothing if not epoch start AND assignments already exist.
+		return nil
+	}
+	// Set deadline to end of epoch.
+	ctx, cancel := context.WithDeadline(ctx, v.SlotDeadline(helpers.StartSlot(helpers.SlotToEpoch(slot)+1)))
+	defer cancel()
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	defer span.End()
+
+	validatingKeys, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		return err
+	}
+	req := &ethpb.DutiesRequest{
+		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
+		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
+	}
+
+	// If duties is nil it means we have had no prior duties and just started up.
+	resp, err := v.validatorClient.GetDuties(ctx, req)
+	if err != nil {
+		v.duties = nil // Clear assignments so we know to retry the request.
+		log.Error(err)
+		return err
+	}
+
+	v.duties = resp
+	v.logDuties(slot, v.duties.Duties)
+	subscribeSlots := make([]uint64, 0, len(validatingKeys))
+	subscribeCommitteeIDs := make([]uint64, 0, len(validatingKeys))
+	subscribeIsAggregator := make([]bool, 0, len(validatingKeys))
+	alreadySubscribed := make(map[[64]byte]bool)
+
+	for _, duty := range v.duties.Duties {
+		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
+			attesterSlot := duty.AttesterSlot
+			committeeIndex := duty.CommitteeIndex
+
+			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
+			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
+				continue
+			}
+
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				alreadySubscribed[alreadySubscribedKey] = true
+			}
+
+			subscribeSlots = append(subscribeSlots, attesterSlot)
+			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+		}
+	}
+
+	// Notify beacon node to subscribe to the attester and aggregator subnets for the next epoch.
+	req.Epoch++
+	dutiesNextEpoch, err := v.validatorClient.GetDuties(ctx, req)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	for _, duty := range dutiesNextEpoch.Duties {
+		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
+			attesterSlot := duty.AttesterSlot
+			committeeIndex := duty.CommitteeIndex
+
+			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
+			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
+				continue
+			}
+
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				alreadySubscribed[alreadySubscribedKey] = true
+			}
+
+			subscribeSlots = append(subscribeSlots, attesterSlot)
+			subscribeCommitteeIDs = append(subscribeCommitteeIDs, committeeIndex)
+			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+		}
+	}
+
+	_, err = v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
+		Slots:        subscribeSlots,
+		CommitteeIds: subscribeCommitteeIDs,
+		IsAggregator: subscribeIsAggregator,
+	})
+
+	return err
+}
+
+// RolesAt slot returns the validator roles at the given slot. Returns nil if the
+// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
+// validator assignments are unknown. Otherwise returns a valid validatorRole map.
+func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) {
+	rolesAt := make(map[[48]byte][]validatorRole)
+	for _, duty := range v.duties.Duties {
+		var roles []validatorRole
+
+		if duty == nil {
+			continue
+		}
+		if len(duty.ProposerSlots) > 0 {
+			for _, proposerSlot := range duty.ProposerSlots {
+				if proposerSlot != 0 && proposerSlot == slot {
+					roles = append(roles, roleProposer)
+					break
+				}
+			}
+		}
+		if duty.AttesterSlot == slot {
+			roles = append(roles, roleAttester)
+
+			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
+			if err != nil {
+				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
+			}
+			if aggregator {
+				roles = append(roles, roleAggregator)
+			}
+
+		}
+		if len(roles) == 0 {
+			roles = append(roles, roleUnknown)
+		}
+
+		var pubKey [48]byte
+		copy(pubKey[:], duty.PublicKey)
+		rolesAt[pubKey] = roles
+	}
+	return rolesAt, nil
+}
+
 // UpdateProtections goes through the duties of the given slot and fetches the required validator history,
 // assigning it in validator.
 func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	v.dutiesLock.RLock()
-	duty, ok := v.dutiesByEpoch[epoch]
-	if !ok {
-		v.dutiesLock.RUnlock()
-		log.Debugf("No assigned duties yet for epoch %d", epoch)
-		return nil
-	}
-	v.dutiesLock.RUnlock()
-	attestingPubKeys := make([][48]byte, 0, len(duty))
-	for _, dt := range duty {
-		if dt == nil {
+	attestingPubKeys := make([][48]byte, 0, len(v.duties.Duties))
+	for _, duty := range v.duties.Duties {
+		if duty == nil {
 			continue
 		}
-		if dt.AttesterSlot == slot {
-			attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(dt.PublicKey))
+		if duty.AttesterSlot == slot {
+			attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
 		}
 	}
 	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeys(ctx, attestingPubKeys)
@@ -379,16 +522,6 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
 		}
 	}
-}
-
-// CurrentSlot based on the chain genesis time.
-func (v *validator) CurrentSlot() uint64 {
-	var currentSlot uint64
-	genesisTime := time.Unix(int64(v.genesisTime), 0)
-	if genesisTime.Before(roughtime.Now()) {
-		currentSlot = slotutil.SlotsSinceGenesis(genesisTime)
-	}
-	return currentSlot
 }
 
 func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {

@@ -1,6 +1,6 @@
-// Package client defines the entire lifecycle of a validator in eth2 – it is responsible
-// for interacting with a beacon node to determine and perform validator duties.
-package streaming
+// Package polling represents a gRPC polling-based implementation
+// of an eth2 validator client.
+package polling
 
 import (
 	"context"
@@ -138,7 +138,6 @@ func (v *ValidatorService) Start() {
 
 	v.validator = &validator{
 		db:                             valDB,
-		dutiesByEpoch:                  make(map[uint64][]*ethpb.DutiesResponse_Duty, 2), // 2 epochs worth of duties.
 		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),
@@ -165,7 +164,9 @@ func (v *ValidatorService) Stop() error {
 	return nil
 }
 
-// Status of the validator service's health.
+// Status ...
+//
+// WIP - not done.
 func (v *ValidatorService) Status() error {
 	if v.conn == nil {
 		return errors.New("no connection to beacon RPC")
