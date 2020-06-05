@@ -1,15 +1,14 @@
-package kv
+package types_test
 
 import (
 	"context"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"reflect"
 	"testing"
 
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/urfave/cli/v2"
 )
 
 type spansValueTests struct {
@@ -33,7 +32,7 @@ func init() {
 				SigBytes:    [2]byte{1, 1},
 				HasAttested: false,
 			},
-			spansLength: spannerEncodedLength,
+			spansLength: types.SpannerEncodedLength,
 			validatorID: 0,
 		},
 		{
@@ -45,7 +44,7 @@ func init() {
 				HasAttested: true,
 			},
 			validatorID: 300000,
-			spansLength: spannerEncodedLength*300000 + spannerEncodedLength,
+			spansLength: types.SpannerEncodedLength*300000 + types.SpannerEncodedLength,
 		},
 		{
 			name: "Validator 1 with highestObservedValidatorIdx 300000",
@@ -56,7 +55,7 @@ func init() {
 				HasAttested: true,
 			},
 			validatorID: 1,
-			spansLength: spannerEncodedLength*300000 + spannerEncodedLength,
+			spansLength: types.SpannerEncodedLength*300000 + types.SpannerEncodedLength,
 		},
 		{
 			name: "Validator 0 not with old spans(disregards the highestObservedValidatorIdx)",
@@ -68,23 +67,22 @@ func init() {
 			},
 			validatorID: 0,
 			oldSpans:    "01000000000000",
-			spansLength: spannerEncodedLength,
+			spansLength: types.SpannerEncodedLength,
 		},
 	}
 }
 
 func TestStore_GetValidatorSpan(t *testing.T) {
-	ctx := context.Background()
 	tooSmall, err := hex.DecodeString("000000")
 	if err != nil {
 		t.Fatal(err)
 	}
-	es, err := NewEpochStore(tooSmall)
-	if err != ErrWrongSize {
+	es, err := types.NewEpochStore(tooSmall)
+	if err != types.ErrWrongSize {
 		t.Error("expected error")
 	}
 	//nil es
-	span, err := es.GetValidatorSpan(ctx, 1)
+	span, err := es.GetValidatorSpan(1)
 	if !reflect.DeepEqual(span, types.Span{}) {
 		t.Errorf("Expected empty span to be returned: %v", span)
 	}
@@ -92,26 +90,26 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es, err = NewEpochStore(tooBig)
-	if err != ErrWrongSize {
+	es, err = types.NewEpochStore(tooBig)
+	if err != types.ErrWrongSize {
 		t.Error("Expected error")
 	}
 	oneValidator, err := hex.DecodeString("01010101010101")
 	if err != nil {
 		t.Fatal(err)
 	}
-	es, err = NewEpochStore(oneValidator)
+	es, err = types.NewEpochStore(oneValidator)
 	if err != nil {
 		t.Fatal(err)
 	}
-	span, err = es.GetValidatorSpan(ctx, 0)
+	span, err = es.GetValidatorSpan(0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
-		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
+		t.Errorf("Expected Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
 	}
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	span, err = es.GetValidatorSpan(ctx, 1)
+	span, err = es.GetValidatorSpan(1)
 	if !reflect.DeepEqual(span, types.Span{}) {
 		t.Errorf("Expected empty span to be returned: %v", span)
 	}
@@ -122,18 +120,18 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	es, err = NewEpochStore(twoValidator)
+	es, err = types.NewEpochStore(twoValidator)
 	if err != nil {
 		t.Fatal(err)
 	}
-	span, err = es.GetValidatorSpan(ctx, 0)
+	span, err = es.GetValidatorSpan(0)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
 	}
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	span, err = es.GetValidatorSpan(ctx, 1)
+	span, err = es.GetValidatorSpan(1)
 	if !reflect.DeepEqual(span, types.Span{MinSpan: 257, MaxSpan: 257, SigBytes: [2]byte{1, 1}, HasAttested: true}) {
 		t.Errorf("Expected types.Span{MinSpan: 1, MaxSpan: 1, SigBytes: [2]byte{1, 1}, HasAttested: true} to be returned: %v", span)
 	}
@@ -145,28 +143,31 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 func TestStore_SetValidatorSpan(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range exampleSpansValues {
-		oldSpans, err := hex.DecodeString(tt.oldSpans)
-		if err != nil {
-			t.Fatal(err)
-		}
-		es, err := NewEpochStore(oldSpans)
-		if err != tt.err {
-			t.Errorf("Expected error: %v got: %v", tt.err, err)
-		}
-		err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan)
-		if uint64(len(es.spans)) != tt.spansLength {
-			t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es.spans))
-		}
-		span, err := es.GetValidatorSpan(ctx, tt.validatorID)
-		if err != nil {
-			t.Errorf("Got error while trying to get span from spans byte array: %v", err)
-		}
-		if !reflect.DeepEqual(span, tt.validatorSpan) {
-			t.Errorf("Expected validator span: %v got: %v ", tt.validatorSpan, span)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			oldSpans, err := hex.DecodeString(tt.oldSpans)
+			if err != nil {
+				t.Fatal(err)
+			}
+			es, err := types.NewEpochStore(oldSpans)
+			if err != tt.err {
+				t.Errorf("Expected error: %v got: %v", tt.err, err)
+			}
+			if err = es.SetValidatorSpan(ctx, tt.validatorID, tt.validatorSpan); err != nil {
+				t.Fatal(err)
+			}
+			if uint64(len(es.Bytes())) != tt.spansLength {
+				t.Errorf("Expected spans length: %d got: %d", tt.spansLength, len(es.Bytes()))
+			}
+			span, err := es.GetValidatorSpan(tt.validatorID)
+			if err != nil {
+				t.Errorf("Got error while trying to get span from spans byte array: %v", err)
+			}
+			if !reflect.DeepEqual(span, tt.validatorSpan) {
+				t.Errorf("Expected validator span: %v got: %v ", tt.validatorSpan, span)
+			}
+		})
 
 	}
-
 }
 
 func BenchmarkEpochStore_Save(b *testing.B) {
@@ -174,9 +175,7 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 	store, spansMap := generateEpochStore(b, amount)
 
 	b.Run(fmt.Sprintf("%d old", amount), func(b *testing.B) {
-		app := cli.App{}
-		set := flag.NewFlagSet("test", 0)
-		db := setupDB(b, cli.NewContext(&app, set, nil))
+		db := testDB.SetupSlasherDB(b, false)
 		db.EnableSpanCache(false)
 		b.ResetTimer()
 		b.ReportAllocs()
@@ -189,9 +188,7 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 	})
 
 	b.Run(fmt.Sprintf("%d new", amount), func(b *testing.B) {
-		app := cli.App{}
-		set := flag.NewFlagSet("test", 0)
-		db := setupDB(b, cli.NewContext(&app, set, nil))
+		db := testDB.SetupSlasherDB(b, false)
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -202,8 +199,8 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 	})
 }
 
-func generateEpochStore(t testing.TB, n uint64) (EpochStore, map[uint64]types.Span) {
-	epochStore, err := NewEpochStore([]byte{})
+func generateEpochStore(t testing.TB, n uint64) (*types.EpochStore, map[uint64]types.Span) {
+	epochStore, err := types.NewEpochStore([]byte{})
 	if err != nil {
 		t.Fatal(err)
 	}

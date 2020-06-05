@@ -1,11 +1,10 @@
-package kv
+package types
 
 import (
 	"context"
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 // EpochStore defines an implementation of the slasher data access interface
@@ -21,28 +20,28 @@ var ErrWrongSize = errors.New("wrong data length for min max span byte array")
 
 // NewEpochStore initialize epoch store from a byte array
 // returns error if byte length is not a multiple of encoded spanner length.
-func NewEpochStore(spans []byte) (EpochStore, error) {
-	if len(spans)%spannerEncodedLength != 0 {
-		return EpochStore{}, ErrWrongSize
+func NewEpochStore(spans []byte) (*EpochStore, error) {
+	if len(spans)%int(SpannerEncodedLength) != 0 {
+		return &EpochStore{}, ErrWrongSize
 	}
-	es := EpochStore{
+	es := &EpochStore{
 		spans: spans,
 	}
 	return es, nil
 }
 
 // GetValidatorSpan unmarshal a span from an encoded, flattened array.
-func (es EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.Span, error) {
-	r := types.Span{}
-	if len(es.spans)%spannerEncodedLength != 0 {
+func (es *EpochStore) GetValidatorSpan(idx uint64) (Span, error) {
+	r := Span{}
+	if len(es.spans)%int(SpannerEncodedLength) != 0 {
 		return r, ErrWrongSize
 	}
-	origLength := uint64(len(es.spans)) / spannerEncodedLength
+	origLength := uint64(len(es.spans)) / SpannerEncodedLength
 	requestedLength := idx + 1
 	if origLength < requestedLength {
 		return r, nil
 	}
-	cursor := idx * spannerEncodedLength
+	cursor := idx * SpannerEncodedLength
 	r.MinSpan = bytesutil.FromBytes2(es.spans[cursor : cursor+2])
 	r.MaxSpan = bytesutil.FromBytes2(es.spans[cursor+2 : cursor+4])
 	sigB := [2]byte{}
@@ -53,43 +52,48 @@ func (es EpochStore) GetValidatorSpan(ctx context.Context, idx uint64) (types.Sp
 }
 
 // SetValidatorSpan marshal a validator span into an encoded, flattened array.
-func (es EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan types.Span) error {
-	if len(es.spans)%spannerEncodedLength != 0 {
+func (es *EpochStore) SetValidatorSpan(ctx context.Context, idx uint64, newSpan Span) error {
+	spansLen := uint64(len(es.spans))
+	if spansLen%SpannerEncodedLength != 0 {
 		return errors.New("wrong data length for min max span byte array")
 	}
 	if es.highestObservedIdx < idx {
 		es.highestObservedIdx = idx
 	}
-	if len(es.spans) == 0 {
-		requestedLength := es.highestObservedIdx*spannerEncodedLength + spannerEncodedLength
+	if spansLen == 0 {
+		requestedLength := es.highestObservedIdx*SpannerEncodedLength + SpannerEncodedLength
 		es.spans = make([]byte, requestedLength)
 	}
-	cursor := idx * spannerEncodedLength
-	endCursor := cursor + spannerEncodedLength
+	cursor := idx * SpannerEncodedLength
+	endCursor := cursor + SpannerEncodedLength
 	spansLength := uint64(len(es.spans))
 	if endCursor > spansLength {
 		diff := endCursor - spansLength
 		b := make([]byte, diff)
 		es.spans = append(es.spans, b...)
 	}
-	enc := marshalSpan(newSpan)
-	ba := es.spans
-	copy(ba[cursor:], enc)
+	enc := newSpan.Marshal()
+	copy(es.spans[cursor:], enc)
 
 	return nil
 }
 
 // HighestObservedIdx returns the highest idx the EpochStore has been used for.
-func (es EpochStore) HighestObservedIdx() uint64 {
+func (es *EpochStore) HighestObservedIdx() uint64 {
 	return es.highestObservedIdx
 }
 
+// Bytes returns the underlying bytes of an EpochStore.
+func (es *EpochStore) Bytes() []byte {
+	return es.spans
+}
+
 // ToMap is a helper function to convert an epoch store to a map, mainly used for testing.
-func (es EpochStore) ToMap() (map[uint64]types.Span, error) {
-	spanMap := make(map[uint64]types.Span)
+func (es *EpochStore) ToMap() (map[uint64]Span, error) {
+	spanMap := make(map[uint64]Span)
 	var err error
 	for i := uint64(0); i < es.highestObservedIdx; i++ {
-		spanMap[i], err = es.GetValidatorSpan(context.Background(), i)
+		spanMap[i], err = es.GetValidatorSpan(i)
 		if err != nil {
 			return nil, err
 		}
