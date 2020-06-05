@@ -85,7 +85,7 @@ require (
 	github.com/protolambda/zssz v0.1.4
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20200604035415-4196125e9fd6
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669
-	github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963
+	github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0
