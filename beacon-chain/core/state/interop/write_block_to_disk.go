@@ -7,7 +7,6 @@ import (
 	"path"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -23,7 +22,7 @@ func WriteBlockToDisk(block *ethpb.SignedBeaconBlock, failed bool) {
 	}
 	fp := path.Join(os.TempDir(), filename)
 	log.Warnf("Writing block to disk at %s", fp)
-	enc, err := ssz.Marshal(block)
+	enc, err := block.MarshalSSZ()
 	if err != nil {
 		log.WithError(err).Error("Failed to ssz encode block")
 		return
