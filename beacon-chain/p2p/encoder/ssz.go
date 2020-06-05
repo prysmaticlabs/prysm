@@ -6,6 +6,7 @@ import (
 	"io"
 	"sync"
 
+	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
@@ -36,6 +37,9 @@ type SszNetworkEncoder struct {
 }
 
 func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
+	if v, ok := msg.(fastssz.Marshaler); ok {
+		return v.MarshalSSZ()
+	}
 	return ssz.Marshal(msg)
 }
 
@@ -118,6 +122,9 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 }
 
 func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
+	if v, ok := to.(fastssz.Unmarshaler); ok {
+		return v.UnmarshalSSZ(b)
+	}
 	return ssz.Unmarshal(b, to)
 }
 

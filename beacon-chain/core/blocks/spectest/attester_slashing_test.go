@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -25,7 +24,7 @@ func runAttesterSlashingTest(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 			attSlashing := &ethpb.AttesterSlashing{}
-			if err := ssz.Unmarshal(attSlashingFile, attSlashing); err != nil {
+			if err := attSlashing.UnmarshalSSZ(attSlashingFile); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 

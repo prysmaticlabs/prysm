@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -110,7 +109,7 @@ func addForkEntry(
 		NextForkVersion:   nextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
-	enc, err := ssz.Marshal(enrForkID)
+	enc, err := enrForkID.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +128,7 @@ func retrieveForkEntry(record *enr.Record) (*pb.ENRForkID, error) {
 		return nil, err
 	}
 	forkEntry := &pb.ENRForkID{}
-	if err := ssz.Unmarshal(sszEncodedForkEntry, forkEntry); err != nil {
+	if err := forkEntry.UnmarshalSSZ(sszEncodedForkEntry); err != nil {
 		return nil, err
 	}
 	return forkEntry, nil
