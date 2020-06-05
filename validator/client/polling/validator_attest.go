@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -20,42 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-)
-
-var (
-	validatorAttestSuccessVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "successful_attestations",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
-	validatorAttestFailVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "failed_attestations",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
-	validatorAttestFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_attestations_rejected_total",
-			Help: "Count the attestations rejected by slashing protection.",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
 )
 
 // SubmitAttestation completes the validator client's attester responsibility at a given slot.
@@ -73,7 +39,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if err != nil {
 		log.WithError(err).Error("Could not fetch validator assignment")
 		if v.emitAccountMetrics {
-			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -95,7 +61,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if err != nil {
 		log.WithError(err).Error("Could not request attestation to sign at slot")
 		if v.emitAccountMetrics {
-			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -107,7 +73,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 				"targetEpoch": data.Target.Epoch,
 			}).Error("Attempted to make a slashable attestation, rejected")
 			if v.emitAccountMetrics {
-				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+				metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			}
 			return
 		}
@@ -117,7 +83,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
 		if v.emitAccountMetrics {
-			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -134,7 +100,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if !found {
 		log.Errorf("Validator ID %d not found in committee of %v", duty.ValidatorIndex, duty.Committee)
 		if v.emitAccountMetrics {
-			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -159,7 +125,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 				"targetEpoch": data.Target.Epoch,
 			}).Error("Attempted to make a slashable attestation, rejected by external slasher service")
 			if v.emitAccountMetrics {
-				validatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
+				metrics.ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
 			return
 		}
@@ -168,7 +134,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
 		if v.emitAccountMetrics {
-			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -176,7 +142,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
-			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -189,7 +155,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 
 	if v.emitAccountMetrics {
-		validatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
+		metrics.ValidatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
 
 	span.AddAttributes(

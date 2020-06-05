@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,42 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-)
-
-var (
-	validatorProposeSuccessVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "successful_proposals",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
-	validatorProposeFailVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "failed_proposals",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
-	validatorProposeFailVecSlasher = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "validator_proposals_rejected_total",
-			Help: "Count the block proposals rejected by slashing protection.",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
 )
 
 // ProposeBlock A new beacon block for a given slot. This method collects the
@@ -78,7 +44,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
 		if v.emitAccountMetrics {
-			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -92,7 +58,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
 		if v.emitAccountMetrics {
-			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -103,7 +69,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")
 			if v.emitAccountMetrics {
-				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
 			return
 		}
@@ -112,7 +78,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		if slotBits.BitAt(slot % params.BeaconConfig().SlotsPerEpoch) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
 			if v.emitAccountMetrics {
-				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
 			return
 		}
@@ -123,7 +89,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
 		if v.emitAccountMetrics {
-			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -140,7 +106,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		if !v.protector.VerifyBlock(ctx, bh) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
 			if v.emitAccountMetrics {
-				validatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
+				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
 			return
 		}
@@ -151,7 +117,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
-			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -161,14 +127,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
 			log.WithError(err).Error("Failed to save updated proposal history")
 			if v.emitAccountMetrics {
-				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
 			return
 		}
 	}
 
 	if v.emitAccountMetrics {
-		validatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+		metrics.ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
 
 	span.AddAttributes(

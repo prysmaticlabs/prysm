@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"go.opencensus.io/trace"
 
@@ -15,29 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-)
-
-var (
-	validatorAggSuccessVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "successful_aggregations",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
-	validatorAggFailVec = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "validator",
-			Name:      "failed_aggregations",
-		},
-		[]string{
-			// validator pubkey
-			"pubkey",
-		},
-	)
+	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 )
 
 // SubmitAggregateAndProof submits the validator's signed slot signature to the beacon node
@@ -56,7 +32,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
 		if v.emitAccountMetrics {
-			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -74,7 +50,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err != nil {
 		log.Errorf("Could not sign slot: %v", err)
 		if v.emitAccountMetrics {
-			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -93,7 +69,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err != nil {
 		log.WithField("slot", slot).Errorf("Could not submit slot signature to beacon node: %v", err)
 		if v.emitAccountMetrics {
-			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -111,7 +87,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err != nil {
 		log.Errorf("Could not submit signed aggregate and proof to beacon node: %v", err)
 		if v.emitAccountMetrics {
-			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
@@ -119,12 +95,12 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err := v.addIndicesToLog(duty); err != nil {
 		log.Errorf("Could not add aggregator indices to logs: %v", err)
 		if v.emitAccountMetrics {
-			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			metrics.ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
 	if v.emitAccountMetrics {
-		validatorAggSuccessVec.WithLabelValues(fmtKey).Inc()
+		metrics.ValidatorAggSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
 
 }

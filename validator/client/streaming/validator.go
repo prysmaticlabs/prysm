@@ -18,8 +18,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -29,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -69,18 +68,6 @@ type validator struct {
 	attesterHistoryByPubKeyLock        sync.RWMutex
 	protector                          slashingprotection.Protector
 }
-
-var validatorStatusesGaugeVec = promauto.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Namespace: "validator",
-		Name:      "statuses",
-		Help:      "validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED",
-	},
-	[]string{
-		// Validator pubkey.
-		"pubkey",
-	},
-)
 
 // Done cleans up the validator.
 func (v *validator) Done() {
@@ -252,7 +239,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", status.PublicKey)
-			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
+			metrics.ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
 		}
 		switch status.Status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
@@ -431,7 +418,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
-			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+			metrics.ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
 		}
 
 		// Only interested in validators who are attesting/proposing.
