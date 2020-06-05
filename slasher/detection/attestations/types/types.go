@@ -72,7 +72,7 @@ func UnmarshalSpan(enc []byte) (Span, error) {
 	return r, nil
 }
 
-// Convert the span struct into a flattened array.
+// Marshal converts the span struct into a flattened byte array.
 func (span Span) Marshal() []byte {
 	return append(append(append(
 		bytesutil.Bytes2(uint64(span.MinSpan)),

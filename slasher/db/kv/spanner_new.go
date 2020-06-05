@@ -23,7 +23,7 @@ func persistFlatSpanMapsOnEviction(db *Store) func(key interface{}, value interf
 		log.Tracef("Evicting flat span map for epoch: %d", key)
 		err := db.update(func(tx *bolt.Tx) error {
 			epoch, keyOK := key.(uint64)
-			epochStore, valueOK := value.(types.EpochStore)
+			epochStore, valueOK := value.(*types.EpochStore)
 			if !keyOK || !valueOK {
 				return errors.New("could not cast key and value into needed types")
 			}
