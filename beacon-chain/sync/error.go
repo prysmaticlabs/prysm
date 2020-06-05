@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 )
 
@@ -23,7 +24,10 @@ var responseCodeServerError = byte(0x02)
 
 func (r *Service) generateErrorResponse(code byte, reason string) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
-	if _, err := r.p2p.Encoding().EncodeWithLength(buf, []byte(reason)); err != nil {
+	resp := &pb.ErrorResponse{
+		Message: []byte(reason),
+	}
+	if _, err := r.p2p.Encoding().EncodeWithLength(buf, resp); err != nil {
 		return nil, err
 	}
 
@@ -42,10 +46,12 @@ func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, 
 		return 0, "", nil
 	}
 
-	msg := make([]byte, 0)
-	if err := encoding.DecodeWithLength(stream, &msg); err != nil {
+	msg := &pb.ErrorResponse{
+		Message: []byte{},
+	}
+	if err := encoding.DecodeWithLength(stream, msg); err != nil {
 		return 0, "", err
 	}
 
-	return b[0], string(msg), nil
+	return b[0], string(msg.Message), nil
 }

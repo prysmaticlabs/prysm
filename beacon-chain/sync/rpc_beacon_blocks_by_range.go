@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -77,7 +78,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 
 		// TODO(3147): Update this with reasonable constraints.
-		if endSlot-startSlot > rangeLimit || m.Step == 0 {
+		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > params.BeaconNetworkConfig().MaxRequestBlocks {
 			r.writeErrorResponseToStream(responseCodeInvalidRequest, stepError, stream)
 			err := errors.New(stepError)
 			traceutil.AnnotateError(span, err)
