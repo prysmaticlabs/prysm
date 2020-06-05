@@ -161,6 +161,10 @@ var (
 		Name:  "reduce-attester-state-copy",
 		Usage: "Reduces the amount of state copies for attester rpc",
 	}
+	enableStreamDuties = &cli.BoolFlag{
+		Name:  "enable-stream-duties",
+		Usage: "Enables validator duties streaming in the validator client",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -443,6 +447,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	e2eConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
+	enableStreamDuties,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
