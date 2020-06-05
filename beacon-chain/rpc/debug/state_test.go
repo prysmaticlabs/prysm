@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -62,7 +61,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted, err := ssz.Marshal(st.CloneInnerState())
+	wanted, err := st.CloneInnerState().MarshalSSZ()
 	if err != nil {
 		t.Fatal(err)
 	}

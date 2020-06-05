@@ -13,7 +13,6 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -41,7 +40,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 			beaconStateBase := &pb.BeaconState{}
-			if err := ssz.Unmarshal(preBeaconStateFile, beaconStateBase); err != nil {
+			if err := beaconStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 			beaconState, err := stateTrie.InitializeFromProto(beaconStateBase)
@@ -67,7 +66,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 					t.Fatal(err)
 				}
 				block := &ethpb.SignedBeaconBlock{}
-				if err := ssz.Unmarshal(blockFile, block); err != nil {
+				if err := block.UnmarshalSSZ(blockFile); err != nil {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}
 				beaconState, transitionError = state.ExecuteStateTransition(context.Background(), beaconState, block)
@@ -96,7 +95,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 				}
 
 				postBeaconState := &pb.BeaconState{}
-				if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
+				if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}
 
