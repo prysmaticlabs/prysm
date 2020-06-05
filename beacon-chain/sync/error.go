@@ -6,7 +6,6 @@ import (
 	"io"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 )
 
