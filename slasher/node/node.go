@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
@@ -103,6 +104,10 @@ func (s *SlasherNode) Start() {
 	s.lock.Lock()
 	s.services.StartAll()
 	s.lock.Unlock()
+
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting slasher client")
 
 	stop := s.stop
 	go func() {
