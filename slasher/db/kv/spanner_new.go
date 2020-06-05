@@ -17,19 +17,20 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64) (EpochStore, erro
 	defer span.End()
 
 	var err error
-	var spans []byte
+	var copiedSpans []byte
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucketNew)
 		if b == nil {
 			return nil
 		}
-		spans = b.Get(bytesutil.Bytes8(epoch))
+		spans := b.Get(bytesutil.Bytes8(epoch))
+		copy(copiedSpans, spans)
 		return nil
 	})
-	if spans == nil {
-		spans = []byte{}
+	if copiedSpans == nil {
+		copiedSpans = []byte{}
 	}
-	return spans, err
+	return copiedSpans, err
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
@@ -40,6 +41,7 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es EpochStore
 	if len(es)%spannerEncodedLength != 0 {
 		return ErrWrongSize
 	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists(validatorsMinMaxSpanBucketNew)
 		if err != nil {

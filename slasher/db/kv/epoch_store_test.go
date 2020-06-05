@@ -3,10 +3,13 @@ package kv
 import (
 	"context"
 	"encoding/hex"
+	"flag"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"github.com/urfave/cli/v2"
 )
 
 type spansValueTests struct {
@@ -162,4 +165,58 @@ func TestStore_SetValidatorSpan(t *testing.T) {
 
 	}
 
+}
+
+func BenchmarkEpochStore_Save(b *testing.B) {
+	amount := uint64(100000)
+	store, spansMap := generateEpochStore(b, amount)
+
+	b.Run(fmt.Sprintf("%d old", amount), func(b *testing.B) {
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		db := setupDB(b, cli.NewContext(&app, set, nil))
+		db.EnableSpanCache(false)
+		b.ResetTimer()
+		b.ReportAllocs()
+		b.N = 5
+		for i := 0; i < b.N; i++ {
+			if err := db.SaveEpochSpansMap(context.Background(), 0, spansMap); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	b.Run(fmt.Sprintf("%d new", amount), func(b *testing.B) {
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		db := setupDB(b, cli.NewContext(&app, set, nil))
+		b.ResetTimer()
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			if err := db.SaveEpochSpans(context.Background(), 1, store); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func generateEpochStore(t testing.TB, n uint64) (EpochStore, map[uint64]types.Span) {
+	epochStore, err := NewEpochStore([]byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	spanMap := make(map[uint64]types.Span)
+	for i := uint64(0); i < n; i++ {
+		span := types.Span{
+			MinSpan:     14,
+			MaxSpan:     8,
+			SigBytes:    [2]byte{5, 13},
+			HasAttested: true,
+		}
+		spanMap[i] = span
+		if err := epochStore.SetValidatorSpan(context.Background(), i, span); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return epochStore, spanMap
 }
