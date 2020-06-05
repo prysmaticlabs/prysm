@@ -2896,10 +2896,6 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_go_ssz",
         importpath = "github.com/prysmaticlabs/go-ssz",
-        patch_args = ["-p1"],
-        patches = [
-            "@prysm//third_party:com_github_prysmaticlabs_go_ssz.patch",
-        ],
         sum = "h1:V4o7uJqGXAuz6ZpwxhT4cnVjRb/XxpBmTKp/lVVr05k=",
         version = "v0.0.0-20200605034351-b6a925e519d0",
     )
