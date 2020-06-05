@@ -1,4 +1,4 @@
-package client
+package streaming
 
 import (
 	"bytes"
@@ -8,9 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
 )
 
 // StreamDuties consumes a server-side stream of validator duties from a beacon node

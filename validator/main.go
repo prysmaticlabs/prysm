@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/client/streaming"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -180,7 +180,7 @@ contract in order to activate the validator client`,
 						ctx, cancel := context.WithTimeout(
 							context.Background(), 10*time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
 						defer cancel()
-						dialOpts := client.ConstructDialOptions(
+						dialOpts := streaming.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 							cliCtx.String(flags.CertFlag.Name),
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),

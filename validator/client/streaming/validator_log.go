@@ -1,11 +1,12 @@
-package client
+package streaming
 
 import (
 	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 type attSubmitted struct {
