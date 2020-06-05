@@ -5,8 +5,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// ValidatorStatusesGuageVec used to track validator statuses by public key.
 var (
+	// ValidatorStatusesGaugeVec used to track validator statuses by public key.
 	ValidatorStatusesGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "validator",
@@ -18,6 +18,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorAggSuccessVec used to count successful aggregations.
 	ValidatorAggSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
@@ -28,6 +29,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorAggFailVec used to count failed aggregations.
 	ValidatorAggFailVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
@@ -38,6 +40,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorProposeSuccessVec used to count successful proposals.
 	ValidatorProposeSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
@@ -48,6 +51,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorProposeFailVec used to count failed proposals.
 	ValidatorProposeFailVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
@@ -58,6 +62,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorProposeFailVecSlasher used to count failed proposals by slashing protection.
 	ValidatorProposeFailVecSlasher = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "validator_proposals_rejected_total",
@@ -68,6 +73,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorBalancesGaugeVec used to keep track of validator balances by public key.
 	ValidatorBalancesGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "validator",
@@ -79,6 +85,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorAttestSuccessVec used to count successful attestations.
 	ValidatorAttestSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
@@ -89,6 +96,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorAttestFailVec used to count failed attestations.
 	ValidatorAttestFailVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
@@ -99,6 +107,7 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorAttestFailVecSlasher used to count failed attestations by slashing protection.
 	ValidatorAttestFailVecSlasher = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "validator_attestations_rejected_total",
