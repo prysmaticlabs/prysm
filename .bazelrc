@@ -86,6 +86,7 @@ build:cgo_symbolizer --config=llvm
 build:cgo_symbolizer --copt=-g
 build:cgo_symbolizer --define=USE_CGO_SYMBOLIZER=true
 build:cgo_symbolizer -c dbg
+build:cgo_symbolizer --define=gotags=cgosymbolizer_enabled
 
 # multi-arch cross-compiling toolchain configs:
 -----------------------------------------------
