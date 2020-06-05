@@ -1,5 +1,3 @@
-// Package client defines the entire lifecycle of a validator in eth2 – it is responsible
-// for interacting with a beacon node to determine and perform validator duties.
 package streaming
 
 import (
