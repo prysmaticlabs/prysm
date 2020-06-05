@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -201,10 +202,8 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	if err != nil {
 		return nil, err
 	}
-	enc, err := ssz.Marshal(helpers.SlotToEpoch(slot) + slotInVotingPeriod)
-	if err != nil {
-		return nil, err
-	}
+	var enc []byte
+	enc = fastssz.MarshalUint64(enc, helpers.SlotToEpoch(slot)+slotInVotingPeriod)
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{

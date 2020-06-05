@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -34,7 +33,7 @@ func TestServer_GetBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted, err := ssz.Marshal(b)
+	wanted, err := b.MarshalSSZ()
 	if err != nil {
 		t.Fatal(err)
 	}

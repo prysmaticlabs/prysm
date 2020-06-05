@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"sync"
 
-	ssz "github.com/ferranbt/fastssz"
+	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
@@ -116,7 +116,7 @@ func HashProto(msg proto.Message) (result [32]byte, err error) {
 		return [32]byte{}, ErrNilProto
 	}
 	var data []byte
-	if m, ok := msg.(ssz.Marshaler); ok {
+	if m, ok := msg.(fastssz.Marshaler); ok {
 		data, err = m.MarshalSSZ()
 	} else {
 		data, err = proto.Marshal(msg)
