@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
 // AggregateUnaggregatedAttestations aggregates the unaggregated attestations and save the
@@ -16,7 +17,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
 	unaggregatedAtts := p.UnaggregatedAttestations()
 	for _, att := range unaggregatedAtts {
-		attDataRoot, err := ssz.HashTreeRoot(att.Data)
+		attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 		if err != nil {
 			return err
 		}
