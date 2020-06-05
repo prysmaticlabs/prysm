@@ -117,38 +117,36 @@ func TestRoundRobinSync(t *testing.T) {
 				},
 			},
 		},
-
-		// TODO(3147): Handle multiple failures.
-		//{
-		//	name:               "Multiple peers with multiple failures",
-		//	currentSlot:        320, // 10 epochs
-		//	expectedBlockSlots: makeSequence(1, 320),
-		//	peers: []*peerData{
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//		{
-		//			blocks:         makeSequence(1, 320),
-		//			finalizedEpoch: 4,
-		//			headSlot:       320,
-		//			failureSlots:   makeSequence(1, 320),
-		//		},
-		//	},
-		//},
+		{
+			name:               "Multiple peers with multiple failures",
+			currentSlot:        320, // 10 epochs
+			expectedBlockSlots: makeSequence(1, 320),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 9,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 9,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 9,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 9,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 320),
+				},
+			},
+		},
 		{
 			name:               "Multiple peers with different finalized epoch",
 			currentSlot:        320, // 10 epochs
