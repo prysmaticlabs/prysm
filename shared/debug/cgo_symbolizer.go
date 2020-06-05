@@ -1,3 +1,5 @@
+// +build cgosymbolizer_enabled
+
 package debug
 
 import (
