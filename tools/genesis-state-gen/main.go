@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -41,7 +40,7 @@ func main() {
 		log.Fatalf("Could not generate genesis beacon state: %v", err)
 	}
 	if *sszOutputFile != "" {
-		encodedState, err := ssz.Marshal(genesisState)
+		encodedState, err := genesisState.MarshalSSZ()
 		if err != nil {
 			log.Fatalf("Could not ssz marshal the genesis beacon state: %v", err)
 		}

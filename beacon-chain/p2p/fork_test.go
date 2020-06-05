@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -215,7 +214,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 		NextForkVersion:   nextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
-	enc, err := ssz.Marshal(enrForkID)
+	enc, err := enrForkID.MarshalSSZ()
 	if err != nil {
 		t.Fatal(err)
 	}
