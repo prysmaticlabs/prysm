@@ -57,13 +57,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	// Step 1 - Sync to end of finalized epoch.
 	for blk := range queue.fetchedBlocks {
-		s.logSyncStatus(genesis, blk.Block, counter)
-		root, err := stateutil.BlockRoot(blk.Block)
-		if err != nil {
-			log.WithError(err).Info("Cannot determine root of block")
-			continue
-		}
-		if err := s.processBlock(ctx, blk, root); err != nil {
+		if err := s.processBlock(ctx, genesis, blk, counter); err != nil {
 			log.WithError(err).Info("Block is invalid")
 			continue
 		}
@@ -109,14 +103,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
 			return nil
 		}
-
 		for _, blk := range resp {
-			s.logSyncStatus(genesis, blk.Block, counter)
-			root, err := stateutil.BlockRoot(blk.Block)
-			if err != nil {
-				return err
-			}
-			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk, root); err != nil {
+			if err := s.processBlock(ctx, genesis, blk, counter); err != nil {
 				log.WithError(err).Error("Failed to process block, exiting init sync")
 				return nil
 			}
@@ -171,7 +159,19 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter
 	)
 }
 
-func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blockRoot [32]byte) error {
+// processBlock performs basic checks on incoming block. If checks are passed corresponding event
+// is triggered, notifying subscribers of a new block's availability.
+func (s *Service) processBlock(
+	ctx context.Context,
+	genesis time.Time,
+	blk *eth.SignedBeaconBlock,
+	counter *ratecounter.RateCounter,
+) error {
+	s.logSyncStatus(genesis, blk.Block, counter)
+	blockRoot, err := stateutil.BlockRoot(blk.Block)
+	if err != nil {
+		return err
+	}
 	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
