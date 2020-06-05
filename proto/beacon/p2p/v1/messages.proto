@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
 
-import "eth/v1alpha1/beacon_block.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message Status {
@@ -21,10 +20,6 @@ message BeaconBlocksByRangeRequest {
 
 message BeaconBlocksByRootRequest {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"1024\""];
-}
-
-message BeaconBlockResponse {
-  repeated ethereum.eth.v1alpha1.SignedBeaconBlock blocks = 1 [(gogoproto.moretags) = "ssz-max:\"1024\""];
 }
 
 message ErrorResponse {
