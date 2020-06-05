@@ -88,21 +88,6 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 	}
 }
 
-// See: https://github.com/prysmaticlabs/go-ssz/pull/69
-func TestBeaconBlock(t *testing.T) {
-	block := &ethpb.BeaconBlock{
-		Slot: 55,
-	}
-	enc, err := ssz.Marshal(block)
-	if err != nil {
-		t.Fatal(err)
-	}
-	dec := &ethpb.BeaconBlock{}
-	if err := ssz.Unmarshal(enc, dec); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func hexDecodeOrDie(t *testing.T, h string) []byte {
 	b, err := hex.DecodeString(h)
 	if err != nil {

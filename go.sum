@@ -949,6 +949,8 @@ github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669 h1:cX6YR
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963 h1:Th5ufPIaL5s/7i3gXHTgiTwfsUhWDP/PwFRiI6qV6v0=
 github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963/go.mod h1:VecIJZrewdAuhVckySLFt2wAAHRME934bSDurP8ftkc=
+github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0 h1:V4o7uJqGXAuz6ZpwxhT4cnVjRb/XxpBmTKp/lVVr05k=
+github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0/go.mod h1:VecIJZrewdAuhVckySLFt2wAAHRME934bSDurP8ftkc=
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796 h1:bVD46NhbqEE6bsIqj42TCS3ELUdumti3WfAw9DXNtkg=
 github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796/go.mod h1:5JkKm84FcLZQPNuHwjX8Mtd5emni/PH5CylWCNqnKos=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
