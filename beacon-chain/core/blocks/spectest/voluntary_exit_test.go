@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -25,7 +24,7 @@ func runVoluntaryExitTest(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 			voluntaryExit := &ethpb.SignedVoluntaryExit{}
-			if err := ssz.Unmarshal(exitFile, voluntaryExit); err != nil {
+			if err := voluntaryExit.UnmarshalSSZ(exitFile); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 

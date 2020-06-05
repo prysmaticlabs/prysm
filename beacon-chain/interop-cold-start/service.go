@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -72,7 +71,7 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
 		genesisState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(data, genesisState); err != nil {
+		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}
 		genesisTrie, err := stateTrie.InitializeFromProto(genesisState)
