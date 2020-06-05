@@ -51,72 +51,67 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return err
 	}
 
-	missingValidators := make(map[[48]byte]bool)
-	for _, val := range resp.MissingValidators {
-		missingValidators[bytesutil.ToBytes48(val)] = true
+	if v.emitAccountMetrics {
+		for _, missingPubKey := range resp.MissingValidators {
+			fmtKey := fmt.Sprintf("%#x", missingPubKey[:])
+			validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
+		}
 	}
 
 	included := 0
 	votedSource := 0
 	votedTarget := 0
 	votedHead := 0
-
-	reported := 0
-	for _, pkey := range pubKeys {
-		pubKey := fmt.Sprintf("%#x", pkey[:8])
-		log := log.WithField("pubKey", pubKey)
-		fmtKey := fmt.Sprintf("%#x", pkey[:])
-		if missingValidators[bytesutil.ToBytes48(pkey)] {
-			if v.emitAccountMetrics {
-				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
-			}
-			continue
-		}
+	prevEpoch := uint64(0)
+	if slot >= params.BeaconConfig().SlotsPerEpoch {
+		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
+	}
+	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
+	for i, pubKey := range resp.PublicKeys {
+		pubKeyBytes := bytesutil.ToBytes48(pubKey)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
-			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
+			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
 
-		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 && len(resp.BalancesAfterEpochTransition) > reported {
-			newBalance := float64(resp.BalancesAfterEpochTransition[reported]) / float64(params.BeaconConfig().GweiPerEth)
-			prevBalance := float64(resp.BalancesBeforeEpochTransition[reported]) / float64(params.BeaconConfig().GweiPerEth)
+		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
+		if v.prevBalance[pubKeyBytes] > 0 {
+			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
+			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
-				"epoch":                (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
-				"correctlyVotedSource": resp.CorrectlyVotedSource[reported],
-				"correctlyVotedTarget": resp.CorrectlyVotedTarget[reported],
-				"correctlyVotedHead":   resp.CorrectlyVotedHead[reported],
-				"inclusionSlot":        resp.InclusionSlots[reported],
-				"inclusionDistance":    resp.InclusionDistances[reported],
+				"pubKey":               truncatedKey,
+				"epoch":                prevEpoch,
+				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
+				"correctlyVotedTarget": resp.CorrectlyVotedTarget[i],
+				"correctlyVotedHead":   resp.CorrectlyVotedHead[i],
+				"inclusionSlot":        resp.InclusionSlots[i],
+				"inclusionDistance":    resp.InclusionDistances[i],
 				"oldBalance":           prevBalance,
 				"newBalance":           newBalance,
 				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
-				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
+				validatorBalancesGaugeVec.WithLabelValues(truncatedKey).Set(newBalance)
 			}
 		}
 
-		if reported < len(resp.InclusionSlots) && resp.InclusionSlots[reported] != ^uint64(0) {
+		if resp.InclusionSlots[i] != ^uint64(0) {
 			included++
 		}
-		if reported < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[reported] {
+		if resp.CorrectlyVotedSource[i] {
 			votedSource++
 		}
-		if reported < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[reported] {
+		if resp.CorrectlyVotedTarget[i] {
 			votedTarget++
 		}
-		if reported < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[reported] {
+		if resp.CorrectlyVotedHead[i] {
 			votedHead++
 		}
-		if reported < len(resp.BalancesAfterEpochTransition) {
-			v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[reported]
-		}
-
-		reported++
+		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
 	}
 
 	log.WithFields(logrus.Fields{
-		"epoch":                          (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
+		"epoch":                          prevEpoch,
 		"attestationInclusionPercentage": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
 		"correctlyVotedSourcePercentage": fmt.Sprintf("%.0f%%", (float64(votedSource)/float64(len(resp.CorrectlyVotedSource)))*100),
 		"correctlyVotedTargetPercentage": fmt.Sprintf("%.0f%%", (float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
