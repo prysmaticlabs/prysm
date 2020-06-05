@@ -49,14 +49,14 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64) (*types.EpochStor
 	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpans")
 	defer span.End()
 
-	var err error
 	var copiedSpans []byte
-	err = db.view(func(tx *bolt.Tx) error {
+	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucketNew)
 		if b == nil {
 			return nil
 		}
 		spans := b.Get(bytesutil.Bytes8(epoch))
+		copiedSpans = make([]byte, len(spans))
 		copy(copiedSpans, spans)
 		return nil
 	})
