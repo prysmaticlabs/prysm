@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -1263,10 +1264,8 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	period := params.BeaconConfig().EpochsPerEth1VotingPeriod * params.BeaconConfig().SlotsPerEpoch
 	wantedSlot := 100 % period
 	currentEpoch := helpers.SlotToEpoch(100)
-	enc, err := ssz.Marshal(currentEpoch + wantedSlot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	var enc []byte
+	enc = fastssz.MarshalUint64(enc, currentEpoch+wantedSlot)
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
