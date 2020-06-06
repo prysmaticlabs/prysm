@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
@@ -38,7 +37,7 @@ func main() {
 	if gs == nil {
 		panic("nil genesis state")
 	}
-	b, err := ssz.Marshal(gs)
+	b, err := gs.InnerStateUnsafe().MarshalSSZ()
 	if err != nil {
 		panic(err)
 	}

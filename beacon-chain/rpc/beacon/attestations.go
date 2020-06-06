@@ -8,12 +8,12 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -355,7 +355,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 				bs.CollectedAttestationsBuffer <- atts
 			}
 		case att := <-bs.ReceivedAttestationsBuffer:
-			attDataRoot, err := ssz.HashTreeRoot(att.Data)
+			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 			if err != nil {
 				log.Errorf("Could not hash tree root data: %v", err)
 				continue

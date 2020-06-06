@@ -2071,6 +2071,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},
@@ -2083,7 +2084,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	}
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
-		PublicKeys: [][]byte{publicKey1[:], publicKey2[:], publicKey3[:]},
+		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2166,6 +2167,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},
@@ -2178,7 +2180,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	}
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
-		Indices: []uint64{0, 1, 2},
+		Indices: []uint64{2, 1, 0},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2261,6 +2263,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},

@@ -14,6 +14,7 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/prometheus:go_default_library",
         "//shared/tracing:go_default_library",
+        "//shared/version:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/db/kv:go_default_library",

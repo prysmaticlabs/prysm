@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	jsoniter "github.com/json-iterator/go"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -101,7 +100,7 @@ func RunBlockOperationTest(
 		t.Fatal(err)
 	}
 	preStateBase := &pb.BeaconState{}
-	if err := ssz.Unmarshal(preBeaconStateFile, preStateBase); err != nil {
+	if err := preStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 	preState, err := beaconstate.InitializeFromProto(preStateBase)
@@ -132,7 +131,7 @@ func RunBlockOperationTest(
 		}
 
 		postBeaconState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
+		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
@@ -164,7 +163,7 @@ func RunEpochOperationTest(
 		t.Fatal(err)
 	}
 	preBeaconStateBase := &pb.BeaconState{}
-	if err := ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase); err != nil {
+	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateFile); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
 	preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
@@ -193,7 +192,7 @@ func RunEpochOperationTest(
 		}
 
 		postBeaconState := &pb.BeaconState{}
-		if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
+		if err := postBeaconState.UnmarshalSSZ(postBeaconStateFile); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 

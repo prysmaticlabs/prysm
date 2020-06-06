@@ -50,6 +50,7 @@ require (
 	github.com/json-iterator/go v1.1.9
 	github.com/karalabe/usb v0.0.0-20191104083709-911d15fe12a9 // indirect
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
+	github.com/kr/pretty v0.2.0
 	github.com/libp2p/go-libp2p v0.9.2
 	github.com/libp2p/go-libp2p-blankhost v0.1.6
 	github.com/libp2p/go-libp2p-circuit v0.2.3
@@ -84,7 +85,7 @@ require (
 	github.com/protolambda/zssz v0.1.4
 	github.com/prysmaticlabs/ethereumapis v0.0.0-20200603034020-fd7b2d1fe13f
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669
-	github.com/prysmaticlabs/go-ssz v0.0.0-20200101200214-e24db4d9e963
+	github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0

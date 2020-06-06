@@ -949,24 +949,14 @@ func (bs *Server) GetValidatorPerformance(
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	validatorSummary := state.ValidatorSummary
-
-	responseCap := len(req.Indices) + len(req.PublicKeys)
-	validatorIndices := make([]uint64, 0, responseCap)
-	beforeTransitionBalances := make([]uint64, 0, responseCap)
-	afterTransitionBalances := make([]uint64, 0, responseCap)
-	effectiveBalances := make([]uint64, 0, responseCap)
-	inclusionSlots := make([]uint64, 0, responseCap)
-	inclusionDistances := make([]uint64, 0, responseCap)
-	correctlyVotedSource := make([]bool, 0, responseCap)
-	correctlyVotedTarget := make([]bool, 0, responseCap)
-	correctlyVotedHead := make([]bool, 0, responseCap)
-	missingValidators := make([][]byte, 0, responseCap)
-
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+
+	responseCap := len(req.Indices) + len(req.PublicKeys)
+	validatorIndices := make([]uint64, 0, responseCap)
+	missingValidators := make([][]byte, 0, responseCap)
 
 	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 	// Convert the list of validator public keys to validator indices and add to the indices set.
@@ -999,6 +989,19 @@ func (bs *Server) GetValidatorPerformance(
 		return validatorIndices[i] < validatorIndices[j]
 	})
 
+	validatorSummary := state.ValidatorSummary
+	currentEpoch := helpers.CurrentEpoch(headState)
+
+	responseCap = len(validatorIndices)
+	pubKeys := make([][]byte, 0, responseCap)
+	beforeTransitionBalances := make([]uint64, 0, responseCap)
+	afterTransitionBalances := make([]uint64, 0, responseCap)
+	effectiveBalances := make([]uint64, 0, responseCap)
+	inclusionSlots := make([]uint64, 0, responseCap)
+	inclusionDistances := make([]uint64, 0, responseCap)
+	correctlyVotedSource := make([]bool, 0, responseCap)
+	correctlyVotedTarget := make([]bool, 0, responseCap)
+	correctlyVotedHead := make([]bool, 0, responseCap)
 	// Append performance summaries.
 	// Also track missing validators using public keys.
 	for _, idx := range validatorIndices {
@@ -1006,21 +1009,20 @@ func (bs *Server) GetValidatorPerformance(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
 		}
+		pubKey := val.PublicKey()
 		if idx >= uint64(len(validatorSummary)) {
 			// Not listed in validator summary yet; treat it as missing.
-			pubKey := val.PublicKey()
 			missingValidators = append(missingValidators, pubKey[:])
 			continue
 		}
-		currentEpoch := helpers.CurrentEpoch(headState)
 		if !helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			// Inactive validator; treat it as missing.
-			pubKey := val.PublicKey()
 			missingValidators = append(missingValidators, pubKey[:])
 			continue
 		}
 
 		summary := validatorSummary[idx]
+		pubKeys = append(pubKeys, pubKey[:])
 		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
 		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
@@ -1032,6 +1034,7 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    pubKeys,
 		InclusionSlots:                inclusionSlots,
 		InclusionDistances:            inclusionDistances,
 		CorrectlyVotedSource:          correctlyVotedSource,

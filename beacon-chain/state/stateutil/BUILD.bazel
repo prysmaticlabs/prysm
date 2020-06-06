@@ -45,6 +45,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestations_test.go",
         "benchmark_test.go",
         "blocks_test.go",
         "state_root_cache_fuzz_test.go",

@@ -15,6 +15,7 @@ go_library(
     ],
     deps = [
         "//shared/params:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

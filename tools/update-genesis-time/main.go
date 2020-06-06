@@ -32,7 +32,7 @@ func main() {
 		beaconState.GenesisTime = *genesisTime
 	}
 
-	encodedState, err := ssz.Marshal(beaconState)
+	encodedState, err := beaconState.MarshalSSZ()
 	if err != nil {
 		log.Fatalf("Could not ssz marshal the beacon state: %v", err)
 	}
