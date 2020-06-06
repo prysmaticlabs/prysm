@@ -20,58 +20,6 @@ type spansValueTests struct {
 	err           error
 }
 
-var exampleSpansValues []spansValueTests
-
-func init() {
-	exampleSpansValues = []spansValueTests{
-		{
-			name: "Validator 0 first time",
-			validatorSpan: types.Span{
-				MinSpan:     1,
-				MaxSpan:     2,
-				SigBytes:    [2]byte{1, 1},
-				HasAttested: false,
-			},
-			spansLength: types.SpannerEncodedLength,
-			validatorID: 0,
-		},
-		{
-			name: "Validator 300000 first time",
-			validatorSpan: types.Span{
-				MinSpan:     256,
-				MaxSpan:     677,
-				SigBytes:    [2]byte{255, 250},
-				HasAttested: true,
-			},
-			validatorID: 300000,
-			spansLength: types.SpannerEncodedLength*300000 + types.SpannerEncodedLength,
-		},
-		{
-			name: "Validator 1 with highestObservedValidatorIdx 300000",
-			validatorSpan: types.Span{
-				MinSpan:     54000,
-				MaxSpan:     54001,
-				SigBytes:    [2]byte{250, 255},
-				HasAttested: true,
-			},
-			validatorID: 1,
-			spansLength: types.SpannerEncodedLength*300000 + types.SpannerEncodedLength,
-		},
-		{
-			name: "Validator 0 not with old spans(disregards the highestObservedValidatorIdx)",
-			validatorSpan: types.Span{
-				MinSpan:     65535,
-				MaxSpan:     65535,
-				SigBytes:    [2]byte{255, 255},
-				HasAttested: true,
-			},
-			validatorID: 0,
-			oldSpans:    "01000000000000",
-			spansLength: types.SpannerEncodedLength,
-		},
-	}
-}
-
 func TestStore_GetValidatorSpan(t *testing.T) {
 	tooSmall, err := hex.DecodeString("000000")
 	if err != nil {

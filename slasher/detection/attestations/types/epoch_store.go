@@ -71,9 +71,7 @@ func (es *EpochStore) SetValidatorSpan(idx uint64, newSpan Span) (*EpochStore, e
 		b := make([]byte, diff)
 		es.spans = append(es.spans, b...)
 	}
-	enc := newSpan.Marshal()
-	copy(es.spans[cursor:], enc)
-
+	copy(es.spans[cursor:], newSpan.Marshal())
 	return es, nil
 }
 
