@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -87,7 +88,7 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
-	if err := validateAggregateAttTime(attSlot, uint64(r.chain.GenesisTime().Unix())); err != nil {
+	if err := validateAggregateAttTime(attSlot, r.chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -193,18 +194,18 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 }
 
 // Validates that the incoming aggregate attestation is in the desired time range.
-func validateAggregateAttTime(attSlot uint64, genesisTime uint64) error {
-	// in milliseconds
-	attTime := 1000 * (genesisTime + (attSlot * params.BeaconConfig().SecondsPerSlot))
+func validateAggregateAttTime(attSlot uint64, genesisTime time.Time) error {
+	// set expected boundaries for attestations
+	attTime := genesisTime.Add(time.Duration(attSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
 	attSlotRange := attSlot + params.BeaconNetworkConfig().AttestationPropagationSlotRange
-	attTimeRange := 1000 * (genesisTime + (attSlotRange * params.BeaconConfig().SecondsPerSlot))
-	currentTimeInSec := roughtime.Now().Unix()
-	currentTime := 1000 * currentTimeInSec
+	attTimeRange := genesisTime.Add(time.Duration(attSlotRange*params.BeaconConfig().SecondsPerSlot) * time.Second)
+	currentTime := roughtime.Now()
+	clockDisparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
 
 	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
-	currentSlot := (uint64(currentTimeInSec) - genesisTime) / params.BeaconConfig().SecondsPerSlot
-	if attTime-uint64(maximumGossipClockDisparity.Milliseconds()) > uint64(currentTime) ||
-		uint64(currentTime-maximumGossipClockDisparity.Milliseconds()) > attTimeRange {
+	currentSlot := helpers.SlotsSince(genesisTime)
+	if attTime.Add(-clockDisparity).After(currentTime) ||
+		currentTime.Add(-clockDisparity).After(attTimeRange) {
 		return fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconNetworkConfig().AttestationPropagationSlotRange)
 	}
 	return nil
