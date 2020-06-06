@@ -69,12 +69,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
-	preState, err := s.chain.AttestationPreState(ctx, att)
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve pre state")
-		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
 	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, digest, att.Data.CommitteeIndex)) {
 		return pubsub.ValidationIgnore
 	}
@@ -85,7 +79,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	if err := validateAggregateAttTime(att.Data.Slot, uint64(s.chain.GenesisTime().Unix())); err != nil {
+	if err := validateAggregateAttTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -101,6 +95,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
+	preState, err := s.chain.AttestationPreState(ctx, att)
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve pre state")
+		traceutil.AnnotateError(span, err)
+		return pubsub.ValidationIgnore
+	}
 	// Attestation's signature is a valid BLS signature and belongs to correct public key..
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification {
 		if err := blocks.VerifyAttestation(ctx, preState, att); err != nil {
