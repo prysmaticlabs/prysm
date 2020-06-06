@@ -655,6 +655,7 @@ func logExternalDNSAddr(id peer.ID, addr string, port uint) {
 	}
 }
 
+// Attempt to dial an address to verify its connectivity
 func verifyExternalIPAddr(addr string, port uint) {
 	if addr != "" {
 		multiAddr, err := multiAddressBuilder(addr, port)
@@ -662,7 +663,9 @@ func verifyExternalIPAddr(addr string, port uint) {
 			log.Errorf("Could not create multiaddress: %v", err)
 			return
 		}
-		_, err = net.DialTimeout("tcp", addr, dialTimeout)
+		a := fmt.Sprintf("%v:%v", addr, port)
+		_, err = net.DialTimeout("tcp", a, dialTimeout)
+
 		if err != nil {
 			log.WithField("multiAddr", multiAddr.String()).Warn("Public address is not accessible")
 		}
