@@ -26,8 +26,6 @@ import (
 
 const pubsubMessageTimeout = 30 * time.Second
 
-var maximumGossipClockDisparity = params.BeaconNetworkConfig().MaximumGossipClockDisparity
-
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
 
