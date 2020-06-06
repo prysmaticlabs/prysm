@@ -117,7 +117,7 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
 
-	err = r.validateStatusMessage(ctx, msg, stream)
+	err = r.validateStatusMessage(ctx, msg)
 	if err != nil {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
@@ -162,7 +162,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return errors.New("message is not type *pb.Status")
 	}
 
-	if err := r.validateStatusMessage(ctx, m, stream); err != nil {
+	if err := r.validateStatusMessage(ctx, m); err != nil {
 		log.WithFields(logrus.Fields{
 			"peer":  stream.Conn().RemotePeer(),
 			"error": err}).Debug("Invalid status message from peer")
@@ -240,7 +240,7 @@ func (r *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	return err
 }
 
-func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, stream network.Stream) error {
+func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
 	forkDigest, err := r.forkDigest()
 	if err != nil {
 		return err
@@ -250,7 +250,6 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	}
 	genesis := r.chain.GenesisTime()
 	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
-	finalizedRoot := r.chain.FinalizedCheckpt().Root
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
@@ -266,9 +265,9 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	if finalizedEpoch < msg.FinalizedEpoch {
 		return nil
 	}
-	finalizedAtGenesis := (finalizedEpoch == msg.FinalizedEpoch) && finalizedEpoch == 0
-	rootIsEqual := bytes.Equal(finalizedRoot, msg.FinalizedRoot)
-	// If both peers are at genesis with the same root hash, then exit.
+	finalizedAtGenesis := msg.FinalizedEpoch == 0
+	rootIsEqual := bytes.Equal(params.BeaconConfig().ZeroHash[:], msg.FinalizedRoot)
+	// If peer is at genesis with the correct genesis root hash we exit.
 	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
