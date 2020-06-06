@@ -101,7 +101,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 				// This delays consideration in the fork choice until their slot is in the past.
 				// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 				nextSlot := a.Data.Slot + 1
-				if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, helpers.TimeShiftTolerance); err != nil {
+				if err := helpers.VerifySlotTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 					continue
 				}
 
