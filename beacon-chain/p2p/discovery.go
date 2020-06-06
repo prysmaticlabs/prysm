@@ -11,9 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	iaddr "github.com/ipfs/go-ipfs-addr"
 	core "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -122,6 +124,61 @@ func (s *Service) startDiscoveryV5(
 	return listener, nil
 }
 
+// filterPeer validates each node that we retrieve from our dht. We
+// try to ascertain that the peer can be a valid protocol peer.
+// Validity Conditions:
+// 1) The local node is still actively looking for peers to
+//    connect to.
+// 2) Peer has a valid IP and TCP port set in their enr.
+// 3) Peer hasn't been marked as 'bad'
+// 4) Peer is not currently active or connected.
+// 5) Peer's fork digest in their ENR matches that of
+// 	  our localnodes.
+func (s *Service) filterPeer(node *enode.Node) bool {
+	if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
+		log.WithFields(logrus.Fields{"peer": node.String(),
+			"reason": "at peer limit"}).Trace("Not dialing peer")
+		return false
+	}
+	// ignore nodes with no ip address stored.
+	if node.IP() == nil {
+		return false
+	}
+	// do not dial nodes with their tcp ports not set
+	if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
+		if !enr.IsNotFound(err) {
+			log.WithError(err).Debug("Could not retrieve tcp port")
+		}
+		return false
+	}
+	peerData, multiAddr, err := convertToAddrInfo(node)
+	if err != nil {
+		log.WithError(err).Debug("Could not convert to peer data")
+		return false
+	}
+	if s.peers.IsBad(peerData.ID) {
+		return false
+	}
+	if s.peers.IsActive(peerData.ID) {
+		return false
+	}
+	if s.host.Network().Connectedness(peerData.ID) == network.Connected {
+		return false
+	}
+	nodeENR := node.Record()
+	// Decide whether or not to connect to peer that does not
+	// match the proper fork ENR data with our local node.
+	if s.genesisValidatorsRoot != nil {
+		if err := s.compareForkENR(nodeENR); err != nil {
+			log.WithError(err).Trace("Fork ENR mismatches between peer and local node")
+			return false
+		}
+	}
+	// Add peer to peer handler.
+	s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
+	return true
+}
+
 // startDHTDiscovery supports discovery via DHT.
 func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 	multiAddr, err := multiAddrFromString(bootstrapAddr)
@@ -180,6 +237,18 @@ func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
 		multiAddrs = append(multiAddrs, multiAddr)
 	}
 	return multiAddrs
+}
+
+func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, ma.Multiaddr, error) {
+	multiAddr, err := convertToSingleMultiAddr(node)
+	if err != nil {
+		return nil, nil, err
+	}
+	info, err := peer.AddrInfoFromP2pAddr(multiAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	return info, multiAddr, nil
 }
 
 func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
