@@ -39,7 +39,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -438,11 +437,7 @@ func (s *Service) FindPeersWithSubnet(index uint64) (bool, error) {
 		}
 		for _, comIdx := range subnets {
 			if comIdx == index {
-				multiAddr, err := convertToSingleMultiAddr(node)
-				if err != nil {
-					return false, err
-				}
-				info, err := peer.AddrInfoFromP2pAddr(multiAddr)
+				info, multiAddr, err := convertToAddrInfo(node)
 				if err != nil {
 					return false, err
 				}
@@ -510,17 +505,30 @@ func (s *Service) awaitStateInitialized() {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	runutil.RunEvery(s.ctx, pollingPeriod, func() {
-		iterator := s.dv5Listener.RandomNodes()
-		nodes := enode.ReadNodes(iterator, lookupLimit)
-		iterator.Close()
-		multiAddresses := s.processPeers(nodes)
-		// do not process a large amount than required peers.
-		if len(multiAddresses) > lookupLimit {
-			multiAddresses = multiAddresses[:lookupLimit]
+	iterator := s.dv5Listener.RandomNodes()
+	iterator = enode.Filter(iterator, s.filterPeer)
+	defer iterator.Close()
+	for {
+		// Exit if service's context is canceled
+		if s.ctx.Err() != nil {
+			break
 		}
-		s.connectWithAllPeers(multiAddresses)
-	})
+		exists := iterator.Next()
+		if !exists {
+			break
+		}
+		node := iterator.Node()
+		peerInfo, _, err := convertToAddrInfo(node)
+		if err != nil {
+			log.WithError(err).Error("Could not convert to peer info")
+			continue
+		}
+		go func(info *peer.AddrInfo) {
+			if err := s.connectWithPeer(*info); err != nil {
+				log.WithError(err).Tracef("Could not connect with peer %s", info.String())
+			}
+		}(peerInfo)
+	}
 }
 
 func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
@@ -540,11 +548,6 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 }
 
 func (s *Service) connectWithPeer(info peer.AddrInfo) error {
-	if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
-		log.WithFields(logrus.Fields{"peer": info.ID.String(),
-			"reason": "at peer limit"}).Trace("Not dialing peer")
-		return nil
-	}
 	if info.ID == s.host.ID() {
 		return nil
 	}
@@ -556,57 +559,6 @@ func (s *Service) connectWithPeer(info peer.AddrInfo) error {
 		return err
 	}
 	return nil
-}
-
-// process new peers that come in from our dht.
-func (s *Service) processPeers(nodes []*enode.Node) []ma.Multiaddr {
-	var multiAddrs []ma.Multiaddr
-	for _, node := range nodes {
-		// ignore nodes with no ip address stored.
-		if node.IP() == nil {
-			continue
-		}
-		// do not dial nodes with their tcp ports not set
-		if err := node.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
-			if !enr.IsNotFound(err) {
-				log.WithError(err).Error("Could not retrieve tcp port")
-			}
-			continue
-		}
-		multiAddr, err := convertToSingleMultiAddr(node)
-		if err != nil {
-			log.WithError(err).Error("Could not convert to multiAddr")
-			continue
-		}
-		peerData, err := peer.AddrInfoFromP2pAddr(multiAddr)
-		if err != nil {
-			log.WithError(err).Error("Could not get peer id")
-			continue
-		}
-		if s.peers.IsBad(peerData.ID) {
-			continue
-		}
-		if s.peers.IsActive(peerData.ID) {
-			continue
-		}
-		if s.host.Network().Connectedness(peerData.ID) == network.Connected {
-			continue
-		}
-		nodeENR := node.Record()
-		// Decide whether or not to connect to peer that does not
-		// match the proper fork ENR data with our local node.
-		if s.genesisValidatorsRoot != nil {
-			if err := s.compareForkENR(nodeENR); err != nil {
-				log.WithError(err).Debug("Fork ENR mismatches between peer and local node")
-				continue
-			}
-		}
-
-		// Add peer to peer handler.
-		s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
-		multiAddrs = append(multiAddrs, multiAddr)
-	}
-	return multiAddrs
 }
 
 func (s *Service) connectToBootnodes() error {
