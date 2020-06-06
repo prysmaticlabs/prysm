@@ -90,9 +90,6 @@ func SlotsSinceEpochStarts(slot uint64) uint64 {
 	return slot - StartSlot(SlotToEpoch(slot))
 }
 
-// TimeShiftTolerance specifies the tolerance threshold for slots "from the future".
-const TimeShiftTolerance = 500 * time.Millisecond // ms
-
 // VerifySlotTime validates the input slot is not from the future.
 func VerifySlotTime(genesisTime uint64, slot uint64, timeTolerance time.Duration) error {
 	slotTime, err := SlotToTime(genesisTime, slot)

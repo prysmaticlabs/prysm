@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
@@ -18,7 +17,7 @@ func WriteStateToDisk(state *stateTrie.BeaconState) {
 	}
 	fp := path.Join(os.TempDir(), fmt.Sprintf("beacon_state_%d.ssz", state.Slot()))
 	log.Warnf("Writing state to disk at %s", fp)
-	enc, err := ssz.Marshal(state.InnerStateUnsafe())
+	enc, err := state.InnerStateUnsafe().MarshalSSZ()
 	if err != nil {
 		log.WithError(err).Error("Failed to ssz encode state")
 		return

@@ -3,7 +3,6 @@ package debug
 import (
 	"context"
 
-	"github.com/prysmaticlabs/go-ssz"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -38,7 +37,7 @@ func (ds *Server) GetBeaconState(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute state by slot: %v", err)
 		}
-		encoded, err := ssz.Marshal(st.CloneInnerState())
+		encoded, err := st.CloneInnerState().MarshalSSZ()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not ssz encode beacon state: %v", err)
 		}
@@ -50,7 +49,7 @@ func (ds *Server) GetBeaconState(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute state by block root: %v", err)
 		}
-		encoded, err := ssz.Marshal(st.CloneInnerState())
+		encoded, err := st.CloneInnerState().MarshalSSZ()
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not ssz encode beacon state: %v", err)
 		}

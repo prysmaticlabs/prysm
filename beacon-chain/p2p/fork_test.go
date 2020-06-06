@@ -238,7 +238,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 		NextForkVersion:   nextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
-	enc, err := ssz.Marshal(enrForkID)
+	enc, err := enrForkID.MarshalSSZ()
 	if err != nil {
 		t.Fatal(err)
 	}
