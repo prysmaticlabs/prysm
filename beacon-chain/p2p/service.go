@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -55,6 +56,9 @@ const searchLimit = 100
 
 // lookup limit whenever looking up for random nodes.
 const lookupLimit = 15
+
+// Dial timeout
+const dialTimeout = 1 * time.Second
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
@@ -290,6 +294,7 @@ func (s *Service) Start() {
 
 	if p2pHostAddress != "" {
 		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+		verifyExternalIPAddr(p2pHostAddress, p2pTCPPort)
 	}
 
 	p2pHostDNS := s.cfg.HostDNS
@@ -695,5 +700,19 @@ func logExternalDNSAddr(id peer.ID, addr string, port uint) {
 			"multiAddr",
 			"/dns4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
 		).Info("Node started external p2p server")
+	}
+}
+
+func verifyExternalIPAddr(addr string, port uint) {
+	if addr != "" {
+		multiAddr, err := multiAddressBuilder(addr, port)
+		if err != nil {
+			log.Errorf("Could not create multiaddress: %v", err)
+			return
+		}
+		_, err = net.DialTimeout("tcp", addr, dialTimeout)
+		if err != nil {
+			log.WithField("multiAddr", multiAddr.String()).Warn("Public address is not accessible")
+		}
 	}
 }
