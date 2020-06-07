@@ -790,6 +790,13 @@ go_repository(
         "gazelle:go_visibility @prysm//fuzz:__pkg__",  # Only used for fuzz testing.
     ],
     importpath = "github.com/protolambda/zrnt",
-    sum = "h1:Xm/FFabauuTayoPN/V2nvYZezB6L7Kj87x+QJ5/Vz2Q=",
-    version = "v0.11.2",
+    sum = "h1:w9H+gzwPvMDDjSmRijo8dvqpVMYi2gxNuPJTao8jFQQ=",
+    version = "v0.12.1",
+)
+
+go_repository(
+    name = "com_github_protolambda_ztyp",
+    importpath = "github.com/protolambda/ztyp",
+    sum = "h1:rW8+XYVWp0rOlH/ot7H61crZKXbsj6T3ZT7MWX1tOAk=",
+    version = "v0.0.1",
 )

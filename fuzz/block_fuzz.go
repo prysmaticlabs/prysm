@@ -9,10 +9,9 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/protolambda/zrnt/eth2/phase0"
+	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zssz"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	//ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prylabs_testing "github.com/prysmaticlabs/prysm/fuzz/testing"
@@ -83,25 +82,24 @@ func beaconFuzzBlockZrnt(bb []byte, sb []byte) ([]byte, bool) {
 		panic("Deadline exceeded")
 	})
 
-	st := &phase0.BeaconState{}
-	if err := zssz.Decode(bytes.NewReader(sb), uint64(len(sb)), st, phase0.BeaconStateSSZ); err != nil {
+	st := &beacon.BeaconState{}
+	if err := zssz.Decode(bytes.NewReader(sb), uint64(len(sb)), st, beacon.BeaconStateSSZ); err != nil {
 		return fail(err)
 	}
-	blk := &phase0.SignedBeaconBlock{}
-	if err := zssz.Decode(bytes.NewReader(bb), uint64(len(bb)), blk, phase0.SignedBeaconBlockSSZ); err != nil {
+	blk := &beacon.SignedBeaconBlock{}
+	if err := zssz.Decode(bytes.NewReader(bb), uint64(len(bb)), blk, beacon.SignedBeaconBlockSSZ); err != nil {
 		return fail(err)
 	}
-	ffstate := phase0.NewFullFeaturedState(st)
-	ffstate.LoadPrecomputedData()
-	blockProc := new(phase0.BlockProcessFeature)
-	blockProc.Meta = ffstate
-	blockProc.Block = blk
-	if err := ffstate.StateTransition(blockProc, true /*validate state root*/); err != nil {
+	state, err := beacon.AsBeaconStateView(beacon.BeaconStateType.Deserialize(bytes.NewReader(bb), uint64(len(bb))))
+	if err != nil {
+		return fail(err)
+	}
+	if err := state.StateTransition(ctx, nil, blk, false /*TODO:something*/); err != nil {
 		return fail(err)
 	}
 	var ret bytes.Buffer
 	writer := bufio.NewWriter(&ret)
-	if _, err := zssz.Encode(writer, ffstate.BeaconState, phase0.BeaconStateSSZ); err != nil {
+	if err := state.Serialize(writer); err != nil {
 		return fail(err)
 	}
 	if err := writer.Flush(); err != nil {
