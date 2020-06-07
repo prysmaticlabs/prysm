@@ -222,8 +222,8 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.ReduceAttesterStateCopy = true
 	}
 	if ctx.Bool(slasherP2P.Name) {
-		log.Warn("Slasher P2P validation. Please do not use this flag if you are not running a slasher " +
-			"that connects to this beacon node!!!")
+		log.Warn("Enabled slasher-friendly P2P validation. Please do not use this flag if you are not running a slasher " +
+			"that connects to this beacon node!")
 		cfg.SlasherP2P = true
 	}
 	Init(cfg)
