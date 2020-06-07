@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ethereum.beacon.rpc.v1;
 
-import "proto/beacon/p2p/v1/types.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
@@ -34,6 +33,12 @@ service Debug {
     rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/debug/forkchoice"
+        };
+    }
+    // Returns a list of validators individual vote status of a given epoch.
+    rpc GetIndividualVotes(IndividualVotesRequest) returns (IndividualVotesRespond) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/individual_votes"
         };
     }
 }
@@ -97,4 +102,50 @@ message ProtoArrayNode {
     uint64 best_child = 7;
     // Best descendant of the proto array node.
     uint64 best_descendant = 8;
+}
+
+message IndividualVotesRequest {
+    // Epoch of the request.
+    uint64 epoch = 1;
+    // Validator 48 byte BLS public keys to filter validators for the given epoch.
+    repeated bytes public_keys = 2;
+    // Validator indices to filter validators for the given epoch.
+    repeated uint64 indices = 3;
+}
+
+message IndividualVotesRespond {
+    message IndividualVote {
+        // The epoch of the request.
+        uint64 epoch = 1;
+        // The public key of the request.
+        bytes public_key = 2;
+        // The validator index of the request.
+        uint64 validator_index = 3;
+        // Has the validator been slashed.
+        bool is_slashed = 4;
+        // Is the validator withdrawable.
+        bool is_withdrawable_in_current_epoch = 5;
+        // Is the validator active in current epoch.
+        bool is_active_in_current_epoch = 6;
+        // Was the validator active in previous epoch.
+        bool is_active_in_previous_epoch = 7;
+        // Did validator attest for current epoch.
+        bool is_current_epoch_attester = 8;
+        // Did validator attest target for current epoch.
+        bool is_current_epoch_target_attester = 9;
+        // Did validator attest for previous epoch.
+        bool is_previous_epoch_attester = 10;
+        // Did validator attest target for previous epoch.
+        bool is_previous_epoch_target_attester = 11;
+        // Did validator attest head for previous epoch.
+        bool is_previous_epoch_head_attester = 12;
+        // The current effective balance of the validator.
+        uint64 current_epoch_effective_balance_gwei = 13;
+        // The slots of when the validator's attestation got included in the block.
+        uint64 inclusion_slot = 14;
+        // How many slots have passed until the validator's attestation got included in the block.
+        uint64 inclusion_distance = 15;
+    }
+
+    repeated IndividualVote individual_votes = 1;
 }
