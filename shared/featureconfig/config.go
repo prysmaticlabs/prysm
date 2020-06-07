@@ -44,7 +44,7 @@ type Flags struct {
 	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	SlasherP2P                                 bool // SlasherP2P  use less restrictive p2p validation in order to use beacon node with slasher.
+	SlasherP2P                                 bool // SlasherP2P use less restrictive p2p validation for beacon nodes that have a connected slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
@@ -222,8 +222,8 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.ReduceAttesterStateCopy = true
 	}
 	if ctx.Bool(slasherP2P.Name) {
-		log.Warn("Slasher P2P validation. Please do not use this flag if you are not running a slasher " +
-			"that connects to this beacon node!!!")
+		log.Warn("Enabled slasher-friendly P2P validation. Please do not use this flag if you are not running a slasher " +
+			"that connects to this beacon node!")
 		cfg.SlasherP2P = true
 	}
 	Init(cfg)
