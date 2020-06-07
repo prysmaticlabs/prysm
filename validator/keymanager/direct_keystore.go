@@ -54,9 +54,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 	if err != nil {
 		return nil, keystoreOptsHelp, err
 	}
-	if !exists {
-		return nil, "", errors.New("no validator keys found, please use validator accounts create")
-	} else {
+	if exists {
 		if opts.Passphrase == "" {
 			log.Info("Enter your validator account password:")
 			bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
@@ -70,6 +68,8 @@ func NewKeystore(input string) (KeyManager, string, error) {
 		if err := accounts.VerifyAccountNotExists(opts.Path, opts.Passphrase); err == nil {
 			log.Info("No account found, creating new validator account...")
 		}
+	} else {
+		return nil, "", errors.New("no validator keys found, please use validator accounts create")
 	}
 
 	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, params.BeaconConfig().ValidatorPrivkeyFileName, opts.Passphrase)
