@@ -9,6 +9,7 @@ go_library(
         "blocks.go",
         "hash_function.go",
         "helpers.go",
+        "htrutils.go",
         "merkleize.go",
         "state_root.go",
         "trie_helpers.go",
