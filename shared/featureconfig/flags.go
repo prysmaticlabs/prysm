@@ -161,6 +161,13 @@ var (
 		Name:  "reduce-attester-state-copy",
 		Usage: "Reduces the amount of state copies for attester rpc",
 	}
+	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
+	slasherP2P = &cli.BoolFlag{
+		Name: "slasher-p2p",
+		Usage: "Slasher node needs to get as much data as it can from the network therefore " +
+			"please use this flag to enable a less restrictive p2p behaviour when connecting " +
+			"a slasher to this beacon node",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -493,6 +500,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableFieldTrie,
 	disableStateRefCopy,
 	reduceAttesterStateCopy,
+	slasherP2P,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
