@@ -164,9 +164,8 @@ var (
 	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
 	slasherP2P = &cli.BoolFlag{
 		Name: "slasher-p2p",
-		Usage: "Slasher node needs to get as much data as it can from the network therefore " +
-			"please use this flag to enable a less restrictive p2p behaviour when connecting " +
-			"a slasher to this beacon node",
+		Usage: "Use this flag to reduce block p2p validation in order for the slasher to receive any blocks" +
+			"the beacon node receives. Please only use if there is a slasher connected to this beacon node",
 	}
 )
 
