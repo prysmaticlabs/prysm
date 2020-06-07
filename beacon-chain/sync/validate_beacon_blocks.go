@@ -80,6 +80,25 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	r.pendingQueueLock.RUnlock()
 
+	// send to block to slasher but dont proceed in processing it.
+	if featureconfig.Get().SlasherP2P && hasSeen {
+		state, err := r.chain.HeadState(ctx)
+		if err != nil {
+			return pubsub.ValidationIgnore
+		}
+		if err := blocks.VerifyBlockSignature(state, blk); err != nil {
+			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
+			return pubsub.ValidationReject
+		}
+		r.blockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{
+				SignedBlock: blk,
+			},
+		})
+		return pubsub.ValidationReject
+	}
+
 	// Add metrics for block arrival time subtracts slot start time.
 	if captureArrivalTimeMetric(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot) != nil {
 		return pubsub.ValidationIgnore
@@ -119,18 +138,6 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 		if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
 			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
-			return pubsub.ValidationReject
-		}
-		// send to block to slasher but dont proceed in processing it.
-		if featureconfig.Get().SlasherP2P && hasSeen {
-			// Broadcast the block on a feed to notify other services in the beacon node
-			// of a received block (even if it does not process correctly through a state transition).
-			r.blockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{
-					SignedBlock: blk,
-				},
-			})
 			return pubsub.ValidationReject
 		}
 
