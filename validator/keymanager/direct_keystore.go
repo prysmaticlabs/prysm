@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 
@@ -54,11 +55,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 		return nil, keystoreOptsHelp, err
 	}
 	if !exists {
-		// If an account does not exist, we create a new one and start the node.
-		opts.Path, opts.Passphrase, err = accounts.CreateValidatorAccount(opts.Path, opts.Passphrase)
-		if err != nil {
-			return nil, keystoreOptsHelp, err
-		}
+		return nil, "", errors.New("no validator keys found, please use validator accounts create")
 	} else {
 		if opts.Passphrase == "" {
 			log.Info("Enter your validator account password:")
