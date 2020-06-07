@@ -22,7 +22,8 @@ func TestRunAfter_ContextCancelled(t *testing.T) {
 }
 
 func TestRunAfter_TimeExceeded(t *testing.T) {
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	var wg sync.WaitGroup
 	wg.Add(1)
 	var called bool
