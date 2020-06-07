@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/protolambda/zrnt/eth2/beacon"
 	"github.com/protolambda/zssz"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 	//ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const timeout = 60*time.Second
+const timeout = 60 * time.Second
 
 // BeaconFuzzBlock using the corpora from sigp/beacon-fuzz.
 func BeaconFuzzBlock(b []byte) ([]byte, bool) {
@@ -94,7 +94,11 @@ func beaconFuzzBlockZrnt(bb []byte, sb []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	if err := state.StateTransition(ctx, nil, blk, false /*TODO:something*/); err != nil {
+	epc, err := state.NewEpochsContext()
+	if err != nil {
+		return fail(err)
+	}
+	if err := state.StateTransition(ctx, epc, blk, true /* validateResult */); err != nil {
 		return fail(err)
 	}
 	var ret bytes.Buffer
