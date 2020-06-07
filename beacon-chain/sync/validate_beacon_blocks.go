@@ -57,20 +57,13 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if blk.Block == nil {
 		return pubsub.ValidationReject
 	}
-
+	hasSeen := false
 	// Verify the block is the first block received for the proposer for the slot.
 	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
-		if featureconfig.Get().SlasherP2P {
-			// Broadcast the block on a feed to notify other services in the beacon node
-			// of a received block (even if it does not process correctly through a state transition).
-			r.blockNotifier.BlockFeed().Send(&feed.Event{
-				Type: blockfeed.ReceivedBlock,
-				Data: &blockfeed.ReceivedBlockData{
-					SignedBlock: blk,
-				},
-			})
+		if !featureconfig.Get().SlasherP2P {
+			return pubsub.ValidationIgnore
 		}
-		return pubsub.ValidationIgnore
+		hasSeen = true
 	}
 
 	blockRoot, err := stateutil.BlockRoot(blk.Block)
@@ -127,6 +120,18 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 		if err := blocks.VerifyBlockSignature(parentState, blk); err != nil {
 			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
+			return pubsub.ValidationReject
+		}
+		// send to block to slasher but dont proceed in processing it.
+		if featureconfig.Get().SlasherP2P && hasSeen {
+			// Broadcast the block on a feed to notify other services in the beacon node
+			// of a received block (even if it does not process correctly through a state transition).
+			r.blockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: &blockfeed.ReceivedBlockData{
+					SignedBlock: blk,
+				},
+			})
 			return pubsub.ValidationReject
 		}
 
