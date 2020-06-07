@@ -96,6 +96,7 @@ func (ds *Server) GetIndividualVotes(
 		index, ok := requestedState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 		if !ok {
 			votes = append(votes, &pbrpc.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: ^uint64(0)})
+			continue
 		}
 		filtered[index] = true
 		filteredIndices = append(filteredIndices, index)
@@ -112,16 +113,16 @@ func (ds *Server) GetIndividualVotes(
 
 	v, b, err := precompute.New(ctx, requestedState)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not set up pre compute instance")
+		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
 	}
 	v, b, err = precompute.ProcessAttestations(ctx, requestedState, v, b)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not pre compute attestations")
 	}
-
 	validators := requestedState.ValidatorsReadOnly()
 	for _, index := range filteredIndices {
 		if int(index) >= len(v) {
+			votes = append(votes, &pbrpc.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
 			continue
 		}
 		pb := validators[index].PublicKey()
