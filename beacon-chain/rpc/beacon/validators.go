@@ -323,7 +323,7 @@ func (bs *Server) ListValidators(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	currentEpoch := helpers.CurrentEpoch(headState)
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 
 	switch q := req.QueryFilter.(type) {
@@ -332,7 +332,28 @@ func (bs *Server) ListValidators(
 			requestedEpoch = 0
 		}
 	case *ethpb.ListValidatorsRequest_Epoch:
+		if q.Epoch > currentEpoch {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+				currentEpoch,
+				q.Epoch,
+			)
+		}
 		requestedEpoch = q.Epoch
+	}
+
+	if helpers.StartSlot(requestedEpoch) > headState.Slot() {
+		headState = headState.Copy()
+		headState, err = state.ProcessSlots(ctx, headState, helpers.StartSlot(requestedEpoch))
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not process slots up to %d: %v",
+				helpers.StartSlot(requestedEpoch),
+				err,
+			)
+		}
 	}
 
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
@@ -396,14 +417,6 @@ func (bs *Server) ListValidators(
 			}
 		}
 		validatorList = validatorList[:stopIdx]
-	} else if requestedEpoch > currentEpoch {
-		// Otherwise, we are requesting data from the future and we return an error.
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			currentEpoch,
-			requestedEpoch,
-		)
 	}
 
 	// Filter active validators if the request specifies it.
@@ -813,7 +826,7 @@ func (bs *Server) getValidatorParticipationUsingOldArchival(
 
 	pBal := bs.ParticipationFetcher.Participation(requestedEpoch)
 	if pBal == nil {
-		pBal = &precompute.Balance{}
+		return nil, status.Errorf(codes.Unavailable, "Participation information for epoch %d is not yet available", requestedEpoch)
 	}
 	participation := &ethpb.ValidatorParticipation{
 		EligibleEther: pBal.ActivePrevEpoch,
@@ -936,24 +949,14 @@ func (bs *Server) GetValidatorPerformance(
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	validatorSummary := state.ValidatorSummary
-
-	responseCap := len(req.Indices) + len(req.PublicKeys)
-	validatorIndices := make([]uint64, 0, responseCap)
-	beforeTransitionBalances := make([]uint64, 0, responseCap)
-	afterTransitionBalances := make([]uint64, 0, responseCap)
-	effectiveBalances := make([]uint64, 0, responseCap)
-	inclusionSlots := make([]uint64, 0, responseCap)
-	inclusionDistances := make([]uint64, 0, responseCap)
-	correctlyVotedSource := make([]bool, 0, responseCap)
-	correctlyVotedTarget := make([]bool, 0, responseCap)
-	correctlyVotedHead := make([]bool, 0, responseCap)
-	missingValidators := make([][]byte, 0, responseCap)
-
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+
+	responseCap := len(req.Indices) + len(req.PublicKeys)
+	validatorIndices := make([]uint64, 0, responseCap)
+	missingValidators := make([][]byte, 0, responseCap)
 
 	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
 	// Convert the list of validator public keys to validator indices and add to the indices set.
@@ -986,6 +989,19 @@ func (bs *Server) GetValidatorPerformance(
 		return validatorIndices[i] < validatorIndices[j]
 	})
 
+	validatorSummary := state.ValidatorSummary
+	currentEpoch := helpers.CurrentEpoch(headState)
+
+	responseCap = len(validatorIndices)
+	pubKeys := make([][]byte, 0, responseCap)
+	beforeTransitionBalances := make([]uint64, 0, responseCap)
+	afterTransitionBalances := make([]uint64, 0, responseCap)
+	effectiveBalances := make([]uint64, 0, responseCap)
+	inclusionSlots := make([]uint64, 0, responseCap)
+	inclusionDistances := make([]uint64, 0, responseCap)
+	correctlyVotedSource := make([]bool, 0, responseCap)
+	correctlyVotedTarget := make([]bool, 0, responseCap)
+	correctlyVotedHead := make([]bool, 0, responseCap)
 	// Append performance summaries.
 	// Also track missing validators using public keys.
 	for _, idx := range validatorIndices {
@@ -993,21 +1009,20 @@ func (bs *Server) GetValidatorPerformance(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "could not get validator: %v", err)
 		}
+		pubKey := val.PublicKey()
 		if idx >= uint64(len(validatorSummary)) {
 			// Not listed in validator summary yet; treat it as missing.
-			pubKey := val.PublicKey()
 			missingValidators = append(missingValidators, pubKey[:])
 			continue
 		}
-		currentEpoch := helpers.CurrentEpoch(headState)
 		if !helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			// Inactive validator; treat it as missing.
-			pubKey := val.PublicKey()
 			missingValidators = append(missingValidators, pubKey[:])
 			continue
 		}
 
 		summary := validatorSummary[idx]
+		pubKeys = append(pubKeys, pubKey[:])
 		effectiveBalances = append(effectiveBalances, summary.CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, summary.BeforeEpochTransitionBalance)
 		afterTransitionBalances = append(afterTransitionBalances, summary.AfterEpochTransitionBalance)
@@ -1019,6 +1034,7 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    pubKeys,
 		InclusionSlots:                inclusionSlots,
 		InclusionDistances:            inclusionDistances,
 		CorrectlyVotedSource:          correctlyVotedSource,

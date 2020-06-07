@@ -22,14 +22,18 @@ package featureconfig
 import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	MinimalConfig                              bool // MinimalConfig as defined in the spec.
+	// Configuration related flags.
+	MinimalConfig bool // MinimalConfig as defined in the spec.
+	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
+
+	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -39,9 +43,9 @@ type Flags struct {
 	EnableSnappyDBCompression                  bool // EnableSnappyDBCompression in the database.
 	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
-	EnableByteMempool                          bool // EnaableByteMempool memory management.
 	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool // CheckHeadState checks the current headstate before retrieving the desired state from the db.
@@ -54,16 +58,17 @@ type Flags struct {
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
+	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
 	DisableForkChoice bool
 
-	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
-	BroadcastSlashings         bool
-	DisableHistoricalDetection bool // DisableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
-	DisableLookback            bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
+	// Slasher toggles.
+	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
+	EnableHistoricalDetection bool // EnableHistoricalDetection disables historical attestation detection and performs detection on the chain head immediately.
+	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -165,10 +170,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
 	}
-	if ctx.Bool(enableByteMempool.Name) {
-		log.Warn("Enabling experimental memory management for beacon state")
-		cfg.EnableByteMempool = true
-	}
 	if ctx.Bool(enableStateGenSigVerify.Name) {
 		log.Warn("Enabling sig verify for state gen")
 		cfg.EnableStateGenSigVerify = true
@@ -189,21 +190,18 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.Bool(enableFieldTrie.Name) {
-		log.Warn("Enabling state field trie")
-		cfg.EnableFieldTrie = true
+	cfg.EnableFieldTrie = true
+	if ctx.Bool(disableFieldTrie.Name) {
+		log.Warn("Disabling state field trie")
+		cfg.EnableFieldTrie = false
 	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
 	}
-	if ctx.Bool(enableStateRefCopy.Name) {
-		log.Warn("Enabling state reference copy")
-		cfg.EnableStateRefCopy = true
-	}
-	if ctx.Bool(broadcastSlashingFlag.Name) {
-		log.Warn("Enabling broadcast slashing to p2p network")
-		cfg.BroadcastSlashings = true
+	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
+		log.Warn("Disabling slashing broadcasting to p2p network")
+		cfg.DisableBroadcastSlashings = true
 	}
 	if ctx.Bool(skipRegenHistoricalStates.Name) {
 		log.Warn("Enabling skipping of historical states regen")
@@ -212,6 +210,15 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
 		log.Warn("Enabling weighted round robin in initial syncing")
 		cfg.EnableInitSyncWeightedRoundRobin = true
+	}
+	cfg.EnableStateRefCopy = true
+	if ctx.Bool(disableStateRefCopy.Name) {
+		log.Warn("Disabling state reference copy")
+		cfg.EnableStateRefCopy = false
+	}
+	if ctx.Bool(reduceAttesterStateCopy.Name) {
+		log.Warn("Enabling feature that reduces attester state copy")
+		cfg.ReduceAttesterStateCopy = true
 	}
 	Init(cfg)
 }
@@ -222,9 +229,9 @@ func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
-	if ctx.Bool(disableHistoricalDetectionFlag.Name) {
-		log.Warn("Disabling historical attestation detection")
-		cfg.DisableHistoricalDetection = true
+	if ctx.Bool(enableHistoricalDetectionFlag.Name) {
+		log.Warn("Enabling historical attestation detection")
+		cfg.EnableHistoricalDetection = true
 	}
 	if ctx.Bool(disableLookbackFlag.Name) {
 		log.Warn("Disabling slasher lookback")
@@ -247,9 +254,14 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
 	}
-	if ctx.Bool(enableDomainDataCacheFlag.Name) {
-		log.Warn("Enabled domain data cache.")
-		cfg.EnableDomainDataCache = true
+	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
+		log.Warn("Enabled validator attestation and block slashing protection using an external slasher.")
+		cfg.SlasherProtection = true
+	}
+	cfg.EnableDomainDataCache = true
+	if ctx.Bool(disableDomainDataCacheFlag.Name) {
+		log.Warn("Disabled domain data cache.")
+		cfg.EnableDomainDataCache = false
 	}
 	Init(cfg)
 }
@@ -279,8 +291,10 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		params.UseMinimalConfig()
-	} else {
-		log.Warn("Using default mainnet config")
+	} else if ctx.Bool(e2eConfigFlag.Name) {
+		log.Warn("Using end-to-end testing config")
+		cfg.MinimalConfig = true
+		params.UseE2EConfig()
 	}
 	return cfg
 }

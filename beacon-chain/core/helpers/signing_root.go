@@ -39,6 +39,8 @@ func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 		switch object.(type) {
 		case *ethpb.BeaconBlock:
 			return stateutil.BlockRoot(object.(*ethpb.BeaconBlock))
+		case *ethpb.AttestationData:
+			return stateutil.AttestationDataRoot(object.(*ethpb.AttestationData))
 		default:
 			// utilise generic ssz library
 			return ssz.HashTreeRoot(object)
@@ -74,7 +76,7 @@ func VerifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []b
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
-	if !sig.Verify(root[:], publicKey) {
+	if !sig.Verify(publicKey, root[:]) {
 		return ErrSigFailedToVerify
 	}
 	return nil
@@ -97,7 +99,7 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
-	if !sig.Verify(root[:], publicKey) {
+	if !sig.Verify(publicKey, root[:]) {
 		return ErrSigFailedToVerify
 	}
 	return nil
@@ -119,7 +121,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub []byte, s
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
-	if !sig.Verify(root[:], publicKey) {
+	if !sig.Verify(publicKey, root[:]) {
 		return ErrSigFailedToVerify
 	}
 	return nil

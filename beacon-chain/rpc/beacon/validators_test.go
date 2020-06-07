@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -485,6 +486,10 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	}
 	bs := &Server{
 		BeaconDB: db,
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -615,6 +620,10 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB: db,
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -685,6 +694,10 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
@@ -718,6 +731,10 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
 		},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -768,6 +785,10 @@ func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	pubKeysWanted := make([][]byte, len(pubkeyIndicesWanted))
@@ -807,6 +828,10 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
 		},
 	}
 
@@ -946,6 +971,10 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -991,6 +1020,10 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	req := &ethpb.ListValidatorsRequest{}
@@ -1031,9 +1064,14 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	if err := st.SetValidators(validators); err != nil {
 		t.Fatal(err)
 	}
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: st,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 30
+			Genesis: time.Now().Add(time.Duration(-1*int64(30*secondsPerEpoch)) * time.Second),
 		},
 	}
 
@@ -1061,6 +1099,92 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	if !reflect.DeepEqual(res.ValidatorList, want[:21]) {
 		t.Errorf("Incorrect number of validators, wanted %d received %d", len(want[:21]), len(res.ValidatorList))
+	}
+}
+
+func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	headSlot := uint64(0)
+	numValidators := uint64(64)
+	validators := make([]*ethpb.Validator, numValidators)
+	balances := make([]uint64, numValidators)
+	for i := uint64(0); i < numValidators; i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch:       0,
+			PublicKey:             make([]byte, 48),
+			WithdrawalCredentials: make([]byte, 32),
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
+	for i := 0; i < len(validators); i++ {
+		want[i] = &ethpb.Validators_ValidatorContainer{
+			Index:     uint64(i),
+			Validator: validators[i],
+		}
+	}
+
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(headSlot); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = make([]byte, 32)
+		stateRoots[i] = make([]byte, 32)
+	}
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
+	}
+	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+	if err := st.SetBlockRoots(blockRoots); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetStateRoots(stateRoots); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetRandaoMixes(randaoMixes); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetSlashings(slashings); err != nil {
+		t.Fatal(err)
+	}
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			Genesis: time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second),
+		},
+	}
+
+	req := &ethpb.ListValidatorsRequest{
+		QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
+			Epoch: 1,
+		},
+	}
+	res, err := bs.ListValidators(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.ValidatorList) != len(want) {
+		t.Errorf("Incorrect number of validators, wanted %d received %d", len(want), len(res.ValidatorList))
+	}
+	for i := 0; i < len(res.ValidatorList); i++ {
+		if !reflect.DeepEqual(res.ValidatorList[i], want[i]) {
+			t.Errorf("Wanted validator %d: %v, got %v", i, want[i], res.ValidatorList[i])
+		}
 	}
 }
 
@@ -1803,13 +1927,9 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 		StateGen:             stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if res.Participation.VotedEther != 0 || res.Participation.EligibleEther != 0 {
-		t.Error("Incorrect validator participation response")
+	wanted := "Participation information for epoch 0 is not yet available"
+	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}}); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 
@@ -1949,6 +2069,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},
@@ -1961,7 +2082,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	}
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
-		PublicKeys: [][]byte{publicKey1[:], publicKey2[:], publicKey3[:]},
+		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2044,6 +2165,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},
@@ -2056,7 +2178,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	}
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
-		Indices: []uint64{0, 1, 2},
+		Indices: []uint64{2, 1, 0},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2139,6 +2261,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},

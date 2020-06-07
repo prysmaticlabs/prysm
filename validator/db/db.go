@@ -8,11 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/db/iface"
-	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
-
-var log = logrus.WithField("prefix", "db")
 
 var _ = iface.ValidatorDB(&Store{})
 
@@ -96,6 +93,23 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 	}
 
 	return kv, err
+}
+
+// GetKVStore returns the validator boltDB key-value store from directory. Returns nil if no such store exists.
+func GetKVStore(directory string) (*Store, error) {
+	fileName := filepath.Join(directory, databaseFileName)
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return nil, nil
+	}
+	boltDb, err := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		if err == bolt.ErrTimeout {
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
+		}
+		return nil, err
+	}
+
+	return &Store{db: boltDb, databasePath: directory}, nil
 }
 
 // Size returns the db size in bytes.

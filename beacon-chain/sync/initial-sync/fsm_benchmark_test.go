@@ -5,9 +5,9 @@ import (
 )
 
 func BenchmarkStateMachine_trigger(b *testing.B) {
-	sm := newStateMachine()
+	sm := newStateMachineManager()
 
-	handlerFn := func(state *epochState, in interface{}) (id stateID, err error) {
+	handlerFn := func(m *stateMachine, in interface{}) (id stateID, err error) {
 		response, ok := in.(*fetchRequestParams)
 		if !ok {
 			return 0, errInputNotFetchRequestParams
@@ -16,30 +16,22 @@ func BenchmarkStateMachine_trigger(b *testing.B) {
 		return stateScheduled, nil
 	}
 
-	sm.addHandler(stateNew, eventSchedule, handlerFn)
-	sm.addHandler(stateScheduled, eventDataReceived, handlerFn)
-	sm.addHandler(stateDataParsed, eventReadyToSend, handlerFn)
-	sm.addHandler(stateSkipped, eventExtendWindow, handlerFn)
-	sm.addHandler(stateSent, eventCheckStale, handlerFn)
-
-	for i := uint64(0); i < lookaheadEpochs; i++ {
-		sm.addEpochState(i)
-	}
+	sm.addEventHandler(eventTick, stateNew, handlerFn)
+	sm.addEventHandler(eventTick, stateScheduled, handlerFn)
+	sm.addEventHandler(eventTick, stateDataParsed, handlerFn)
+	sm.addEventHandler(eventTick, stateSkipped, handlerFn)
+	sm.addEventHandler(eventTick, stateSent, handlerFn)
+	sm.addStateMachine(64)
 
 	b.ReportAllocs()
 	b.ResetTimer()
-
-	event, ok := sm.events[eventSchedule]
-	if !ok {
-		b.Errorf("event not found: %v", eventSchedule)
-	}
 
 	for i := 0; i < b.N; i++ {
 		data := &fetchRequestParams{
 			start: 23,
 			count: 32,
 		}
-		err := sm.epochs[1].trigger(event, data)
+		err := sm.machines[64].trigger(eventTick, data)
 		if err != nil {
 			b.Fatal(err)
 		}

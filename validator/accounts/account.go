@@ -3,6 +3,7 @@ package accounts
 
 import (
 	"bufio"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -17,12 +18,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "accounts")
+
+var errFailedToCloseDb = errors.New("failed to close the database")
+var errFailedToCloseManyDb = errors.New("failed to close one or more databases")
 
 // DecryptKeysFromKeystore extracts a set of validator private keys from
 // an encrypted keystore directory and a password string.
@@ -103,22 +108,24 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to create deposit transaction")
 	}
-	log.Info(`Account creation complete! Copy and paste the raw transaction data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
+	log.Info(`Account creation complete! Copy and paste the raw deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`
-========================Raw Transaction Data=======================
+========================Deposit Data=======================
 
 %#x
 
 ===================================================================
 `, tx.Data())
-	fmt.Println("***Enter the above Raw Transaction Data into step 3 on https://prylabs.net/participate***")
+	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
 	publicKey := validatorKey.PublicKey.Marshal()[:]
-	log.Infof("Deposit data displayed for public key: %#x", publicKey)
+	log.Infof("Public key: %#x", publicKey)
 	return nil
 }
 
 // Exists checks if a validator account at a given keystore path exists.
-func Exists(keystorePath string) (bool, error) {
+// assertNonEmpty is a boolean used to determine whether to check that
+// the provided directory exists.
+func Exists(keystorePath string, assertNonEmpty bool) (bool, error) {
 	/* #nosec */
 	f, err := os.Open(keystorePath)
 	if err != nil {
@@ -130,10 +137,13 @@ func Exists(keystorePath string) (bool, error) {
 		}
 	}()
 
-	_, err = f.Readdirnames(1) // Or f.Readdir(1)
-	if err == io.EOF {
-		return false, nil
+	if assertNonEmpty {
+		_, err = f.Readdirnames(1) // Or f.Readdir(1)
+		if err == io.EOF {
+			return false, nil
+		}
 	}
+
 	return true, err
 }
 
@@ -141,7 +151,7 @@ func Exists(keystorePath string) (bool, error) {
 func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
 	// Forces user to create directory if using non-default path.
 	if path != DefaultValidatorDir() {
-		exists, err := Exists(path)
+		exists, err := Exists(path, false /* assertNonEmpty */)
 		if err != nil {
 			return path, passphrase, err
 		}
@@ -214,6 +224,69 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 	return path, passphrase, nil
 }
 
+// Merge merges data from validator databases in sourceDirectories into a new store, which is created in targetDirectory.
+func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) (err error) {
+	var sourceStores []*db.Store
+	defer func() {
+		failedToClose := false
+		for _, store := range sourceStores {
+			if deferErr := store.Close(); deferErr != nil {
+				failedToClose = true
+			}
+		}
+		if failedToClose {
+			if err != nil {
+				err = errors.Wrapf(err, errFailedToCloseManyDb.Error())
+			} else {
+				err = errFailedToCloseManyDb
+			}
+		}
+	}()
+
+	for _, dir := range sourceDirectories {
+		store, err := db.GetKVStore(dir)
+		if err != nil {
+			return errors.Wrapf(err, "failed to prepare the database in %s for merging", dir)
+		}
+		if store == nil {
+			continue
+		}
+		sourceStores = append(sourceStores, store)
+	}
+
+	if len(sourceStores) == 0 {
+		return errors.New("no validator databases found in source directories")
+	}
+
+	return db.Merge(ctx, sourceStores, targetDirectory)
+}
+
+// Split splits data from one validator database in sourceDirectory into several validator databases.
+// Each validator database is created in its own subdirectory inside targetDirectory.
+func Split(ctx context.Context, sourceDirectory string, targetDirectory string) (err error) {
+	var sourceStore *db.Store
+	sourceStore, err = db.GetKVStore(sourceDirectory)
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare the source database for splitting")
+	}
+	if sourceStore == nil {
+		return errors.New("no database found in source directory")
+	}
+	defer func() {
+		if sourceStore != nil {
+			if deferErr := sourceStore.Close(); deferErr != nil {
+				if err != nil {
+					err = errors.Wrap(err, errFailedToCloseDb.Error())
+				} else {
+					err = errors.Wrap(deferErr, errFailedToCloseDb.Error())
+				}
+			}
+		}
+	}()
+
+	return db.Split(ctx, sourceStore, targetDirectory)
+}
+
 // ChangePassword changes the password for all keys located in a keystore.
 // Password is changed only for keys that can be decrypted using the old password.
 func ChangePassword(keystorePath string, oldPassword string, newPassword string) error {
@@ -236,14 +309,14 @@ func ChangePassword(keystorePath string, oldPassword string, newPassword string)
 func changePasswordForKeyType(keystorePath string, filePrefix string, oldPassword string, newPassword string) error {
 	keys, err := DecryptKeysFromKeystore(keystorePath, filePrefix, oldPassword)
 	if err != nil {
-		return errors.Wrap(err, "Failed to decrypt keys")
+		return errors.Wrap(err, "failed to decrypt keys")
 	}
 
 	keyStore := keystore.NewKeystore(keystorePath)
 	for _, key := range keys {
 		keyFileName := keystorePath + filePrefix + hex.EncodeToString(key.PublicKey.Marshal())[:12]
 		if err := keyStore.StoreKey(keyFileName, key, newPassword); err != nil {
-			return errors.Wrapf(err, "Failed to encrypt key %s with the new password", keyFileName)
+			return errors.Wrapf(err, "failed to encrypt key %s with the new password", keyFileName)
 		}
 	}
 
@@ -265,7 +338,7 @@ func homeDir() string {
 func ExtractPublicKeysFromKeyStore(keystorePath string, passphrase string) ([][]byte, error) {
 	decryptedKeys, err := DecryptKeysFromKeystore(keystorePath, params.BeaconConfig().ValidatorPrivkeyFileName, passphrase)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not decrypt keys from keystore in path %s", keystorePath)
+		return nil, errors.Wrapf(err, "could not decrypt keys from keystore in path %s", keystorePath)
 	}
 
 	i := 0

@@ -2,10 +2,11 @@ package testing
 
 import (
 	"fmt"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"os"
 	"strconv"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 const fileBase = "0-11-0/mainnet/beaconstate"

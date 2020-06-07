@@ -48,7 +48,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -107,7 +107,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(cliCtx)
 	registry := shared.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(cliCtx)
+	ctx, cancel := context.WithCancel(context.Background())
 	beacon := &BeaconNode{
 		cliCtx:            cliCtx,
 		ctx:               ctx,
@@ -406,8 +406,11 @@ func (b *BeaconNode) registerPOWChainService() error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
+	if !b.cliCtx.IsSet(flags.HTTPWeb3ProviderFlag.Name) {
+		log.Warn("Using default ETH1 connection provided by Prysmatic Labs. Please consider running your own ETH1 node for better uptime, security, and decentralization of ETH2. Visit https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information.")
+	}
+
 	cfg := &powchain.Web3ServiceConfig{
-		ETH1Endpoint:    b.cliCtx.String(flags.Web3ProviderFlag.Name),
 		HTTPEndPoint:    b.cliCtx.String(flags.HTTPWeb3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
 		BeaconDB:        b.db,
@@ -591,25 +594,25 @@ func (b *BeaconNode) registerPrometheusService() error {
 }
 
 func (b *BeaconNode) registerGRPCGateway() error {
-	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	if gatewayPort > 0 {
-		selfAddress := fmt.Sprintf("127.0.0.1:%d", b.cliCtx.Int(flags.RPCPort.Name))
-		gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
-		allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-		enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
-		return b.services.RegisterService(
-			gateway.New(
-				b.ctx,
-				selfAddress,
-				gatewayAddress,
-				nil, /*optional mux*/
-				allowedOrigins,
-				enableDebugRPCEndpoints,
-				b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
-			),
-		)
+	if b.cliCtx.Bool(flags.DisableGRPCGateway.Name) {
+		return nil
 	}
-	return nil
+	gatewayPort := b.cliCtx.Int(flags.GRPCGatewayPort.Name)
+	selfAddress := fmt.Sprintf("127.0.0.1:%d", b.cliCtx.Int(flags.RPCPort.Name))
+	gatewayAddress := fmt.Sprintf("0.0.0.0:%d", gatewayPort)
+	allowedOrigins := strings.Split(b.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	return b.services.RegisterService(
+		gateway.New(
+			b.ctx,
+			selfAddress,
+			gatewayAddress,
+			nil, /*optional mux*/
+			allowedOrigins,
+			enableDebugRPCEndpoints,
+			b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
+		),
+	)
 }
 
 func (b *BeaconNode) registerInteropServices() error {

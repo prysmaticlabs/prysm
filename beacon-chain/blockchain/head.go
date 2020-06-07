@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -41,8 +42,18 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// Get head from the fork choice service.
 	f := s.finalizedCheckpt
 	j := s.justifiedCheckpt
-	headRoot, err := s.forkChoiceStore.Head(ctx, j.Epoch, bytesutil.ToBytes32(j.Root), balances, f.Epoch)
+	// To get head before the first justified epoch, the fork choice will start with genesis root
+	// instead of zero hashes.
+	headStartRoot := bytesutil.ToBytes32(j.Root)
+	if headStartRoot == params.BeaconConfig().ZeroHash {
+		headStartRoot = s.genesisRoot
+	}
+	headRoot, err := s.forkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
 	if err != nil {
+		return err
+	}
+
+	if err := s.updateRecentCanonicalBlocks(ctx, headRoot); err != nil {
 		return err
 	}
 
@@ -253,4 +264,29 @@ func (s *Service) hasHeadState() bool {
 	defer s.headLock.RUnlock()
 
 	return s.head != nil && s.head.state != nil
+}
+
+// This updates recent canonical block mapping. It uses input head root and retrieves
+// all the canonical block roots that are ancestor of the input head block root.
+func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]byte) error {
+	s.recentCanonicalBlocksLock.Lock()
+	defer s.recentCanonicalBlocksLock.Unlock()
+
+	s.recentCanonicalBlocks = make(map[[32]byte]bool)
+	s.recentCanonicalBlocks[headRoot] = true
+	nodes := s.forkChoiceStore.Nodes()
+	node := s.forkChoiceStore.Node(headRoot)
+	if node == nil {
+		return nil
+	}
+
+	for node.Parent != protoarray.NonExistentNode {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		node = nodes[node.Parent]
+		s.recentCanonicalBlocks[node.Root] = true
+	}
+
+	return nil
 }

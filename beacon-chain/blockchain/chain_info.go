@@ -1,13 +1,13 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -21,6 +21,7 @@ type ChainInfoFetcher interface {
 	HeadFetcher
 	FinalizationFetcher
 	GenesisFetcher
+	CanonicalFetcher
 }
 
 // TimeFetcher retrieves the Eth2 data that's related to time.
@@ -44,11 +45,17 @@ type HeadFetcher interface {
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
+	ProtoArrayStore() *protoarray.Store
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
 	CurrentFork() *pb.Fork
+}
+
+// CanonicalFetcher retrieves the current chain's canonical information.
+type CanonicalFetcher interface {
+	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
@@ -71,12 +78,6 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	// If head state exists but there hasn't been a finalized check point,
-	// the check point's root should refer to genesis block root.
-	if bytes.Equal(s.finalizedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
-		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
-	}
-
 	return state.CopyCheckpoint(s.finalizedCheckpt)
 }
 
@@ -86,12 +87,6 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	// If head state exists but there hasn't been a justified check point,
-	// the check point root should refer to genesis block root.
-	if bytes.Equal(s.justifiedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
-		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
-	}
-
 	return state.CopyCheckpoint(s.justifiedCheckpt)
 }
 
@@ -99,12 +94,6 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 	if s.prevJustifiedCheckpt == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	}
-
-	// If head state exists but there hasn't been a justified check point,
-	// the check point root should refer to genesis block root.
-	if bytes.Equal(s.prevJustifiedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
-		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
 	return state.CopyCheckpoint(s.prevJustifiedCheckpt)
@@ -190,6 +179,11 @@ func (s *Service) HeadGenesisValidatorRoot() [32]byte {
 	return s.headGenesisValidatorRoot()
 }
 
+// ProtoArrayStore returns the proto array store object.
+func (s *Service) ProtoArrayStore() *protoarray.Store {
+	return s.forkChoiceStore.Store()
+}
+
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
@@ -221,4 +215,18 @@ func (s *Service) Participation(epoch uint64) *precompute.Balance {
 	defer s.epochParticipationLock.RUnlock()
 
 	return s.epochParticipation[epoch]
+}
+
+// IsCanonical returns true if the input block root is part of the canonical chain.
+func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	// If the block has been finalized, the block will always be part of the canonical chain.
+	if s.beaconDB.IsFinalizedBlock(ctx, blockRoot) {
+		return true, nil
+	}
+
+	// If the block has not been finalized, the block must be recent. Check recent canonical roots
+	// mapping which uses proto array fork choice.
+	s.recentCanonicalBlocksLock.RLock()
+	defer s.recentCanonicalBlocksLock.RUnlock()
+	return s.recentCanonicalBlocks[blockRoot], nil
 }

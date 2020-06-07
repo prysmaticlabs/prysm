@@ -53,7 +53,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(0, 0)},
+		GenesisTimeFetcher: &mock.ChainService{},
 		GenesisFetcher: &mock.ChainService{
 			State:          st,
 			ValidatorsRoot: genValRoot,
@@ -75,6 +75,19 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	}
 	if !bytes.Equal(genValRoot[:], res.GenesisValidatorsRoot) {
 		t.Errorf("Wanted GenesisValidatorsRoot = %v, received %v", genValRoot, res.GenesisValidatorsRoot)
+	}
+
+	ns.GenesisTimeFetcher = &mock.ChainService{Genesis: time.Unix(10, 0)}
+	res, err = ns.GetGenesis(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pUnix, err = ptypes.TimestampProto(time.Unix(10, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.GenesisTime.Equal(pUnix) {
+		t.Errorf("Wanted GenesisTime() = %v, received %v", pUnix, res.GenesisTime)
 	}
 }
 

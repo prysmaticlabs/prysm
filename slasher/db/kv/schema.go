@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	latestEpochKey       = "LATEST_EPOCH_DETECTED"
-	chainHeadKey         = "CHAIN_HEAD"
-	cachedSpanerEpochs   = 256
+	latestEpochKey = "LATEST_EPOCH_DETECTED"
+	chainHeadKey   = "CHAIN_HEAD"
+	// spannerEncodedLength the byte length of validator span data structure.
 	spannerEncodedLength = 7
 )
 
@@ -25,7 +25,8 @@ var (
 	// In order to quickly detect surround and surrounded attestations we need to store
 	// the min and max span for each validator for each epoch.
 	// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-	validatorsMinMaxSpanBucket = []byte("validators-min-max-span-bucket")
+	validatorsMinMaxSpanBucket    = []byte("validators-min-max-span-bucket")
+	validatorsMinMaxSpanBucketNew = []byte("validators-min-max-span-bucket-new")
 )
 
 func encodeSlotValidatorID(slot uint64, validatorID uint64) []byte {

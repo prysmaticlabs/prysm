@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // beaconAggregateProofSubscriber forwards the incoming validated aggregated attestation and proof to the
@@ -32,6 +33,11 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 			Attestation: a.Message,
 		},
 	})
+
+	// An unaggregated attestation can make it here. It’s valid, the aggregator it just itself, although it means poor performance for the subnet.
+	if !helpers.IsAggregated(a.Message.Aggregate) {
+		return r.attPool.SaveUnaggregatedAttestation(a.Message.Aggregate)
+	}
 
 	return r.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }

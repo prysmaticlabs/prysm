@@ -13,15 +13,27 @@ import "google/protobuf/empty.proto";
 // to retrieve the beacon state by block root or state root from the node directly.
 service Debug {
     // Returns a beacon state by filter criteria from the beacon node.
-    rpc GetBeaconState(BeaconStateRequest) returns (ethereum.beacon.p2p.v1.BeaconState) {
+    rpc GetBeaconState(BeaconStateRequest) returns (SSZResponse) {
         option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/state"
+            get: "/eth/v1alpha1/debug/state"
+        };
+    }
+    // Returns a beacon state by filter criteria from the beacon node.
+    rpc GetBlock(BlockRequest) returns (SSZResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/block"
         };
     }
     // SetLoggingLevel sets the log-level of the beacon node programmatically.
     rpc SetLoggingLevel(LoggingLevelRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/debug/logging"
+        };
+    }
+    // Returns a proto array fork choice object from the beacon node.
+    rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/forkchoice"
         };
     }
 }
@@ -36,6 +48,15 @@ message BeaconStateRequest {
     }
 }
 
+message BlockRequest {
+    bytes block_root = 1;
+}
+
+message SSZResponse {
+    // Returns an ssz-encoded byte slice as a response.
+    bytes encoded = 1;
+}
+
 message LoggingLevelRequest {
     // The logging levels available in Prysm as an enum.
     enum Level {
@@ -44,4 +65,36 @@ message LoggingLevelRequest {
         TRACE = 2;
     }
     Level level = 1;
+}
+
+message ProtoArrayForkChoiceResponse {
+    // The prune threshold of how many nodes allowed in proto array store.
+    uint64 prune_threshold = 1;
+    // Latest justified epoch in proto array store.
+    uint64 justified_epoch = 2;
+    // Latest finalized epoch in proto array store.
+    uint64 finalized_epoch = 3;
+    // The list of the proto array nodes in store.
+    repeated ProtoArrayNode proto_array_nodes = 4;
+    // Root to indices mapping of the proto array nodes in store.
+    map<string, uint64> indices = 5;
+}
+
+message ProtoArrayNode {
+    // Slot of the proto array node.
+    uint64 slot = 1;
+    // Root of the proto array node.
+    bytes root = 2;
+    // Parent of the proto array node.
+    uint64 parent = 3;
+    // Justified epoch of the current proto array node.
+    uint64 justified_epoch = 4;
+    // finalized epoch of the current proto array node.
+    uint64 finalized_epoch = 5;
+    // Current weight of the current proto array node.
+    uint64 weight = 6;
+    // Best child of the current proto array node.
+    uint64 best_child = 7;
+    // Best descendant of the proto array node.
+    uint64 best_descendant = 8;
 }

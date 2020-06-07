@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	ssz "github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -43,42 +43,6 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type store struct {
-	headRoot []byte
-}
-
-func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
-	return nil, nil
-}
-
-func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
-	return nil, nil
-}
-
-func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
-	return nil, nil
-}
-
-func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
-	return nil, nil
-}
-
-func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {
-	return nil
-}
-
-func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
-	return nil
-}
-
-func (s *store) JustifiedCheckpt() *ethpb.Checkpoint {
-	return nil
-}
-
-func (s *store) Head(ctx context.Context) ([]byte, error) {
-	return s.headRoot, nil
-}
-
 type mockBeaconNode struct {
 	stateFeed *event.Feed
 }
@@ -103,7 +67,7 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
-	endpoint := "ws://127.0.0.1"
+	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
@@ -128,7 +92,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	}
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: common.Address{},
 	})
 	if err != nil {

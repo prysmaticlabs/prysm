@@ -13,12 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -29,38 +27,6 @@ var _ = ChainStartFetcher(&Service{})
 var _ = ChainInfoFetcher(&Service{})
 var _ = POWBlockFetcher(&Service{})
 var _ = Chain(&Service{})
-
-type badReader struct{}
-
-func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return nil, errors.New("subscription has failed")
-}
-
-type goodReader struct {
-	backend *backends.SimulatedBackend
-}
-
-func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	if g.backend == nil {
-		return new(event.Feed).Subscribe(ch), nil
-	}
-	headChan := make(chan core.ChainHeadEvent)
-	eventSub := g.backend.Blockchain().SubscribeChainHeadEvent(headChan)
-	feed := new(event.Feed)
-	sub := feed.Subscribe(ch)
-	go func() {
-		for {
-			select {
-			case blk := <-headChan:
-				feed.Send(blk.Block.Header())
-			case <-ctx.Done():
-				eventSub.Unsubscribe()
-				return
-			}
-		}
-	}()
-	return sub, nil
-}
 
 type goodLogger struct {
 	backend *backends.SimulatedBackend
@@ -152,44 +118,6 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 
 var depositsReqForChainStart = 64
 
-func TestNewWeb3Service_OK(t *testing.T) {
-	endpoint := "http://127.0.0.1"
-	ctx := context.Background()
-	var err error
-	beaconDB := dbutil.SetupDB(t)
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err == nil {
-		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
-	}
-	endpoint = "ftp://127.0.0.1"
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err == nil {
-		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
-	}
-	endpoint = "ws://127.0.0.1"
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err != nil {
-		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
-	}
-	endpoint = "ipc://geth.ipc"
-	if _, err = NewService(ctx, &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
-		DepositContract: common.Address{},
-		BeaconDB:        beaconDB,
-	}); err != nil {
-		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
-	}
-}
-
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
@@ -198,7 +126,7 @@ func TestStart_OK(t *testing.T) {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
@@ -233,7 +161,7 @@ func TestStop_OK(t *testing.T) {
 	}
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
@@ -266,7 +194,7 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	}
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
+		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
 		BeaconDB:        beaconDB,
 	})
@@ -283,39 +211,6 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	if err := web3Service.initDataFromContract(); err != nil {
 		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
-}
-
-func TestWeb3Service_BadReader(t *testing.T) {
-	hook := logTest.NewGlobal()
-	depositcontract.Amount32Eth()
-	testAcc, err := contracts.Setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	beaconDB := dbutil.SetupDB(t)
-	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint:    endpoint,
-		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        beaconDB,
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-	web3Service = setDefaultMocks(web3Service)
-	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	testAcc.Backend.Commit()
-	web3Service.reader = &badReader{}
-	web3Service.logger = &goodLogger{}
-	go web3Service.initPOWService()
-	time.Sleep(200 * time.Millisecond)
-	web3Service.cancel()
-	want := "Unable to subscribe to incoming ETH1.0 chain headers: subscription has failed"
-	testutil.AssertLogsContain(t, hook, want)
-	hook.Reset()
 }
 
 func TestStatus(t *testing.T) {
@@ -352,7 +247,7 @@ func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
-		ETH1Endpoint: endpoint,
+		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
 	})
 	if err != nil {
@@ -360,7 +255,6 @@ func TestHandlePanic_OK(t *testing.T) {
 	}
 	// nil blockFetcher would panic if cached value not used
 	web3Service.blockFetcher = nil
-
-	web3Service.processSubscribedHeaders(nil)
+	web3Service.processBlockHeader(nil)
 	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }

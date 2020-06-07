@@ -13,10 +13,17 @@
   },
   "lostcancel": {
     "exclude_files": {
-      "validator/client/runner.go": "No need to cancel right when goroutines begin"
+      "validator/client/runner.go": "No need to cancel right when goroutines begin",
+      "external/.*": "Third party code"
     }
   },
   "nilness": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
+  "pkgfact": {
     "exclude_files": {
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code"
@@ -35,12 +42,12 @@
   "composites": {
     "exclude_files": {
       "external/.*": "Third party code"
-    } 
+    }
   }, 
   "cgocall": {
     "exclude_files": {
       "external/.*": "Third party code"
-    } 
+    }
   },
   "assign": {
     "exclude_files": {
@@ -73,7 +80,7 @@
       "beacon-chain/blockchain/testing/*": "Test-only package",
       "beacon-chain/p2p/sender\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
       "beacon-chain/sync/deadlines\\.go": "Libp2p uses time.Now and this file sets a time based deadline in such a way that roughtime cannot be used",
-      "validator/client/grpc_interceptor\\.go": "Uses time.Now() for gRPC duration logging"
+      "shared/grpcutils/grpcutils\\.go": "Uses time.Now() for gRPC duration logging"
     }
   },
   "errcheck": {
@@ -82,7 +89,8 @@
       "rules_go_work-.*": "Third party code",
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
-      ".*/testmain\\.go": "Test runner generated code"
+      ".*/testmain\\.go": "Test runner generated code",
+      "proto/.*": "Generated protobuf related code"
     }
   },
   "featureconfig": {

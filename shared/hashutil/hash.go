@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"sync"
 
-	ssz "github.com/ferranbt/fastssz"
+	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
@@ -102,15 +102,6 @@ func HashKeccak256(data []byte) [32]byte {
 	return b
 }
 
-// RepeatHash applies the sha256 hash function repeatedly
-// numTimes on a [32]byte array.
-func RepeatHash(data [32]byte, numTimes uint64) [32]byte {
-	if numTimes == 0 {
-		return data
-	}
-	return RepeatHash(Hash(data[:]), numTimes-1)
-}
-
 // HashProto hashes a protocol buffer message using sha256.
 func HashProto(msg proto.Message) (result [32]byte, err error) {
 	// Hashing a proto with nil pointers will cause a panic in the unsafe
@@ -125,7 +116,7 @@ func HashProto(msg proto.Message) (result [32]byte, err error) {
 		return [32]byte{}, ErrNilProto
 	}
 	var data []byte
-	if m, ok := msg.(ssz.Marshaler); ok {
+	if m, ok := msg.(fastssz.Marshaler); ok {
 		data, err = m.MarshalSSZ()
 	} else {
 		data, err = proto.Marshal(msg)

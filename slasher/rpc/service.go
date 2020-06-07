@@ -14,9 +14,10 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -37,29 +38,34 @@ type Service struct {
 	withCert        string
 	withKey         string
 	credentialError error
+	beaconclient    *beaconclient.Service
 }
 
 // Config options for the slasher node RPC server.
 type Config struct {
-	Host      string
-	Port      string
-	CertFlag  string
-	KeyFlag   string
-	Detector  *detection.Service
-	SlasherDB db.Database
+	Host         string
+	Port         string
+	CertFlag     string
+	KeyFlag      string
+	Detector     *detection.Service
+	SlasherDB    db.Database
+	BeaconClient *beaconclient.Service
 }
+
+var log = logrus.WithField("prefix", "rpc")
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:       ctx,
-		cancel:    cancel,
-		host:      cfg.Host,
-		port:      cfg.Port,
-		detector:  cfg.Detector,
-		slasherDB: cfg.SlasherDB,
+		ctx:          ctx,
+		cancel:       cancel,
+		host:         cfg.Host,
+		port:         cfg.Port,
+		detector:     cfg.Detector,
+		slasherDB:    cfg.SlasherDB,
+		beaconclient: cfg.BeaconClient,
 	}
 }
 
@@ -100,15 +106,14 @@ func (s *Service) Start() {
 			s.credentialError = err
 		}
 		opts = append(opts, grpc.Creds(creds))
-	} else {
-		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
 	slasherServer := &Server{
-		ctx:       s.ctx,
-		detector:  s.detector,
-		slasherDB: s.slasherDB,
+		ctx:          s.ctx,
+		detector:     s.detector,
+		slasherDB:    s.slasherDB,
+		beaconClient: s.beaconclient,
 	}
 	slashpb.RegisterSlasherServer(s.grpcServer, slasherServer)
 

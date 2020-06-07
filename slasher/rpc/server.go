@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -86,16 +85,15 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		log.WithError(err).Error("Failed to verify indexed attestation signature")
 		return nil, status.Errorf(codes.Internal, "Could not verify indexed attestation signature: %v: %v", req, err)
 	}
-
-	if err := ss.slasherDB.SaveIndexedAttestation(ctx, req); err != nil {
-		log.WithError(err).Error("Could not save indexed attestation")
-		return nil, status.Errorf(codes.Internal, "Could not save indexed attestation: %v: %v", req, err)
-	}
 	slashings, err := ss.detector.DetectAttesterSlashings(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not detect attester slashings for attestation: %v: %v", req, err)
 	}
 	if len(slashings) < 1 {
+		if err := ss.slasherDB.SaveIndexedAttestation(ctx, req); err != nil {
+			log.WithError(err).Error("Could not save indexed attestation")
+			return nil, status.Errorf(codes.Internal, "Could not save indexed attestation: %v: %v", req, err)
+		}
 		if err := ss.detector.UpdateSpans(ctx, req); err != nil {
 			log.WithError(err).Error("Could not update spans")
 		}

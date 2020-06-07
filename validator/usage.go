@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var appHelpTemplate = `NAME:
@@ -85,6 +85,11 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GraffitiFlag,
 			flags.GrpcRetriesFlag,
 			flags.GrpcHeadersFlag,
+			flags.SlasherRPCProviderFlag,
+			flags.SlasherCertFlag,
+			flags.SourceDirectories,
+			flags.SourceDirectory,
+			flags.TargetDirectory,
 			flags.DisableAccountMetricsFlag,
 		},
 	},

@@ -26,11 +26,11 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
-	"gopkg.in/urfave/cli.v2"
-	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
 var log = logrus.WithField("prefix", "main")
@@ -49,6 +49,9 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
+	flags.SourceDirectories,
+	flags.SourceDirectory,
+	flags.TargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -59,6 +62,9 @@ var appFlags = []cli.Flag{
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
+	flags.MonitoringPortFlag,
+	flags.SlasherRPCProviderFlag,
+	flags.SlasherCertFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
@@ -67,18 +73,17 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
-	flags.MonitoringPortFlag,
 	cmd.LogFormat,
+	cmd.LogFileName,
+	cmd.ConfigFileFlag,
+	cmd.ChainConfigFileFlag,
+	cmd.GrpcMaxCallRecvMsgSizeFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
-	cmd.LogFileName,
-	cmd.ConfigFileFlag,
-	cmd.ChainConfigFileFlag,
-	cmd.GrpcMaxCallRecvMsgSizeFlag,
 }
 
 func init() {
@@ -103,16 +108,18 @@ func main() {
 					Description: `creates a new validator account keystore containing private keys for Ethereum 2.0 -
 this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit
 contract in order to activate the validator client`,
-					Flags: []cli.Flag{
-						flags.KeystorePathFlag,
-						flags.PasswordFlag,
-					},
+					Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
+						[]cli.Flag{
+							flags.KeystorePathFlag,
+							flags.PasswordFlag,
+							cmd.ChainConfigFileFlag,
+						}...),
 					Action: func(cliCtx *cli.Context) error {
-						featureconfig.ConfigureValidator(cliCtx)
-						if featureconfig.Get().MinimalConfig {
-							log.Warn("Using Minimal Config")
-							params.UseMinimalConfig()
+						if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+							chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+							params.LoadChainConfigFile(chainConfigFileName)
 						}
+						featureconfig.ConfigureValidator(cliCtx)
 
 						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
@@ -216,6 +223,47 @@ contract in order to activate the validator client`,
 							log.WithError(err).Error("Changing password failed")
 						} else {
 							log.Info("Password changed successfully")
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:        "merge",
+					Description: "merges data from several validator databases into a new validator database",
+					Flags: []cli.Flag{
+						flags.SourceDirectories,
+						flags.TargetDirectory,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						passedSources := cliCtx.String(flags.SourceDirectories.Name)
+						sources := strings.Split(passedSources, ",")
+						target := cliCtx.String(flags.TargetDirectory.Name)
+
+						if err := accounts.Merge(context.Background(), sources, target); err != nil {
+							log.WithError(err).Error("Merging validator data failed")
+						} else {
+							log.Info("Merge completed successfully")
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:        "split",
+					Description: "splits one validator database into several databases - one for each public key",
+					Flags: []cli.Flag{
+						flags.SourceDirectory,
+						flags.TargetDirectory,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						source := cliCtx.String(flags.SourceDirectory.Name)
+						target := cliCtx.String(flags.TargetDirectory.Name)
+
+						if err := accounts.Split(context.Background(), source, target); err != nil {
+							log.WithError(err).Error("Splitting validator data failed")
+						} else {
+							log.Info("Split completed successfully")
 						}
 
 						return nil

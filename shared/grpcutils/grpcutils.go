@@ -1,4 +1,4 @@
-package client
+package grpcutils
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// This method logs the gRPC backend as well as request duration when the log level is set to debug
+// LogGRPCRequests this method logs the gRPC backend as well as request duration when the log level is set to debug
 // or higher.
-func logDebugRequestInfoUnaryInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+func LogGRPCRequests(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	// Shortcut when debug logging is not enabled.
 	if logrus.GetLevel() < logrus.DebugLevel {
 		return invoker(ctx, method, req, reply, cc, opts...)
@@ -24,7 +24,7 @@ func logDebugRequestInfoUnaryInterceptor(ctx context.Context, method string, req
 	)
 	start := time.Now()
 	err := invoker(ctx, method, req, reply, cc, opts...)
-	log.WithField("backend", header["x-backend"]).
+	logrus.WithField("backend", header["x-backend"]).
 		WithField("method", method).WithField("duration", time.Now().Sub(start)).
 		Debug("gRPC request finished.")
 	return err

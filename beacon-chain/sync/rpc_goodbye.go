@@ -51,9 +51,6 @@ func (r *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id 
 			"peer":  id,
 		}).Debug("Could not send goodbye message to peer")
 	}
-	// Add a short delay to allow the stream to flush before closing the connection.
-	// There is still a chance that the peer won't receive the message.
-	time.Sleep(50 * time.Millisecond)
 	if err := r.p2p.Disconnect(id); err != nil {
 		return err
 	}
@@ -68,8 +65,16 @@ func (r *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.I
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := stream.Reset(); err != nil {
+			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+		}
+	}()
 	log := log.WithField("Reason", goodbyeMessage(code))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Sending Goodbye message to peer")
+	// Add a short delay to allow the stream to flush before resetting it.
+	// There is still a chance that the peer won't receive the message.
+	time.Sleep(50 * time.Millisecond)
 	return nil
 }
 

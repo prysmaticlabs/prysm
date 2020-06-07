@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
@@ -27,7 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -65,7 +66,7 @@ func NewSlasherNode(cliCtx *cli.Context) (*SlasherNode, error) {
 	featureconfig.ConfigureSlasher(cliCtx)
 	registry := shared.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(cliCtx)
+	ctx, cancel := context.WithCancel(context.Background())
 	slasher := &SlasherNode{
 		cliCtx:                cliCtx,
 		ctx:                   ctx,
@@ -103,6 +104,10 @@ func (s *SlasherNode) Start() {
 	s.lock.Lock()
 	s.services.StartAll()
 	s.lock.Unlock()
+
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting slasher client")
 
 	stop := s.stop
 	go func() {
@@ -225,16 +230,22 @@ func (s *SlasherNode) registerRPCService() error {
 	if err := s.services.FetchService(&detectionService); err != nil {
 		return err
 	}
-
+	var bs *beaconclient.Service
+	if err := s.services.FetchService(&bs); err != nil {
+		panic(err)
+	}
+	host := s.cliCtx.String(flags.RPCHost.Name)
 	port := s.cliCtx.String(flags.RPCPort.Name)
 	cert := s.cliCtx.String(flags.CertFlag.Name)
 	key := s.cliCtx.String(flags.KeyFlag.Name)
 	rpcService := rpc.NewService(s.ctx, &rpc.Config{
-		Port:      port,
-		CertFlag:  cert,
-		KeyFlag:   key,
-		Detector:  detectionService,
-		SlasherDB: s.db,
+		Host:         host,
+		Port:         port,
+		CertFlag:     cert,
+		KeyFlag:      key,
+		Detector:     detectionService,
+		SlasherDB:    s.db,
+		BeaconClient: bs,
 	})
 
 	return s.services.RegisterService(rpcService)

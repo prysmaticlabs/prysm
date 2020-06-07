@@ -1,11 +1,11 @@
 package debug
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -61,9 +61,13 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := st.CloneInnerState()
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+	wanted, err := st.CloneInnerState().MarshalSSZ()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(wanted, res.Encoded) {
+		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
 	}
 	req = &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
@@ -74,8 +78,8 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+	if !bytes.Equal(wanted, res.Encoded) {
+		t.Errorf("Wanted %v, received %v", wanted, res.Encoded)
 	}
 }
 

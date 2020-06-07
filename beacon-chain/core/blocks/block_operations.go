@@ -52,7 +52,7 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	if err != nil {
 		return errors.Wrap(err, "could not get container root")
 	}
-	if !sig.Verify(ctrRoot[:], publicKey) {
+	if !sig.Verify(publicKey, ctrRoot[:]) {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
@@ -75,7 +75,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 	if err != nil {
 		return errors.Wrap(err, "could not hash container")
 	}
-	if !sig.Verify(root[:], publicKey) {
+	if !sig.Verify(publicKey, root[:]) {
 		return helpers.ErrSigFailedToVerify
 	}
 	return nil
@@ -856,7 +856,7 @@ func ProcessPreGenesisDeposit(
 		validator.ActivationEligibilityEpoch = 0
 		validator.ActivationEpoch = 0
 	}
-	if err := beaconState.UpdateValidatorAtIndex(uint64(index), validator); err != nil {
+	if err := beaconState.UpdateValidatorAtIndex(index, validator); err != nil {
 		return nil, err
 	}
 	return beaconState, nil
@@ -952,7 +952,7 @@ func ProcessDeposit(
 			return nil, err
 		}
 	} else {
-		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
+		if err := helpers.IncreaseBalance(beaconState, index, amount); err != nil {
 			return nil, err
 		}
 	}

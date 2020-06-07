@@ -1,14 +1,14 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
+# gazelle:ignore geth_deps.go
+
 go_test(
     name = "go_default_test",
-    size = "large",
+    size = "enormous",
     testonly = True,
     srcs = [
         "endtoend_test.go",
         "long_minimal_e2e_test.go",
-        "minimal_antiflake_e2e_1_test.go",
-        "minimal_antiflake_e2e_2_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
     ],
@@ -16,11 +16,11 @@ go_test(
     data = [
         "//beacon-chain",
         "//slasher",
-        "//validator",
         "//tools/bootnode",
+        "//validator",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
-    shard_count = 4,
+    shard_count = 3,
     tags = [
         "block-network",
         "e2e",

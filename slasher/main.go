@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"gopkg.in/urfave/cli.v2"
-	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
 var log = logrus.WithField("prefix", "main")
@@ -59,6 +59,8 @@ var appFlags = []cli.Flag{
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
 	flags.RPCPort,
+	flags.RPCHost,
+	flags.CertFlag,
 	flags.KeyFlag,
 	flags.RebuildSpanMapsFlag,
 	flags.BeaconCertFlag,

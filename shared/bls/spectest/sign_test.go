@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	bls "github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -42,7 +42,7 @@ func TestSignMessageYaml(t *testing.T) {
 			}
 			sig := sk.Sign(msgBytes)
 
-			if !sig.Verify(msgBytes, sk.PublicKey()) {
+			if !sig.Verify(sk.PublicKey(), msgBytes) {
 				t.Fatal("could not verify signature")
 			}
 

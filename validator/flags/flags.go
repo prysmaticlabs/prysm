@@ -3,13 +3,13 @@
 package flags
 
 import (
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var (
 	// DisableAccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
 	DisableAccountMetricsFlag = &cli.BoolFlag{
-		Name:  "disable-account-metrics",
+		Name: "disable-account-metrics",
 		Usage: "Disable prometheus metrics for validator accounts. Operators with high volumes " +
 			"of validating keys may wish to disable granular prometheus metrics as it increases " +
 			"the data cardinality.",
@@ -24,6 +24,17 @@ var (
 	CertFlag = &cli.StringFlag{
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
+	}
+	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
+	SlasherRPCProviderFlag = &cli.StringFlag{
+		Name:  "slasher-rpc-provider",
+		Usage: "Slasher node RPC provider endpoint",
+		Value: "localhost:4002",
+	}
+	// SlasherCertFlag defines a flag for the slasher node's TLS certificate.
+	SlasherCertFlag = &cli.StringFlag{
+		Name:  "slasher-tls-cert",
+		Usage: "Certificate for secure slasher gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
 	// DisablePenaltyRewardLogFlag defines the ability to not log reward/penalty information during deployment
 	DisablePenaltyRewardLogFlag = &cli.BoolFlag{
@@ -70,15 +81,25 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8081,
 	}
-	// NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	NoCustomConfigFlag = &cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
 	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
 	PasswordFlag = &cli.StringFlag{
 		Name:  "password",
 		Usage: "String value of the password for your validator private keys",
+	}
+	// SourceDirectories defines the locations of the source validator databases while managing validators.
+	SourceDirectories = &cli.StringFlag{
+		Name:  "source-dirs",
+		Usage: "The directory of source validator databases",
+	}
+	// SourceDirectory defines the location of the source validator database while managing validators.
+	SourceDirectory = &cli.StringFlag{
+		Name:  "source-dir",
+		Usage: "The directory of the source validator database",
+	}
+	// TargetDirectory defines the location of the target validator database while managing validators.
+	TargetDirectory = &cli.StringFlag{
+		Name:  "target-dir",
+		Usage: "The directory of the target validator database",
 	}
 	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
 	// alternative from launching the validator client from decrypting a keystore directory.

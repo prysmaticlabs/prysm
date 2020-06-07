@@ -9,7 +9,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -64,7 +65,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		if res == nil {
 			continue
 		}
-		root, err := ssz.HashTreeRoot(res.Block)
+		root, err := stateutil.BlockRoot(res.Block)
 		if err != nil {
 			log.WithError(err).Error("Could not hash block")
 			return
@@ -97,6 +98,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
+			log.Info("Attestation stream closed")
 			break
 		}
 		// If context is canceled we stop the loop.
@@ -135,7 +137,8 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	defer span.End()
 
 	var atts []*ethpb.IndexedAttestation
-	ticker := time.NewTicker(500 * time.Millisecond)
+	halfSlot := slotutil.DivideSlotBy(2 /* 1/2 slot duration */)
+	ticker := time.NewTicker(halfSlot)
 	for {
 		select {
 		case <-ticker.C:

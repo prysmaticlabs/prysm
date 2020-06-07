@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var appHelpTemplate = `NAME:
@@ -73,8 +73,10 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "slasher",
 		Flags: []cli.Flag{
 			flags.BeaconCertFlag,
+			flags.CertFlag,
 			flags.KeyFlag,
 			flags.RPCPort,
+			flags.RPCHost,
 			flags.RebuildSpanMapsFlag,
 			flags.BeaconRPCProviderFlag,
 		},

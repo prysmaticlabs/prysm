@@ -14,7 +14,7 @@ import (
 
 func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
-	params.UseMinimalConfig()
+	params.UseE2EConfig()
 
 	epochsToRun := 20
 	var err error
@@ -29,8 +29,8 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	}
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{"--minimal-config", "--custom-genesis-delay=25"},
-		ValidatorFlags: []string{"--minimal-config"},
+		BeaconFlags:    []string{},
+		ValidatorFlags: []string{},
 		EpochsToRun:    uint64(epochsToRun),
 		TestSync:       false,
 		TestDeposits:   true,
@@ -38,12 +38,14 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 		Evaluators: []types.Evaluator{
 			ev.PeersConnect,
 			ev.HealthzCheck,
+			ev.MetricsCheck,
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
 			ev.FinalizationOccurs,
-			ev.MetricsCheck,
 			ev.ProcessesDepositedValidators,
+			ev.ProposeVoluntaryExit,
 			ev.DepositedValidatorsAreActive,
+			ev.ValidatorHasExited,
 		},
 	}
 	if err := e2eParams.Init(4); err != nil {
