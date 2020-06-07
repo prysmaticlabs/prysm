@@ -11,16 +11,14 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
-type spansValueTests struct {
-	name          string
-	validatorID   uint64
-	oldSpans      string
-	spansLength   uint64
-	validatorSpan types.Span
-	err           error
-}
+func TestEpochStore_GetValidatorSpan_Format(t *testing.T) {
+	type formatTest struct {
+		name         string
+		hexToDecode  string
+		expectedErr  error
+		expectedSpan map[uint64]types.Span
+	}
 
-func TestStore_GetValidatorSpan(t *testing.T) {
 	tooSmall, err := hex.DecodeString("000000")
 	if err != nil {
 		t.Fatal(err)
@@ -86,6 +84,10 @@ func TestStore_GetValidatorSpan(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
+}
+
+func TestEpochStore_GetValidatorSpan(t *testing.T) {
+
 }
 
 func TestStore_SetValidatorSpan(t *testing.T) {
