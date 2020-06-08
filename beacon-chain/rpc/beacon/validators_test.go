@@ -27,7 +27,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -2401,4 +2403,209 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 		t.Fatal(err)
 	}
 	return validators, balances
+}
+
+func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	req := &pbrpc.IndividualVotesRequest{
+		Epoch: helpers.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
+	}
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := ds.GetIndividualVotes(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	validators := uint64(64)
+	stateWithValidators, _ := testutil.DeterministicGenesisState(t, validators)
+	beaconState := testutil.NewBeaconState()
+	if err := beaconState.SetValidators(stateWithValidators.Validators()); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gen := stategen.New(db, cache.NewStateSummaryCache())
+	if err := gen.SaveState(ctx, gRoot, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		StateGen:           gen,
+		GenesisTimeFetcher: &mock.ChainService{},
+	}
+
+	// Test non exist public key.
+	res, err := bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+		PublicKeys: [][]byte{{'a'}},
+		Epoch:      0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := &pbrpc.IndividualVotesRespond{
+		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+			{PublicKey: []byte{'a'}, ValidatorIndex: ^uint64(0)},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Error("Did not get wanted respond")
+	}
+
+	// Test non-existent validator index.
+	res, err = bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+		Indices: []uint64{100},
+		Epoch:   0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted = &pbrpc.IndividualVotesRespond{
+		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+			{ValidatorIndex: 100},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Log(res, wanted)
+		t.Error("Did not get wanted respond")
+	}
+
+	// Test both.
+	res, err = bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+		PublicKeys: [][]byte{{'a'}, {'b'}},
+		Indices:    []uint64{100, 101},
+		Epoch:      0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted = &pbrpc.IndividualVotesRespond{
+		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+			{PublicKey: []byte{'a'}, ValidatorIndex: ^uint64(0)},
+			{PublicKey: []byte{'b'}, ValidatorIndex: ^uint64(0)},
+			{ValidatorIndex: 100},
+			{ValidatorIndex: 101},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Log(res, wanted)
+		t.Error("Did not get wanted respond")
+	}
+}
+
+func TestServer_GetIndividualVotes_Working(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	validators := uint64(64)
+	stateWithValidators, _ := testutil.DeterministicGenesisState(t, validators)
+	beaconState := testutil.NewBeaconState()
+	if err := beaconState.SetValidators(stateWithValidators.Validators()); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+
+	bf := []byte{0xff}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
+	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
+	rt := [32]byte{'A'}
+	att1.Data.Target.Root = rt[:]
+	att1.Data.BeaconBlockRoot = rt[:]
+	br := beaconState.BlockRoots()
+	newRt := [32]byte{'B'}
+	br[0] = newRt[:]
+	if err := beaconState.SetBlockRoots(br); err != nil {
+		t.Fatal(err)
+	}
+	att2.Data.Target.Root = rt[:]
+	att2.Data.BeaconBlockRoot = newRt[:]
+	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gen := stategen.New(db, cache.NewStateSummaryCache())
+	if err := gen.SaveState(ctx, gRoot, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		StateGen:           gen,
+		GenesisTimeFetcher: &mock.ChainService{},
+	}
+
+	res, err := bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+		Indices: []uint64{0, 1},
+		Epoch:   0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := &pbrpc.IndividualVotesRespond{
+		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+			{ValidatorIndex: 0, PublicKey: beaconState.Validators()[0].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance, InclusionSlot: params.BeaconConfig().FarFutureEpoch, InclusionDistance: params.BeaconConfig().FarFutureEpoch},
+			{ValidatorIndex: 1, PublicKey: beaconState.Validators()[1].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance, InclusionSlot: params.BeaconConfig().FarFutureEpoch, InclusionDistance: params.BeaconConfig().FarFutureEpoch},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Log(res, wanted)
+		t.Error("Did not get wanted respond")
+	}
 }
