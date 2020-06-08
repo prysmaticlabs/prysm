@@ -8,8 +8,6 @@ import (
 
 	"github.com/paulbellamy/ratecounter"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -26,6 +24,9 @@ const (
 	// refreshTime defines an interval at which suitable peer is checked during 2nd phase of sync.
 	refreshTime = 6 * time.Second
 )
+
+// blockReceiverFn defines block receiving function.
+type blockReceiverFn func(ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
@@ -44,7 +45,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	state.SkipSlotCache.Disable()
 	defer state.SkipSlotCache.Enable()
 
-	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
+	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
+	s.lastProcessedSlot = s.chain.HeadSlot()
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
@@ -54,17 +56,17 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	if err := queue.start(); err != nil {
 		return err
 	}
+	var blockReceiver blockReceiverFn
+	if featureconfig.Get().InitSyncNoVerify {
+		blockReceiver = s.chain.ReceiveBlockNoVerify
+	} else {
+		blockReceiver = s.chain.ReceiveBlockNoPubsubForkchoice
+	}
 
 	// Step 1 - Sync to end of finalized epoch.
 	for blk := range queue.fetchedBlocks {
-		s.logSyncStatus(genesis, blk.Block, counter)
-		root, err := stateutil.BlockRoot(blk.Block)
-		if err != nil {
-			log.WithError(err).Info("Cannot determine root of block")
-			continue
-		}
-		if err := s.processBlock(ctx, blk, root); err != nil {
-			log.WithError(err).Info("Block is invalid")
+		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+			log.WithError(err).Info("Block is not processed")
 			continue
 		}
 	}
@@ -109,14 +111,9 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
 			return nil
 		}
-
 		for _, blk := range resp {
-			s.logSyncStatus(genesis, blk.Block, counter)
-			root, err := stateutil.BlockRoot(blk.Block)
+			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlockNoPubsubForkchoice)
 			if err != nil {
-				return err
-			}
-			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk, root); err != nil {
 				log.WithError(err).Error("Failed to process block, exiting init sync")
 				return nil
 			}
@@ -144,50 +141,45 @@ func (s *Service) highestFinalizedEpoch() uint64 {
 }
 
 // logSyncStatus and increment block processing counter.
-func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter *ratecounter.RateCounter) {
-	counter.Incr(1)
-	rate := float64(counter.Rate()) / counterSeconds
+func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, blkRoot [32]byte) {
+	s.counter.Incr(1)
+	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
 		rate = 1
 	}
 	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
-	blockRoot := "unknown"
-	root, err := stateutil.BlockRoot(blk)
-	if err == nil {
-		blockRoot = fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8])
-	}
-	log.WithField(
-		"peers",
-		len(s.p2p.Peers().Connected()),
-	).WithField(
-		"blocksPerSecond",
-		fmt.Sprintf("%.1f", rate),
-	).Infof(
+	log.WithFields(logrus.Fields{
+		"peers":           len(s.p2p.Peers().Connected()),
+		"blocksPerSecond": fmt.Sprintf("%.1f", rate),
+	}).Infof(
 		"Processing block %s %d/%d - estimated time remaining %s",
-		blockRoot,
-		blk.Slot,
-		helpers.SlotsSince(genesis),
-		timeRemaining,
+		fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
+		blk.Slot, helpers.SlotsSince(genesis), timeRemaining,
 	)
 }
 
-func (s *Service) processBlock(ctx context.Context, blk *eth.SignedBeaconBlock, blockRoot [32]byte) error {
+// processBlock performs basic checks on incoming block, and triggers receiver function.
+func (s *Service) processBlock(
+	ctx context.Context,
+	genesis time.Time,
+	blk *eth.SignedBeaconBlock,
+	blockReceiver blockReceiverFn,
+) error {
+	if blk.Block.Slot <= s.lastProcessedSlot {
+		return fmt.Errorf("slot %d already processed", blk.Block.Slot)
+	}
+	blkRoot, err := stateutil.BlockRoot(blk.Block)
+	if err != nil {
+		return err
+	}
+	s.logSyncStatus(genesis, blk.Block, blkRoot)
 	parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 	}
-	s.blockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.ReceivedBlock,
-		Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
-	})
-	if featureconfig.Get().InitSyncNoVerify {
-		if err := s.chain.ReceiveBlockNoVerify(ctx, blk, blockRoot); err != nil {
-			return err
-		}
-	} else {
-		if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk, blockRoot); err != nil {
-			return err
-		}
+	if err := blockReceiver(ctx, blk, blkRoot); err != nil {
+		return err
 	}
+	s.lastProcessedSlot = blk.Block.Slot
 	return nil
 }
