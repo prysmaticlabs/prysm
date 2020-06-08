@@ -170,6 +170,11 @@ func (ds *Service) DetectDoubleProposals(ctx context.Context, incomingBlock *eth
 	return ds.proposalsDetector.DetectDoublePropose(ctx, incomingBlock)
 }
 
+// DetectDoubleProposals checks if the given beacon block header is a slashable offense and returns the slashing.
+func (ds *Service) DetectDoubleProposeNoUpdate(ctx context.Context, incomingBlock *ethpb.BeaconBlockHeader) (bool, error) {
+	return ds.proposalsDetector.DetectDoubleProposeNoUpdate(ctx, incomingBlock)
+}
+
 // mapResultsToAtts handles any duplicate detections by ensuring they reuse the same pool of attestations, instead of re-checking the DB for the same data.
 func (ds *Service) mapResultsToAtts(ctx context.Context, results []*types.DetectionResult) (map[[32]byte][]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.mapResultsToAtts")

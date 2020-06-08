@@ -150,3 +150,26 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	return psr, nil
 
 }
+
+func (ss *Server) IsSlashableAttestationNoUpdate(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.Slashable, error) {
+	slashings, err := ss.detector.DetectAttesterSlashings(ctx, req)
+	sl := &slashpb.Slashable{Slashable: false}
+	if err != nil {
+		return sl, status.Errorf(codes.Internal, "Could not detect attester slashings for attestation: %v: %v", req, err)
+	}
+	if len(slashings) < 1 {
+		return sl, nil
+	}
+	sl.Slashable = true
+	return sl, nil
+}
+
+func (ss *Server) IsSlashableBlockNoUpdate(ctx context.Context, req *ethpb.BeaconBlockHeader) (*slashpb.Slashable, error) {
+	slash, err := ss.detector.DetectDoubleProposeNoUpdate(ctx, req)
+	if err != nil {
+		sl := &slashpb.Slashable{Slashable: false}
+		return sl, status.Errorf(codes.Internal, "Could not detect proposer slashing for block: %v: %v", req, err)
+	}
+	sl := &slashpb.Slashable{Slashable: slash}
+	return sl, nil
+}
