@@ -663,11 +663,14 @@ func verifyExternalIPAddr(addr string, port uint) {
 			log.Errorf("Could not create multiaddress: %v", err)
 			return
 		}
-		a := fmt.Sprintf("%v:%v", addr, port)
-		_, err = net.DialTimeout("tcp", a, dialTimeout)
-
-		if err != nil {
-			log.WithField("multiAddr", multiAddr.String()).Warn("Public address is not accessible")
+		a := fmt.Sprintf("%v:%d", addr, port)
+		protocols := [2]string{"tcp", "udp"}
+		for _, p := range protocols {
+			_, err = net.DialTimeout(p, a, dialTimeout)
+			if err != nil {
+				addrWithProtocol := strings.Replace(multiAddr.String(), "tcp", p, -1)
+				log.WithField("multiAddr", addrWithProtocol).Warn("Public address is not accessible")
+			}
 		}
 	}
 }
