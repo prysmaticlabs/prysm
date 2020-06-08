@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const bytesPerChunk = 32
 const cacheSize = 100000
 
 var nocachedHasher *stateRootHasher
@@ -74,7 +74,7 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 			return [32]byte{}, err
 		}
 	}
-	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return htrutils.BitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
@@ -86,7 +86,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots := make([][]byte, 21)
 
 	// Genesis time root.
-	genesisRoot := Uint64Root(state.GenesisTime)
+	genesisRoot := htrutils.Uint64Root(state.GenesisTime)
 	fieldRoots[0] = genesisRoot[:]
 
 	// Genesis validator root.
@@ -95,11 +95,11 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[1] = r[:]
 
 	// Slot root.
-	slotRoot := Uint64Root(state.Slot)
+	slotRoot := htrutils.Uint64Root(state.Slot)
 	fieldRoots[2] = slotRoot[:]
 
 	// Fork data structure root.
-	forkHashTreeRoot, err := ForkRoot(state.Fork)
+	forkHashTreeRoot, err := htrutils.ForkRoot(state.Fork)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute fork merkleization")
 	}
@@ -127,7 +127,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[6] = stateRootsRoot[:]
 
 	// HistoricalRoots slice root.
-	historicalRootsRt, err := HistoricalRootsRoot(state.HistoricalRoots)
+	historicalRootsRt, err := htrutils.HistoricalRootsRoot(state.HistoricalRoots)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -175,7 +175,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[13] = randaoRootsRoot[:]
 
 	// Slashings array root.
-	slashingsRootsRoot, err := SlashingsRoot(state.Slashings)
+	slashingsRootsRoot, err := htrutils.SlashingsRoot(state.Slashings)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute slashings merkleization")
 	}
@@ -200,21 +200,21 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[17] = justifiedBitsRoot[:]
 
 	// PreviousJustifiedCheckpoint data structure root.
-	prevCheckRoot, err := CheckpointRoot(hasher, state.PreviousJustifiedCheckpoint)
+	prevCheckRoot, err := htrutils.CheckpointRoot(hasher, state.PreviousJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute previous justified checkpoint merkleization")
 	}
 	fieldRoots[18] = prevCheckRoot[:]
 
 	// CurrentJustifiedCheckpoint data structure root.
-	currJustRoot, err := CheckpointRoot(hasher, state.CurrentJustifiedCheckpoint)
+	currJustRoot, err := htrutils.CheckpointRoot(hasher, state.CurrentJustifiedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute current justified checkpoint merkleization")
 	}
 	fieldRoots[19] = currJustRoot[:]
 
 	// FinalizedCheckpoint data structure root.
-	finalRoot, err := CheckpointRoot(hasher, state.FinalizedCheckpoint)
+	finalRoot, err := htrutils.CheckpointRoot(hasher, state.FinalizedCheckpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}

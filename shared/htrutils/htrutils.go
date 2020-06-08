@@ -1,6 +1,5 @@
-// Package stateutil defines utility functions to compute state roots
-// using advanced merkle branch caching techniques.
-package stateutil
+// Package htrutils defines HashTreeRoot utility functions.
+package htrutils
 
 import (
 	"bytes"
@@ -39,7 +38,7 @@ func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 		epochRoot := bytesutil.ToBytes32(forkEpochBuf)
 		fieldRoots[2] = epochRoot[:]
 	}
-	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return BitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // CheckpointRoot computes the HashTreeRoot Merkleization of
@@ -55,14 +54,14 @@ func CheckpointRoot(hasher HashFn, checkpoint *ethpb.Checkpoint) ([32]byte, erro
 		ckpRoot := bytesutil.ToBytes32(checkpoint.Root)
 		fieldRoots[1] = ckpRoot[:]
 	}
-	return bitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // HistoricalRootsRoot computes the HashTreeRoot Merkleization of
 // a list of [32]byte historical block roots according to the eth2
 // Simple Serialize specification.
 func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
-	result, err := bitwiseMerkleize(hashutil.CustomSHA256Hasher(), historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
+	result, err := BitwiseMerkleize(hashutil.CustomSHA256Hasher(), historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute historical roots merkleization")
 	}
@@ -73,7 +72,7 @@ func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	historicalRootsOutput := make([]byte, 32)
 	copy(historicalRootsOutput, historicalRootsBuf.Bytes())
-	mixedLen := mixInLength(result, historicalRootsOutput)
+	mixedLen := MixInLength(result, historicalRootsOutput)
 	return mixedLen, nil
 }
 
@@ -87,9 +86,9 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 		binary.LittleEndian.PutUint64(slashBuf, slashings[i])
 		slashingMarshaling[i] = slashBuf
 	}
-	slashingChunks, err := pack(slashingMarshaling)
+	slashingChunks, err := Pack(slashingMarshaling)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack slashings into chunks")
 	}
-	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
+	return BitwiseMerkleize(hashutil.CustomSHA256Hasher(), slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }

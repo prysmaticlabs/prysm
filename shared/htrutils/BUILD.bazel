@@ -1,0 +1,24 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "hashers.go",
+        "helpers.go",
+        "htrutils.go",
+        "merkleize.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/htrutils",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/hashutil:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/trieutil:go_default_library",
+        "@com_github_minio_sha256_simd//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
