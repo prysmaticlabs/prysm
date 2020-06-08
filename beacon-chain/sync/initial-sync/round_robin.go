@@ -46,6 +46,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	defer state.SkipSlotCache.Enable()
 
 	s.counter = ratecounter.NewRateCounter(counterSeconds * time.Second)
+	s.lastProcessedSlot = s.chain.HeadSlot()
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
@@ -65,7 +66,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// Step 1 - Sync to end of finalized epoch.
 	for blk := range queue.fetchedBlocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Info("Block is invalid")
+			log.WithError(err).Info("Block is not processed")
 			continue
 		}
 	}
@@ -164,6 +165,9 @@ func (s *Service) processBlock(
 	blk *eth.SignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
+	if blk.Block.Slot <= s.lastProcessedSlot {
+		return fmt.Errorf("slot %d already processed", blk.Block.Slot)
+	}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		return err
@@ -176,5 +180,6 @@ func (s *Service) processBlock(
 	if err := blockReceiver(ctx, blk, blkRoot); err != nil {
 		return err
 	}
+	s.lastProcessedSlot = blk.Block.Slot
 	return nil
 }
