@@ -64,8 +64,8 @@ func TestPrivateKeyLoading(t *testing.T) {
 	}
 }
 
-func TestPeerBlacklist(t *testing.T) {
-	// create host with blacklist
+func TestPeerDenyList(t *testing.T) {
+	// create host with deny list
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	ipAddr2, pkey2 := createAddrAndPrivKey(t)
 
@@ -78,7 +78,7 @@ func TestPeerBlacklist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to p2p listen: %v", err)
 	}
-	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), blacklistSubnets([]string{cidr})}...)
+	h1, err := libp2p.New(context.Background(), []libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), denyListSubnets([]string{cidr})}...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,6 +111,6 @@ func TestPeerBlacklist(t *testing.T) {
 	}
 	err = h1.Connect(context.Background(), *addrInfo)
 	if err == nil {
-		t.Error("Wanted connection to fail with blacklist")
+		t.Error("Wanted connection to fail with deny list")
 	}
 }
