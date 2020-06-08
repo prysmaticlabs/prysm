@@ -589,7 +589,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		err := r2.validateStatusMessage(context.Background(), out, stream)
+		err := r2.validateStatusMessage(context.Background(), out)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -700,5 +700,62 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	}
 	if badResponses != 1 {
 		t.Errorf("Bad response was not bumped to one, instead it is %d", badResponses)
+	}
+}
+
+func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
+	// Set up a head state with data we expect.
+	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
+	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	finalizedCheckpt := &ethpb.Checkpoint{
+		Epoch: 5,
+		Root:  finalizedRoot[:],
+	}
+	r := &Service{
+		chain: &mock.ChainService{
+			State:               genesisState,
+			FinalizedCheckPoint: finalizedCheckpt,
+			Root:                headRoot[:],
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		},
+		ctx: context.Background(),
+	}
+	digest, err := r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// There should be no error for a status message
+	// with a genesis checkpoint.
+	err = r.validateStatusMessage(r.ctx, &pb.Status{
+		ForkDigest:     digest[:],
+		FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
+		FinalizedEpoch: 0,
+		HeadRoot:       headRoot[:],
+		HeadSlot:       111,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

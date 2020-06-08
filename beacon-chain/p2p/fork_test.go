@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -84,6 +85,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
+	cfg.MaxPeers = 30
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -91,11 +93,21 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	multiAddrs := s.processPeers(nodes)
+	addrs := []ma.Multiaddr{}
+
+	for _, n := range nodes {
+		if s.filterPeer(n) {
+			addr, err := convertToSingleMultiAddr(n)
+			if err != nil {
+				t.Fatal(err)
+			}
+			addrs = append(addrs, addr)
+		}
+	}
 
 	// We should not have valid peers if the fork digest mismatched.
-	if len(multiAddrs) != 0 {
-		t.Errorf("Expected 0 valid peers, got %d", len(multiAddrs))
+	if len(addrs) != 0 {
+		t.Errorf("Expected 0 valid peers, got %d", len(addrs))
 	}
 	if err := s.Stop(); err != nil {
 		t.Fatal(err)
@@ -104,7 +116,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	hook := logTest.NewGlobal()
-	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.TraceLevel)
 	port := 2000
 	ipAddr, pkey := createAddrAndPrivKey(t)
 	genesisTime := time.Now()
@@ -171,6 +183,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	// bootnode given all nodes provided by discv5 will have different fork digests.
 	cfg.UDPPort = 14000
 	cfg.TCPPort = 14001
+	cfg.MaxPeers = 30
 	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -179,8 +192,18 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	s.genesisTime = genesisTime
 	s.genesisValidatorsRoot = make([]byte, 32)
 	s.dv5Listener = lastListener
-	multiAddrs := s.processPeers(nodes)
-	if len(multiAddrs) == 0 {
+	addrs := []ma.Multiaddr{}
+
+	for _, n := range nodes {
+		if s.filterPeer(n) {
+			addr, err := convertToSingleMultiAddr(n)
+			if err != nil {
+				t.Fatal(err)
+			}
+			addrs = append(addrs, addr)
+		}
+	}
+	if len(addrs) == 0 {
 		t.Error("Expected to have valid peers, got 0")
 	}
 

@@ -66,6 +66,7 @@ go_test(
         "attestations_test.go",
         "backup_test.go",
         "blocks_test.go",
+        "check_historical_test_test.go",
         "checkpoint_test.go",
         "deposit_contract_test.go",
         "encoding_test.go",
