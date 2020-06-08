@@ -104,7 +104,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 }
 
 // IsSlashableBlock returns an proposer slashing if the block submitted
-// is a double proposal.
+// is a double proposal(no db update is being done).
 func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconBlockHeader) (*slashpb.ProposerSlashingResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.IsSlashableBlock")
 	defer span.End()
@@ -151,6 +151,8 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 
 }
 
+// IsSlashableAttestationNoUpdate returns true if the attestation submitted
+// is a slashable vote(no db update is being done).
 func (ss *Server) IsSlashableAttestationNoUpdate(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.Slashable, error) {
 	slashings, err := ss.detector.DetectAttesterSlashings(ctx, req)
 	sl := &slashpb.Slashable{Slashable: false}
@@ -164,6 +166,8 @@ func (ss *Server) IsSlashableAttestationNoUpdate(ctx context.Context, req *ethpb
 	return sl, nil
 }
 
+// IsSlashableBlockNoUpdate returns true if the block submitted
+// is slashable.
 func (ss *Server) IsSlashableBlockNoUpdate(ctx context.Context, req *ethpb.BeaconBlockHeader) (*slashpb.Slashable, error) {
 	slash, err := ss.detector.DetectDoubleProposeNoUpdate(ctx, req)
 	if err != nil {

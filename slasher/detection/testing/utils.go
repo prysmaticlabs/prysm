@@ -29,8 +29,7 @@ func SignedBlockHeader(slot uint64, proposerIdx uint64) (*ethpb.SignedBeaconBloc
 	}, nil
 }
 
-// SignedBlockHeader given slot, proposer index this function generates signed block header.
-// with random bytes as its signature.
+// BlockHeader given slot, proposer index this function generates block header.
 func BlockHeader(slot uint64, proposerIdx uint64) (*ethpb.BeaconBlockHeader, error) {
 	root := [32]byte{1, 2, 3}
 	return &ethpb.BeaconBlockHeader{
