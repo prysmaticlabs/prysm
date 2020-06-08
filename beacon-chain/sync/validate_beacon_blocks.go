@@ -81,7 +81,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	r.pendingQueueLock.RUnlock()
 
 	// Send block to slasher but don't proceed in processing it.
-	if featureconfig.Get().SlasherP2P && hasSeen {
+	if featureconfig.Get().SlasherP2P {
 		state, err := r.chain.HeadState(ctx)
 		if err != nil {
 			return pubsub.ValidationIgnore
@@ -96,6 +96,8 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 				SignedBlock: blk,
 			},
 		})
+	}
+	if hasSeen {
 		return pubsub.ValidationReject
 	}
 
