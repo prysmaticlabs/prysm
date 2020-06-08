@@ -154,6 +154,7 @@ func verifyConnectivity(addr string, port uint, protocol string) {
 			addr, err := net.ResolveUDPAddr(protocol, a)
 			if err != nil {
 				log.Errorf("Could not resolve UDP address: %v", err)
+				return
 			}
 			_, err = net.ListenUDP("udp", addr)
 			if err != nil {
@@ -162,7 +163,6 @@ func verifyConnectivity(addr string, port uint, protocol string) {
 		default:
 			log.Errorf("Error verifying address connectivy. Protocol not supported: %v", protocol)
 			return
-
 		}
 	}
 }
