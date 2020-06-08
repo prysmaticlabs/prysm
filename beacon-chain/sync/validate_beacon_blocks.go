@@ -80,7 +80,7 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	r.pendingQueueLock.RUnlock()
 
-	// Send block to slasher but don't proceed in processing it.
+	// Send block to block stream for slasher detection after minimal validation.
 	if featureconfig.Get().SlasherP2P {
 		state, err := r.chain.HeadState(ctx)
 		if err != nil {
