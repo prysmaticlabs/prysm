@@ -24,8 +24,8 @@ type Config struct {
 	TCPPort               uint
 	UDPPort               uint
 	MaxPeers              uint
-	WhitelistCIDR         string
-	BlacklistCIDR         []string
+	AllowListCIDR         string
+	DenyListCIDR          []string
 	Encoding              string
 	StateNotifier         statefeed.Notifier
 	PubSub                string
