@@ -295,8 +295,10 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}
 	if err != nil {
-		// Print help for the keymanager
-		fmt.Println(help)
+		if help != "" {
+			// Print help for the keymanager
+			fmt.Println(help)
+		}
 		return nil, err
 	}
 	return km, nil
