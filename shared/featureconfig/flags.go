@@ -392,7 +392,18 @@ var (
 	deprecateEnableFieldTrie = &cli.BoolFlag{
 		Name:   "enable-state-field-trie",
 		Usage:  deprecatedUsage,
-		Hidden: true}
+		Hidden: true,
+	}
+	deprecatedP2PWhitelist = &cli.StringFlag{
+		Name:   "p2p-whitelist",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedP2PBlacklist = &cli.StringFlag{
+		Name:   "p2p-blacklist",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -439,6 +450,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableHistoricalDetectionFlag,
 	deprecateEnableStateRefCopy,
 	deprecateEnableFieldTrie,
+	deprecatedP2PWhitelist,
+	deprecatedP2PBlacklist,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
