@@ -133,10 +133,6 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *pb
 	inclusionSlot := aSlot + a.InclusionDelay
 
 	for _, i := range indices {
-		if int(i) >= len(vp) {
-			return vp
-		}
-
 		if record.IsCurrentEpochAttester {
 			vp[i].IsCurrentEpochAttester = true
 		}
@@ -190,8 +186,8 @@ func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
 // EnsureBalancesLowerBound ensures all the balances such as active current epoch, active previous epoch and more
 // have EffectiveBalanceIncrement(1 eth) as a lower bound.
 func EnsureBalancesLowerBound(bBal *Balance) *Balance {
-        ebi := params.BeaconConfig().EffectiveBalanceIncrement
-        if ebi > bBal.ActiveCurrentEpoch {
+	ebi := params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.ActiveCurrentEpoch {
 		bBal.ActiveCurrentEpoch = ebi
 	}
 	if ebi > bBal.ActivePrevEpoch {

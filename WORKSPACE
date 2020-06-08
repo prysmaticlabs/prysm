@@ -215,7 +215,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9a1318ee3a9a0699c65759557e71e9fdf62e63d4dc3f9918f845280c8ca89321",
+    sha256 = "678c50336ce39bef19b2a0dc69e20a7bda37a673ae07dc0577386e9876e0a525",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/general.tar.gz",
 )
 
@@ -231,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "370c058fbda8a5acf225a197c4eedbfa6ce012ec779efbb56580f99d2f31605c",
+    sha256 = "d0ce95a3ca0d30df24f96a1b5cfad1f7e6fcc07ad84ca221d92480add051af3e",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/minimal.tar.gz",
 )
 
@@ -247,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9bdc38f3552bf90a519ba60bb5313f563591551306420aea88ed2ae5e0ae1bdb",
+    sha256 = "1dfa1ae6822912508dbf6d1fe7608169372daa3ad1e53a3ed0867cb2d6e0ccb0",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/mainnet.tar.gz",
 )
 
