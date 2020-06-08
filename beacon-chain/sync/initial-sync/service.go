@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -43,15 +44,16 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	chain         blockchainService
-	p2p           p2p.P2P
-	db            db.ReadOnlyDatabase
-	synced        bool
-	chainStarted  bool
-	stateNotifier statefeed.Notifier
-	blockNotifier blockfeed.Notifier
+	ctx               context.Context
+	cancel            context.CancelFunc
+	chain             blockchainService
+	p2p               p2p.P2P
+	db                db.ReadOnlyDatabase
+	synced            bool
+	chainStarted      bool
+	stateNotifier     statefeed.Notifier
+	counter           *ratecounter.RateCounter
+	lastProcessedSlot uint64
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
@@ -65,7 +67,7 @@ func NewInitialSync(cfg *Config) *Service {
 		p2p:           cfg.P2P,
 		db:            cfg.DB,
 		stateNotifier: cfg.StateNotifier,
-		blockNotifier: cfg.BlockNotifier,
+		counter:       ratecounter.NewRateCounter(counterSeconds * time.Second),
 	}
 }
 
