@@ -100,6 +100,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
+	// Note: eth2 spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
+	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
 	if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
 		return pubsub.ValidationReject
 	}
