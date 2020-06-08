@@ -151,17 +151,19 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 		blk := b.Block
 
-		// check that the block is valid according to the request
-		// and part of the canonical chain.
+		// Check that the block is valid according to the request and part of the canonical chain.
 		isRequestedSlotStep := (blk.Slot-startSlot)%step == 0
-		isCanonical, err := r.chain.IsCanonical(ctx, roots[i])
-		if err != nil {
-			log.WithError(err).Error("Failed to determine canonical block")
-			r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-		if isRequestedSlotStep && isCanonical {
+		if isRequestedSlotStep {
+			canonical, err := r.chain.IsCanonical(ctx, roots[i])
+			if err != nil {
+				log.WithError(err).Error("Failed to determine canonical block")
+				r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+			if !canonical {
+				continue
+			}
 			if err := r.chunkWriter(stream, b); err != nil {
 				log.WithError(err).Error("Failed to send a chunked response")
 				r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
