@@ -216,7 +216,7 @@ filegroup(
 )
     """,
     sha256 = "9a1318ee3a9a0699c65759557e71e9fdf62e63d4dc3f9918f845280c8ca89321",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.0/general.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/general.tar.gz",
 )
 
 http_archive(
@@ -232,7 +232,7 @@ filegroup(
 )
     """,
     sha256 = "370c058fbda8a5acf225a197c4eedbfa6ce012ec779efbb56580f99d2f31605c",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.0/minimal.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/minimal.tar.gz",
 )
 
 http_archive(
@@ -248,7 +248,7 @@ filegroup(
 )
     """,
     sha256 = "9bdc38f3552bf90a519ba60bb5313f563591551306420aea88ed2ae5e0ae1bdb",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.0/mainnet.tar.gz",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.12.1/mainnet.tar.gz",
 )
 
 http_archive(
@@ -827,11 +827,11 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_tls",
     importpath = "github.com/libp2p/go-libp2p-tls",
-    sum = "h1:twKMhMu44jQO+HgQK9X8NHO5HkeJu2QbhLzLJpa8oNM=",
     patch_args = ["-p1"],
     patches = [
         "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
         "//third_party:libp2p_tls.patch",
     ],
+    sum = "h1:twKMhMu44jQO+HgQK9X8NHO5HkeJu2QbhLzLJpa8oNM=",
     version = "v0.1.3",
 )
