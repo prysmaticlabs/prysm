@@ -16,7 +16,7 @@ func decode(data []byte, dst proto.Message) error {
 	if err != nil {
 		return err
 	}
-	if isWhitelisted(dst) {
+	if isSSZStorageFormat(dst) {
 		return dst.(fastssz.Unmarshaler).UnmarshalSSZ(data)
 	}
 	return proto.Unmarshal(data, dst)
@@ -28,7 +28,7 @@ func encode(msg proto.Message) ([]byte, error) {
 	}
 	var enc []byte
 	var err error
-	if isWhitelisted(msg) {
+	if isSSZStorageFormat(msg) {
 		enc, err = msg.(fastssz.Marshaler).MarshalSSZ()
 		if err != nil {
 			return nil, err
@@ -42,7 +42,8 @@ func encode(msg proto.Message) ([]byte, error) {
 	return snappy.Encode(nil, enc), nil
 }
 
-func isWhitelisted(obj interface{}) bool {
+// isSSZStorageFormat returns true if the object type should be saved in SSZ encoded format.
+func isSSZStorageFormat(obj interface{}) bool {
 	switch obj.(type) {
 	case *pb.BeaconState:
 		return true

@@ -398,7 +398,15 @@ var (
 		Hidden: true,
 	}
 	deprecateEnableNewStateMgmt = &cli.BoolFlag{
-		Name:   "enable-new-state-mgmt",
+		Name: "enable-new-state-mgmt",
+	}
+	deprecatedP2PWhitelist = &cli.StringFlag{
+		Name:   "p2p-whitelist",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedP2PBlacklist = &cli.StringFlag{
+		Name:   "p2p-blacklist",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -449,6 +457,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecateEnableStateRefCopy,
 	deprecateEnableFieldTrie,
 	deprecateEnableNewStateMgmt,
+	deprecatedP2PWhitelist,
+	deprecatedP2PBlacklist,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
