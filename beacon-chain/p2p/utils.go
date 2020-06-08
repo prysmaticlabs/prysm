@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/libp2p/go-libp2p-core/crypto"
