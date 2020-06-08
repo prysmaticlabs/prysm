@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -290,10 +289,12 @@ func (s *Service) Start() {
 
 	p2pHostAddress := s.cfg.HostAddress
 	p2pTCPPort := s.cfg.TCPPort
+	p2pUDPPort := s.cfg.UDPPort
 
 	if p2pHostAddress != "" {
 		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
-		verifyExternalIPAddr(p2pHostAddress, p2pTCPPort)
+		verifyConnectivity(p2pHostAddress, p2pTCPPort, "tcp")
+		verifyConnectivity(p2pHostAddress, p2pUDPPort, "udp")
 	}
 
 	p2pHostDNS := s.cfg.HostDNS
@@ -652,25 +653,5 @@ func logExternalDNSAddr(id peer.ID, addr string, port uint) {
 			"multiAddr",
 			"/dns4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
 		).Info("Node started external p2p server")
-	}
-}
-
-// Attempt to dial an address to verify its connectivity
-func verifyExternalIPAddr(addr string, port uint) {
-	if addr != "" {
-		multiAddr, err := multiAddressBuilder(addr, port)
-		if err != nil {
-			log.Errorf("Could not create multiaddress: %v", err)
-			return
-		}
-		a := fmt.Sprintf("%v:%d", addr, port)
-		protocols := [2]string{"tcp", "udp"}
-		for _, p := range protocols {
-			_, err = net.DialTimeout(p, a, dialTimeout)
-			if err != nil {
-				addrWithProtocol := strings.Replace(multiAddr.String(), "tcp", p, -1)
-				log.WithField("multiAddr", addrWithProtocol).Warn("Public address is not accessible")
-			}
-		}
 	}
 }

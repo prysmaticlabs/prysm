@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
+	"github.com/sirupsen/logrus"
 )
 
 const keyPath = "network-keys"
@@ -130,4 +132,37 @@ func ipAddr() net.IP {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}
 	return net.ParseIP(ip)
+}
+
+// Attempt to dial an address to verify its connectivity for a protocol{"udp", "tcp"}
+func verifyConnectivity(addr string, port uint, protocol string) {
+	if addr != "" {
+		a := fmt.Sprintf("%s:%d", addr, port)
+		fields := logrus.Fields{
+			"protocol": protocol,
+			"address":  a,
+		}
+		switch protocol {
+		case "tcp":
+			conn, err := net.DialTimeout(protocol, a, dialTimeout)
+			if err != nil {
+				log.WithFields(fields).Warn("IP address is not accessible")
+			} else {
+				defer conn.Close()
+			}
+		case "udp":
+			addr, err := net.ResolveUDPAddr(protocol, a)
+			if err != nil {
+				log.Errorf("Could not resolve UDP address: %v", err)
+			}
+			_, err = net.ListenUDP("udp", addr)
+			if err != nil {
+				log.WithFields(fields).Warn("IP Address is not accessible")
+			}
+		default:
+			log.Errorf("Error verifying address connectivy. Protocol not supported: %v", protocol)
+			return
+
+		}
+	}
 }
