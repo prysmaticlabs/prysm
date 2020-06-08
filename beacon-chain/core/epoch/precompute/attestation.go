@@ -184,34 +184,33 @@ func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
 		}
 	}
 
-	bBal = EnsureBalancesLowerBound(bBal)
-
-	return bBal
+	return EnsureBalancesLowerBound(bBal)
 }
 
 // EnsureBalancesLowerBound ensures all the balances such as active current epoch, active previous epoch and more
 // have EffectiveBalanceIncrement(1 eth) as a lower bound.
 func EnsureBalancesLowerBound(bBal *Balance) *Balance {
-	if params.BeaconConfig().EffectiveBalanceIncrement > bBal.ActiveCurrentEpoch {
-		bBal.ActiveCurrentEpoch = params.BeaconConfig().EffectiveBalanceIncrement
+        ebi := params.BeaconConfig().EffectiveBalanceIncrement
+        if ebi > bBal.ActiveCurrentEpoch {
+		bBal.ActiveCurrentEpoch = ebi
 	}
-	if params.BeaconConfig().EffectiveBalanceIncrement > bBal.ActivePrevEpoch {
-		bBal.ActivePrevEpoch = params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.ActivePrevEpoch {
+		bBal.ActivePrevEpoch = ebi
 	}
-	if params.BeaconConfig().EffectiveBalanceIncrement > bBal.CurrentEpochAttested {
-		bBal.CurrentEpochAttested = params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.CurrentEpochAttested {
+		bBal.CurrentEpochAttested = ebi
 	}
-	if params.BeaconConfig().EffectiveBalanceIncrement > bBal.CurrentEpochTargetAttested {
-		bBal.CurrentEpochTargetAttested = params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.CurrentEpochTargetAttested {
+		bBal.CurrentEpochTargetAttested = ebi
 	}
-	if params.BeaconConfig().EffectiveBalanceIncrement > bBal.PrevEpochAttested {
-		bBal.PrevEpochAttested = params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.PrevEpochAttested {
+		bBal.PrevEpochAttested = ebi
 	}
-	if params.BeaconConfig().EffectiveBalanceIncrement > bBal.PrevEpochTargetAttested {
-		bBal.PrevEpochTargetAttested = params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.PrevEpochTargetAttested {
+		bBal.PrevEpochTargetAttested = ebi
 	}
-	if params.BeaconConfig().EffectiveBalanceIncrement > bBal.PrevEpochHeadAttested {
-		bBal.PrevEpochHeadAttested = params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.PrevEpochHeadAttested {
+		bBal.PrevEpochHeadAttested = ebi
 	}
 	return bBal
 }

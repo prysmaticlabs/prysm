@@ -59,7 +59,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation to the p2p network.
 func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
+	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
 	defer span.End()
 	forkDigest, err := s.forkDigest()
 	if err != nil {
