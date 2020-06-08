@@ -3,7 +3,6 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -348,7 +347,7 @@ func TestService_processBlock(t *testing.T) {
 			return nil
 		})
 		expectedErr := fmt.Errorf("slot %d already processed", blk1.Block.Slot)
-		if !reflect.DeepEqual(err, expectedErr) {
+		if err == nil || err.Error() != expectedErr.Error() {
 			t.Errorf("Expected error not thrown, want: %v, got: %v", expectedErr, err)
 		}
 
