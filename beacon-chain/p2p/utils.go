@@ -22,6 +22,9 @@ import (
 const keyPath = "network-keys"
 const metaDataPath = "metaData"
 
+// Dial timeout
+const dialTimeout = 1 * time.Second
+
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
 	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
 	return typeAssertedKey

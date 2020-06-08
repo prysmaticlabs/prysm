@@ -55,9 +55,6 @@ const searchLimit = 100
 // lookup limit whenever looking up for random nodes.
 const lookupLimit = 15
 
-// Dial timeout
-const dialTimeout = 1 * time.Second
-
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
