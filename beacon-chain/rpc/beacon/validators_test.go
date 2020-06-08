@@ -29,7 +29,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -2409,7 +2408,7 @@ func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
-	req := &pbrpc.IndividualVotesRequest{
+	req := &ethpb.IndividualVotesRequest{
 		Epoch: helpers.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
 	}
 	wanted := "Cannot retrieve information about an epoch in the future"
@@ -2462,15 +2461,15 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	}
 
 	// Test non exist public key.
-	res, err := bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		PublicKeys: [][]byte{{'a'}},
 		Epoch:      0,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := &pbrpc.IndividualVotesRespond{
-		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+	wanted := &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
 			{PublicKey: []byte{'a'}, ValidatorIndex: ^uint64(0)},
 		},
 	}
@@ -2479,15 +2478,15 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	}
 
 	// Test non-existent validator index.
-	res, err = bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+	res, err = bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		Indices: []uint64{100},
 		Epoch:   0,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted = &pbrpc.IndividualVotesRespond{
-		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+	wanted = &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
 			{ValidatorIndex: 100},
 		},
 	}
@@ -2497,7 +2496,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	}
 
 	// Test both.
-	res, err = bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+	res, err = bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		PublicKeys: [][]byte{{'a'}, {'b'}},
 		Indices:    []uint64{100, 101},
 		Epoch:      0,
@@ -2505,8 +2504,8 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted = &pbrpc.IndividualVotesRespond{
-		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+	wanted = &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
 			{PublicKey: []byte{'a'}, ValidatorIndex: ^uint64(0)},
 			{PublicKey: []byte{'b'}, ValidatorIndex: ^uint64(0)},
 			{ValidatorIndex: 100},
@@ -2589,15 +2588,15 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
-	res, err := bs.GetIndividualVotes(ctx, &pbrpc.IndividualVotesRequest{
+	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
 		Indices: []uint64{0, 1},
 		Epoch:   0,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := &pbrpc.IndividualVotesRespond{
-		IndividualVotes: []*pbrpc.IndividualVotesRespond_IndividualVote{
+	wanted := &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
 			{ValidatorIndex: 0, PublicKey: beaconState.Validators()[0].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
 				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance, InclusionSlot: params.BeaconConfig().FarFutureEpoch, InclusionDistance: params.BeaconConfig().FarFutureEpoch},
 			{ValidatorIndex: 1, PublicKey: beaconState.Validators()[1].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
