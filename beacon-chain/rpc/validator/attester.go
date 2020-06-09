@@ -217,9 +217,8 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 		return uint64(len(vals)), nil
 	}
 
-	// request the head validator indices of
-	// epoch represented by the first requested
-	// slot
+	// Request the head validator indices of epoch represented by the first requested
+	// slot.
 	currValsLen, err := fetchValsLen(req.Slots[0])
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator indices: %v", err)
@@ -227,7 +226,7 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 	currEpoch := helpers.SlotToEpoch(req.Slots[0])
 
 	for i := 0; i < len(req.Slots); i++ {
-		// if epoch has changed, re-request active validators
+		// If epoch has changed, re-request active validators
 		// indices.
 		if currEpoch != helpers.SlotToEpoch(req.Slots[i]) {
 			currValsLen, err = fetchValsLen(req.Slots[i])
