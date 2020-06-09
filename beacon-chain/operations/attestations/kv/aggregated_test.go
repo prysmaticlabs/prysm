@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func TestKV_AggregateUnaggregatedAttestations(t *testing.T) {
+func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
 	priv := bls.RandKey()
 	sig1 := priv.Sign([]byte{'a'})
@@ -39,7 +39,7 @@ func TestKV_AggregateUnaggregatedAttestations(t *testing.T) {
 	}
 }
 
-func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
+func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
@@ -64,7 +64,7 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
-func TestKV_Aggregated_CanDelete(t *testing.T) {
+func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
@@ -94,7 +94,7 @@ func TestKV_Aggregated_CanDelete(t *testing.T) {
 	}
 }
 
-func TestKV_HasAggregatedAttestation(t *testing.T) {
+func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 	tests := []struct {
 		name     string
 		existing []*ethpb.Attestation
@@ -267,7 +267,8 @@ func TestKV_HasAggregatedAttestation(t *testing.T) {
 	}
 }
 
-func TestKV_Aggregated_AggregatesAttestations(t *testing.T) {
+// todo remove
+func TestKV_Aggregated_Aggregated_AggregatesAttestations(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
