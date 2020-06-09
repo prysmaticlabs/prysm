@@ -123,7 +123,6 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	}
 
 	returned := cache.AggregatedAttestations()
-
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
 	})
@@ -224,6 +223,9 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 
 		returned := cache.AggregatedAttestations()
 		wanted := []*ethpb.Attestation{att1, att2}
+		sort.Slice(returned, func(i, j int) bool {
+			return string(returned[i].AggregationBits) < string(returned[j].AggregationBits)
+		})
 		if !reflect.DeepEqual(wanted, returned) {
 			t.Errorf("Did not receive correct aggregated atts, want: %v, got: %v", wanted, returned)
 		}
