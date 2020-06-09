@@ -336,8 +336,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 	}
 }
 
-// todo remove
-func TestKV_Aggregated_Aggregated_AggregatesAttestations(t *testing.T) {
+func TestKV_Aggregated_DuplicateAggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
