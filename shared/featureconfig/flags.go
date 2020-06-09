@@ -399,6 +399,8 @@ var (
 	}
 	deprecateEnableNewStateMgmt = &cli.BoolFlag{
 		Name: "enable-new-state-mgmt",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 	deprecatedP2PWhitelist = &cli.StringFlag{
 		Name:   "p2p-whitelist",
