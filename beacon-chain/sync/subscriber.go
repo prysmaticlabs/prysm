@@ -70,7 +70,6 @@ func (r *Service) registerSubscribers() {
 	if featureconfig.Get().DisableDynamicCommitteeSubnets {
 		r.subscribeDynamic(
 			"/eth2/%x/beacon_attestation_%d",
-			r.subnetCount,                               /* determineSubsLen */
 			r.validateCommitteeIndexBeaconAttestation,   /* validator */
 			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 		)
@@ -239,7 +238,7 @@ func (r *Service) subscribeDynamicWithSubnets(
 // maintained. As the state feed emits a newly updated state, the maxID function will be called to
 // determine the appropriate number of topics. This method supports only sequential number ranges
 // for topics.
-func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.ValidatorEx, handle subHandler) {
+func (r *Service) subscribeDynamic(topicFormat string, validate pubsub.ValidatorEx, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
@@ -252,6 +251,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	wantedSubs := int(params.BeaconNetworkConfig().AttestationSubnetCount)
 	go func() {
 		for {
 			select {
@@ -263,7 +263,6 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 					continue
 				}
 				// Update topic count.
-				wantedSubs := determineSubsLen()
 				// Resize as appropriate.
 				if len(subscriptions) > wantedSubs { // Reduce topics
 					var cancelSubs []*pubsub.Subscription
