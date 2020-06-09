@@ -126,28 +126,36 @@ func TestKV_Unaggregated_CanDelete(t *testing.T) {
 	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b110}}
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
-	for _, att := range atts {
-		if err := cache.SaveUnaggregatedAttestation(att); err != nil {
-			t.Fatal(err)
+	if err := cache.SaveUnaggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("nil attestation", func(t *testing.T) {
+		if err := cache.DeleteUnaggregatedAttestation(nil); err != nil {
+			t.Error(err)
 		}
-	}
+	})
 
-	if err := cache.DeleteUnaggregatedAttestation(att1); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.DeleteUnaggregatedAttestation(att2); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("aggregated attestation", func(t *testing.T) {
+		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}}
+		err := cache.DeleteUnaggregatedAttestation(att)
+		wantErr := "attestation is aggregated"
+		if err == nil || err.Error() != wantErr {
+			t.Errorf("Did not receive wanted error, want: %q, got: %v", wantErr, err)
+		}
+	})
 
-	if err := cache.DeleteUnaggregatedAttestation(att3); err != nil {
-		t.Fatal(err)
-	}
-
-	returned := cache.UnaggregatedAttestations()
-
-	if !reflect.DeepEqual([]*ethpb.Attestation{}, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	t.Run("delete all", func(t *testing.T) {
+		for _, att := range atts {
+			if err := cache.DeleteUnaggregatedAttestation(att); err != nil {
+				t.Error(err)
+			}
+		}
+		returned := cache.UnaggregatedAttestations()
+		if !reflect.DeepEqual([]*ethpb.Attestation{}, returned) {
+			t.Error("Did not receive correct aggregated atts")
+		}
+	})
 }
 
 func TestKV_Unaggregated_CanGetByCommitteeAndSlot(t *testing.T) {
