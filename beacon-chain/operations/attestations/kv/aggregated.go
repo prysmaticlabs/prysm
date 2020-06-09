@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
-// AggregateUnaggregatedAttestations aggregates the unaggregated attestations and save the
+// AggregateUnaggregatedAttestations aggregates the unaggregated attestations and saves the
 // newly aggregated attestations in the pool.
 // It tracks the unaggregated attestations that weren't able to aggregate to prevent
 // the deletion of unaggregated attestations in the pool.
