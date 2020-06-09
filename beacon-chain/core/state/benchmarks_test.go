@@ -16,28 +16,6 @@ import (
 
 var runAmount = 25
 
-func TestBenchmarkExecuteStateTransition(t *testing.T) {
-	t.Skip("Skipping until v0.12 is ready, need to regen test file")
-	benchutil.SetBenchmarkConfig()
-	beaconState, err := benchutil.PreGenState1Epoch()
-	if err != nil {
-		t.Fatal(err)
-	}
-	block, err := benchutil.PreGenFullBlock()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	oldSlot := beaconState.Slot()
-	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
-	}
-	if oldSlot == beaconState.Slot() {
-		t.Fatal("Expected slots to be different")
-	}
-}
-
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState1Epoch()
