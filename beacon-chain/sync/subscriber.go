@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
@@ -68,11 +67,13 @@ func (r *Service) registerSubscribers() {
 		r.attesterSlashingSubscriber,
 	)
 	if featureconfig.Get().DisableDynamicCommitteeSubnets {
-		r.subscribeDynamic(
-			"/eth2/%x/beacon_attestation_%d",
-			r.validateCommitteeIndexBeaconAttestation,   /* validator */
-			r.committeeIndexBeaconAttestationSubscriber, /* message handler */
-		)
+		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+			r.subscribe(
+				fmt.Sprintf("/eth2/%%x/beacon_attestation_%d", i),
+				r.validateCommitteeIndexBeaconAttestation,   /* validator */
+				r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+			)
+		}
 	} else {
 		r.subscribeDynamicWithSubnets(
 			"/eth2/%x/beacon_attestation_%d",
@@ -227,57 +228,6 @@ func (r *Service) subscribeDynamicWithSubnets(
 				attesterSubs := r.attesterSubnetIndices(currentSlot)
 				for _, idx := range attesterSubs {
 					r.lookupAttesterSubnets(digest, idx)
-				}
-			}
-		}
-	}()
-}
-
-// subscribe to a dynamically increasing index of topics. This method expects a fmt compatible
-// string for the topic name and a maxID to represent the number of subscribed topics that should be
-// maintained. As the state feed emits a newly updated state, the maxID function will be called to
-// determine the appropriate number of topics. This method supports only sequential number ranges
-// for topics.
-func (r *Service) subscribeDynamic(topicFormat string, validate pubsub.ValidatorEx, handle subHandler) {
-	base := p2p.GossipTopicMappings[topicFormat]
-	if base == nil {
-		log.Fatalf("%s is not mapped to any message in GossipTopicMappings", topicFormat)
-	}
-	digest, err := r.forkDigest()
-	if err != nil {
-		log.WithError(err).Fatal("Could not compute fork digest")
-	}
-	var subscriptions []*pubsub.Subscription
-
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
-	wantedSubs := int(params.BeaconNetworkConfig().AttestationSubnetCount)
-	go func() {
-		for {
-			select {
-			case <-r.ctx.Done():
-				stateSub.Unsubscribe()
-				return
-			case <-stateChannel:
-				if r.chainStarted && r.initialSync.Syncing() {
-					continue
-				}
-				// Update topic count.
-				// Resize as appropriate.
-				if len(subscriptions) > wantedSubs { // Reduce topics
-					var cancelSubs []*pubsub.Subscription
-					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
-					for i, sub := range cancelSubs {
-						sub.Cancel()
-						if err := r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, i+wantedSubs)); err != nil {
-							log.WithError(err).Error("Failed to unregister topic validator")
-						}
-					}
-				} else if len(subscriptions) < wantedSubs { // Increase topics
-					for i := len(subscriptions); i < wantedSubs; i++ {
-						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, digest, i), validate, handle)
-						subscriptions = append(subscriptions, sub)
-					}
 				}
 			}
 		}
