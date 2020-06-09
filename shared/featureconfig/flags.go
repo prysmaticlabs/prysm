@@ -394,7 +394,7 @@ var (
 		Hidden: true,
 	}
 	deprecateEnableNewStateMgmt = &cli.BoolFlag{
-		Name: "enable-new-state-mgmt",
+		Name:   "enable-new-state-mgmt",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -409,7 +409,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedSchlesiTestnetFlag = &cli.BoolFlag{
-		Name:  "schlesi-testnet",
+		Name:   "schlesi-testnet",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
