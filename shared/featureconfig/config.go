@@ -208,9 +208,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling skipping of historical states regen")
 		cfg.SkipRegenHistoricalStates = true
 	}
-	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
-		log.Warn("Enabling weighted round robin in initial syncing")
-		cfg.EnableInitSyncWeightedRoundRobin = true
+	cfg.EnableInitSyncWeightedRoundRobin = true
+	if ctx.Bool(disableInitSyncWeightedRoundRobin.Name) {
+		log.Warn("Disabling weighted round robin in initial syncing")
+		cfg.EnableInitSyncWeightedRoundRobin = false
 	}
 	cfg.EnableStateRefCopy = true
 	if ctx.Bool(disableStateRefCopy.Name) {
