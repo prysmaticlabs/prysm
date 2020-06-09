@@ -118,7 +118,7 @@ func TestKV_SaveUnaggregatedAttestations(t *testing.T) {
 	}
 }
 
-func TestKV_Unaggregated_CanDelete(t *testing.T) {
+func TestKV_DeleteUnaggregatedAttestation(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101}}
@@ -158,7 +158,7 @@ func TestKV_Unaggregated_CanDelete(t *testing.T) {
 	})
 }
 
-func TestKV_Unaggregated_CanGetByCommitteeAndSlot(t *testing.T) {
+func TestKV_UnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1, CommitteeIndex: 1}, AggregationBits: bitfield.Bitlist{0b101}}
