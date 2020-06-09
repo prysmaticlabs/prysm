@@ -69,7 +69,21 @@ func IncreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 	if err != nil {
 		return err
 	}
-	return state.UpdateBalancesAtIndex(idx, balAtIdx+delta)
+	return state.UpdateBalancesAtIndex(idx, IncreaseBalanceWithVal(balAtIdx, delta))
+}
+
+// IncreaseBalanceWithVal increases validator with the given 'index' balance by 'delta' in Gwei.
+// This method is flattened version of the spec method, taking in the raw balance and returning
+// the post balance.
+//
+// Spec pseudocode definition:
+//  def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+//    """
+//    Increase the validator balance at index ``index`` by ``delta``.
+//    """
+//    state.balances[index] += delta
+func IncreaseBalanceWithVal(currBalance uint64, delta uint64) uint64 {
+	return currBalance + delta
 }
 
 // DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
@@ -85,8 +99,22 @@ func DecreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 	if err != nil {
 		return err
 	}
-	if delta > balAtIdx {
-		return state.UpdateBalancesAtIndex(idx, 0)
+	return state.UpdateBalancesAtIndex(idx, DecreaseBalanceWithVal(balAtIdx, delta))
+}
+
+// DecreaseBalanceWithVal decreases validator with the given 'index' balance by 'delta' in Gwei.
+// This method is flattened version of the spec method, taking in the raw balance and returning
+// the post balance.
+//
+// Spec pseudocode definition:
+//  def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> None:
+//    """
+//    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
+//    """
+//    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
+func DecreaseBalanceWithVal(currBalance uint64, delta uint64) uint64 {
+	if delta > currBalance {
+		return 0
 	}
-	return state.UpdateBalancesAtIndex(idx, balAtIdx-delta)
+	return currBalance - delta
 }

@@ -86,7 +86,7 @@ message StateSummary {
   bytes root = 2;
 }
 
-message SigningRoot {
+message SigningData {
   // The root of the object being signed.
   bytes object_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
   // The domain for the particular object being signed.

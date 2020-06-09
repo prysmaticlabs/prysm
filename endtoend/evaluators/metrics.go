@@ -56,14 +56,14 @@ var metricComparisonTests = []comparisonTest{
 	},
 	{
 		name:               "committee index 0 beacon attestation",
-		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/committee_index0_beacon_attestation/ssz_snappy\"}",
-		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/committee_index0_beacon_attestation/ssz_snappy\"}",
+		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/beacon_attestation_0/ssz_snappy\"}",
+		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/beacon_attestation_0/ssz_snappy\"}",
 		expectedComparison: 0.15,
 	},
 	{
 		name:               "committee index 1 beacon attestation",
-		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/committee_index1_beacon_attestation/ssz_snappy\"}",
-		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/committee_index1_beacon_attestation/ssz_snappy\"}",
+		topic1:             "p2p_message_failed_validation_total{topic=\"/eth2/%x/beacon_attestation_1/ssz_snappy\"}",
+		topic2:             "p2p_message_received_total{topic=\"/eth2/%x/beacon_attestation_1/ssz_snappy\"}",
 		expectedComparison: 0.15,
 	},
 	{

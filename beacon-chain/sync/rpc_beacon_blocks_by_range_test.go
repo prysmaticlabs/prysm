@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -42,7 +43,8 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	}
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false)}
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false),
+		chain: &chainMock.ChainService{}}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -107,7 +109,8 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	}
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false)}
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, int64(req.Count*10), false),
+		chain: &chainMock.ChainService{}}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -175,7 +178,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		}
 	}
 
-	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false), chain: &chainMock.ChainService{}}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -270,7 +273,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 
 		capacity := int64(flags.Get().BlockBatchLimit * 3)
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
+		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false), chain: &chainMock.ChainService{}}
 
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
@@ -301,7 +304,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 
 		capacity := int64(flags.Get().BlockBatchLimit * 3)
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
+		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false), chain: &chainMock.ChainService{}}
 
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,
@@ -336,7 +339,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		}
 
 		capacity := int64(flags.Get().BlockBatchLimit * flags.Get().BlockBatchLimitBurstFactor)
-		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false)}
+		r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(0.000001, capacity, false), chain: &chainMock.ChainService{}}
 
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: 100,

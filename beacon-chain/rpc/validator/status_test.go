@@ -11,7 +11,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
@@ -136,7 +135,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -236,7 +235,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.ActivationExitEpoch(0)
 
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -301,7 +300,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	epoch := helpers.SlotToEpoch(slot)
 	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -372,7 +371,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	// Exit slashed because slashed is true, exit epoch is =< current epoch and withdrawable epoch > epoch .
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -442,7 +441,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	// Exit because only exit epoch is =< current epoch.
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -566,7 +565,7 @@ func TestActivationStatus_OK(t *testing.T) {
 			},
 		},
 	})
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
@@ -655,7 +654,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	ctx := context.Background()
 
 	pbKey := pubKey(5)
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -795,7 +794,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 		},
 	}
 
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -834,7 +833,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 		t.Fatalf("Could not get the deposit block slot %v", err)
 	}
 
-	expected := uint64(53)
+	expected := uint64(69)
 
 	if resp != expected {
 		t.Errorf("Wanted %v, got %v", expected, resp)
@@ -870,7 +869,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 		},
 	}
 
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -940,7 +939,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 			},
 		},
 	})
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
@@ -995,7 +994,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 		},
 		{
 			Status:               ethpb.ValidatorStatus_DEPOSITED,
-			DepositInclusionSlot: 53,
+			DepositInclusionSlot: 69,
 			ActivationEpoch:      18446744073709551615,
 		},
 		{
@@ -1059,7 +1058,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 		},
 	}
 	stateObj, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)

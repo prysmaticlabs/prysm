@@ -940,12 +940,12 @@ github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200530091827-df74fa9e9621 h1
 github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200530091827-df74fa9e9621/go.mod h1:oP8FC5+TbICUyftkTWs+8JryntjIJLJvWvApK3z2AYw=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20200529200550-337049017365 h1:WYx4msKthEtN21Vr/T1RXaCLQHnTOuP5ccAgcygBODc=
 github.com/prysmaticlabs/ethereumapis v0.0.0-20200529200550-337049017365/go.mod h1:rs05kpTfWKl0KflsBWzBQFstoyPFMTWQTbxSAyGHe78=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200603174634-ff675830ffa1 h1:Wwd71oD0hcecHmxuZaOvRxiWVRat+nWYwSJy/LLzJUs=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200603174634-ff675830ffa1/go.mod h1:rs05kpTfWKl0KflsBWzBQFstoyPFMTWQTbxSAyGHe78=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200604035415-4196125e9fd6 h1:tevY2jSFSV1Eke0uFuWDlLu5TMNP+7gCnBEe0m9BQJk=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200604035415-4196125e9fd6/go.mod h1:rs05kpTfWKl0KflsBWzBQFstoyPFMTWQTbxSAyGHe78=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200608170652-89274a4c8351 h1:yK6i5POvj9upNVvBc8bGf5h7c/ZEgPuSxSzYaWxvDxM=
-github.com/prysmaticlabs/ethereumapis v0.0.0-20200608170652-89274a4c8351/go.mod h1:rs05kpTfWKl0KflsBWzBQFstoyPFMTWQTbxSAyGHe78=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200603034020-fd7b2d1fe13f h1:+FPJ/5X39h+Jk9Ny16tVH315TzsDCUdfF9U8UWSzY1Q=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200603034020-fd7b2d1fe13f/go.mod h1:rs05kpTfWKl0KflsBWzBQFstoyPFMTWQTbxSAyGHe78=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200606010748-e78ac6918bf5 h1:XfsjGmygBsjmY7FcEZPxxHrsRwYyYEhROdDKWn3QWXg=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200606010748-e78ac6918bf5/go.mod h1:rs05kpTfWKl0KflsBWzBQFstoyPFMTWQTbxSAyGHe78=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200608211251-7dafd77461b5 h1:9igaafiIE223IAcWdw7LyFOzAh4okr1/b4JtvfDMI9A=
+github.com/prysmaticlabs/ethereumapis v0.0.0-20200608211251-7dafd77461b5/go.mod h1:rs05kpTfWKl0KflsBWzBQFstoyPFMTWQTbxSAyGHe78=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20191017011753-53b773adde52/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669 h1:cX6YRZnZ9sgMqM5U14llxUiXVNJ3u07Res1IIjTOgtI=
 github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669/go.mod h1:hCwmef+4qXWjv0jLDbQdWnL0Ol7cS7/lCSS26WR+u6s=
@@ -1382,6 +1382,8 @@ golang.org/x/tools v0.0.0-20200207183749-b753a1ba74fa/go.mod h1:TB2adYChydJhpapK
 golang.org/x/tools v0.0.0-20200221224223-e1da425f72fd/go.mod h1:TB2adYChydJhpapKDTa4BR/hXlZSLoq2Wpct/0txZ28=
 golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e h1:jTL1CJ2kmavapMVdBKy6oVrhBHByRCMfykS45+lEFQk=
 golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
+golang.org/x/tools v0.0.0-20200530233709-52effbd89c51 h1:Wec8/IO8hAraBf0it7/dPQYOslIrgM938wZYNkLnOYc=
+golang.org/x/tools v0.0.0-20200530233709-52effbd89c51/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
