@@ -364,6 +364,12 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *gethRPC.Client, error) {
 		return nil, nil, err
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
+
+	// Make a simple call to ensure we are actually connected to a working node.
+	if _, err := httpClient.ChainID(s.ctx); err != nil {
+		return nil, nil, err
+	}
+
 	return httpClient, httpRPCClient, nil
 }
 
