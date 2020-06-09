@@ -167,7 +167,6 @@ var (
 var devModeFlags = []cli.Flag{
 	enableNewStateMgmt,
 	enableInitSyncWeightedRoundRobin,
-	reduceAttesterStateCopy,
 }
 
 // Deprecated flags list.
@@ -453,7 +452,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecateEnableFieldTrie,
 	deprecatedP2PWhitelist,
 	deprecatedP2PBlacklist,
-	deprecateReduceAttesterStateCopies
+	deprecateReduceAttesterStateCopies,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
