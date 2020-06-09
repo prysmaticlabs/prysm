@@ -173,11 +173,13 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[22].Sign(slotRoot[:])
+	// Arbitrary aggregator index for testing purposes.
+	aggregatorIndex := uint64(22)
+	sig := privKeys[aggregatorIndex].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 22,
+		AggregatorIndex: aggregatorIndex,
 	}
 	attesterDomain, err = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainAggregateAndProof, beaconState.GenesisValidatorRoot())
 	if err != nil {
@@ -187,7 +189,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	aggreSig := privKeys[22].Sign(signingRoot[:]).Marshal()
+	aggreSig := privKeys[aggregatorIndex].Sign(signingRoot[:]).Marshal()
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
