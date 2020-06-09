@@ -52,7 +52,8 @@ func (dd *ProposeDetector) DetectDoublePropose(
 	return nil, nil
 }
 
-// DetectDoubleProposeNoUpdate detects double proposals for a given block header by looking in the db.
+// DetectDoubleProposeNoUpdate detects double proposals for a given block header by db search
+// without storing the incoming block to db.
 func (dd *ProposeDetector) DetectDoubleProposeNoUpdate(
 	ctx context.Context,
 	incomingBlk *ethpb.BeaconBlockHeader,
@@ -65,9 +66,9 @@ func (dd *ProposeDetector) DetectDoubleProposeNoUpdate(
 	}
 	for _, blockHeader := range headersFromIdx {
 		sameBodyRoot := bytes.Equal(blockHeader.Header.BodyRoot, incomingBlk.BodyRoot)
-		sameSatateRoot := bytes.Equal(blockHeader.Header.StateRoot, incomingBlk.StateRoot)
+		sameStateRoot := bytes.Equal(blockHeader.Header.StateRoot, incomingBlk.StateRoot)
 		sameParentRoot := bytes.Equal(blockHeader.Header.ParentRoot, incomingBlk.ParentRoot)
-		if sameBodyRoot && sameSatateRoot && sameParentRoot {
+		if sameBodyRoot && sameStateRoot && sameParentRoot {
 			continue
 		}
 		return true, nil
