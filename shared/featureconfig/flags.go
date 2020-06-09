@@ -153,10 +153,6 @@ var (
 		Name:  "skip-regen-historical-states",
 		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
 	}
-	enableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:  "enable-init-sync-wrr",
-		Usage: "Enables weighted round robin fetching optimization",
-	}
 	disableReduceAttesterStateCopy = &cli.BoolFlag{
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
@@ -165,11 +161,14 @@ var (
 		Name:  "enable-kad-dht",
 		Usage: "Enables libp2p's kademlia based discovery to start running",
 	}
+	disableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:  "disable-init-sync-wrr",
+		Usage: "Disables weighted round robin fetching optimization",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableInitSyncWeightedRoundRobin,
 }
 
 // Deprecated flags list.
@@ -417,6 +416,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:   "enable-init-sync-wrr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -468,6 +472,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedP2PBlacklist,
 	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
+	deprecatedEnableInitSyncWeightedRoundRobin,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -521,7 +526,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
-	enableInitSyncWeightedRoundRobin,
+	disableInitSyncWeightedRoundRobin,
 	disableFieldTrie,
 	disableStateRefCopy,
 	disableNewStateMgmt,
@@ -534,5 +539,4 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
-	"--enable-init-sync-wrr",
 }
