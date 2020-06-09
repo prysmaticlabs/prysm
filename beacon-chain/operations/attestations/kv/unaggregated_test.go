@@ -63,6 +63,55 @@ func TestKV_SaveUnaggregatedAttestation(t *testing.T) {
 	}
 }
 
+func TestKV_SaveUnaggregatedAttestations(t *testing.T) {
+	tests := []struct {
+		name          string
+		atts          []*ethpb.Attestation
+		count         int
+		wantErrString string
+	}{
+		{
+			name: "unaggregated only",
+			atts: []*ethpb.Attestation{
+				{Data: &ethpb.AttestationData{Slot: 1}},
+				{Data: &ethpb.AttestationData{Slot: 2}},
+				{Data: &ethpb.AttestationData{Slot: 3}},
+			},
+			count: 3,
+		},
+		{
+			name: "has aggregated",
+			atts: []*ethpb.Attestation{
+				{Data: &ethpb.AttestationData{Slot: 1}},
+				{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}},
+				{Data: &ethpb.AttestationData{Slot: 3}},
+			},
+			wantErrString: "attestation is aggregated",
+			count:         1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewAttCaches()
+			if len(cache.unAggregatedAtt) != 0 {
+				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
+			}
+
+			err := cache.SaveUnaggregatedAttestations(tt.atts)
+			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {
+				t.Errorf("Did not receive wanted error, want: %q, got: %v", tt.wantErrString, err)
+			}
+			if tt.wantErrString == "" && err != nil {
+				t.Error(err)
+			}
+			if len(cache.unAggregatedAtt) != tt.count {
+				t.Errorf("Incorrect attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+			}
+		})
+	}
+}
+
 func TestKV_Unaggregated_CanDelete(t *testing.T) {
 	cache := NewAttCaches()
 
