@@ -52,7 +52,7 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 	return s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest))
 }
 
-// method to broadcast messages into
+// method to broadcast messages to other peers in our gossip mesh.
 func (s *Service) broadcastObject(ctx context.Context, obj interface{}, topic string) error {
 	_, span := trace.StartSpan(ctx, "p2p.broadcastObject")
 	defer span.End()
