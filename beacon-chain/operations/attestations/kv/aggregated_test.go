@@ -134,33 +134,100 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
-	cache := NewAttCaches()
+	t.Run("nil attestation", func(t *testing.T) {
+		cache := NewAttCaches()
+		if err := cache.DeleteAggregatedAttestation(nil); err != nil {
+			t.Error(err)
+		}
+		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}}
+		if err := cache.DeleteAggregatedAttestation(att); err != nil {
+			t.Error(err)
+		}
+	})
 
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
-	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}
-	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}
-	att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b10101}}
-	atts := []*ethpb.Attestation{att1, att2, att3, att4}
+	t.Run("non aggregated attestation", func(t *testing.T) {
+		cache := NewAttCaches()
+		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: &ethpb.AttestationData{Slot: 2}}
+		err := cache.DeleteAggregatedAttestation(att)
+		wantErr := "attestation is not aggregated"
+		if err == nil || err.Error() != wantErr {
+			t.Errorf("Did not receive wanted error, want: %q, got: %v", wantErr, err)
+		}
+	})
 
-	for _, att := range atts {
-		if err := cache.SaveAggregatedAttestation(att); err != nil {
+	t.Run("invalid hash", func(t *testing.T) {
+		cache := NewAttCaches()
+		att := &ethpb.Attestation{
+			AggregationBits: bitfield.Bitlist{0b1111},
+			Data: &ethpb.AttestationData{
+				Slot:            2,
+				BeaconBlockRoot: []byte{0b0},
+			},
+		}
+		err := cache.DeleteAggregatedAttestation(att)
+		wantErr := "could not tree hash attestation data: incorrect fixed bytes marshalling"
+		if err == nil || err.Error() != wantErr {
+			t.Errorf("Did not receive wanted error, want: %q, got: %v", wantErr, err)
+		}
+	})
+
+	t.Run("nonexistent attestation", func(t *testing.T) {
+		cache := NewAttCaches()
+		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}}
+		if err := cache.DeleteAggregatedAttestation(att); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("non-filtered deletion", func(t *testing.T) {
+		cache := NewAttCaches()
+		att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
+		att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}
+		att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}
+		att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b10101}}
+		atts := []*ethpb.Attestation{att1, att2, att3, att4}
+		if err := cache.SaveAggregatedAttestations(atts); err != nil {
 			t.Fatal(err)
 		}
-	}
 
-	if err := cache.DeleteAggregatedAttestation(att1); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.DeleteAggregatedAttestation(att3); err != nil {
-		t.Fatal(err)
-	}
+		if err := cache.DeleteAggregatedAttestation(att1); err != nil {
+			t.Fatal(err)
+		}
+		if err := cache.DeleteAggregatedAttestation(att3); err != nil {
+			t.Fatal(err)
+		}
 
-	returned := cache.AggregatedAttestations()
-	wanted := []*ethpb.Attestation{att2}
+		returned := cache.AggregatedAttestations()
+		wanted := []*ethpb.Attestation{att2}
+		if !reflect.DeepEqual(wanted, returned) {
+			t.Error("Did not receive correct aggregated atts")
+		}
+	})
 
-	if !reflect.DeepEqual(wanted, returned) {
-		t.Error("Did not receive correct aggregated atts")
-	}
+	t.Run("filtered deletion", func(t *testing.T) {
+		cache := NewAttCaches()
+		att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b110101}}
+		att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110111}}
+		att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110100}}
+		att4 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110101}}
+		atts := []*ethpb.Attestation{att1, att2, att3, att4}
+		if err := cache.SaveAggregatedAttestations(atts); err != nil {
+			t.Fatal(err)
+		}
+
+		if cache.AggregatedAttestationCount() != 2 {
+			t.Error("Unexpected number of atts")
+		}
+		if err := cache.DeleteAggregatedAttestation(att4); err != nil {
+			t.Fatal(err)
+		}
+
+		returned := cache.AggregatedAttestations()
+		wanted := []*ethpb.Attestation{att1, att2}
+		if !reflect.DeepEqual(wanted, returned) {
+			t.Errorf("Did not receive correct aggregated atts, want: %v, got: %v", wanted, returned)
+		}
+	})
 }
 
 func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {

@@ -119,24 +119,15 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestations(t *testing.T) {
 }
 
 func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
-	cache := NewAttCaches()
-
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101}}
-	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110}}
-	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b110}}
-	atts := []*ethpb.Attestation{att1, att2, att3}
-
-	if err := cache.SaveUnaggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
-	}
-
 	t.Run("nil attestation", func(t *testing.T) {
+		cache := NewAttCaches()
 		if err := cache.DeleteUnaggregatedAttestation(nil); err != nil {
 			t.Error(err)
 		}
 	})
 
 	t.Run("aggregated attestation", func(t *testing.T) {
+		cache := NewAttCaches()
 		att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}}
 		err := cache.DeleteUnaggregatedAttestation(att)
 		wantErr := "attestation is aggregated"
@@ -145,7 +136,15 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 		}
 	})
 
-	t.Run("delete all", func(t *testing.T) {
+	t.Run("successful deletion", func(t *testing.T) {
+		cache := NewAttCaches()
+		att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101}}
+		att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110}}
+		att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b110}}
+		atts := []*ethpb.Attestation{att1, att2, att3}
+		if err := cache.SaveUnaggregatedAttestations(atts); err != nil {
+			t.Fatal(err)
+		}
 		for _, att := range atts {
 			if err := cache.DeleteUnaggregatedAttestation(att); err != nil {
 				t.Error(err)
