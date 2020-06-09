@@ -1106,3 +1106,23 @@ func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) Trailer()
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).Trailer))
 }
+
+// GetIndividualVotes mocks base method.
+func (m *MockBeaconChainClient) GetIndividualVotes(arg0 context.Context, arg1 *eth.IndividualVotesRequest, arg2 ...grpc.CallOption) (*eth.IndividualVotesRespond, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetIndividualVotes", varargs...)
+	ret0, _ := ret[0].(*eth.IndividualVotesRespond)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIndividualVotes indicates an expected call of GetIndividualVotes.
+func (mr *MockBeaconChainClientMockRecorder) GetIndividualVotes(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndividualVotes", reflect.TypeOf((*MockBeaconChainClient)(nil).GetIndividualVotes), varargs...)
+}
