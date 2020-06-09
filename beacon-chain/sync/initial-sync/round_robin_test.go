@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -21,7 +23,7 @@ func TestConstants(t *testing.T) {
 	}
 }
 
-func TestRoundRobinSync(t *testing.T) {
+func TestService_roundRobinSync(t *testing.T) {
 	tests := []struct {
 		name               string
 		currentSlot        uint64
@@ -254,12 +256,11 @@ func TestRoundRobinSync(t *testing.T) {
 				DB:    beaconDB,
 			} // no-op mock
 			s := &Service{
-				chain:         mc,
-				blockNotifier: mc.BlockNotifier(),
-				p2p:           p,
-				db:            beaconDB,
-				synced:        false,
-				chainStarted:  true,
+				chain:        mc,
+				p2p:          p,
+				db:           beaconDB,
+				synced:       false,
+				chainStarted: true,
 			}
 			if err := s.roundRobinSync(makeGenesisTime(tt.currentSlot)); err != nil {
 				t.Error(err)
@@ -279,4 +280,91 @@ func TestRoundRobinSync(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_processBlock(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	genesisBlk := &eth.BeaconBlock{
+		Slot: 0,
+	}
+	genesisBlkRoot, err := stateutil.BlockRoot(genesisBlk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{Block: genesisBlk})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := NewInitialSync(&Config{
+		P2P: p2pt.NewTestP2P(t),
+		DB:  beaconDB,
+		Chain: &mock.ChainService{
+			State: st,
+			Root:  genesisBlkRoot[:],
+			DB:    beaconDB,
+		},
+	})
+	ctx := context.Background()
+	genesis := makeGenesisTime(32)
+
+	t.Run("process duplicate block", func(t *testing.T) {
+		blk1 := &eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
+				Slot:       1,
+				ParentRoot: genesisBlkRoot[:],
+			},
+		}
+		blk1Root, err := stateutil.BlockRoot(blk1.Block)
+		if err != nil {
+			t.Fatal(err)
+		}
+		blk2 := &eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
+				Slot:       2,
+				ParentRoot: blk1Root[:],
+			},
+		}
+
+		// Process block normally.
+		err = s.processBlock(ctx, genesis, blk1, func(
+			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
+			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, block, blockRoot); err != nil {
+				t.Error(err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		// Duplicate processing should trigger error.
+		err = s.processBlock(ctx, genesis, blk1, func(
+			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
+			return nil
+		})
+		expectedErr := fmt.Errorf("slot %d already processed", blk1.Block.Slot)
+		if err == nil || err.Error() != expectedErr.Error() {
+			t.Errorf("Expected error not thrown, want: %v, got: %v", expectedErr, err)
+		}
+
+		// Continue normal processing, should proceed w/o errors.
+		err = s.processBlock(ctx, genesis, blk2, func(
+			ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error {
+			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, block, blockRoot); err != nil {
+				t.Error(err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		if s.chain.HeadSlot() != 2 {
+			t.Errorf("Unexpected head slot, want: %d, got: %d", 2, s.chain.HeadSlot())
+		}
+	})
 }

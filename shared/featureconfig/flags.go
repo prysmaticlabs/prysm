@@ -17,10 +17,6 @@ var (
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
-	schlesiTestnetFlag = &cli.BoolFlag{
-		Name:  "schlesi-testnet",
-		Usage: "Use the preconfigured Schlesi multi-client testnet spec.",
-	}
 	e2eConfigFlag = &cli.BoolFlag{
 		Name:  "e2e-config",
 		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
@@ -402,6 +398,21 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedP2PWhitelist = &cli.StringFlag{
+		Name:   "p2p-whitelist",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedP2PBlacklist = &cli.StringFlag{
+		Name:   "p2p-blacklist",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedSchlesiTestnetFlag = &cli.BoolFlag{
+		Name:   "schlesi-testnet",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -449,12 +460,14 @@ var deprecatedFlags = []cli.Flag{
 	deprecateEnableStateRefCopy,
 	deprecateEnableFieldTrie,
 	deprecateEnableNewStateMgmt,
+	deprecatedP2PWhitelist,
+	deprecatedP2PBlacklist,
+	deprecatedSchlesiTestnetFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
-	schlesiTestnetFlag,
 	e2eConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
@@ -482,7 +495,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
-	schlesiTestnetFlag,
 	e2eConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,

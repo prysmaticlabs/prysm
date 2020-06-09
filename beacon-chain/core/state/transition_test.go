@@ -92,9 +92,18 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	if err := beaconState.SetSlot(beaconState.Slot() - 1); err != nil {
 		t.Fatal(err)
 	}
+
+	nextSlotState := beaconState.Copy()
+	if err := nextSlotState.SetSlot(beaconState.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	if err != nil {
+		t.Error(err)
+	}
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 60,
+			ProposerIndex: proposerIdx,
 			Slot:          beaconState.Slot() + 1,
 			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{
@@ -902,9 +911,17 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	nextSlotState := s.Copy()
+	if err := nextSlotState.SetSlot(s.Slot() + 1); err != nil {
+		t.Fatal(err)
+	}
+	proposerIdx, err := helpers.BeaconProposerIndex(nextSlotState)
+	if err != nil {
+		t.Error(err)
+	}
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
-			ProposerIndex: 125,
+			ProposerIndex: proposerIdx,
 			Slot:          s.Slot() + 1,
 			ParentRoot:    parentRoot[:],
 			Body: &ethpb.BeaconBlockBody{

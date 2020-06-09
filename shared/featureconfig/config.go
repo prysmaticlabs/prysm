@@ -20,6 +20,7 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -30,9 +31,8 @@ var log = logrus.WithField("prefix", "flags")
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Configuration related flags.
-	MinimalConfig  bool // MinimalConfig as defined in the spec.
-	SchlesiTestnet bool // SchlesiTestnet preconfigured spec.
-	E2EConfig      bool //E2EConfig made specifically for testing, do not use except in E2E.
+	MinimalConfig bool // MinimalConfig as defined in the spec.
+	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
 
 	// Feature related flags.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -109,7 +109,6 @@ func InitWithReset(c *Flags) func() {
 func (c *Flags) Copy() *Flags {
 	return &Flags{
 		MinimalConfig:                              c.MinimalConfig,
-		SchlesiTestnet:                             c.SchlesiTestnet,
 		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
 		InitSyncNoVerify:                           c.InitSyncNoVerify,
 		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
@@ -263,6 +262,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling libp2p's kademlia discovery")
 		cfg.EnableKadDHT = true
 	}
+	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
+		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
+		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
+			log.WithError(err).Error("Failed to update P2PAllowList flag")
+		}
+	}
+	if ctx.IsSet(deprecatedP2PBlacklist.Name) {
+		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PBlacklist.Name, cmd.P2PDenyList.Name)
+		if err := ctx.Set(cmd.P2PDenyList.Name, ctx.String(deprecatedP2PBlacklist.Name)); err != nil {
+			log.WithError(err).Error("Failed to update P2PDenyList flag")
+		}
+	}
+
 	Init(cfg)
 }
 
@@ -334,11 +346,6 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		params.UseMinimalConfig()
-	}
-	if ctx.Bool(schlesiTestnetFlag.Name) {
-		log.Warn("Using schlesi testnet config")
-		cfg.SchlesiTestnet = true
-		params.UseSchlesiTestnet()
 	}
 	if ctx.Bool(e2eConfigFlag.Name) {
 		log.Warn("Using end-to-end testing config")

@@ -22,7 +22,7 @@ const DomainByteLength = 4
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
-// ComputeSigningRoot computes the root of the object by hash tree rooting the signing data of the domain object.
+// ComputeSigningRoot computes the root of the object by calculating the hash tree root of the signing data with the given domain.
 //
 // Spec pseudocode definition:
 //	def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:

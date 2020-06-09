@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestCommitteeIDCache_RoundTrip(t *testing.T) {
+func TestSubnetIDsCache_RoundTrip(t *testing.T) {
 	c := newSubnetIDs()
 	slot := uint64(100)
 	committeeIDs := c.GetAggregatorSubnetIDs(slot)
@@ -55,7 +55,7 @@ func TestCommitteeIDCache_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestCommitteeIDs_PersistentCommitteeRoundtrip(t *testing.T) {
+func TestSubnetIDsCache_PersistentCommitteeRoundtrip(t *testing.T) {
 	pubkeySet := [][48]byte{}
 	c := newSubnetIDs()
 

@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -59,6 +58,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if att.Data == nil {
 		return pubsub.ValidationReject
 	}
+	// Attestation aggregation bits must exist.
+	if att.AggregationBits == nil {
+		return pubsub.ValidationReject
+	}
 
 	// Verify this the first attestation received for the participating validator for the slot.
 	if s.hasSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits) {
@@ -90,18 +93,16 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationReject
 	}
 
-	// Attestation aggregation bits must exist.
-	if att.AggregationBits == nil {
-		return pubsub.ValidationReject
-	}
 	committee, err := helpers.BeaconCommitteeFromState(preState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
-	// Attestation must be unaggregated.
-	if len(attestationutil.AttestingIndices(att.AggregationBits, committee)) != 1 {
+	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
+	// Note: eth2 spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
+	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
+	if att.AggregationBits.Count() != 1 || att.AggregationBits.BitIndices()[0] >= len(committee) {
 		return pubsub.ValidationReject
 	}
 
