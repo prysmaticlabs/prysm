@@ -32,7 +32,6 @@ var log = logrus.WithField("prefix", "flags")
 type Flags struct {
 	// Configuration related flags.
 	MinimalConfig  bool // MinimalConfig as defined in the spec.
-	SchlesiTestnet bool // SchlesiTestnet preconfigured spec.
 	E2EConfig      bool //E2EConfig made specifically for testing, do not use except in E2E.
 
 	// Feature related flags.
@@ -110,7 +109,6 @@ func InitWithReset(c *Flags) func() {
 func (c *Flags) Copy() *Flags {
 	return &Flags{
 		MinimalConfig:                              c.MinimalConfig,
-		SchlesiTestnet:                             c.SchlesiTestnet,
 		WriteSSZStateTransitions:                   c.WriteSSZStateTransitions,
 		InitSyncNoVerify:                           c.InitSyncNoVerify,
 		DisableDynamicCommitteeSubnets:             c.DisableDynamicCommitteeSubnets,
@@ -348,11 +346,6 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		params.UseMinimalConfig()
-	}
-	if ctx.Bool(schlesiTestnetFlag.Name) {
-		log.Warn("Using schlesi testnet config")
-		cfg.SchlesiTestnet = true
-		params.UseSchlesiTestnet()
 	}
 	if ctx.Bool(e2eConfigFlag.Name) {
 		log.Warn("Using end-to-end testing config")
