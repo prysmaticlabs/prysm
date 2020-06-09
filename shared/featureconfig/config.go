@@ -254,10 +254,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling state reference copy")
 		cfg.EnableStateRefCopy = false
 	}
-	if ctx.Bool(reduceAttesterStateCopy.Name) {
-		log.Warn("Enabling feature that reduces attester state copy")
-		cfg.ReduceAttesterStateCopy = true
-	}
 	if ctx.Bool(enableKadDht.Name) {
 		log.Warn("Enabling libp2p's kademlia discovery")
 		cfg.EnableKadDHT = true
@@ -274,7 +270,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 			log.WithError(err).Error("Failed to update P2PDenyList flag")
 		}
 	}
-
+	cfg.ReduceAttesterStateCopy = true
+	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
+		log.Warn("Disabling reducing attester state copy")
+		cfg.ReduceAttesterStateCopy = false
+	}
 	Init(cfg)
 }
 
