@@ -39,6 +39,75 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	}
 }
 
+func TestKV_Aggregated_SaveUnaggregatedAttestation(t *testing.T) {
+	tests := []struct {
+		name          string
+		att           *ethpb.Attestation
+		count         int
+		wantErrString string
+	}{
+		{
+			name: "nil attestation",
+			att:  nil,
+		},
+		{
+			name: "nil attestation data",
+			att:  &ethpb.Attestation{},
+		},
+		{
+			name: "not aggregated",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b10100}},
+			wantErrString: "attestation is not aggregated",
+		},
+		{
+			name: "invalid hash",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: []byte{0b0},
+				},
+				AggregationBits: bitfield.Bitlist{0b10111},
+			},
+			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
+		},
+		{
+			name: "normal save",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1101},
+			},
+			count: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewAttCaches()
+			if len(cache.unAggregatedAtt) != 0 {
+				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
+			}
+
+			err := cache.SaveAggregatedAttestation(tt.att)
+			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {
+				t.Errorf("Did not receive wanted error, want: %q, got: %v", tt.wantErrString, err)
+				return
+			}
+			if tt.wantErrString == "" && err != nil {
+				t.Error(err)
+				return
+			}
+			if len(cache.aggregatedAtt) != tt.count {
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+			}
+			if cache.AggregatedAttestationCount() != tt.count {
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.AggregatedAttestationCount())
+			}
+		})
+	}
+}
+
 func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
 
