@@ -148,6 +148,9 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 // ProposeAttestation is a function called by an attester to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation) (*ethpb.AttestResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "AttesterServer.ProposeAttestation")
+	defer span.End()
+
 	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
@@ -195,11 +198,14 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 
 // SubscribeCommitteeSubnets subscribes to the committee ID subnet given subscribe request.
 func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.CommitteeSubnetsSubscribeRequest) (*ptypes.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "AttesterServer.SubscribeCommitteeSubnets")
+	defer span.End()
+
 	if len(req.Slots) != len(req.CommitteeIds) && len(req.CommitteeIds) != len(req.IsAggregator) {
 		return nil, status.Error(codes.InvalidArgument, "request fields are not the same length")
 	}
 	if len(req.Slots) == 0 {
-		return &ptypes.Empty{}, nil
+		return nil, status.Error(codes.InvalidArgument, "no attester slots provided")
 	}
 
 	fetchValsLen := func(slot uint64) (uint64, error) {
@@ -211,19 +217,20 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 		return uint64(len(vals)), nil
 	}
 
-	// run first request
+	// Request the head validator indices of epoch represented by the first requested
+	// slot.
 	currValsLen, err := fetchValsLen(req.Slots[0])
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 	}
 	currEpoch := helpers.SlotToEpoch(req.Slots[0])
 
 	for i := 0; i < len(req.Slots); i++ {
-		// if epoch has changed, re-request active validators
+		// If epoch has changed, re-request active validators length
 		if currEpoch != helpers.SlotToEpoch(req.Slots[i]) {
 			currValsLen, err = fetchValsLen(req.Slots[i])
 			if err != nil {
-				return nil, err
+				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 			}
 			currEpoch = helpers.SlotToEpoch(req.Slots[i])
 		}

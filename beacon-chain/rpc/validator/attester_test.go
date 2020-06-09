@@ -654,8 +654,8 @@ func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
 		CommitteeIds: nil,
 		IsAggregator: nil,
 	})
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || !strings.Contains(err.Error(), "no attester slots provided") {
+		t.Fatalf("Expected no attester slots provided error, received: %v", err)
 	}
 }
 
