@@ -210,3 +210,24 @@ func TestGenesisValidatorRoot_CanRetrieve(t *testing.T) {
 		t.Error("Did not get correct genesis validator root")
 	}
 }
+
+func TestHeadETH1Data_Nil(t *testing.T) {
+	db := testDB.SetupDB(t)
+	c := setupBeaconChain(t, db)
+	if !reflect.DeepEqual(c.HeadETH1Data(), &ethpb.Eth1Data{}) {
+		t.Error("Incorrect pre chain start value")
+	}
+}
+
+func TestHeadETH1Data_CanRetrieve(t *testing.T) {
+	d := &ethpb.Eth1Data{DepositCount: 999}
+	s, err := state.InitializeFromProto(&pb.BeaconState{Eth1Data: d})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &Service{}
+	c.head = &head{state: s}
+	if !proto.Equal(c.HeadETH1Data(), d) {
+		t.Error("Received incorrect eth1 data")
+	}
+}
