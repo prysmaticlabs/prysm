@@ -1047,6 +1047,92 @@ func (bs *Server) GetValidatorPerformance(
 	}, nil
 }
 
+// GetIndividualVotes retrieves individual voting status of validators.
+func (bs *Server) GetIndividualVotes(
+	ctx context.Context,
+	req *ethpb.IndividualVotesRequest,
+) (*ethpb.IndividualVotesRespond, error) {
+	if !featureconfig.Get().NewStateMgmt {
+		return nil, status.Error(codes.FailedPrecondition, "Requires --enable-new-state-mgmt to function")
+	}
+
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	if req.Epoch > currentEpoch {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			currentEpoch,
+			req.Epoch,
+		)
+	}
+
+	requestedState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(req.Epoch))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve archived state for epoch %d: %v", req.Epoch, err)
+	}
+	// Track filtered validators to prevent duplication in the response.
+	filtered := map[uint64]bool{}
+	filteredIndices := make([]uint64, 0)
+	votes := make([]*ethpb.IndividualVotesRespond_IndividualVote, 0, len(req.Indices)+len(req.PublicKeys))
+	// Filter out assignments by public keys.
+	for _, pubKey := range req.PublicKeys {
+		index, ok := requestedState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		if !ok {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: ^uint64(0)})
+			continue
+		}
+		filtered[index] = true
+		filteredIndices = append(filteredIndices, index)
+	}
+	// Filter out assignments by validator indices.
+	for _, index := range req.Indices {
+		if !filtered[index] {
+			filteredIndices = append(filteredIndices, index)
+		}
+	}
+	sort.Slice(filteredIndices, func(i, j int) bool {
+		return filteredIndices[i] < filteredIndices[j]
+	})
+
+	v, b, err := precompute.New(ctx, requestedState)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
+	}
+	v, b, err = precompute.ProcessAttestations(ctx, requestedState, v, b)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not pre compute attestations")
+	}
+	vals := requestedState.ValidatorsReadOnly()
+	for _, index := range filteredIndices {
+		if int(index) >= len(v) {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
+			continue
+		}
+		pb := vals[index].PublicKey()
+		votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{
+			Epoch:                            req.Epoch,
+			PublicKey:                        pb[:],
+			ValidatorIndex:                   index,
+			IsSlashed:                        v[index].IsSlashed,
+			IsWithdrawableInCurrentEpoch:     v[index].IsWithdrawableCurrentEpoch,
+			IsActiveInCurrentEpoch:           v[index].IsActiveCurrentEpoch,
+			IsActiveInPreviousEpoch:          v[index].IsActivePrevEpoch,
+			IsCurrentEpochAttester:           v[index].IsCurrentEpochAttester,
+			IsCurrentEpochTargetAttester:     v[index].IsCurrentEpochTargetAttester,
+			IsPreviousEpochAttester:          v[index].IsPrevEpochAttester,
+			IsPreviousEpochTargetAttester:    v[index].IsPrevEpochTargetAttester,
+			IsPreviousEpochHeadAttester:      v[index].IsPrevEpochHeadAttester,
+			CurrentEpochEffectiveBalanceGwei: v[index].CurrentEpochEffectiveBalance,
+			InclusionSlot:                    v[index].InclusionSlot,
+			InclusionDistance:                v[index].InclusionDistance,
+		})
+	}
+
+	return &ethpb.IndividualVotesRespond{
+		IndividualVotes: votes,
+	}, nil
+}
+
 // Determines whether a validator has already exited.
 func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
