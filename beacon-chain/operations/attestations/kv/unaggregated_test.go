@@ -2,21 +2,64 @@ package kv
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
-func TestKV_Unaggregated_AlreadyAggregated(t *testing.T) {
-	cache := NewAttCaches()
+func TestKV_SaveUnaggregatedAttestation(t *testing.T) {
+	tests := []struct {
+		name          string
+		att           *ethpb.Attestation
+		count         int
+		wantErrString string
+	}{
+		{
+			name: "nil attestation",
+			att:  nil,
+		},
+		{
+			name:          "already aggregated",
+			att:           &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}},
+			wantErrString: "attestation is aggregated",
+		},
+		{
+			name: "invalid hash",
+			att: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					BeaconBlockRoot: []byte{0b0},
+				},
+			},
+			wantErrString: "could not tree hash attestation: incorrect fixed bytes marshalling",
+		},
+		{
+			name:  "normal save",
+			att:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b0001}},
+			count: 1,
+		},
+	}
 
-	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewAttCaches()
+			if len(cache.unAggregatedAtt) != 0 {
+				t.Errorf("Invalid start pool, atts: %d", len(cache.unAggregatedAtt))
+			}
 
-	wanted := "attestation is aggregated"
-	if err := cache.SaveUnaggregatedAttestation(att); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not received wanted error")
+			err := cache.SaveUnaggregatedAttestation(tt.att)
+			if tt.wantErrString != "" && (err == nil || err.Error() != tt.wantErrString) {
+				t.Errorf("Did not receive wanted error, want: %q, got: %v", tt.wantErrString, err)
+				return
+			}
+			if tt.wantErrString == "" && err != nil {
+				t.Error(err)
+				return
+			}
+			if len(cache.unAggregatedAtt) != tt.count {
+				t.Errorf("Incorrect attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+			}
+		})
 	}
 }
 
