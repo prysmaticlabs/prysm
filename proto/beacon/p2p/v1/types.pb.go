@@ -531,7 +531,7 @@ func (m *StateSummary) GetRoot() []byte {
 	return nil
 }
 
-type SigningRoot struct {
+type SigningData struct {
 	ObjectRoot           []byte   `protobuf:"bytes,1,opt,name=object_root,json=objectRoot,proto3" json:"object_root,omitempty" ssz-size:"32"`
 	Domain               []byte   `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty" ssz-size:"32"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -539,18 +539,18 @@ type SigningRoot struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SigningRoot) Reset()         { *m = SigningRoot{} }
-func (m *SigningRoot) String() string { return proto.CompactTextString(m) }
-func (*SigningRoot) ProtoMessage()    {}
-func (*SigningRoot) Descriptor() ([]byte, []int) {
+func (m *SigningData) Reset()         { *m = SigningData{} }
+func (m *SigningData) String() string { return proto.CompactTextString(m) }
+func (*SigningData) ProtoMessage()    {}
+func (*SigningData) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e719e7d82cfa7b0d, []int{6}
 }
-func (m *SigningRoot) XXX_Unmarshal(b []byte) error {
+func (m *SigningData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SigningRoot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SigningData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SigningRoot.Marshal(b, m, deterministic)
+		return xxx_messageInfo_SigningData.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -560,26 +560,26 @@ func (m *SigningRoot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return b[:n], nil
 	}
 }
-func (m *SigningRoot) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SigningRoot.Merge(m, src)
+func (m *SigningData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SigningData.Merge(m, src)
 }
-func (m *SigningRoot) XXX_Size() int {
+func (m *SigningData) XXX_Size() int {
 	return m.Size()
 }
-func (m *SigningRoot) XXX_DiscardUnknown() {
-	xxx_messageInfo_SigningRoot.DiscardUnknown(m)
+func (m *SigningData) XXX_DiscardUnknown() {
+	xxx_messageInfo_SigningData.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SigningRoot proto.InternalMessageInfo
+var xxx_messageInfo_SigningData proto.InternalMessageInfo
 
-func (m *SigningRoot) GetObjectRoot() []byte {
+func (m *SigningData) GetObjectRoot() []byte {
 	if m != nil {
 		return m.ObjectRoot
 	}
 	return nil
 }
 
-func (m *SigningRoot) GetDomain() []byte {
+func (m *SigningData) GetDomain() []byte {
 	if m != nil {
 		return m.Domain
 	}
@@ -703,7 +703,7 @@ func init() {
 	proto.RegisterType((*ValidatorLatestVote)(nil), "ethereum.beacon.p2p.v1.ValidatorLatestVote")
 	proto.RegisterType((*HistoricalBatch)(nil), "ethereum.beacon.p2p.v1.HistoricalBatch")
 	proto.RegisterType((*StateSummary)(nil), "ethereum.beacon.p2p.v1.StateSummary")
-	proto.RegisterType((*SigningRoot)(nil), "ethereum.beacon.p2p.v1.SigningRoot")
+	proto.RegisterType((*SigningData)(nil), "ethereum.beacon.p2p.v1.SigningData")
 	proto.RegisterType((*ForkData)(nil), "ethereum.beacon.p2p.v1.ForkData")
 	proto.RegisterType((*SignedAggregateAndProof)(nil), "ethereum.beacon.p2p.v1.SignedAggregateAndProof")
 }
@@ -780,16 +780,16 @@ var fileDescriptor_e719e7d82cfa7b0d = []byte{
 	0x6f, 0xfd, 0x1d, 0x05, 0xd4, 0x6f, 0x15, 0xcf, 0x4d, 0x17, 0x71, 0xc7, 0x87, 0x9d, 0xe9, 0x67,
 	0x53, 0x59, 0xf8, 0xd5, 0xec, 0x4c, 0xbf, 0x9a, 0x4b, 0x8b, 0x3e, 0x9a, 0x7a, 0x1b, 0xd4, 0xe4,
 	0x10, 0x73, 0x7f, 0x10, 0x86, 0x28, 0xd9, 0x13, 0x9e, 0xca, 0xd9, 0x42, 0x99, 0x18, 0x2d, 0x66,
-	0x79, 0x1f, 0x80, 0xea, 0x7d, 0xe2, 0x45, 0x24, 0xf2, 0xe4, 0x48, 0x62, 0x82, 0x2a, 0xed, 0x3d,
-	0xc4, 0x0e, 0x4f, 0x47, 0x1a, 0x65, 0xde, 0x44, 0x03, 0x52, 0x94, 0xe4, 0xbc, 0x00, 0x0e, 0xba,
-	0x34, 0x44, 0x24, 0xaf, 0xcd, 0x19, 0xf0, 0x0c, 0xa0, 0xbf, 0xaf, 0x80, 0xc3, 0xe2, 0xaf, 0x90,
-	0x8f, 0xea, 0x8c, 0xe2, 0xae, 0x2c, 0x58, 0xdc, 0xb7, 0xe7, 0x4f, 0x61, 0x4b, 0xff, 0x6e, 0x08,
-	0xd3, 0x3f, 0x54, 0x40, 0x43, 0x44, 0x00, 0xbb, 0xd7, 0xb2, 0x2a, 0xc5, 0xd7, 0x22, 0xf7, 0x5e,
-	0x42, 0x69, 0x1f, 0xde, 0x05, 0x87, 0x42, 0xcc, 0x18, 0xf2, 0xb0, 0x8c, 0x44, 0xd5, 0xdc, 0x9c,
-	0x57, 0xaa, 0x05, 0xb5, 0xac, 0xd9, 0x5c, 0xc5, 0xca, 0x35, 0x60, 0x0b, 0x1c, 0x61, 0xc4, 0x8b,
-	0x10, 0x1f, 0x24, 0x78, 0xb6, 0x9f, 0xa2, 0xdb, 0x97, 0x98, 0x6e, 0xed, 0xeb, 0xfd, 0x35, 0xe5,
-	0x9b, 0xfd, 0x35, 0xe5, 0xa7, 0xfd, 0x35, 0xa5, 0x77, 0x50, 0x4e, 0xad, 0x9b, 0x7f, 0x06, 0x00,
-	0x00, 0xff, 0xff, 0x5d, 0x05, 0xc0, 0x7f, 0x7e, 0x0b, 0x00, 0x00,
+	0x79, 0x1f, 0x80, 0xea, 0x7d, 0xe2, 0x45, 0x24, 0xf2, 0xe4, 0x43, 0x67, 0x82, 0x2a, 0xed, 0x3d,
+	0xc4, 0x0e, 0x4f, 0x47, 0x1a, 0x65, 0xde, 0x44, 0x03, 0x52, 0x94, 0x1c, 0x63, 0x5e, 0x00, 0x07,
+	0x5d, 0x1a, 0x22, 0x92, 0xd7, 0xe6, 0x0c, 0x78, 0x06, 0xd0, 0xdf, 0x57, 0xc0, 0x61, 0xf1, 0x57,
+	0x48, 0x5b, 0x33, 0x8a, 0xbb, 0xb2, 0x60, 0x71, 0xdf, 0x9e, 0x3f, 0x85, 0x2d, 0xfd, 0xbb, 0x21,
+	0x4c, 0xff, 0x50, 0x01, 0x0d, 0x11, 0x01, 0xec, 0x5e, 0xcb, 0xaa, 0x14, 0x5f, 0x8b, 0xdc, 0x7b,
+	0x09, 0xa5, 0x7d, 0x78, 0x17, 0x1c, 0x0a, 0x31, 0x63, 0xc8, 0xc3, 0x32, 0x12, 0x55, 0x73, 0x73,
+	0x5e, 0xa9, 0x16, 0xd4, 0xb2, 0x66, 0x73, 0x15, 0x2b, 0xd7, 0x80, 0x2d, 0x70, 0x84, 0x11, 0x2f,
+	0x42, 0x7c, 0x90, 0xe0, 0xd9, 0x7e, 0x8a, 0x6e, 0x5f, 0x62, 0xba, 0xb5, 0xaf, 0xf7, 0xd7, 0x94,
+	0x6f, 0xf6, 0xd7, 0x94, 0x9f, 0xf6, 0xd7, 0x94, 0xde, 0x41, 0x39, 0xb5, 0x6e, 0xfe, 0x19, 0x00,
+	0x00, 0xff, 0xff, 0x54, 0xb8, 0x94, 0x7b, 0x7e, 0x0b, 0x00, 0x00,
 }
 
 func (m *BeaconState) Marshal() (dAtA []byte, err error) {
@@ -1341,7 +1341,7 @@ func (m *StateSummary) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SigningRoot) Marshal() (dAtA []byte, err error) {
+func (m *SigningData) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1351,12 +1351,12 @@ func (m *SigningRoot) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SigningRoot) MarshalTo(dAtA []byte) (int, error) {
+func (m *SigningData) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SigningRoot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *SigningData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1706,7 +1706,7 @@ func (m *StateSummary) Size() (n int) {
 	return n
 }
 
-func (m *SigningRoot) Size() (n int) {
+func (m *SigningData) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -3218,7 +3218,7 @@ func (m *StateSummary) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SigningRoot) Unmarshal(dAtA []byte) error {
+func (m *SigningData) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3241,10 +3241,10 @@ func (m *SigningRoot) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: SigningRoot: wiretype end group for non-group")
+			return fmt.Errorf("proto: SigningData: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: SigningRoot: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: SigningData: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

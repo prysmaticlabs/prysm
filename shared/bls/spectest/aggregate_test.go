@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -20,12 +21,10 @@ func TestAggregateYaml(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
 			}
-
 			test := &AggregateTest{}
 			if err := yaml.Unmarshal(file, test); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-
 			var sigs []*bls.Signature
 			for _, s := range test.Input {
 				sigBytes, err := hex.DecodeString(s[2:])
@@ -38,8 +37,19 @@ func TestAggregateYaml(t *testing.T) {
 				}
 				sigs = append(sigs, sig)
 			}
+			if len(test.Input) == 0 {
+				if test.Output != "" {
+					t.Fatalf("Output Aggregate is not of zero length:Output %s", test.Output)
+				}
+				return
+			}
 			sig := bls.AggregateSignatures(sigs)
-
+			if strings.Contains(folder.Name(), "aggregate_na_pubkeys") {
+				if sig != nil {
+					t.Errorf("Expected nil signature, received: %v", sig)
+				}
+				return
+			}
 			outputBytes, err := hex.DecodeString(test.Output[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)

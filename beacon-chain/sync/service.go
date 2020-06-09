@@ -66,6 +66,7 @@ type blockchainService interface {
 	blockchain.AttestationReceiver
 	blockchain.TimeFetcher
 	blockchain.GenesisFetcher
+	blockchain.CanonicalFetcher
 }
 
 // Service is responsible for handling all run time p2p related operations as the

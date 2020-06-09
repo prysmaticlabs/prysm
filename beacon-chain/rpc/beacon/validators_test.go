@@ -1892,7 +1892,9 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted := &ethpb.ValidatorParticipation{EligibleEther: validatorCount * params.BeaconConfig().MaxEffectiveBalance}
+	wanted := &ethpb.ValidatorParticipation{EligibleEther: validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+		VotedEther:              params.BeaconConfig().EffectiveBalanceIncrement,
+		GlobalParticipationRate: float32(params.BeaconConfig().EffectiveBalanceIncrement) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance)}
 	if !reflect.DeepEqual(res.Participation, wanted) {
 		t.Error("Incorrect validator participation respond")
 	}

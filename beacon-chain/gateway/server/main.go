@@ -40,7 +40,7 @@ func main() {
 	gw := gateway.New(
 		context.Background(),
 		*beaconRPC,
-		fmt.Sprintf("0.0.0.0:%d", *port),
+		fmt.Sprintf("127.0.0.1:%d", *port),
 		mux,
 		strings.Split(*allowedOrigins, ","),
 		*enableDebugRPCEndpoints,

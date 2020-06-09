@@ -26,7 +26,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 	exit := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			ValidatorIndex: 0,
-			Epoch:          1 + params.BeaconConfig().PersistentCommitteePeriod,
+			Epoch:          1 + params.BeaconConfig().ShardCommitteePeriod,
 		},
 	}
 	registry := []*ethpb.Validator{
@@ -47,7 +47,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 		t.Fatal(err)
 	}
 	if err := state.SetSlot(
-		state.Slot() + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch),
+		state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch),
 	); err != nil {
 		t.Fatal(err)
 	}
