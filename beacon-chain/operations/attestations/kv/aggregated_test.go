@@ -171,6 +171,17 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		want     bool
 	}{
 		{
+			name:  "nil attestation",
+			input: nil,
+			want:  false,
+		},
+		{
+			name: "nil attestation data",
+			input: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0b1111}},
+			want: false,
+		},
+		{
 			name: "empty cache aggregated",
 			input: &ethpb.Attestation{
 				Data: &ethpb.AttestationData{
