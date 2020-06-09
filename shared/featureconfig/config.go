@@ -217,10 +217,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling state reference copy")
 		cfg.EnableStateRefCopy = false
 	}
-	if ctx.Bool(reduceAttesterStateCopy.Name) {
-		log.Warn("Enabling feature that reduces attester state copy")
-		cfg.ReduceAttesterStateCopy = true
-	}
 	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
 		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
 		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
@@ -233,7 +229,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 			log.WithError(err).Error("Failed to update P2PDenyList flag")
 		}
 	}
-
+	cfg.ReduceAttesterStateCopy = true
+	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
+		log.Warn("Disabling reducing attester state copy")
+		cfg.ReduceAttesterStateCopy = false
+	}
 	Init(cfg)
 }
 
