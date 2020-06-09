@@ -16,7 +16,7 @@ import (
 
 var runAmount = 25
 
-func TestBenchmarkExecuteStateTransition(t *testing.T) {
+func TestExecuteStateTransition_FullBlock(t *testing.T) {
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState1Epoch()
 	if err != nil {

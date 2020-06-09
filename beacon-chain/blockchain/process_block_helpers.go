@@ -387,7 +387,8 @@ func (s *Service) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32
 //    elif block.slot == slot:
 //      return root
 //    else:
-//      return Bytes32()  # root is older than queried slot: no results.
+//      # root is older than queried slot, thus a skip slot. Return most recent root prior to slot.
+//      return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
 	defer span.End()

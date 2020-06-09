@@ -132,12 +132,9 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	blockRoots := make([][32]byte, 0)
 	evenBlockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
-		totalBlocks[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot:       uint64(i),
-				ParentRoot: []byte("parent"),
-			},
-		}
+		b := testutil.NewBeaconBlock()
+		b.Block.Slot = uint64(i)
+		totalBlocks[i] = b
 		r, err := stateutil.BlockRoot(totalBlocks[i].Block)
 		if err != nil {
 			t.Fatal(err)
