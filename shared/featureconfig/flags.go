@@ -157,9 +157,9 @@ var (
 		Name:  "enable-init-sync-wrr",
 		Usage: "Enables weighted round robin fetching optimization",
 	}
-	reduceAttesterStateCopy = &cli.BoolFlag{
-		Name:  "reduce-attester-state-copy",
-		Usage: "Reduces the amount of state copies for attester rpc",
+	disableReduceAttesterStateCopy = &cli.BoolFlag{
+		Name:  "disable-reduce-attester-state-copy",
+		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
 )
 
@@ -167,7 +167,6 @@ var (
 var devModeFlags = []cli.Flag{
 	enableNewStateMgmt,
 	enableInitSyncWeightedRoundRobin,
-	reduceAttesterStateCopy,
 }
 
 // Deprecated flags list.
@@ -400,6 +399,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecateReduceAttesterStateCopies = &cli.BoolFlag{
+		Name:   "reduce-attester-state-copy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -448,6 +452,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecateEnableFieldTrie,
 	deprecatedP2PWhitelist,
 	deprecatedP2PBlacklist,
+	deprecateReduceAttesterStateCopies,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -505,7 +510,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableInitSyncWeightedRoundRobin,
 	disableFieldTrie,
 	disableStateRefCopy,
-	reduceAttesterStateCopy,
+	disableReduceAttesterStateCopy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -515,5 +520,4 @@ var E2EBeaconChainFlags = []string{
 	"--check-head-state",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
-	"--reduce-attester-state-copy",
 }
