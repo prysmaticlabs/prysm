@@ -174,7 +174,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Arbitrary aggregator index for testing purposes.
-	aggregatorIndex := uint64(22)
+	aggregatorIndex := committee[0]
 	sig := privKeys[aggregatorIndex].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
