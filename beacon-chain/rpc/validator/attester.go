@@ -231,7 +231,7 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 		if currEpoch != helpers.SlotToEpoch(req.Slots[i]) {
 			currValsLen, err = fetchValsLen(req.Slots[i])
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator indices: %v", err)
+				return nil, status.Errorf(codes.Internal, "Could not retrieve head validator length: %v", err)
 			}
 			currEpoch = helpers.SlotToEpoch(req.Slots[i])
 		}
