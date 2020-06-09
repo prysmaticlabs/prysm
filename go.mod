@@ -41,7 +41,6 @@ require (
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-cid v0.0.6 // indirect
 	github.com/ipfs/go-datastore v0.4.4
-	github.com/ipfs/go-detect-race v0.0.1
 	github.com/ipfs/go-ipfs-addr v0.0.1
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.1
