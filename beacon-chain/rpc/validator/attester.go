@@ -227,7 +227,6 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 
 	for i := 0; i < len(req.Slots); i++ {
 		// If epoch has changed, re-request active validators length
-		// indices.
 		if currEpoch != helpers.SlotToEpoch(req.Slots[i]) {
 			currValsLen, err = fetchValsLen(req.Slots[i])
 			if err != nil {
