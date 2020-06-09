@@ -57,7 +57,10 @@ func TestKV_SaveUnaggregatedAttestation(t *testing.T) {
 				return
 			}
 			if len(cache.unAggregatedAtt) != tt.count {
-				t.Errorf("Incorrect attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+			}
+			if cache.UnaggregatedAttestationCount() != tt.count {
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.UnaggregatedAttestationCount())
 			}
 		})
 	}
@@ -106,7 +109,10 @@ func TestKV_SaveUnaggregatedAttestations(t *testing.T) {
 				t.Error(err)
 			}
 			if len(cache.unAggregatedAtt) != tt.count {
-				t.Errorf("Incorrect attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, len(cache.unAggregatedAtt))
+			}
+			if cache.UnaggregatedAttestationCount() != tt.count {
+				t.Errorf("Wrong attestation count, want: %d, got: %d", tt.count, cache.UnaggregatedAttestationCount())
 			}
 		})
 	}
