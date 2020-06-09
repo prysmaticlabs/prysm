@@ -8,7 +8,7 @@ import (
 // Pool defines the necessary methods for Prysm attestations pool to serve
 // fork choice and validators. In the current design, aggregated attestations
 // are used by proposer actor. Unaggregated attestations are used by
-// for aggregator actor.
+// aggregator actor.
 type Pool interface {
 	// For Aggregated attestations
 	AggregateUnaggregatedAttestations() error
