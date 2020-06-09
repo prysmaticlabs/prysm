@@ -61,6 +61,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
 		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
+	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
 	for startSlot <= endReqSlot {
 		remainingBucketCapacity = r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
 		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
@@ -78,7 +79,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 
 		// TODO(3147): Update this with reasonable constraints.
-		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > params.BeaconNetworkConfig().MaxRequestBlocks {
+		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > maxRequestBlocks {
 			r.writeErrorResponseToStream(responseCodeInvalidRequest, stepError, stream)
 			err := errors.New(stepError)
 			traceutil.AnnotateError(span, err)
