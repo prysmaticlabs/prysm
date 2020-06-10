@@ -44,7 +44,7 @@ func TestBlockRoot(t *testing.T) {
 }
 
 func TestBlockBodyRoot_NilIsSameAsEmpty(t *testing.T) {
-	a, err := stateutil.BlockBodyRoot(&ethpb.BeaconBlockBody{})
+	a, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
 	if err != nil {
 		t.Error(err)
 	}
