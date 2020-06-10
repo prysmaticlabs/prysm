@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"log"
 	"os"
 
@@ -12,6 +13,7 @@ import (
 var (
 	numKeys    = flag.Int("num-keys", 0, "Number of validator private/withdrawal keys to generate")
 	startIndex = flag.Uint64("start-index", 0, "Start index for the determinstic keygen algorithm")
+	random = flag.Bool("random", false, "Randomly generate keys")
 	outputJSON = flag.String("output-json", "", "JSON file to write output to")
 	overwrite  = flag.Bool("overwrite", false, "If the key file exists, it will be overwritten")
 )
@@ -41,10 +43,31 @@ func main() {
 		}
 	}()
 
-	ctnr := generateUnencryptedKeys(*startIndex)
+	var ctnr *keygen.UnencryptedKeysContainer
+	if *random {
+		ctnr = generateRandomKeys(*numKeys)
+	} else {
+		ctnr = generateUnencryptedKeys(*startIndex)
+	}
 	if err := keygen.SaveUnencryptedKeysToFile(file, ctnr); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func generateRandomKeys(num int) *keygen.UnencryptedKeysContainer {
+	ctnr := &keygen.UnencryptedKeysContainer{
+		Keys: make([]*keygen.UnencryptedKeys, num),
+	}
+
+	for i := 0; i < num; i++ {
+		sk := bls.RandKey()
+		ctnr.Keys[i] = &keygen.UnencryptedKeys{
+			ValidatorKey:  sk.Marshal(),
+			WithdrawalKey: sk.Marshal(),
+		}
+	}
+
+	return ctnr
 }
 
 func generateUnencryptedKeys(startIndex uint64) *keygen.UnencryptedKeysContainer {
