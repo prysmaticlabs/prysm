@@ -65,6 +65,9 @@ func VerifyAccountNotExists(directory string, password string) error {
 // generates a BLS private and public key, and then logs the serialized deposit input hex string
 // to be used in an ETH1.0 transaction by the validator.
 func NewValidatorAccount(directory string, password string) error {
+	if password == "" {
+		return errors.New("empty passphrase is not allowed")
+	}
 	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
