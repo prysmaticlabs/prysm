@@ -148,7 +148,7 @@ func verifyConnectivity(addr string, port uint, protocol string) {
 		}
 		conn, err := net.DialTimeout(protocol, a, dialTimeout)
 		if err != nil {
-			log.WithFields(fields).Warn("IP address is not accessible")
+			log.WithError(err).WithFields(fields).Warn("IP address is not accessible")
 			return
 		}
 		defer func() {
