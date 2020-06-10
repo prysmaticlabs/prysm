@@ -38,7 +38,7 @@ func NewEpochStore(spans []byte) (*EpochStore, error) {
 func (es *EpochStore) GetValidatorSpan(idx uint64) (Span, error) {
 	spansLen := uint64(len(es.spans))
 	if spansLen%SpannerEncodedLength != 0 {
-		return r, ErrWrongSize
+		return Span{}, ErrWrongSize
 	}
 	if idx > es.highestObservedIdx {
 		return Span{}, nil
