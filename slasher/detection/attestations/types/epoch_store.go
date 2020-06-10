@@ -20,11 +20,18 @@ var ErrWrongSize = errors.New("wrong data length for min max span byte array")
 // NewEpochStore initialize epoch store from a byte array
 // returns error if byte length is not a multiple of encoded spanner length.
 func NewEpochStore(spans []byte) (*EpochStore, error) {
-	if len(spans)%int(SpannerEncodedLength) != 0 {
+	spansLen := uint64(len(spans))
+	if spansLen%SpannerEncodedLength != 0 {
 		return &EpochStore{}, ErrWrongSize
 	}
+	highestIdx := spansLen / SpannerEncodedLength
+	if highestIdx > 0 {
+		// Minus one here since validators are 0 indeex.
+		highestIdx -= 1
+	}
 	es := &EpochStore{
-		spans: spans,
+		spans:              spans,
+		highestObservedIdx: highestIdx,
 	}
 	return es, nil
 }
@@ -32,8 +39,12 @@ func NewEpochStore(spans []byte) (*EpochStore, error) {
 // GetValidatorSpan unmarshal a span from an encoded, flattened array.
 func (es *EpochStore) GetValidatorSpan(idx uint64) (Span, error) {
 	r := Span{}
-	if len(es.spans)%int(SpannerEncodedLength) != 0 {
+	spansLen := uint64(len(es.spans))
+	if spansLen%SpannerEncodedLength != 0 {
 		return r, ErrWrongSize
+	}
+	if idx > es.highestObservedIdx {
+		return Span{}, nil
 	}
 	origLength := uint64(len(es.spans)) / SpannerEncodedLength
 	requestedLength := idx + 1
@@ -96,4 +107,19 @@ func (es *EpochStore) ToMap() (map[uint64]Span, error) {
 		}
 	}
 	return spanMap, nil
+}
+
+// EpochStoreFromMap is a helper function to turn a map into a epoch store, mainly used for testing.
+func EpochStoreFromMap(spanMap map[uint64]Span) (*EpochStore, error) {
+	var err error
+	es, err := NewEpochStore([]byte{})
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range spanMap {
+		if es, err = es.SetValidatorSpan(k, v); err != nil {
+			return nil, err
+		}
+	}
+	return es, nil
 }
