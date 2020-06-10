@@ -433,7 +433,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: buf, Domain: domain})
+	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: buf, Domain: domain})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2018,7 +2018,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = state.SetSlot(state.Slot() + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
+	err = state.SetSlot(state.Slot() + (params.BeaconConfig().ShardCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
 	if err != nil {
 		t.Fatal(err)
 	}

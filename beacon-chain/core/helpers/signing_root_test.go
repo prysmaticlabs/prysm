@@ -52,7 +52,7 @@ func TestSigningRoot_Compatibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newRoot, err := signingRoot(func() ([32]byte, error) {
+	newRoot, err := signingData(func() ([32]byte, error) {
 		return stateutil.BlockRoot(blk)
 	}, params.BeaconConfig().DomainBeaconProposer[:])
 	if err != nil {

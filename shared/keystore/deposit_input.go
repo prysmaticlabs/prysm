@@ -41,7 +41,7 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: sr[:], Domain: domain})
+	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
 	if err != nil {
 		return nil, [32]byte{}, err
 	}

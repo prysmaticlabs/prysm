@@ -44,11 +44,11 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
-	sigRoot := &pb.SigningRoot{
+	signingData := &pb.SigningData{
 		ObjectRoot: root[:],
 		Domain:     domain,
 	}
-	ctrRoot, err := ssz.HashTreeRoot(sigRoot)
+	ctrRoot, err := ssz.HashTreeRoot(signingData)
 	if err != nil {
 		return errors.Wrap(err, "could not get container root")
 	}
@@ -67,11 +67,11 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain []b
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	ctr := &pb.SigningRoot{
+	signingData := &pb.SigningData{
 		ObjectRoot: signedData,
 		Domain:     domain,
 	}
-	root, err := ssz.HashTreeRoot(ctr)
+	root, err := ssz.HashTreeRoot(signingData)
 	if err != nil {
 		return errors.Wrap(err, "could not hash container")
 	}
@@ -1104,11 +1104,11 @@ func VerifyExit(validator *stateTrie.ReadOnlyValidator, currentSlot uint64, fork
 		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
 	}
 	// Verify the validator has been active long enough.
-	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().PersistentCommitteePeriod {
+	if currentEpoch < validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod {
 		return fmt.Errorf(
 			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
-			validator.ActivationEpoch()+params.BeaconConfig().PersistentCommitteePeriod,
+			validator.ActivationEpoch()+params.BeaconConfig().ShardCommitteePeriod,
 		)
 	}
 	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)

@@ -464,9 +464,13 @@ func (f *blocksFetcher) requestBlocks(
 	}()
 
 	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
-	for {
+	for i := uint64(0); ; i++ {
 		blk, err := prysmsync.ReadChunkedBlock(stream, f.p2p)
 		if err == io.EOF {
+			break
+		}
+		// exit if more than max request blocks are returned
+		if i >= params.BeaconNetworkConfig().MaxRequestBlocks {
 			break
 		}
 		if err != nil {

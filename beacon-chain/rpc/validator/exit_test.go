@@ -7,7 +7,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -34,7 +33,7 @@ func TestSub(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -123,7 +122,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
