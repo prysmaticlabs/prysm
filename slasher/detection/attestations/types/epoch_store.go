@@ -1,9 +1,7 @@
 package types
 
 import (
-	"errors"
-
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/pkg/errors"
 )
 
 // EpochStore defines an implementation of the slasher data access interface
@@ -38,7 +36,6 @@ func NewEpochStore(spans []byte) (*EpochStore, error) {
 
 // GetValidatorSpan unmarshal a span from an encoded, flattened array.
 func (es *EpochStore) GetValidatorSpan(idx uint64) (Span, error) {
-	r := Span{}
 	spansLen := uint64(len(es.spans))
 	if spansLen%SpannerEncodedLength != 0 {
 		return r, ErrWrongSize
@@ -49,16 +46,14 @@ func (es *EpochStore) GetValidatorSpan(idx uint64) (Span, error) {
 	origLength := uint64(len(es.spans)) / SpannerEncodedLength
 	requestedLength := idx + 1
 	if origLength < requestedLength {
-		return r, nil
+		return Span{}, nil
 	}
 	cursor := idx * SpannerEncodedLength
-	r.MinSpan = bytesutil.FromBytes2(es.spans[cursor : cursor+2])
-	r.MaxSpan = bytesutil.FromBytes2(es.spans[cursor+2 : cursor+4])
-	sigB := [2]byte{}
-	copy(sigB[:], es.spans[cursor+4:cursor+6])
-	r.SigBytes = sigB
-	r.HasAttested = bytesutil.ToBool(es.spans[cursor+6])
-	return r, nil
+	unmarshaledSpan, err := UnmarshalSpan(es.spans[cursor : cursor+SpannerEncodedLength])
+	if err != nil {
+		return Span{}, errors.Wrap(err, "could not unmarshal span")
+	}
+	return unmarshaledSpan, nil
 }
 
 // SetValidatorSpan marshal a validator span into an encoded, flattened array.

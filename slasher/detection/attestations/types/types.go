@@ -57,7 +57,7 @@ type Span struct {
 // SpannerEncodedLength the byte length of validator span data structure.
 var SpannerEncodedLength = uint64(7)
 
-// UnmarshalSpan returns a span map from an encoded, flattened byte array.
+// UnmarshalSpan returns a span from an encoded, flattened byte array.
 func UnmarshalSpan(enc []byte) (Span, error) {
 	r := Span{}
 	if len(enc) != int(SpannerEncodedLength) {
