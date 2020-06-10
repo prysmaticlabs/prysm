@@ -4,10 +4,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"path"
+	"time"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -15,10 +17,13 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
+	"github.com/sirupsen/logrus"
 )
 
 const keyPath = "network-keys"
 const metaDataPath = "metaData"
+
+const dialTimeout = 1 * time.Second
 
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
 	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))
@@ -130,4 +135,23 @@ func ipAddr() net.IP {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}
 	return net.ParseIP(ip)
+}
+
+// Attempt to dial an address to verify its connectivity
+func verifyConnectivity(addr string, port uint, protocol string) {
+	if addr != "" {
+		a := fmt.Sprintf("%s:%d", addr, port)
+		fields := logrus.Fields{
+			"protocol": protocol,
+			"address":  a,
+		}
+		conn, err := net.DialTimeout(protocol, a, dialTimeout)
+		if err != nil {
+			log.WithError(err).WithFields(fields).Warn("IP address is not accessible")
+			return
+		}
+		if err := conn.Close(); err != nil {
+			log.WithError(err).Debug("Could not close connection")
+		}
+	}
 }

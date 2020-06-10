@@ -101,6 +101,7 @@ go_test(
         "sender_test.go",
         "service_test.go",
         "subnets_test.go",
+        "utils_test.go",
     ],
     embed = [":go_default_library"],
     flaky = True,
