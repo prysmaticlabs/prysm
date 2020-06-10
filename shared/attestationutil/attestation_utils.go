@@ -122,7 +122,7 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedA
 // Spec pseudocode definition:
 //  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //    """
-//    Check if ``indexed_attestation`` has valid indices and signature.
+//    Check if ``indexed_attestation``is not empty, has valid indices, and signature.
 //    """
 //    indices = indexed_attestation.attesting_indices
 //
@@ -148,6 +148,9 @@ func IsValidAttestationIndices(ctx context.Context, indexedAttestation *ethpb.In
 		return errors.New("nil or missing indexed attestation data")
 	}
 	indices := indexedAttestation.AttestingIndices
+	if len(indices) == 0 {
+		return errors.New("expected non-empty attesting indices")
+	}
 	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
 		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}

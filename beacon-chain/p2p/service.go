@@ -37,6 +37,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
@@ -136,7 +137,7 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery {
+	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery && featureconfig.Get().EnableKadDHT {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
@@ -235,7 +236,7 @@ func (s *Service) Start() {
 		go s.listenForNewNodes()
 	}
 
-	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery {
+	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery && featureconfig.Get().EnableKadDHT {
 		for _, addr := range s.cfg.KademliaBootStrapAddr {
 			peersToWatch = append(peersToWatch, addr)
 			err := startDHTDiscovery(s.host, addr)
@@ -393,7 +394,7 @@ func (s *Service) RefreshENR() {
 		return
 	}
 	bitV := bitfield.NewBitvector64()
-	committees := cache.CommitteeIDs.GetAllCommittees()
+	committees := cache.SubnetIDs.GetAllSubnets()
 	for _, idx := range committees {
 		bitV.SetBitAt(idx, true)
 	}

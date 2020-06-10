@@ -45,7 +45,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		}
 
 		if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-			baseState = baseState.Copy()
 			baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
@@ -91,23 +90,22 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	}
 
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-		savedState := baseState.Copy()
-		savedState, err = state.ProcessSlots(ctx, savedState, helpers.StartSlot(c.Epoch))
+		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
 		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 			Checkpoint: c,
-			State:      savedState.Copy(),
+			State:      baseState,
 		}); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 		}
-		return savedState, nil
+		return baseState, nil
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: c,
-		State:      baseState.Copy(),
+		State:      baseState,
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 	}
@@ -142,6 +140,20 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if b.Block.Slot > data.Slot {
 		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block.Slot, data.Slot)
 	}
+	return nil
+}
+
+// verifyLMDFFGConsistent verifies LMD GHOST and FFG votes are consistent with each other.
+func (s *Service) verifyLMDFFGConsistent(ctx context.Context, ffgEpoch uint64, ffgRoot []byte, lmdRoot []byte) error {
+	ffgSlot := helpers.StartSlot(ffgEpoch)
+	r, err := s.ancestor(ctx, lmdRoot, ffgSlot)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(ffgRoot, r) {
+		return errors.New("FFG and LMD votes are not consistent")
+	}
+
 	return nil
 }
 

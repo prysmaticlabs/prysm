@@ -7,11 +7,11 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -61,6 +61,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
 		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
+	maxRequestBlocks := params.BeaconNetworkConfig().MaxRequestBlocks
 	for startSlot <= endReqSlot {
 		remainingBucketCapacity = r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
 		if int64(allowedBlocksPerSecond) > remainingBucketCapacity {
@@ -78,7 +79,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 
 		// TODO(3147): Update this with reasonable constraints.
-		if endSlot-startSlot > rangeLimit || m.Step == 0 {
+		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > maxRequestBlocks {
 			r.writeErrorResponseToStream(responseCodeInvalidRequest, stepError, stream)
 			err := errors.New(stepError)
 			traceutil.AnnotateError(span, err)
@@ -145,24 +146,29 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		roots = append([][32]byte{genRoot}, roots...)
 	}
 	blks, roots = r.sortBlocksAndRoots(blks, roots)
-	checkpoint, err := r.db.FinalizedCheckpoint(ctx)
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve finalized checkpoint")
-		r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
-		traceutil.AnnotateError(span, err)
-		return err
-	}
 	for i, b := range blks {
 		if b == nil || b.Block == nil {
 			continue
 		}
 		blk := b.Block
 
+		// Check that the block is valid according to the request and part of the canonical chain.
 		isRequestedSlotStep := (blk.Slot-startSlot)%step == 0
-		isRecentUnfinalizedSlot := blk.Slot >= helpers.StartSlot(checkpoint.Epoch+1) || checkpoint.Epoch == 0
-		if isRequestedSlotStep && (isRecentUnfinalizedSlot || r.db.IsFinalizedBlock(ctx, roots[i])) {
+		if isRequestedSlotStep {
+			canonical, err := r.chain.IsCanonical(ctx, roots[i])
+			if err != nil {
+				log.WithError(err).Error("Failed to determine canonical block")
+				r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+			if !canonical {
+				continue
+			}
 			if err := r.chunkWriter(stream, b); err != nil {
 				log.WithError(err).Error("Failed to send a chunked response")
+				r.writeErrorResponseToStream(responseCodeServerError, genericError, stream)
+				traceutil.AnnotateError(span, err)
 				return err
 			}
 		}

@@ -47,6 +47,10 @@ func isSSZStorageFormat(obj interface{}) bool {
 	switch obj.(type) {
 	case *pb.BeaconState:
 		return true
+	case *ethpb.SignedBeaconBlock:
+		return true
+	case *ethpb.SignedAggregateAttestationAndProof:
+		return true
 	case *ethpb.BeaconBlock:
 		return true
 	case *ethpb.Attestation:

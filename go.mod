@@ -41,9 +41,7 @@ require (
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-cid v0.0.6 // indirect
 	github.com/ipfs/go-datastore v0.4.4
-	github.com/ipfs/go-detect-race v0.0.1
 	github.com/ipfs/go-ipfs-addr v0.0.1
-	github.com/ipfs/go-ipns v0.0.2 // indirect
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.1
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
@@ -54,6 +52,7 @@ require (
 	github.com/libp2p/go-libp2p v0.9.2
 	github.com/libp2p/go-libp2p-blankhost v0.1.6
 	github.com/libp2p/go-libp2p-circuit v0.2.3
+	github.com/libp2p/go-libp2p-connmgr v0.2.3
 	github.com/libp2p/go-libp2p-core v0.5.6
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-host v0.1.0
@@ -64,7 +63,7 @@ require (
 	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/libp2p/go-libp2p-peerstore v0.2.4
 	github.com/libp2p/go-libp2p-pubsub v0.3.1
-	github.com/libp2p/go-libp2p-routing-helpers v0.2.3 // indirect
+	github.com/libp2p/go-libp2p-record v0.1.2 // indirect
 	github.com/libp2p/go-libp2p-swarm v0.2.5
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
@@ -83,7 +82,7 @@ require (
 	github.com/prometheus/client_golang v1.6.0
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/protolambda/zssz v0.1.4
-	github.com/prysmaticlabs/ethereumapis v0.0.0-20200604035415-4196125e9fd6
+	github.com/prysmaticlabs/ethereumapis v0.0.0-20200608211251-7dafd77461b5
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20200322041314-62c2aee71669
 	github.com/prysmaticlabs/go-ssz v0.0.0-20200605034351-b6a925e519d0
 	github.com/prysmaticlabs/prombbolt v0.0.0-20200324184628-09789ef63796
@@ -92,7 +91,6 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/urfave/cli/v2 v2.2.0
-	github.com/wangjia184/sortedset v0.0.0-20160527075905-f5d03557ba30 // indirect
 	github.com/wealdtech/eth2-signer-api v1.3.0
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-wallet v1.9.4
@@ -111,7 +109,6 @@ require (
 	golang.org/x/tools v0.0.0-20200528185414-6be401e3f76e
 	google.golang.org/genproto v0.0.0-20200528191852-705c0b31589b
 	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.24.0
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.4.2
 	gopkg.in/d4l3k/messagediff.v1 v1.2.1
 	gopkg.in/yaml.v2 v2.2.8

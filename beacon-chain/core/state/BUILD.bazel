@@ -54,7 +54,10 @@ go_test(
         "transition_fuzz_test.go",
         "transition_test.go",
     ],
-    data = ["//shared/benchutil/benchmark_files:benchmark_data"],
+    data = [
+        "//beacon-chain/core/state/regression_files:regression_data",
+        "//shared/benchutil/benchmark_files:benchmark_data",
+    ],
     embed = [":go_default_library"],
     shard_count = 3,
     deps = [

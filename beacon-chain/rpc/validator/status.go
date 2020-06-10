@@ -128,7 +128,7 @@ func (vs *Server) validatorStatus(
 	headState *stateTrie.BeaconState,
 	pubKey []byte,
 ) (*ethpb.ValidatorStatusResponse, uint64) {
-	ctx, span := trace.StartSpan(ctx, "validatorServer.validatorStatus")
+	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
 	defer span.End()
 
 	// Using ^0 as the default value for index, in case the validators index cannot be determined.

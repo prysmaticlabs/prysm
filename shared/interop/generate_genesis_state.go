@@ -156,7 +156,7 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 	if err != nil {
 		return nil, err
 	}
-	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: sr[:], Domain: domain})
+	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
 	if err != nil {
 		return nil, err
 	}

@@ -44,7 +44,7 @@ type BeaconChainConfig struct {
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
-	MinGenesisDelay                  uint64 `yaml:"MIN_GENESIS_DELAY"`                   // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
+	GenesisDelay                     uint64 `yaml:"GENESIS_DELAY"`                       // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
 	MinAttestationInclusionDelay     uint64 `yaml:"MIN_ATTESTATION_INCLUSION_DELAY"`     // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
@@ -53,7 +53,7 @@ type BeaconChainConfig struct {
 	EpochsPerEth1VotingPeriod        uint64 `yaml:"EPOCHS_PER_ETH1_VOTING_PERIOD"`       // EpochsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node on per epoch basis.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
-	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
+	ShardCommitteePeriod             uint64 `yaml:"SHARD_COMMITTEE_PERIOD"`              // ShardCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	SafeSlotsToUpdateJustified       uint64 // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
@@ -89,7 +89,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSSecretKeyLength        int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	BLSSignatureLength        int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
@@ -118,7 +117,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	MinGenesisDelay:          86400, // 1 day
+	GenesisDelay:             172800, // 2 days
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -153,7 +152,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochsPerEth1VotingPeriod:        32,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
-	PersistentCommitteePeriod:        2048,
+	ShardCommitteePeriod:             256,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
 	SafeSlotsToUpdateJustified:       8,
@@ -169,12 +168,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BaseRewardFactor:            64,
 	WhistleBlowerRewardQuotient: 512,
 	ProposerRewardQuotient:      8,
-	InactivityPenaltyQuotient:   1 << 25,
+	InactivityPenaltyQuotient:   1 << 24,
 	MinSlashingPenaltyQuotient:  32,
 
 	// Max operations per block constants.
 	MaxProposerSlashings: 16,
-	MaxAttesterSlashings: 1,
+	MaxAttesterSlashings: 2,
 	MaxAttestations:      128,
 	MaxDeposits:          16,
 	MaxVoluntaryExits:    16,
@@ -190,7 +189,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	LogBlockDelay:             4,
 	BLSSecretKeyLength:        32,
 	BLSPubkeyLength:           48,
 	BLSSignatureLength:        96,
@@ -241,7 +239,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 0
-	minimalConfig.MinGenesisDelay = 300 // 5 minutes
+	minimalConfig.GenesisDelay = 300 // 5 minutes
 	minimalConfig.TargetAggregatorsPerCommittee = 3
 
 	// Gwei values
@@ -259,10 +257,10 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
 	minimalConfig.MaxSeedLookahead = 4
-	minimalConfig.EpochsPerEth1VotingPeriod = 2
+	minimalConfig.EpochsPerEth1VotingPeriod = 4
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
-	minimalConfig.PersistentCommitteePeriod = 128
+	minimalConfig.ShardCommitteePeriod = 64
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2
@@ -278,12 +276,12 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BaseRewardFactor = 64
 	minimalConfig.WhistleBlowerRewardQuotient = 512
 	minimalConfig.ProposerRewardQuotient = 8
-	minimalConfig.InactivityPenaltyQuotient = 33554432
+	minimalConfig.InactivityPenaltyQuotient = 1 << 24
 	minimalConfig.MinSlashingPenaltyQuotient = 32
 
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
-	minimalConfig.MaxAttesterSlashings = 1
+	minimalConfig.MaxAttesterSlashings = 2
 	minimalConfig.MaxAttestations = 128
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
@@ -308,13 +306,13 @@ func E2ETestConfig() *BeaconChainConfig {
 
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256
-	e2eConfig.MinGenesisDelay = 30 // 30 seconds so E2E has enough time to process deposits and get started.
+	e2eConfig.GenesisDelay = 30 // 30 seconds so E2E has enough time to process deposits and get started.
 
 	// Time parameters.
 	e2eConfig.SecondsPerSlot = 8
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.Eth1FollowDistance = 4
-	e2eConfig.PersistentCommitteePeriod = 4
+	e2eConfig.ShardCommitteePeriod = 4
 	return e2eConfig
 }
 
