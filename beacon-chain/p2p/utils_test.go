@@ -1,13 +1,10 @@
 package p2p
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -27,11 +24,6 @@ func TestVerifyConnectivity(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf(tc.name),
 			func(t *testing.T) {
-				var buf bytes.Buffer
-				logrus.SetOutput(&buf)
-				defer func() {
-					logrus.SetOutput(os.Stderr)
-				}()
 				verifyConnectivity(tc.address, tc.port, "tcp")
 				logMessage := "IP address is not accessible"
 				if tc.expectedConnectivity {
