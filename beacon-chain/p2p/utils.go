@@ -151,6 +151,11 @@ func verifyConnectivity(addr string, port uint, protocol string) {
 			log.WithFields(fields).Warn("IP address is not accessible")
 			return
 		}
-		defer conn.Close()
+		defer func() {
+			err := conn.Close()
+			if err != nil {
+				log.WithError(err).Debug("Error closing the connection")
+			}
+		}()
 	}
 }
