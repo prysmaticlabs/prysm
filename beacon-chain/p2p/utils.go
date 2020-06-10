@@ -138,7 +138,7 @@ func ipAddr() net.IP {
 	return net.ParseIP(ip)
 }
 
-// Attempt to dial an address to verify its connectivity for a protocol{"udp", "tcp"}
+// Attempt to dial an address to verify its connectivity
 func verifyConnectivity(addr string, port uint, protocol string) {
 	if addr != "" {
 		a := fmt.Sprintf("%s:%d", addr, port)
@@ -146,27 +146,11 @@ func verifyConnectivity(addr string, port uint, protocol string) {
 			"protocol": protocol,
 			"address":  a,
 		}
-		switch protocol {
-		case "tcp":
-			conn, err := net.DialTimeout(protocol, a, dialTimeout)
-			if err != nil {
-				log.WithFields(fields).Warn("IP address is not accessible")
-			} else {
-				defer conn.Close()
-			}
-		case "udp":
-			addr, err := net.ResolveUDPAddr(protocol, a)
-			if err != nil {
-				log.Errorf("Could not resolve UDP address: %v", err)
-				return
-			}
-			_, err = net.ListenUDP("udp", addr)
-			if err != nil {
-				log.WithFields(fields).Warn("IP Address is not accessible")
-			}
-		default:
-			log.Errorf("Error verifying address connectivy. Protocol not supported: %v", protocol)
+		conn, err := net.DialTimeout(protocol, a, dialTimeout)
+		if err != nil {
+			log.WithFields(fields).Warn("IP address is not accessible")
 			return
 		}
+		defer conn.Close()
 	}
 }
