@@ -38,12 +38,6 @@ var (
 		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
 		Value: 500,
 	}
-	// MonitoringHostFlag defines the host used to serve prometheus metrics.
-	MonitoringHostFlag = &cli.StringFlag{
-		Name:  "monitoring-host",
-		Usage: "Host used for listening and responding metrics for prometheus.",
-		Value: "127.0.0.1",
-	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.Int64Flag{
 		Name:  "monitoring-port",

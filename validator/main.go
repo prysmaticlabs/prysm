@@ -62,7 +62,7 @@ var appFlags = []cli.Flag{
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.DisableAccountMetricsFlag,
-	flags.MonitoringHostFlag,
+	cmd.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
