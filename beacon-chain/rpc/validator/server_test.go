@@ -12,7 +12,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -70,7 +69,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -135,7 +134,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 			},
 		},
 	}
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
@@ -244,7 +243,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 			},
 		},
 	}
-	block := blk.NewGenesisBlock([]byte{})
+	block := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)

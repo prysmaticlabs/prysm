@@ -46,6 +46,7 @@ type Flags struct {
 	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
+	SlasherP2P                                 bool // SlasherP2P use less restrictive p2p validation for beacon nodes that have a connected slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
@@ -61,7 +62,7 @@ type Flags struct {
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
-
+	EnableKadDHT                               bool // EnableKadDHT stops libp2p's kademlia based discovery from running.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -115,7 +116,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	delay := params.BeaconConfig().MinGenesisDelay
+	delay := params.BeaconConfig().GenesisDelay
 	if ctx.IsSet(customGenesisDelayFlag.Name) {
 		delay = ctx.Uint64(customGenesisDelayFlag.Name)
 		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
@@ -188,9 +189,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Not enabling state pruning upon start up")
 		cfg.DontPruneStateStartUp = true
 	}
-	if ctx.Bool(enableNewStateMgmt.Name) {
-		log.Warn("Enabling state management service")
-		cfg.NewStateMgmt = true
+	cfg.NewStateMgmt = true
+	if ctx.Bool(disableNewStateMgmt.Name) {
+		log.Warn("Disabling new state management service")
+		cfg.NewStateMgmt = false
 	}
 	cfg.EnableFieldTrie = true
 	if ctx.Bool(disableFieldTrie.Name) {
@@ -209,14 +211,24 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling skipping of historical states regen")
 		cfg.SkipRegenHistoricalStates = true
 	}
-	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
-		log.Warn("Enabling weighted round robin in initial syncing")
-		cfg.EnableInitSyncWeightedRoundRobin = true
+	cfg.EnableInitSyncWeightedRoundRobin = true
+	if ctx.Bool(disableInitSyncWeightedRoundRobin.Name) {
+		log.Warn("Disabling weighted round robin in initial syncing")
+		cfg.EnableInitSyncWeightedRoundRobin = false
 	}
 	cfg.EnableStateRefCopy = true
 	if ctx.Bool(disableStateRefCopy.Name) {
 		log.Warn("Disabling state reference copy")
 		cfg.EnableStateRefCopy = false
+	}
+	if ctx.Bool(enableKadDht.Name) {
+		log.Warn("Enabling libp2p's kademlia discovery")
+		cfg.EnableKadDHT = true
+	}
+	if ctx.Bool(slasherP2P.Name) {
+		log.Warn("Enabled slasher-friendly P2P validation. Please do not use this flag if you are not running a slasher " +
+			"that connects to this beacon node!")
+		cfg.SlasherP2P = true
 	}
 	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
 		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
@@ -310,7 +322,8 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		params.UseMinimalConfig()
-	} else if ctx.Bool(e2eConfigFlag.Name) {
+	}
+	if ctx.Bool(e2eConfigFlag.Name) {
 		log.Warn("Using end-to-end testing config")
 		cfg.MinimalConfig = true
 		params.UseE2EConfig()

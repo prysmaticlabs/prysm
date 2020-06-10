@@ -78,21 +78,12 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					return
 				}
 				s.peers.Add(nil /* ENR */, remotePeer, conn.RemoteMultiaddr(), conn.Stat().Direction)
-				if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
-					log.WithField("reason", "at peer limit").Trace("Ignoring connection request")
-					if err := goodbyeFunc(context.Background(), remotePeer); err != nil {
-						log.WithError(err).Trace("Unable to send goodbye message to peer")
-					}
-					disconnectFromPeer()
-					return
-				}
 				if s.peers.IsBad(remotePeer) {
 					log.WithField("reason", "bad peer").Trace("Ignoring connection request")
 					disconnectFromPeer()
 					return
 				}
 				validPeerConnection := func() {
-					s.host.ConnManager().Protect(conn.RemotePeer(), "protocol")
 					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
 					// Go through the handshake process.
 					multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())

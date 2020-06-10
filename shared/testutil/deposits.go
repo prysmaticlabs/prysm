@@ -74,7 +74,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
-			sigRoot, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: root[:], Domain: domain})
+			sigRoot, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: root[:], Domain: domain})
 			if err != nil {
 				return nil, nil, err
 			}
@@ -246,7 +246,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
-			sigRoot, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: root[:], Domain: domain})
+			sigRoot, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: root[:], Domain: domain})
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data and domain")
 			}
