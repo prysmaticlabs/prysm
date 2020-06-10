@@ -46,7 +46,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, ""); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
-	if err := NewValidatorAccount(directory, ""); err != nil {
+	if err := NewValidatorAccount(directory, "passsword123"); err != nil {
 		t.Errorf("Should support multiple keys: %v", err)
 	}
 	files, err := ioutil.ReadDir(directory)
@@ -99,8 +99,9 @@ func TestNewValidatorAccount_CreateValidatorAccount(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, _, err := CreateValidatorAccount(directory, "")
-		if err != nil {
-			t.Error(err)
+		wantErrString := "empty passphrase is not allowed"
+		if err == nil || !strings.Contains(err.Error(), wantErrString) {
+			t.Errorf("expected error not thrown, want: %v, got: %v", wantErrString, err)
 		}
 	})
 }
