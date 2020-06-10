@@ -4,8 +4,26 @@ cc_library(
     name = "fp",
     srcs = [
         "src/fp.cpp",
-        "src/asm/x86-64.s",
-    ],
+    ] + select({
+        "@io_bazel_rules_go//go/platform:android_arm": [
+            "src/asm/arm.s",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_arm64": [
+            "src/asm/aarch64.s",
+        ],
+        "@io_bazel_rules_go//go/platform:android_arm64": [
+            "src/asm/aarch64.s",
+        ],
+        "@io_bazel_rules_go//go/platform:darwin_amd64": [
+            "src/asm/x86-64mac.s",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_amd64": [
+            "src/asm/x86-64.s",
+        ],
+        "@io_bazel_rules_go//go/platform:windows_amd64": [
+            "src/asm/x86-64.s",
+        ],
+    }),
     includes = [
         "include",
     ],
@@ -26,6 +44,7 @@ cc_library(
         "src/fp_generator.hpp",
         "src/proto.hpp",
         "src/low_func_llvm.hpp",
+        "src/detect_cpu.hpp",
     ],
 )
 

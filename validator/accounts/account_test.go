@@ -46,7 +46,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, ""); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
-	if err := NewValidatorAccount(directory, ""); err != nil {
+	if err := NewValidatorAccount(directory, "passsword123"); err != nil {
 		t.Errorf("Should support multiple keys: %v", err)
 	}
 	files, err := ioutil.ReadDir(directory)
@@ -62,26 +62,48 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 }
 
 func TestNewValidatorAccount_CreateValidatorAccount(t *testing.T) {
-	directory := testutil.TempDir() + "/testkeystore"
-	defer func() {
-		if err := os.RemoveAll(directory); err != nil {
-			t.Logf("Could not remove directory: %v", err)
+	t.Run("custom non-existent path", func(t *testing.T) {
+		_, _, err := CreateValidatorAccount("foobar", "foobar")
+		wantErrString := fmt.Sprintf("path %q does not exist", "foobar")
+		if err == nil || err.Error() != wantErrString {
+			t.Errorf("expected error not thrown, want: %v, got: %v", wantErrString, err)
 		}
-	}()
-	_, _, err := CreateValidatorAccount("foobar", "foobar")
-	wantErrString := fmt.Sprintf("path %q does not exist", "foobar")
-	if err == nil || err.Error() != wantErrString {
-		t.Errorf("expected error not thrown, want: %v, got: %v", wantErrString, err)
-	}
+	})
 
-	// Make sure that empty existing directory doesn't trigger any errors.
-	if err := os.Mkdir(directory, 0777); err != nil {
-		t.Fatal(err)
-	}
-	_, _, err = CreateValidatorAccount(directory, "foobar")
-	if err != nil {
-		t.Error(err)
-	}
+	t.Run("empty existing dir", func(t *testing.T) {
+		directory := testutil.TempDir() + "/testkeystore"
+		defer func() {
+			if err := os.RemoveAll(directory); err != nil {
+				t.Logf("Could not remove directory: %v", err)
+			}
+		}()
+
+		// Make sure that empty existing directory doesn't trigger any errors.
+		if err := os.Mkdir(directory, 0777); err != nil {
+			t.Fatal(err)
+		}
+		_, _, err := CreateValidatorAccount(directory, "foobar")
+		if err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("empty string as password", func(t *testing.T) {
+		directory := testutil.TempDir() + "/testkeystore"
+		defer func() {
+			if err := os.RemoveAll(directory); err != nil {
+				t.Logf("Could not remove directory: %v", err)
+			}
+		}()
+		if err := os.Mkdir(directory, 0777); err != nil {
+			t.Fatal(err)
+		}
+		_, _, err := CreateValidatorAccount(directory, "")
+		wantErrString := "empty passphrase is not allowed"
+		if err == nil || !strings.Contains(err.Error(), wantErrString) {
+			t.Errorf("expected error not thrown, want: %v, got: %v", wantErrString, err)
+		}
+	})
 }
 
 func TestHandleEmptyFlags_FlagsSet(t *testing.T) {
