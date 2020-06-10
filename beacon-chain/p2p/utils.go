@@ -154,7 +154,7 @@ func verifyConnectivity(addr string, port uint, protocol string) {
 		defer func() {
 			err := conn.Close()
 			if err != nil {
-				log.WithError(err).Debug("Error closing the connection")
+				log.WithError(err).Debug("Could not close connection")
 			}
 		}()
 	}
