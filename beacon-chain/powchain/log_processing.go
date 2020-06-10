@@ -182,6 +182,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
+			"block":           depositLog.BlockNumber,
 			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
 			"merkleTreeIndex": index,
 		}).Debug("Deposit registered from deposit contract")
