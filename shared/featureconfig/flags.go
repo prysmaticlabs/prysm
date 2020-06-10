@@ -120,9 +120,9 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
-	enableNewStateMgmt = &cli.BoolFlag{
-		Name:  "enable-new-state-mgmt",
-		Usage: "This enable the usage of state mgmt service across Prysm",
+	disableNewStateMgmt = &cli.BoolFlag{
+		Name:  "disable-new-state-mgmt",
+		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
 	disableFieldTrie = &cli.BoolFlag{
 		Name:  "disable-state-field-trie",
@@ -153,21 +153,22 @@ var (
 		Name:  "skip-regen-historical-states",
 		Usage: "Skips regeneration and saving of historical states from genesis to last finalized. This enables a quick switch-over to using `--enable-new-state-mgmt`",
 	}
-	enableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:  "enable-init-sync-wrr",
-		Usage: "Enables weighted round robin fetching optimization",
-	}
 	disableReduceAttesterStateCopy = &cli.BoolFlag{
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
+	enableKadDht = &cli.BoolFlag{
+		Name:  "enable-kad-dht",
+		Usage: "Enables libp2p's kademlia based discovery to start running",
+	}
+	disableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:  "disable-init-sync-wrr",
+		Usage: "Disables weighted round robin fetching optimization",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
-var devModeFlags = []cli.Flag{
-	enableNewStateMgmt,
-	enableInitSyncWeightedRoundRobin,
-}
+var devModeFlags = []cli.Flag{}
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
@@ -389,6 +390,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecateEnableNewStateMgmt = &cli.BoolFlag{
+		Name:   "enable-new-state-mgmt",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedP2PWhitelist = &cli.StringFlag{
 		Name:   "p2p-whitelist",
 		Usage:  deprecatedUsage,
@@ -399,8 +405,18 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedSchlesiTestnetFlag = &cli.BoolFlag{
+		Name:   "schlesi-testnet",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecateReduceAttesterStateCopies = &cli.BoolFlag{
 		Name:   "reduce-attester-state-copy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:   "enable-init-sync-wrr",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -450,9 +466,12 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableHistoricalDetectionFlag,
 	deprecateEnableStateRefCopy,
 	deprecateEnableFieldTrie,
+	deprecateEnableNewStateMgmt,
 	deprecatedP2PWhitelist,
 	deprecatedP2PBlacklist,
+	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
+	deprecatedEnableInitSyncWeightedRoundRobin,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -503,13 +522,14 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
-	enableNewStateMgmt,
 	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
-	enableInitSyncWeightedRoundRobin,
+	disableInitSyncWeightedRoundRobin,
 	disableFieldTrie,
 	disableStateRefCopy,
+	disableNewStateMgmt,
+	enableKadDht,
 	disableReduceAttesterStateCopy,
 }...)
 
@@ -518,6 +538,4 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
-	"--enable-new-state-mgmt",
-	"--enable-init-sync-wrr",
 }

@@ -49,7 +49,7 @@ func (r *Service) registerRPCHandlers() {
 	)
 	r.registerRPC(
 		p2p.RPCBlocksByRootTopic,
-		[][32]byte{},
+		&pb.BeaconBlocksByRootRequest{},
 		r.beaconBlocksRootRPCHandler,
 	)
 	r.registerRPC(

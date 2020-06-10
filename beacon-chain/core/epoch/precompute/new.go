@@ -27,7 +27,7 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 
 	if err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
-		withdrawable := currentEpoch >= val.WithdrawableEpoch()
+		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
 		pVal := &Validator{
 			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"math/rand"
 	"strings"
 	"sync"
 	"testing"
@@ -22,6 +23,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -40,12 +42,9 @@ func TestProposeAttestation_OK(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
-	head := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       999,
-			ParentRoot: []byte{'a'},
-		},
-	}
+	head := testutil.NewBeaconBlock()
+	head.Block.Slot = 999
+	head.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
@@ -635,5 +634,88 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
+	}
+}
+
+func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
+	db := dbutil.SetupDB(t)
+
+	attesterServer := &Server{
+		HeadFetcher:       &mock.ChainService{},
+		P2P:               &mockp2p.MockBroadcaster{},
+		BeaconDB:          db,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           attestations.NewPool(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+	}
+
+	_, err := attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
+		Slots:        nil,
+		CommitteeIds: nil,
+		IsAggregator: nil,
+	})
+	if err == nil || !strings.Contains(err.Error(), "no attester slots provided") {
+		t.Fatalf("Expected no attester slots provided error, received: %v", err)
+	}
+}
+
+func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	// fixed seed
+	s := rand.NewSource(10)
+	randGen := rand.New(s)
+
+	validators := make([]*ethpb.Validator, 64)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+
+	state := testutil.NewBeaconState()
+	if err := state.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+
+	attesterServer := &Server{
+		HeadFetcher:       &mock.ChainService{State: state},
+		P2P:               &mockp2p.MockBroadcaster{},
+		BeaconDB:          db,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           attestations.NewPool(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+	}
+
+	var slots []uint64
+	var comIdxs []uint64
+	var isAggregator []bool
+
+	for i := uint64(100); i < 200; i++ {
+		slots = append(slots, i)
+		comIdxs = append(comIdxs, uint64(randGen.Int63n(64)))
+		boolVal := randGen.Uint64()%2 == 0
+		isAggregator = append(isAggregator, boolVal)
+	}
+
+	_, err := attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
+		Slots:        slots,
+		CommitteeIds: comIdxs,
+		IsAggregator: isAggregator,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := uint64(100); i < 200; i++ {
+		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(i)
+		if len(subnets) != 1 {
+			t.Errorf("Wanted subnets of length 1 but got %d", len(subnets))
+		}
+		if isAggregator[i-100] {
+			subnets = cache.SubnetIDs.GetAggregatorSubnetIDs(i)
+			if len(subnets) != 1 {
+				t.Errorf("Wanted subnets of length 1 but got %d", len(subnets))
+			}
+		}
 	}
 }

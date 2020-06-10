@@ -37,6 +37,7 @@ type ChainService struct {
 	Genesis                     time.Time
 	ValidatorsRoot              [32]byte
 	Fork                        *pb.Fork
+	ETH1Data                    *ethpb.Eth1Data
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
 	blockNotifier               blockfeed.Notifier
@@ -222,6 +223,11 @@ func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
 	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
+// HeadETH1Data provides the current ETH1Data of the head state.
+func (ms *ChainService) HeadETH1Data() *ethpb.Eth1Data {
+	return ms.ETH1Data
+}
+
 // ProtoArrayStore mocks the same method in the chain service.
 func (ms *ChainService) ProtoArrayStore() *protoarray.Store {
 	return ms.ForkChoiceStore
@@ -250,6 +256,12 @@ func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
 // IsValidAttestation always returns true.
 func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
 	return ms.ValidAttestation
+}
+
+// IsCanonical returns and determines whether a block with the provided root is part of
+// the canonical chain.
+func (ms *ChainService) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
+	return true, nil
 }
 
 // ClearCachedStates does nothing.

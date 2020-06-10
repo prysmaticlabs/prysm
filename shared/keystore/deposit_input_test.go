@@ -40,7 +40,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		t.Fatal(err)
 	}
 	dom := params.BeaconConfig().DomainDeposit
-	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: sr[:], Domain: dom[:]})
+	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: dom[:]})
 	if err != nil {
 		t.Fatal(err)
 	}

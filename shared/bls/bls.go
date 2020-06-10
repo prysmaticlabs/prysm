@@ -17,7 +17,7 @@ func init() {
 	if err := bls12.Init(bls12.BLS12_381); err != nil {
 		panic(err)
 	}
-	if err := bls12.SetETHmode(bls12.EthModeDraft05); err != nil {
+	if err := bls12.SetETHmode(bls12.EthModeDraft07); err != nil {
 		panic(err)
 	}
 }
