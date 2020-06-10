@@ -59,6 +59,12 @@ var (
 		Name:  "disable-grpc-gateway",
 		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
 	}
+	// GRPCGatewayHost specifies a gRPC gateway host for Prysm.
+	GRPCGatewayHost = &cli.StringFlag{
+		Name:  "grpc-gateway-host",
+		Usage: "The host on which the gateway server runs on",
+		Value: "127.0.0.1",
+	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",

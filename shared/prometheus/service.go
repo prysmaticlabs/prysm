@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"runtime/debug"
 	"runtime/pprof"
-	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -114,8 +113,7 @@ func (s *Service) goroutinezHandler(w http.ResponseWriter, _ *http.Request) {
 func (s *Service) Start() {
 	go func() {
 		// See if the port is already used.
-		addrParts := strings.Split(s.server.Addr, ":")
-		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%s", addrParts[1]), time.Second)
+		conn, err := net.DialTimeout("tcp", s.server.Addr, time.Second)
 		if err == nil {
 			if err := conn.Close(); err != nil {
 				log.WithError(err).Error("Failed to close connection")
