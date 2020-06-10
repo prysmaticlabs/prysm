@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"gopkg.in/urfave/cli.v2"
-	"gopkg.in/urfave/cli.v2/altsrc"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 )
 
 // WrapFlags so that they can be loaded from alternative sources.

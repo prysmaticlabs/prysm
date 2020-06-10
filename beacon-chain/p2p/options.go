@@ -8,7 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
-	filter "github.com/libp2p/go-maddr-filter"
+	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
@@ -25,8 +25,8 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		privKeyOption(priKey),
 		libp2p.EnableRelay(),
 		libp2p.ListenAddrs(listen),
-		whitelistSubnet(cfg.WhitelistCIDR),
-		blacklistSubnets(cfg.BlacklistCIDR),
+		allowListSubnet(cfg.AllowListCIDR),
+		denyListSubnets(cfg.DenyListCIDR),
 		// Add one for the boot node and another for the relay, otherwise when we are close to maxPeers we will be above the high
 		// water mark and continually trigger pruning.
 		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers+2), int(cfg.MaxPeers+2), 1*time.Second)),
@@ -98,52 +98,45 @@ func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 	}
 }
 
-// whitelistSubnet adds a whitelist multiaddress filter for a given CIDR subnet.
+// allowListSubnet adds an allowed multiaddress filter for a given CIDR subnet.
 // Example: 192.168.0.0/16 may be used to accept only connections on your local
 // network.
-func whitelistSubnet(cidr string) libp2p.Option {
+func allowListSubnet(cidr string) libp2p.Option {
 	if cidr == "" {
 		return func(_ *libp2p.Config) error {
 			return nil
 		}
 	}
-
-	return func(cfg *libp2p.Config) error {
-		_, ipnet, err := net.ParseCIDR(cidr)
-		if err != nil {
+	_, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return func(_ *libp2p.Config) error {
 			return err
 		}
-
-		if cfg.Filters == nil {
-			cfg.Filters = filter.NewFilters()
-		}
-		cfg.Filters.AddFilter(*ipnet, filter.ActionAccept)
-
-		return nil
 	}
+	filters := filter.NewFilters()
+	filters.AddFilter(*ipnet, filter.ActionAccept)
+
+	return libp2p.Filters(filters)
 }
 
-// blacklistSubnet adds a blacklist multiaddress filter for multiple given CIDR subnets.
+// denyListSubnets adds a deny multiaddress filter for multiple given CIDR subnets.
 // Example: 192.168.0.0/16 may be used to deny connections from your local
 // network.
-func blacklistSubnets(mulCidrs []string) libp2p.Option {
+func denyListSubnets(mulCidrs []string) libp2p.Option {
 	if len(mulCidrs) == 0 {
 		return func(_ *libp2p.Config) error {
 			return nil
 		}
 	}
-	return func(cfg *libp2p.Config) error {
-		if cfg.Filters == nil {
-			cfg.Filters = filter.NewFilters()
-		}
-
-		for _, cidr := range mulCidrs {
-			_, ipnet, err := net.ParseCIDR(cidr)
-			if err != nil {
+	ipNets := []*net.IPNet{}
+	for _, cidr := range mulCidrs {
+		_, ipnet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return func(_ *libp2p.Config) error {
 				return err
 			}
-			cfg.Filters.AddFilter(*ipnet, filter.ActionDeny)
 		}
-		return nil
+		ipNets = append(ipNets, ipnet)
 	}
+	return libp2p.FilterAddresses(ipNets...)
 }

@@ -1,7 +1,7 @@
 package featureconfig
 
 import (
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -124,17 +124,18 @@ var (
 		Name:  "enable-new-state-mgmt",
 		Usage: "This enable the usage of state mgmt service across Prysm",
 	}
-	enableFieldTrie = &cli.BoolFlag{
-		Name:  "enable-state-field-trie",
-		Usage: "Enables the usage of state field tries to compute the state root",
+	disableFieldTrie = &cli.BoolFlag{
+		Name:  "disable-state-field-trie",
+		Usage: "Disables the usage of state field tries to compute the state root",
 	}
+
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
 	}
-	enableStateRefCopy = &cli.BoolFlag{
-		Name:  "enable-state-ref-copy",
-		Usage: "Enables the usage of a new copying method for our state fields.",
+	disableStateRefCopy = &cli.BoolFlag{
+		Name:  "disable-state-ref-copy",
+		Usage: "Disables the usage of a new copying method for our state fields.",
 	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
@@ -156,12 +157,14 @@ var (
 		Name:  "enable-init-sync-wrr",
 		Usage: "Enables weighted round robin fetching optimization",
 	}
+	disableReduceAttesterStateCopy = &cli.BoolFlag{
+		Name:  "disable-reduce-attester-state-copy",
+		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableStateRefCopy,
-	enableFieldTrie,
 	enableNewStateMgmt,
 	enableInitSyncWeightedRoundRobin,
 }
@@ -170,6 +173,11 @@ var devModeFlags = []cli.Flag{
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedWeb3ProviderFlag = &cli.StringFlag{
+		Name:   "web3provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableDynamicCommitteeSubnets = &cli.BoolFlag{
 		Name:   "enable-dynamic-committee-subnets",
 		Usage:  deprecatedUsage,
@@ -371,9 +379,35 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecateEnableStateRefCopy = &cli.BoolFlag{
+		Name:   "enable-state-ref-copy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecateEnableFieldTrie = &cli.BoolFlag{
+		Name:   "enable-state-field-trie",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedP2PWhitelist = &cli.StringFlag{
+		Name:   "p2p-whitelist",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedP2PBlacklist = &cli.StringFlag{
+		Name:   "p2p-blacklist",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecateReduceAttesterStateCopies = &cli.BoolFlag{
+		Name:   "reduce-attester-state-copy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedWeb3ProviderFlag,
 	deprecatedEnableDynamicCommitteeSubnets,
 	deprecatedNoCustomConfigFlag,
 	deprecatedEnableInitSyncQueue,
@@ -414,6 +448,11 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableByteMempool,
 	deprecatedBroadcastSlashingFlag,
 	deprecatedDisableHistoricalDetectionFlag,
+	deprecateEnableStateRefCopy,
+	deprecateEnableFieldTrie,
+	deprecatedP2PWhitelist,
+	deprecatedP2PBlacklist,
+	deprecateReduceAttesterStateCopies,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -465,12 +504,13 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	enableNewStateMgmt,
-	enableFieldTrie,
 	disableInitSyncBatchSaveBlocks,
-	enableStateRefCopy,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	enableInitSyncWeightedRoundRobin,
+	disableFieldTrie,
+	disableStateRefCopy,
+	disableReduceAttesterStateCopy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -478,8 +518,6 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
-	"--enable-state-field-trie",
-	"--enable-state-ref-copy",
 	"--enable-new-state-mgmt",
 	"--enable-init-sync-wrr",
 }

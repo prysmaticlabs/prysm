@@ -3,7 +3,7 @@
 package flags
 
 import (
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -75,31 +75,31 @@ var (
 		Name:  "keystore-path",
 		Usage: "Path to the desired keystore directory",
 	}
-	// MergeSourceDirectories defines the locations of source validator databases that will be merged.
-	MergeSourceDirectories = &cli.StringFlag{
-		Name:  "source-dirs",
-		Usage: "A comma-separated list of directories containing validator databases that will be merged.",
-	}
-	// MergeTargetDirectory defines the locations where the merged database will be stored.
-	MergeTargetDirectory = &cli.StringFlag{
-		Name:  "target-dir",
-		Usage: "The directory where the merged database will be stored.",
-	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.Int64Flag{
 		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8081,
 	}
-	// NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	NoCustomConfigFlag = &cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
 	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
 	PasswordFlag = &cli.StringFlag{
 		Name:  "password",
 		Usage: "String value of the password for your validator private keys",
+	}
+	// SourceDirectories defines the locations of the source validator databases while managing validators.
+	SourceDirectories = &cli.StringFlag{
+		Name:  "source-dirs",
+		Usage: "The directory of source validator databases",
+	}
+	// SourceDirectory defines the location of the source validator database while managing validators.
+	SourceDirectory = &cli.StringFlag{
+		Name:  "source-dir",
+		Usage: "The directory of the source validator database",
+	}
+	// TargetDirectory defines the location of the target validator database while managing validators.
+	TargetDirectory = &cli.StringFlag{
+		Name:  "target-dir",
+		Usage: "The directory of the target validator database",
 	}
 	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
 	// alternative from launching the validator client from decrypting a keystore directory.

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -26,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -485,6 +487,10 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	}
 	bs := &Server{
 		BeaconDB: db,
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -615,6 +621,10 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB: db,
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -685,6 +695,10 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
@@ -718,6 +732,10 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
 		},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -768,6 +786,10 @@ func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	pubKeysWanted := make([][]byte, len(pubkeyIndicesWanted))
@@ -807,6 +829,10 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
 		},
 	}
 
@@ -946,6 +972,10 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -991,6 +1021,10 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 0.
+			Genesis: time.Now(),
+		},
 	}
 
 	req := &ethpb.ListValidatorsRequest{}
@@ -1031,9 +1065,14 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	if err := st.SetValidators(validators); err != nil {
 		t.Fatal(err)
 	}
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: st,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			// We are in epoch 30
+			Genesis: time.Now().Add(time.Duration(-1*int64(30*secondsPerEpoch)) * time.Second),
 		},
 	}
 
@@ -1061,6 +1100,92 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	if !reflect.DeepEqual(res.ValidatorList, want[:21]) {
 		t.Errorf("Incorrect number of validators, wanted %d received %d", len(want[:21]), len(res.ValidatorList))
+	}
+}
+
+func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	headSlot := uint64(0)
+	numValidators := uint64(64)
+	validators := make([]*ethpb.Validator, numValidators)
+	balances := make([]uint64, numValidators)
+	for i := uint64(0); i < numValidators; i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch:       0,
+			PublicKey:             make([]byte, 48),
+			WithdrawalCredentials: make([]byte, 32),
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
+	for i := 0; i < len(validators); i++ {
+		want[i] = &ethpb.Validators_ValidatorContainer{
+			Index:     uint64(i),
+			Validator: validators[i],
+		}
+	}
+
+	st := testutil.NewBeaconState()
+	if err := st.SetSlot(headSlot); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := 0; i < len(blockRoots); i++ {
+		blockRoots[i] = make([]byte, 32)
+		stateRoots[i] = make([]byte, 32)
+	}
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
+	}
+	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+	if err := st.SetBlockRoots(blockRoots); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetStateRoots(stateRoots); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetRandaoMixes(randaoMixes); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetSlashings(slashings); err != nil {
+		t.Fatal(err)
+	}
+	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			Genesis: time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second),
+		},
+	}
+
+	req := &ethpb.ListValidatorsRequest{
+		QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
+			Epoch: 1,
+		},
+	}
+	res, err := bs.ListValidators(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.ValidatorList) != len(want) {
+		t.Errorf("Incorrect number of validators, wanted %d received %d", len(want), len(res.ValidatorList))
+	}
+	for i := 0; i < len(res.ValidatorList); i++ {
+		if !reflect.DeepEqual(res.ValidatorList[i], want[i]) {
+			t.Errorf("Wanted validator %d: %v, got %v", i, want[i], res.ValidatorList[i])
+		}
 	}
 }
 
@@ -1945,6 +2070,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},
@@ -1957,7 +2083,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	}
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
-		PublicKeys: [][]byte{publicKey1[:], publicKey2[:], publicKey3[:]},
+		PublicKeys: [][]byte{publicKey1[:], publicKey3[:], publicKey2[:]},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2040,6 +2166,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},
@@ -2052,7 +2179,7 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	}
 
 	res, err := bs.GetValidatorPerformance(ctx, &ethpb.ValidatorPerformanceRequest{
-		Indices: []uint64{0, 1, 2},
+		Indices: []uint64{2, 1, 0},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2135,6 +2262,7 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	}
 
 	want := &ethpb.ValidatorPerformanceResponse{
+		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 		InclusionSlots:                []uint64{3, 5},
 		InclusionDistances:            []uint64{1, 2},
@@ -2274,4 +2402,209 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 		t.Fatal(err)
 	}
 	return validators, balances
+}
+
+func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	req := &ethpb.IndividualVotesRequest{
+		Epoch: helpers.SlotToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
+	}
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := ds.GetIndividualVotes(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	validators := uint64(64)
+	stateWithValidators, _ := testutil.DeterministicGenesisState(t, validators)
+	beaconState := testutil.NewBeaconState()
+	if err := beaconState.SetValidators(stateWithValidators.Validators()); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gen := stategen.New(db, cache.NewStateSummaryCache())
+	if err := gen.SaveState(ctx, gRoot, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		StateGen:           gen,
+		GenesisTimeFetcher: &mock.ChainService{},
+	}
+
+	// Test non exist public key.
+	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
+		PublicKeys: [][]byte{{'a'}},
+		Epoch:      0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
+			{PublicKey: []byte{'a'}, ValidatorIndex: ^uint64(0)},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Error("Did not get wanted respond")
+	}
+
+	// Test non-existent validator index.
+	res, err = bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
+		Indices: []uint64{100},
+		Epoch:   0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted = &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
+			{ValidatorIndex: 100},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Log(res, wanted)
+		t.Error("Did not get wanted respond")
+	}
+
+	// Test both.
+	res, err = bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
+		PublicKeys: [][]byte{{'a'}, {'b'}},
+		Indices:    []uint64{100, 101},
+		Epoch:      0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted = &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
+			{PublicKey: []byte{'a'}, ValidatorIndex: ^uint64(0)},
+			{PublicKey: []byte{'b'}, ValidatorIndex: ^uint64(0)},
+			{ValidatorIndex: 100},
+			{ValidatorIndex: 101},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Log(res, wanted)
+		t.Error("Did not get wanted respond")
+	}
+}
+
+func TestServer_GetIndividualVotes_Working(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
+	defer resetCfg()
+
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	validators := uint64(64)
+	stateWithValidators, _ := testutil.DeterministicGenesisState(t, validators)
+	beaconState := testutil.NewBeaconState()
+	if err := beaconState.SetValidators(stateWithValidators.Validators()); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
+
+	bf := []byte{0xff}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
+	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{
+		Target: &ethpb.Checkpoint{Epoch: 0}},
+		AggregationBits: bf}
+	rt := [32]byte{'A'}
+	att1.Data.Target.Root = rt[:]
+	att1.Data.BeaconBlockRoot = rt[:]
+	br := beaconState.BlockRoots()
+	newRt := [32]byte{'B'}
+	br[0] = newRt[:]
+	if err := beaconState.SetBlockRoots(br); err != nil {
+		t.Fatal(err)
+	}
+	att2.Data.Target.Root = rt[:]
+	att2.Data.BeaconBlockRoot = newRt[:]
+	err := beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{{Data: att2.Data, AggregationBits: bf}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b := testutil.NewBeaconBlock()
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gen := stategen.New(db, cache.NewStateSummaryCache())
+	if err := gen.SaveState(ctx, gRoot, beaconState); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		StateGen:           gen,
+		GenesisTimeFetcher: &mock.ChainService{},
+	}
+
+	res, err := bs.GetIndividualVotes(ctx, &ethpb.IndividualVotesRequest{
+		Indices: []uint64{0, 1},
+		Epoch:   0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := &ethpb.IndividualVotesRespond{
+		IndividualVotes: []*ethpb.IndividualVotesRespond_IndividualVote{
+			{ValidatorIndex: 0, PublicKey: beaconState.Validators()[0].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance, InclusionSlot: params.BeaconConfig().FarFutureEpoch, InclusionDistance: params.BeaconConfig().FarFutureEpoch},
+			{ValidatorIndex: 1, PublicKey: beaconState.Validators()[1].PublicKey, IsActiveInCurrentEpoch: true, IsActiveInPreviousEpoch: true,
+				CurrentEpochEffectiveBalanceGwei: params.BeaconConfig().MaxEffectiveBalance, InclusionSlot: params.BeaconConfig().FarFutureEpoch, InclusionDistance: params.BeaconConfig().FarFutureEpoch},
+		},
+	}
+	if !reflect.DeepEqual(res, wanted) {
+		t.Log(res, wanted)
+		t.Error("Did not get wanted respond")
+	}
 }

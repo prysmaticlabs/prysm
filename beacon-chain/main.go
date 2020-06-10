@@ -8,7 +8,7 @@ import (
 	runtimeDebug "runtime/debug"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
-	golog "github.com/ipfs/go-log"
+	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
@@ -18,21 +18,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	gologging "github.com/whyrusleeping/go-logging"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
-	"gopkg.in/urfave/cli.v2"
-	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
-	flags.Web3ProviderFlag,
 	flags.HTTPWeb3ProviderFlag,
 	flags.RPCHost,
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
+	flags.DisableGRPCGateway,
 	flags.GRPCGatewayPort,
 	flags.MinSyncPeers,
 	flags.RPCMaxPageSize,
@@ -66,8 +65,8 @@ var appFlags = []cli.Flag{
 	cmd.P2PMaxPeers,
 	cmd.P2PPrivKey,
 	cmd.P2PMetadata,
-	cmd.P2PWhitelist,
-	cmd.P2PBlacklist,
+	cmd.P2PAllowList,
+	cmd.P2PDenyList,
 	cmd.P2PEncoding,
 	cmd.P2PPubsub,
 	cmd.DataDirFlag,
@@ -178,7 +177,7 @@ func startNode(ctx *cli.Context) error {
 	logrus.SetLevel(level)
 	if level == logrus.TraceLevel {
 		// libp2p specific logging.
-		golog.SetAllLoggers(gologging.DEBUG)
+		golog.SetAllLoggers(golog.LevelDebug)
 		// Geth specific logging.
 		glogger := gethlog.NewGlogHandler(gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true)))
 		glogger.Verbosity(gethlog.LvlTrace)

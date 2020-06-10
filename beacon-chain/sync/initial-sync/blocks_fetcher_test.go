@@ -31,7 +31,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestBlocksFetcherInitStartStop(t *testing.T) {
+func TestBlocksFetcher_InitStartStop(t *testing.T) {
 	mc, p2p, _ := initializeTestServices(t, []uint64{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -41,7 +41,8 @@ func TestBlocksFetcherInitStartStop(t *testing.T) {
 		&blocksFetcherConfig{
 			headFetcher: mc,
 			p2p:         p2p,
-		})
+		},
+	)
 
 	t.Run("check for leaked goroutines", func(t *testing.T) {
 		err := fetcher.start()
@@ -94,7 +95,7 @@ func TestBlocksFetcherInitStartStop(t *testing.T) {
 	})
 }
 
-func TestBlocksFetcherRoundRobin(t *testing.T) {
+func TestBlocksFetcher_RoundRobin(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	requestsGenerator := func(start, end uint64, batchSize uint64) []*fetchRequestParams {
 		var requests []*fetchRequestParams
@@ -376,7 +377,7 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 	}
 }
 
-func TestBlocksFetcherScheduleRequest(t *testing.T) {
+func TestBlocksFetcher_scheduleRequest(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -390,8 +391,24 @@ func TestBlocksFetcherScheduleRequest(t *testing.T) {
 		}
 	})
 }
+func TestBlocksFetcher_handleRequest(t *testing.T) {
+	// Handle using default configuration.
+	t.Run("default config", func(t *testing.T) {
+		_handleRequest(t)
+	})
 
-func TestBlocksFetcherHandleRequest(t *testing.T) {
+	// Now handle using previous implementation, w/o WRR.
+	t.Run("previous config", func(t *testing.T) {
+		resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+			EnableInitSyncWeightedRoundRobin: false,
+		})
+		defer resetCfg()
+		_handleRequest(t)
+	})
+}
+
+// TODO(6024): Move to TestBlocksFetcher_handleRequest when EnableInitSyncWeightedRoundRobin is released.
+func _handleRequest(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	chainConfig := struct {
 		expectedBlockSlots []uint64
@@ -436,7 +453,8 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 			p2p:         p2p,
 		})
 
-		requestCtx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+		requestCtx, reqCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer reqCancel()
 		go func() {
 			response := fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchLimit /* count */)
 			select {
@@ -473,7 +491,7 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 	})
 }
 
-func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
+func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 	blockBatchLimit := uint64(flags.Get().BlockBatchLimit)
 	chainConfig := struct {
 		expectedBlockSlots []uint64
@@ -529,7 +547,8 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 
 		// Test request fail over (error).
 		err = fetcher.p2p.Disconnect(peers[1])
-		ctx, _ = context.WithTimeout(context.Background(), time.Second*1)
+		ctx, cancel = context.WithTimeout(context.Background(), time.Second*1)
+		defer cancel()
 		blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[1], root, 1, 1, blockBatchLimit)
 		testutil.AssertLogsContain(t, hook, "Request failed, trying to forward request to another peer")
 		if err == nil || err.Error() != "context deadline exceeded" {
@@ -546,7 +565,7 @@ func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	}
 }
 
-func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
+func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 	type args struct {
 		excludedPID peer.ID
 		peers       []peer.ID
@@ -626,7 +645,7 @@ func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
 	}
 }
 
-func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
+func TestBlocksFetcher_nonSkippedSlotAfter(t *testing.T) {
 	peersGen := func(size int) []*peerData {
 		blocks := append(makeSequence(1, 64), makeSequence(500, 640)...)
 		blocks = append(blocks, makeSequence(51200, 51264)...)
@@ -711,7 +730,10 @@ func TestBlocksFetcherNonSkippedSlotAfter(t *testing.T) {
 	})
 }
 
-func TestBlocksFetcherFilterPeers(t *testing.T) {
+func TestBlocksFetcher_filterPeers(t *testing.T) {
+	if !featureconfig.Get().EnableInitSyncWeightedRoundRobin {
+		t.Skip("Test is run only when EnableInitSyncWeightedRoundRobin = true")
+	}
 	type weightedPeer struct {
 		peer.ID
 		usedCapacity int64
@@ -781,7 +803,7 @@ func TestBlocksFetcherFilterPeers(t *testing.T) {
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
 			got := fetcher.filterPeers(pids, tt.args.peersPercentage)
-			// Re-arrange deterministically peers with the same remaining capacity.
+			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
 			sort.SliceStable(got, func(i, j int) bool {
@@ -799,7 +821,7 @@ func TestBlocksFetcherFilterPeers(t *testing.T) {
 	}
 }
 
-func TestBlocksFetcherRequestBlocksRateLimitingLocks(t *testing.T) {
+func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	p1 := p2pt.NewTestP2P(t)
 	p2 := p2pt.NewTestP2P(t)
 	p3 := p2pt.NewTestP2P(t)
@@ -871,7 +893,7 @@ func TestBlocksFetcherRequestBlocksRateLimitingLocks(t *testing.T) {
 	}
 }
 
-func TestBlocksFetcherRemoveStalePeerLocks(t *testing.T) {
+func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 	type peerData struct {
 		peerID   peer.ID
 		accessed time.Time

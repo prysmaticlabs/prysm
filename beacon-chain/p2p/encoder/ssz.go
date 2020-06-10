@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 
+	fastssz "github.com/ferranbt/fastssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
-	errors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -20,6 +22,14 @@ var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize // 1Mib
 // MaxGossipSize allowed for gossip messages.
 var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
 
+// This pool defines the sync pool for our buffered snappy writers, so that they
+// can be constantly reused.
+var bufWriterPool = new(sync.Pool)
+
+// This pool defines the sync pool for our buffered snappy readers, so that they
+// can be constantly reused.
+var bufReaderPool = new(sync.Pool)
+
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
 // with snappy compression (if enabled).
 type SszNetworkEncoder struct {
@@ -27,6 +37,9 @@ type SszNetworkEncoder struct {
 }
 
 func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
+	if v, ok := msg.(fastssz.Marshaler); ok {
+		return v.MarshalSSZ()
+	}
 	return ssz.Marshal(msg)
 }
 
@@ -109,6 +122,9 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 }
 
 func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
+	if v, ok := to.(fastssz.Unmarshaler); ok {
+		return v.UnmarshalSSZ(b)
+	}
 	return ssz.Unmarshal(b, to)
 }
 
@@ -116,7 +132,9 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
 	if e.UseSnappyCompression {
 		newBuffer := bytes.NewBuffer(b)
-		r := snappy.NewReader(newBuffer)
+		r := newBufferedReader(newBuffer)
+		defer bufReaderPool.Put(r)
+
 		newObj := make([]byte, len(b))
 		numOfBytes, err := r.Read(newObj)
 		if err != nil {
@@ -158,7 +176,8 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 		return err
 	}
 	if e.UseSnappyCompression {
-		r = snappy.NewReader(r)
+		r = newBufferedReader(r)
+		defer bufReaderPool.Put(r)
 	}
 	if msgLen > maxSize {
 		return fmt.Errorf("size of decoded message is %d which is larger than the provided max limit of %d", msgLen, maxSize)
@@ -190,10 +209,41 @@ func (e SszNetworkEncoder) MaxLength(length int) int {
 
 // Writes a bytes value through a snappy buffered writer.
 func writeSnappyBuffer(w io.Writer, b []byte) (int, error) {
-	bufWriter := snappy.NewBufferedWriter(w)
+	bufWriter := newBufferedWriter(w)
+	defer bufWriterPool.Put(bufWriter)
 	num, err := bufWriter.Write(b)
 	if err != nil {
 		return 0, err
 	}
 	return num, bufWriter.Close()
+}
+
+// Instantiates a new instance of the snappy buffered reader
+// using our sync pool.
+func newBufferedReader(r io.Reader) *snappy.Reader {
+	rawReader := bufReaderPool.Get()
+	if rawReader == nil {
+		return snappy.NewReader(r)
+	}
+	bufR, ok := rawReader.(*snappy.Reader)
+	if !ok {
+		return snappy.NewReader(r)
+	}
+	bufR.Reset(r)
+	return bufR
+}
+
+// Instantiates a new instance of the snappy buffered writer
+// using our sync pool.
+func newBufferedWriter(w io.Writer) *snappy.Writer {
+	rawBufWriter := bufWriterPool.Get()
+	if rawBufWriter == nil {
+		return snappy.NewBufferedWriter(w)
+	}
+	bufW, ok := rawBufWriter.(*snappy.Writer)
+	if !ok {
+		return snappy.NewBufferedWriter(w)
+	}
+	bufW.Reset(w)
+	return bufW
 }

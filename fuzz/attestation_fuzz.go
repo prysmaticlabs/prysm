@@ -3,7 +3,6 @@ package fuzz
 import (
 	"context"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prylabs_testing "github.com/prysmaticlabs/prysm/fuzz/testing"
@@ -14,7 +13,7 @@ import (
 func BeaconFuzzAttestation(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputAttestationWrapper{}
-	if err := ssz.Unmarshal(b, input); err != nil {
+	if err := input.UnmarshalSSZ(b); err != nil {
 		return fail(err)
 	}
 	s, err := prylabs_testing.GetBeaconFuzzState(input.StateID)

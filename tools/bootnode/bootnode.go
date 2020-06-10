@@ -30,7 +30,7 @@ import (
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	logging "github.com/ipfs/go-log"
-	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
@@ -39,7 +39,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
@@ -243,7 +242,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		NextForkVersion:   params.BeaconConfig().GenesisForkVersion,
 		NextForkEpoch:     params.BeaconConfig().FarFutureEpoch,
 	}
-	forkEntry, err := ssz.Marshal(forkID)
+	forkEntry, err := forkID.MarshalSSZ()
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not marshal fork id")
 	}

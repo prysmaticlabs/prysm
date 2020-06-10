@@ -3,7 +3,6 @@ package debug
 import (
 	"context"
 
-	"github.com/prysmaticlabs/go-ssz"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
@@ -23,7 +22,7 @@ func (ds *Server) GetBlock(
 	if signedBlock == nil {
 		return &pbrpc.SSZResponse{Encoded: make([]byte, 0)}, nil
 	}
-	encoded, err := ssz.Marshal(signedBlock)
+	encoded, err := signedBlock.MarshalSSZ()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not marshal block: %v", err)
 	}

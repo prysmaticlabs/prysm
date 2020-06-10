@@ -122,13 +122,13 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 	}
 
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
-		SelectionProof:  []byte{'A'},
+		SelectionProof:  bytesutil.PadTo([]byte{'A'}, 96),
 		Aggregate:       att,
 		AggregatorIndex: 0,
 	}
@@ -162,7 +162,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		},
 	}
 
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 }
@@ -193,8 +193,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Slot:            1,
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
 	}
@@ -237,7 +237,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		},
 	}
 
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 
@@ -256,7 +256,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			},
 		},
 	}
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 }
@@ -329,7 +329,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	if err := r.attPool.SaveBlockAttestation(att); err != nil {
 		t.Fatal(err)
 	}
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Error("Expected validate to fail")
 	}
 }
@@ -362,8 +362,8 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
 	}
@@ -455,7 +455,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 		},
 	}
 
-	if !r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) != pubsub.ValidationAccept {
 		t.Fatal("Validated status is false")
 	}
 
@@ -489,8 +489,8 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
-			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
 		AggregationBits: aggBits,
 	}
@@ -582,7 +582,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 		},
 	}
 
-	if !r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) != pubsub.ValidationAccept {
 		t.Fatal("Validated status is false")
 	}
 
@@ -602,7 +602,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	}
 
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
-	if r.validateAggregateAndProof(context.Background(), "", msg) {
+	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Fatal("Validated status is true")
 	}
 }

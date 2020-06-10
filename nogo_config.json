@@ -13,10 +13,17 @@
   },
   "lostcancel": {
     "exclude_files": {
-      "validator/client/runner.go": "No need to cancel right when goroutines begin"
+      "validator/client/runner.go": "No need to cancel right when goroutines begin",
+      "external/.*": "Third party code"
     }
   },
   "nilness": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
+  "pkgfact": {
     "exclude_files": {
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code"
@@ -35,12 +42,12 @@
   "composites": {
     "exclude_files": {
       "external/.*": "Third party code"
-    } 
+    }
   }, 
   "cgocall": {
     "exclude_files": {
       "external/.*": "Third party code"
-    } 
+    }
   },
   "assign": {
     "exclude_files": {
@@ -82,7 +89,8 @@
       "rules_go_work-.*": "Third party code",
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
-      ".*/testmain\\.go": "Test runner generated code"
+      ".*/testmain\\.go": "Test runner generated code",
+      "proto/.*": "Generated protobuf related code"
     }
   },
   "featureconfig": {

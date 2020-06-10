@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
+func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -99,7 +99,68 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	}
 }
 
-func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
+func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	if len(p1.Host.Network().Peers()) != 1 {
+		t.Error("Expected peers to be connected")
+	}
+	root := [32]byte{}
+
+	r := &Service{p2p: p1,
+		chain: &mock.ChainService{
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+				Root:  params.BeaconConfig().ZeroHash[:],
+			},
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		}}
+	pcl := protocol.ID("/testing")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		expectSuccess(t, r, stream)
+		out := &pb.Status{}
+		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(out.FinalizedRoot, root[:]) {
+			t.Errorf("Expected finalized root of %#x but got %#x", root, out.FinalizedRoot)
+		}
+	})
+
+	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = r.statusRPCHandler(context.Background(), &pb.Status{ForkDigest: digest[:], FinalizedRoot: params.BeaconConfig().ZeroHash[:]}, stream1)
+	if err != nil {
+		t.Errorf("Expected no error but got %v", err)
+	}
+
+	if testutil.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+
+	if len(p1.Host.Network().Peers()) != 1 {
+		t.Error("handler disconnected with peer")
+	}
+}
+
+func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -296,7 +357,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		}
 	})
 
-	pcl = protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
+	pcl = "/eth2/beacon_chain/req/ping/1/ssz"
 	var wg2 sync.WaitGroup
 	wg2.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -528,7 +589,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		err := r2.validateStatusMessage(context.Background(), out, stream)
+		err := r2.validateStatusMessage(context.Background(), out)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -639,5 +700,62 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	}
 	if badResponses != 1 {
 		t.Errorf("Bad response was not bumped to one, instead it is %d", badResponses)
+	}
+}
+
+func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
+	// Set up a head state with data we expect.
+	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blkSlot := 3 * params.BeaconConfig().SlotsPerEpoch
+	finalizedRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: blkSlot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	finalizedCheckpt := &ethpb.Checkpoint{
+		Epoch: 5,
+		Root:  finalizedRoot[:],
+	}
+	r := &Service{
+		chain: &mock.ChainService{
+			State:               genesisState,
+			FinalizedCheckPoint: finalizedCheckpt,
+			Root:                headRoot[:],
+			Fork: &pb.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			},
+			Genesis:        time.Now(),
+			ValidatorsRoot: [32]byte{'A'},
+		},
+		ctx: context.Background(),
+	}
+	digest, err := r.forkDigest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// There should be no error for a status message
+	// with a genesis checkpoint.
+	err = r.validateStatusMessage(r.ctx, &pb.Status{
+		ForkDigest:     digest[:],
+		FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
+		FinalizedEpoch: 0,
+		HeadRoot:       headRoot[:],
+		HeadSlot:       111,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

@@ -20,9 +20,10 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -58,6 +59,7 @@ type Flags struct {
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
+	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -189,17 +191,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling state management service")
 		cfg.NewStateMgmt = true
 	}
-	if ctx.Bool(enableFieldTrie.Name) {
-		log.Warn("Enabling state field trie")
-		cfg.EnableFieldTrie = true
+	cfg.EnableFieldTrie = true
+	if ctx.Bool(disableFieldTrie.Name) {
+		log.Warn("Disabling state field trie")
+		cfg.EnableFieldTrie = false
 	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
-	}
-	if ctx.Bool(enableStateRefCopy.Name) {
-		log.Warn("Enabling state reference copy")
-		cfg.EnableStateRefCopy = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
@@ -212,6 +211,28 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableInitSyncWeightedRoundRobin.Name) {
 		log.Warn("Enabling weighted round robin in initial syncing")
 		cfg.EnableInitSyncWeightedRoundRobin = true
+	}
+	cfg.EnableStateRefCopy = true
+	if ctx.Bool(disableStateRefCopy.Name) {
+		log.Warn("Disabling state reference copy")
+		cfg.EnableStateRefCopy = false
+	}
+	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
+		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
+		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
+			log.WithError(err).Error("Failed to update P2PAllowList flag")
+		}
+	}
+	if ctx.IsSet(deprecatedP2PBlacklist.Name) {
+		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PBlacklist.Name, cmd.P2PDenyList.Name)
+		if err := ctx.Set(cmd.P2PDenyList.Name, ctx.String(deprecatedP2PBlacklist.Name)); err != nil {
+			log.WithError(err).Error("Failed to update P2PDenyList flag")
+		}
+	}
+	cfg.ReduceAttesterStateCopy = true
+	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
+		log.Warn("Disabling reducing attester state copy")
+		cfg.ReduceAttesterStateCopy = false
 	}
 	Init(cfg)
 }

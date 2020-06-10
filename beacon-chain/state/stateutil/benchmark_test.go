@@ -1,4 +1,4 @@
-package stateutil_benchmark
+package stateutil_test
 
 import (
 	"testing"
@@ -73,7 +73,10 @@ func BenchmarkMerkleize(b *testing.B) {
 		b.ReportAllocs()
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
-			_, _ = oldMerkleize(roots, 8192, 8192)
+			_, err := oldMerkleize(roots, 8192, 8192)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
 	})
 
@@ -82,7 +85,10 @@ func BenchmarkMerkleize(b *testing.B) {
 		b.ReportAllocs()
 		b.N = 1000
 		for i := 0; i < b.N; i++ {
-			_, _ = newMerkleize(roots, 8192, 8192)
+			_, err := newMerkleize(roots, 8192, 8192)
+			if err != nil {
+				b.Fatal(err)
+			}
 		}
 	})
 

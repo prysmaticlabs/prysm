@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -86,13 +88,28 @@ func addForkEntry(
 	if err != nil {
 		return nil, err
 	}
+	currentSlot := helpers.SlotsSince(genesisTime)
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+	if roughtime.Now().Before(genesisTime) {
+		currentSlot, currentEpoch = 0, 0
+	}
+	fork, err := p2putils.Fork(currentEpoch)
+	if err != nil {
+		return nil, err
+	}
+
 	nextForkEpoch := params.BeaconConfig().NextForkEpoch
+	nextForkVersion := params.BeaconConfig().NextForkVersion
+	// Set to the current fork version if our next fork is not planned.
+	if nextForkEpoch == math.MaxUint64 {
+		nextForkVersion = fork.CurrentVersion
+	}
 	enrForkID := &pb.ENRForkID{
 		CurrentForkDigest: digest[:],
-		NextForkVersion:   params.BeaconConfig().NextForkVersion,
+		NextForkVersion:   nextForkVersion,
 		NextForkEpoch:     nextForkEpoch,
 	}
-	enc, err := ssz.Marshal(enrForkID)
+	enc, err := enrForkID.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +128,7 @@ func retrieveForkEntry(record *enr.Record) (*pb.ENRForkID, error) {
 		return nil, err
 	}
 	forkEntry := &pb.ENRForkID{}
-	if err := ssz.Unmarshal(sszEncodedForkEntry, forkEntry); err != nil {
+	if err := forkEntry.UnmarshalSSZ(sszEncodedForkEntry); err != nil {
 		return nil, err
 	}
 	return forkEntry, nil

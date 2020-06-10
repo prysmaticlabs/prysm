@@ -95,6 +95,11 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := stream.Reset(); err != nil {
+			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+		}
+	}()
 
 	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
 	if err != nil {
@@ -112,7 +117,7 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
 
-	err = r.validateStatusMessage(ctx, msg, stream)
+	err = r.validateStatusMessage(ctx, msg)
 	if err != nil {
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
@@ -157,7 +162,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return errors.New("message is not type *pb.Status")
 	}
 
-	if err := r.validateStatusMessage(ctx, m, stream); err != nil {
+	if err := r.validateStatusMessage(ctx, m); err != nil {
 		log.WithFields(logrus.Fields{
 			"peer":  stream.Conn().RemotePeer(),
 			"error": err}).Debug("Invalid status message from peer")
@@ -235,7 +240,7 @@ func (r *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	return err
 }
 
-func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, stream network.Stream) error {
+func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
 	forkDigest, err := r.forkDigest()
 	if err != nil {
 		return err
@@ -258,6 +263,12 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status, str
 	// Exit early if the peer's finalized epoch
 	// is less than that of the remote peer's.
 	if finalizedEpoch < msg.FinalizedEpoch {
+		return nil
+	}
+	finalizedAtGenesis := msg.FinalizedEpoch == 0
+	rootIsEqual := bytes.Equal(params.BeaconConfig().ZeroHash[:], msg.FinalizedRoot)
+	// If peer is at genesis with the correct genesis root hash we exit.
+	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
 	if !r.db.IsFinalizedBlock(context.Background(), bytesutil.ToBytes32(msg.FinalizedRoot)) {

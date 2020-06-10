@@ -2,7 +2,7 @@
 package cmd
 
 import (
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -118,19 +118,19 @@ var (
 		Usage: "The max number of p2p peers to maintain.",
 		Value: 30,
 	}
-	// P2PWhitelist defines a CIDR subnet to exclusively allow connections.
-	P2PWhitelist = &cli.StringFlag{
-		Name: "p2p-whitelist",
-		Usage: "The CIDR subnet for whitelisting peer connections. Example: 192.168.0.0/16 " +
-			"would whitelist connections to peers on your local network only. The default " +
-			"is to accept all connections.",
+	// P2PAllowList defines a CIDR subnet to exclusively allow connections.
+	P2PAllowList = &cli.StringFlag{
+		Name: "p2p-allowlist",
+		Usage: "The CIDR subnet for allowing only certain peer connections. Example: " +
+			"192.168.0.0/16 would permit connections to peers on your local network only. The " +
+			"default is to accept all connections.",
 	}
-	// P2PBlacklist defines a list of CIDR subnets to disallow connections from them.
-	P2PBlacklist = &cli.StringSliceFlag{
-		Name: "p2p-blacklist",
-		Usage: "The CIDR subnets for blacklisting peer connections. Example: 192.168.0.0/16 " +
-			"would blacklist connections from peers on your local network only. The default " +
-			"is to accept all connections.",
+	// P2PDenyList defines a list of CIDR subnets to disallow connections from them.
+	P2PDenyList = &cli.StringSliceFlag{
+		Name: "p2p-denylist",
+		Usage: "The CIDR subnets for denying certainy peer connections. Example: " +
+			"192.168.0.0/16 would deny connections from peers on your local network only. The " +
+			"default is to accept all connections.",
 	}
 	// P2PEncoding defines the encoding format for p2p messages.
 	P2PEncoding = &cli.StringFlag{

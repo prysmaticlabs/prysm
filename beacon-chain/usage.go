@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var appHelpTemplate = `NAME:
@@ -83,12 +83,12 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
 			flags.ContractDeploymentBlock,
-			flags.Web3ProviderFlag,
 			flags.RPCHost,
 			flags.RPCPort,
 			flags.RPCMaxPageSize,
 			flags.CertFlag,
 			flags.KeyFlag,
+			flags.DisableGRPCGateway,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
 			flags.SetGCPercent,
@@ -112,8 +112,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PMaxPeers,
 			cmd.P2PPrivKey,
 			cmd.P2PMetadata,
-			cmd.P2PWhitelist,
-			cmd.P2PBlacklist,
+			cmd.P2PAllowList,
+			cmd.P2PDenyList,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
 			cmd.P2PEncoding,

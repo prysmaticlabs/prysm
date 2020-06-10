@@ -28,7 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/urfave/cli.v2"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -295,8 +295,10 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}
 	if err != nil {
-		// Print help for the keymanager
-		fmt.Println(help)
+		if help != "" {
+			// Print help for the keymanager
+			fmt.Println(help)
+		}
 		return nil, err
 	}
 	return km, nil
@@ -317,7 +319,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := db.NewKVStoreWithPublicKeyBuckets(dataDir, pubkeys)
+		valDB, err := db.NewKVStore(dataDir, pubkeys)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}

@@ -26,11 +26,11 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2/altsrc"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
-	"gopkg.in/urfave/cli.v2"
-	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
 var log = logrus.WithField("prefix", "main")
@@ -49,8 +49,9 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
-	flags.MergeSourceDirectories,
-	flags.MergeTargetDirectory,
+	flags.SourceDirectories,
+	flags.SourceDirectory,
+	flags.TargetDirectory,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
 	flags.UnencryptedKeysFlag,
@@ -231,18 +232,38 @@ contract in order to activate the validator client`,
 					Name:        "merge",
 					Description: "merges data from several validator databases into a new validator database",
 					Flags: []cli.Flag{
-						flags.MergeSourceDirectories,
-						flags.MergeTargetDirectory,
+						flags.SourceDirectories,
+						flags.TargetDirectory,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						passedSources := cliCtx.String(flags.MergeSourceDirectories.Name)
+						passedSources := cliCtx.String(flags.SourceDirectories.Name)
 						sources := strings.Split(passedSources, ",")
-						target := cliCtx.String(flags.MergeTargetDirectory.Name)
+						target := cliCtx.String(flags.TargetDirectory.Name)
 
 						if err := accounts.Merge(context.Background(), sources, target); err != nil {
 							log.WithError(err).Error("Merging validator data failed")
 						} else {
 							log.Info("Merge completed successfully")
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:        "split",
+					Description: "splits one validator database into several databases - one for each public key",
+					Flags: []cli.Flag{
+						flags.SourceDirectory,
+						flags.TargetDirectory,
+					},
+					Action: func(cliCtx *cli.Context) error {
+						source := cliCtx.String(flags.SourceDirectory.Name)
+						target := cliCtx.String(flags.TargetDirectory.Name)
+
+						if err := accounts.Split(context.Background(), source, target); err != nil {
+							log.WithError(err).Error("Splitting validator data failed")
+						} else {
+							log.Info("Split completed successfully")
 						}
 
 						return nil

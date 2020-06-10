@@ -621,20 +621,32 @@ func TestActivationStatus_OK(t *testing.T) {
 		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
 			response[0].PublicKey, response[0].Status.Status.String())
 	}
+	if response[0].Index != 0 {
+		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[0].PublicKey, 0, response[0].Index)
+	}
 
 	if response[1].Status.Status != ethpb.ValidatorStatus_ACTIVE {
 		t.Errorf("Validator with pubkey %#x was activated when not supposed to",
 			response[1].PublicKey)
+	}
+	if response[1].Index != 1 {
+		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[1].PublicKey, 1, response[1].Index)
 	}
 
 	if response[2].Status.Status != ethpb.ValidatorStatus_DEPOSITED {
 		t.Errorf("Validator with pubkey %#x is not unknown and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}
+	if response[2].Index != params.BeaconConfig().FarFutureEpoch {
+		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[2].PublicKey, params.BeaconConfig().FarFutureEpoch, response[2].Index)
+	}
 
 	if response[3].Status.Status != ethpb.ValidatorStatus_DEPOSITED {
 		t.Errorf("Validator with pubkey %#x was not deposited and has this status: %s",
 			response[3].PublicKey, response[3].Status.Status.String())
+	}
+	if response[3].Index != 2 {
+		t.Errorf("Validator with pubkey %#x is expected to have index %d, received %d", response[3].PublicKey, 2, response[3].Index)
 	}
 }
 
@@ -817,7 +829,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 
 	eth1BlockNumBigInt := big.NewInt(1000000)
 
-	resp, err := vs.depositBlockSlot(context.Background(), eth1BlockNumBigInt, state)
+	resp, err := vs.depositBlockSlot(context.Background(), state, eth1BlockNumBigInt)
 	if err != nil {
 		t.Fatalf("Could not get the deposit block slot %v", err)
 	}
@@ -891,8 +903,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	}
 
 	eth1BlockNumBigInt := big.NewInt(1000000)
-
-	resp, err := vs.depositBlockSlot(context.Background(), eth1BlockNumBigInt, state)
+	resp, err := vs.depositBlockSlot(context.Background(), state, eth1BlockNumBigInt)
 	if err != nil {
 		t.Fatalf("Could not get the deposit block slot %v", err)
 	}
@@ -976,18 +987,18 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status:               ethpb.ValidatorStatus_DEPOSITED,
 			DepositInclusionSlot: 53,
 			ActivationEpoch:      18446744073709551615,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_DEPOSITED,
 		},
 	}
@@ -1066,16 +1077,16 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_ACTIVE,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_DEPOSITED,
 		},
-		&ethpb.ValidatorStatusResponse{
+		{
 			Status: ethpb.ValidatorStatus_SLASHING,
 		},
 	}
