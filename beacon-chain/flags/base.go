@@ -75,7 +75,7 @@ var (
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
-		Value: 3000,
+		Value: 3500,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{
