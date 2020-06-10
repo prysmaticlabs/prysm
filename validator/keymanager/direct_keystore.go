@@ -20,8 +20,8 @@ type Keystore struct {
 }
 
 type keystoreOpts struct {
-	Path       string  `json:"path"`
-	Passphrase *string `json:"passphrase"`
+	Path       string `json:"path"`
+	Passphrase string `json:"passphrase"`
 }
 
 var keystoreOptsHelp = `The keystore key manager generates keys and stores them in a local encrypted store.  The options are:
@@ -55,25 +55,24 @@ func NewKeystore(input string) (KeyManager, string, error) {
 		return nil, keystoreOptsHelp, err
 	}
 	if exists {
-		if opts.Passphrase == nil {
+		if opts.Passphrase == "" {
 			log.Info("Enter your validator account password:")
 			bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 			if err != nil {
 				return nil, keystoreOptsHelp, err
 			}
 			text := string(bytePassword)
-			*opts.Passphrase = strings.Replace(text, "\n", "", -1)
+			opts.Passphrase = strings.Replace(text, "\n", "", -1)
 		}
 
-		if err := accounts.VerifyAccountNotExists(opts.Path, *opts.Passphrase); err == nil {
+		if err := accounts.VerifyAccountNotExists(opts.Path, opts.Passphrase); err == nil {
 			log.Info("No account found, creating new validator account...")
 		}
 	} else {
 		return nil, "", errors.New("no validator keys found, please use validator accounts create")
 	}
 
-	keyMap, err := accounts.DecryptKeysFromKeystore(
-		opts.Path, params.BeaconConfig().ValidatorPrivkeyFileName, *opts.Passphrase)
+	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, params.BeaconConfig().ValidatorPrivkeyFileName, opts.Passphrase)
 	if err != nil {
 		return nil, keystoreOptsHelp, err
 	}
