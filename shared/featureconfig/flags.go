@@ -165,6 +165,12 @@ var (
 		Name:  "disable-init-sync-wrr",
 		Usage: "Disables weighted round robin fetching optimization",
 	}
+	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
+	slasherP2P = &cli.BoolFlag{
+		Name: "slasher-p2p",
+		Usage: "Use this flag to reduce block p2p validation in order for the slasher to receive any blocks" +
+			"the beacon node receives. Please only use if there is a slasher connected to this beacon node",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -531,6 +537,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewStateMgmt,
 	enableKadDht,
 	disableReduceAttesterStateCopy,
+	slasherP2P,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -538,4 +545,5 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
+	"--slasher-p2p",
 }
