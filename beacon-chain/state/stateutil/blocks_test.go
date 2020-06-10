@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -14,7 +15,7 @@ func TestBlockRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedRoot, err := stateutil.BlockRoot(blk.Block)
+	expectedRoot, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +30,7 @@ func TestBlockRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedRoot, err = stateutil.BlockRoot(blk.Block)
+	expectedRoot, err = ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func TestBlockRoot(t *testing.T) {
 }
 
 func TestBlockBodyRoot_NilIsSameAsEmpty(t *testing.T) {
-	a, err := stateutil.BlockBodyRoot(&ethpb.BeaconBlockBody{})
+	a, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
 	if err != nil {
 		t.Error(err)
 	}
