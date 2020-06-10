@@ -46,6 +46,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
+	flags.MonitoringHostFlag,
 	flags.MonitoringPortFlag,
 	cmd.LogFileName,
 	cmd.LogFormat,
