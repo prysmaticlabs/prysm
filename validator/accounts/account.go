@@ -212,7 +212,7 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 		}
 	}
 
-	if passphrase == "" {
+	if passphrase == "" && !cliCtx.IsSet(flags.PasswordFlag.Name) {
 		log.Info("Please enter the password for your private keys")
 		enteredPassphrase, err := cmd.EnterPassword(confirmPassword, cmd.StdInPasswordReader{})
 		if err != nil {
