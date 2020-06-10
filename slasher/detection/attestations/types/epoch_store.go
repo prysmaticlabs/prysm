@@ -26,8 +26,8 @@ func NewEpochStore(spans []byte) (*EpochStore, error) {
 	}
 	highestIdx := spansLen / SpannerEncodedLength
 	if highestIdx > 0 {
-		// Minus one here since validators are 0 indeex.
-		highestIdx -= 1
+		// Minus one here since validators are 0 index.
+		highestIdx--
 	}
 	es := &EpochStore{
 		spans:              spans,
