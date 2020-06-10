@@ -41,6 +41,12 @@ var (
 		Usage: "Indicate what fraction of p2p messages are sampled for tracing.",
 		Value: 0.20,
 	}
+	// MonitoringHostFlag defines the host used to serve prometheus metrics.
+	MonitoringHostFlag = &cli.StringFlag{
+		Name:  "monitoring-host",
+		Usage: "Host used for listening and responding metrics for prometheus.",
+		Value: "127.0.0.1",
+	}
 	// DisableMonitoringFlag defines a flag to disable the metrics collection.
 	DisableMonitoringFlag = &cli.BoolFlag{
 		Name:  "disable-monitoring",
