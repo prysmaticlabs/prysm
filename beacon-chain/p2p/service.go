@@ -290,6 +290,7 @@ func (s *Service) Start() {
 
 	if p2pHostAddress != "" {
 		logExternalIPAddr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+		verifyConnectivity(p2pHostAddress, p2pTCPPort, "tcp")
 	}
 
 	p2pHostDNS := s.cfg.HostDNS
