@@ -3,6 +3,7 @@ package evaluators
 import (
 	"context"
 	"fmt"
+	"math"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -23,17 +24,22 @@ var exitedIndice uint64
 // valExited is used to know if exitedIndice is set, since default value is 0.
 var valExited bool
 
+var churnLimit = float64(4)
+var depositValCount = params.E2ETestConfig().MinGenesisActiveValidatorCount / 4 // Dividing by 4 for 4 beacon nodes in long running e2e.
+var depositStartEpoch = uint64(8)
+var depositEndEpoch = depositStartEpoch + uint64(math.Ceil(float64(depositValCount)/churnLimit))
+
 // ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
 var ProcessesDepositedValidators = types.Evaluator{
 	Name:       "processes_deposit_validators_epoch_%d",
-	Policy:     isBetweenEpochs(8, 21), //Choosing 8-21 because of the churn limit of 4 per epoch for 256 vals / 4 beacon nodes = 64 deposits. )
+	Policy:     isBetweenEpochs(depositStartEpoch, depositEndEpoch), //Choosing 8-21 because of the churn limit of 4 per epoch for 256 vals / 4 beacon nodes = 64 deposits. )
 	Evaluation: processesDepositedValidators,
 }
 
 // DepositedValidatorsAreActive ensures the expected amount of validators are active after their deposits are processed.
 var DepositedValidatorsAreActive = types.Evaluator{
 	Name:       "deposited_validators_are_active_epoch_%d",
-	Policy:     afterNthEpoch(22),
+	Policy:     afterNthEpoch(depositEndEpoch),
 	Evaluation: depositedValidatorsAreActive,
 }
 
@@ -53,14 +59,21 @@ var ValidatorHasExited = types.Evaluator{
 
 // Not including first epoch because of issues with genesis.
 func isBetweenEpochs(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
+	fmt.Println(fromEpoch, toEpoch)
 	return func(currentEpoch uint64) bool {
-		return fromEpoch < currentEpoch && currentEpoch > toEpoch
+		return fromEpoch < currentEpoch && currentEpoch < toEpoch
 	}
 }
 
 func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
+
+	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get validators")
+	}
+
 	validatorRequest := &eth.ListValidatorsRequest{
 		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		PageToken: "1",
@@ -76,33 +89,26 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
 	}
 
-	churnLimit, err := helpers.ValidatorChurnLimit(params.BeaconConfig().MinGenesisActiveValidatorCount + uint64(len(validators.ValidatorList)))
-	if err != nil {
-		return errors.Wrap(err, "failed to calculate churn limit")
-	}
+	epoch := chainHead.HeadEpoch
+	depositsInEpoch := uint64(0)
 	var effBalanceLowCount, exitEpochWrongCount, withdrawEpochWrongCount uint64
-	var activeEpoch10Count, activeEpoch11Count, activeEpoch12Count, activeEpoch13Count uint64
 	for _, item := range validators.ValidatorList {
-		switch item.Validator.ActivationEpoch {
-		case 10:
-			activeEpoch10Count++
-		case 11:
-			activeEpoch11Count++
-		case 12:
-			activeEpoch12Count++
-		case 13:
-			activeEpoch13Count++
+		fmt.Printf("Val %d, active epoch %d, eligible epoch %d\n", item.Index, item.Validator.ActivationEpoch, item.Validator.ActivationEligibilityEpoch)
+		if item.Validator.ActivationEpoch == epoch {
+			depositsInEpoch++
+			if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
+				effBalanceLowCount++
+			}
+			if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+				exitEpochWrongCount++
+			}
+			if item.Validator.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+				withdrawEpochWrongCount++
+			}
 		}
-
-		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
-			effBalanceLowCount++
-		}
-		if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			exitEpochWrongCount++
-		}
-		if item.Validator.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
-			withdrawEpochWrongCount++
-		}
+	}
+	if depositsInEpoch != uint64(churnLimit) {
+		return fmt.Errorf("expected %d deposits to be processed in epoch %d, received %d", churnLimit, epoch, depositsInEpoch)
 	}
 
 	if effBalanceLowCount > 0 {
@@ -111,14 +117,6 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 			effBalanceLowCount,
 			params.BeaconConfig().MaxEffectiveBalance,
 		)
-	} else if activeEpoch10Count != churnLimit {
-		return fmt.Errorf("%d validators did not have activation epoch of 10", activeEpoch10Count)
-	} else if activeEpoch11Count != churnLimit {
-		return fmt.Errorf("%d validators did not have activation epoch of 11", activeEpoch11Count)
-	} else if activeEpoch12Count != churnLimit {
-		return fmt.Errorf("%d validators did not have activation epoch of 12", activeEpoch12Count)
-	} else if activeEpoch13Count != churnLimit {
-		return fmt.Errorf("%d validators did not have activation epoch of 13", activeEpoch13Count)
 	} else if exitEpochWrongCount > 0 {
 		return fmt.Errorf("%d validators did not have an exit epoch of far future epoch", exitEpochWrongCount)
 	} else if withdrawEpochWrongCount > 0 {
