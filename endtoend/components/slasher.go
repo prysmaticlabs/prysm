@@ -30,9 +30,9 @@ func StartSlashers(t *testing.T) []int {
 		}
 
 		args := []string{
+			fmt.Sprintf("--datadir=%s/slasher-data-%d/", e2e.TestParams.TestPath, i),
 			fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 			fmt.Sprintf("--rpc-port=%d", e2e.TestParams.SlasherRPCPort+i),
-			fmt.Sprintf("--datadir=%s/slasher-data-%d/", e2e.TestParams.TestPath, i),
 			fmt.Sprintf("--monitoring-port=%d", e2e.TestParams.SlasherMetricsPort+i),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", e2e.TestParams.BeaconNodeRPCPort+i),
 			"--force-clear-db",
