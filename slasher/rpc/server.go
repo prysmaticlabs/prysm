@@ -82,20 +82,20 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 
 	err = attestationutil.VerifyIndexedAttestationSig(ctx, req, pubkeys, domain)
 	if err != nil {
-		log.WithError(err).Error("Failed to verify indexed attestation signature")
-		return nil, status.Errorf(codes.Internal, "Could not verify indexed attestation signature: %v: %v", req, err)
+		log.WithError(err).Error("failed to verify indexed attestation signature")
+		return nil, status.Errorf(codes.Internal, "could not verify indexed attestation signature: %v: %v", req, err)
 	}
 	slashings, err := ss.detector.DetectAttesterSlashings(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not detect attester slashings for attestation: %v: %v", req, err)
+		return nil, status.Errorf(codes.Internal, "could not detect attester slashings for attestation: %v: %v", req, err)
 	}
 	if len(slashings) < 1 {
 		if err := ss.slasherDB.SaveIndexedAttestation(ctx, req); err != nil {
 			log.WithError(err).Error("Could not save indexed attestation")
-			return nil, status.Errorf(codes.Internal, "Could not save indexed attestation: %v: %v", req, err)
+			return nil, status.Errorf(codes.Internal, "could not save indexed attestation: %v: %v", req, err)
 		}
 		if err := ss.detector.UpdateSpans(ctx, req); err != nil {
-			log.WithError(err).Error("Could not update spans")
+			log.WithError(err).Error("could not update spans")
 		}
 	}
 	return &slashpb.AttesterSlashingResponse{
@@ -139,7 +139,7 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	}
 	slashing, err := ss.detector.DetectDoubleProposals(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not detect proposer slashing for block: %v: %v", req, err)
+		return nil, status.Errorf(codes.Internal, "could not detect proposer slashing for block: %v: %v", req, err)
 	}
 	psr := &slashpb.ProposerSlashingResponse{}
 	if slashing != nil {
@@ -149,4 +149,31 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, req *ethpb.SignedBeaconB
 	}
 	return psr, nil
 
+}
+
+// IsSlashableAttestationNoUpdate returns true if the attestation submitted
+// is a slashable vote (no db update is being done).
+func (ss *Server) IsSlashableAttestationNoUpdate(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.Slashable, error) {
+	sl := &slashpb.Slashable{}
+	slashings, err := ss.detector.DetectAttesterSlashings(ctx, req)
+	if err != nil {
+		return sl, status.Errorf(codes.Internal, "could not detect attester slashings for attestation: %v: %v", req, err)
+	}
+	if len(slashings) < 1 {
+		return sl, nil
+	}
+	sl.Slashable = true
+	return sl, nil
+}
+
+// IsSlashableBlockNoUpdate returns true if the block submitted
+// is slashable (no db update is being done).
+func (ss *Server) IsSlashableBlockNoUpdate(ctx context.Context, req *ethpb.BeaconBlockHeader) (*slashpb.Slashable, error) {
+	sl := &slashpb.Slashable{}
+	slash, err := ss.detector.DetectDoubleProposeNoUpdate(ctx, req)
+	if err != nil {
+		return sl, status.Errorf(codes.Internal, "could not detect proposer slashing for block: %v: %v", req, err)
+	}
+	sl.Slashable = slash
+	return sl, nil
 }

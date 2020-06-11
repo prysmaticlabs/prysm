@@ -58,7 +58,7 @@ func persistSpanMapsOnEviction(db *Store) func(key interface{}, value interface{
 				return err
 			}
 			for k, v := range spanMap {
-				if err = epochBucket.Put(bytesutil.Bytes8(k), marshalSpan(v)); err != nil {
+				if err = epochBucket.Put(bytesutil.Bytes8(k), v.Marshal()); err != nil {
 					return err
 				}
 			}
@@ -69,33 +69,6 @@ func persistSpanMapsOnEviction(db *Store) func(key interface{}, value interface{
 			log.Errorf("Failed to save span map to db on cache eviction: %v", err)
 		}
 	}
-}
-
-// Unmarshal a span map from an encoded, flattened array.
-func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.unmarshalSpan")
-	defer span.End()
-	r := types.Span{}
-	if len(enc) != spannerEncodedLength {
-		return r, errors.New("wrong data length for min max span")
-	}
-	r.MinSpan = bytesutil.FromBytes2(enc[:2])
-	r.MaxSpan = bytesutil.FromBytes2(enc[2:4])
-	sigB := [2]byte{}
-	copy(sigB[:], enc[4:6])
-	r.SigBytes = sigB
-	r.HasAttested = bytesutil.ToBool(enc[6])
-	return r, nil
-}
-
-// Convert the span struct into a flattened array.
-func marshalSpan(span types.Span) []byte {
-	return append(append(append(
-		bytesutil.Bytes2(uint64(span.MinSpan)),
-		bytesutil.Bytes2(uint64(span.MaxSpan))...),
-		span.SigBytes[:]...),
-		bytesutil.FromBool(span.HasAttested),
-	)
 }
 
 // EpochSpansMap accepts epoch and returns the corresponding spans map epoch=>spans
@@ -126,7 +99,7 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 		spanMap = make(map[uint64]types.Span, keysLength)
 		return epochBucket.ForEach(func(k, v []byte) error {
 			key := bytesutil.FromBytes8(k)
-			value, err := unmarshalSpan(ctx, v)
+			value, err := types.UnmarshalSpan(v)
 			if err != nil {
 				return err
 			}
@@ -173,7 +146,7 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 		if v == nil {
 			return nil
 		}
-		value, err := unmarshalSpan(ctx, v)
+		value, err := types.UnmarshalSpan(v)
 		if err != nil {
 			return err
 		}
@@ -204,7 +177,7 @@ func (db *Store) EpochsSpanByValidatorsIndices(ctx context.Context, validatorInd
 				if enc == nil {
 					continue
 				}
-				value, err := unmarshalSpan(ctx, enc)
+				value, err := types.UnmarshalSpan(enc)
 				if err != nil {
 					return err
 				}
@@ -237,8 +210,7 @@ func (db *Store) SaveEpochsSpanByValidatorsIndices(ctx context.Context, epochsSp
 				return err
 			}
 			for idx, v := range indicesSpanMaps {
-				enc := marshalSpan(v)
-				if err := epochBucket.Put(bytesutil.Bytes8(idx), enc); err != nil {
+				if err := epochBucket.Put(bytesutil.Bytes8(idx), v.Marshal()); err != nil {
 					return err
 				}
 			}
@@ -278,8 +250,7 @@ func (db *Store) SaveValidatorEpochSpan(
 			return err
 		}
 		key := bytesutil.Bytes8(validatorIdx)
-		value := marshalSpan(span)
-		return epochBucket.Put(key, value)
+		return epochBucket.Put(key, span.Marshal())
 	})
 }
 
@@ -302,7 +273,7 @@ func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap ma
 			return err
 		}
 		for k, v := range spanMap {
-			err = valBucket.Put(bytesutil.Bytes8(k), marshalSpan(v))
+			err = valBucket.Put(bytesutil.Bytes8(k), v.Marshal())
 			if err != nil {
 				return err
 			}
