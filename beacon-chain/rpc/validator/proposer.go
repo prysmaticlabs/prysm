@@ -61,9 +61,17 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
 	}
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
+	}
+	head, err = state.ProcessSlots(context.Background(), head, req.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
+	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := vs.packAttestations(ctx, req.Slot)
+	atts, err := vs.packAttestations(ctx, head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
 	}
@@ -73,16 +81,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
 
-	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
-	}
-
 	// Calculate new proposer index.
-	head, err = state.ProcessSlots(context.Background(), head, req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not advance slot to calculate proposer index: %v", err)
-	}
 	idx, err := helpers.BeaconProposerIndex(head)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not calculate proposer index %v", err)
@@ -459,22 +458,12 @@ func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *e
 	return deposit, nil
 }
 
-func (vs *Server) packAttestations(ctx context.Context, slot uint64) ([]*ethpb.Attestation, error) {
+func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.BeaconState) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
-	st, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could fetch head state")
-	}
-	if st.Slot() < slot {
-		st, err = state.ProcessSlots(ctx, st, slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not advance state")
-		}
-	}
 
 	atts := vs.AttPool.AggregatedAttestations()
-	atts, err = vs.filterAttestationsForBlockInclusion(ctx, st, atts)
+	atts, err := vs.filterAttestationsForBlockInclusion(ctx, latestState, atts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}
@@ -482,7 +471,7 @@ func (vs *Server) packAttestations(ctx context.Context, slot uint64) ([]*ethpb.A
 	// If there is any room left in the block, consider unaggregated attestations as well.
 	if len(atts) < int(params.BeaconConfig().MaxAttestations) {
 		uAtts := vs.AttPool.UnaggregatedAttestations()
-		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, st, uAtts)
+		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
 		if len(uAtts)+len(atts) > int(params.BeaconConfig().MaxAttestations) {
 			uAtts = uAtts[:int(params.BeaconConfig().MaxAttestations)-len(atts)]
 		}
