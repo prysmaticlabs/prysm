@@ -397,7 +397,7 @@ func ProcessProposerSlashings(
 			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
 		beaconState, err = v.SlashValidator(
-			beaconState, slashing.Header_1.Header.ProposerIndex, 0, /* proposer is whistleblower */
+			beaconState, slashing.Header_1.Header.ProposerIndex,
 		)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.Header_1.Header.ProposerIndex)
@@ -487,7 +487,7 @@ func ProcessAttesterSlashings(
 				return nil, err
 			}
 			if helpers.IsSlashableValidator(val, currentEpoch) {
-				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
+				beaconState, err = v.SlashValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -151,9 +152,16 @@ func TestSlashValidator_OK(t *testing.T) {
 	}
 
 	slashedIdx := uint64(2)
-	whistleIdx := uint64(10)
 
-	state, err = SlashValidator(state, slashedIdx, whistleIdx)
+	proposer, err := helpers.BeaconProposerIndex(state)
+	if err != nil {
+		t.Errorf("Could not get proposer %v", err)
+	}
+	proposerBal, err := state.BalanceAtIndex(proposer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err = SlashValidator(state, slashedIdx)
 	if err != nil {
 		t.Fatalf("Could not slash validator %v", err)
 	}
@@ -177,27 +185,14 @@ func TestSlashValidator_OK(t *testing.T) {
 		t.Errorf("Slashed balance isnt the expected amount: got %d but expected %d", slashedBalance, maxBalance)
 	}
 
-	proposer, err := helpers.BeaconProposerIndex(state)
-	if err != nil {
-		t.Errorf("Could not get proposer %v", err)
-	}
-
 	whistleblowerReward := slashedBalance / params.BeaconConfig().WhistleBlowerRewardQuotient
-	proposerReward := whistleblowerReward / params.BeaconConfig().ProposerRewardQuotient
-
 	bal, err := state.BalanceAtIndex(proposer)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bal != maxBalance+proposerReward {
-		t.Errorf("Did not get expected balance for proposer %d", bal)
-	}
-	bal, err = state.BalanceAtIndex(whistleIdx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bal != maxBalance+whistleblowerReward-proposerReward {
-		t.Errorf("Did not get expected balance for whistleblower %d", bal)
+	// The proposer is the whistleblower in phase 0.
+	if bal != proposerBal+whistleblowerReward {
+		t.Errorf("Did not get expected balance for proposer: prev %d, new %d", bal, proposerBal+whistleblowerReward)
 	}
 	bal, err = state.BalanceAtIndex(slashedIdx)
 	if err != nil {
