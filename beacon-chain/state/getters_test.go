@@ -75,3 +75,13 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.FinalizedCheckpoint()
 	_ = err
 }
+
+func TestReadOnlyValidator_NoPanic(t *testing.T) {
+	v := &ReadOnlyValidator{}
+	if v.Slashed() == true {
+		t.Error("Expected not slashed")
+	}
+	if v.CopyValidator() != nil {
+		t.Error("Expected nil result")
+	}
+}
