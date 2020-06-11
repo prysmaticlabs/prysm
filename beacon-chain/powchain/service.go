@@ -528,7 +528,7 @@ func (s *Service) handleETH1FollowDistance() {
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
 	fiveMinutesTimeout := roughtime.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
-	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) && roughtime.Now().Second()%15 == 0 {
+	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
 		log.Warn("eth1 client is not syncing")
 	}
 	if !s.chainStartData.Chainstarted {
@@ -606,8 +606,12 @@ func (s *Service) run(done <-chan struct{}) {
 
 	s.initPOWService()
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
+
+	// Update follow distance immediately as the ticker doesn't update until after the first time
+	// interval.
+	s.handleETH1FollowDistance()
 
 	for {
 		select {
