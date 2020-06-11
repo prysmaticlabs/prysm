@@ -3,8 +3,9 @@ package endtoend
 import (
 	"testing"
 
-	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/endtoend/params"
+
+	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -13,6 +14,9 @@ import (
 func TestEndToEnd_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
+	if err := e2eParams.Init(2); err != nil {
+		t.Fatal(err)
+	}
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},
@@ -31,9 +35,6 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.ProposeVoluntaryExit,
 			ev.ValidatorHasExited,
 		},
-	}
-	if err := e2eParams.Init(2); err != nil {
-		t.Fatal(err)
 	}
 
 	runEndToEndTest(t, minimalConfig)

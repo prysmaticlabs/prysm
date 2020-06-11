@@ -44,6 +44,9 @@ var SlasherLogFileName = "slasher-%d.log"
 // ValidatorLogFileName is the file name used for the validator client logs.
 var ValidatorLogFileName = "vals-%d.log"
 
+// LongRunningBeaconCount is a global constant for the count of beacon nodes of long running E2E.
+var LongRunningBeaconCount = 4
+
 // Init initializes the E2E config, properly handling test sharding.
 func Init(beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
