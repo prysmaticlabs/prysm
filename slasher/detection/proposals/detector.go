@@ -51,3 +51,27 @@ func (dd *ProposeDetector) DetectDoublePropose(
 	}
 	return nil, nil
 }
+
+// DetectDoubleProposeNoUpdate detects double proposals for a given block header by db search
+// without storing the incoming block to db.
+func (dd *ProposeDetector) DetectDoubleProposeNoUpdate(
+	ctx context.Context,
+	incomingBlk *ethpb.BeaconBlockHeader,
+) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "detector.DetectDoubleProposeNoUpdate")
+	defer span.End()
+	headersFromIdx, err := dd.slasherDB.BlockHeaders(ctx, incomingBlk.Slot, incomingBlk.ProposerIndex)
+	if err != nil {
+		return false, err
+	}
+	for _, blockHeader := range headersFromIdx {
+		sameBodyRoot := bytes.Equal(blockHeader.Header.BodyRoot, incomingBlk.BodyRoot)
+		sameStateRoot := bytes.Equal(blockHeader.Header.StateRoot, incomingBlk.StateRoot)
+		sameParentRoot := bytes.Equal(blockHeader.Header.ParentRoot, incomingBlk.ParentRoot)
+		if sameBodyRoot && sameStateRoot && sameParentRoot {
+			continue
+		}
+		return true, nil
+	}
+	return false, nil
+}
