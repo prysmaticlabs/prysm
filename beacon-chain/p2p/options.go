@@ -13,6 +13,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 const (
@@ -36,6 +37,7 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.ListenAddrs(listen),
 		allowListSubnet(cfg.AllowListCIDR),
 		denyListSubnets(cfg.DenyListCIDR),
+		libp2p.UserAgent(version.GetBuildData()),
 		// Add one for the boot node and another for the relay, otherwise when we are close to maxPeers we will be above the high
 		// water mark and continually trigger pruning.
 		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers), int(cfg.MaxPeers+peerBuffer), gracePeriod)),
