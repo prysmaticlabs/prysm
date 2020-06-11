@@ -79,7 +79,8 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Calculate new proposer index.
-	if err := head.SetSlot(req.Slot); err != nil {
+	head, err = state.ProcessSlots(context.Background(), head, req.Slot)
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set slot to calculate proposer index: %v", err)
 	}
 	idx, err := helpers.BeaconProposerIndex(head)
