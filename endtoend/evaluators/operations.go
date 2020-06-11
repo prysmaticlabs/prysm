@@ -71,7 +71,7 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 
 	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "failed to get validators")
+		return errors.Wrap(err, "failed to get chain head")
 	}
 
 	validatorRequest := &eth.ListValidatorsRequest{
