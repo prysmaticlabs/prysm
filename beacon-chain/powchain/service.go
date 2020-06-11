@@ -120,7 +120,6 @@ type Service struct {
 	processingLock          sync.RWMutex
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	client                  Client
 	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
 	httpEndpoint            string
@@ -295,11 +294,6 @@ func (s *Service) LatestBlockHash() common.Hash {
 	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
 }
 
-// Client for interacting with the ETH1.0 chain.
-func (s *Service) Client() Client {
-	return s.client
-}
-
 // AreAllDepositsProcessed determines if all the logs from the deposit contract
 // are processed.
 func (s *Service) AreAllDepositsProcessed() (bool, error) {
@@ -378,7 +372,6 @@ func (s *Service) initializeConnection(
 	rpcClient *gethRPC.Client,
 	contractCaller *contracts.DepositContractCaller,
 ) {
-	s.client = httpClient
 	s.httpLogger = httpClient
 	s.blockFetcher = httpClient
 	s.depositContractCaller = contractCaller
