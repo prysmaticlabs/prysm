@@ -13,6 +13,7 @@ import (
 // The value of these vars are set through linker options.
 var gitCommit = "Local build"
 var buildDate = "Moments ago"
+var gitTag = "Unknown"
 
 // GetVersion returns the version string of this build.
 func GetVersion() string {
@@ -29,5 +30,5 @@ func GetVersion() string {
 		now := time.Now().Format(time.RFC3339)
 		buildDate = now
 	}
-	return fmt.Sprintf("Prysm/Git commit: %s. Built at: %s", gitCommit, buildDate)
+	return fmt.Sprintf("Prysm/%s/%s. Built at: %s", gitTag, gitCommit, buildDate)
 }

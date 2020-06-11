@@ -13,6 +13,9 @@ import (
 func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
+	if err := e2eParams.Init(2); err != nil {
+		t.Fatal(err)
+	}
 
 	minimalConfig := &types.E2EConfig{
 		BeaconFlags:    []string{},
@@ -29,9 +32,6 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 			ev.InjectDoubleVote,
 			ev.ProposeDoubleBlock,
 		},
-	}
-	if err := e2eParams.Init(2); err != nil {
-		t.Fatal(err)
 	}
 
 	runEndToEndTest(t, minimalConfig)
