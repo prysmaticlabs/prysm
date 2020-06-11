@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
@@ -32,16 +31,15 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	if err != nil {
 		return err
 	}
-	if !featureconfig.Get().SlasherP2P {
-		// Broadcast the block on a feed to notify other services in the beacon node
-		// of a received block (even if it does not process correctly through a state transition).
-		r.blockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{
-				SignedBlock: signed,
-			},
-		})
-	}
+
+	// Broadcast the block on a feed to notify other services in the beacon node
+	// of a received block (even if it does not process correctly through a state transition).
+	r.blockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{
+			SignedBlock: signed,
+		},
+	})
 
 	if err := r.chain.ReceiveBlockNoPubsub(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)
