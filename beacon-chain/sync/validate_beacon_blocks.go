@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -117,9 +118,9 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			return pubsub.ValidationReject
 		}
 
-		err = parentState.SetSlot(blk.Block.Slot)
+		parentState, err = state.ProcessSlots(context.Background(), parentState, blk.Block.Slot)
 		if err != nil {
-			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not set parent state slot")
+			log.Errorf("Could not advance slot to calculate proposer index: %v", err)
 			return pubsub.ValidationIgnore
 		}
 		idx, err := helpers.BeaconProposerIndex(parentState)
