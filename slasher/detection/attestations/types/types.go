@@ -2,7 +2,11 @@
 // slashable objects detected by slasher.
 package types
 
-import "github.com/prysmaticlabs/prysm/shared/bytesutil"
+import (
+	"errors"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+)
 
 // DetectionKind defines an enum type that
 // gives us information on the type of slashable offense
@@ -48,4 +52,32 @@ type Span struct {
 	MaxSpan     uint16
 	SigBytes    [2]byte
 	HasAttested bool
+}
+
+// SpannerEncodedLength the byte length of validator span data structure.
+var SpannerEncodedLength = uint64(7)
+
+// UnmarshalSpan returns a span from an encoded, flattened byte array.
+func UnmarshalSpan(enc []byte) (Span, error) {
+	r := Span{}
+	if len(enc) != int(SpannerEncodedLength) {
+		return r, errors.New("wrong data length for min max span")
+	}
+	r.MinSpan = bytesutil.FromBytes2(enc[:2])
+	r.MaxSpan = bytesutil.FromBytes2(enc[2:4])
+	sigB := [2]byte{}
+	copy(sigB[:], enc[4:6])
+	r.SigBytes = sigB
+	r.HasAttested = bytesutil.ToBool(enc[6])
+	return r, nil
+}
+
+// Marshal converts the span struct into a flattened byte array.
+func (span Span) Marshal() []byte {
+	return append(append(append(
+		bytesutil.Bytes2(uint64(span.MinSpan)),
+		bytesutil.Bytes2(uint64(span.MaxSpan))...),
+		span.SigBytes[:]...),
+		bytesutil.FromBool(span.HasAttested),
+	)
 }
