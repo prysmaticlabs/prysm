@@ -25,10 +25,10 @@ func TestAggregateVerifyYaml(t *testing.T) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			pubkeys := make([]*bls.PublicKey, 0, len(test.Input.Pairs))
-			msgs := make([][32]byte, 0, len(test.Input.Pairs))
-			for _, pair := range test.Input.Pairs {
-				pkBytes, err := hex.DecodeString(pair.Pubkey[2:])
+			pubkeys := make([]*bls.PublicKey, 0, len(test.Input.Pubkeys))
+			msgs := make([][32]byte, 0, len(test.Input.Messages))
+			for _, pubKey := range test.Input.Pubkeys {
+				pkBytes, err := hex.DecodeString(pubKey[2:])
 				if err != nil {
 					t.Fatalf("Cannot decode string to bytes: %v", err)
 				}
@@ -37,7 +37,9 @@ func TestAggregateVerifyYaml(t *testing.T) {
 					t.Fatalf("Cannot unmarshal input to secret key: %v", err)
 				}
 				pubkeys = append(pubkeys, pk)
-				msgBytes, err := hex.DecodeString(pair.Message[2:])
+			}
+			for _, msg := range test.Input.Messages {
+				msgBytes, err := hex.DecodeString(msg[2:])
 				if err != nil {
 					t.Fatalf("Cannot decode string to bytes: %v", err)
 				}

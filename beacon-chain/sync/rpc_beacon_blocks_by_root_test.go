@@ -17,6 +17,7 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -30,7 +31,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	}
 	d := db.SetupDB(t)
 
-	var blkRoots [][32]byte
+	var blkRoots [][]byte
 	// Populate the database with blocks that would match the request.
 	for i := 1; i < 11; i++ {
 		blk := &ethpb.BeaconBlock{
@@ -43,7 +44,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		if err := d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: blk}); err != nil {
 			t.Fatal(err)
 		}
-		blkRoots = append(blkRoots, root)
+		blkRoots = append(blkRoots, root[:])
 	}
 
 	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
@@ -69,8 +70,8 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	err = r.beaconBlocksRootRPCHandler(context.Background(), blkRoots, stream1)
+	req := &pb.BeaconBlocksByRootRequest{BlockRoots: blkRoots}
+	err = r.beaconBlocksRootRPCHandler(context.Background(), req, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -111,7 +112,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		Root:  blockBRoot[:],
 	}
 
-	expectedRoots := [][32]byte{blockBRoot, blockARoot}
+	expectedRoots := [][]byte{blockBRoot[:], blockARoot[:]}
 
 	r := &Service{
 		p2p: p1,
@@ -132,12 +133,12 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	wg.Add(1)
 	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := [][32]byte{}
-		if err := p2.Encoding().DecodeWithLength(stream, &out); err != nil {
+		out := &pb.BeaconBlocksByRootRequest{BlockRoots: [][]byte{}}
+		if err := p2.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(out, expectedRoots) {
-			t.Fatalf("Did not receive expected message. Got %+v wanted %+v", out, expectedRoots)
+		if !reflect.DeepEqual(out.BlockRoots, expectedRoots) {
+			t.Fatalf("Did not receive expected message. Got %+v wanted %+v", out.BlockRoots, expectedRoots)
 		}
 		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
 		for _, blk := range response {

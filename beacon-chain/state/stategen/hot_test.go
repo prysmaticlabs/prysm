@@ -11,6 +11,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	//pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -245,23 +246,30 @@ func TestLastAncestorState_CanGet(t *testing.T) {
 	db := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
-	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'a'}}
-	r0, err := ssz.HashTreeRoot(b0)
+	b0 := testutil.NewBeaconBlock()
+	b0.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
+	r0, err := ssz.HashTreeRoot(b0.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
-	r1, err := ssz.HashTreeRoot(b1)
+	b1 := testutil.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ParentRoot = bytesutil.PadTo(r0[:], 32)
+	r1, err := ssz.HashTreeRoot(b1.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:]}
-	r2, err := ssz.HashTreeRoot(b2)
+	b2 := testutil.NewBeaconBlock()
+	b2.Block.Slot = 2
+	b2.Block.ParentRoot = bytesutil.PadTo(r1[:], 32)
+	r2, err := ssz.HashTreeRoot(b2.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r2[:]}
-	r3, err := ssz.HashTreeRoot(b3)
+	b3 := testutil.NewBeaconBlock()
+	b3.Block.Slot = 3
+	b3.Block.ParentRoot = bytesutil.PadTo(r2[:], 32)
+	r3, err := ssz.HashTreeRoot(b3.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,16 +279,16 @@ func TestLastAncestorState_CanGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := service.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: b0}); err != nil {
+	if err := service.beaconDB.SaveBlock(ctx, b0); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: b1}); err != nil {
+	if err := service.beaconDB.SaveBlock(ctx, b1); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: b2}); err != nil {
+	if err := service.beaconDB.SaveBlock(ctx, b2); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: b3}); err != nil {
+	if err := service.beaconDB.SaveBlock(ctx, b3); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveState(ctx, b1State, r1); err != nil {

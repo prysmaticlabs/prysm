@@ -38,7 +38,7 @@ const eth1dataTimeout = 2 * time.Second
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.RequestBlock")
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
@@ -382,6 +382,11 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 	if depositsTillHeight == 0 {
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
+	// Check for the validity of deposit count.
+	currentETH1Data := vs.HeadFetcher.HeadETH1Data()
+	if depositsTillHeight < currentETH1Data.DepositCount {
+		return currentETH1Data, nil
+	}
 	return &ethpb.Eth1Data{
 		DepositRoot:  depositRoot[:],
 		BlockHash:    blockHash[:],
@@ -454,7 +459,7 @@ func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *e
 }
 
 func (vs *Server) packAttestations(ctx context.Context, slot uint64) ([]*ethpb.Attestation, error) {
-	ctx, span := trace.StartSpan(ctx, "validatorServer.packAttestations")
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
 	defer span.End()
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {

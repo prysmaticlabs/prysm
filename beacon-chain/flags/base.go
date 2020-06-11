@@ -17,13 +17,13 @@ var (
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
-		Value: "0x5cA1e00004366Ac85f492887AAab12d0e6418876",
+		Value: "0x0F0F0fc0530007361933EaB5DB97d09aCDD6C1c8",
 	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = &cli.StringFlag{
 		Name:  "rpc-host",
 		Usage: "Host on which the RPC server should listen",
-		Value: "0.0.0.0",
+		Value: "127.0.0.1",
 	}
 	// RPCPort defines a beacon node RPC port to open.
 	RPCPort = &cli.IntFlag{
@@ -59,11 +59,17 @@ var (
 		Name:  "disable-grpc-gateway",
 		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
 	}
+	// GRPCGatewayHost specifies a gRPC gateway host for Prysm.
+	GRPCGatewayHost = &cli.StringFlag{
+		Name:  "grpc-gateway-host",
+		Usage: "The host on which the gateway server runs on",
+		Value: "127.0.0.1",
+	}
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for Prysm.
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
-		Value: 3000,
+		Value: 3500,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{
@@ -82,7 +88,7 @@ var (
 	ContractDeploymentBlock = &cli.IntFlag{
 		Name:  "contract-deployment-block",
 		Usage: "The eth1 block in which the deposit contract was deployed.",
-		Value: 2523557,
+		Value: 2844925,
 	}
 	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.
 	SetGCPercent = &cli.IntFlag{
