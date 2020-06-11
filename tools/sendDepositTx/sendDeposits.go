@@ -141,6 +141,7 @@ func main() {
 			}
 			txOps = bind.NewKeyedTransactor(privKey)
 			txOps.Value = new(big.Int).Mul(big.NewInt(depositAmount), big.NewInt(1e9))
+			txOps.GasLimit = 700000
 		} else {
 			// User inputs keystore json file, sign tx with keystore json
 			password := loadTextFromFile(passwordFile)
@@ -157,7 +158,7 @@ func main() {
 
 			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
 			txOps.Value = new(big.Int).Mul(big.NewInt(depositAmount), big.NewInt(1e9))
-			txOps.GasLimit = 500000
+			txOps.GasLimit = 700000
 		}
 
 		depositContract, err := contracts.NewDepositContract(common.HexToAddress(depositContractAddr), client)
