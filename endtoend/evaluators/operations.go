@@ -59,7 +59,6 @@ var ValidatorHasExited = types.Evaluator{
 
 // Not including first epoch because of issues with genesis.
 func isBetweenEpochs(fromEpoch uint64, toEpoch uint64) func(uint64) bool {
-	fmt.Println(fromEpoch, toEpoch)
 	return func(currentEpoch uint64) bool {
 		return fromEpoch < currentEpoch && currentEpoch < toEpoch
 	}
@@ -93,7 +92,6 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 	depositsInEpoch := uint64(0)
 	var effBalanceLowCount, exitEpochWrongCount, withdrawEpochWrongCount uint64
 	for _, item := range validators.ValidatorList {
-		fmt.Printf("Val %d, active epoch %d, eligible epoch %d\n", item.Index, item.Validator.ActivationEpoch, item.Validator.ActivationEligibilityEpoch)
 		if item.Validator.ActivationEpoch == epoch {
 			depositsInEpoch++
 			if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
