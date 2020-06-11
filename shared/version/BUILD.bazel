@@ -8,5 +8,6 @@ go_library(
     x_defs = {
         "gitCommit": "{STABLE_GIT_COMMIT}",
         "buildDate": "{DATE}",
+        "gitTag": "{LATEST_GIT_TAG}",
     },
 )

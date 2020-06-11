@@ -14,7 +14,6 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -40,7 +39,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	ctx := context.Background()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
-	genesis := blk.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	genesisRoot, err := stateutil.BlockRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
@@ -78,7 +77,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 func TestGetDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
-	genesis := blk.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	if err != nil {
@@ -165,7 +164,7 @@ func TestGetDuties_OK(t *testing.T) {
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
-	genesis := blk.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	if err != nil {
@@ -222,7 +221,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
-	genesis := blk.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(64)
 	testutil.ResetCache()
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
@@ -274,11 +273,11 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if len(res.CurrentEpochDuties) != 2 {
 		t.Errorf("expected 2 assignments but got %d", len(res.CurrentEpochDuties))
 	}
-	if res.CurrentEpochDuties[0].AttesterSlot != 2 {
-		t.Errorf("Expected res.CurrentEpochDuties[0].AttesterSlot == 7, got %d", res.CurrentEpochDuties[0].AttesterSlot)
+	if res.CurrentEpochDuties[0].AttesterSlot != 4 {
+		t.Errorf("Expected res.CurrentEpochDuties[0].AttesterSlot == 4, got %d", res.CurrentEpochDuties[0].AttesterSlot)
 	}
-	if res.CurrentEpochDuties[1].AttesterSlot != 1 {
-		t.Errorf("Expected res.CurrentEpochDuties[1].AttesterSlot == 1, got %d", res.CurrentEpochDuties[1].AttesterSlot)
+	if res.CurrentEpochDuties[1].AttesterSlot != 4 {
+		t.Errorf("Expected res.CurrentEpochDuties[1].AttesterSlot == 4, got %d", res.CurrentEpochDuties[1].AttesterSlot)
 	}
 }
 
@@ -309,7 +308,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 func TestStreamDuties_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
-	genesis := blk.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	if err != nil {
@@ -380,7 +379,7 @@ func TestStreamDuties_OK(t *testing.T) {
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
-	genesis := blk.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	if err != nil {
@@ -469,7 +468,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	k := pubKey(3)
 
 	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
-	coms, ok, exp := cache.CommitteeIDs.GetPersistentCommittees(k)
+	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	if !ok {
 		t.Fatal("No cache entry found for validator")
 	}
@@ -487,7 +486,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 func BenchmarkCommitteeAssignment(b *testing.B) {
 	db := dbutil.SetupDB(b)
 
-	genesis := blk.NewGenesisBlock([]byte{})
+	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)
 	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	if err != nil {

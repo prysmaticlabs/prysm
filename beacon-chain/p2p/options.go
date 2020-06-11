@@ -7,12 +7,22 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	noise "github.com/libp2p/go-libp2p-noise"
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/version"
+)
+
+const (
+	// Period that we allocate each new peer before we mark them as valid
+	// for trimming.
+	gracePeriod = 2 * time.Minute
+	// Buffer for the number of peers allowed to connect above max peers before the
+	// connection manager begins trimming them.
+	peerBuffer = 5
 )
 
 // buildOptions for the libp2p host.
@@ -27,9 +37,10 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.ListenAddrs(listen),
 		allowListSubnet(cfg.AllowListCIDR),
 		denyListSubnets(cfg.DenyListCIDR),
+		libp2p.UserAgent(version.GetBuildData()),
 		// Add one for the boot node and another for the relay, otherwise when we are close to maxPeers we will be above the high
 		// water mark and continually trigger pruning.
-		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers+2), int(cfg.MaxPeers+2), 1*time.Second)),
+		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers), int(cfg.MaxPeers+peerBuffer), gracePeriod)),
 	}
 	if featureconfig.Get().EnableNoise {
 		// Enable NOISE for the beacon node

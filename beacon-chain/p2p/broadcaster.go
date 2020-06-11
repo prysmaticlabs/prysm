@@ -18,33 +18,49 @@ import (
 // GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
+const attestationSubnetTopicFormat = "/eth2/%x/beacon_attestation_%d"
+
 // Broadcast a message to the p2p network.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
 	defer span.End()
 	forkDigest, err := s.forkDigest()
 	if err != nil {
+		err := errors.Wrap(err, "could not retrieve fork digest")
+		traceutil.AnnotateError(span, err)
 		return err
 	}
 
-	var topic string
-	switch msg.(type) {
-	case *eth.Attestation:
-		topic = attestationToTopic(msg.(*eth.Attestation), forkDigest)
-	default:
-		var ok bool
-		topic, ok = GossipTypeMapping[reflect.TypeOf(msg)]
-		if !ok {
-			traceutil.AnnotateError(span, ErrMessageNotMapped)
-			return ErrMessageNotMapped
-		}
-		topic = fmt.Sprintf(topic, forkDigest)
+	topic, ok := GossipTypeMapping[reflect.TypeOf(msg)]
+	if !ok {
+		traceutil.AnnotateError(span, ErrMessageNotMapped)
+		return ErrMessageNotMapped
 	}
+	return s.broadcastObject(ctx, msg, fmt.Sprintf(topic, forkDigest))
+}
+
+// BroadcastAttestation broadcasts an attestation to the p2p network.
+func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *eth.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastAttestation")
+	defer span.End()
+	forkDigest, err := s.forkDigest()
+	if err != nil {
+		err := errors.Wrap(err, "could not retrieve fork digest")
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+	return s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest))
+}
+
+// method to broadcast messages to other peers in our gossip mesh.
+func (s *Service) broadcastObject(ctx context.Context, obj interface{}, topic string) error {
+	_, span := trace.StartSpan(ctx, "p2p.broadcastObject")
+	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("topic", topic))
 
 	buf := new(bytes.Buffer)
-	if _, err := s.Encoding().EncodeGossip(buf, msg); err != nil {
+	if _, err := s.Encoding().EncodeGossip(buf, obj); err != nil {
 		err := errors.Wrap(err, "could not encode message")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -64,11 +80,6 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	return nil
 }
 
-const attestationSubnetTopicFormat = "/eth2/%x/committee_index%d_beacon_attestation"
-
-func attestationToTopic(att *eth.Attestation, forkDigest [4]byte) string {
-	if att == nil || att.Data == nil {
-		return ""
-	}
-	return fmt.Sprintf(attestationSubnetTopicFormat, forkDigest, att.Data.CommitteeIndex)
+func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
+	return fmt.Sprintf(attestationSubnetTopicFormat, forkDigest, subnet)
 }

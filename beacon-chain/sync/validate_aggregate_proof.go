@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -108,7 +107,7 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		}
 	}
 
-	// Verify validator index is within the aggregate's committee.
+	// Verify validator index is within the beacon committee.
 	if err := validateIndexInCommittee(ctx, s, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
 		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate index in committee"))
 		return pubsub.ValidationReject
@@ -169,7 +168,7 @@ func (r *Service) setAggregatorIndexEpochSeen(epoch uint64, aggregatorIndex uint
 	r.seenAttestationCache.Add(string(b), true)
 }
 
-// This validates the aggregator's index in state is within the attesting indices of the attestation.
+// This validates the aggregator's index in state is within the beacon committee.
 func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
@@ -178,9 +177,8 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 	if err != nil {
 		return err
 	}
-	attestingIndices := attestationutil.AttestingIndices(a.AggregationBits, committee)
 	var withinCommittee bool
-	for _, i := range attestingIndices {
+	for _, i := range committee {
 		if validatorIndex == i {
 			withinCommittee = true
 			break
@@ -188,7 +186,7 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 	}
 	if !withinCommittee {
 		return fmt.Errorf("validator index %d is not within the committee: %v",
-			validatorIndex, attestingIndices)
+			validatorIndex, committee)
 	}
 	return nil
 }

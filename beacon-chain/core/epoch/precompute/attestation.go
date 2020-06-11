@@ -9,6 +9,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -90,12 +91,14 @@ func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool
 			votedTarget = true
 		}
 
-		same, err = SameHead(s, a)
-		if err != nil {
-			return false, false, false, errors.Wrap(err, "could not check same head")
-		}
-		if same {
-			votedHead = true
+		if votedTarget {
+			same, err = SameHead(s, a)
+			if err != nil {
+				return false, false, false, errors.Wrap(err, "could not check same head")
+			}
+			if same {
+				votedHead = true
+			}
 		}
 	}
 	return votedPrevEpoch, votedTarget, votedHead, nil
@@ -175,6 +178,35 @@ func UpdateBalance(vp []*Validator, bBal *Balance) *Balance {
 				bBal.PrevEpochHeadAttested += v.CurrentEpochEffectiveBalance
 			}
 		}
+	}
+
+	return EnsureBalancesLowerBound(bBal)
+}
+
+// EnsureBalancesLowerBound ensures all the balances such as active current epoch, active previous epoch and more
+// have EffectiveBalanceIncrement(1 eth) as a lower bound.
+func EnsureBalancesLowerBound(bBal *Balance) *Balance {
+	ebi := params.BeaconConfig().EffectiveBalanceIncrement
+	if ebi > bBal.ActiveCurrentEpoch {
+		bBal.ActiveCurrentEpoch = ebi
+	}
+	if ebi > bBal.ActivePrevEpoch {
+		bBal.ActivePrevEpoch = ebi
+	}
+	if ebi > bBal.CurrentEpochAttested {
+		bBal.CurrentEpochAttested = ebi
+	}
+	if ebi > bBal.CurrentEpochTargetAttested {
+		bBal.CurrentEpochTargetAttested = ebi
+	}
+	if ebi > bBal.PrevEpochAttested {
+		bBal.PrevEpochAttested = ebi
+	}
+	if ebi > bBal.PrevEpochTargetAttested {
+		bBal.PrevEpochTargetAttested = ebi
+	}
+	if ebi > bBal.PrevEpochHeadAttested {
+		bBal.PrevEpochHeadAttested = ebi
 	}
 	return bBal
 }

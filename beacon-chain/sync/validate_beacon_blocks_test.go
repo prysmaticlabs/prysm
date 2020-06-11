@@ -14,6 +14,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -188,6 +189,103 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 		p2p:         p,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+			State: beaconState,
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
+		seenBlockCache:      c,
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		stateSummaryCache:   stateSummaryCache,
+		stateGen:            stateGen,
+	}
+
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
+	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	result := r.validateBeaconBlockPubSub(ctx, "", m) == pubsub.ValidationAccept
+	if !result {
+		t.Error("Expected true result, got false")
+	}
+
+	if m.ValidatorData == nil {
+		t.Error("Decoded message was not set on the message validator data")
+	}
+}
+
+func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	parentBlock := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 0,
+			Slot:          0,
+		},
+	}
+	if err := db.SaveBlock(ctx, parentBlock); err != nil {
+		t.Fatal(err)
+	}
+	bRoot, err := stateutil.BlockRoot(parentBlock.Block)
+	if err := db.SaveState(ctx, beaconState, bRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: bRoot[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	copied := beaconState.Copy()
+	// The next block is at least 2 epochs ahead to induce shuffling and a new seed.
+	blkSlot := params.BeaconConfig().SlotsPerEpoch * 2
+	copied, err = state.ProcessSlots(context.Background(), copied, blkSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposerIdx, err := helpers.BeaconProposerIndex(copied)
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ProposerIndex: proposerIdx,
+			Slot:          blkSlot,
+			ParentRoot:    bRoot[:],
+		},
+	}
+
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingRoot, err := helpers.ComputeSigningRoot(msg.Block, domain)
+	if err != nil {
+		t.Error(err)
+	}
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
+	msg.Signature = blockSig[:]
+
+	c, err := lru.New(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateSummaryCache := cache.NewStateSummaryCache()
+	stateGen := stategen.New(db, stateSummaryCache)
+	r := &Service{
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
 			State: beaconState,
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,

@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"testing"
 
-	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/endtoend/params"
+
+	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -15,6 +16,9 @@ import (
 func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
+	if err := e2eParams.Init(e2eParams.LongRunningBeaconCount); err != nil {
+		t.Fatal(err)
+	}
 
 	epochsToRun := 20
 	var err error
@@ -47,9 +51,6 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 			ev.DepositedValidatorsAreActive,
 			ev.ValidatorHasExited,
 		},
-	}
-	if err := e2eParams.Init(4); err != nil {
-		t.Fatal(err)
 	}
 
 	runEndToEndTest(t, minimalConfig)

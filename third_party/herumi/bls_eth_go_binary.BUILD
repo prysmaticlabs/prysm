@@ -47,8 +47,11 @@ genrule(
         "src/base64.ll",
     ],
     outs = ["base64.o"],
-    cmd = "external/llvm_toolchain/bin/clang++ -c -o $@ $(location src/base64.ll)",
-    tools = ["@llvm_toolchain//:clang"],
+    cmd = "$(CC) $(CC_FLAGS) -c -o $@ $(location src/base64.ll)",
+    toolchains = [
+        "@bazel_tools//tools/cpp:current_cc_toolchain",
+        "@bazel_tools//tools/cpp:cc_flags",
+    ],
 )
 
 cc_library(
