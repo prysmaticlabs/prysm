@@ -24,10 +24,11 @@ var exitedIndice uint64
 // valExited is used to know if exitedIndice is set, since default value is 0.
 var valExited bool
 
-var churnLimit = float64(4)
+// churnLimit is normally 4 unless the validator set is extremely large.
+var churnLimit = uint64(4)
 var depositValCount = params.E2ETestConfig().MinGenesisActiveValidatorCount / 4 // Dividing by 4 for 4 beacon nodes in long running e2e.
 var depositStartEpoch = uint64(8)
-var depositEndEpoch = depositStartEpoch + uint64(math.Ceil(float64(depositValCount)/churnLimit))
+var depositEndEpoch = depositStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
 
 // ProcessesDepositedValidators ensures the expected amount of validator deposits are processed into the state.
 var ProcessesDepositedValidators = types.Evaluator{
@@ -105,7 +106,7 @@ func processesDepositedValidators(conns ...*grpc.ClientConn) error {
 			}
 		}
 	}
-	if depositsInEpoch != uint64(churnLimit) {
+	if depositsInEpoch != churnLimit {
 		return fmt.Errorf("expected %d deposits to be processed in epoch %d, received %d", churnLimit, epoch, depositsInEpoch)
 	}
 
