@@ -26,7 +26,7 @@ var valExited bool
 
 // churnLimit is normally 4 unless the validator set is extremely large.
 var churnLimit = uint64(4)
-var depositValCount = params.E2ETestConfig().MinGenesisActiveValidatorCount / 4 // Dividing by 4 for 4 beacon nodes in long running e2e.
+var depositValCount = params.E2ETestConfig().MinGenesisActiveValidatorCount / uint64(e2e.LongRunningBeaconCount)
 var depositStartEpoch = uint64(8)
 var depositEndEpoch = depositStartEpoch + uint64(math.Ceil(float64(depositValCount)/float64(churnLimit)))
 

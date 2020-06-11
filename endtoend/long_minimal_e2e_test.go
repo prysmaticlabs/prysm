@@ -16,7 +16,7 @@ import (
 func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseE2EConfig()
-	if err := e2eParams.Init(4); err != nil {
+	if err := e2eParams.Init(e2eParams.LongRunningBeaconCount); err != nil {
 		t.Fatal(err)
 	}
 
