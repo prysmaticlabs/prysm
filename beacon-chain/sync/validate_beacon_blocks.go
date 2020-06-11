@@ -8,8 +8,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -57,13 +55,10 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if blk.Block == nil {
 		return pubsub.ValidationReject
 	}
-	hasSeen := false
+
 	// Verify the block is the first block received for the proposer for the slot.
 	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
-		if !featureconfig.Get().SlasherP2P {
-			return pubsub.ValidationIgnore
-		}
-		hasSeen = true
+		return pubsub.ValidationIgnore
 	}
 
 	blockRoot, err := stateutil.BlockRoot(blk.Block)
@@ -80,27 +75,6 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore
 	}
 	r.pendingQueueLock.RUnlock()
-
-	// Send block to block stream for slasher detection after minimal validation.
-	if featureconfig.Get().SlasherP2P {
-		state, err := r.chain.HeadState(ctx)
-		if err != nil {
-			return pubsub.ValidationIgnore
-		}
-		if err := blocks.VerifyBlockSignature(state, blk); err != nil {
-			log.WithError(err).WithField("blockSlot", blk.Block.Slot).Warn("Could not verify block signature")
-			return pubsub.ValidationReject
-		}
-		r.blockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.ReceivedBlock,
-			Data: &blockfeed.ReceivedBlockData{
-				SignedBlock: blk,
-			},
-		})
-	}
-	if hasSeen {
-		return pubsub.ValidationReject
-	}
 
 	// Add metrics for block arrival time subtracts slot start time.
 	if captureArrivalTimeMetric(uint64(r.chain.GenesisTime().Unix()), blk.Block.Slot) != nil {
