@@ -17,10 +17,22 @@ service Slasher {
 
     // Returns any found proposer slashings if the passed in proposal conflicts with a validators history.
     rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse);
+
+    // Returns if a given indexed attestation could be slashable when compared to the slashers history for the attesters.
+    // This function is read-only, and does not need the indexed attestation to be signed.
+    rpc IsSlashableAttestationNoUpdate(ethereum.eth.v1alpha1.IndexedAttestation) returns (Slashable);
+
+    // Returns if a given beacon block header could be slashable when compared to the slashers history for the proposer.
+    // This function is read-only, and does not need the beacon block header to be signed.
+    rpc IsSlashableBlockNoUpdate(ethereum.eth.v1alpha1.BeaconBlockHeader) returns (Slashable);
 }
 
 message ProposerSlashingResponse {
     repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
+}
+
+message Slashable {
+    bool slashable = 1;
 }
 
 message AttesterSlashingResponse {

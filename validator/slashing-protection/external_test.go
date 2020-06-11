@@ -35,6 +35,14 @@ func (ms mockSlasher) IsSlashableAttestation(ctx context.Context, in *eth.Indexe
 	}
 	return nil, nil
 }
+
+func (ms mockSlasher) IsSlashableAttestationNoUpdate(ctx context.Context, in *eth.IndexedAttestation, opts ...grpc.CallOption) (*slashpb.Slashable, error) {
+	return &slashpb.Slashable{
+		Slashable: ms.slashAttestation,
+	}, nil
+
+}
+
 func (ms mockSlasher) IsSlashableBlock(ctx context.Context, in *eth.SignedBeaconBlockHeader, opts ...grpc.CallOption) (*slashpb.ProposerSlashingResponse, error) {
 	if ms.slashBlock {
 		slashingBlk, ok := proto.Clone(in).(*eth.SignedBeaconBlockHeader)
@@ -52,6 +60,12 @@ func (ms mockSlasher) IsSlashableBlock(ctx context.Context, in *eth.SignedBeacon
 		}, nil
 	}
 	return nil, nil
+}
+
+func (ms mockSlasher) IsSlashableBlockNoUpdate(ctx context.Context, in *eth.BeaconBlockHeader, opts ...grpc.CallOption) (*slashpb.Slashable, error) {
+	return &slashpb.Slashable{
+		Slashable: ms.slashBlock,
+	}, nil
 }
 
 func TestService_VerifyAttestation(t *testing.T) {
