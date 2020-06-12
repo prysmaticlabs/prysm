@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
@@ -30,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
