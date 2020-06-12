@@ -212,6 +212,40 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	}
 }
 
+func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		var activationEpoch uint64
+		if i >= len(validators)/2 {
+			activationEpoch = 3
+		}
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: activationEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Validators:  validators,
+		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ClearCache()
+	_, proposerIndexToSlots, err := CommitteeAssignments(state, 0)
+	if err != nil {
+		t.Fatalf("failed to determine CommitteeAssignments: %v", err)
+	}
+	for _, slots := range proposerIndexToSlots {
+		for _, s := range slots {
+			if s == 0 {
+				t.Error("No proposer should be assigned to slot 0")
+			}
+		}
+	}
+}
+
 func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
