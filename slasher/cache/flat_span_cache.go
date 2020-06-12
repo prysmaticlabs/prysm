@@ -27,19 +27,19 @@ func NewEpochFlatSpansCache(size int, onEvicted func(key interface{}, value inte
 }
 
 // Get returns an ok bool and the cached value for the requested epoch key, if any.
-func (c *EpochFlatSpansCache) Get(epoch uint64) (map[uint64]types.Span, bool) {
+func (c *EpochFlatSpansCache) Get(epoch uint64) (*types.EpochStore, bool) {
 	item, exists := c.cache.Get(epoch)
 	if exists && item != nil {
 		epochSpansCacheHit.Inc()
-		return item.(map[uint64]types.Span), true
+		return item.(*types.EpochStore), true
 	}
 
 	epochSpansCacheMiss.Inc()
-	return make(map[uint64]types.Span), false
+	return &types.EpochStore{}, false
 }
 
 // Set the response in the cache.
-func (c *EpochFlatSpansCache) Set(epoch uint64, epochSpans map[uint64]types.Span) {
+func (c *EpochFlatSpansCache) Set(epoch uint64, epochSpans *types.EpochStore) {
 	_ = c.cache.Add(epoch, epochSpans)
 }
 

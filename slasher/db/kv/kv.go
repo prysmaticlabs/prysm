@@ -104,11 +104,12 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new cache")
 	}
-	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistEpochSpansOnEviction(kv))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create new cache")
-	}
 	kv.spanCache = spanCache
+	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistFlatSpanMapsOnEviction(kv))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create new flat cache")
+	}
+	kv.flatSpanCache = flatSpanCache
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
