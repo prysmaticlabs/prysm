@@ -1,6 +1,7 @@
 package slotutil
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -18,7 +19,11 @@ func TestCountdownToGenesis(t *testing.T) {
 	params.OverrideBeaconConfig(config)
 
 	firstStringResult := "1 minute(s) until chain genesis"
-	CountdownToGenesis(roughtime.Now().Add(2*time.Second), params.BeaconConfig().MinGenesisActiveValidatorCount)
+	CountdownToGenesis(
+		context.Background(),
+		roughtime.Now().Add(2*time.Second),
+		params.BeaconConfig().MinGenesisActiveValidatorCount,
+	)
 	testutil.AssertLogsContain(t, hook, firstStringResult)
 }
 

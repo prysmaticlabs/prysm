@@ -99,7 +99,7 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 		// Generated genesis time; fetch it
 		s.genesisTime = genesisTrie.GenesisTime()
 	}
-	slotutil.CountdownToGenesis(time.Unix(int64(s.genesisTime), 0), s.numValidators)
+	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.genesisTime), 0), s.numValidators)
 
 	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)

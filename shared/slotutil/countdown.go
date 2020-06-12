@@ -1,6 +1,7 @@
 package slotutil
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -16,10 +17,9 @@ var log = logrus.WithField("prefix", "slotutil")
 // logging the remaining minutes until the genesis chainstart event
 // along with important genesis state metadata such as number
 // of genesis validators.
-func CountdownToGenesis(genesisTime time.Time, genesisValidatorCount uint64) {
+func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValidatorCount uint64) {
 	ticker := time.NewTicker(params.BeaconConfig().GenesisCountdownInterval)
 	timeTillGenesis := genesisTime.Sub(roughtime.Now())
-	log.Infof("%s", timeTillGenesis)
 	for {
 		select {
 		case <-time.After(timeTillGenesis):
@@ -33,6 +33,8 @@ func CountdownToGenesis(genesisTime time.Time, genesisValidatorCount uint64) {
 				"%s until chain genesis",
 				formatDuration(timeRemaining),
 			)
+		case <-ctx.Done():
+			return
 		}
 	}
 }
