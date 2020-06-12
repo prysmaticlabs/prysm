@@ -35,7 +35,7 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 				return
 			}
 			timeRemaining := genesisTime.Sub(currentTime)
-			if timeRemaining <= time.Minute {
+			if timeRemaining <= 2*time.Minute {
 				ticker = time.NewTicker(time.Second)
 			}
 			if timeRemaining >= time.Second {
