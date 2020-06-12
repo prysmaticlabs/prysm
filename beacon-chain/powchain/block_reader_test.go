@@ -242,7 +242,6 @@ func TestBlockNumberByTimestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.client = nil
 
 	ctx := context.Background()
 	bn, err := web3Service.BlockNumberByTimestamp(ctx, 150000 /* time */)

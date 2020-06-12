@@ -226,6 +226,11 @@ func (r *Service) registerHandlers() {
 					return
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+
+				// Register respective rpc and pubsub handlers at state initialized event.
+				r.registerRPCHandlers()
+				r.registerSubscribers()
+
 				if data.StartTime.After(roughtime.Now()) {
 					stateSub.Unsubscribe()
 					time.Sleep(roughtime.Until(data.StartTime))
@@ -240,9 +245,6 @@ func (r *Service) registerHandlers() {
 			return
 		}
 	}
-	// Register respective rpc and pubsub handlers.
-	r.registerRPCHandlers()
-	r.registerSubscribers()
 }
 
 // Checker defines a struct which can verify whether a node is currently
