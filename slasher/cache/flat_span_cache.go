@@ -9,12 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// EpochSpansCache is used to store the spans needed on a per-epoch basis for slashing detection.
+// EpochFlatSpansCache is used to store the spans needed on a per-epoch basis for slashing detection.
 type EpochFlatSpansCache struct {
 	cache *lru.Cache
 }
 
-// NewEpochSpansCache initializes the map and underlying cache.
+// NewEpochFlatSpansCache initializes the underlying cache with the given size and on evict function.
 func NewEpochFlatSpansCache(size int, onEvicted func(key interface{}, value interface{})) (*EpochFlatSpansCache, error) {
 	if size != 0 {
 		epochSpansCacheSize = size
