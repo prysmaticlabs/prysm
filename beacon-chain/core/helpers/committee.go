@@ -201,6 +201,10 @@ func CommitteeAssignments(
 	startSlot := StartSlot(epoch)
 	proposerIndexToSlots := make(map[uint64][]uint64)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		// Skip proposer assignment for genesis slot.
+		if slot == 0 {
+			continue
+		}
 		if err := state.SetSlot(slot); err != nil {
 			return nil, nil, err
 		}
