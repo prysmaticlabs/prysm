@@ -165,6 +165,10 @@ var (
 		Name:  "disable-init-sync-wrr",
 		Usage: "Disables weighted round robin fetching optimization",
 	}
+	disableGRPCConnectionLogging = &cli.BoolFlag{
+		Name:  "disable-grpc-connection-logging",
+		Usage: "Disables displaying logs for newly connected grpc clients",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -531,6 +535,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewStateMgmt,
 	enableKadDht,
 	disableReduceAttesterStateCopy,
+	disableGRPCConnectionLogging,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
