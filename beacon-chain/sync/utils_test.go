@@ -45,6 +45,47 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	}
 }
 
+func TestSortedObj_NoDuplicates(t *testing.T) {
+	source := rand.NewSource(33)
+	randGen := rand.New(source)
+	blks := []*ethpb.SignedBeaconBlock{}
+	roots := [][32]byte{}
+	randFunc := func() int64 {
+		return randGen.Int63n(50)
+	}
+
+	for i := 0; i < 10; i++ {
+		slot := uint64(randFunc())
+		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}}
+		// append twice
+		blks = append(blks, newBlk)
+		blks = append(blks, newBlk)
+
+		// append twice
+		root := bytesutil.ToBytes32(bytesutil.Bytes32(slot))
+		roots = append(roots, root)
+		roots = append(roots, root)
+
+	}
+
+	r := &Service{}
+
+	newBlks, newRoots := r.sortBlocksAndRoots(blks, roots)
+
+	previousSlot := uint64(0)
+	previousRoot := [32]byte{}
+	for i, b := range newBlks {
+		if b.Block.Slot == previousSlot {
+			t.Errorf("Block list is not sorted as %d is equal to previousSlot %d", b.Block.Slot, previousSlot)
+		}
+		if newRoots[i] == previousRoot {
+			t.Errorf("root matches stored previous root in block: got same root of %#x", newRoots[i])
+		}
+		previousSlot = b.Block.Slot
+		previousRoot = newRoots[i]
+	}
+}
+
 func TestValidateAggregatedTime_ValidatesCorrectly(t *testing.T) {
 	const genesisOffset = 1200
 	genTime := roughtime.Now().Add(-(genesisOffset * time.Second))
