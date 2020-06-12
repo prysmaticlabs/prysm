@@ -38,10 +38,12 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 			if timeRemaining <= time.Minute {
 				ticker = time.NewTicker(time.Second)
 			}
-			log.WithFields(logFields).Infof(
-				"%s until chain genesis",
-				timeRemaining.Truncate(time.Second),
-			)
+			if timeRemaining >= time.Second {
+				log.WithFields(logFields).Infof(
+					"%s until chain genesis",
+					timeRemaining.Truncate(time.Second),
+				)
+			}
 		case <-ctx.Done():
 			return
 		}

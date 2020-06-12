@@ -15,14 +15,16 @@ func TestCountdownToGenesis(t *testing.T) {
 	hook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
-	config.GenesisCountdownInterval = time.Second
+	config.GenesisCountdownInterval = time.Millisecond * 500
 	params.OverrideBeaconConfig(config)
 
-	firstStringResult := "1 minute(s) until chain genesis"
+	firstStringResult := "1s until chain genesis"
+	genesisReached := "Chain genesis time reached"
 	CountdownToGenesis(
 		context.Background(),
 		roughtime.Now().Add(2*time.Second),
 		params.BeaconConfig().MinGenesisActiveValidatorCount,
 	)
 	testutil.AssertLogsContain(t, hook, firstStringResult)
+	testutil.AssertLogsContain(t, hook, genesisReached)
 }
