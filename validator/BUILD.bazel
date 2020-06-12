@@ -82,6 +82,8 @@ container_bundle(
     images = {
         "gcr.io/prysmaticlabs/prysm/validator:latest": ":image",
         "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}": ":image",
+        "index.docker.io/prysmaticlabs/prysm-validator:latest": ":image",
+        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}": ":image",
     },
     tags = ["manual"],
 )
@@ -97,6 +99,8 @@ container_bundle(
     images = {
         "gcr.io/prysmaticlabs/prysm/validator:latest-debug": ":image_debug",
         "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}-debug": ":image_debug",
+        "index.docker.io/prysmaticlabs/prysm-validator:latest-debug": ":image_debug",
+        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}-debug": ":image_debug",
     },
     tags = ["manual"],
 )
@@ -112,6 +116,8 @@ container_bundle(
     images = {
         "gcr.io/prysmaticlabs/prysm/validator:latest-alpine": ":image_alpine",
         "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}-alpine": ":image_alpine",
+        "index.docker.io/prysmaticlabs/prysm-validator:latest-alpine": ":image_alpine",
+        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}-alpine": ":image_alpine",
     },
     tags = ["manual"],
 )
