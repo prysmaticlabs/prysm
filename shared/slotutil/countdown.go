@@ -25,7 +25,11 @@ func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValid
 		case <-time.After(timeTillGenesis):
 			return
 		case <-ticker.C:
-			timeRemaining := genesisTime.Sub(roughtime.Now())
+			currentTime := roughtime.Now()
+			if currentTime.After(genesisTime) {
+				return
+			}
+			timeRemaining := genesisTime.Sub(currentTime)
 			log.WithFields(logrus.Fields{
 				"genesisValidators": fmt.Sprintf("%d", genesisValidatorCount),
 				"genesisTime":       fmt.Sprintf("%v", genesisTime),
