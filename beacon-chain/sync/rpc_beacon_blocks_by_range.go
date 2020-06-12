@@ -145,6 +145,9 @@ func (r *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		blks = append([]*ethpb.SignedBeaconBlock{genBlock}, blks...)
 		roots = append([][32]byte{genRoot}, roots...)
 	}
+	// Filter and sort our retrieved blocks, so that
+	// we only return valid sets of blocks.
+	blks, roots = r.dedupBlocksAndRoots(blks, roots)
 	blks, roots = r.sortBlocksAndRoots(blks, roots)
 	for i, b := range blks {
 		if b == nil || b.Block == nil {

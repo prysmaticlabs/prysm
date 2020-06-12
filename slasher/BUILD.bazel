@@ -74,6 +74,8 @@ container_bundle(
     images = {
         "gcr.io/prysmaticlabs/prysm/slasher:latest": ":image",
         "gcr.io/prysmaticlabs/prysm/slasher:{DOCKER_TAG}": ":image",
+        "index.docker.io/prysmaticlabs/prysm-slasher:latest": ":image",
+        "index.docker.io/prysmaticlabs/prysm-slasher:{DOCKER_TAG}": ":image",
     },
     tags = ["manual"],
 )

@@ -45,6 +45,42 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	}
 }
 
+func TestSortedObj_NoDuplicates(t *testing.T) {
+	source := rand.NewSource(33)
+	randGen := rand.New(source)
+	blks := []*ethpb.SignedBeaconBlock{}
+	roots := [][32]byte{}
+	randFunc := func() int64 {
+		return randGen.Int63n(50)
+	}
+
+	for i := 0; i < 10; i++ {
+		slot := uint64(randFunc())
+		newBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: slot}}
+		// append twice
+		blks = append(blks, newBlk)
+		blks = append(blks, newBlk)
+
+		// append twice
+		root := bytesutil.ToBytes32(bytesutil.Bytes32(slot))
+		roots = append(roots, root)
+		roots = append(roots, root)
+
+	}
+
+	r := &Service{}
+
+	newBlks, newRoots := r.dedupBlocksAndRoots(blks, roots)
+
+	rootMap := make(map[[32]byte]bool)
+	for i, b := range newBlks {
+		if rootMap[newRoots[i]] {
+			t.Errorf("Duplicated root exists %#x with block %v", newRoots[i], b)
+		}
+		rootMap[newRoots[i]] = true
+	}
+}
+
 func TestValidateAggregatedTime_ValidatesCorrectly(t *testing.T) {
 	const genesisOffset = 1200
 	genTime := roughtime.Now().Add(-(genesisOffset * time.Second))
