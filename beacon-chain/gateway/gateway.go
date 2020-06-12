@@ -151,7 +151,7 @@ func (g *Gateway) dial(ctx context.Context, network, addr string) (*grpc.ClientC
 	case "tcp":
 		return g.dialTCP(ctx, addr)
 	case "unix":
-		return dialUnix(ctx, addr)
+		return g.dialUnix(ctx, addr)
 	default:
 		return nil, fmt.Errorf("unsupported network type %q", network)
 	}
@@ -174,7 +174,7 @@ func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, e
 
 // dialUnix creates a client connection via a unix domain socket.
 // "addr" must be a valid path to the socket.
-func dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, error) {
+func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, error) {
 	d := func(addr string, timeout time.Duration) (net.Conn, error) {
 		return net.DialTimeout("unix", addr, timeout)
 	}
