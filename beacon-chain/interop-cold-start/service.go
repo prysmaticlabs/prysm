@@ -7,6 +7,7 @@ import (
 	"context"
 	"io/ioutil"
 	"math/big"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -19,6 +20,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -97,6 +99,7 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 		// Generated genesis time; fetch it
 		s.genesisTime = genesisTrie.GenesisTime()
 	}
+	go slotutil.CountdownToGenesis(ctx, time.Unix(int64(s.genesisTime), 0), s.numValidators)
 
 	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
