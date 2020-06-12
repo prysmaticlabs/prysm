@@ -3,7 +3,6 @@ package slotutil
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -20,37 +19,31 @@ var log = logrus.WithField("prefix", "slotutil")
 func CountdownToGenesis(ctx context.Context, genesisTime time.Time, genesisValidatorCount uint64) {
 	ticker := time.NewTicker(params.BeaconConfig().GenesisCountdownInterval)
 	timeTillGenesis := genesisTime.Sub(roughtime.Now())
+	logFields := logrus.Fields{
+		"genesisValidators": fmt.Sprintf("%d", genesisValidatorCount),
+		"genesisTime":       fmt.Sprintf("%v", genesisTime),
+	}
 	for {
 		select {
 		case <-time.After(timeTillGenesis):
+			log.WithFields(logFields).Info("Chain genesis time reached")
 			return
 		case <-ticker.C:
 			currentTime := roughtime.Now()
 			if currentTime.After(genesisTime) {
+				log.WithFields(logFields).Info("Chain genesis time reached")
 				return
 			}
 			timeRemaining := genesisTime.Sub(currentTime)
-			log.WithFields(logrus.Fields{
-				"genesisValidators": fmt.Sprintf("%d", genesisValidatorCount),
-				"genesisTime":       fmt.Sprintf("%v", genesisTime),
-			}).Infof(
+			if timeRemaining <= time.Minute {
+				ticker = time.NewTicker(time.Second)
+			}
+			log.WithFields(logFields).Infof(
 				"%s until chain genesis",
-				formatDuration(timeRemaining),
+				timeRemaining.Truncate(time.Second),
 			)
 		case <-ctx.Done():
 			return
 		}
 	}
-}
-
-// Format duration truncates any decimal representation of a time
-// duration, if present.
-// Example: 5h3m2.023920390s turns into 5h3m2s.
-func formatDuration(duration time.Duration) string {
-	durationString := fmt.Sprintf("%s", duration)
-	decimalIndex := strings.Index(durationString, ".")
-	if decimalIndex != -1 {
-		return durationString[:decimalIndex] + "s"
-	}
-	return durationString
 }
