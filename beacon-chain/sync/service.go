@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
@@ -225,7 +227,15 @@ func (r *Service) registerHandlers() {
 					return
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-				stateSub.Unsubscribe()
+
+				// Register respective rpc and pubsub handlers at state initialized event.
+				r.registerRPCHandlers()
+				r.registerSubscribers()
+
+				if data.StartTime.After(roughtime.Now()) {
+					stateSub.Unsubscribe()
+					time.Sleep(roughtime.Until(data.StartTime))
+				}
 				r.chainStarted = true
 			}
 		case <-r.ctx.Done():
@@ -236,9 +246,6 @@ func (r *Service) registerHandlers() {
 			return
 		}
 	}
-	// Register respective rpc and pubsub handlers.
-	r.registerRPCHandlers()
-	r.registerSubscribers()
 }
 
 // Checker defines a struct which can verify whether a node is currently
