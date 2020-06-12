@@ -42,6 +42,7 @@ import (
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -95,6 +96,7 @@ type Service struct {
 	slasherCredentialError  error
 	slasherClient           slashpb.SlasherClient
 	stateGen                *stategen.State
+	connectedRPCClients     map[net.Addr]bool
 }
 
 // Config options for the beacon node RPC server.
@@ -172,6 +174,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		slasherCert:             cfg.SlasherCert,
 		stateGen:                cfg.StateGen,
 		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
+		connectedRPCClients:     make(map[net.Addr]bool),
 	}
 }
 
@@ -193,6 +196,7 @@ func (s *Service) Start() {
 			),
 			grpc_prometheus.StreamServerInterceptor,
 			grpc_opentracing.StreamServerInterceptor(),
+			s.validatorStreamConnectionInterceptor,
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
@@ -200,6 +204,7 @@ func (s *Service) Start() {
 			),
 			grpc_prometheus.UnaryServerInterceptor,
 			grpc_opentracing.UnaryServerInterceptor(),
+			s.validatorUnaryConnectionInterceptor,
 		)),
 	}
 	grpc_prometheus.EnableHandlingTimeHistogram()
@@ -361,4 +366,42 @@ func (s *Service) Status() error {
 		return s.slasherCredentialError
 	}
 	return nil
+}
+
+// Stream interceptor for new validator client connections to the beacon node.
+func (s *Service) validatorStreamConnectionInterceptor(
+	srv interface{},
+	ss grpc.ServerStream,
+	_ *grpc.StreamServerInfo,
+	handler grpc.StreamHandler,
+) error {
+	s.logNewClientConnection(ss.Context())
+	return handler(srv, ss)
+}
+
+// Unary interceptor for new validator client connections to the beacon node.
+func (s *Service) validatorUnaryConnectionInterceptor(
+	ctx context.Context,
+	req interface{},
+	_ *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (interface{}, error) {
+	s.logNewClientConnection(ctx)
+	return handler(ctx, req)
+}
+
+func (s *Service) logNewClientConnection(ctx context.Context) {
+	if featureconfig.Get().DisableGRPCConnectionLogs {
+		return
+	}
+	if clientInfo, ok := peer.FromContext(ctx); ok {
+		// Check if we have not yet observed this grpc client connection
+		// in the running beacon node.
+		if !s.connectedRPCClients[clientInfo.Addr] {
+			log.WithFields(logrus.Fields{
+				"addr": clientInfo.Addr.String(),
+			}).Infof("New gRPC client connected to beacon node")
+			s.connectedRPCClients[clientInfo.Addr] = true
+		}
+	}
 }
