@@ -37,6 +37,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 )
 
@@ -167,6 +168,10 @@ func (s *Service) Start() {
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
+
+		// We start a counter to genesis, if needed.
+		slotutil.CountdownToGenesis(s.genesisTime, 300 /* countdown interval */)
+
 		justifiedCheckpoint, err := s.beaconDB.JustifiedCheckpoint(ctx)
 		if err != nil {
 			log.Fatalf("Could not get justified checkpoint: %v", err)
@@ -245,6 +250,11 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
+	// We start a counter to genesis, if needed.
+	slotutil.CountdownToGenesis(genesisTime, 300 /* countdown interval */)
+
+	// We send out a state initialized event to the rest of the services
+	// running in the beacon node.
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
