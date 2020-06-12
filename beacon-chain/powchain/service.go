@@ -120,7 +120,6 @@ type Service struct {
 	processingLock          sync.RWMutex
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	client                  Client
 	headerChan              chan *gethTypes.Header
 	headTicker              *time.Ticker
 	httpEndpoint            string
@@ -295,11 +294,6 @@ func (s *Service) LatestBlockHash() common.Hash {
 	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
 }
 
-// Client for interacting with the ETH1.0 chain.
-func (s *Service) Client() Client {
-	return s.client
-}
-
 // AreAllDepositsProcessed determines if all the logs from the deposit contract
 // are processed.
 func (s *Service) AreAllDepositsProcessed() (bool, error) {
@@ -378,7 +372,6 @@ func (s *Service) initializeConnection(
 	rpcClient *gethRPC.Client,
 	contractCaller *contracts.DepositContractCaller,
 ) {
-	s.client = httpClient
 	s.httpLogger = httpClient
 	s.blockFetcher = httpClient
 	s.depositContractCaller = contractCaller
@@ -535,7 +528,7 @@ func (s *Service) handleETH1FollowDistance() {
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
 	fiveMinutesTimeout := roughtime.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
-	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) && roughtime.Now().Second()%15 == 0 {
+	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
 		log.Warn("eth1 client is not syncing")
 	}
 	if !s.chainStartData.Chainstarted {
@@ -613,9 +606,6 @@ func (s *Service) run(done <-chan struct{}) {
 
 	s.initPOWService()
 
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-done:
@@ -631,7 +621,6 @@ func (s *Service) run(done <-chan struct{}) {
 				continue
 			}
 			s.processBlockHeader(head)
-		case <-ticker.C:
 			s.handleETH1FollowDistance()
 		}
 	}
