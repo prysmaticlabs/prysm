@@ -232,6 +232,7 @@ func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ClearCache()
 	_, proposerIndexToSlots, err := CommitteeAssignments(state, 0)
 	if err != nil {
 		t.Fatalf("failed to determine CommitteeAssignments: %v", err)
