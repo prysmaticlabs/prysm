@@ -605,7 +605,7 @@ func (s *Service) run(done <-chan struct{}) {
 	s.runError = nil
 
 	s.initPOWService()
-	
+
 	for {
 		select {
 		case <-done:
