@@ -70,19 +70,14 @@ func TestSortedObj_NoDuplicates(t *testing.T) {
 
 	r := &Service{}
 
-	newBlks, newRoots := r.sortBlocksAndRoots(blks, roots)
+	newBlks, newRoots := r.dedupBlocksAndRoots(blks, roots)
 
-	previousSlot := uint64(0)
-	previousRoot := [32]byte{}
+	rootMap := make(map[[32]byte]bool)
 	for i, b := range newBlks {
-		if b.Block.Slot == previousSlot {
-			t.Errorf("Block list is not sorted as %d is equal to previousSlot %d", b.Block.Slot, previousSlot)
+		if rootMap[newRoots[i]] {
+			t.Errorf("Duplicated root exists %#x with block %v", newRoots[i], b)
 		}
-		if newRoots[i] == previousRoot {
-			t.Errorf("root matches stored previous root in block: got same root of %#x", newRoots[i])
-		}
-		previousSlot = b.Block.Slot
-		previousRoot = newRoots[i]
+		rootMap[newRoots[i]] = true
 	}
 }
 
