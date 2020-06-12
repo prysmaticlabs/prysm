@@ -605,14 +605,7 @@ func (s *Service) run(done <-chan struct{}) {
 	s.runError = nil
 
 	s.initPOWService()
-
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	// Update follow distance immediately as the ticker doesn't update until after the first time
-	// interval.
-	s.handleETH1FollowDistance()
-
+	
 	for {
 		select {
 		case <-done:
@@ -628,7 +621,6 @@ func (s *Service) run(done <-chan struct{}) {
 				continue
 			}
 			s.processBlockHeader(head)
-		case <-ticker.C:
 			s.handleETH1FollowDistance()
 		}
 	}
