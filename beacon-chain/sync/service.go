@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
@@ -226,10 +225,7 @@ func (r *Service) registerHandlers() {
 					return
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-				if data.StartTime.After(roughtime.Now()) {
-					stateSub.Unsubscribe()
-					time.Sleep(roughtime.Until(data.StartTime))
-				}
+				stateSub.Unsubscribe()
 				r.chainStarted = true
 			}
 		case <-r.ctx.Done():
