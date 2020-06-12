@@ -27,6 +27,23 @@ func (s sortedObj) Len() int {
 	return len(s.blks)
 }
 
+// removes duplicates from provided blocks and roots.
+func (r *Service) dedupBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte) {
+	// Remove duplicate blocks received
+	rootMap := make(map[[32]byte]bool)
+	newBlks := make([]*ethpb.SignedBeaconBlock, 0, len(blks))
+	newRoots := make([][32]byte, 0, len(roots))
+	for i, r := range roots {
+		if rootMap[r] {
+			continue
+		}
+		rootMap[r] = true
+		newRoots = append(newRoots, roots[i])
+		newBlks = append(newBlks, blks[i])
+	}
+	return newBlks, newRoots
+}
+
 // sort the provided blocks and roots in ascending order. This method assumes that the size of
 // block slice and root slice is equal.
 func (r *Service) sortBlocksAndRoots(blks []*ethpb.SignedBeaconBlock, roots [][32]byte) ([]*ethpb.SignedBeaconBlock, [][32]byte) {
