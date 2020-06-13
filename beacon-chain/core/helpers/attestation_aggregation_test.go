@@ -2,6 +2,8 @@ package helpers_test
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"sort"
 	"testing"
 
@@ -10,7 +12,21 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/sirupsen/logrus"
 )
+
+func TestMain(m *testing.M) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		AttestationAggregationStrategy: "max_cover",
+	})
+	defer resetCfg()
+
+	os.Exit(m.Run())
+}
 
 func bitlistWithAllBitsSet(length uint64) bitfield.Bitlist {
 	b := bitfield.NewBitlist(length)

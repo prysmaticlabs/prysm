@@ -82,6 +82,8 @@ type Flags struct {
 
 	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
+
+	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
 var featureConfig *Flags
@@ -246,6 +248,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
+	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	Init(cfg)
 }
 

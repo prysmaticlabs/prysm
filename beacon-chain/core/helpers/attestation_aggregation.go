@@ -1,12 +1,20 @@
 package helpers
 
 import (
-	"errors"
-
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
+
+const (
+	NaiveAggregation             AttestationAggregationStrategy = ""
+	MaxCoverAggregation                                         = "max_cover"
+)
+
+// AttestationAggregationStrategy defines attestation aggregation strategy.
+type AttestationAggregationStrategy string
 
 var (
 	// ErrAttestationAggregationBitsOverlap is returned when two attestations aggregation
@@ -16,6 +24,10 @@ var (
 	// ErrAttestationAggregationBitsDifferentLen is returned when two attestation aggregation bits
 	// have different lengths.
 	ErrAttestationAggregationBitsDifferentLen = errors.New("different bitlist lengths")
+
+	// ErrAttestationAggregationInvalidStrategy is returned when invalid aggregation strategy
+	// is selected.
+	ErrAttestationAggregationInvalidStrategy  = errors.New("invalid aggregation strategy")
 )
 
 // BLS aggregate signature aliases for testing / benchmark substitution. These methods are
@@ -24,9 +36,21 @@ var (
 var aggregateSignatures = bls.AggregateSignatures
 var signatureFromBytes = bls.SignatureFromBytes
 
-// AggregateAttestations such that the minimal number of attestations are returned.
-// Note: this is currently a naive implementation to the order of O(n^2).
+// AggregateAttestations aggregates attestations. The minimal number of attestations are returned.
 func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	strategy := AttestationAggregationStrategy(featureconfig.Get().AttestationAggregationStrategy)
+	switch strategy {
+	case NaiveAggregation:
+		return NaiveAttestationAggregation(atts)
+	case MaxCoverAggregation:
+		return MaxCoverAttestationAggregation(atts)
+	}
+	return nil, errors.Wrapf(ErrAttestationAggregationInvalidStrategy, "%v", strategy)
+}
+
+// NaiveAttestationAggregation aggregates naively, without any complex algorithms or optimizations.
+// Note: this is currently a naive implementation to the order of O(mn^2).
+func NaiveAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	if len(atts) <= 1 {
 		return atts, nil
 	}
@@ -74,6 +98,11 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 		}
 	}
 
+	return atts, nil
+}
+
+// MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
+func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	return atts, nil
 }
 
