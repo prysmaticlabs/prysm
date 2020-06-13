@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	NaiveAggregation             AttestationAggregationStrategy = ""
-	MaxCoverAggregation                                         = "max_cover"
+	NaiveAggregation    AttestationAggregationStrategy = ""
+	MaxCoverAggregation                                = "max_cover"
 )
 
 // AttestationAggregationStrategy defines attestation aggregation strategy.
@@ -27,7 +27,7 @@ var (
 
 	// ErrAttestationAggregationInvalidStrategy is returned when invalid aggregation strategy
 	// is selected.
-	ErrAttestationAggregationInvalidStrategy  = errors.New("invalid aggregation strategy")
+	ErrAttestationAggregationInvalidStrategy = errors.New("invalid aggregation strategy")
 )
 
 // BLS aggregate signature aliases for testing / benchmark substitution. These methods are
