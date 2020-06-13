@@ -454,8 +454,10 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
 
-	if featureconfig.Get().NewStateMgmt && featureconfig.Get().SkipRegenHistoricalStates {
-		// To skip the regeneration of historical state, the node has to generate the parent of the last finalized state.
+	// To skip the regeneration of historical state, the node has to generate the parent of the last finalized state.
+	// We don't need to do this for genesis.
+	atGenesis := s.CurrentSlot() == 0
+	if featureconfig.Get().NewStateMgmt && featureconfig.Get().SkipRegenHistoricalStates && !atGenesis {
 		parentRoot := bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)
 		parentState, err := s.generateState(ctx, finalizedRoot, parentRoot)
 		if err != nil {
