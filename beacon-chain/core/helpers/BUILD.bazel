@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "attestation.go",
+        "attestation_aggregation.go",
         "block.go",
         "committee.go",
         "randao.go",
@@ -50,6 +51,7 @@ go_test(
     name = "go_default_test",
     size = "medium",
     srcs = [
+        "attestation_aggregation_test.go",
         "attestation_test.go",
         "block_test.go",
         "committee_test.go",
