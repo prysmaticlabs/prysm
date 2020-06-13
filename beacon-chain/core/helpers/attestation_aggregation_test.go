@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 	logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		AttestationAggregationStrategy: "max_cover",
+		AttestationAggregationStrategy: "naive",
 	})
 	defer resetCfg()
 
