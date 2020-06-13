@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	NaiveAggregation    AttestationAggregationStrategy = ""
-	MaxCoverAggregation                                = "max_cover"
+	// NaiveAggregation is an aggregation strategy without any optimizations.
+	NaiveAggregation AttestationAggregationStrategy = ""
+	// MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
+	MaxCoverAggregation = "max_cover"
 )
 
 // AttestationAggregationStrategy defines attestation aggregation strategy.
