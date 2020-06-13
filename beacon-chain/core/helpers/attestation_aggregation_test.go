@@ -52,15 +52,21 @@ func TestAttestationAggregate_AggregateAttestation(t *testing.T) {
 		a2   *ethpb.Attestation
 		want *ethpb.Attestation
 	}{
-		{a1: &ethpb.Attestation{AggregationBits: []byte{}},
+		{
+			a1:   &ethpb.Attestation{AggregationBits: []byte{}},
 			a2:   &ethpb.Attestation{AggregationBits: []byte{}},
-			want: &ethpb.Attestation{AggregationBits: []byte{}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
+			want: &ethpb.Attestation{AggregationBits: []byte{}},
+		},
+		{
+			a1:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
 			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
-			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
+			want: &ethpb.Attestation{AggregationBits: []byte{0x03}},
+		},
+		{
+			a1:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
 			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
-			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
+			want: &ethpb.Attestation{AggregationBits: []byte{0x03}},
+		},
 	}
 	for _, tt := range tests {
 		got, err := helpers.AggregateAttestation(tt.a1, tt.a2)
@@ -78,10 +84,14 @@ func TestAttestationAggregate_AggregateAttestation_OverlapFails(t *testing.T) {
 		a1 *ethpb.Attestation
 		a2 *ethpb.Attestation
 	}{
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x1F}},
-			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0xFF, 0x85}},
-			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x13, 0x8F}}},
+		{
+			a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x1F}},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}},
+		},
+		{
+			a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0xFF, 0x85}},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x13, 0x8F}},
+		},
 	}
 	for _, tt := range tests {
 		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)
@@ -96,8 +106,10 @@ func TestAttestationAggregate_AggregateAttestation_DiffLengthFails(t *testing.T)
 		a1 *ethpb.Attestation
 		a2 *ethpb.Attestation
 	}{
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0F}},
-			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}}},
+		{
+			a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0F}},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}},
+		},
 	}
 	for _, tt := range tests {
 		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)

@@ -47,7 +47,7 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 	case MaxCoverAggregation:
 		return MaxCoverAttestationAggregation(atts)
 	}
-	return nil, errors.Wrapf(ErrAttestationAggregationInvalidStrategy, "%v", strategy)
+	return nil, errors.Wrapf(ErrAttestationAggregationInvalidStrategy, "%q", strategy)
 }
 
 // NaiveAttestationAggregation aggregates naively, without any complex algorithms or optimizations.
