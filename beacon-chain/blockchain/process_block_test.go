@@ -834,7 +834,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	}
 }
 
-func TestEnsureJustifiedRootNotZeroHashes(t *testing.T) {
+func TestEnsureRootNotZeroHashes(t *testing.T) {
 	ctx := context.Background()
 	cfg := &Config{}
 	service, err := NewService(ctx, cfg)
@@ -843,12 +843,12 @@ func TestEnsureJustifiedRootNotZeroHashes(t *testing.T) {
 	}
 	service.genesisRoot = [32]byte{'a'}
 
-	r := service.ensureJustifiedRootNotZeroHashes(params.BeaconConfig().ZeroHash)
+	r := service.ensureRootNotZeros(params.BeaconConfig().ZeroHash)
 	if r != service.genesisRoot {
 		t.Error("Did not get wanted justified root")
 	}
 	root := [32]byte{'b'}
-	r = service.ensureJustifiedRootNotZeroHashes(root)
+	r = service.ensureRootNotZeros(root)
 	if r != root {
 		t.Error("Did not get wanted justified root")
 	}
