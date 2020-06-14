@@ -27,6 +27,12 @@ func (r *Service) maintainPeerStatuses() {
 	runutil.RunEvery(r.ctx, interval, func() {
 		for _, pid := range r.p2p.Peers().Connected() {
 			go func(id peer.ID) {
+				if r.p2p.Peers().IsBad(id) {
+					if err := r.sendGoodByeAndDisconnect(r.ctx, codeGenericError, id); err != nil {
+						log.Errorf("Error when disconnecting with bad peer: %v", err)
+					}
+					return
+				}
 				// If the status hasn't been updated in the recent interval time.
 				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(id)
 				if err != nil {
@@ -36,6 +42,7 @@ func (r *Service) maintainPeerStatuses() {
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
 					if err := r.reValidatePeer(r.ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Error("Failed to revalidate peer")
+						r.p2p.Peers().IncrementBadResponses(id)
 					}
 				}
 			}(pid)
