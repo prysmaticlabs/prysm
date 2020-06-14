@@ -18,8 +18,6 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	_, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
 	setRPCStreamDeadlines(stream)
 
 	m, ok := msg.(*uint64)
@@ -32,15 +30,18 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 	}
 	if !valid {
 		// send metadata request in a new routine and stream.
-		go func() {
-			md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+		go func(peer peer.ID) {
+			// New context so the calling function doesn't cancel on us.
+			ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
+			defer cancel()
+			md, err := r.sendMetaDataRequest(ctx, peer)
 			if err != nil {
-				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
+				log.WithField("peer", peer).WithError(err).Debug("Failed to send metadata request")
 				return
 			}
 			// update metadata if there is no error
-			r.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
-		}()
+			r.p2p.Peers().SetMetadata(peer, md)
+		}(stream.Conn().RemotePeer())
 	}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
