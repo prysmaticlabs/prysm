@@ -36,14 +36,16 @@ func (s *Service) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
 // InterceptSecured tests whether a given connection, now authenticated,
 // is allowed.
 func (s *Service) InterceptSecured(_ network.Direction, _ peer.ID, n network.ConnMultiaddrs) (allow bool) {
-	return filterConnections(s.addrFilter, n.RemoteMultiaddr())
+	return true
 }
 
 // InterceptUpgraded tests whether a fully capable connection is allowed.
 func (s *Service) InterceptUpgraded(n network.Conn) (allow bool, reason control.DisconnectReason) {
-	return filterConnections(s.addrFilter, n.RemoteMultiaddr()), 0
+	return true, 0
 }
 
+// configureFilter looks at the provided allow lists and
+// deny lists to appropriately create a filter.
 func configureFilter(cfg *Config) (*filter.Filters, error) {
 	addrFilter := filter.NewFilters()
 	// Configure from provided allow list in the config.
@@ -70,7 +72,7 @@ func configureFilter(cfg *Config) (*filter.Filters, error) {
 // filterConnections checks the appropriate ip subnets from our
 // filter and decides what to do with them. By default libp2p
 // accepts all incoming dials, so if we have an allow list
-// we will reject all incoming dials except for those in the
+// we will reject all inbound dials except for those in the
 // appropriate ip subnets.
 func filterConnections(f *filter.Filters, a filter.Multiaddr) bool {
 	acceptedNets := f.FiltersForAction(filter.ActionAccept)

@@ -8,7 +8,6 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
-	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -103,48 +102,4 @@ func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 		log.Debug("ECDSA private key generated")
 		return cfg.Apply(libp2p.Identity(convertToInterfacePrivkey(privkey)))
 	}
-}
-
-// allowListSubnet adds an allowed multiaddress filter for a given CIDR subnet.
-// Example: 192.168.0.0/16 may be used to accept only connections on your local
-// network.
-func allowListSubnet(cidr string) libp2p.Option {
-	if cidr == "" {
-		return func(_ *libp2p.Config) error {
-			return nil
-		}
-	}
-	_, ipnet, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return func(_ *libp2p.Config) error {
-			return err
-		}
-	}
-	filters := filter.NewFilters()
-	filters.AddFilter(*ipnet, filter.ActionAccept)
-
-	return libp2p.Filters(filters)
-}
-
-// denyListSubnets adds a deny multiaddress filter for multiple given CIDR subnets.
-// Example: 192.168.0.0/16 may be used to deny connections from your local
-// network.
-func denyListSubnets(mulCidrs []string) libp2p.Option {
-	if len(mulCidrs) == 0 {
-		return func(_ *libp2p.Config) error {
-			return nil
-		}
-	}
-	ipNets := []*net.IPNet{}
-	for _, cidr := range mulCidrs {
-		_, ipnet, err := net.ParseCIDR(cidr)
-		if err != nil {
-			return func(_ *libp2p.Config) error {
-				return err
-			}
-		}
-		ipNets = append(ipNets, ipnet)
-	}
-
-	return libp2p.FilterAddresses(ipNets...)
 }
