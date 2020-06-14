@@ -123,6 +123,11 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 	}); err != nil {
 		return 0, err
 	}
+
+	if err := UpdateCommitteeCache(state, epoch); err != nil {
+		return 0, errors.Wrap(err, "could not update committee cache")
+	}
+
 	return count, nil
 }
 
