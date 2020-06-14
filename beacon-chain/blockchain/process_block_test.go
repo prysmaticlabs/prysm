@@ -834,7 +834,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	}
 }
 
-func TestEnsureJustifiedRootNotZeroHashes(t *testing.T) {
+func TestEnsureRootNotZeroHashes(t *testing.T) {
 	ctx := context.Background()
 	cfg := &Config{}
 	service, err := NewService(ctx, cfg)
