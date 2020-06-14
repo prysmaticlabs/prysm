@@ -80,6 +80,7 @@ go_library(
         "@com_github_libp2p_go_libp2p_pubsub//:go_default_library",
         "@com_github_libp2p_go_libp2p_pubsub//pb:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
+        "@com_github_multiformats_go_multiaddr_net//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
@@ -95,6 +96,7 @@ go_test(
     srcs = [
         "addr_factory_test.go",
         "broadcaster_test.go",
+        "connection_gater_test.go",
         "dial_relay_node_test.go",
         "discovery_test.go",
         "fork_test.go",
@@ -115,6 +117,7 @@ go_test(
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
