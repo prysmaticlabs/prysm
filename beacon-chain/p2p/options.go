@@ -35,8 +35,6 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		privKeyOption(priKey),
 		libp2p.EnableRelay(),
 		libp2p.ListenAddrs(listen),
-		allowListSubnet(cfg.AllowListCIDR),
-		denyListSubnets(cfg.DenyListCIDR),
 		libp2p.UserAgent(version.GetBuildData()),
 		libp2p.ConnectionGater(s),
 	}
@@ -147,5 +145,6 @@ func denyListSubnets(mulCidrs []string) libp2p.Option {
 		}
 		ipNets = append(ipNets, ipnet)
 	}
+
 	return libp2p.FilterAddresses(ipNets...)
 }

@@ -27,6 +27,7 @@ import (
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
+	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -76,6 +77,7 @@ type Service struct {
 	cfg                   *Config
 	peers                 *peers.Status
 	dht                   *kaddht.IpfsDHT
+	addrFilter            *filter.Filters
 	privKey               *ecdsa.PrivateKey
 	exclusionList         *ristretto.Cache
 	metaData              *pb.MetaData
@@ -127,6 +129,11 @@ func NewService(cfg *Config) (*Service, error) {
 	s.metaData, err = metaDataFromConfig(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to create peer metadata")
+		return nil, err
+	}
+	s.addrFilter, err = configureFilter(s.cfg)
+	if err != nil {
+		log.WithError(err).Error("Failed to create address filter")
 		return nil, err
 	}
 	opts := s.buildOptions(ipAddr, s.privKey)
