@@ -45,6 +45,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		}
 
 		if helpers.StartSlot(c.Epoch) > baseState.Slot() {
+			baseState = baseState.Copy()
 			baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
@@ -90,22 +91,23 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	}
 
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+		savedState := baseState.Copy()
+		savedState, err = state.ProcessSlots(ctx, savedState, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
 		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 			Checkpoint: c,
-			State:      baseState,
+			State:      savedState.Copy(),
 		}); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 		}
-		return baseState, nil
+		return savedState, nil
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: c,
-		State:      baseState,
+		State:      baseState.Copy(),
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 	}
