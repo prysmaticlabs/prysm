@@ -11,7 +11,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/control"
 	"github.com/multiformats/go-multiaddr"
-
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
