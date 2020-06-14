@@ -2,8 +2,8 @@ package kv
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	log "github.com/sirupsen/logrus"
