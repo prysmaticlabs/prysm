@@ -380,6 +380,8 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
 	for _, test := range tests {
+		ClearCache()
+
 		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{

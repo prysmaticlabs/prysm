@@ -102,6 +102,18 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
 func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get seed")
+	}
+	activeCount, err := committeeCache.ActiveIndicesCount(seed)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if activeCount != 0 {
+		return uint64(activeCount), nil
+	}
+
 	count := uint64(0)
 	if err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
@@ -111,6 +123,11 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 	}); err != nil {
 		return 0, err
 	}
+
+	if err := UpdateCommitteeCache(state, epoch); err != nil {
+		return 0, errors.Wrap(err, "could not update committee cache")
+	}
+
 	return count, nil
 }
 
