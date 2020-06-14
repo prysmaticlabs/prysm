@@ -238,7 +238,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return true, nil
 	}
 	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
-	justifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
+	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
@@ -257,7 +257,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return false, nil
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
-	cachedJustifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
@@ -297,7 +297,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	}
 
 	if !featureconfig.Get().NewStateMgmt {
-		justifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(cpt.Root))
+		justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(cpt.Root))
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
@@ -434,7 +434,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	}
 	finalizedBlk := finalizedBlkSigned.Block
 
-	justifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedBlk.Slot)
 	if err != nil {
 		return err
@@ -507,11 +507,11 @@ func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 	return nil
 }
 
-// This ensures that justified check point's root field uses genesis root instead of zero hashes for handling
+// This ensures that the input root defaults to using genesis root instead of zero hashes. This is needed for handling
 // fork choice justification routine.
-func (s *Service) ensureJustifiedRootNotZeroHashes(justifiedRoot [32]byte) [32]byte {
-	if justifiedRoot == params.BeaconConfig().ZeroHash {
+func (s *Service) ensureRootNotZeros(root [32]byte) [32]byte {
+	if root == params.BeaconConfig().ZeroHash {
 		return s.genesisRoot
 	}
-	return justifiedRoot
+	return root
 }
