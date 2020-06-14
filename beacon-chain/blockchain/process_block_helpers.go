@@ -380,15 +380,15 @@ func (s *Service) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32
 // ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
-//   def get_ancestor(store: Store, root: Hash, slot: Slot) -> Hash:
+//   def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
 //    block = store.blocks[root]
 //    if block.slot > slot:
-//      return get_ancestor(store, block.parent_root, slot)
+//        return get_ancestor(store, block.parent_root, slot)
 //    elif block.slot == slot:
-//      return root
+//        return root
 //    else:
-//      # root is older than queried slot, thus a skip slot. Return most recent root prior to slot.
-//      return root
+//        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
+//        return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
 	defer span.End()
@@ -412,13 +412,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	}
 	b := signed.Block
 
-	// If we dont have the ancestor in the DB, simply return nil so rest of fork choice
-	// operation can proceed. This is not an error condition.
-	if b == nil || b.Slot < slot {
-		return nil, nil
-	}
-
-	if b.Slot == slot {
+	if b.Slot == slot || b.Slot < slot {
 		return root, nil
 	}
 
