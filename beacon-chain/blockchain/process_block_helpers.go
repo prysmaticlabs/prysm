@@ -239,6 +239,10 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	}
 	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
 	justifiedRoot := bytesutil.ToBytes32(newJustifiedCheckpt.Root)
+	// Sets to the genesis root in the event we get a zero hash.
+	if justifiedRoot == params.BeaconConfig().ZeroHash {
+		justifiedRoot = s.genesisRoot
+	}
 	var err error
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
@@ -258,6 +262,10 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
 	cachedJustifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
+	// Sets to the genesis root in the event we get a zero hash.
+	if cachedJustifiedRoot == params.BeaconConfig().ZeroHash {
+		cachedJustifiedRoot = s.genesisRoot
+	}
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
@@ -271,7 +279,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return false, errors.New("nil justified block")
 	}
 	justifiedBlock := justifiedBlockSigned.Block
-	b, err := s.ancestor(ctx, newJustifiedCheckpt.Root, justifiedBlock.Slot)
+	b, err := s.ancestor(ctx, justifiedRoot[:], justifiedBlock.Slot)
 	if err != nil {
 		return false, err
 	}
@@ -298,6 +306,9 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 
 	if !featureconfig.Get().NewStateMgmt {
 		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
+		if justifiedRoot == params.BeaconConfig().ZeroHash {
+			justifiedRoot = s.genesisRoot
+		}
 
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
@@ -435,7 +446,12 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	}
 	finalizedBlk := finalizedBlkSigned.Block
 
-	anc, err := s.ancestor(ctx, s.justifiedCheckpt.Root, finalizedBlk.Slot)
+	justifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
+	if justifiedRoot == params.BeaconConfig().ZeroHash {
+		justifiedRoot = s.genesisRoot
+	}
+
+	anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedBlk.Slot)
 	if err != nil {
 		return err
 	}
