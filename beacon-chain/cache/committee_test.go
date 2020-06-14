@@ -97,6 +97,31 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 	}
 }
 
+func TestCommitteeCache_ActiveCount(t *testing.T) {
+	cache := NewCommitteesCache()
+
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
+	count, err := cache.ActiveIndicesCount(item.Seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Error("Expected active count not to exist in empty cache")
+	}
+
+	if err := cache.AddCommitteeShuffledList(item); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = cache.ActiveIndicesCount(item.Seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != len(item.SortedIndices) {
+		t.Error("Did not receive correct active acount from cache")
+	}
+}
+
 func TestCommitteeCache_AddProposerIndicesList(t *testing.T) {
 	cache := NewCommitteesCache()
 
