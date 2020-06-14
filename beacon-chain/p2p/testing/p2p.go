@@ -13,12 +13,14 @@ import (
 	"github.com/gogo/protobuf/proto"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	core "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/control"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
+	"github.com/multiformats/go-multiaddr"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -274,4 +276,29 @@ func (p *TestP2P) MetadataSeq() uint64 {
 // AddPingMethod mocks the p2p func.
 func (p *TestP2P) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error) {
 	// no-op
+}
+
+// InterceptPeerDial .
+func (p *TestP2P) InterceptPeerDial(peer.ID) (allow bool) {
+	return true
+}
+
+// InterceptAddrDial .
+func (p *TestP2P) InterceptAddrDial(peer.ID, multiaddr.Multiaddr) (allow bool) {
+	return true
+}
+
+// InterceptAccept .
+func (p *TestP2P) InterceptAccept(n network.ConnMultiaddrs) (allow bool) {
+	return true
+}
+
+// InterceptSecured .
+func (p *TestP2P) InterceptSecured(network.Direction, peer.ID, network.ConnMultiaddrs) (allow bool) {
+	return true
+}
+
+// InterceptUpgraded .
+func (p *TestP2P) InterceptUpgraded(network.Conn) (allow bool, reason control.DisconnectReason) {
+	return true, 0
 }

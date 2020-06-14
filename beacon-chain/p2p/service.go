@@ -129,8 +129,7 @@ func NewService(cfg *Config) (*Service, error) {
 		log.WithError(err).Error("Failed to create peer metadata")
 		return nil, err
 	}
-
-	opts := buildOptions(s.cfg, ipAddr, s.privKey)
+	opts := s.buildOptions(ipAddr, s.privKey)
 	h, err := libp2p.New(s.ctx, opts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to create p2p host")

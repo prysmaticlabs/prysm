@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -41,6 +42,7 @@ type SetStreamHandler interface {
 type ConnectionHandler interface {
 	AddConnectionHandler(f func(ctx context.Context, id peer.ID) error, g func(context.Context, peer.ID) error)
 	AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error)
+	connmgr.ConnectionGater
 }
 
 // EncodingProvider provides p2p network encoding.
