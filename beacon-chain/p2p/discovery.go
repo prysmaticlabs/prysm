@@ -135,7 +135,10 @@ func (s *Service) startDiscoveryV5(
 // 5) Peer's fork digest in their ENR matches that of
 // 	  our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
-	if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
+	numOfConns := len(s.host.Network().Peers())
+	maxPeers := int(s.cfg.MaxPeers)
+	activePeers := len(s.Peers().Active())
+	if activePeers >= maxPeers || numOfConns >= maxPeers {
 		log.WithFields(logrus.Fields{"peer": node.String(),
 			"reason": "at peer limit"}).Trace("Not dialing peer")
 		return false
