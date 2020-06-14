@@ -232,3 +232,22 @@ func TestPeerDenyList(t *testing.T) {
 		t.Error("Wanted connection to fail with deny list")
 	}
 }
+
+func TestService_InterceptAddrDial_Allow(t *testing.T) {
+	s := &Service{}
+	var err error
+	cidr := "212.67.89.112/16"
+	s.addrFilter, err = configureFilter(&Config{AllowListCIDR: cidr})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ip := "212.67.10.122"
+	multiAddress, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid := s.InterceptAddrDial("", multiAddress)
+	if !valid {
+		t.Errorf("Expected multiaddress with ip %s to not be rejected with an allow cidr mask of %s", ip, cidr)
+	}
+}
