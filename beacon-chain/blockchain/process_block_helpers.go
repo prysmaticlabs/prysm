@@ -238,11 +238,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return true, nil
 	}
 	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
-	justifiedRoot := bytesutil.ToBytes32(newJustifiedCheckpt.Root)
-	// Sets to the genesis root in the event we get a zero hash.
-	if justifiedRoot == params.BeaconConfig().ZeroHash {
-		justifiedRoot = s.genesisRoot
-	}
+	justifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
@@ -261,11 +257,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return false, nil
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
-	cachedJustifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
-	// Sets to the genesis root in the event we get a zero hash.
-	if cachedJustifiedRoot == params.BeaconConfig().ZeroHash {
-		cachedJustifiedRoot = s.genesisRoot
-	}
+	cachedJustifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
@@ -305,11 +297,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	}
 
 	if !featureconfig.Get().NewStateMgmt {
-		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
-		if justifiedRoot == params.BeaconConfig().ZeroHash {
-			justifiedRoot = s.genesisRoot
-		}
-
+		justifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(cpt.Root))
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
@@ -446,11 +434,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	}
 	finalizedBlk := finalizedBlkSigned.Block
 
-	justifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
-	if justifiedRoot == params.BeaconConfig().ZeroHash {
-		justifiedRoot = s.genesisRoot
-	}
-
+	justifiedRoot := s.ensureJustifiedRootNotZeroHashes(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedBlk.Slot)
 	if err != nil {
 		return err
@@ -521,4 +505,13 @@ func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 	}
 
 	return nil
+}
+
+// This ensures that justified check point's root field uses genesis root instead of zero hashes for handling
+// fork choice justification routine.
+func (s *Service) ensureJustifiedRootNotZeroHashes(justifiedRoot [32]byte) [32]byte {
+	if justifiedRoot == params.BeaconConfig().ZeroHash {
+		return s.genesisRoot
+	}
+	return justifiedRoot
 }
