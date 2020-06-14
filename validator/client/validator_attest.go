@@ -112,6 +112,22 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			return
 		}
 	}
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
+		indexedAtt := &ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{duty.ValidatorIndex},
+			Data:             data,
+		}
+		if !v.protector.VerifyAttestation(ctx, indexedAtt) {
+			log.WithFields(logrus.Fields{
+				"sourceEpoch": data.Source.Epoch,
+				"targetEpoch": data.Target.Epoch,
+			}).Error("Attempted to make a slashable attestation, rejected by external slasher service")
+			if v.emitAccountMetrics {
+				validatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+	}
 
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
@@ -147,6 +163,14 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Signature:       sig,
 	}
 
+	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
+	if err != nil {
+		log.WithError(err).Error("Could not submit attestation to beacon node")
+		if v.emitAccountMetrics {
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
 		indexedAtt := &ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{duty.ValidatorIndex},
@@ -163,14 +187,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			}
 			return
 		}
-	}
-	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
-	if err != nil {
-		log.WithError(err).Error("Could not submit attestation to beacon node")
-		if v.emitAccountMetrics {
-			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-		}
-		return
 	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {

@@ -95,7 +95,34 @@ func TestService_VerifyAttestation(t *testing.T) {
 	}
 }
 
-func TestService_VerifyBlock(t *testing.T) {
+func TestService_CommitAttestation(t *testing.T) {
+	s := &Service{slasherClient: mockSlasher{slashAttestation: true}}
+	att := &eth.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &eth.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: []byte("great block"),
+			Source: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 10,
+				Root:  []byte("good target"),
+			},
+		},
+	}
+	if s.CommitAttestation(context.Background(), att) {
+		t.Error("Expected commit attestation to fail verification")
+	}
+	s = &Service{slasherClient: mockSlasher{slashAttestation: false}}
+	if !s.CommitAttestation(context.Background(), att) {
+		t.Error("Expected commit attestation to pass verification")
+	}
+}
+
+func TestService_CommitBlock(t *testing.T) {
 	s := &Service{slasherClient: mockSlasher{slashBlock: true}}
 	blk := &eth.SignedBeaconBlockHeader{
 		Header: &eth.BeaconBlockHeader{
@@ -106,11 +133,29 @@ func TestService_VerifyBlock(t *testing.T) {
 			BodyRoot:      []byte("body"),
 		},
 	}
+	if s.CommitBlock(context.Background(), blk) {
+		t.Error("Expected commit block to fail verification")
+	}
+	s = &Service{slasherClient: mockSlasher{slashBlock: false}}
+	if !s.CommitBlock(context.Background(), blk) {
+		t.Error("Expected commit block to pass verification")
+	}
+}
+
+func TestService_VerifyBlock(t *testing.T) {
+	s := &Service{slasherClient: mockSlasher{slashBlock: true}}
+	blk := &eth.BeaconBlockHeader{
+		Slot:          0,
+		ProposerIndex: 0,
+		ParentRoot:    []byte("parent"),
+		StateRoot:     []byte("state"),
+		BodyRoot:      []byte("body"),
+	}
 	if s.VerifyBlock(context.Background(), blk) {
-		t.Error("Expected verify attestation to fail verification")
+		t.Error("Expected verify block to fail verification")
 	}
 	s = &Service{slasherClient: mockSlasher{slashBlock: false}}
 	if !s.VerifyBlock(context.Background(), blk) {
-		t.Error("Expected verify attestation to pass verification")
+		t.Error("Expected verify block to pass verification")
 	}
 }
