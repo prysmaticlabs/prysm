@@ -16,6 +16,13 @@ const (
 	Reverted //relevant again
 )
 
+const (
+	// ToCache is used to mark when calling a DB function, to save it to the cache.
+	ToCache = true
+	// ToDB is used to mark when calling a DB function, to save it to the DB.
+	ToDB = false
+)
+
 func (status SlashingStatus) String() string {
 	names := [...]string{
 		"Unknown",
