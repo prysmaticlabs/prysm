@@ -23,6 +23,7 @@ go_test(
     srcs = [
         "countdown_test.go",
         "slotticker_test.go",
+        "slottime_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
