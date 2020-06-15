@@ -15,11 +15,15 @@ checks=0
 if [ "$(diff -s go.mod.orig go.mod | grep -c 'Files go.mod.orig and go.mod are identical')" = 1 ]; then
   echo "- go.mod is up to date."
   checks=$((checks + 1))
+else
+  echo "- go.mod is NOT up to date."
 fi
 
 if [ "$(diff -s go.sum.orig go.sum | grep -c 'Files go.sum.orig and go.sum are identical')" = 1 ]; then
   echo "- go.sum is up to date."
   checks=$((checks + 1))
+else
+  echo "- go.sum is NOT up to date."
 fi
 
 if [ $checks -eq 2 ]; then
