@@ -196,7 +196,8 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 				}
 				if featureconfig.Get().NewStateMgmt {
 					hasStateSummaryDB := bs.BeaconDB.HasStateSummary(bs.Ctx, bytesutil.ToBytes32(data.SignedBlock.Block.ParentRoot))
-					if !hasStateSummaryDB {
+					hasStateSummaryCache := bs.stateSummaryCache.Has(bytesutil.ToBytes32(blk.Block.ParentRoot))
+					if !hasStateSummaryDB && !hasStateSummaryCache {
 						log.WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("No access to parent state to verify block signature")
 						continue
 					}

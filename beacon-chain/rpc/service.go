@@ -96,6 +96,7 @@ type Service struct {
 	slasherCredentialError  error
 	slasherClient           slashpb.SlasherClient
 	stateGen                *stategen.State
+	stateSummaryCache       *cache.StateSummaryCache
 	connectedRPCClients     map[net.Addr]bool
 }
 
@@ -132,6 +133,7 @@ type Config struct {
 	BlockNotifier           blockfeed.Notifier
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
+	StateSummaryCache       *cache.StateSummaryCache
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -173,6 +175,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		slasherProvider:         cfg.SlasherProvider,
 		slasherCert:             cfg.SlasherCert,
 		stateGen:                cfg.StateGen,
+		stateSummaryCache:       cfg.StateSummaryCache,
 		enableDebugRPCEndpoints: cfg.EnableDebugRPCEndpoints,
 		connectedRPCClients:     make(map[net.Addr]bool),
 	}
@@ -275,6 +278,7 @@ func (s *Service) Start() {
 		AttestationNotifier:         s.operationNotifier,
 		Broadcaster:                 s.p2p,
 		StateGen:                    s.stateGen,
+		StateSummaryCache:           s.stateSummaryCache,
 		SyncChecker:                 s.syncService,
 		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),

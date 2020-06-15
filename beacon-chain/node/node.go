@@ -558,6 +558,7 @@ func (b *BeaconNode) registerRPCService() error {
 		SlasherCert:             slasherCert,
 		SlasherProvider:         slasherProvider,
 		StateGen:                b.stateGen,
+		StateSummaryCache:       b.stateSummaryCache,
 		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
 	})
 
