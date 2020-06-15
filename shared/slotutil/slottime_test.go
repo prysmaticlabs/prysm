@@ -1,10 +1,11 @@
 package slotutil
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 func TestSlotsSinceGenesis(t *testing.T) {
