@@ -21,6 +21,10 @@ jobs:
         with:
           path: ./
 
+      - name: Go mod tidy checker
+        id: gomodtidy
+        uses: ./.github/actions/gomodtidy
+
   build:
     name: Build
     runs-on: ubuntu-latest
