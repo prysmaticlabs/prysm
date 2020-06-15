@@ -1,7 +1,9 @@
 package helpers
 
 import (
+	"math/rand"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -26,20 +28,21 @@ func bitlistsWithSingleBitSet(length uint64) []bitfield.Bitlist {
 	return lists
 }
 
-func BenchmarkAggregateAttestations(b *testing.B) {
-	// Override expensive BLS aggregation method with cheap no-op such that this benchmark profiles
-	// the logic of aggregation selection rather than BLS logic.
-	aggregateSignatures = func(sigs []*bls.Signature) *bls.Signature {
-		return sigs[0]
+func bitlistsWithMultipleBitSet(length uint64, count uint64) []bitfield.Bitlist {
+	rand.Seed(time.Now().UnixNano())
+	lists := make([]bitfield.Bitlist, length)
+	for i := uint64(0); i < length; i++ {
+		b := bitfield.NewBitlist(length)
+		keys := rand.Perm(int(length))
+		for _, key := range keys[:count] {
+			b.SetBitAt(uint64(key), true)
+		}
+		lists[i] = b
 	}
-	signatureFromBytes = func(sig []byte) (*bls.Signature, error) {
-		return bls.NewAggregateSignature(), nil
-	}
-	defer func() {
-		aggregateSignatures = bls.AggregateSignatures
-		signatureFromBytes = bls.SignatureFromBytes
-	}()
+	return lists
+}
 
+func BenchmarkAttestationAggregate_AggregateAttestation(b *testing.B) {
 	// Each test defines the aggregation bitfield inputs and the wanted output result.
 	tests := []struct {
 		name   string
@@ -49,6 +52,27 @@ func BenchmarkAggregateAttestations(b *testing.B) {
 		{
 			name:   "64 attestations with single bit set",
 			inputs: bitlistsWithSingleBitSet(64),
+			want: []bitfield.Bitlist{
+				bitlistWithAllBitsSet(64),
+			},
+		},
+		{
+			name:   "64 attestations with 8 random bits set",
+			inputs: bitlistsWithMultipleBitSet(64, 8),
+			want: []bitfield.Bitlist{
+				bitlistWithAllBitsSet(64),
+			},
+		},
+		{
+			name:   "64 attestations with 16 random bits set",
+			inputs: bitlistsWithMultipleBitSet(64, 16),
+			want: []bitfield.Bitlist{
+				bitlistWithAllBitsSet(64),
+			},
+		},
+		{
+			name:   "64 attestations with 32 random bits set",
+			inputs: bitlistsWithMultipleBitSet(64, 32),
 			want: []bitfield.Bitlist{
 				bitlistWithAllBitsSet(64),
 			},
