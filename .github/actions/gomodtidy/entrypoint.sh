@@ -6,6 +6,8 @@ cd $GITHUB_WORKSPACE
 /usr/local/go/bin/go mod tidy
 
 echo "Git status:"
+pwd
+ls
 /usr/bin/git status
 /usr/bin/git diff
 /usr/bin/git diff go.sum
