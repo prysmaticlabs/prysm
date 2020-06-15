@@ -1046,7 +1046,7 @@ func (bs *Server) GetValidatorPerformance(
 		correctlyVotedTarget = append(correctlyVotedTarget, summary.IsPrevEpochTargetAttester)
 		correctlyVotedHead = append(correctlyVotedHead, summary.IsPrevEpochHeadAttester)
 	}
-	log.Info(correctlyVotedSource)
+
 	return &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    pubKeys,
 		InclusionSlots:                inclusionSlots,
