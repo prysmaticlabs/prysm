@@ -57,12 +57,12 @@ func AggregateSignature(attestations []*ethpb.Attestation) (*bls.Signature, erro
 	sigs := make([]*bls.Signature, len(attestations))
 	var err error
 	for i := 0; i < len(sigs); i++ {
-		sigs[i], err = signatureFromBytes(attestations[i].Signature)
+		sigs[i], err = bls.SignatureFromBytes(attestations[i].Signature)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return aggregateSignatures(sigs), nil
+	return bls.AggregateSignatures(sigs), nil
 }
 
 // IsAggregated returns true if the attestation is an aggregated attestation,

@@ -32,17 +32,11 @@ var (
 	ErrAttestationAggregationInvalidStrategy = errors.New("invalid aggregation strategy")
 )
 
-// BLS aggregate signature aliases for testing / benchmark substitution. These methods are
-// significantly more expensive than the inner logic of AggregateAttestations so they must be
-// substituted for benchmarks which analyze AggregateAttestations.
-var aggregateSignatures = bls.AggregateSignatures
-var signatureFromBytes = bls.SignatureFromBytes
-
 // AggregateAttestations aggregates attestations. The minimal number of attestations are returned.
 func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	strategy := AttestationAggregationStrategy(featureconfig.Get().AttestationAggregationStrategy)
 	switch strategy {
-	case NaiveAggregation:
+	case "", NaiveAggregation:
 		return NaiveAttestationAggregation(atts)
 	case MaxCoverAggregation:
 		return MaxCoverAttestationAggregation(atts)
@@ -128,16 +122,16 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 	}
 
 	newBits := baseAtt.AggregationBits.Or(newAtt.AggregationBits)
-	newSig, err := signatureFromBytes(newAtt.Signature)
+	newSig, err := bls.SignatureFromBytes(newAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
-	baseSig, err := signatureFromBytes(baseAtt.Signature)
+	baseSig, err := bls.SignatureFromBytes(baseAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
 
-	aggregatedSig := aggregateSignatures([]*bls.Signature{baseSig, newSig})
+	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{baseSig, newSig})
 	baseAtt.Signature = aggregatedSig.Marshal()
 	baseAtt.AggregationBits = newBits
 
