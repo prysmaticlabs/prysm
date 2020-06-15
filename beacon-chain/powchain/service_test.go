@@ -117,6 +117,10 @@ func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*get
 	return g.backend.Blockchain().GetHeaderByNumber(number.Uint64()), nil
 }
 
+func (g *goodFetcher) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
+	return nil, nil
+}
+
 var depositsReqForChainStart = 64
 
 func TestStart_OK(t *testing.T) {
@@ -188,6 +192,37 @@ func TestStop_OK(t *testing.T) {
 	hook.Reset()
 }
 
+func TestService_Eth1Synced(t *testing.T) {
+	testAcc, err := contracts.Setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	beaconDB := dbutil.SetupDB(t)
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		HTTPEndPoint:    endpoint,
+		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testAcc.Backend.Commit()
+
+	synced, err := web3Service.isEth1NodeSynced()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !synced {
+		t.Error("Expected eth1 nodes to be synced")
+	}
+}
+
 func TestFollowBlock_OK(t *testing.T) {
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -213,7 +248,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	}()
 
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.blockFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	baseHeight := testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	// process follow_distance blocks
 	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
@@ -315,8 +350,8 @@ func TestHandlePanic_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
-	// nil blockFetcher would panic if cached value not used
-	web3Service.blockFetcher = nil
+	// nil eth1DataFetcher would panic if cached value not used
+	web3Service.eth1DataFetcher = nil
 	web3Service.processBlockHeader(nil)
 	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }

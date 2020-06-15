@@ -488,7 +488,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	}
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
-	web3Service.blockFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
@@ -780,7 +780,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	}
 
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: eth1Backend.Backend}
-	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
+	web3Service.eth1DataFetcher = &goodFetcher{backend: eth1Backend.Backend}
 	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}
 	params.SetupTestConfigCleanup(t)
 	bConfig := params.MinimalSpecConfig()
