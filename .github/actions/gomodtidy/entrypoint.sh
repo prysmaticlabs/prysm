@@ -7,6 +7,8 @@ cd $GITHUB_WORKSPACE
 
 echo "Git status:"
 /usr/bin/git status
+/usr/bin/git diff
+/usr/bin/git diff go.sum
 
 if [ "$(git status | grep -c 'nothing to commit, working tree clean')" = 1 ]; then
   echo "go.sum is up to date"
