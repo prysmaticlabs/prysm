@@ -6,14 +6,12 @@ cd $GITHUB_WORKSPACE
 /usr/local/go/bin/go mod tidy
 
 echo "Git status:"
-pwd
-ls
 /usr/bin/git status
 /usr/bin/git diff
 /usr/bin/git diff go.sum
 
 if [ "$(git status | grep -c 'nothing to commit, working tree clean')" = 1 ]; then
-  echo "go.sum is up to date"
+  echo "go.mod and go.sum are up to date"
   exit 0
 fi
 
