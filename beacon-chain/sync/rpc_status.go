@@ -85,7 +85,6 @@ func (r *Service) shouldReSync() bool {
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}
-	fmt.Println(r.initialSync != nil, !r.initialSync.Syncing(), syncedEpoch, prevEpoch)
 	return r.initialSync != nil && !r.initialSync.Syncing() && syncedEpoch < prevEpoch
 }
 
