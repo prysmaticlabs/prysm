@@ -1,20 +1,24 @@
 #!/bin/sh -l
 set -e
+export PATH=$PATH:/usr/local/go/bin
 
 cd $GITHUB_WORKSPACE
 
-/usr/local/go/bin/go mod tidy
+cp go.mod go.mod.orig
+cp go.sum go.sum.orig
 
-echo "Git status:"
-/usr/bin/git status
-/usr/bin/git diff
-/usr/bin/git diff go.sum
+go mod tidy
 
-if [ "$(git status | grep -c 'nothing to commit, working tree clean')" = 1 ]; then
-  echo "go.mod and go.sum are up to date"
+echo "Checking go.mod and go.sum:"
+if [ "$(diff -s go.mod.orig go.mod | grep -c 'Files go.mod.orig and go.mod are identical')" = 1 ]; then
+  echo "- go.mod is up to date."
+  exit 0
+fi
+if [ "$(diff -s go.sum.orig go.sum | grep -c 'Files go.sum.orig and go.sum are identical')" = 1 ]; then
+  echo "- go.sum is up to date."
   exit 0
 fi
 
 # Notify of any issues.
-echo "The go.sum is not up to date: run 'go mod tidy' to update"
+echo "Either go.mod or/and go.sum is not up to date: run 'go mod tidy' to update."
 exit 1
