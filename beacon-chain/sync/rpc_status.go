@@ -3,7 +3,6 @@ package sync
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
