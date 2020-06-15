@@ -954,6 +954,22 @@ func (bs *Server) GetValidatorPerformance(
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
+	if bs.GenesisTimeFetcher.CurrentSlot() > headState.Slot() {
+		headState, err = state.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
+		}
+	}
+	vp, bp, err := precompute.New(ctx, headState)
+	if err != nil {
+		return nil, err
+	}
+	vp, bp, err = precompute.ProcessAttestations(ctx, headState, vp, bp)
+	if err != nil {
+		return nil, err
+	}
+	validatorSummary := vp
+
 	responseCap := len(req.Indices) + len(req.PublicKeys)
 	validatorIndices := make([]uint64, 0, responseCap)
 	missingValidators := make([][]byte, 0, responseCap)
@@ -989,9 +1005,7 @@ func (bs *Server) GetValidatorPerformance(
 		return validatorIndices[i] < validatorIndices[j]
 	})
 
-	validatorSummary := state.ValidatorSummary
 	currentEpoch := helpers.CurrentEpoch(headState)
-
 	responseCap = len(validatorIndices)
 	pubKeys := make([][]byte, 0, responseCap)
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
