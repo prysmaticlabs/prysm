@@ -77,7 +77,7 @@ func (r *Service) resyncIfBehind() {
 	})
 }
 
-// shouldReSync returns true if the node is still syncing and still behind previous epoch .
+// shouldReSync returns true if the node is not syncing and falls behind two epochs.
 func (r *Service) shouldReSync() bool {
 	syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
 	currentEpoch := helpers.SlotToEpoch(r.chain.CurrentSlot())
