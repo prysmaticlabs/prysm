@@ -3,7 +3,7 @@ set -e
 
 cd $GITHUB_WORKSPACE
 
-go mod tidy
+/usr/local/go/bin/go mod tidy
 
 if [ "$(git status | grep -c 'nothing to commit, working tree clean')" = "1" ]; then
   echo "go.sum is up to date"
