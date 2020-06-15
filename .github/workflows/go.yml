@@ -15,15 +15,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
 
+      - name: Go mod tidy checker
+        id: gomodtidy
+        uses: ./.github/actions/gomodtidy
+
       - name: Gofmt checker
         id: gofmt
         uses: ./.github/actions/gofmt
         with:
           path: ./
-
-      - name: Go mod tidy checker
-        id: gomodtidy
-        uses: ./.github/actions/gomodtidy
 
   build:
     name: Build
