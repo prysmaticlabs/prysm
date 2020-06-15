@@ -19,8 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -757,5 +759,78 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestShouldResync(t *testing.T) {
+	type args struct {
+		genesis     time.Time
+		syncing     bool
+		headSlot    uint64
+		genesisTime uint64
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "genesis epoch should not resync when syncing is true",
+			args: args{
+				headSlot: uint64(31),
+				genesis:  roughtime.Now(),
+				syncing:  true,
+			},
+			want: false,
+		},
+		{
+			name: "genesis epoch should not resync when syncing is false",
+			args: args{
+				headSlot: uint64(31),
+				genesis:  roughtime.Now(),
+				syncing:  false,
+			},
+			want: false,
+		},
+		{
+			name: "two epochs behind, resync ok",
+			args: args{
+				headSlot: uint64(31),
+				genesis:  roughtime.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				syncing:  false,
+			},
+			want: true,
+		},
+		{
+			name: "two epochs behind, already syncing",
+			args: args{
+				headSlot: uint64(31),
+				genesis:  roughtime.Now().Add(-1 * 96 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+				syncing:  true,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		headState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := headState.SetSlot(tt.args.headSlot); err != nil {
+			t.Fatal(err)
+		}
+		r := &Service{
+			chain: &mock.ChainService{
+				State:   headState,
+				Genesis: tt.args.genesis,
+			},
+			ctx:         context.Background(),
+			initialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
+		}
+		t.Run(tt.name, func(t *testing.T) {
+			if got := r.shouldReSync(); got != tt.want {
+				t.Errorf("shouldReSync() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
