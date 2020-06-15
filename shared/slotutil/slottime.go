@@ -18,6 +18,9 @@ func SlotStartTime(genesis uint64, slot uint64) time.Time {
 // SlotsSinceGenesis returns the number of slots since
 // the provided genesis time.
 func SlotsSinceGenesis(genesis time.Time) uint64 {
+	if genesis.After(roughtime.Now()) { // Genesis has not occurred yet.
+		return 0
+	}
 	return uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }
 
