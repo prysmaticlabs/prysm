@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
@@ -57,17 +58,12 @@ func (r *Service) resyncIfBehind() {
 	// Run sixteen times per epoch.
 	interval := time.Duration(int64(millisecondsPerEpoch)/16) * time.Millisecond
 	runutil.RunEvery(r.ctx, interval, func() {
-		currentEpoch := helpers.SlotToEpoch(r.chain.CurrentSlot())
-		prevEpoch := uint64(0)
-		if currentEpoch > 1 {
-			prevEpoch = currentEpoch - 1
-		}
-		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
-		if r.initialSync != nil && !r.initialSync.Syncing() && syncedEpoch < prevEpoch {
+		if r.shouldReSync() {
+			syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
 			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				log.WithFields(logrus.Fields{
-					"currentEpoch": currentEpoch,
+					"currentEpoch": helpers.SlotToEpoch(r.chain.CurrentSlot()),
 					"syncedEpoch":  syncedEpoch,
 					"peersEpoch":   highestEpoch,
 				}).Info("Fallen behind peers; reverting to initial sync to catch up")
@@ -79,6 +75,18 @@ func (r *Service) resyncIfBehind() {
 			}
 		}
 	})
+}
+
+// shouldReSync returns true if the node is still syncing and still behind previous epoch .
+func (r *Service) shouldReSync() bool {
+	syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
+	currentEpoch := helpers.SlotToEpoch(r.chain.CurrentSlot())
+	prevEpoch := uint64(0)
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+	fmt.Println(r.initialSync != nil, !r.initialSync.Syncing(), syncedEpoch, prevEpoch)
+	return r.initialSync != nil && !r.initialSync.Syncing() && syncedEpoch < prevEpoch
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
