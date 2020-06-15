@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -56,6 +59,14 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject
 	}
 
+	// Broadcast the block on a feed to notify other services in the beacon node
+	// of a received block (even if it does not process correctly through a state transition).
+	r.blockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{
+			SignedBlock: blk,
+		},
+	})
 	// Verify the block is the first block received for the proposer for the slot.
 	if r.hasSeenBlockIndexSlot(blk.Block.Slot, blk.Block.ProposerIndex) {
 		return pubsub.ValidationIgnore

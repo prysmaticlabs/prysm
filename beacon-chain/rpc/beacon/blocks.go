@@ -6,6 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -191,6 +193,23 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 				if data.SignedBlock == nil {
 					// One nil block shouldn't stop the stream.
 					continue
+				}
+				if featureconfig.Get().NewStateMgmt {
+					hasStateSummaryDB := bs.BeaconDB.HasStateSummary(bs.Ctx, bytesutil.ToBytes32(data.SignedBlock.Block.ParentRoot))
+					if !hasStateSummaryDB {
+						log.WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("No access to parent state to verify block signature")
+						continue
+					}
+					parentState, err := bs.StateGen.StateByRoot(bs.Ctx, bytesutil.ToBytes32(data.SignedBlock.Block.ParentRoot))
+					if err != nil {
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get parent state to verify block signature")
+						continue
+					}
+
+					if err := blocks.VerifyBlockSignature(parentState, data.SignedBlock); err != nil {
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not verify block signature")
+						continue
+					}
 				}
 				if err := stream.Send(data.SignedBlock); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
