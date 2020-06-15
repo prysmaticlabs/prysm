@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -37,6 +38,9 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	// ensure head gets its best justified info.
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
 		s.justifiedCheckpt = s.bestJustifiedCheckpt
+		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+			return err
+		}
 	}
 
 	// Get head from the fork choice service.
@@ -288,5 +292,40 @@ func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]
 		s.recentCanonicalBlocks[node.Root] = true
 	}
 
+	return nil
+}
+
+// This caches justified state balances to be used for fork choice.
+func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot [32]byte) error {
+	if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		return err
+	}
+	s.clearInitSyncBlocks()
+
+	var justifiedState *stateTrie.BeaconState
+	var err error
+	if featureconfig.Get().NewStateMgmt {
+		justifiedState, err = s.stateGen.StateByRoot(ctx, justifiedRoot)
+		if err != nil {
+			return err
+		}
+	} else {
+		justifiedState, err = s.beaconDB.State(ctx, justifiedRoot)
+		if err != nil {
+			return err
+		}
+	}
+
+	epoch := helpers.CurrentEpoch(justifiedState)
+	validators := justifiedState.Validators()
+	justifiedBalances := make([]uint64, len(validators))
+	for i, validator := range validators {
+		if helpers.IsActiveValidator(validator, epoch) {
+			justifiedBalances[i] = validator.EffectiveBalance
+		} else {
+			justifiedBalances[i] = 0
+		}
+	}
+	s.justifiedBalances = justifiedBalances
 	return nil
 }
