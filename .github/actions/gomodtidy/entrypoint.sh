@@ -8,7 +8,6 @@ cp go.mod go.mod.orig
 cp go.sum go.sum.orig
 
 go mod tidy
-go mod verify
 
 echo "Checking go.mod and go.sum:"
 checks=0
@@ -31,5 +30,5 @@ if [ $checks -eq 2 ]; then
 fi
 
 # Notify of any issues.
-echo "Either go.mod or/and go.sum is not up to date: run 'go mod tidy' to update."
+echo "Run 'go mod tidy' to update."
 exit 1
