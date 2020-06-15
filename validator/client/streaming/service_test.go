@@ -8,7 +8,6 @@ import (
 	"time"
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
