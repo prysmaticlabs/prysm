@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -88,17 +89,18 @@ type Chain interface {
 // Client defines a struct that combines all relevant ETH1.0 mainchain interactions required
 // by the beacon chain node.
 type Client interface {
-	RPCBlockFetcher
+	RPCDataFetcher
 	bind.ContractFilterer
 	bind.ContractCaller
 }
 
-// RPCBlockFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
-// fetching block information.
-type RPCBlockFetcher interface {
+// RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
+// fetching eth1 data from the clients.
+type RPCDataFetcher interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)
 }
 
 // RPCClient defines the rpc methods required to interact with the eth1 node.
@@ -125,7 +127,7 @@ type Service struct {
 	httpEndpoint            string
 	stateNotifier           statefeed.Notifier
 	httpLogger              bind.ContractFilterer
-	blockFetcher            RPCBlockFetcher
+	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
 	blockCache              *blockCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
@@ -373,27 +375,42 @@ func (s *Service) initializeConnection(
 	contractCaller *contracts.DepositContractCaller,
 ) {
 	s.httpLogger = httpClient
-	s.blockFetcher = httpClient
+	s.eth1DataFetcher = httpClient
 	s.depositContractCaller = contractCaller
 	s.rpcClient = rpcClient
 }
 
 func (s *Service) waitForConnection() {
-	err := s.connectToPowChain()
-	if err == nil {
+	errConnect := s.connectToPowChain()
+	synced, errSynced := s.isEth1NodeSynced()
+	if errConnect == nil && synced {
 		s.connectedETH1 = true
 		log.WithFields(logrus.Fields{
 			"endpoint": s.httpEndpoint,
 		}).Info("Connected to eth1 proof-of-work chain")
 		return
 	}
-	log.WithError(err).Error("Could not connect to powchain endpoint")
+	if errConnect != nil {
+		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
+	}
+	if errSynced != nil {
+		log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+	}
 	ticker := time.NewTicker(backOffPeriod)
 	for {
 		select {
 		case <-ticker.C:
-			err := s.connectToPowChain()
-			if err == nil {
+			errConnect = s.connectToPowChain()
+			if errConnect != nil {
+				log.WithError(errConnect).Error("Could not connect to powchain endpoint")
+				continue
+			}
+			synced, errSynced = s.isEth1NodeSynced()
+			if errSynced != nil {
+				log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+				continue
+			}
+			if synced {
 				s.connectedETH1 = true
 				log.WithFields(logrus.Fields{
 					"endpoint": s.httpEndpoint,
@@ -401,13 +418,23 @@ func (s *Service) waitForConnection() {
 				ticker.Stop()
 				return
 			}
-			log.WithError(err).Error("Could not connect to powchain endpoint")
+			log.Debug("Eth1 node is currently syncing")
 		case <-s.ctx.Done():
 			ticker.Stop()
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
 		}
 	}
+}
+
+// checks if the eth1 node is healthy and ready to serve before
+// fetching data from  it.
+func (s *Service) isEth1NodeSynced() (bool, error) {
+	syncProg, err := s.eth1DataFetcher.SyncProgress(s.ctx)
+	if err != nil {
+		return false, err
+	}
+	return syncProg == nil, nil
 }
 
 // initDataFromContract calls the deposit contract and finds the deposit count
@@ -560,6 +587,9 @@ func (s *Service) initPOWService() {
 	retryETH1Node := func(err error) {
 		s.runError = err
 		s.connectedETH1 = false
+		// back off for a while before
+		// resuming dialing the eth1 node.
+		time.Sleep(backOffPeriod)
 		s.waitForConnection()
 		// reset value in the event of a successful connection.
 		s.runError = nil
@@ -578,7 +608,7 @@ func (s *Service) initPOWService() {
 				continue
 			}
 
-			header, err := s.blockFetcher.HeaderByNumber(context.Background(), nil)
+			header, err := s.eth1DataFetcher.HeaderByNumber(context.Background(), nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
 				retryETH1Node(err)
@@ -615,7 +645,7 @@ func (s *Service) run(done <-chan struct{}) {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.headTicker.C:
-			head, err := s.blockFetcher.HeaderByNumber(s.ctx, nil)
+			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
 				continue
