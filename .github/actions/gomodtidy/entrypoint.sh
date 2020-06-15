@@ -5,7 +5,10 @@ cd $GITHUB_WORKSPACE
 
 /usr/local/go/bin/go mod tidy
 
-if [ "$(git status | grep -c 'nothing to commit, working tree clean')" = "1" ]; then
+echo "Git status:"
+/usr/bin/git status
+
+if [ "$(git status | grep -c 'nothing to commit, working tree clean')" = 1 ]; then
   echo "go.sum is up to date"
   exit 0
 fi
