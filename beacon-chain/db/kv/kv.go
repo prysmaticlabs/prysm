@@ -132,7 +132,10 @@ func (k *Store) ClearDB() error {
 		return nil
 	}
 	prometheus.Unregister(createBoltCollector(k.db))
-	return os.Remove(path.Join(k.databasePath, databaseFileName))
+	if err := os.Remove(path.Join(k.databasePath, databaseFileName)); err != nil {
+		return errors.Wrap(err, "could not remove database file")
+	}
+	return nil
 }
 
 // Close closes the underlying BoltDB database.
