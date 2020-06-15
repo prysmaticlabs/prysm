@@ -779,3 +779,77 @@ func TestCurrentSlot_HandlesOverflow(t *testing.T) {
 		t.Fatalf("Expected slot to be 0, got %d", slot)
 	}
 }
+
+func TestAncestor_HandleSkipSlot(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'a'}}
+	r1, err := ssz.HashTreeRoot(b1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b100 := &ethpb.BeaconBlock{Slot: 100, ParentRoot: r1[:]}
+	r100, err := ssz.HashTreeRoot(b100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b200 := &ethpb.BeaconBlock{Slot: 200, ParentRoot: r100[:]}
+	r200, err := ssz.HashTreeRoot(b200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, b := range []*ethpb.BeaconBlock{b1, b100, b200} {
+		beaconBlock := testutil.NewBeaconBlock()
+		beaconBlock.Block.Slot = b.Slot
+		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.ParentRoot, 32)
+		beaconBlock.Block.Body = &ethpb.BeaconBlockBody{}
+		if err := db.SaveBlock(context.Background(), beaconBlock); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Slots 100 to 200 are skip slots. Requesting root at 150 will yield root at 100. The last physical block.
+	r, err := service.ancestor(context.Background(), r200[:], 150)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytesutil.ToBytes32(r) != r100 {
+		t.Error("Did not get correct root")
+	}
+
+	// Slots 1 to 100 are skip slots. Requesting root at 50 will yield root at 1. The last physical block.
+	r, err = service.ancestor(context.Background(), r200[:], 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytesutil.ToBytes32(r) != r1 {
+		t.Error("Did not get correct root")
+	}
+}
+
+func TestEnsureRootNotZeroHashes(t *testing.T) {
+	ctx := context.Background()
+	cfg := &Config{}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.genesisRoot = [32]byte{'a'}
+
+	r := service.ensureRootNotZeros(params.BeaconConfig().ZeroHash)
+	if r != service.genesisRoot {
+		t.Error("Did not get wanted justified root")
+	}
+	root := [32]byte{'b'}
+	r = service.ensureRootNotZeros(root)
+	if r != root {
+		t.Error("Did not get wanted justified root")
+	}
+}

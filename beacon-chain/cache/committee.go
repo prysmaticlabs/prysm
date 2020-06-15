@@ -169,6 +169,30 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]uint64, error) {
 	return item.SortedIndices, nil
 }
 
+// ActiveIndicesCount returns the active indices count of a given seed stored in cache.
+func (c *CommitteeCache) ActiveIndicesCount(seed [32]byte) (int, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
+	if err != nil {
+		return 0, err
+	}
+
+	if exists {
+		CommitteeCacheHit.Inc()
+	} else {
+		CommitteeCacheMiss.Inc()
+		return 0, nil
+	}
+
+	item, ok := obj.(*Committees)
+	if !ok {
+		return 0, ErrNotCommittee
+	}
+
+	return len(item.SortedIndices), nil
+}
+
 // ProposerIndices returns the proposer indices of a given seed.
 func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
 	c.lock.RLock()

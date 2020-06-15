@@ -351,36 +351,36 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 		incomingBlk *ethpb.SignedBeaconBlockHeader
 		slashing    *ethpb.ProposerSlashing
 	}
-	blk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blk2slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	sigBlk2slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
+	sigBlk1epoch1, err := testDetect.SignedBlockHeader(testDetect.StartSlot(1), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	tests := []testStruct{
 		{
 			name:        "same block sig dont slash",
-			blk:         blk1slot0,
-			incomingBlk: blk1slot0,
+			blk:         sigBlk1slot0,
+			incomingBlk: sigBlk1slot0,
 			slashing:    nil,
 		},
 		{
 			name:        "block from different epoch dont slash",
-			blk:         blk1slot0,
-			incomingBlk: blk1epoch1,
+			blk:         sigBlk1slot0,
+			incomingBlk: sigBlk1epoch1,
 			slashing:    nil,
 		},
 		{
 			name:        "different sig from same slot slash",
-			blk:         blk1slot0,
-			incomingBlk: blk2slot0,
-			slashing:    &ethpb.ProposerSlashing{Header_1: blk2slot0, Header_2: blk1slot0},
+			blk:         sigBlk1slot0,
+			incomingBlk: sigBlk2slot0,
+			slashing:    &ethpb.ProposerSlashing{Header_1: sigBlk2slot0, Header_2: sigBlk1slot0},
 		},
 	}
 	for _, tt := range tests {
@@ -416,6 +416,86 @@ func TestDetect_detectProposerSlashing(t *testing.T) {
 				)
 			}
 
+		})
+	}
+}
+func TestDetect_detectProposerSlashingNoUpdate(t *testing.T) {
+	type testStruct struct {
+		name        string
+		blk         *ethpb.SignedBeaconBlockHeader
+		noUpdtaeBlk *ethpb.BeaconBlockHeader
+		slashable   bool
+	}
+	sigBlk1slot0, err := testDetect.SignedBlockHeader(testDetect.StartSlot(0), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blk1slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blk2slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diffRoot := [32]byte{1, 1, 1}
+	blk2slot0.ParentRoot = diffRoot[:]
+	blk3slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blk3slot0.StateRoot = diffRoot[:]
+	blk4slot0, err := testDetect.BlockHeader(testDetect.StartSlot(0), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blk4slot0.BodyRoot = diffRoot[:]
+	tests := []testStruct{
+		{
+			name:        "same block don't slash",
+			blk:         sigBlk1slot0,
+			noUpdtaeBlk: blk1slot0,
+			slashable:   false,
+		},
+		{
+			name:        "diff parent root slash",
+			blk:         sigBlk1slot0,
+			noUpdtaeBlk: blk2slot0,
+			slashable:   true,
+		},
+		{
+			name:        "diff state root slash",
+			blk:         sigBlk1slot0,
+			noUpdtaeBlk: blk3slot0,
+			slashable:   true,
+		},
+		{
+			name:        "diff body root slash",
+			blk:         sigBlk1slot0,
+			noUpdtaeBlk: blk4slot0,
+			slashable:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := testDB.SetupSlasherDB(t, false)
+			ctx := context.Background()
+			ds := Service{
+				ctx:               ctx,
+				slasherDB:         db,
+				proposalsDetector: proposals.NewProposeDetector(db),
+			}
+			if err := db.SaveBlockHeader(ctx, tt.blk); err != nil {
+				t.Fatal(err)
+			}
+
+			slashble, err := ds.proposalsDetector.DetectDoubleProposeNoUpdate(ctx, tt.noUpdtaeBlk)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if slashble != tt.slashable {
+				t.Errorf("Wanted slashbale: %v, received slashable: %v", tt.slashable, slashble)
+			}
 		})
 	}
 }

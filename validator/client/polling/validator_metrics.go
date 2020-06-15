@@ -60,6 +60,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
 
+		fmtKey := fmt.Sprintf("%#x", pubKey)
 		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
@@ -78,7 +79,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
-				metrics.ValidatorBalancesGaugeVec.WithLabelValues(truncatedKey).Set(newBalance)
+				metrics.ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
 			}
 		}
 

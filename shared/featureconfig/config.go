@@ -46,7 +46,6 @@ type Flags struct {
 	ProtectProposer                            bool // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 	SlasherProtection                          bool // SlasherProtection protects validator fron sending over a slashable offense over the network using external slasher.
-	SlasherP2P                                 bool // SlasherP2P use less restrictive p2p validation for beacon nodes that have a connected slasher.
 	DisableStrictAttestationPubsubVerification bool // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableDomainDataCache                      bool // EnableDomainDataCache caches validator calls to DomainData per epoch.
@@ -67,6 +66,9 @@ type Flags struct {
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
 	DisableForkChoice bool
+
+	// Logging related toggles.
+	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
 	// Slasher toggles.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
@@ -225,11 +227,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling libp2p's kademlia discovery")
 		cfg.EnableKadDHT = true
 	}
-	if ctx.Bool(slasherP2P.Name) {
-		log.Warn("Enabled slasher-friendly P2P validation. Please do not use this flag if you are not running a slasher " +
-			"that connects to this beacon node!")
-		cfg.SlasherP2P = true
-	}
 	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
 		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
 		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
@@ -246,6 +243,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableReduceAttesterStateCopy.Name) {
 		log.Warn("Disabling reducing attester state copy")
 		cfg.ReduceAttesterStateCopy = false
+	}
+	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
+		cfg.DisableGRPCConnectionLogs = true
 	}
 	Init(cfg)
 }

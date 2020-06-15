@@ -238,7 +238,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return true, nil
 	}
 	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
-	justifiedRoot := bytesutil.ToBytes32(newJustifiedCheckpt.Root)
+	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
@@ -257,7 +257,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return false, nil
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
-	cachedJustifiedRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
+	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
@@ -271,7 +271,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 		return false, errors.New("nil justified block")
 	}
 	justifiedBlock := justifiedBlockSigned.Block
-	b, err := s.ancestor(ctx, newJustifiedCheckpt.Root, justifiedBlock.Slot)
+	b, err := s.ancestor(ctx, justifiedRoot[:], justifiedBlock.Slot)
 	if err != nil {
 		return false, err
 	}
@@ -297,8 +297,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	}
 
 	if !featureconfig.Get().NewStateMgmt {
-		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
-
+		justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(cpt.Root))
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
@@ -380,15 +379,15 @@ func (s *Service) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32
 // ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
-//   def get_ancestor(store: Store, root: Hash, slot: Slot) -> Hash:
+//   def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
 //    block = store.blocks[root]
 //    if block.slot > slot:
-//      return get_ancestor(store, block.parent_root, slot)
+//        return get_ancestor(store, block.parent_root, slot)
 //    elif block.slot == slot:
-//      return root
+//        return root
 //    else:
-//      # root is older than queried slot, thus a skip slot. Return most recent root prior to slot.
-//      return root
+//        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
+//        return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
 	defer span.End()
@@ -412,13 +411,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 	}
 	b := signed.Block
 
-	// If we dont have the ancestor in the DB, simply return nil so rest of fork choice
-	// operation can proceed. This is not an error condition.
-	if b == nil || b.Slot < slot {
-		return nil, nil
-	}
-
-	if b.Slot == slot {
+	if b.Slot == slot || b.Slot < slot {
 		return root, nil
 	}
 
@@ -441,7 +434,8 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	}
 	finalizedBlk := finalizedBlkSigned.Block
 
-	anc, err := s.ancestor(ctx, s.justifiedCheckpt.Root, finalizedBlk.Slot)
+	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedBlk.Slot)
 	if err != nil {
 		return err
 	}
@@ -511,4 +505,13 @@ func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 	}
 
 	return nil
+}
+
+// This ensures that the input root defaults to using genesis root instead of zero hashes. This is needed for handling
+// fork choice justification routine.
+func (s *Service) ensureRootNotZeros(root [32]byte) [32]byte {
+	if root == params.BeaconConfig().ZeroHash {
+		return s.genesisRoot
+	}
+	return root
 }

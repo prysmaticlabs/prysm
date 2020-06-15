@@ -75,11 +75,17 @@ func (v *ReadOnlyValidator) WithdrawalCredentials() []byte {
 
 // Slashed returns the read only validator is slashed.
 func (v *ReadOnlyValidator) Slashed() bool {
+	if v == nil || v.validator == nil {
+		return false
+	}
 	return v.validator.Slashed
 }
 
 // CopyValidator returns the copy of the read only validator.
 func (v *ReadOnlyValidator) CopyValidator() *ethpb.Validator {
+	if v == nil || v.validator == nil {
+		return nil
+	}
 	return CopyValidator(v.validator)
 }
 
