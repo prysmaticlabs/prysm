@@ -41,15 +41,10 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	}
 
 	if !featureconfig.Get().DisableUpdateHeadPerAttestation {
-		baseState, err := s.getAttPreState(ctx, att.Data.Target)
-		if err != nil {
-			return err
-		}
-
 		// This updates fork choice head, if a new head could not be updated due to
 		// long range or intermediate forking. It simply logs a warning and returns nil
 		// as that's more appropriate than returning errors.
-		if err := s.updateHead(ctx, baseState.Balances()); err != nil {
+		if err := s.updateHead(ctx, s.justifiedBalances); err != nil {
 			log.Warnf("Resolving fork due to new attestation: %v", err)
 			return nil
 		}
