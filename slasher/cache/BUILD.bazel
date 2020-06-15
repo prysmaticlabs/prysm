@@ -3,6 +3,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "doc.go",
+        "flat_span_cache.go",
         "span_cache.go",
         "validators_cache.go",
     ],
