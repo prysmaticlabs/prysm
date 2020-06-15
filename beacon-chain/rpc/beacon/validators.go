@@ -953,6 +953,7 @@ func (bs *Server) GetValidatorPerformance(
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+
 	if bs.GenesisTimeFetcher.CurrentSlot() > headState.Slot() {
 		headState, err = state.ProcessSlots(ctx, headState, bs.GenesisTimeFetcher.CurrentSlot())
 		if err != nil {
