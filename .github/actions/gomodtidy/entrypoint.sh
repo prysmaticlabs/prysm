@@ -10,12 +10,18 @@ cp go.sum go.sum.orig
 go mod tidy
 
 echo "Checking go.mod and go.sum:"
+checks=0
 if [ "$(diff -s go.mod.orig go.mod | grep -c 'Files go.mod.orig and go.mod are identical')" = 1 ]; then
   echo "- go.mod is up to date."
-  exit 0
+  checks=$((checks + 1))
 fi
+
 if [ "$(diff -s go.sum.orig go.sum | grep -c 'Files go.sum.orig and go.sum are identical')" = 1 ]; then
   echo "- go.sum is up to date."
+  checks=$((checks + 1))
+fi
+
+if [ $checks -eq 2 ]; then
   exit 0
 fi
 
