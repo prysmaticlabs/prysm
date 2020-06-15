@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -250,7 +249,7 @@ func (b *BeaconNode) startForkChoice() {
 
 func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dbPath := path.Join(baseDir, beaconChainDBName)
+	dbPath := filepath.Join(baseDir, beaconChainDBName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
 
@@ -271,11 +270,11 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	if clearDBConfirmed || forceClearDB {
 		log.Warning("Removing database")
 		if err := d.ClearDB(); err != nil {
-			return err
+			return errors.Wrap(err, "could not clear database")
 		}
 		d, err = db.NewDB(dbPath, b.stateSummaryCache)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not create new database")
 		}
 	} else {
 		if !featureconfig.Get().SkipRegenHistoricalStates {
