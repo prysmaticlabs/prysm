@@ -52,6 +52,7 @@ def prysm_deps():
         name = "com_github_prysmaticlabs_bazel_go_ethereum",
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/bazel-go-ethereum",
+        replace = "github.com/ethereum/go-ethereum",
         sum = "h1:BgFL+G37WhgPOvkQveBXevApdusxtkrRoTzN9O3jnDM=",
         version = "v0.0.0-20200615030327-5f59060ced70",
     )
