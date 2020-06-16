@@ -2058,3 +2058,13 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
 }
+
+func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
+	// TODO
+	t.Fail()
+}
+
+func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
+	// TODO
+	t.Fail()
+}
