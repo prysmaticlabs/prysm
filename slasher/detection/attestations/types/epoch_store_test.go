@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
