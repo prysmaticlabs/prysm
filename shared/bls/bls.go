@@ -267,6 +267,8 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 //
 // In ETH2.0 specification:
 // def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
+//
+// Deprecated: Use AggregateSignatures.
 func Aggregate(sigs []*Signature) *Signature {
 	return AggregateSignatures(sigs)
 }
