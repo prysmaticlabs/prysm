@@ -125,6 +125,7 @@ contract in order to activate the validator client`,
 						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
+							return nil
 						}
 						if _, _, err := accounts.CreateValidatorAccount(keystorePath, passphrase); err != nil {
 							log.WithField("err", err.Error()).Fatalf("Could not create validator at path: %s", keystorePath)
