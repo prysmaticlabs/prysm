@@ -127,12 +127,12 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 	ctx := context.Background()
 
 	spansToSave := map[uint64]types.Span{
-		0:      {MinSpan: 5, MaxSpan: 69, SigBytes: [2]byte{40, 219}, HasAttested: false},
-		10:     {MinSpan: 43, MaxSpan: 32, SigBytes: [2]byte{10, 13}, HasAttested: true},
-		1000:   {MinSpan: 40, MaxSpan: 36, SigBytes: [2]byte{61, 151}, HasAttested: false},
-		100000: {MinSpan: 40, MaxSpan: 64, SigBytes: [2]byte{110, 225}, HasAttested: true},
-		10000:  {MinSpan: 40, MaxSpan: 64, SigBytes: [2]byte{190, 215}, HasAttested: true},
-		100:    {MinSpan: 49, MaxSpan: 96, SigBytes: [2]byte{11, 98}, HasAttested: true},
+		0:     {MinSpan: 5, MaxSpan: 69, SigBytes: [2]byte{40, 219}, HasAttested: false},
+		10:    {MinSpan: 43, MaxSpan: 32, SigBytes: [2]byte{10, 13}, HasAttested: true},
+		1000:  {MinSpan: 40, MaxSpan: 36, SigBytes: [2]byte{61, 151}, HasAttested: false},
+		10000: {MinSpan: 40, MaxSpan: 64, SigBytes: [2]byte{190, 215}, HasAttested: true},
+		50000: {MinSpan: 40, MaxSpan: 64, SigBytes: [2]byte{190, 215}, HasAttested: true},
+		100:   {MinSpan: 49, MaxSpan: 96, SigBytes: [2]byte{11, 98}, HasAttested: true},
 	}
 	epochStore, err := types.EpochStoreFromMap(spansToSave)
 	if err != nil {
@@ -144,20 +144,20 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.ToDB)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(esFromDB.Bytes(), []byte{}) {
-		t.Fatalf("Expected store from DB to be empty, received %#x", esFromDB.Bytes())
-	}
-
 	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.ToCache)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(epochStore.Bytes(), esFromCache.Bytes()) {
 		t.Fatalf("Expected store from DB to be %#x, received %#x", epochStore.Bytes(), esFromCache.Bytes())
+	}
+
+	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.ToDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(esFromDB.Bytes(), []byte{}) {
+		t.Fatalf("Expected store asked from DB to be empty, \nreceived %#x, \nexpected %#x", esFromDB.Bytes(), []byte{})
 	}
 }
 
@@ -171,8 +171,8 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 		0:      {MinSpan: 5, MaxSpan: 69, SigBytes: [2]byte{40, 219}, HasAttested: false},
 		10:     {MinSpan: 43, MaxSpan: 32, SigBytes: [2]byte{10, 13}, HasAttested: true},
 		1000:   {MinSpan: 40, MaxSpan: 36, SigBytes: [2]byte{61, 151}, HasAttested: false},
-		100000: {MinSpan: 40, MaxSpan: 64, SigBytes: [2]byte{110, 225}, HasAttested: true},
 		10000:  {MinSpan: 40, MaxSpan: 64, SigBytes: [2]byte{190, 215}, HasAttested: true},
+		100000: {MinSpan: 20, MaxSpan: 64, SigBytes: [2]byte{170, 215}, HasAttested: false},
 		100:    {MinSpan: 49, MaxSpan: 96, SigBytes: [2]byte{11, 98}, HasAttested: true},
 	}
 	epochStore, err := types.EpochStoreFromMap(spansToSave)
@@ -185,12 +185,13 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Expect cache to retrieve from DB if its not in cache.
 	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.ToCache)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(esFromCache.Bytes(), []byte{}) {
-		t.Fatalf("Expected store from DB to be empty, received %#x", esFromCache.Bytes())
+	if !bytes.Equal(esFromCache.Bytes(), epochStore.Bytes()) {
+		t.Fatalf("Expected cache request to be %#x, expected %#x", epochStore.Bytes(), esFromCache.Bytes())
 	}
 
 	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.ToDB)

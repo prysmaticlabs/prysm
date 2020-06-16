@@ -88,6 +88,11 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 		return nil
 	}
 
+	// Saving to the cache if it exists so cache and DB never conflict.
+	if db.flatSpanCache.Has(epoch) {
+		db.flatSpanCache.Set(epoch, es)
+	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists(validatorsMinMaxSpanBucketNew)
 		if err != nil {
