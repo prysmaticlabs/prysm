@@ -3,17 +3,19 @@
 package attaggregation
 
 import (
-	"math/rand"
-	"time"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
+
+// BLS aggregate signature aliases for testing / benchmark substitution. These methods are
+// significantly more expensive than the inner logic of AggregateAttestations so they must be
+// substituted for benchmarks which analyze AggregateAttestations.
+var aggregateSignatures = bls.AggregateSignatures
+var signatureFromBytes = bls.SignatureFromBytes
 
 var log = logrus.WithField("prefix", "attaggregation")
 
@@ -71,62 +73,18 @@ func AggregatePair(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.Attesta
 	}
 
 	newBits := baseAtt.AggregationBits.Or(newAtt.AggregationBits)
-	newSig, err := bls.SignatureFromBytes(newAtt.Signature)
+	newSig, err := signatureFromBytes(newAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
-	baseSig, err := bls.SignatureFromBytes(baseAtt.Signature)
+	baseSig, err := signatureFromBytes(baseAtt.Signature)
 	if err != nil {
 		return nil, err
 	}
 
-	aggregatedSig := bls.AggregateSignatures([]*bls.Signature{baseSig, newSig})
+	aggregatedSig := aggregateSignatures([]*bls.Signature{baseSig, newSig})
 	baseAtt.Signature = aggregatedSig.Marshal()
 	baseAtt.AggregationBits = newBits
 
 	return baseAtt, nil
-}
-
-func bitlistWithAllBitsSet(length uint64) bitfield.Bitlist {
-	b := bitfield.NewBitlist(length)
-	for i := uint64(0); i < length; i++ {
-		b.SetBitAt(i, true)
-	}
-	return b
-}
-
-func bitlistsWithSingleBitSet(length uint64) []bitfield.Bitlist {
-	lists := make([]bitfield.Bitlist, length)
-	for i := uint64(0); i < length; i++ {
-		b := bitfield.NewBitlist(length)
-		b.SetBitAt(i, true)
-		lists[i] = b
-	}
-	return lists
-}
-
-func bitlistsWithMultipleBitSet(length uint64, count uint64) []bitfield.Bitlist {
-	rand.Seed(time.Now().UnixNano())
-	lists := make([]bitfield.Bitlist, length)
-	for i := uint64(0); i < length; i++ {
-		b := bitfield.NewBitlist(length)
-		keys := rand.Perm(int(length))
-		for _, key := range keys[:count] {
-			b.SetBitAt(uint64(key), true)
-		}
-		lists[i] = b
-	}
-	return lists
-}
-
-func makeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, len(bl))
-	for i, b := range bl {
-		atts[i] = &ethpb.Attestation{
-			AggregationBits: b,
-			Data:            nil,
-			Signature:       bls.NewAggregateSignature().Marshal(),
-		}
-	}
-	return atts
 }

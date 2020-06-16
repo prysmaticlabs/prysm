@@ -1,14 +1,22 @@
 package attaggregation
 
 import (
+	"errors"
+	"sort"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
 const MaxCoverAggregation AttestationAggregationStrategy = "max_cover"
+
+// ErrInvalidAttestationCount is returned when insufficient number
+// of attestations is provided for aggregation.
+var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 
 // MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
 //
@@ -18,30 +26,35 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	if len(atts) < 2 {
 		return atts, nil
 	}
-	mc, err := newMaxCoverage(atts, len(atts))
+	mc, err := newMaxCoverProblem(atts, len(atts))
 	if err != nil {
 		return atts, err
 	}
-	return mc.solve()
+	return mc.cover()
 }
 
-// maxCoverage defines Maximum k-Coverage problem.
-type maxCoverage struct {
-	k          int
-	candidates map[int]*bitfield.Bitlist
-	coverage   bitfield.Bitlist
-	solution   map[int]struct{}
-	input      struct {
-		atts  *[]*ethpb.Attestation
-		data  *ethpb.AttestationData
-		signs map[int]*[]byte
-	}
+// maxCoverProblem defines Maximum k-Coverage problem.
+type maxCoverProblem struct {
+	k            int
+	atts         []*ethpb.Attestation
+	candidates   maxCoverCandidateList
+	coverage     bitfield.Bitlist
+	aggregated   []*maxCoverCandidate
+	unaggregated []*maxCoverCandidate
 }
 
-// newMaxCoverage returns initialized Maximum k-Coverage problem, with all necessary pre-tests done.
-func newMaxCoverage(atts []*ethpb.Attestation, k int) (*maxCoverage, error) {
+// maxCoverCandidate represents a candidate set to be used in aggregation.
+type maxCoverCandidate struct {
+	bits      *bitfield.Bitlist
+	signature *[]byte
+	score     uint64
+	processed bool
+}
+
+// newMaxCoverProblem returns initialized Maximum k-Coverage problem, with all necessary pre-tests done.
+func newMaxCoverProblem(atts []*ethpb.Attestation, k int) (*maxCoverProblem, error) {
 	if len(atts) == 0 {
-		return &maxCoverage{}, nil
+		return nil, ErrInvalidAttestationCount
 	}
 	if len(atts) < k {
 		k = len(atts)
@@ -54,91 +67,120 @@ func newMaxCoverage(atts []*ethpb.Attestation, k int) (*maxCoverage, error) {
 		}
 	}
 
-	// Populate candidates to select cover from.
-	candidateSets := make(map[int]*bitfield.Bitlist, len(atts))
-	candidateSigns := make(map[int]*[]byte, len(atts))
-	for key, att := range atts {
-		candidateSets[key] = &att.AggregationBits
-		candidateSigns[key] = &att.Signature
+	mc := &maxCoverProblem{
+		k:            k,
+		atts:         atts,
+		candidates:   maxCoverCandidateList{},
+		coverage:     bitfield.NewBitlist(atts[0].AggregationBits.Len()),
+		aggregated:   make([]*maxCoverCandidate, 0, k),
+		unaggregated: make([]*maxCoverCandidate, 0, len(atts)),
+	}
+	for i := 0; i < len(atts); i++ {
+		mc.candidates = append(mc.candidates, &maxCoverCandidate{
+			bits:      &atts[i].AggregationBits,
+			signature: &atts[i].Signature,
+			score:     atts[i].AggregationBits.Count(),
+		})
 	}
 
-	return &maxCoverage{
-		k:          k,
-		coverage:   bitfield.NewBitlist(atts[0].AggregationBits.Len()),
-		candidates: candidateSets,
-		solution:   make(map[int]struct{}, k),
-		input: struct {
-			atts  *[]*ethpb.Attestation
-			data  *ethpb.AttestationData
-			signs map[int]*[]byte
-		}{atts: &atts, data: atts[0].Data, signs: candidateSigns},
-	}, nil
+	return mc, nil
 }
 
-func (mc *maxCoverage) findCoverage() {
+type maxCoverCandidateList []*maxCoverCandidate
+
+func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist) *maxCoverCandidateList {
+	cur, end := 0, len(*cl)
+	for cur < end {
+		if (*cl)[cur].processed || covered.Overlaps(*(*cl)[cur].bits) {
+			(*cl)[cur] = (*cl)[end-1]
+			end--
+			continue
+		}
+		cur++
+	}
+	*cl = (*cl)[:end]
+	return cl
+}
+
+func (cl *maxCoverCandidateList) sort() *maxCoverCandidateList {
+	sort.Slice(*cl, func(i, j int) bool {
+		return (*cl)[i].score > (*cl)[j].score
+	})
+	return cl
+}
+
+func (mc *maxCoverProblem) cover() ([]*ethpb.Attestation, error) {
 	if len(mc.candidates) == 0 {
-		return
+		return mc.atts, nil
 	}
 
-	for len(mc.solution) < mc.k && len(mc.candidates) > 0 {
-		// Select candidate that maximizes score.
-		bestCandidateIndex := -1
-		for ind, candidate := range mc.candidates {
-			if mc.coverage.Overlaps(*candidate) {
-				// Overlapping candidates violate non-intersection invariant.
-				delete(mc.candidates, ind)
+	// Find coverage.
+	for len(mc.aggregated) < mc.k && len(mc.candidates) > 0 {
+		// Filter out processed and overlapping, sort by score in a descending order.
+		mc.candidates.filter(mc.coverage).sort()
+
+		// Pick enough non-overlapping candidates.
+		for _, candidate := range mc.candidates {
+			if candidate.processed {
 				continue
 			}
-			if bestCandidateIndex == -1 || candidate.Len() > mc.candidates[bestCandidateIndex].Len() {
-				bestCandidateIndex = ind
+			if mc.coverage.Overlaps(*candidate.bits) {
+				// Overlapping candidates violate non-intersection invariant.
+				mc.unaggregated = append(mc.unaggregated, candidate)
+				candidate.processed = true
+			} else {
+				mc.coverage = mc.coverage.Or(*candidate.bits)
+				mc.aggregated = append(mc.aggregated, candidate)
+				candidate.processed = true
+			}
+			if len(mc.aggregated) >= mc.k {
+				break
 			}
 		}
-		// Update partial solution.
-		if bestCandidateIndex >= 0 {
-			mc.coverage = mc.coverage.Or(*mc.candidates[bestCandidateIndex])
-			mc.solution[bestCandidateIndex] = struct{}{}
-			delete(mc.candidates, bestCandidateIndex)
-		}
 	}
-}
 
-func (mc *maxCoverage) solve() ([]*ethpb.Attestation, error) {
-	mc.findCoverage()
+	// Remove processed items.
+	mc.candidates.filter(mc.coverage)
 
-	// Start with aggregated attestation.
-	atts := make([]*ethpb.Attestation, 0, len(mc.solution))
-	if len(mc.solution) > 0 {
+	// Return results, start with the aggregated attestation.
+	atts := make([]*ethpb.Attestation, 0, len(mc.aggregated)+len(mc.unaggregated))
+	if len(mc.aggregated) > 0 {
 		// Collect selected signatures.
-		var signs []*bls.Signature
-		for key := range mc.solution {
-			sig, err := bls.SignatureFromBytes(*mc.input.signs[key])
+		signs := make([]*bls.Signature, len(mc.aggregated))
+		for i := 0; i < len(mc.aggregated); i++ {
+			sig, err := signatureFromBytes(*mc.aggregated[i].signature)
 			if err != nil {
 				return nil, err
 			}
-			signs = append(signs, sig)
+			signs[i] = sig
 		}
 		atts = append(atts, &ethpb.Attestation{
 			AggregationBits: mc.coverage,
-			Data:            stateTrie.CopyAttestationData(mc.input.data),
-			Signature:       bls.AggregateSignatures(signs).Marshal(),
+			Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
+			Signature:       aggregateSignatures(signs).Marshal(),
 		})
 	}
 
 	// Add unaggregated attestations.
-	for key, att := range *mc.input.atts {
-		if _, ok := mc.solution[key]; !ok {
-			// Consider att := stateTrie.CopyAttestation(att)
-			atts = append(atts, att)
-		}
+	for _, candidate := range mc.unaggregated {
+		atts = append(atts, &ethpb.Attestation{
+			AggregationBits: bytesutil.SafeCopyBytes(*candidate.bits),
+			Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
+			Signature:       bytesutil.SafeCopyBytes(*candidate.signature),
+		})
 	}
 
-	lst := make([]bitfield.Bitlist, 0)
-	for _, att := range atts {
-		lst = append(lst, att.AggregationBits)
+	// Add left-over candidates (their fate was undecided as we had k items already).
+	for _, candidate := range mc.candidates {
+		if candidate.processed {
+			continue
+		}
+		atts = append(atts, &ethpb.Attestation{
+			AggregationBits: bytesutil.SafeCopyBytes(*candidate.bits),
+			Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
+			Signature:       bytesutil.SafeCopyBytes(*candidate.signature),
+		})
 	}
-	//log.WithFields(logrus.Fields{
-	//	"list": fmt.Sprintf("%#v\n", lst),
-	//}).Debug("-----> Collected")
 
 	return atts, nil
 }

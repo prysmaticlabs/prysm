@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestAggregate_AggregatePair(t *testing.T) {
@@ -85,6 +86,7 @@ func TestAggregate_AggregatePair_DiffLengthFails(t *testing.T) {
 
 func TestAggregate_Aggregate(t *testing.T) {
 	// Each test defines the aggregation bitfield inputs and the wanted output result.
+	bitlistLen := params.BeaconConfig().MaxValidatorsPerCommittee
 	tests := []struct {
 		name   string
 		inputs []bitfield.Bitlist
@@ -116,14 +118,14 @@ func TestAggregate_Aggregate(t *testing.T) {
 		},
 		{
 			name:   "256 attestations with single bit set",
-			inputs: bitlistsWithSingleBitSet(256),
+			inputs: bitlistsWithSingleBitSet(256, bitlistLen),
 			want: []bitfield.Bitlist{
 				bitlistWithAllBitsSet(256),
 			},
 		},
 		{
 			name:   "1024 attestations with single bit set",
-			inputs: bitlistsWithSingleBitSet(1024),
+			inputs: bitlistsWithSingleBitSet(1024, bitlistLen),
 			want: []bitfield.Bitlist{
 				bitlistWithAllBitsSet(1024),
 			},
