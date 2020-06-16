@@ -800,6 +800,7 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
+// VerifyAttestations will verify the signatures of the provided attestations.
 func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "VerifyAttestations")
 	defer span.End()
@@ -809,6 +810,7 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 		return nil
 	}
 
+	// TODO(6277): Domain selection will not work for all attestations provided when there is a planned fork.
 	domain, err := helpers.Domain(beaconState.Fork(), helpers.SlotToEpoch(beaconState.Slot()), params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorRoot())
 	if err != nil {
 		return err
