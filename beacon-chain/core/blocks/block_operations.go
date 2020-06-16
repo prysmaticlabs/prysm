@@ -818,7 +818,7 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 	gvr := beaconState.GenesisValidatorRoot()
 	dt := params.BeaconConfig().DomainBeaconAttester
 
-	// Split attestations by fork. Note: the domain will differ based on the fork.
+	// Split attestations by fork. Note: the signature domain will differ based on the fork.
 	var preForkAtts []*ethpb.Attestation
 	var postForkAtts []*ethpb.Attestation
 	for _, a := range atts {
