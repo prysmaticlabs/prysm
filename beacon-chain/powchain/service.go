@@ -440,7 +440,7 @@ func (s *Service) isEth1NodeSynced() (bool, error) {
 	return syncProg == nil, nil
 }
 
-// Reconnect to eth1 node in case of any failure
+// Reconnect to eth1 node in case of any failure.
 func (s *Service) retryETH1Node(err error) {
 	s.runError = err
 	s.connectedETH1 = false
