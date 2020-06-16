@@ -202,8 +202,8 @@ func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool 
 	if size != len(msgs) {
 		return false
 	}
-	msgSlices := []byte{}
-	var rawKeys []bls12.PublicKey
+	msgSlices := make([]byte, 0, 32*len(msgs))
+	rawKeys := make([]bls12.PublicKey, 0, len(pubKeys))
 	for i := 0; i < size; i++ {
 		msgSlices = append(msgSlices, msgs[i][:]...)
 		rawKeys = append(rawKeys, *pubKeys[i].p)
