@@ -384,7 +384,7 @@ func (s *Service) waitForConnection() {
 	errConnect := s.connectToPowChain()
 	if errConnect == nil {
 		synced, errSynced := s.isEth1NodeSynced()
-		// Resume if eth1 node is synced
+		// Resume if eth1 node is synced.
 		if synced {
 			s.connectedETH1 = true
 			log.WithFields(logrus.Fields{
