@@ -28,7 +28,7 @@ const DomainByteLength = 4
 var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
-	MaxCost:     1 << 19, // 500 kb is cache max size
+	MaxCost:     1 << 22, // ~4mb is cache max size
 	BufferItems: 64,
 })
 

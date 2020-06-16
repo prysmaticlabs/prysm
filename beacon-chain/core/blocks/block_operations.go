@@ -802,7 +802,7 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 
 // VerifyAttestations will verify the signatures of the provided attestations.
 func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "VerifyAttestations")
+	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestations")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("attestations", int64(len(atts))))
 
