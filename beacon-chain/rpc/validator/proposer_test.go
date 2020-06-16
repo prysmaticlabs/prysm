@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -1666,7 +1667,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aa, err := helpers.AggregateAttestations(aggregatedAtts)
+	aa, err := attaggregation.Aggregate(aggregatedAtts)
 	if err != nil {
 		t.Error(err)
 	}

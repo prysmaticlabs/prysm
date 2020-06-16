@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -200,7 +201,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	}
 
 	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
-	wanted, err := helpers.AggregateAttestation(att0, att1)
+	wanted, err := attaggregation.AggregatePair(att0, att1)
 	if err != nil {
 		t.Fatal(err)
 	}

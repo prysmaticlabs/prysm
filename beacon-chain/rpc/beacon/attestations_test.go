@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -1159,7 +1160,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	}
 
 	for dataRoot, sameDataAtts := range atts {
-		aggAtts, err := helpers.AggregateAttestations(sameDataAtts)
+		aggAtts, err := attaggregation.Aggregate(sameDataAtts)
 		if err != nil {
 			t.Fatal(err)
 		}

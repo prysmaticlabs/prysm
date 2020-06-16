@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -339,7 +340,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
-				aggAtts, err := helpers.AggregateAttestations(atts)
+				aggAtts, err := attaggregation.Aggregate(atts)
 				if err != nil {
 					log.WithError(err).Error("Could not aggregate collected attestations")
 					continue

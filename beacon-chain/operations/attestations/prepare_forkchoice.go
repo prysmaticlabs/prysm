@@ -8,7 +8,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -91,7 +91,7 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 	for i, a := range atts {
 		clonedAtts[i] = stateTrie.CopyAttestation(a)
 	}
-	aggregatedAtts, err := helpers.AggregateAttestations(clonedAtts)
+	aggregatedAtts, err := attaggregation.Aggregate(clonedAtts)
 	if err != nil {
 		return err
 	}

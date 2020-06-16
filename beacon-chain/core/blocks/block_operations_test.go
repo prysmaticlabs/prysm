@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -1245,7 +1246,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	if _, err = helpers.AggregateAttestation(att1, att2); err != helpers.ErrAttestationAggregationBitsOverlap {
+	if _, err = attaggregation.AggregatePair(att1, att2); err != attaggregation.ErrBitsOverlap {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -1326,7 +1327,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	aggregatedAtt, err := helpers.AggregateAttestation(att1, att2)
+	aggregatedAtt, err := attaggregation.AggregatePair(att1, att2)
 	if err != nil {
 		t.Fatal(err)
 	}

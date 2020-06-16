@@ -5,6 +5,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
@@ -29,7 +30,7 @@ func (p *AttCaches) AggregateUnaggregatedAttestations() error {
 	leftOverUnaggregatedAtt := make(map[[32]byte]bool)
 	for _, atts := range attsByDataRoot {
 		aggregatedAtts := make([]*ethpb.Attestation, 0, len(atts))
-		processedAtts, err := helpers.AggregateAttestations(atts)
+		processedAtts, err := attaggregation.Aggregate(atts)
 		if err != nil {
 			return err
 		}
@@ -89,7 +90,7 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return nil
 	}
 
-	atts, err = helpers.AggregateAttestations(append(atts, copiedAtt))
+	atts, err = attaggregation.Aggregate(append(atts, copiedAtt))
 	if err != nil {
 		return err
 	}
