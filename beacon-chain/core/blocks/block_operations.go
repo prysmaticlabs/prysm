@@ -831,22 +831,20 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 		}
 		ia := attestationutil.ConvertToIndexed(ctx, a, c)
 		indices := ia.AttestingIndices
-		if len(indices) > 0 {
-			var pk *bls.PublicKey
-			for i := 0; i < len(indices); i++ {
-				pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
-				p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-				if err != nil {
-					return errors.Wrap(err, "could not deserialize validator public key")
-				}
-				if pk == nil {
-					pk = p
-				} else {
-					pk.Aggregate(p)
-				}
+		var pk *bls.PublicKey
+		for i := 0; i < len(indices); i++ {
+			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+			p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+			if err != nil {
+				return errors.Wrap(err, "could not deserialize validator public key")
 			}
-			pks[i] = pk
+			if pk == nil {
+				pk = p
+			} else {
+				pk.Aggregate(p)
+			}
 		}
+		pks[i] = pk
 
 		root, err := helpers.ComputeSigningRoot(ia.Data, domain)
 		if err != nil {
