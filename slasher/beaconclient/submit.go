@@ -26,6 +26,12 @@ func (bs *Service) subscribeDetectedProposerSlashings(ctx context.Context, ch ch
 			if _, err := bs.beaconClient.SubmitProposerSlashing(ctx, slashing); err != nil {
 				log.Error(err)
 			}
+			log.WithFields(logrus.Fields{
+				"header1": slashing.Header_1,
+				"header2": slashing.Header_2,
+				"index1":  slashing.Header_1.Header.ProposerIndex,
+				"index2":  slashing.Header_2.Header.ProposerIndex,
+			}).Info("Found a valid proposer slashing! Submitted to beacon node")
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
