@@ -198,3 +198,21 @@ func TestUpdateRecentCanonicalBlocks_CanUpdateWithParent(t *testing.T) {
 		t.Error("Block should not be canonical")
 	}
 }
+
+func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
+	db := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db)
+
+	state, _ := testutil.DeterministicGenesisState(t, 100)
+	r := [32]byte{'a'}
+	if err := service.beaconDB.SaveState(context.Background(), state, r); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.cacheJustifiedStateBalances(context.Background(), r); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(state.Balances(), service.getJustifiedBalances()) {
+		t.Fatal("Incorrect justified balances")
+	}
+}
