@@ -444,7 +444,7 @@ func (s *Service) isEth1NodeSynced() (bool, error) {
 func (s *Service) retryETH1Node(err error) {
 	s.runError = err
 	s.connectedETH1 = false
-	// back off for a while before
+	// Back off for a while before
 	// resuming dialing the eth1 node.
 	time.Sleep(backOffPeriod)
 	s.waitForConnection()
