@@ -23,7 +23,7 @@ func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big
 		return true, blkInfo.Number, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := s.blockFetcher.BlockByHash(ctx, hash)
+	block, err := s.eth1DataFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), errors.Wrap(err, "could not query block with given hash")
 	}
@@ -48,7 +48,7 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 		return blkInfo.Hash, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	block, err := s.blockFetcher.BlockByNumber(ctx, height)
+	block, err := s.eth1DataFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, fmt.Sprintf("could not query block with height %d", height.Uint64()))
 	}
@@ -62,7 +62,7 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
 	defer span.End()
-	block, err := s.blockFetcher.BlockByNumber(ctx, height)
+	block, err := s.eth1DataFetcher.BlockByNumber(ctx, height)
 	if err != nil {
 		return 0, errors.Wrap(err, fmt.Sprintf("could not query block with height %d", height.Uint64()))
 	}
@@ -77,7 +77,7 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
-	head, err := s.blockFetcher.BlockByNumber(ctx, nil)
+	head, err := s.eth1DataFetcher.BlockByNumber(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (s *Service) BlockNumberByTimestamp(ctx context.Context, time uint64) (*big
 		}
 
 		if !exists {
-			blk, err := s.blockFetcher.BlockByNumber(ctx, bn)
+			blk, err := s.eth1DataFetcher.BlockByNumber(ctx, bn)
 			if err != nil {
 				return nil, err
 			}

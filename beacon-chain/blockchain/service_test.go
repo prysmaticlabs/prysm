@@ -232,6 +232,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 }
 
 func TestChainService_InitializeBeaconChain(t *testing.T) {
+	helpers.ClearCache()
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
 
