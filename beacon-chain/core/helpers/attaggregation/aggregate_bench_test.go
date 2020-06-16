@@ -1,48 +1,14 @@
-package helpers
+package attaggregation
 
 import (
-	"math/rand"
 	"testing"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func bitlistWithAllBitsSet(length uint64) bitfield.Bitlist {
-	b := bitfield.NewBitlist(length)
-	for i := uint64(0); i < length; i++ {
-		b.SetBitAt(i, true)
-	}
-	return b
-}
-
-func bitlistsWithSingleBitSet(length uint64) []bitfield.Bitlist {
-	lists := make([]bitfield.Bitlist, length)
-	for i := uint64(0); i < length; i++ {
-		b := bitfield.NewBitlist(length)
-		b.SetBitAt(i, true)
-		lists[i] = b
-	}
-	return lists
-}
-
-func bitlistsWithMultipleBitSet(length uint64, count uint64) []bitfield.Bitlist {
-	rand.Seed(time.Now().UnixNano())
-	lists := make([]bitfield.Bitlist, length)
-	for i := uint64(0); i < length; i++ {
-		b := bitfield.NewBitlist(length)
-		keys := rand.Perm(int(length))
-		for _, key := range keys[:count] {
-			b.SetBitAt(uint64(key), true)
-		}
-		lists[i] = b
-	}
-	return lists
-}
-
-func BenchmarkAttestationAggregate_AggregateAttestation(b *testing.B) {
+func BenchmarkAggregate_Aggregate(b *testing.B) {
 	// Each test defines the aggregation bitfield inputs and the wanted output result.
 	tests := []struct {
 		name   string
@@ -124,7 +90,7 @@ func BenchmarkAttestationAggregate_AggregateAttestation(b *testing.B) {
 			atts := makeAttestationsFromBitlists(tt.inputs)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, err := AggregateAttestations(atts)
+				_, err := Aggregate(atts)
 				if err != nil {
 					b.Fatal(err)
 				}
