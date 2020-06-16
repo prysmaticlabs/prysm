@@ -208,7 +208,8 @@ func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool 
 		msgSlices = append(msgSlices, msgs[i][:]...)
 		rawKeys = append(rawKeys, *pubKeys[i].p)
 	}
-	return s.s.AggregateVerify(rawKeys, msgSlices)
+	// Use "NoCheck" because we do not care if the messages are unique or not.
+	return s.s.AggregateVerifyNoCheck(rawKeys, msgSlices)
 }
 
 // FastAggregateVerify verifies all the provided public keys with their aggregated signature.
