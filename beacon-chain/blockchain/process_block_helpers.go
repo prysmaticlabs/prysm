@@ -294,6 +294,9 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	if canUpdate {
 		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
+		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+			return err
+		}
 	}
 
 	if !featureconfig.Get().NewStateMgmt {
@@ -443,6 +446,9 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	// Either the new justified is later than stored justified or not in chain with finalized check pint.
 	if cpt := state.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch || !bytes.Equal(anc, s.finalizedCheckpt.Root) {
 		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
+		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+			return err
+		}
 	}
 
 	return nil
