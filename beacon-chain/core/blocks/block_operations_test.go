@@ -2091,11 +2091,11 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	}
 	att1 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
-		Data:            &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  0,
+		Data: &ethpb.AttestationData{
+			Slot:           1,
+			CommitteeIndex: 0,
 		},
-		Signature:       nil,
+		Signature: nil,
 	}
 	domain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	if err != nil {
@@ -2118,11 +2118,11 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	}
 	att2 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
-		Data:            &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  1,
+		Data: &ethpb.AttestationData{
+			Slot:           1,
+			CommitteeIndex: 1,
 		},
-		Signature:       nil,
+		Signature: nil,
 	}
 	root, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	if err != nil {
@@ -2173,11 +2173,11 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	}
 	att1 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
-		Data:            &ethpb.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  0,
+		Data: &ethpb.AttestationData{
+			Slot:           1,
+			CommitteeIndex: 0,
 		},
-		Signature:       nil,
+		Signature: nil,
 	}
 	prevDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch-1, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	if err != nil {
@@ -2200,11 +2200,11 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	}
 	att2 := &ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
-		Data:            &ethpb.AttestationData{
-			Slot:            1*params.BeaconConfig().SlotsPerEpoch+1,
-			CommitteeIndex:  1,
+		Data: &ethpb.AttestationData{
+			Slot:           1*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex: 1,
 		},
-		Signature:       nil,
+		Signature: nil,
 	}
 	currDomain, err := helpers.Domain(st.Fork(), st.Fork().Epoch, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorRoot())
 	root, err = helpers.ComputeSigningRoot(att2.Data, currDomain)
