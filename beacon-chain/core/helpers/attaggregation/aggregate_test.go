@@ -91,6 +91,20 @@ func TestAggregate_Aggregate(t *testing.T) {
 		want   []bitfield.Bitlist
 	}{
 		{
+			name:   "empty list",
+			inputs: []bitfield.Bitlist{},
+			want:   []bitfield.Bitlist{},
+		},
+		{
+			name: "single attestation",
+			inputs: []bitfield.Bitlist{
+				{0b00000010, 0b1},
+			},
+			want: []bitfield.Bitlist{
+				{0b00000010, 0b1},
+			},
+		},
+		{
 			name: "two attestations with no overlap",
 			inputs: []bitfield.Bitlist{
 				{0b00000001, 0b1},

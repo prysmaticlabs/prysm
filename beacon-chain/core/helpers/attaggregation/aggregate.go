@@ -12,7 +12,10 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "attaggregation")
 
 var (
 	// ErrBitsOverlap is returned when two attestations aggregation bits overlap with each other.
