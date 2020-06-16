@@ -326,6 +326,15 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 			justifiedBalances[i] = 0
 		}
 	}
+
+	s.justifiedBalancesLock.Lock()
+	defer s.justifiedBalancesLock.Unlock()
 	s.justifiedBalances = justifiedBalances
 	return nil
+}
+
+func (s *Service) getJustifiedBalances() []uint64 {
+	s.justifiedBalancesLock.RLock()
+	defer s.justifiedBalancesLock.RUnlock()
+	return s.justifiedBalances
 }

@@ -44,7 +44,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		// This updates fork choice head, if a new head could not be updated due to
 		// long range or intermediate forking. It simply logs a warning and returns nil
 		// as that's more appropriate than returning errors.
-		if err := s.updateHead(ctx, s.justifiedBalances); err != nil {
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			log.Warnf("Resolving fork due to new attestation: %v", err)
 			return nil
 		}

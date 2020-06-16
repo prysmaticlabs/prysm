@@ -81,6 +81,7 @@ type Service struct {
 	recentCanonicalBlocks     map[[32]byte]bool
 	recentCanonicalBlocksLock sync.RWMutex
 	justifiedBalances         []uint64
+	justifiedBalancesLock     sync.RWMutex
 }
 
 // Config options for the service.
