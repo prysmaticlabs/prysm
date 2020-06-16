@@ -448,7 +448,7 @@ func (s *Service) retryETH1Node(err error) {
 	// resuming dialing the eth1 node.
 	time.Sleep(backOffPeriod)
 	s.waitForConnection()
-	// reset value in the event of a successful connection.
+	// Reset run error in the event of a successful connection.
 	s.runError = nil
 }
 
