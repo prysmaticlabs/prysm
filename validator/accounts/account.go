@@ -215,6 +215,9 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 		if text = strings.Replace(text, "\n", "", -1); text != "" {
 			path = text
 		}
+		if text = strings.Replace(text, "\r", "", -1); text != "" {
+			path = text
+		}
 	}
 
 	if passphrase == "" {
