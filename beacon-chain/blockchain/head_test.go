@@ -212,7 +212,7 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	if err := service.cacheJustifiedStateBalances(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(state.Balances(), service.justifiedBalances) {
+	if !reflect.DeepEqual(state.Balances(), service.getJustifiedBalances()) {
 		t.Fatal("Incorrect justified balances")
 	}
 }
