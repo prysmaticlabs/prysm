@@ -195,19 +195,14 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					continue
 				}
 				if featureconfig.Get().NewStateMgmt {
-					hasStateSummaryDB := bs.BeaconDB.HasStateSummary(bs.Ctx, bytesutil.ToBytes32(data.SignedBlock.Block.ParentRoot))
-					hasStateSummaryCache := bs.StateSummaryCache.Has(bytesutil.ToBytes32(data.SignedBlock.Block.ParentRoot))
-					if !hasStateSummaryDB && !hasStateSummaryCache {
-						log.WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("No access to parent state to verify block signature")
-						continue
-					}
-					parentState, err := bs.StateGen.StateByRoot(bs.Ctx, bytesutil.ToBytes32(data.SignedBlock.Block.ParentRoot))
+
+					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
 					if err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get parent state to verify block signature")
+						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get head state to verify block signature")
 						continue
 					}
 
-					if err := blocks.VerifyBlockSignature(parentState, data.SignedBlock); err != nil {
+					if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not verify block signature")
 						continue
 					}

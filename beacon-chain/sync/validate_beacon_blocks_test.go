@@ -51,17 +51,15 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chainService := &mock.ChainService{Genesis: time.Now(),
-		FinalizedCheckPoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		}}
 	r := &Service{
-		db:             db,
-		p2p:            p,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
-		chain:          chainService,
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Now(),
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
 		seenBlockCache: c,
-		blockNotifier:  chainService.BlockNotifier(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -102,15 +100,13 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		db:                db,
 		p2p:               p,
 		initialSync:       &mockSync.Sync{IsSyncing: false},
-		chain:             chainService,
+		chain:             &mock.ChainService{Genesis: time.Now()},
 		seenBlockCache:    c,
 		stateSummaryCache: cache.NewStateSummaryCache(),
-		blockNotifier:     chainService.BlockNotifier(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -188,17 +184,15 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	}
 	stateSummaryCache := cache.NewStateSummaryCache()
 	stateGen := stategen.New(db, stateSummaryCache)
-	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
-		State: beaconState,
-		FinalizedCheckPoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		}}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+			State: beaconState,
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
 		seenBlockCache:      c,
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -287,17 +281,15 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	}
 	stateSummaryCache := cache.NewStateSummaryCache()
 	stateGen := stategen.New(db, stateSummaryCache)
-	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
-		State: beaconState,
-		FinalizedCheckPoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		}}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
+			State: beaconState,
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
 		seenBlockCache:      c,
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -343,17 +335,16 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		},
 		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
-	chainService := &mock.ChainService{
-		Genesis: time.Now(),
-		FinalizedCheckPoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		}}
+
 	r := &Service{
-		db:            db,
-		p2p:           p,
-		initialSync:   &mockSync.Sync{IsSyncing: true},
-		chain:         chainService,
-		blockNotifier: chainService.BlockNotifier(),
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: true},
+		chain: &mock.ChainService{
+			Genesis: time.Now(),
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
 	}
 
 	buf := new(bytes.Buffer)
@@ -396,13 +387,11 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
 		p2p:                 p,
 		db:                  db,
 		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		chain:               &mock.ChainService{Genesis: time.Now()},
 		seenBlockCache:      c,
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -449,17 +438,15 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chainService := &mock.ChainService{
-		Genesis: time.Unix(genesisTime.Unix()-1000, 0),
-		FinalizedCheckPoint: &ethpb.Checkpoint{
-			Epoch: 1,
-		}}
 	r := &Service{
-		db:             db,
-		p2p:            p,
-		initialSync:    &mockSync.Sync{IsSyncing: false},
-		chain:          chainService,
-		blockNotifier:  chainService.BlockNotifier(),
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{
+			Genesis: time.Unix(genesisTime.Unix()-1000, 0),
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 1,
+			}},
 		seenBlockCache: c,
 	}
 
@@ -531,17 +518,15 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
-		State: beaconState,
-		FinalizedCheckPoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		}}
 	r := &Service{
-		db:                  db,
-		p2p:                 p,
-		initialSync:         &mockSync.Sync{IsSyncing: false},
-		chain:               chainService,
-		blockNotifier:       chainService.BlockNotifier(),
+		db:          db,
+		p2p:         p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+			State: beaconState,
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			}},
 		seenBlockCache:      c,
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
