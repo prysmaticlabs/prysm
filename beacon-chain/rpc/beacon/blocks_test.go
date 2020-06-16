@@ -310,7 +310,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    4},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[96:100],
-				NextPageToken:   "1",
+				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
 	}
 
