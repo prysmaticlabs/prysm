@@ -219,7 +219,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	hashLen := 32
 	blk := &eth.BeaconBlock{
 		Slot:          chainHead.HeadSlot - 1,
-		ParentRoot:    bytesutil.PadTo([]byte("bad parent root"), hashLen),
+		ParentRoot:    chainHead.HeadBlockRoot,
 		StateRoot:     bytesutil.PadTo([]byte("bad state root"), hashLen),
 		ProposerIndex: proposerIndex,
 		Body: &eth.BeaconBlockBody{
