@@ -195,7 +195,6 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					continue
 				}
 				if featureconfig.Get().NewStateMgmt {
-
 					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
 					if err != nil {
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get head state to verify block signature")
