@@ -68,7 +68,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
-	postState, err := s.onBlock(ctx, blockCopy, blockRoot)
+	_, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
@@ -93,7 +93,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
-		if err := s.updateHead(ctx, postState.Balances()); err != nil {
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	}
