@@ -382,30 +382,33 @@ func (s *Service) initializeConnection(
 
 func (s *Service) waitForConnection() {
 	errConnect := s.connectToPowChain()
-	synced, errSynced := s.isEth1NodeSynced()
-	if errConnect == nil && synced {
-		s.connectedETH1 = true
-		log.WithFields(logrus.Fields{
-			"endpoint": s.httpEndpoint,
-		}).Info("Connected to eth1 proof-of-work chain")
-		return
+	if errConnect == nil {
+		synced, errSynced := s.isEth1NodeSynced()
+		// Resume if eth1 node is synced
+		if synced {
+			s.connectedETH1 = true
+			log.WithFields(logrus.Fields{
+				"endpoint": s.httpEndpoint,
+			}).Info("Connected to eth1 proof-of-work chain")
+			return
+		}
+		if errSynced != nil {
+			log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
+		}
 	}
 	if errConnect != nil {
 		log.WithError(errConnect).Error("Could not connect to powchain endpoint")
-	}
-	if errSynced != nil {
-		log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
 	}
 	ticker := time.NewTicker(backOffPeriod)
 	for {
 		select {
 		case <-ticker.C:
-			errConnect = s.connectToPowChain()
+			errConnect := s.connectToPowChain()
 			if errConnect != nil {
 				log.WithError(errConnect).Error("Could not connect to powchain endpoint")
 				continue
 			}
-			synced, errSynced = s.isEth1NodeSynced()
+			synced, errSynced := s.isEth1NodeSynced()
 			if errSynced != nil {
 				log.WithError(errSynced).Error("Could not check sync status of eth1 chain")
 				continue
@@ -435,6 +438,18 @@ func (s *Service) isEth1NodeSynced() (bool, error) {
 		return false, err
 	}
 	return syncProg == nil, nil
+}
+
+// Reconnect to eth1 node in case of any failure
+func (s *Service) retryETH1Node(err error) {
+	s.runError = err
+	s.connectedETH1 = false
+	// back off for a while before
+	// resuming dialing the eth1 node.
+	time.Sleep(backOffPeriod)
+	s.waitForConnection()
+	// reset value in the event of a successful connection.
+	s.runError = nil
 }
 
 // initDataFromContract calls the deposit contract and finds the deposit count
@@ -583,17 +598,6 @@ func (s *Service) handleETH1FollowDistance() {
 }
 
 func (s *Service) initPOWService() {
-	// Reconnect to eth1 node in case of any failure
-	retryETH1Node := func(err error) {
-		s.runError = err
-		s.connectedETH1 = false
-		// back off for a while before
-		// resuming dialing the eth1 node.
-		time.Sleep(backOffPeriod)
-		s.waitForConnection()
-		// reset value in the event of a successful connection.
-		s.runError = nil
-	}
 
 	// Run in a select loop to retry in the event of any failures.
 	for {
@@ -604,14 +608,14 @@ func (s *Service) initPOWService() {
 			err := s.initDataFromContract()
 			if err != nil {
 				log.Errorf("Unable to retrieve data from deposit contract %v", err)
-				retryETH1Node(err)
+				s.retryETH1Node(err)
 				continue
 			}
 
 			header, err := s.eth1DataFetcher.HeaderByNumber(context.Background(), nil)
 			if err != nil {
 				log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
-				retryETH1Node(err)
+				s.retryETH1Node(err)
 				continue
 			}
 
@@ -621,7 +625,7 @@ func (s *Service) initPOWService() {
 
 			if err := s.processPastLogs(context.Background()); err != nil {
 				log.Errorf("Unable to process past logs %v", err)
-				retryETH1Node(err)
+				s.retryETH1Node(err)
 				continue
 			}
 			return
@@ -648,6 +652,7 @@ func (s *Service) run(done <-chan struct{}) {
 			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
+				s.retryETH1Node(err)
 				continue
 			}
 			s.processBlockHeader(head)
