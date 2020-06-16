@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
@@ -52,4 +54,16 @@ func bitlistsWithMultipleBitSet(length uint64, count uint64) []bitfield.Bitlist 
 		lists[i] = b
 	}
 	return lists
+}
+
+func makeAttestationsFromBitlists(bl []bitfield.Bitlist) []*ethpb.Attestation {
+	atts := make([]*ethpb.Attestation, len(bl))
+	for i, b := range bl {
+		atts[i] = &ethpb.Attestation{
+			AggregationBits: b,
+			Data:            nil,
+			Signature:       bls.NewAggregateSignature().Marshal(),
+		}
+	}
+	return atts
 }

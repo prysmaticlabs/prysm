@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func TestAggregate_AggregatePair(t *testing.T) {
@@ -184,20 +183,6 @@ func TestAggregate_Aggregate(t *testing.T) {
 				{0b00000100, 0b1},
 			},
 		},
-	}
-
-	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
-		atts := make([]*ethpb.Attestation, len(bl))
-		for i, b := range bl {
-			sk := bls.RandKey()
-			sig := sk.Sign([]byte("dummy_test_data"))
-			atts[i] = &ethpb.Attestation{
-				AggregationBits: b,
-				Data:            nil,
-				Signature:       sig.Marshal(),
-			}
-		}
-		return atts
 	}
 
 	for _, tt := range tests {

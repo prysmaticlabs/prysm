@@ -3,9 +3,7 @@ package attaggregation
 import (
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func BenchmarkAggregate_Aggregate(b *testing.B) {
@@ -71,18 +69,6 @@ func BenchmarkAggregate_Aggregate(b *testing.B) {
 				bitlistWithAllBitsSet(1024),
 			},
 		},
-	}
-
-	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
-		atts := make([]*ethpb.Attestation, len(bl))
-		for i, b := range bl {
-			atts[i] = &ethpb.Attestation{
-				AggregationBits: b,
-				Data:            nil,
-				Signature:       bls.NewAggregateSignature().Marshal(),
-			}
-		}
-		return atts
 	}
 
 	for _, tt := range tests {
