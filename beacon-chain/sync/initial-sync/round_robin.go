@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/sirupsen/logrus"
 )
@@ -56,12 +55,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	if err := queue.start(); err != nil {
 		return err
 	}
-	var blockReceiver blockReceiverFn
-	if featureconfig.Get().InitSyncNoVerify {
-		blockReceiver = s.chain.ReceiveBlockNoVerify
-	} else {
-		blockReceiver = s.chain.ReceiveBlockNoPubsubForkchoice
-	}
+	blockReceiver := s.chain.ReceiveBlockInitialSync
 
 	// Step 1 - Sync to end of finalized epoch.
 	for blk := range queue.fetchedBlocks {
@@ -112,7 +106,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			return nil
 		}
 		for _, blk := range resp {
-			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlockNoPubsubForkchoice)
+			err := s.processBlock(ctx, genesis, blk, s.chain.ReceiveBlockNoPubsub)
 			if err != nil {
 				log.WithError(err).Error("Failed to process block, exiting init sync")
 				return nil
