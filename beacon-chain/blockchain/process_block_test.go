@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -851,5 +852,87 @@ func TestEnsureRootNotZeroHashes(t *testing.T) {
 	r = service.ensureRootNotZeros(root)
 	if r != root {
 		t.Error("Did not get wanted justified root")
+	}
+}
+
+func TestFinalizedImpliesNewJustified(t *testing.T) {
+	db := testDB.SetupDB(t)
+	ctx := context.Background()
+	type args struct {
+		cachedCheckPoint        *ethpb.Checkpoint
+		stateCheckPoint         *ethpb.Checkpoint
+		diffFinalizedCheckPoint bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want *ethpb.Checkpoint
+	}{
+		{
+			name: "Same justified, do nothing",
+			args: args{
+				cachedCheckPoint: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
+				stateCheckPoint:  &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
+			},
+			want: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
+		},
+		{
+			name: "Different justified, higher epoch, cache new justified",
+			args: args{
+				cachedCheckPoint: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
+				stateCheckPoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'b'}},
+			},
+			want: &ethpb.Checkpoint{Epoch: 2, Root: []byte{'b'}},
+		},
+		{
+			name: "finalized has different justified, cache new justified",
+			args: args{
+				cachedCheckPoint:        &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}},
+				stateCheckPoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'b'}},
+				diffFinalizedCheckPoint: true,
+			},
+			want: &ethpb.Checkpoint{Epoch: 1, Root: []byte{'b'}},
+		},
+	}
+	for _, test := range tests {
+		beaconState := testutil.NewBeaconState()
+		if err := beaconState.SetCurrentJustifiedCheckpoint(test.args.stateCheckPoint); err != nil {
+			t.Fatal(err)
+		}
+		service, err := NewService(ctx, &Config{BeaconDB: db})
+		if err != nil {
+			t.Fatal(err)
+		}
+		service.justifiedCheckpt = test.args.cachedCheckPoint
+
+		if test.args.diffFinalizedCheckPoint {
+			b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'a'}}
+			r1, err := ssz.HashTreeRoot(b1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b100 := &ethpb.BeaconBlock{Slot: 100, ParentRoot: r1[:]}
+			r100, err := ssz.HashTreeRoot(b100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, b := range []*ethpb.BeaconBlock{b1, b100} {
+				beaconBlock := testutil.NewBeaconBlock()
+				beaconBlock.Block.Slot = b.Slot
+				beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.ParentRoot, 32)
+				if err := service.beaconDB.SaveBlock(context.Background(), beaconBlock); err != nil {
+					t.Fatal(err)
+				}
+			}
+			service.finalizedCheckpt = &ethpb.Checkpoint{Root: []byte{'c'}, Epoch: 1}
+			service.justifiedCheckpt.Root = r100[:]
+		}
+
+		if err := service.finalizedImpliesNewJustified(ctx, beaconState); err != nil {
+			t.Fatal(err)
+		}
+		if !attestationutil.CheckPointIsEqual(test.want, service.justifiedCheckpt) {
+			t.Error("Did not get wanted check point")
+		}
 	}
 }
