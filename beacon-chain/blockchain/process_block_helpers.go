@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -425,32 +426,42 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 // the store's justified is not in chain with finalized check point.
 //
 // Spec definition:
-//   if (
-//            state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch
-//            or get_ancestor(store, store.justified_checkpoint.root, finalized_slot) != store.finalized_checkpoint.root
-//        ):
-//            store.justified_checkpoint = state.current_justified_checkpoint
+//   # Potentially update justified if different from store
+//        if store.justified_checkpoint != state.current_justified_checkpoint:
+//            # Update justified if new justified is later than store justified
+//            if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
+//                store.justified_checkpoint = state.current_justified_checkpoint
+//                return
+//            # Update justified if store justified is not in chain with finalized checkpoint
+//            finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
+//            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
+//                store.justified_checkpoint = state.current_justified_checkpoint
 func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *stateTrie.BeaconState) error {
-	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
-		return errors.Wrap(err, "could not get finalized block")
-	}
-	finalizedBlk := finalizedBlkSigned.Block
+	// Update justified if it's different than the one cached in the store.
+	if !attestationutil.CheckPointIsEqual(s.justifiedCheckpt, state.CurrentJustifiedCheckpoint()) {
+		if state.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
+			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+				return err
+			}
+			return nil
+		}
 
-	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-	anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedBlk.Slot)
-	if err != nil {
-		return err
-	}
-
-	// Either the new justified is later than stored justified or not in chain with finalized check pint.
-	if cpt := state.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch || !bytes.Equal(anc, s.finalizedCheckpt.Root) {
-		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
-		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+		// Update justified if store justified is not in chain with finalized check point.
+		finalizedSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+		anc, err := s.ancestor(ctx, justifiedRoot[:], finalizedSlot)
+		if err != nil {
 			return err
 		}
+		if !bytes.Equal(anc, s.finalizedCheckpt.Root) {
+			s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
+			if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+				return err
+			}
+		}
 	}
-
 	return nil
 }
 
