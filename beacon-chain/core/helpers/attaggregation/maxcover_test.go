@@ -13,7 +13,6 @@ import (
 func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
 	type args struct {
 		atts []*ethpb.Attestation
-		k    int
 	}
 	tests := []struct {
 		name        string
@@ -55,13 +54,11 @@ func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
 		{
 			name: "single attestation",
 			args: args{
-				k: 1,
 				atts: []*ethpb.Attestation{
 					{AggregationBits: bitfield.Bitlist{0b00001010, 0b1}},
 				},
 			},
 			want: &maxCoverProblem{
-				k: 1,
 				candidates: maxCoverCandidateList{
 					&maxCoverCandidate{
 						key:       0,
@@ -83,10 +80,8 @@ func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
 					{AggregationBits: bitfield.Bitlist{0b00000010, 0b1}},
 					{AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
 				},
-				k: 50,
 			},
 			want: &maxCoverProblem{
-				k: 5,
 				candidates: maxCoverCandidateList{
 					{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 					{1, &bitfield.Bitlist{0b00101010, 0b1}, 3, false},
@@ -100,7 +95,7 @@ func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newMaxCoverProblem(tt.args.atts, tt.args.k)
+			got, err := newMaxCoverProblem(tt.args.atts)
 			if (err != nil) != tt.wantErr || !errors.Is(err, tt.expectedErr) {
 				t.Errorf("newMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
 				return
@@ -314,3 +309,34 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_sort(t *testing.T)
 		})
 	}
 }
+
+//func TestMaxCoverAttestationAggregation_maxCoverProblem_cover(t *testing.T) {
+//	type fields struct {
+//		k          int
+//		candidates maxCoverCandidateList
+//	}
+//	tests := []struct {
+//		name    string
+//		fields  fields
+//		want    *maxCoverSolution
+//		wantErr bool
+//	}{
+//		// TODO: Add test cases.
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			mc := &maxCoverProblem{
+//				k:          tt.fields.k,
+//				candidates: tt.fields.candidates,
+//			}
+//			got, err := mc.cover()
+//			if (err != nil) != tt.wantErr {
+//				t.Errorf("cover() error = %v, wantErr %v", err, tt.wantErr)
+//				return
+//			}
+//			if !reflect.DeepEqual(got, tt.want) {
+//				t.Errorf("cover() got = %v, want %v", got, tt.want)
+//			}
+//		})
+//	}
+//}

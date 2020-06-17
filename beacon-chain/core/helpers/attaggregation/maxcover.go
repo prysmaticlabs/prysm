@@ -24,7 +24,7 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	if len(atts) < 2 {
 		return atts, nil
 	}
-	_, err := newMaxCoverProblem(atts, len(atts))
+	_, err := newMaxCoverProblem(atts)
 	if err != nil {
 		return atts, err
 	}
@@ -33,9 +33,8 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 	//return mc.cover()
 }
 
-// maxCoverProblem defines Maximum k-Coverage problem.
+// maxCoverProblem defines Maximum Coverage problem.
 type maxCoverProblem struct {
-	k          int
 	candidates maxCoverCandidateList
 }
 
@@ -57,13 +56,10 @@ type maxCoverSolution struct {
 	indices  [][]uint64
 }
 
-// newMaxCoverProblem returns initialized Maximum k-Coverage problem, with all necessary pre-tests done.
-func newMaxCoverProblem(atts []*ethpb.Attestation, k int) (*maxCoverProblem, error) {
+// newMaxCoverProblem returns initialized Maximum Coverage problem, with all necessary pre-tests done.
+func newMaxCoverProblem(atts []*ethpb.Attestation) (*maxCoverProblem, error) {
 	if len(atts) == 0 {
 		return nil, errors.Wrap(ErrInvalidAttestationCount, "cannot setup max_cover problem")
-	}
-	if len(atts) < k {
-		k = len(atts)
 	}
 
 	// Assert that all attestations have the same bitlist length.
@@ -73,6 +69,7 @@ func newMaxCoverProblem(atts []*ethpb.Attestation, k int) (*maxCoverProblem, err
 		}
 	}
 
+	// Transform list of attestations into candidate sets.
 	buildCandidateList := func() maxCoverCandidateList {
 		candidates := make([]*maxCoverCandidate, len(atts))
 		for i := 0; i < len(atts); i++ {
@@ -85,48 +82,16 @@ func newMaxCoverProblem(atts []*ethpb.Attestation, k int) (*maxCoverProblem, err
 		return candidates
 	}
 
-	mc := &maxCoverProblem{
-		k:          k,
+	return &maxCoverProblem{
 		candidates: buildCandidateList(),
-	}
-
-	return mc, nil
+	}, nil
 }
 
-// filter removes processed and overlapping candidates.
-func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist) *maxCoverCandidateList {
-	cur, end := 0, len(*cl)
-	for cur < end {
-		if (*cl)[cur].processed || covered.Overlaps(*(*cl)[cur].bits) {
-			(*cl)[cur] = (*cl)[end-1]
-			end--
-			continue
-		}
-		cur++
-	}
-	*cl = (*cl)[:end]
-	return cl
-}
-
-// sort orders candidates by their score, starting from the candidate with the highest score.
-func (cl *maxCoverCandidateList) sort() *maxCoverCandidateList {
-	sort.Slice(*cl, func(i, j int) bool {
-		return (*cl)[i].score > (*cl)[j].score
-	})
-	return cl
-}
-
-// String provides string representation of candidates list.
-func (cl *maxCoverCandidateList) String() string {
-	return fmt.Sprintf("candidates: %v", *cl)
-}
-
-// String provides string representation of a candidate.
-func (c *maxCoverCandidate) String() string {
-	return fmt.Sprintf("{%v, 0b%b, s%d, %t}", c.key, c.bits.Bytes(), c.score, c.processed)
-}
-
-//func (mc *maxCoverProblem) cover() ([]*ethpb.Attestation, error) {
+//// cover calculates solution to Maximum k-Cover problem.
+//func (mc *maxCoverProblem) cover() (*maxCoverSolution, error) {
+//if len(atts) < k {
+//k = len(atts)
+//}
 //	if len(mc.candidates) == 0 {
 //		return mc.atts, nil
 //	}
@@ -166,7 +131,40 @@ func (c *maxCoverCandidate) String() string {
 //
 //	return mc.collectAttestations()
 //}
-//
+
+// filter removes processed and overlapping candidates.
+func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist) *maxCoverCandidateList {
+	cur, end := 0, len(*cl)
+	for cur < end {
+		if (*cl)[cur].processed || covered.Overlaps(*(*cl)[cur].bits) {
+			(*cl)[cur] = (*cl)[end-1]
+			end--
+			continue
+		}
+		cur++
+	}
+	*cl = (*cl)[:end]
+	return cl
+}
+
+// sort orders candidates by their score, starting from the candidate with the highest score.
+func (cl *maxCoverCandidateList) sort() *maxCoverCandidateList {
+	sort.Slice(*cl, func(i, j int) bool {
+		return (*cl)[i].score > (*cl)[j].score
+	})
+	return cl
+}
+
+// String provides string representation of candidates list.
+func (cl *maxCoverCandidateList) String() string {
+	return fmt.Sprintf("candidates: %v", *cl)
+}
+
+// String provides string representation of a candidate.
+func (c *maxCoverCandidate) String() string {
+	return fmt.Sprintf("{%v, 0b%b, s%d, %t}", c.key, c.bits.Bytes(), c.score, c.processed)
+}
+
 //// aggregatedAttestation returns aggregated attestation containing all unaggregated attestations
 //// from the solution.
 //func (mc *maxCoverProblem) aggregatedAttestation() (*ethpb.Attestation, error) {
