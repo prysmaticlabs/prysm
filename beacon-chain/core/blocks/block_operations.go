@@ -800,6 +800,109 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
 }
 
+// VerifyAttestations will verify the signatures of the provided attestations. This method performs
+// a single BLS verification call to verify the signatures of all of the provided attestations. All
+// of the provided attestations must have valid signatures or this method will return an error.
+// This method does not determine which attestation signature is invalid, only that one or more
+// attestation signatures were not valid.
+func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "core.VerifyAttestations")
+	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("attestations", int64(len(atts))))
+
+	if len(atts) == 0 {
+		return nil
+	}
+
+	fork := beaconState.Fork()
+	gvr := beaconState.GenesisValidatorRoot()
+	dt := params.BeaconConfig().DomainBeaconAttester
+
+	// Split attestations by fork. Note: the signature domain will differ based on the fork.
+	var preForkAtts []*ethpb.Attestation
+	var postForkAtts []*ethpb.Attestation
+	for _, a := range atts {
+		if helpers.SlotToEpoch(a.Data.Slot) < fork.Epoch {
+			preForkAtts = append(preForkAtts, a)
+		} else {
+			postForkAtts = append(postForkAtts, a)
+		}
+	}
+
+	// Check attestations from before the fork.
+	if fork.Epoch > 0 { // Check to prevent underflow.
+		prevDomain, err := helpers.Domain(fork, fork.Epoch-1, dt, gvr)
+		if err != nil {
+			return err
+		}
+		if err := verifyAttestationsWithDomain(ctx, beaconState, preForkAtts, prevDomain); err != nil {
+			return err
+		}
+	} else if len(preForkAtts) > 0 {
+		// This is a sanity check that preForkAtts were not ignored when fork.Epoch == 0. This
+		// condition is not possible, but it doesn't hurt to check anyway.
+		return errors.New("some attestations were not verified from previous fork before genesis")
+	}
+
+	// Then check attestations from after the fork.
+	currDomain, err := helpers.Domain(fork, fork.Epoch, dt, gvr)
+	if err != nil {
+		return err
+	}
+
+	return verifyAttestationsWithDomain(ctx, beaconState, postForkAtts, currDomain)
+}
+
+// Inner method to verify attestations. This abstraction allows for the domain to be provided as an
+// argument.
+func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) error {
+	if len(atts) == 0 {
+		return nil
+	}
+
+	sigs := make([]*bls.Signature, len(atts))
+	pks := make([]*bls.PublicKey, len(atts))
+	msgs := make([][32]byte, len(atts))
+	for i, a := range atts {
+		sig, err := bls.SignatureFromBytes(a.Signature)
+		if err != nil {
+			return err
+		}
+		sigs[i] = sig
+		c, err := helpers.BeaconCommitteeFromState(beaconState, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return err
+		}
+		ia := attestationutil.ConvertToIndexed(ctx, a, c)
+		indices := ia.AttestingIndices
+		var pk *bls.PublicKey
+		for i := 0; i < len(indices); i++ {
+			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+			p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+			if err != nil {
+				return errors.Wrap(err, "could not deserialize validator public key")
+			}
+			if pk == nil {
+				pk = p
+			} else {
+				pk.Aggregate(p)
+			}
+		}
+		pks[i] = pk
+
+		root, err := helpers.ComputeSigningRoot(ia.Data, domain)
+		if err != nil {
+			return errors.Wrap(err, "could not get signing root of object")
+		}
+		msgs[i] = root
+	}
+	as := bls.AggregateSignatures(sigs)
+	if !as.AggregateVerify(pks, msgs) {
+		return errors.New("one or more attestation signatures did not verify")
+	}
+	return nil
+}
+
 // ProcessDeposits is one of the operations performed on each processed
 // beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
 // into the beacon chain.
