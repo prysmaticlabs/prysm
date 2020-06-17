@@ -1,6 +1,7 @@
 package attaggregation
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -46,8 +47,11 @@ type maxCoverCandidate struct {
 	processed bool
 }
 
+// maxCoverCandidateList is defined to allow group operations (filtering, sorting) on all candidates.
 type maxCoverCandidateList []*maxCoverCandidate
 
+// maxCoverSolution represents the solution as bitlist of resultant coverage, and indices in
+// attributes array grouped by aggregations.
 type maxCoverSolution struct {
 	coverage bitfield.Bitlist
 	indices  [][]uint64
@@ -89,6 +93,7 @@ func newMaxCoverProblem(atts []*ethpb.Attestation, k int) (*maxCoverProblem, err
 	return mc, nil
 }
 
+// filter removes processed and overlapping candidates.
 func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist) *maxCoverCandidateList {
 	cur, end := 0, len(*cl)
 	for cur < end {
@@ -108,6 +113,16 @@ func (cl *maxCoverCandidateList) sort() *maxCoverCandidateList {
 		return (*cl)[i].score > (*cl)[j].score
 	})
 	return cl
+}
+
+// String provides string representation of candidates list.
+func (cl *maxCoverCandidateList) String() string {
+	return fmt.Sprintf("candidates: %v", *cl)
+}
+
+// String provides string representation of a candidate.
+func (c *maxCoverCandidate) String() string {
+	return fmt.Sprintf("{%v, 0b%b, s%d, %t}", c.key, c.bits.Bytes(), c.score, c.processed)
 }
 
 //func (mc *maxCoverProblem) cover() ([]*ethpb.Attestation, error) {
