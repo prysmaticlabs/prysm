@@ -197,3 +197,14 @@ func AttDataIsEqual(attData1 *ethpb.AttestationData, attData2 *ethpb.Attestation
 	}
 	return true
 }
+
+// CheckPointIsEqual performs an equality check between 2 check points, returns false if unequal.
+func CheckPointIsEqual(checkPt1 *ethpb.Checkpoint, checkPt2 *ethpb.Checkpoint) bool {
+	if checkPt1.Epoch != checkPt2.Epoch {
+		return false
+	}
+	if !bytes.Equal(checkPt1.Root, checkPt2.Root) {
+		return false
+	}
+	return true
+}
