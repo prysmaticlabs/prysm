@@ -49,7 +49,8 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (
 	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpans")
 	defer span.End()
 
-	if fromCache && db.flatSpanCache.Has(epoch) {
+	// Get from the cache if it exists or is requested, if not, go to DB.
+	if fromCache && db.flatSpanCache.Has(epoch) || db.flatSpanCache.Has(epoch) {
 		spans, _ := db.flatSpanCache.Get(epoch)
 		return spans, nil
 	}
@@ -83,14 +84,12 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 		return types.ErrWrongSize
 	}
 
-	if toCache {
-		db.flatSpanCache.Set(epoch, es)
-		return nil
-	}
-
 	// Saving to the cache if it exists so cache and DB never conflict.
-	if db.flatSpanCache.Has(epoch) {
+	if toCache || db.flatSpanCache.Has(epoch) {
 		db.flatSpanCache.Set(epoch, es)
+	}
+	if toCache {
+		return nil
 	}
 
 	return db.update(func(tx *bolt.Tx) error {

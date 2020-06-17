@@ -140,11 +140,11 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 	}
 
 	epoch := uint64(9)
-	if err := db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.ToCache); err != nil {
+	if err := db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseCache); err != nil {
 		t.Fatal(err)
 	}
 
-	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.ToCache)
+	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.UseCache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 		t.Fatalf("Expected store from DB to be %#x, received %#x", epochStore.Bytes(), esFromCache.Bytes())
 	}
 
-	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.ToDB)
+	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.UseDB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,12 +181,12 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 	}
 
 	epoch := uint64(9)
-	if err := db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.ToDB); err != nil {
+	if err := db.SaveEpochSpans(ctx, epoch, epochStore, dbTypes.UseDB); err != nil {
 		t.Fatal(err)
 	}
 
 	// Expect cache to retrieve from DB if its not in cache.
-	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.ToCache)
+	esFromCache, err := db.EpochSpans(ctx, epoch, dbTypes.UseCache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestStore_SaveEpochSpans_ToDB(t *testing.T) {
 		t.Fatalf("Expected cache request to be %#x, expected %#x", epochStore.Bytes(), esFromCache.Bytes())
 	}
 
-	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.ToDB)
+	esFromDB, err := db.EpochSpans(ctx, epoch, dbTypes.UseDB)
 	if err != nil {
 		t.Fatal(err)
 	}

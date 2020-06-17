@@ -257,7 +257,7 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			if err := db.SaveEpochSpans(context.Background(), 1, store, dbTypes.ToDB); err != nil {
+			if err := db.SaveEpochSpans(context.Background(), 1, store, dbTypes.UseDB); err != nil {
 				b.Fatal(err)
 			}
 		}

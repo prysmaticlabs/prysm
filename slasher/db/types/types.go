@@ -17,10 +17,10 @@ const (
 )
 
 const (
-	// ToCache is used to mark when calling a DB function, to save it to the cache.
-	ToCache = true
-	// ToDB is used to mark when calling a DB function, to save it to the DB.
-	ToDB = false
+	// UseCache is used to mark when calling a DB function, to save it to the cache.
+	UseCache = true
+	// UseDB is used to mark when calling a DB function, to save it to the DB.
+	UseDB = false
 )
 
 func (status SlashingStatus) String() string {
