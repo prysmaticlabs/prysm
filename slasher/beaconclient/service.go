@@ -192,6 +192,6 @@ func (bs *Service) Start() {
 	go bs.subscribeDetectedAttesterSlashings(bs.ctx, bs.attesterSlashingsChan)
 
 	// We listen to a stream of blocks and attestations from the beacon node.
-	//go bs.receiveBlocks(bs.ctx)
-	//go bs.receiveAttestations(bs.ctx)
+	go bs.receiveBlocks(bs.ctx)
+	go bs.receiveAttestations(bs.ctx)
 }
