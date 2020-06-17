@@ -388,7 +388,7 @@ func (s *Service) Peers() *peers.Status {
 // ENR returns the local node's current ENR.
 func (s *Service) ENR() *enr.Record {
 	if s.dv5Listener == nil {
-		return &enr.Record{}
+		return nil
 	}
 	return s.dv5Listener.Self().Record()
 }

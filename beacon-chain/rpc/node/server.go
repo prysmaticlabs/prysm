@@ -9,10 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -95,17 +94,37 @@ func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) 
 	}, nil
 }
 
+// GetHost returns the p2p data on the current local and host peer.
 func (ns *Server) GetHost(ctx context.Context) (*ethpb.HostData, error) {
+	stringAddr := []string{}
+	for _, addr := range ns.PeerManager.Host().Addrs() {
+		stringAddr = append(stringAddr, addr.String())
+	}
+	record := ns.PeerManager.ENR()
+	enr := ""
+	err := error(nil)
+	if record != nil {
+		enr, err = p2p.SerializeENR(record)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Unable to serialize enr: %v", err)
+		}
+	}
 
+	return &ethpb.HostData{
+		Addresses: stringAddr,
+		PeerId:    ns.PeerManager.PeerID().String(),
+		Enr:       enr,
+	}, nil
 }
 
+// GetPeer returns the data known about the peer defined by the provided peer id.
 func (ns *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*ethpb.Peer, error) {
 	pid, err := peer.Decode(peerReq.PeerId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Unable to parse provided peer id: %v", err)
 	}
 	addr, err := ns.PeersFetcher.Peers().Address(pid)
-	if err != nil || addr == nil {
+	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
 	dir, err := ns.PeersFetcher.Peers().Direction(pid)
