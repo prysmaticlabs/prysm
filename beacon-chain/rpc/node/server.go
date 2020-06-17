@@ -9,6 +9,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -30,6 +32,7 @@ type Server struct {
 	Server             *grpc.Server
 	BeaconDB           db.ReadOnlyDatabase
 	PeersFetcher       p2p.PeersProvider
+	PeerManager        p2p.PeerManager
 	GenesisTimeFetcher blockchain.TimeFetcher
 	GenesisFetcher     blockchain.GenesisFetcher
 }
@@ -92,6 +95,54 @@ func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) 
 	}, nil
 }
 
+func (ns *Server) GetHost(ctx context.Context) (*ethpb.HostData, error) {
+
+}
+
+func (ns *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*ethpb.Peer, error) {
+	pid, err := peer.Decode(peerReq.PeerId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Unable to parse provided peer id: %v", err)
+	}
+	addr, err := ns.PeersFetcher.Peers().Address(pid)
+	if err != nil || addr == nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	dir, err := ns.PeersFetcher.Peers().Direction(pid)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	pbDirection := ethpb.PeerDirection_UNKNOWN
+	switch dir {
+	case network.DirInbound:
+		pbDirection = ethpb.PeerDirection_INBOUND
+	case network.DirOutbound:
+		pbDirection = ethpb.PeerDirection_OUTBOUND
+	}
+	connState, err := ns.PeersFetcher.Peers().ConnectionState(pid)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	record, err := ns.PeersFetcher.Peers().ENR(pid)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	enr := ""
+	if record != nil {
+		enr, err = p2p.SerializeENR(record)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Unable to serialize enr: %v", err)
+		}
+	}
+	return &ethpb.Peer{
+		Address:         addr.String(),
+		Direction:       pbDirection,
+		ConnectionState: ethpb.ConnectionState(connState),
+		PeerId:          peerReq.PeerId,
+		Enr:             enr,
+	}, nil
+}
+
 // ListPeers lists the peers connected to this node.
 func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers, error) {
 	res := make([]*ethpb.Peer, 0)
@@ -104,6 +155,17 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers,
 		if err != nil {
 			continue
 		}
+		record, err := ns.PeersFetcher.Peers().ENR(pid)
+		if err != nil {
+			continue
+		}
+		enr := ""
+		if record != nil {
+			enr, err = p2p.SerializeENR(record)
+			if err != nil {
+				continue
+			}
+		}
 
 		address := fmt.Sprintf("%s/p2p/%s", multiaddr.String(), pid.Pretty())
 		pbDirection := ethpb.PeerDirection_UNKNOWN
@@ -114,8 +176,11 @@ func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers,
 			pbDirection = ethpb.PeerDirection_OUTBOUND
 		}
 		res = append(res, &ethpb.Peer{
-			Address:   address,
-			Direction: pbDirection,
+			Address:         address,
+			Direction:       pbDirection,
+			ConnectionState: ethpb.ConnectionState_CONNECTED,
+			PeerId:          pid.String(),
+			Enr:             enr,
 		})
 	}
 
