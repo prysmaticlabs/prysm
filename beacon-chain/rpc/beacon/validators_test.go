@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -2051,6 +2052,9 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	if err := headState.SetValidators(validators); err != nil {
 		t.Fatal(err)
 	}
+	if err := headState.SetBalances([]uint64{100, 101, 102}); err != nil {
+		t.Fatal(err)
+	}
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -2067,7 +2071,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{0, 0},
+		BalancesBeforeEpochTransition: []uint64{101, 102},
 		BalancesAfterEpochTransition:  []uint64{0, 0},
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
@@ -2121,7 +2125,6 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	if err := headState.SetValidators(validators); err != nil {
 		t.Fatal(err)
 	}
-
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			// 10 epochs into the future.
@@ -2129,6 +2132,19 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 		},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
+	}
+	c := headState.Copy()
+	vp, bp, err := precompute.New(ctx, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
+	if err != nil {
+		t.Fatal(err)
 	}
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -2139,8 +2155,8 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{0, 0},
-		BalancesAfterEpochTransition:  []uint64{0, 0},
+		BalancesBeforeEpochTransition: []uint64{extraBal, extraBal + params.BeaconConfig().GweiPerEth},
+		BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
 
@@ -2202,6 +2218,19 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 	}
+	c := headState.Copy()
+	vp, bp, err := precompute.New(ctx, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err = precompute.ProcessRewardsAndPenaltiesPrecompute(c, bp, vp)
+	if err != nil {
+		t.Fatal(err)
+	}
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
@@ -2211,8 +2240,8 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{0, 0},
-		BalancesAfterEpochTransition:  []uint64{0, 0},
+		BalancesBeforeEpochTransition: []uint64{extraBal, extraBal + params.BeaconConfig().GweiPerEth},
+		BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
 	// Index 2 and publicKey3 points to the same validator.
