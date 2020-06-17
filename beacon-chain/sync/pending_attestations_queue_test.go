@@ -35,7 +35,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)

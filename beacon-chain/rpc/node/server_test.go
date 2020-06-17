@@ -133,7 +133,7 @@ func TestNodeServer_GetHost(t *testing.T) {
 		t.Fatal(err)
 	}
 	ns := &Server{
-		PeerManager:  &mockP2p.MockPeerManager{BHost: mP2P.Host, Enr: record, PID: mP2P.Host.ID()},
+		PeerManager:  &mockP2p.MockPeerManager{BHost: mP2P.BHost, Enr: record, PID: mP2P.BHost.ID()},
 		PeersFetcher: peersProvider,
 	}
 	ethpb.RegisterNodeServer(server, ns)
