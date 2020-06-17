@@ -156,8 +156,8 @@ func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(esFromDB.Bytes(), []byte{}) {
-		t.Fatalf("Expected store asked from DB to be empty, \nreceived %#x, \nexpected %#x", esFromDB.Bytes(), []byte{})
+	if !bytes.Equal(esFromDB.Bytes(), esFromCache.Bytes()) {
+		t.Fatalf("Expected store asked from DB to use cache, \nreceived %#x, \nexpected %#x", esFromDB.Bytes(), esFromCache.Bytes())
 	}
 }
 
