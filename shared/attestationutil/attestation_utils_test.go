@@ -258,6 +258,61 @@ func TestAttDataIsEqual(t *testing.T) {
 	}
 }
 
+func TestCheckPtIsEqual(t *testing.T) {
+	type test struct {
+		name     string
+		checkPt1 *eth.Checkpoint
+		checkPt2 *eth.Checkpoint
+		equal    bool
+	}
+	tests := []test{
+		{
+			name: "same",
+			checkPt1: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			checkPt2: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			equal: true,
+		},
+		{
+			name: "diff epoch",
+			checkPt1: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			checkPt2: &eth.Checkpoint{
+				Epoch: 5,
+				Root:  []byte("good source"),
+			},
+			equal: false,
+		},
+		{
+			name: "diff root",
+			checkPt1: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			checkPt2: &eth.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("bad source"),
+			},
+			equal: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			areEqual := attestationutil.CheckPointIsEqual(tt.checkPt1, tt.checkPt2)
+			if areEqual != tt.equal {
+				t.Errorf("Expected %t, received %t", tt.equal, areEqual)
+			}
+		})
+	}
+}
+
 func BenchmarkAttDataIsEqual(b *testing.B) {
 	attData1 := &eth.AttestationData{
 		Slot:            5,
