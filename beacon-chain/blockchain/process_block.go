@@ -250,13 +250,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		}
 	}
 
-	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
-		if err := s.updateJustified(ctx, postState); err != nil {
-			return err
-		}
-	}
-
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if len(s.getInitSyncBlocks()) > int(initialSyncBlockCacheSize) {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
@@ -295,10 +288,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
-
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
 
 		if featureconfig.Get().NewStateMgmt {
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
