@@ -89,8 +89,6 @@ func (ds *Service) detectDoubleVote(
 	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
-	ctx, span := trace.StartSpan(ctx, "detection.detectDoubleVote")
-	defer span.End()
 	if detectionResult == nil || detectionResult.Kind != types.DoubleVote {
 		return nil, nil
 	}
