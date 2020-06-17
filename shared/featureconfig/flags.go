@@ -172,7 +172,9 @@ var (
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
-var devModeFlags = []cli.Flag{}
+var devModeFlags = []cli.Flag{
+	initSyncVerifyEverythingFlag,
+}
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
@@ -543,4 +545,5 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
+	"--dev",
 }

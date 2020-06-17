@@ -28,7 +28,7 @@ const DomainByteLength = 4
 var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
-	MaxCost:     1 << 19, // 500 kb is cache max size
+	MaxCost:     1 << 22, // ~4mb is cache max size
 	BufferItems: 64,
 })
 
@@ -202,13 +202,14 @@ func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool 
 	if size != len(msgs) {
 		return false
 	}
-	msgSlices := []byte{}
-	var rawKeys []bls12.PublicKey
+	msgSlices := make([]byte, 0, 32*len(msgs))
+	rawKeys := make([]bls12.PublicKey, 0, len(pubKeys))
 	for i := 0; i < size; i++ {
 		msgSlices = append(msgSlices, msgs[i][:]...)
 		rawKeys = append(rawKeys, *pubKeys[i].p)
 	}
-	return s.s.AggregateVerify(rawKeys, msgSlices)
+	// Use "NoCheck" because we do not care if the messages are unique or not.
+	return s.s.AggregateVerifyNoCheck(rawKeys, msgSlices)
 }
 
 // FastAggregateVerify verifies all the provided public keys with their aggregated signature.
@@ -267,6 +268,8 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 //
 // In ETH2.0 specification:
 // def Aggregate(signatures: Sequence[BLSSignature]) -> BLSSignature
+//
+// Deprecated: Use AggregateSignatures.
 func Aggregate(sigs []*Signature) *Signature {
 	return AggregateSignatures(sigs)
 }
