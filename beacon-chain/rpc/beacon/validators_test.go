@@ -2142,8 +2142,8 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{0, 0},
-		BalancesAfterEpochTransition:  []uint64{0, 0},
+		BalancesBeforeEpochTransition: []uint64{33000000000, 34000000000},
+		BalancesAfterEpochTransition:  []uint64{32993928423, 33993928423},
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
 
@@ -2214,8 +2214,8 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{0, 0},
-		BalancesAfterEpochTransition:  []uint64{0, 0},
+		BalancesBeforeEpochTransition: []uint64{33000000000, 34000000000},
+		BalancesAfterEpochTransition:  []uint64{32993928423, 33993928423},
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
 	// Index 2 and publicKey3 points to the same validator.
