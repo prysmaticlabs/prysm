@@ -2051,6 +2051,9 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	if err := headState.SetValidators(validators); err != nil {
 		t.Fatal(err)
 	}
+	if err := headState.SetBalances([]uint64{100, 101, 102}); err != nil {
+		t.Fatal(err)
+	}
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -2067,7 +2070,7 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
-		BalancesBeforeEpochTransition: []uint64{0, 0},
+		BalancesBeforeEpochTransition: []uint64{101, 102},
 		BalancesAfterEpochTransition:  []uint64{0, 0},
 		MissingValidators:             [][]byte{publicKey1[:]},
 	}
