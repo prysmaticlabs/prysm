@@ -108,6 +108,7 @@ func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist) *maxCoverCandi
 	return cl
 }
 
+// sort orders candidates by their score, starting from the candidate with the highest score.
 func (cl *maxCoverCandidateList) sort() *maxCoverCandidateList {
 	sort.Slice(*cl, func(i, j int) bool {
 		return (*cl)[i].score > (*cl)[j].score

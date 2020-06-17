@@ -227,3 +227,90 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_filter(t *testing.
 		})
 	}
 }
+
+func TestMaxCoverAttestationAggregation_maxCoverCandidateList_sort(t *testing.T) {
+	var problem maxCoverCandidateList
+	tests := []struct {
+		name string
+		cl   maxCoverCandidateList
+		want *maxCoverCandidateList
+	}{
+		{
+			name: "nil list",
+			cl:   nil,
+			want: &problem,
+		},
+		{
+			name: "empty list",
+			cl:   maxCoverCandidateList{},
+			want: &maxCoverCandidateList{},
+		},
+		{
+			name: "single item",
+			cl: maxCoverCandidateList{
+				{0, &bitfield.Bitlist{}, 5, false},
+			},
+			want: &maxCoverCandidateList{
+				{0, &bitfield.Bitlist{}, 5, false},
+			},
+		},
+		{
+			name: "already sorted",
+			cl: maxCoverCandidateList{
+				{5, &bitfield.Bitlist{}, 5, false},
+				{4, &bitfield.Bitlist{}, 4, false},
+				{3, &bitfield.Bitlist{}, 4, false},
+				{2, &bitfield.Bitlist{}, 2, false},
+				{1, &bitfield.Bitlist{}, 1, false},
+			},
+			want: &maxCoverCandidateList{
+				{5, &bitfield.Bitlist{}, 5, false},
+				{4, &bitfield.Bitlist{}, 4, false},
+				{3, &bitfield.Bitlist{}, 4, false},
+				{2, &bitfield.Bitlist{}, 2, false},
+				{1, &bitfield.Bitlist{}, 1, false},
+			},
+		},
+		{
+			name: "all equal",
+			cl: maxCoverCandidateList{
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+			},
+			want: &maxCoverCandidateList{
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+				{0, &bitfield.Bitlist{}, 5, false},
+			},
+		},
+		{
+			name: "unsorted",
+			cl: maxCoverCandidateList{
+				{2, &bitfield.Bitlist{}, 2, false},
+				{4, &bitfield.Bitlist{}, 4, false},
+				{3, &bitfield.Bitlist{}, 4, false},
+				{5, &bitfield.Bitlist{}, 5, false},
+				{1, &bitfield.Bitlist{}, 1, false},
+			},
+			want: &maxCoverCandidateList{
+				{5, &bitfield.Bitlist{}, 5, false},
+				{4, &bitfield.Bitlist{}, 4, false},
+				{3, &bitfield.Bitlist{}, 4, false},
+				{2, &bitfield.Bitlist{}, 2, false},
+				{1, &bitfield.Bitlist{}, 1, false},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cl.sort(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("sort() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
