@@ -1,14 +1,13 @@
 package attaggregation
 
 import (
-	"errors"
 	"sort"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
@@ -49,6 +48,7 @@ type maxCoverCandidate struct {
 	signature *[]byte
 	score     uint64
 	processed bool
+	ind       int
 }
 
 // newMaxCoverProblem returns initialized Maximum k-Coverage problem, with all necessary pre-tests done.
@@ -80,6 +80,7 @@ func newMaxCoverProblem(atts []*ethpb.Attestation, k int) (*maxCoverProblem, err
 			bits:      &atts[i].AggregationBits,
 			signature: &atts[i].Signature,
 			score:     atts[i].AggregationBits.Count(),
+			ind:       i,
 		})
 	}
 
@@ -139,47 +140,73 @@ func (mc *maxCoverProblem) cover() ([]*ethpb.Attestation, error) {
 		}
 	}
 
-	// Remove processed items.
-	mc.candidates.filter(mc.coverage)
+	//lst := make([]bitfield.Bitlist, 0)
+	//for _, att := range atts {
+	//	lst = append(lst, att.AggregationBits)
+	//}
+	//log.WithFields(logrus.Fields{
+	//	"list": fmt.Sprintf("%#v\n", lst),
+	//}).Debug("-----> Collected")
+
+	return mc.collectAttestations()
+}
+
+// aggregatedAttestation returns aggregated attestation containing all unaggregated attestations
+// from the solution.
+func (mc *maxCoverProblem) aggregatedAttestation() (*ethpb.Attestation, error) {
+	if len(mc.aggregated) < 1 {
+		return nil, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate solution")
+	}
+
+	signs := make([]*bls.Signature, len(mc.aggregated))
+	for i := 0; i < len(mc.aggregated); i++ {
+		sig, err := signatureFromBytes(*mc.aggregated[i].signature)
+		if err != nil {
+			return nil, err
+		}
+		signs[i] = sig
+	}
+	return &ethpb.Attestation{
+		AggregationBits: mc.coverage,
+		Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
+		Signature:       aggregateSignatures(signs).Marshal(),
+	}, nil
+}
+
+func (mc *maxCoverProblem) collectAttestations() ([]*ethpb.Attestation, error) {
+	// Remove processed items. Filter by score in desc.
+	mc.candidates.filter(mc.coverage).sort()
 
 	// Return results, start with the aggregated attestation.
-	atts := make([]*ethpb.Attestation, 0, len(mc.aggregated)+len(mc.unaggregated))
+	atts := make([]*ethpb.Attestation, 1+len(mc.candidates)+len(mc.unaggregated))
+	ind := 0
 	if len(mc.aggregated) > 0 {
-		// Collect selected signatures.
-		signs := make([]*bls.Signature, len(mc.aggregated))
-		for i := 0; i < len(mc.aggregated); i++ {
-			sig, err := signatureFromBytes(*mc.aggregated[i].signature)
-			if err != nil {
-				return nil, err
-			}
-			signs[i] = sig
+		att, err := mc.aggregatedAttestation()
+		if err != nil {
+			return nil, err
 		}
-		atts = append(atts, &ethpb.Attestation{
-			AggregationBits: mc.coverage,
-			Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
-			Signature:       aggregateSignatures(signs).Marshal(),
-		})
+		atts[ind] = att
+		ind++
 	}
 
 	// Add unaggregated attestations.
 	for _, candidate := range mc.unaggregated {
-		atts = append(atts, &ethpb.Attestation{
-			AggregationBits: bytesutil.SafeCopyBytes(*candidate.bits),
-			Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
-			Signature:       bytesutil.SafeCopyBytes(*candidate.signature),
-		})
+		//atts[ind] = &ethpb.Attestation{
+		//	AggregationBits: bytesutil.SafeCopyBytes(*candidate.bits),
+		//	Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
+		//	Signature:       bytesutil.SafeCopyBytes(*candidate.signature),
+		//}
+		atts[ind] = mc.atts[candidate.ind]
+		ind++
 	}
 
 	// Add left-over candidates (their fate was undecided as we had k items already).
 	for _, candidate := range mc.candidates {
 		if candidate.processed {
-			continue
+			panic("wrong solution")
 		}
-		atts = append(atts, &ethpb.Attestation{
-			AggregationBits: bytesutil.SafeCopyBytes(*candidate.bits),
-			Data:            stateTrie.CopyAttestationData(mc.atts[0].Data),
-			Signature:       bytesutil.SafeCopyBytes(*candidate.signature),
-		})
+		atts[ind] = mc.atts[candidate.ind]
+		ind++
 	}
 
 	return atts, nil
