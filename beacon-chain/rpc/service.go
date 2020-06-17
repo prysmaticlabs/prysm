@@ -211,8 +211,6 @@ func (s *Service) Start() {
 		)),
 	}
 	grpc_prometheus.EnableHandlingTimeHistogram()
-	// TODO(#791): Utilize a certificate for secure connections
-	// between beacon nodes and validator clients.
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -221,7 +219,9 @@ func (s *Service) Start() {
 		}
 		opts = append(opts, grpc.Creds(creds))
 	} else {
-		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
+		log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
+			"validator on the same machines, you can ignore this message. If you want to know " +
+			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
