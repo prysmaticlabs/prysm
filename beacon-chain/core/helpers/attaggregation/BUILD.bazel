@@ -25,7 +25,6 @@ go_library(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//shared/bls:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -40,6 +39,7 @@ go_test(
     srcs = [
         "aggregate_test.go",
         "attaggregation_test.go",
+        "maxcover_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
