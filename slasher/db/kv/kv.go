@@ -34,7 +34,7 @@ type Config struct {
 
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
-	db.spanCache.Purge()
+	db.flatSpanCache.Purge()
 	return db.db.Close()
 }
 
@@ -42,13 +42,13 @@ func (db *Store) Close() error {
 func (db *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.removeOldestFromCache")
 	defer span.End()
-	epochRemoved := db.spanCache.PruneOldest()
+	epochRemoved := db.flatSpanCache.PruneOldest()
 	return epochRemoved
 }
 
 // ClearSpanCache clears the spans cache.
 func (db *Store) ClearSpanCache() {
-	db.spanCache.Purge()
+	db.flatSpanCache.Purge()
 }
 
 func (db *Store) update(fn func(*bolt.Tx) error) error {
@@ -100,11 +100,6 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	}
 	kv := &Store{db: boltDB, databasePath: datafile}
 	kv.EnableSpanCache(true)
-	spanCache, err := cache.NewEpochSpansCache(cfg.SpanCacheSize, persistSpanMapsOnEviction(kv))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not create new cache")
-	}
-	kv.spanCache = spanCache
 	flatSpanCache, err := cache.NewEpochFlatSpansCache(cfg.SpanCacheSize, persistFlatSpanMapsOnEviction(kv))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create new flat cache")
