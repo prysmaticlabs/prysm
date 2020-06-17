@@ -100,7 +100,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		AttestingIndices: []uint64{duty.ValidatorIndex},
 		Data:             data,
 	}
-	if v.preSigningValidations(ctx, indexedAtt, pubKey) {
+	if err := v.preSigningValidations(ctx, indexedAtt, pubKey); err != nil {
 		return
 	}
 
@@ -147,7 +147,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 	indexedAtt.Signature = sig
-	if v.postSignatureUpdate(ctx, indexedAtt, pubKey) {
+	if err := v.postSignatureUpdate(ctx, indexedAtt, pubKey); err != nil {
 		return
 	}
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
@@ -172,21 +172,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
 }
-func (v *validator) preSigningValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) bool {
+func (v *validator) preSigningValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", indexedAtt.Data.Slot)
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.VerifyAttestation(ctx, indexedAtt) {
-			log.WithFields(logrus.Fields{
-				"sourceEpoch": indexedAtt.Data.Source.Epoch,
-				"targetEpoch": indexedAtt.Data.Target.Epoch,
-			}).Error("Attempted to make a slashable attestation, rejected by external slasher service")
-			if v.emitAccountMetrics {
-				validatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return true
-		}
-	}
 
 	v.attesterHistoryByPubKeyLock.RLock()
 	attesterHistory := v.attesterHistoryByPubKey[pubKey]
@@ -200,17 +188,12 @@ func (v *validator) preSigningValidations(ctx context.Context, indexedAtt *ethpb
 			if v.emitAccountMetrics {
 				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			}
-			return true
+			return fmt.Errorf("sourceEpoch: %dtargetEpoch: %d  Attempted to make a slashable attestation,"+
+				" rejected by local slasher protection", indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
 		}
 	}
-	return false
-}
-
-func (v *validator) postSignatureUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) bool {
-	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", indexedAtt.Data.Slot)
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.CommitAttestation(ctx, indexedAtt) {
+		if !v.protector.VerifyAttestation(ctx, indexedAtt) {
 			log.WithFields(logrus.Fields{
 				"sourceEpoch": indexedAtt.Data.Source.Epoch,
 				"targetEpoch": indexedAtt.Data.Target.Epoch,
@@ -218,21 +201,40 @@ func (v *validator) postSignatureUpdate(ctx context.Context, indexedAtt *ethpb.I
 			if v.emitAccountMetrics {
 				validatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return true
+			return fmt.Errorf("sourceEpoch: %dtargetEpoch: %d  Attempted to make a slashable attestation,"+
+				" rejected by external slasher service", indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
 		}
 	}
+	return nil
+}
 
-	v.attesterHistoryByPubKeyLock.RLock()
-	attesterHistory := v.attesterHistoryByPubKey[pubKey]
-	v.attesterHistoryByPubKeyLock.RUnlock()
-
+func (v *validator) postSignatureUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", indexedAtt.Data.Slot)
 	if featureconfig.Get().ProtectAttester {
+		v.attesterHistoryByPubKeyLock.RLock()
+		attesterHistory := v.attesterHistoryByPubKey[pubKey]
+		v.attesterHistoryByPubKeyLock.RUnlock()
 		attesterHistory = markAttestationForTargetEpoch(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
 		v.attesterHistoryByPubKeyLock.Lock()
 		v.attesterHistoryByPubKey[pubKey] = attesterHistory
 		v.attesterHistoryByPubKeyLock.Unlock()
 	}
-	return false
+
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
+		if !v.protector.CommitAttestation(ctx, indexedAtt) {
+			log.WithFields(logrus.Fields{
+				"sourceEpoch": indexedAtt.Data.Source.Epoch,
+				"targetEpoch": indexedAtt.Data.Target.Epoch,
+			}).Fatal("made a slashable attestation, found by external slasher service")
+			if v.emitAccountMetrics {
+				validatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
+			}
+			return fmt.Errorf("made a slashable attestation, sourceEpoch: %dtargetEpoch: %d  "+
+				" found by external slasher service", indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
+		}
+	}
+	return nil
 }
 
 // Given the validator public key, this gets the validator assignment.
