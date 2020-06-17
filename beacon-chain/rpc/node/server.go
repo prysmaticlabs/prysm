@@ -95,7 +95,7 @@ func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) 
 }
 
 // GetHost returns the p2p data on the current local and host peer.
-func (ns *Server) GetHost(ctx context.Context) (*ethpb.HostData, error) {
+func (ns *Server) GetHost(ctx context.Context, _ *ptypes.Empty) (*ethpb.HostData, error) {
 	stringAddr := []string{}
 	for _, addr := range ns.PeerManager.Host().Addrs() {
 		stringAddr = append(stringAddr, addr.String())
