@@ -114,18 +114,35 @@ func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBea
 	return nil
 }
 
-// ReceiveBlockNoVerify mocks ReceiveBlockNoVerify method in chain service.
-func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+// ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
+func (ms *ChainService) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+	if ms.State == nil {
+		ms.State = &stateTrie.BeaconState{}
+	}
+	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
+	}
+	if err := ms.State.SetSlot(block.Block.Slot); err != nil {
+		return err
+	}
+	ms.BlocksReceived = append(ms.BlocksReceived, block)
+	signingRoot, err := stateutil.BlockRoot(block.Block)
+	if err != nil {
+		return err
+	}
+	if ms.DB != nil {
+		if err := ms.DB.SaveBlock(ctx, block); err != nil {
+			return err
+		}
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
+	}
+	ms.Root = signingRoot[:]
+	ms.Block = block
 	return nil
 }
 
 // ReceiveBlockNoPubsub mocks ReceiveBlockNoPubsub method in chain service.
 func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	return nil
-}
-
-// ReceiveBlockNoPubsubForkchoice mocks ReceiveBlockNoPubsubForkchoice method in chain service.
-func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	if ms.State == nil {
 		ms.State = &stateTrie.BeaconState{}
 	}
