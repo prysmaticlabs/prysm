@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -194,22 +193,21 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					// One nil block shouldn't stop the stream.
 					continue
 				}
-				if featureconfig.Get().NewStateMgmt {
-					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
-					if err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get head state to verify block signature")
-						continue
-					}
-
-					if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
-						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not verify block signature")
-						continue
-					}
+				headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+				if err != nil {
+					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get head state to verify block signature")
+					continue
 				}
-				if err := stream.Send(data.SignedBlock); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+
+				if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
+					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not verify block signature")
+					continue
 				}
 			}
+			if err := stream.Send(data.SignedBlock); err != nil {
+				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+			}
+
 		case <-blockSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-bs.Ctx.Done():
