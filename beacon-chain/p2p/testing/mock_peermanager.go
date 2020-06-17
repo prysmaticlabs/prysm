@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
+// MockPeerManager is mock of the PeerManager interface.
 type MockPeerManager struct {
 	Enr   *enr.Record
 	PID   peer.ID
