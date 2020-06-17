@@ -19,9 +19,9 @@ import (
 )
 
 // Validation
+// - The block being voted for (attestation.data.beacon_block_root) passes validation.
 // - The attestation's committee index (attestation.data.index) is for the correct subnet.
 // - The attestation is unaggregated -- that is, it has exactly one participating validator (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1).
-// - The block being voted for (attestation.data.beacon_block_root) passes validation.
 // - attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot).
 // - The signature of attestation is valid.
 func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
@@ -68,6 +68,17 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore
 	}
 
+	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
+	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
+	hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
+	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
+	hasBlock := s.db.HasBlock(ctx, blockRoot)
+	if !(hasState && hasBlock) {
+		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
+		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
+		return pubsub.ValidationIgnore
+	}
+
 	// The attestation's committee index (attestation.data.index) is for the correct subnet.
 	digest, err := s.forkDigest()
 	if err != nil {
@@ -109,17 +120,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
 	if err := validateAggregateAttTime(att.Data.Slot, s.chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
-		return pubsub.ValidationIgnore
-	}
-
-	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
-	blockRoot := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
-	hasStateSummary := featureconfig.Get().NewStateMgmt && s.db.HasStateSummary(ctx, blockRoot) || s.stateSummaryCache.Has(blockRoot)
-	hasState := s.db.HasState(ctx, blockRoot) || hasStateSummary
-	hasBlock := s.db.HasBlock(ctx, blockRoot)
-	if !(hasState && hasBlock) {
-		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: att}})
 		return pubsub.ValidationIgnore
 	}
 
