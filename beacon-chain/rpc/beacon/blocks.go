@@ -203,11 +203,10 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not verify block signature")
 					continue
 				}
+				if err := stream.Send(data.SignedBlock); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
 			}
-			if err := stream.Send(data.SignedBlock); err != nil {
-				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-			}
-
 		case <-blockSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-bs.Ctx.Done():
