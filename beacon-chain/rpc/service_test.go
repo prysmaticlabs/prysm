@@ -74,7 +74,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	rpcService.Start()
 
 	testutil.AssertLogsContain(t, hook, fmt.Sprint("listening on port"))
-	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
+	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC server")
 
 	if err := rpcService.Stop(); err != nil {
 		t.Error(err)

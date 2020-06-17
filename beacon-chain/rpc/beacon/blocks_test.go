@@ -716,6 +716,7 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	server := &Server{
 		Ctx:           ctx,
 		BlockNotifier: chainService.BlockNotifier(),
+		HeadFetcher:   chainService,
 		BeaconDB:      db,
 	}
 
@@ -735,17 +736,17 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
-	b := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot: 1,
-		},
-	}
-
-	chainService := &chainMock.ChainService{}
 	ctx := context.Background()
+	beaconState, privs := testutil.DeterministicGenesisState(t, 32)
+	b, err := testutil.GenerateFullBlock(beaconState, privs, testutil.DefaultBlockGenConfig(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,
 		BlockNotifier: chainService.BlockNotifier(),
+		HeadFetcher:   chainService,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
