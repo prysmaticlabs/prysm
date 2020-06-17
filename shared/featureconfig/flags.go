@@ -551,4 +551,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
 	"--dev",
+	"--enable-stream-duties",
 }
