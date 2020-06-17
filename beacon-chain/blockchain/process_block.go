@@ -215,7 +215,12 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return nil
 	}
 
-	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
+	var postState *stateTrie.BeaconState
+	if featureconfig.Get().InitSyncNoVerify {
+		postState, err = state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
+	} else {
+		postState, err = state.ExecuteStateTransition(ctx, preState, signed)
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
