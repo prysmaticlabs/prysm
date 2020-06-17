@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
@@ -256,7 +257,7 @@ func BenchmarkEpochStore_Save(b *testing.B) {
 		b.ResetTimer()
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			if err := db.SaveEpochSpans(context.Background(), 1, store); err != nil {
+			if err := db.SaveEpochSpans(context.Background(), 1, store, dbTypes.UseDB); err != nil {
 				b.Fatal(err)
 			}
 		}
