@@ -232,11 +232,13 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	// db read and write is used.
 	var spanMap *types.EpochStore
 	epoch := source - 1
-	untilEpoch := epoch - epochLookback
+	lookbackEpoch := epoch - epochLookback
+	untilEpoch := lookbackEpoch
 	if int(untilEpoch) < 0 || featureconfig.Get().DisableLookback {
 		untilEpoch = 0
 	}
 	var err error
+	dbOrCache := dbTypes.UseCache
 	for ; epoch >= untilEpoch; epoch-- {
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update min spans")
@@ -266,7 +268,10 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbTypes.UseCache); err != nil {
+		if epoch >= lookbackEpoch {
+			dbOrCache = dbTypes.UseDB
+		}
+		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbOrCache); err != nil {
 			return err
 		}
 		if len(indices) == 0 {
