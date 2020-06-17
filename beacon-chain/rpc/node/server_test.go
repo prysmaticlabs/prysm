@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -127,7 +128,13 @@ func TestNodeServer_GetHost(t *testing.T) {
 	server := grpc.NewServer()
 	peersProvider := &mockP2p.MockPeersProvider{}
 	mP2P := mockP2p.NewTestP2P(t)
-	record := &enr.Record{}
+	key, err := crypto.GenerateKey()
+	db, err := enode.OpenDB("")
+	if err != nil {
+		t.Fatal("could not open node's peer database")
+	}
+	lNode := enode.NewLocalNode(db, key)
+	record := lNode.Node().Record()
 	stringENR, err := p2p.SerializeENR(record)
 	if err != nil {
 		t.Fatal(err)
