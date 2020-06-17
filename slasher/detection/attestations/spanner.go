@@ -72,11 +72,11 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		)
 	}
 
-	spanMap, err := s.slasherDB.EpochSpans(ctx, sourceEpoch, dbTypes.ToCache)
+	spanMap, err := s.slasherDB.EpochSpans(ctx, sourceEpoch, dbTypes.UseCache)
 	if err != nil {
 		return nil, err
 	}
-	targetSpanMap, err := s.slasherDB.EpochSpans(ctx, targetEpoch, dbTypes.ToCache)
+	targetSpanMap, err := s.slasherDB.EpochSpans(ctx, targetEpoch, dbTypes.UseCache)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		minSpan := span.MinSpan
 		if minSpan > 0 && minSpan < distance {
 			slashableEpoch := sourceEpoch + uint64(minSpan)
-			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.ToCache)
+			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.UseCache)
 			if err != nil {
 				return nil, err
 			}
@@ -114,7 +114,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		maxSpan := span.MaxSpan
 		if maxSpan > distance {
 			slashableEpoch := sourceEpoch + uint64(maxSpan)
-			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.ToCache)
+			targetSpans, err := s.slasherDB.EpochSpans(ctx, slashableEpoch, dbTypes.UseCache)
 			if err != nil {
 				return nil, err
 			}
@@ -174,7 +174,7 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.saveSigBytes")
 	defer traceSpan.End()
 	target := att.Data.Target.Epoch
-	spanMap, err := s.slasherDB.EpochSpans(ctx, target, dbTypes.ToCache)
+	spanMap, err := s.slasherDB.EpochSpans(ctx, target, dbTypes.UseCache)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 			return err
 		}
 	}
-	return s.slasherDB.SaveEpochSpans(ctx, target, spanMap, dbTypes.ToCache)
+	return s.slasherDB.SaveEpochSpans(ctx, target, spanMap, dbTypes.UseCache)
 }
 
 // Updates a min span for a validator index given a source and target epoch
@@ -241,7 +241,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update min spans")
 		}
-		spanMap, err = s.slasherDB.EpochSpans(ctx, epoch, dbTypes.ToCache)
+		spanMap, err = s.slasherDB.EpochSpans(ctx, epoch, dbTypes.UseCache)
 		if err != nil {
 			return err
 		}
@@ -266,7 +266,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbTypes.ToCache); err != nil {
+		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbTypes.UseCache); err != nil {
 			return err
 		}
 		if len(indices) == 0 {
@@ -293,7 +293,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 		if ctx.Err() != nil {
 			return errors.Wrap(ctx.Err(), "could not update max spans")
 		}
-		spanMap, err := s.slasherDB.EpochSpans(ctx, epoch, dbTypes.ToCache)
+		spanMap, err := s.slasherDB.EpochSpans(ctx, epoch, dbTypes.UseCache)
 		if err != nil {
 			return err
 		}
@@ -318,7 +318,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbTypes.ToCache); err != nil {
+		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbTypes.UseCache); err != nil {
 			return err
 		}
 		if len(indices) == 0 {

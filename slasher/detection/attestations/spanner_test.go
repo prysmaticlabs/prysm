@@ -486,7 +486,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := sd.slasherDB.SaveEpochSpans(ctx, k, epochStore, dbTypes.ToDB); err != nil {
+				if err := sd.slasherDB.SaveEpochSpans(ctx, k, epochStore, dbTypes.UseDB); err != nil {
 					t.Fatalf("Failed to save to slasherDB: %v", err)
 				}
 			}
@@ -831,7 +831,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 				t.Fatal(err)
 			}
 			for epoch := range tt.want {
-				sm, err := sd.slasherDB.EpochSpans(ctx, uint64(epoch), dbTypes.ToDB)
+				sm, err := sd.slasherDB.EpochSpans(ctx, uint64(epoch), dbTypes.UseDB)
 				if err != nil {
 					t.Fatalf("Failed to read from slasherDB: %v", err)
 				}
@@ -840,7 +840,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 					t.Fatal(err)
 				}
 				if !reflect.DeepEqual(resMap, tt.want[epoch]) {
-					t.Errorf("Wanted and received:\n%v \n%v", tt.want, sm)
+					t.Errorf("Wanted and received:\n%v \n%v", tt.want[epoch], resMap)
 				}
 			}
 		})

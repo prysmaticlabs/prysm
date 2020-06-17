@@ -76,7 +76,7 @@ func (db *Store) EpochSpans(ctx context.Context, epoch uint64, fromCache bool) (
 }
 
 // SaveEpochSpans accepts a epoch and span byte array and writes it to disk.
-func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, toCache bool) error {
+func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.EpochStore, UseCache bool) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpans")
 	defer span.End()
 
@@ -85,10 +85,10 @@ func (db *Store) SaveEpochSpans(ctx context.Context, epoch uint64, es *types.Epo
 	}
 
 	// Saving to the cache if it exists so cache and DB never conflict.
-	if toCache || db.flatSpanCache.Has(epoch) {
+	if UseCache || db.flatSpanCache.Has(epoch) {
 		db.flatSpanCache.Set(epoch, es)
 	}
-	if toCache {
+	if UseCache {
 		return nil
 	}
 
