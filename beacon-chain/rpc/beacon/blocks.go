@@ -6,6 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -190,6 +191,16 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 				}
 				if data.SignedBlock == nil {
 					// One nil block shouldn't stop the stream.
+					continue
+				}
+				headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+				if err != nil {
+					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not get head state to verify block signature")
+					continue
+				}
+
+				if err := blocks.VerifyBlockSignature(headState, data.SignedBlock); err != nil {
+					log.WithError(err).WithField("blockSlot", data.SignedBlock.Block.Slot).Warn("Could not verify block signature")
 					continue
 				}
 				if err := stream.Send(data.SignedBlock); err != nil {
