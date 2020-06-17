@@ -87,50 +87,13 @@ func newMaxCoverProblem(atts []*ethpb.Attestation) (*maxCoverProblem, error) {
 	}, nil
 }
 
-//// cover calculates solution to Maximum k-Cover problem.
-//func (mc *maxCoverProblem) cover() (*maxCoverSolution, error) {
-//if len(atts) < k {
-//k = len(atts)
-//}
-//	if len(mc.candidates) == 0 {
-//		return mc.atts, nil
-//	}
-//
-//	// Find coverage.
-//	for len(mc.aggregated) < mc.k && len(mc.candidates) > 0 {
-//		// Filter out processed and overlapping, sort by score in a descending order.
-//		mc.candidates.filter(mc.coverage).sort()
-//
-//		// Pick enough non-overlapping candidates.
-//		for _, candidate := range mc.candidates {
-//			if candidate.processed {
-//				continue
-//			}
-//			if mc.coverage.Overlaps(*candidate.bits) {
-//				// Overlapping candidates violate non-intersection invariant.
-//				mc.unaggregated = append(mc.unaggregated, candidate)
-//				candidate.processed = true
-//			} else {
-//				mc.coverage = mc.coverage.Or(*candidate.bits)
-//				mc.aggregated = append(mc.aggregated, candidate)
-//				candidate.processed = true
-//			}
-//			if len(mc.aggregated) >= mc.k {
-//				break
-//			}
-//		}
-//	}
-//
-//	//lst := make([]bitfield.Bitlist, 0)
-//	//for _, att := range atts {
-//	//	lst = append(lst, att.AggregationBits)
-//	//}
-//	//log.WithFields(logrus.Fields{
-//	//	"list": fmt.Sprintf("%#v\n", lst),
-//	//}).Debug("-----> Collected")
-//
-//	return mc.collectAttestations()
-//}
+// score updates scores of candidates, taking into account the uncovered elements only.
+func (cl *maxCoverCandidateList) score(uncovered bitfield.Bitlist) *maxCoverCandidateList {
+	for i := 0; i < len(*cl); i++ {
+		(*cl)[i].score = (*cl)[i].bits.And(uncovered).Count()
+	}
+	return cl
+}
 
 // filter removes processed and overlapping candidates.
 func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist) *maxCoverCandidateList {
