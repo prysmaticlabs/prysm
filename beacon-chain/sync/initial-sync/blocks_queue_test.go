@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
@@ -276,22 +275,12 @@ func TestBlocksQueueLoop(t *testing.T) {
 				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block.ParentRoot)) {
 					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
 				}
-				if featureconfig.Get().InitSyncNoVerify {
-					root, err := stateutil.BlockRoot(block.Block)
-					if err != nil {
-						return err
-					}
-					if err := mc.ReceiveBlockNoVerify(ctx, block, root); err != nil {
-						return err
-					}
-				} else {
-					root, err := stateutil.BlockRoot(block.Block)
-					if err != nil {
-						return err
-					}
-					if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, block, root); err != nil {
-						return err
-					}
+				root, err := stateutil.BlockRoot(block.Block)
+				if err != nil {
+					return err
+				}
+				if err := mc.ReceiveBlockNoPubsub(ctx, block, root); err != nil {
+					return err
 				}
 
 				return nil
