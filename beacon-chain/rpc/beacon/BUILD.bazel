@@ -78,6 +78,7 @@ go_test(
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/block:go_default_library",
         "//beacon-chain/core/feed/operation:go_default_library",
