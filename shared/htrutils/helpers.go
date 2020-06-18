@@ -1,4 +1,5 @@
-package stateutil
+// Package htrutils defines HashTreeRoot utility functions.
+package htrutils
 
 import (
 	"bytes"
@@ -9,17 +10,20 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
-func bitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error) {
+const bytesPerChunk = 32
+
+// BitlistRoot returns the mix in length of a bitwise Merkleized bitfield.
+func BitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([32]byte, error) {
 	limit := (maxCapacity + 255) / 256
 	if bfield == nil || bfield.Len() == 0 {
 		length := make([]byte, 32)
-		root, err := bitwiseMerkleize(hasher, [][]byte{}, 0, limit)
+		root, err := BitwiseMerkleize(hasher, [][]byte{}, 0, limit)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		return mixInLength(root, length), nil
+		return MixInLength(root, length), nil
 	}
-	chunks, err := pack([][]byte{bfield.Bytes()})
+	chunks, err := Pack([][]byte{bfield.Bytes()})
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -29,18 +33,19 @@ func bitlistRoot(hasher HashFn, bfield bitfield.Bitfield, maxCapacity uint64) ([
 	}
 	output := make([]byte, 32)
 	copy(output, buf.Bytes())
-	root, err := bitwiseMerkleize(hasher, chunks, uint64(len(chunks)), limit)
+	root, err := BitwiseMerkleize(hasher, chunks, uint64(len(chunks)), limit)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return mixInLength(root, output), nil
+	return MixInLength(root, output), nil
 }
 
-// Given ordered BYTES_PER_CHUNK-byte chunks, if necessary utilize zero chunks so that the
-// number of chunks is a power of two, Merkleize the chunks, and return the root.
+// BitwiseMerkleize - given ordered BYTES_PER_CHUNK-byte chunks, if necessary utilize
+// zero chunks so that the number of chunks is a power of two, Merkleize the chunks,
+// and return the root.
 // Note that merkleize on a single chunk is simply that chunk, i.e. the identity
 // when the number of chunks is one.
-func bitwiseMerkleize(hasher HashFn, chunks [][]byte, count uint64, limit uint64) ([32]byte, error) {
+func BitwiseMerkleize(hasher HashFn, chunks [][]byte, count uint64, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
@@ -51,8 +56,8 @@ func bitwiseMerkleize(hasher HashFn, chunks [][]byte, count uint64, limit uint64
 	return Merkleize(hashFn, count, limit, leafIndexer), nil
 }
 
-// bitwiseMerkleizeArrays is used when a set of 32-byte root chunks are provided.
-func bitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count uint64, limit uint64) ([32]byte, error) {
+// BitwiseMerkleizeArrays is used when a set of 32-byte root chunks are provided.
+func BitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count uint64, limit uint64) ([32]byte, error) {
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
@@ -63,7 +68,8 @@ func bitwiseMerkleizeArrays(hasher HashFn, chunks [][32]byte, count uint64, limi
 	return Merkleize(hashFn, count, limit, leafIndexer), nil
 }
 
-func pack(serializedItems [][]byte) ([][]byte, error) {
+// Pack a given byte array's final chunk with zeroes if needed.
+func Pack(serializedItems [][]byte) ([][]byte, error) {
 	areAllEmpty := true
 	for _, item := range serializedItems {
 		if !bytes.Equal(item, []byte{}) {
@@ -107,7 +113,8 @@ func pack(serializedItems [][]byte) ([][]byte, error) {
 	return chunks, nil
 }
 
-func mixInLength(root [32]byte, length []byte) [32]byte {
+// MixInLength appends hash length to root
+func MixInLength(root [32]byte, length []byte) [32]byte {
 	var hash [32]byte
 	h := sha256.New()
 	h.Write(root[:])

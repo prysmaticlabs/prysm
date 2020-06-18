@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
@@ -203,7 +204,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 // pads the leaves to a power-of-two length.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
-	layers := make([][][]byte, stateutil.GetDepth(uint64(len(leaves)))+1)
+	layers := make([][][]byte, htrutils.GetDepth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}
@@ -233,15 +234,15 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	switch field {
 	case genesisTime:
-		return stateutil.Uint64Root(b.state.GenesisTime), nil
+		return htrutils.Uint64Root(b.state.GenesisTime), nil
 	case genesisValidatorRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
-		return stateutil.Uint64Root(b.state.Slot), nil
+		return htrutils.Uint64Root(b.state.Slot), nil
 	case eth1DepositIndex:
-		return stateutil.Uint64Root(b.state.Eth1DepositIndex), nil
+		return htrutils.Uint64Root(b.state.Eth1DepositIndex), nil
 	case fork:
-		return stateutil.ForkRoot(b.state.Fork)
+		return htrutils.ForkRoot(b.state.Fork)
 	case latestBlockHeader:
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
@@ -273,7 +274,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		}
 		return stateutil.RootsArrayHashTreeRoot(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
 	case historicalRoots:
-		return stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
+		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
 		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
@@ -321,7 +322,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		}
 		return stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
 	case slashings:
-		return stateutil.SlashingsRoot(b.state.Slashings)
+		return htrutils.SlashingsRoot(b.state.Slashings)
 	case previousEpochAttestations:
 		if featureconfig.Get().EnableFieldTrie {
 			if b.rebuildTrie[field] {
@@ -353,11 +354,11 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
+		return htrutils.CheckpointRoot(hasher, b.state.PreviousJustifiedCheckpoint)
 	case currentJustifiedCheckpoint:
-		return stateutil.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
+		return htrutils.CheckpointRoot(hasher, b.state.CurrentJustifiedCheckpoint)
 	case finalizedCheckpoint:
-		return stateutil.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
+		return htrutils.CheckpointRoot(hasher, b.state.FinalizedCheckpoint)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
