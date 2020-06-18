@@ -7,7 +7,7 @@ go_library(
         "account.go",
         "status.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/accounts",
+    importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v1",
     visibility = [
         "//validator:__pkg__",
         "//validator:__subpackages__",

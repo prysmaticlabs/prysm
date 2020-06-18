@@ -1,4 +1,4 @@
-package accounts
+package v1
 
 import (
 	"bytes"
@@ -12,8 +12,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-
-	"github.com/prysmaticlabs/go-bitfield"
+	bitfield "github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"

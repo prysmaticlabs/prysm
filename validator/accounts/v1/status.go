@@ -1,4 +1,4 @@
-package accounts
+package v1
 
 import (
 	"context"
@@ -8,9 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ValidatorStatusMetadata holds all status information about a validator.

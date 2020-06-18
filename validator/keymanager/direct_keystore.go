@@ -7,11 +7,12 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
+	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
+
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Keystore is a key manager that loads keys from a standard keystore.
@@ -46,11 +47,11 @@ func NewKeystore(input string) (KeyManager, string, error) {
 	}
 
 	if opts.Path == "" {
-		opts.Path = accounts.DefaultValidatorDir()
+		opts.Path = v1.DefaultValidatorDir()
 	}
 	log.WithField("keystorePath", opts.Path).Info("Checking validator keys")
 
-	exists, err := accounts.Exists(opts.Path, true /* assertNonEmpty */)
+	exists, err := v1.Exists(opts.Path, true /* assertNonEmpty */)
 	if err != nil {
 		return nil, keystoreOptsHelp, err
 	}
@@ -65,14 +66,14 @@ func NewKeystore(input string) (KeyManager, string, error) {
 			opts.Passphrase = strings.Replace(text, "\n", "", -1)
 		}
 
-		if err := accounts.VerifyAccountNotExists(opts.Path, opts.Passphrase); err == nil {
+		if err := v1.VerifyAccountNotExists(opts.Path, opts.Passphrase); err == nil {
 			log.Info("No account found, creating new validator account...")
 		}
 	} else {
 		return nil, "", errors.New("no validator keys found, please use validator accounts create")
 	}
 
-	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, params.BeaconConfig().ValidatorPrivkeyFileName, opts.Passphrase)
+	keyMap, err := v1.DecryptKeysFromKeystore(opts.Path, params.BeaconConfig().ValidatorPrivkeyFileName, opts.Passphrase)
 	if err != nil {
 		return nil, keystoreOptsHelp, err
 	}
