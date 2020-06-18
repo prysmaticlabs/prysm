@@ -81,6 +81,7 @@ type Flags struct {
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 
 	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	MaxRPCPageSize        int    // MaxRPCPageSize defines the maximum numbers per page for RPC responses.
 	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 }
 
@@ -323,5 +324,11 @@ func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
 		cfg.MinimalConfig = true
 		params.UseE2EConfig()
 	}
+	maxPageSize := params.BeaconConfig().DefaultPageSize
+	if ctx.IsSet(rpcMaxPageSizeFlag.Name) {
+		maxPageSize = ctx.Int(rpcMaxPageSizeFlag.Name)
+		log.Warnf("Setting max RPC page size to %d", maxPageSize)
+	}
+	cfg.MaxRPCPageSize = maxPageSize
 	return cfg
 }

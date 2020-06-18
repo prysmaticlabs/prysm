@@ -86,7 +86,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ContractDeploymentBlock,
 			flags.RPCHost,
 			flags.RPCPort,
-			flags.RPCMaxPageSize,
 			flags.CertFlag,
 			flags.KeyFlag,
 			flags.DisableGRPCGateway,

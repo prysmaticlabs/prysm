@@ -35,7 +35,6 @@ var appFlags = []cli.Flag{
 	flags.GRPCGatewayHost,
 	flags.GRPCGatewayPort,
 	flags.MinSyncPeers,
-	flags.RPCMaxPageSize,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
 	flags.UnsafeSync,

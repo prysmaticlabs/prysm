@@ -21,6 +21,13 @@ var (
 		Name:  "e2e-config",
 		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
 	}
+	// rpcMaxPageSizeFlag defines the maximum numbers per page returned in RPC responses from this
+	// beacon node (default: 500).
+	rpcMaxPageSizeFlag = &cli.Uint64Flag{
+		Name:  "rpc-max-page-size",
+		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
+		Value: 500,
+	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
@@ -494,6 +501,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 	e2eConfigFlag,
+	rpcMaxPageSizeFlag,
 	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
@@ -511,6 +519,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	e2eConfigFlag,
+	rpcMaxPageSizeFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,

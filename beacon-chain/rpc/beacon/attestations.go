@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -57,9 +56,9 @@ func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethp
 func (bs *Server) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	if int(req.PageSize) > flags.Get().MaxPageSize {
+	if int(req.PageSize) > featureconfig.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, flags.Get().MaxPageSize)
+			req.PageSize, featureconfig.Get().MaxRPCPageSize)
 	}
 	var blocks []*ethpb.SignedBeaconBlock
 	var err error
@@ -381,12 +380,12 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 func (bs *Server) AttestationPool(
 	ctx context.Context, req *ethpb.AttestationPoolRequest,
 ) (*ethpb.AttestationPoolResponse, error) {
-	if int(req.PageSize) > flags.Get().MaxPageSize {
+	if int(req.PageSize) > featureconfig.Get().MaxRPCPageSize {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Requested page size %d can not be greater than max size %d",
 			req.PageSize,
-			flags.Get().MaxPageSize,
+			featureconfig.Get().MaxRPCPageSize,
 		)
 	}
 	atts := bs.AttestationsPool.AggregatedAttestations()

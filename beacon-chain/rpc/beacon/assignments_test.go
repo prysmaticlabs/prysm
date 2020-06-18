@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -143,9 +142,9 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 
 func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
-	exceedsMax := int32(flags.Get().MaxPageSize + 1)
+	exceedsMax := int32(featureconfig.Get().MaxRPCPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, featureconfig.Get().MaxRPCPageSize)
 	req := &ethpb.ListValidatorAssignmentsRequest{
 		PageToken: strconv.Itoa(0),
 		PageSize:  exceedsMax,
