@@ -9,7 +9,9 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -24,6 +26,9 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 		}
 		return blk
 	}
+	bc := params.BeaconConfig()
+	bc.ShardCommitteePeriod = 0 // Required for voluntary exits test in reasonable time.
+	params.OverrideBeaconConfig(bc)
 
 	type args struct {
 		block *ethpb.SignedBeaconBlock
@@ -69,17 +74,53 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 				}
 			},
 		},
-		/*
-			{
-				name: "updates exit pool",
+
+		{
+			name: "updates exit pool",
+			args: args{
+				block: genFullBlock(t, &testutil.BlockGenConfig{
+					NumProposerSlashings: 0,
+					NumAttesterSlashings: 0,
+					NumAttestations:      0,
+					NumDeposits:          0,
+					NumVoluntaryExits:    3,
+				},
+					1, /*slot*/
+				),
 			},
-			{
-				name: "sets epochParticipation",
+			check: func(t *testing.T, s *Service) {
+				var n int
+				for i := uint64(0); int(i) < genesis.NumValidators(); i++ {
+					if s.exitPool.HasBeenIncluded(i) {
+						n++
+					}
+				}
+				if n != 3 {
+					t.Errorf("Did not mark the correct number of exits. Got %d but wanted %d", n, 3)
+				}
 			},
-			{
-				name: "notifies block processed on state feed",
+		},
+		{
+			name: "sets epochParticipation",
+			args: args{
+				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
-		*/
+			check: func(t *testing.T, s *Service) {
+				e := s.epochParticipation[0]
+				if e == nil {
+					t.Error("epoch participation is nil")
+				}
+			},
+		},
+		{
+			name: "notifies block processed on state feed",
+			args: args{
+				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 1 /*slot*/),
+			},
+			check: func(t *testing.T, s *Service) {
+				t.Skip("TODO: Need to add a better mock for state notifier.")
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -99,6 +140,7 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 					gBlkRoot,
 				),
 				AttPool:       attestations.NewPool(),
+				ExitPool:      voluntaryexits.NewPool(),
 				StateNotifier: &blockchainTesting.MockStateNotifier{},
 			}
 			s, err := NewService(ctx, cfg)

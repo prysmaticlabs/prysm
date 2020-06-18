@@ -77,7 +77,7 @@ var fieldMap map[fieldIndex]dataType
 // copy is performed then the state must increment the refs counter.
 type reference struct {
 	refs uint
-	lock sync.Mutex
+	lock sync.RWMutex
 }
 
 // ErrNilInnerState returns when the inner state is nil and no copy set or get
@@ -102,6 +102,12 @@ type BeaconState struct {
 // to be read, and prevents any modification of internal validator fields.
 type ReadOnlyValidator struct {
 	validator *ethpb.Validator
+}
+
+func (r *reference) Refs() uint {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.refs
 }
 
 func (r *reference) AddRef() {
