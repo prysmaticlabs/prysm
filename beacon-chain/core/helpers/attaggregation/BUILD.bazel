@@ -1,0 +1,44 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "aggregate.go",
+        "maxcover.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers/attaggregation",
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//endtoend/evaluators:__pkg__",
+        "//shared/benchutil/benchmark_files:__subpackages__",
+        "//shared/interop:__pkg__",
+        "//shared/keystore:__pkg__",
+        "//shared/p2putils:__pkg__",
+        "//shared/attestationutil:__pkg__",
+        "//shared/testutil:__pkg__",
+        "//slasher:__subpackages__",
+        "//tools:__subpackages__",
+        "//validator:__subpackages__",
+    ],
+    deps = [
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
+
+# gazelle:exclude aggregate_bench_test.go
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "attaggregation_test.go",
+        "maxcover_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/bls:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
