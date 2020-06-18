@@ -278,25 +278,25 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	canonicalEth1Data, latestEth1DataHeight, err := vs.canonicalEth1Data(ctx, headState, currentVote)
+	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, headState, currentVote)
 	if err != nil {
 		return nil, err
 	}
 
 	_, genesisEth1Block := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
-	if genesisEth1Block.Cmp(latestEth1DataHeight) == 0 {
+	if genesisEth1Block.Cmp(canonicalEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
 
 	// If there are no pending deposits, exit early.
-	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, latestEth1DataHeight)
+	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, canonicalEth1DataHeight)
 	if len(allPendingContainers) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, latestEth1DataHeight)
+	deposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
 	depositData := [][]byte{}
-	for _, dep := range upToEth1DataDeposits {
+	for _, dep := range deposits {
 		depHash, err := ssz.HashTreeRoot(dep.Data)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash deposit data")
@@ -356,11 +356,18 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 		canonicalEth1Data = beaconState.Eth1Data()
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data().BlockHash)
 	}
-	_, latestEth1DataHeight, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
+	_, latestEth1Height, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
-	return canonicalEth1Data, latestEth1DataHeight, nil
+
+	canonicalEth1Height := big.NewInt(0)
+	if latestEth1Height.Uint64() >= params.BeaconConfig().Eth1FollowDistance {
+		canonicalEth1Height =
+			big.NewInt(0).Sub(latestEth1Height, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	}
+
+	return canonicalEth1Data, canonicalEth1Height, nil
 }
 
 // in case no vote for new eth1data vote considered best vote we

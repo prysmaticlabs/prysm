@@ -411,8 +411,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 	ctx := context.Background()
 
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	newHeight := big.NewInt(height.Int64() + 11000)
+	height := big.NewInt(1)
+	newHeight := big.NewInt(10000)
 	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
@@ -474,8 +474,9 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if eth1Height.Cmp(height) != 0 {
-		t.Errorf("Wanted Eth1 height of %d but got %d", height.Uint64(), eth1Height.Uint64())
+	expectedHeight := big.NewInt(0)
+	if eth1Height.Cmp(expectedHeight) != 0 {
+		t.Errorf("Wanted Eth1 height of %d but got %d", expectedHeight.Uint64(), eth1Height.Uint64())
 	}
 
 	newState, err := b.ProcessEth1DataInBlock(beaconState, blk)
@@ -497,8 +498,9 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if eth1Height.Cmp(newHeight) != 0 {
-		t.Errorf("Wanted Eth1 height of %d but got %d", newHeight.Uint64(), eth1Height.Uint64())
+	expectedHeight = big.NewInt(0).Sub(newHeight, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	if eth1Height.Cmp(expectedHeight) != 0 {
+		t.Errorf("Wanted Eth1 height of %d but got %d", expectedHeight.Uint64(), eth1Height.Uint64())
 	}
 
 	newState, err = b.ProcessEth1DataInBlock(beaconState, blk)
@@ -514,7 +516,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	ctx := context.Background()
 
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	height := big.NewInt(100)
 	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
@@ -524,9 +526,10 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 
 	beaconState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash: []byte("0x0"),
+			BlockHash:    []byte("0x0"),
+			DepositCount: 5,
 		},
-		Eth1DepositIndex: 2,
+		Eth1DepositIndex: 1,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -562,7 +565,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	recentDeposits := []*dbpb.DepositContainer{
 		{
 			Index:           2,
-			Eth1BlockHeight: 400,
+			Eth1BlockHeight: height.Uint64() - params.BeaconConfig().Eth1FollowDistance,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("c"),
@@ -572,7 +575,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 		{
 			Index:           3,
-			Eth1BlockHeight: 600,
+			Eth1BlockHeight: height.Uint64() - params.BeaconConfig().Eth1FollowDistance + 1,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("d"),
@@ -622,31 +625,27 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(deposits) != 0 {
-		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(deposits))
+	if len(deposits) != 1 {
+		t.Errorf("Received unexpected number of pending deposits: %d, wanted: 1", len(deposits))
 	}
 
-	// It should not return the recent deposits after their follow window.
+	// It should not return the recent deposits after their follow window
 	// as latest block number makes no difference in retrieval of deposits
 	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err = bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(deposits) != 0 {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(deposits),
-			len(recentDeposits),
-		)
+	if len(deposits) != 1 {
+		t.Errorf("Received unexpected number of pending deposits: %d, wanted: 1", len(deposits))
 	}
 }
 
 func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	ctx := context.Background()
 
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
-	newHeight := big.NewInt(height.Int64() + 11000)
+	height := big.NewInt(100)
+	newHeight := big.NewInt(10000)
 	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
@@ -771,8 +770,6 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(deposits))
 	}
 
-	// It should also return the recent deposits after their follow window.
-	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	// we should get our pending deposits once this vote pushes the vote tally to include
 	// the updated eth1 data.
 	deposits, err = bs.deposits(ctx, vote)
@@ -790,7 +787,8 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 
 func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	ctx := context.Background()
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+
+	height := big.NewInt(10000)
 	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
@@ -880,8 +878,6 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	// It should also return the recent deposits after their follow window.
-	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -900,7 +896,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	ctx := context.Background()
 
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	height := big.NewInt(10000)
 	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
@@ -973,10 +969,10 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		}
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		depositCache.InsertDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
 	}
 
 	bs := &Server{
@@ -989,8 +985,6 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	// It should also return the recent deposits after their follow window.
-	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
@@ -1004,10 +998,10 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
+func TestPendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	ctx := context.Background()
 
-	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	height := big.NewInt(10000)
 	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
@@ -1096,8 +1090,6 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 		PendingDepositsFetcher: depositCache,
 	}
 
-	// It should also return the recent deposits after their follow window.
-	p.LatestBlockNumber = big.NewInt(0).Add(p.LatestBlockNumber, big.NewInt(10000))
 	deposits, err := bs.deposits(ctx, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
