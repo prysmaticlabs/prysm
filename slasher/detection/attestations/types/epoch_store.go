@@ -93,7 +93,7 @@ func (es *EpochStore) Bytes() []byte {
 
 // ToMap is a helper function to convert an epoch store to a map, mainly used for testing.
 func (es *EpochStore) ToMap() (map[uint64]Span, error) {
-	spanMap := make(map[uint64]Span)
+	spanMap := make(map[uint64]Span, es.highestObservedIdx)
 	var err error
 	for i := uint64(0); i < es.highestObservedIdx; i++ {
 		spanMap[i], err = es.GetValidatorSpan(i)

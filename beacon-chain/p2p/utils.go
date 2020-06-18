@@ -1,8 +1,10 @@
 package p2p
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -24,6 +27,16 @@ const keyPath = "network-keys"
 const metaDataPath = "metaData"
 
 const dialTimeout = 1 * time.Second
+
+// SerializeENR takes the enr record in its key-value form and serializes it.
+func SerializeENR(record *enr.Record) (string, error) {
+	buf := bytes.NewBuffer([]byte{})
+	if err := record.EncodeRLP(buf); err != nil {
+		return "", errors.Wrap(err, "could not encode ENR record to bytes")
+	}
+	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
+	return enrString, nil
+}
 
 func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
 	typeAssertedKey := (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey)))

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -366,6 +367,40 @@ func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 	if wanted != got {
 		t.Errorf("Wanted: %d, received: %d", wanted, got)
+	}
+}
+
+func TestActiveValidatorCount_Genesis(t *testing.T) {
+	c := 1000
+	validators := make([]*ethpb.Validator, c)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	beaconState, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Slot:        0,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Preset cache to a bad count.
+	seed, err := Seed(beaconState, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{Seed: seed, ShuffledIndices: []uint64{1, 2, 3}}); err != nil {
+		t.Fatal(err)
+	}
+	validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if validatorCount != uint64(c) {
+		t.Error("Did not get the correct validator count")
 	}
 }
 

@@ -7,10 +7,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -118,6 +121,65 @@ func TestNodeServer_GetImplementedServices(t *testing.T) {
 	// We verify the services include the node service + the registered reflection service.
 	if len(res.Services) != 2 {
 		t.Errorf("Expected 2 services, received %d: %v", len(res.Services), res.Services)
+	}
+}
+
+func TestNodeServer_GetHost(t *testing.T) {
+	server := grpc.NewServer()
+	peersProvider := &mockP2p.MockPeersProvider{}
+	mP2P := mockP2p.NewTestP2P(t)
+	key, err := crypto.GenerateKey()
+	db, err := enode.OpenDB("")
+	if err != nil {
+		t.Fatal("could not open node's peer database")
+	}
+	lNode := enode.NewLocalNode(db, key)
+	record := lNode.Node().Record()
+	stringENR, err := p2p.SerializeENR(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns := &Server{
+		PeerManager:  &mockP2p.MockPeerManager{BHost: mP2P.BHost, Enr: record, PID: mP2P.BHost.ID()},
+		PeersFetcher: peersProvider,
+	}
+	ethpb.RegisterNodeServer(server, ns)
+	reflection.Register(server)
+	h, err := ns.GetHost(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h.PeerId != mP2P.PeerID().String() {
+		t.Errorf("Wanted Peer id of %s but got %s", mP2P.PeerID().String(), h.PeerId)
+	}
+	if h.Enr != stringENR {
+		t.Errorf("Wanted %s for enr but couldn't get it %s", stringENR, h.Enr)
+	}
+}
+
+func TestNodeServer_GetPeer(t *testing.T) {
+	server := grpc.NewServer()
+	peersProvider := &mockP2p.MockPeersProvider{}
+	ns := &Server{
+		PeersFetcher: peersProvider,
+	}
+	ethpb.RegisterNodeServer(server, ns)
+	reflection.Register(server)
+	firstPeer := peersProvider.Peers().All()[0]
+
+	res, err := ns.GetPeer(context.Background(), &ethpb.PeerRequest{PeerId: firstPeer.String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.PeerId != firstPeer.String() {
+		t.Fatalf("Expected peer id to be %s, but received: %s", firstPeer.String(), res.PeerId)
+	}
+
+	if int(res.Direction) != int(ethpb.PeerDirection_INBOUND) {
+		t.Errorf("Expected 1st peer to be an inbound (%d) connection, received %d", ethpb.PeerDirection_INBOUND, res.Direction)
+	}
+	if res.ConnectionState != ethpb.ConnectionState_CONNECTED {
+		t.Errorf("Expected peer to be connected received %s", res.ConnectionState.String())
 	}
 }
 
