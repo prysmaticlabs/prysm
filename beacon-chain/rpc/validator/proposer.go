@@ -361,12 +361,10 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
 
-	var canonicalEth1Height *big.Int
+	canonicalEth1Height := big.NewInt(0)
 	if latestEth1Height.Uint64() >= params.BeaconConfig().Eth1FollowDistance {
 		canonicalEth1Height =
 			big.NewInt(0).Sub(latestEth1Height, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	} else {
-		canonicalEth1Height = big.NewInt(0)
 	}
 
 	return canonicalEth1Data, canonicalEth1Height, nil
