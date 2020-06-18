@@ -73,6 +73,8 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "slasher",
 		Flags: []cli.Flag{
+			cmd.MinimalConfigFlag,
+			cmd.E2EConfigFlag,
 			flags.BeaconCertFlag,
 			flags.CertFlag,
 			flags.KeyFlag,

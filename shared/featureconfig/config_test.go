@@ -20,10 +20,10 @@ func TestInitFeatureConfig(t *testing.T) {
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(minimalConfigFlag.Name, true, "test")
+	set.Bool(skipBLSVerifyFlag.Name, true, "test")
 	context := cli.NewContext(&app, set, nil)
 	ConfigureBeaconChain(context)
-	if c := Get(); !c.MinimalConfig {
-		t.Errorf("MinimalConfig in FeatureFlags incorrect. Wanted true, got false")
+	if c := Get(); !c.SkipBLSVerify {
+		t.Errorf("SkipBLSVerify in FeatureFlags incorrect. Wanted true, got false")
 	}
 }

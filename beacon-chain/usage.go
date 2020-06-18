@@ -80,6 +80,8 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "beacon-chain",
 		Flags: []cli.Flag{
+			cmd.MinimalConfigFlag,
+			cmd.E2EConfigFlag,
 			flags.InteropMockEth1DataVotesFlag,
 			flags.InteropGenesisStateFlag,
 			flags.DepositContractFlag,
@@ -103,6 +105,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.BlockBatchLimitBurstFactor,
 			flags.EnableDebugRPCEndpoints,
 			flags.SlotsPerArchivedPoint,
+			cmd.CustomGenesisDelayFlag,
 		},
 	},
 	{

@@ -13,14 +13,6 @@ var (
 		Name:  "disable-broadcast-slashings",
 		Usage: "Disables broadcasting slashings submitted to the beacon node.",
 	}
-	minimalConfigFlag = &cli.BoolFlag{
-		Name:  "minimal-config",
-		Usage: "Use minimal config with parameters as defined in the spec.",
-	}
-	e2eConfigFlag = &cli.BoolFlag{
-		Name:  "e2e-config",
-		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
-	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
@@ -63,11 +55,6 @@ var (
 		Name: "enable-slasher",
 		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
 			"the slasher-provider flag can be used to pass its address.",
-	}
-	customGenesisDelayFlag = &cli.Uint64Flag{
-		Name: "custom-genesis-delay",
-		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
-			"This flag should be used for local development and testing only.",
 	}
 	cacheFilteredBlockTreeFlag = &cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
@@ -482,8 +469,6 @@ var deprecatedFlags = []cli.Flag{
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
-	minimalConfigFlag,
-	e2eConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
 	enableExternalSlasherProtectionFlag,
@@ -493,7 +478,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
 var SlasherFlags = append(deprecatedFlags, []cli.Flag{
-	e2eConfigFlag,
 	enableHistoricalDetectionFlag,
 	disableLookbackFlag,
 }...)
@@ -508,9 +492,6 @@ var E2EValidatorFlags = []string{
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
-	customGenesisDelayFlag,
-	minimalConfigFlag,
-	e2eConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
 	disableDynamicCommitteeSubnets,

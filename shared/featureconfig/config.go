@@ -21,7 +21,6 @@ package featureconfig
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -113,16 +112,9 @@ func InitWithReset(c *Flags) func() {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	delay := params.BeaconConfig().GenesisDelay
-	if ctx.IsSet(customGenesisDelayFlag.Name) {
-		delay = ctx.Uint64(customGenesisDelayFlag.Name)
-		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
-	}
-	cfg.CustomGenesisDelay = delay
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
@@ -254,7 +246,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
 	if ctx.Bool(enableHistoricalDetectionFlag.Name) {
 		log.Warn("Enabling historical attestation detection")
 		cfg.EnableHistoricalDetection = true
@@ -271,7 +262,6 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
 	if ctx.Bool(enableProtectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")
 		cfg.ProtectProposer = true
@@ -310,18 +300,4 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
 		}
 	}
-}
-
-func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
-	if ctx.Bool(minimalConfigFlag.Name) {
-		log.Warn("Using minimal config")
-		cfg.MinimalConfig = true
-		params.UseMinimalConfig()
-	}
-	if ctx.Bool(e2eConfigFlag.Name) {
-		log.Warn("Using end-to-end testing config")
-		cfg.MinimalConfig = true
-		params.UseE2EConfig()
-	}
-	return cfg
 }
