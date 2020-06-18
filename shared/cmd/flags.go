@@ -16,6 +16,7 @@ var (
 		Name:  "e2e-config",
 		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
 	}
+	// CustomGenesisDelayFlag declares a genesis delay for use with handling the beacon chain start.
 	CustomGenesisDelayFlag = &cli.Uint64Flag{
 		Name: "custom-genesis-delay",
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
