@@ -14,12 +14,12 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 		covered       bitfield.Bitlist
 		allowOverlaps bool
 	}
-	var problem maxCoverCandidateList
+	var problem MaxCoverCandidates
 	tests := []struct {
 		name string
-		cl   maxCoverCandidateList
+		cl   MaxCoverCandidates
 		args args
-		want *maxCoverCandidateList
+		want *MaxCoverCandidates
 	}{
 		{
 			name: "nil list",
@@ -29,13 +29,13 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 		},
 		{
 			name: "empty list",
-			cl:   maxCoverCandidateList{},
+			cl:   MaxCoverCandidates{},
 			args: args{},
-			want: &maxCoverCandidateList{},
+			want: &MaxCoverCandidates{},
 		},
 		{
 			name: "all processed",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
 				{2, &bitfield.Bitlist{0b01000010, 0b1}, 2, true},
 				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
@@ -43,11 +43,11 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 				{4, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
 			},
 			args: args{},
-			want: &maxCoverCandidateList{},
+			want: &MaxCoverCandidates{},
 		},
 		{
 			name: "partially processed",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
 				{2, &bitfield.Bitlist{0b01000010, 0b1}, 2, false},
 				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
@@ -57,14 +57,14 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 			args: args{
 				covered: bitfield.NewBitlist(8),
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{2, &bitfield.Bitlist{0b01000010, 0b1}, 2, false},
 				{4, &bitfield.Bitlist{0b01000010, 0b1}, 2, false},
 			},
 		},
 		{
 			name: "all overlapping",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 				{2, &bitfield.Bitlist{0b01000010, 0b1}, 2, false},
 				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
@@ -74,11 +74,11 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 			args: args{
 				covered: bitlistWithAllBitsSet(8),
 			},
-			want: &maxCoverCandidateList{},
+			want: &MaxCoverCandidates{},
 		},
 		{
 			name: "partially overlapping",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 				{2, &bitfield.Bitlist{0b11000010, 0b1}, 2, false},
 				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
@@ -88,14 +88,14 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 			args: args{
 				covered: bitfield.Bitlist{0b10000001, 0b1},
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 			},
 		},
 		{
 			name: "overlapping and processed and pending",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 				{2, &bitfield.Bitlist{0b11000010, 0b1}, 2, false},
 				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
@@ -105,13 +105,13 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 			args: args{
 				covered: bitfield.Bitlist{0b10000001, 0b1},
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 			},
 		},
 		{
 			name: "overlapping and processed and pending - allow overlaps",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 				{2, &bitfield.Bitlist{0b11000010, 0b1}, 2, false},
 				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
@@ -122,7 +122,7 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 				covered:       bitfield.Bitlist{0b11111111, 0b1},
 				allowOverlaps: true,
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 				{2, &bitfield.Bitlist{0b11000010, 0b1}, 2, false},
 				{4, &bitfield.Bitlist{0b10001010, 0b1}, 2, false},
@@ -146,11 +146,11 @@ func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 }
 
 func TestMaxCover_maxCoverCandidateList_sort(t *testing.T) {
-	var problem maxCoverCandidateList
+	var problem MaxCoverCandidates
 	tests := []struct {
 		name string
-		cl   maxCoverCandidateList
-		want *maxCoverCandidateList
+		cl   MaxCoverCandidates
+		want *MaxCoverCandidates
 	}{
 		{
 			name: "nil list",
@@ -159,28 +159,28 @@ func TestMaxCover_maxCoverCandidateList_sort(t *testing.T) {
 		},
 		{
 			name: "empty list",
-			cl:   maxCoverCandidateList{},
-			want: &maxCoverCandidateList{},
+			cl:   MaxCoverCandidates{},
+			want: &MaxCoverCandidates{},
 		},
 		{
 			name: "single item",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{}, 5, false},
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{}, 5, false},
 			},
 		},
 		{
 			name: "already sorted",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{5, &bitfield.Bitlist{}, 5, false},
 				{3, &bitfield.Bitlist{}, 4, false},
 				{4, &bitfield.Bitlist{}, 4, false},
 				{2, &bitfield.Bitlist{}, 2, false},
 				{1, &bitfield.Bitlist{}, 1, false},
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{5, &bitfield.Bitlist{}, 5, false},
 				{3, &bitfield.Bitlist{}, 4, false},
 				{4, &bitfield.Bitlist{}, 4, false},
@@ -190,14 +190,14 @@ func TestMaxCover_maxCoverCandidateList_sort(t *testing.T) {
 		},
 		{
 			name: "all equal",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{}, 5, false},
 				{0, &bitfield.Bitlist{}, 5, false},
 				{0, &bitfield.Bitlist{}, 5, false},
 				{0, &bitfield.Bitlist{}, 5, false},
 				{0, &bitfield.Bitlist{}, 5, false},
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{}, 5, false},
 				{0, &bitfield.Bitlist{}, 5, false},
 				{0, &bitfield.Bitlist{}, 5, false},
@@ -207,14 +207,14 @@ func TestMaxCover_maxCoverCandidateList_sort(t *testing.T) {
 		},
 		{
 			name: "unsorted",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{2, &bitfield.Bitlist{}, 2, false},
 				{4, &bitfield.Bitlist{}, 4, false},
 				{3, &bitfield.Bitlist{}, 4, false},
 				{5, &bitfield.Bitlist{}, 5, false},
 				{1, &bitfield.Bitlist{}, 1, false},
 			},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{5, &bitfield.Bitlist{}, 5, false},
 				{3, &bitfield.Bitlist{}, 4, false},
 				{4, &bitfield.Bitlist{}, 4, false},
@@ -235,7 +235,7 @@ func TestMaxCover_maxCoverCandidateList_sort(t *testing.T) {
 func TestMaxCover_maxCoverCandidateList_union(t *testing.T) {
 	tests := []struct {
 		name string
-		cl   maxCoverCandidateList
+		cl   MaxCoverCandidates
 		want bitfield.Bitlist
 	}{
 		{
@@ -245,21 +245,21 @@ func TestMaxCover_maxCoverCandidateList_union(t *testing.T) {
 		},
 		{
 			name: "single empty candidate",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000000, 0b1}, 0, false},
 			},
 			want: bitfield.Bitlist{0b00000000, 0b1},
 		},
 		{
 			name: "single full candidate",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b11111111, 0b1}, 8, false},
 			},
 			want: bitlistWithAllBitsSet(8),
 		},
 		{
 			name: "mixed",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{1, &bitfield.Bitlist{0b00000000, 0b00001110, 0b00001110, 0b1}, 6, false},
 				{2, &bitfield.Bitlist{0b00000000, 0b01110000, 0b01110000, 0b1}, 6, false},
 				{3, &bitfield.Bitlist{0b00000111, 0b10000001, 0b10000000, 0b1}, 6, false},
@@ -281,12 +281,12 @@ func TestMaxCover_maxCoverCandidateList_union(t *testing.T) {
 }
 
 func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
-	var problem maxCoverCandidateList
+	var problem MaxCoverCandidates
 	tests := []struct {
 		name      string
-		cl        maxCoverCandidateList
+		cl        MaxCoverCandidates
 		uncovered bitfield.Bitlist
-		want      *maxCoverCandidateList
+		want      *MaxCoverCandidates
 	}{
 		{
 			name: "nil",
@@ -295,7 +295,7 @@ func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 		},
 		{
 			name: "uncovered set is empty",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000100, 0b1}, 1, false},
 				{1, &bitfield.Bitlist{0b00011011, 0b1}, 4, false},
 				{2, &bitfield.Bitlist{0b00011011, 0b1}, 4, false},
@@ -303,7 +303,7 @@ func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 				{4, &bitfield.Bitlist{0b00011010, 0b1}, 3, false},
 			},
 			uncovered: bitfield.NewBitlist(8),
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000100, 0b1}, 0, false},
 				{1, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
 				{2, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
@@ -313,7 +313,7 @@ func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 		},
 		{
 			name: "completely uncovered",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000100, 0b1}, 0, false},
 				{1, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
 				{2, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
@@ -321,7 +321,7 @@ func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 				{4, &bitfield.Bitlist{0b00011010, 0b1}, 0, false},
 			},
 			uncovered: bitlistWithAllBitsSet(8),
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000100, 0b1}, 1, false},
 				{1, &bitfield.Bitlist{0b00011011, 0b1}, 4, false},
 				{2, &bitfield.Bitlist{0b00011011, 0b1}, 4, false},
@@ -331,7 +331,7 @@ func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 		},
 		{
 			name: "partial uncovered set",
-			cl: maxCoverCandidateList{
+			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000100, 0b1}, 0, false},
 				{1, &bitfield.Bitlist{0b00011011, 0b1}, 1, false},
 				{2, &bitfield.Bitlist{0b10011011, 0b1}, 0, false},
@@ -339,7 +339,7 @@ func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 				{4, &bitfield.Bitlist{0b00011010, 0b1}, 0, false},
 			},
 			uncovered: bitfield.Bitlist{0b11010010, 0b1},
-			want: &maxCoverCandidateList{
+			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000100, 0b1}, 0, false},
 				{1, &bitfield.Bitlist{0b00011011, 0b1}, 2, false},
 				{2, &bitfield.Bitlist{0b10011011, 0b1}, 3, false},
@@ -358,10 +358,10 @@ func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 }
 
 func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
-	problemSet := func() maxCoverCandidateList {
+	problemSet := func() MaxCoverCandidates {
 		// test vectors originally from:
 		// https://github.com/sigp/lighthouse/blob/master/beacon_node/operation_pool/src/max_cover.rs
-		return maxCoverCandidateList{
+		return MaxCoverCandidates{
 			{0, &bitfield.Bitlist{0b00000100, 0b1}, 0, false},
 			{1, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
 			{2, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
@@ -371,13 +371,13 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 	}
 	type args struct {
 		k             int
-		candidates    maxCoverCandidateList
+		candidates    MaxCoverCandidates
 		allowOverlaps bool
 	}
 	tests := []struct {
 		name        string
 		args        args
-		want        *maxCoverSolution
+		want        *MaxCoverSolution
 		wantErr     bool
 		expectedErr error
 	}{
@@ -391,7 +391,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		{
 			name: "k=0",
 			args: args{k: 0, candidates: problemSet()},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b0000000, 0b1},
 				keys:     []int{},
 			},
@@ -400,7 +400,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		{
 			name: "k=1",
 			args: args{k: 1, candidates: problemSet()},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b0011011, 0b1},
 				keys:     []int{1},
 			},
@@ -409,7 +409,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		{
 			name: "k=2",
 			args: args{k: 2, candidates: problemSet()},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b0011111, 0b1},
 				keys:     []int{1, 0},
 			},
@@ -418,7 +418,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		{
 			name: "k=3",
 			args: args{k: 3, candidates: problemSet()},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b0011111, 0b1},
 				keys:     []int{1, 0},
 			},
@@ -427,7 +427,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		{
 			name: "k=5",
 			args: args{k: 5, candidates: problemSet()},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b0011111, 0b1},
 				keys:     []int{1, 0},
 			},
@@ -436,7 +436,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		{
 			name: "k=50",
 			args: args{k: 50, candidates: problemSet()},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b0011111, 0b1},
 				keys:     []int{1, 0},
 			},
@@ -444,7 +444,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		},
 		{
 			name: "suboptimal", // Greedy algorithm selects: 0, 2, 3, while 1,4,5 is optimal.
-			args: args{k: 3, candidates: maxCoverCandidateList{
+			args: args{k: 3, candidates: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000000, 0b00011111, 0b1}, 0, false},
 				{2, &bitfield.Bitlist{0b00000001, 0b11100000, 0b1}, 0, false},
 				{3, &bitfield.Bitlist{0b00000110, 0b00000000, 0b1}, 0, false},
@@ -452,7 +452,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 				{4, &bitfield.Bitlist{0b00000110, 0b10001100, 0b1}, 0, false},
 				{5, &bitfield.Bitlist{0b01001001, 0b00000011, 0b1}, 0, false},
 			}},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b00000111, 0b11111111, 0b1},
 				keys:     []int{0, 2, 3},
 			},
@@ -460,7 +460,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 		},
 		{
 			name: "allow overlaps",
-			args: args{k: 5, allowOverlaps: true, candidates: maxCoverCandidateList{
+			args: args{k: 5, allowOverlaps: true, candidates: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000000, 0b00000001, 0b11111110, 0b1}, 0, false},
 				{1, &bitfield.Bitlist{0b00000000, 0b00001110, 0b00001110, 0b1}, 0, false},
 				{2, &bitfield.Bitlist{0b00000000, 0b01110000, 0b01110000, 0b1}, 0, false},
@@ -469,7 +469,7 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 				{5, &bitfield.Bitlist{0b00000000, 0b00000001, 0b01100010, 0b1}, 0, false},
 				{6, &bitfield.Bitlist{0b00001000, 0b00001000, 0b10000010, 0b1}, 0, false},
 			}},
-			want: &maxCoverSolution{
+			want: &MaxCoverSolution{
 				coverage: bitfield.Bitlist{0b00001111, 0xff, 0b11111110, 0b1},
 				keys:     []int{0, 3, 1, 2, 6},
 			},
@@ -478,16 +478,16 @@ func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &maxCoverProblem{
+			mc := &MaxCoverProblem{
 				candidates: tt.args.candidates,
 			}
-			got, err := mc.cover(tt.args.k, tt.args.allowOverlaps)
+			got, err := mc.Cover(tt.args.k, tt.args.allowOverlaps)
 			if (err != nil) != tt.wantErr || !errors.Is(err, tt.expectedErr) {
 				t.Errorf("newMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("cover() got: %v, want: %v", got, tt.want)
+				t.Errorf("Cover() got: %v, want: %v", got, tt.want)
 			}
 		})
 	}

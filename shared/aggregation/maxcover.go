@@ -11,40 +11,40 @@ import (
 // ErrInvalidMaxCoverProblem is returned when Maximum Coverage problem was initialized incorrectly.
 var ErrInvalidMaxCoverProblem = errors.New("invalid max_cover problem")
 
-// maxCoverProblem defines Maximum Coverage problem.
-type maxCoverProblem struct {
-	candidates maxCoverCandidateList
+// MaxCoverProblem defines Maximum Coverage problem.
+type MaxCoverProblem struct {
+	candidates MaxCoverCandidates
 }
 
-// maxCoverCandidate represents a candidate set to be used in aggregation.
-type maxCoverCandidate struct {
+// MaxCoverCandidate represents a candidate set to be used in aggregation.
+type MaxCoverCandidate struct {
 	key       int
 	bits      *bitfield.Bitlist
 	score     uint64
 	processed bool
 }
 
-// maxCoverCandidateList is defined to allow group operations (filtering, sorting) on all candidates.
-type maxCoverCandidateList []*maxCoverCandidate
+// MaxCoverCandidates is defined to allow group operations (filtering, sorting) on all candidates.
+type MaxCoverCandidates []*MaxCoverCandidate
 
-// maxCoverSolution represents the solution as bitlist of resultant coverage, and indices in
+// MaxCoverSolution represents the solution as bitlist of resultant coverage, and indices in
 // attributes array grouped by aggregations.
-type maxCoverSolution struct {
+type MaxCoverSolution struct {
 	coverage bitfield.Bitlist
 	keys     []int
 }
 
-// cover calculates solution to Maximum k-Cover problem.
-func (mc *maxCoverProblem) cover(k int, allowOverlaps bool) (*maxCoverSolution, error) {
+// Cover calculates solution to Maximum k-Cover problem.
+func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*MaxCoverSolution, error) {
 	if len(mc.candidates) == 0 {
-		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate cover")
+		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate Cover")
 	}
 	if len(mc.candidates) < k {
 		k = len(mc.candidates)
 	}
 
 	remainingBits := mc.candidates.union()
-	solution := &maxCoverSolution{
+	solution := &MaxCoverSolution{
 		coverage: bitfield.NewBitlist(mc.candidates[0].bits.Len()),
 		keys:     make([]int, 0, k),
 	}
@@ -78,7 +78,7 @@ func (mc *maxCoverProblem) cover(k int, allowOverlaps bool) (*maxCoverSolution, 
 }
 
 // score updates scores of candidates, taking into account the uncovered elements only.
-func (cl *maxCoverCandidateList) score(uncovered bitfield.Bitlist) *maxCoverCandidateList {
+func (cl *MaxCoverCandidates) score(uncovered bitfield.Bitlist) *MaxCoverCandidates {
 	for i := 0; i < len(*cl); i++ {
 		(*cl)[i].score = (*cl)[i].bits.And(uncovered).Count()
 	}
@@ -86,7 +86,7 @@ func (cl *maxCoverCandidateList) score(uncovered bitfield.Bitlist) *maxCoverCand
 }
 
 // filter removes processed, overlapping and zero-score candidates.
-func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist, allowOverlaps bool) *maxCoverCandidateList {
+func (cl *MaxCoverCandidates) filter(covered bitfield.Bitlist, allowOverlaps bool) *MaxCoverCandidates {
 	overlaps := func(e bitfield.Bitlist) bool {
 		return !allowOverlaps && covered.Len() == e.Len() && covered.Overlaps(e)
 	}
@@ -105,7 +105,7 @@ func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist, allowOverlaps 
 }
 
 // sort orders candidates by their score, starting from the candidate with the highest score.
-func (cl *maxCoverCandidateList) sort() *maxCoverCandidateList {
+func (cl *MaxCoverCandidates) sort() *MaxCoverCandidates {
 	sort.Slice(*cl, func(i, j int) bool {
 		if (*cl)[i].score == (*cl)[j].score {
 			return (*cl)[i].key < (*cl)[j].key
@@ -115,7 +115,7 @@ func (cl *maxCoverCandidateList) sort() *maxCoverCandidateList {
 	return cl
 }
 
-func (cl *maxCoverCandidateList) union() bitfield.Bitlist {
+func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 	if len(*cl) == 0 {
 		return nil
 	}
@@ -127,17 +127,17 @@ func (cl *maxCoverCandidateList) union() bitfield.Bitlist {
 }
 
 // String provides string representation of candidates list.
-func (cl *maxCoverCandidateList) String() string {
+func (cl *MaxCoverCandidates) String() string {
 	return fmt.Sprintf("candidates: %v", *cl)
 }
 
 // String provides string representation of a candidate.
-func (c *maxCoverCandidate) String() string {
+func (c *MaxCoverCandidate) String() string {
 	return fmt.Sprintf("{%v, %#b:%d, s%d, %t}",
 		c.key, c.bits.Bytes(), c.bits.Len(), c.score, c.processed)
 }
 
 // String provides string representation of a Maximum Coverage problem solution.
-func (s *maxCoverSolution) String() string {
+func (s *MaxCoverSolution) String() string {
 	return fmt.Sprintf("{%#b:%v}", s.coverage.Bytes(), s.keys)
 }
