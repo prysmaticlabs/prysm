@@ -144,11 +144,15 @@ func (cl *maxCoverCandidateList) score(uncovered bitfield.Bitlist) *maxCoverCand
 	return cl
 }
 
-// filter removes processed and overlapping candidates.
-func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist) *maxCoverCandidateList {
+// filter removes processed, overlapping and zero-score candidates.
+func (cl *maxCoverCandidateList) filter(covered bitfield.Bitlist, allowOverlaps bool) *maxCoverCandidateList {
+	overlaps := func(e bitfield.Bitlist) bool {
+		return !allowOverlaps && covered.Len() == e.Len() && covered.Overlaps(e)
+	}
 	cur, end := 0, len(*cl)
 	for cur < end {
-		if (*cl)[cur].processed || covered.Overlaps(*(*cl)[cur].bits) {
+		e := *(*cl)[cur]
+		if e.processed || overlaps(*e.bits) || e.score == 0 {
 			(*cl)[cur] = (*cl)[end-1]
 			end--
 			continue

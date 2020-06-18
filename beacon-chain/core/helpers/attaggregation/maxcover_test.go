@@ -109,7 +109,8 @@ func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
 
 func TestMaxCoverAttestationAggregation_maxCoverCandidateList_filter(t *testing.T) {
 	type args struct {
-		covered bitfield.Bitlist
+		covered       bitfield.Bitlist
+		allowOverlaps bool
 	}
 	var problem maxCoverCandidateList
 	tests := []struct {
@@ -204,6 +205,25 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_filter(t *testing.
 			},
 			want: &maxCoverCandidateList{
 				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
+			},
+		},
+		{
+			name: "overlapping and processed and pending - allow overlaps",
+			cl: maxCoverCandidateList{
+				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
+				{2, &bitfield.Bitlist{0b11000010, 0b1}, 2, false},
+				{3, &bitfield.Bitlist{0b00001010, 0b1}, 2, true},
+				{4, &bitfield.Bitlist{0b01000011, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b10001010, 0b1}, 2, false},
+			},
+			args: args{
+				covered:       bitfield.Bitlist{0b11111111, 0b1},
+				allowOverlaps: true,
+			},
+			want: &maxCoverCandidateList{
+				{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
+				{2, &bitfield.Bitlist{0b11000010, 0b1}, 2, false},
+				{4, &bitfield.Bitlist{0b10001010, 0b1}, 2, false},
 			},
 		},
 	}
