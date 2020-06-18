@@ -35,6 +35,7 @@ type Flags struct {
 	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
 
 	// Feature related flags.
+	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -273,6 +274,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
+	if ctx.Bool(enableStreamDuties.Name) {
+		log.Warn("Enabled validator duties streaming.")
+		cfg.EnableStreamDuties = true
+	}
 	if ctx.Bool(enableProtectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")
 		cfg.ProtectProposer = true

@@ -1,4 +1,4 @@
-package client
+package streaming
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mocks struct {

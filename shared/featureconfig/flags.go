@@ -164,6 +164,10 @@ var (
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
+	enableStreamDuties = &cli.BoolFlag{
+		Name:  "enable-stream-duties",
+		Usage: "Enables validator duties streaming in the validator client",
+	}
 	enableKadDht = &cli.BoolFlag{
 		Name:  "enable-kad-dht",
 		Usage: "Enables libp2p's kademlia based discovery to start running",
@@ -493,6 +497,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	e2eConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
+	enableStreamDuties,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
@@ -511,6 +516,7 @@ var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
+	"--enable-stream-duties",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
