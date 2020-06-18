@@ -80,6 +80,8 @@ type Service struct {
 	initSyncBlocksLock        sync.RWMutex
 	recentCanonicalBlocks     map[[32]byte]bool
 	recentCanonicalBlocksLock sync.RWMutex
+	justifiedBalances         []uint64
+	justifiedBalancesLock     sync.RWMutex
 }
 
 // Config options for the service.
@@ -124,6 +126,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		stateGen:              cfg.StateGen,
 		initSyncBlocks:        make(map[[32]byte]*ethpb.SignedBeaconBlock),
 		recentCanonicalBlocks: make(map[[32]byte]bool),
+		justifiedBalances:     make([]uint64, 0),
 	}, nil
 }
 
@@ -183,6 +186,9 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
+		if err := s.cacheJustifiedStateBalances(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root)); err != nil {
+			log.Fatalf("Could not cache justified state balances: %v", err)
+		}
 		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
 		s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
 		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
@@ -367,6 +373,9 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
 	s.justifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
+	if err := s.cacheJustifiedStateBalances(ctx, genesisBlkRoot); err != nil {
+		return err
+	}
 	s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 	s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 	s.finalizedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)

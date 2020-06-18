@@ -215,7 +215,12 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return nil
 	}
 
-	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
+	var postState *stateTrie.BeaconState
+	if featureconfig.Get().InitSyncNoVerify {
+		postState, err = state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
+	} else {
+		postState, err = state.ExecuteStateTransition(ctx, preState, signed)
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
@@ -247,13 +252,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		atts := signed.Block.Body.Attestations
 		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
 			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
-		}
-	}
-
-	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
-		if err := s.updateJustified(ctx, postState); err != nil {
-			return err
 		}
 	}
 
@@ -295,10 +293,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
-
-		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save new justified")
-		}
 
 		if featureconfig.Get().NewStateMgmt {
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)

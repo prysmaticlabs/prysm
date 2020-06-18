@@ -968,6 +968,10 @@ func (bs *Server) GetValidatorPerformance(
 	if err != nil {
 		return nil, err
 	}
+	headState, err = precompute.ProcessRewardsAndPenaltiesPrecompute(headState, bp, vp)
+	if err != nil {
+		return nil, err
+	}
 	validatorSummary := vp
 
 	responseCap := len(req.Indices) + len(req.PublicKeys)

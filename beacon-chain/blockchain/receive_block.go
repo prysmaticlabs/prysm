@@ -22,8 +22,7 @@ import (
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
@@ -68,7 +67,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
-	postState, err := s.onBlock(ctx, blockCopy, blockRoot)
+	_, err := s.onBlock(ctx, blockCopy, blockRoot)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
@@ -93,7 +92,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
-		if err := s.updateHead(ctx, postState.Balances()); err != nil {
+		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	}
@@ -120,63 +119,9 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	return nil
 }
 
-// ReceiveBlockNoPubsubForkchoice is a function that defines the all operations (minus pubsub and forkchoice)
-// that are preformed blocks that is received from initial sync service. The operations consists of:
-//   1. Validate block, apply state transition and update check points
-//   2. Save latest head info
-func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
-	defer span.End()
-	blockCopy := stateTrie.CopySignedBeaconBlock(block)
-
-	// Apply state transition on the new block.
-	_, err := s.onBlock(ctx, blockCopy, blockRoot)
-	if err != nil {
-		err := errors.Wrap(err, "could not process block")
-		traceutil.AnnotateError(span, err)
-		return err
-	}
-
-	cachedHeadRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head root from cache")
-	}
-	if !bytes.Equal(blockRoot[:], cachedHeadRoot) {
-		if err := s.saveHead(ctx, blockRoot); err != nil {
-			return errors.Wrap(err, "could not save head")
-		}
-	}
-
-	// Send notification of the processed block to the state feed.
-	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockProcessed,
-		Data: &statefeed.BlockProcessedData{
-			Slot:      blockCopy.Block.Slot,
-			BlockRoot: blockRoot,
-			Verified:  true,
-		},
-	})
-
-	// Reports on block and fork choice metrics.
-	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
-
-	// Log block sync status.
-	logBlockSyncStatus(blockCopy.Block, blockRoot, s.finalizedCheckpt)
-
-	// Log state transition data.
-	logStateTransitionData(blockCopy.Block)
-
-	s.epochParticipationLock.Lock()
-	defer s.epochParticipationLock.Unlock()
-	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
-
-	return nil
-}
-
-// ReceiveBlockNoVerify runs state transition on a input block without verifying the block's BLS contents.
-// Depends on the security model, this is the "minimal" work a node can do to sync the chain.
-// It simulates light client behavior and assumes 100% trust with the syncing peer.
-func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
+// ReceiveBlockInitialSync processes the input block for the purpose of initial syncing.
+// This method should only be used on blocks during initial syncing phase.
+func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoVerify")
 	defer span.End()
 	blockCopy := stateTrie.CopySignedBeaconBlock(block)

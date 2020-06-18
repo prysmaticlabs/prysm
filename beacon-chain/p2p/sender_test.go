@@ -19,7 +19,7 @@ func TestService_Send(t *testing.T) {
 	p1.Connect(p2)
 
 	svc := &Service{
-		host: p1.Host,
+		host: p1.BHost,
 		cfg:  &Config{Encoding: "ssz"},
 	}
 
@@ -46,7 +46,7 @@ func TestService_Send(t *testing.T) {
 		wg.Done()
 	})
 
-	stream, err := svc.Send(context.Background(), msg, "/testing/1", p2.Host.ID())
+	stream, err := svc.Send(context.Background(), msg, "/testing/1", p2.BHost.ID())
 	if err != nil {
 		t.Fatal(err)
 	}

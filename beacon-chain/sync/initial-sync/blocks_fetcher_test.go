@@ -827,7 +827,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	p3 := p2pt.NewTestP2P(t)
 	p1.Connect(p2)
 	p1.Connect(p3)
-	if len(p1.Host.Network().Peers()) != 2 {
+	if len(p1.BHost.Network().Peers()) != 2 {
 		t.Fatal("Expected peers to be connected")
 	}
 	req := &p2ppb.BeaconBlocksByRangeRequest{
@@ -843,8 +843,8 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 			t.Error(err)
 		}
 	}
-	p2.Host.SetStreamHandler(protocol, streamHandlerFn)
-	p3.Host.SetStreamHandler(protocol, streamHandlerFn)
+	p2.BHost.SetStreamHandler(protocol, streamHandlerFn)
+	p3.BHost.SetStreamHandler(protocol, streamHandlerFn)
 
 	burstFactor := uint64(flags.Get().BlockBatchLimitBurstFactor)
 
