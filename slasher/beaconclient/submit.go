@@ -60,7 +60,7 @@ func (bs *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch ch
 				} else if strings.Contains(err.Error(), helpers.ErrSigFailedToVerify.Error()) {
 					log.WithError(err).Errorf("Could not submit attester slashing with indices %v", slashableIndices)
 				} else {
-					log.WithError(err).Errorf("Could not submit attester slashing with indices %v", slashableIndices)
+					log.WithError(err).Errorf("Could not slash validators with indices %v", slashableIndices)
 				}
 			}
 		case <-sub.Err():

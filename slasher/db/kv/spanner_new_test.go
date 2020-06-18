@@ -120,7 +120,7 @@ func TestStore_SaveReadEpochSpans(t *testing.T) {
 	}
 }
 
-func TestStore_SaveEpochSpans_UseCache(t *testing.T) {
+func TestStore_SaveEpochSpans_ToCache(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(&app, set, nil))
