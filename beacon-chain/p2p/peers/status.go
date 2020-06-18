@@ -30,6 +30,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -38,17 +39,17 @@ import (
 )
 
 // PeerConnectionState is the state of the connection.
-type PeerConnectionState int
+type PeerConnectionState ethpb.ConnectionState
 
 const (
 	// PeerDisconnected means there is no connection to the peer.
 	PeerDisconnected PeerConnectionState = iota
-	// PeerConnecting means there is an on-going attempt to connect to the peer.
-	PeerConnecting
-	// PeerConnected means the peer has an active connection.
-	PeerConnected
 	// PeerDisconnecting means there is an on-going attempt to disconnect from the peer.
 	PeerDisconnecting
+	// PeerConnected means the peer has an active connection.
+	PeerConnected
+	// PeerConnecting means there is an on-going attempt to connect to the peer.
+	PeerConnecting
 )
 
 var (

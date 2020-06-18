@@ -2,14 +2,12 @@ package p2p
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2putils"
@@ -39,11 +37,10 @@ func (s *Service) compareForkENR(record *enr.Record) error {
 	if err != nil {
 		return err
 	}
-	buf := bytes.NewBuffer([]byte{})
-	if err := record.EncodeRLP(buf); err != nil {
-		return errors.Wrap(err, "could not encode ENR record to bytes")
+	enrString, err := SerializeENR(record)
+	if err != nil {
+		return err
 	}
-	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
 	// Clients SHOULD connect to peers with current_fork_digest, next_fork_version,
 	// and next_fork_epoch that match local values.
 	if !bytes.Equal(peerForkENR.CurrentForkDigest, currentForkENR.CurrentForkDigest) {
