@@ -9,11 +9,11 @@ import (
 
 func TestInitFeatureConfig(t *testing.T) {
 	cfg := &Flags{
-		MinimalConfig: true,
+		SkipBLSVerify: true,
 	}
 	Init(cfg)
-	if c := Get(); !c.MinimalConfig {
-		t.Errorf("MinimalConfig in FeatureFlags incorrect. Wanted true, got false")
+	if c := Get(); !c.SkipBLSVerify {
+		t.Errorf("SkipBLSVerify in FeatureFlags incorrect. Wanted true, got false")
 	}
 }
 

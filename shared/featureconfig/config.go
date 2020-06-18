@@ -29,10 +29,6 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	// Configuration related flags.
-	MinimalConfig bool // MinimalConfig as defined in the spec.
-	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
-
 	// Feature related flags.
 	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
