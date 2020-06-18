@@ -3,8 +3,10 @@ package p2p
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/connmgr"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -59,6 +61,8 @@ type PubSubProvider interface {
 type PeerManager interface {
 	Disconnect(peer.ID) error
 	PeerID() peer.ID
+	Host() host.Host
+	ENR() *enr.Record
 	RefreshENR()
 	FindPeersWithSubnet(index uint64) (bool, error)
 	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)

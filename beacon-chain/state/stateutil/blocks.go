@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -34,7 +35,7 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		bodyRoot := bytesutil.ToBytes32(header.BodyRoot)
 		fieldRoots[4] = bodyRoot[:]
 	}
-	return bitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return htrutils.BitwiseMerkleize(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // BlockRoot returns the block hash tree root of the provided block.
@@ -59,7 +60,7 @@ func BlockRoot(blk *ethpb.BeaconBlock) ([32]byte, error) {
 		}
 		fieldRoots[4] = bodyRoot
 	}
-	return bitwiseMerkleizeArrays(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return htrutils.BitwiseMerkleizeArrays(hashutil.CustomSHA256Hasher(), fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // BlockBodyRoot returns the hash tree root of the block body.
@@ -87,11 +88,11 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	fieldRoots := make([][32]byte, 8)
 	rawRandao := bytesutil.ToBytes96(body.RandaoReveal)
-	packedRandao, err := pack([][]byte{rawRandao[:]})
+	packedRandao, err := htrutils.Pack([][]byte{rawRandao[:]})
 	if err != nil {
 		return [32]byte{}, err
 	}
-	randaoRoot, err := bitwiseMerkleize(hasher, packedRandao, uint64(len(packedRandao)), uint64(len(packedRandao)))
+	randaoRoot, err := htrutils.BitwiseMerkleize(hasher, packedRandao, uint64(len(packedRandao)), uint64(len(packedRandao)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -133,13 +134,13 @@ func BlockBodyRoot(body *ethpb.BeaconBlockBody) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	fieldRoots[7] = exitRoot
-	return bitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	return htrutils.BitwiseMerkleizeArrays(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 // Eth1Root computes the HashTreeRoot Merkleization of
 // a BeaconBlockHeader struct according to the eth2
 // Simple Serialize specification.
-func Eth1Root(hasher HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+func Eth1Root(hasher htrutils.HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	enc := make([]byte, 0, 96)
 	fieldRoots := make([][]byte, 3)
 	for i := 0; i < len(fieldRoots); i++ {
@@ -167,7 +168,7 @@ func Eth1Root(hasher HashFn, eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 			}
 		}
 	}
-	root, err := bitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	root, err := htrutils.BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -198,11 +199,11 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 			return found.([32]byte), nil
 		}
 	}
-	eth1Chunks, err := pack(eth1VotesRoots)
+	eth1Chunks, err := htrutils.Pack(eth1VotesRoots)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
 	}
-	eth1VotesRootsRoot, err := bitwiseMerkleize(
+	eth1VotesRootsRoot, err := htrutils.BitwiseMerkleize(
 		hasher,
 		eth1Chunks,
 		uint64(len(eth1Chunks)),
@@ -218,7 +219,7 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	eth1VotesRootBufRoot := make([]byte, 32)
 	copy(eth1VotesRootBufRoot, eth1VotesRootBuf.Bytes())
-	root := mixInLength(eth1VotesRootsRoot, eth1VotesRootBufRoot)
+	root := htrutils.MixInLength(eth1VotesRootsRoot, eth1VotesRootBufRoot)
 	if featureconfig.Get().EnableSSZCache {
 		cachedHasher.rootsCache.Set(string(hashKey[:]), root, 32)
 	}
@@ -235,5 +236,5 @@ func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	rootBufRoot := make([]byte, 32)
 	copy(rootBufRoot, rootBuf.Bytes())
-	return mixInLength(root, rootBufRoot), nil
+	return htrutils.MixInLength(root, rootBufRoot), nil
 }

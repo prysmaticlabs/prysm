@@ -3,3 +3,6 @@
 
 # Starlark code owners
 *.bzl @prestonvanloon
+
+# Anyone on prylabs team can approve dependency updates.
+deps.bzl @prysmaticlabs/core-team

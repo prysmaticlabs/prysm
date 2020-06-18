@@ -20,12 +20,12 @@ func TestService_Broadcast(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) == 0 {
+	if len(p1.BHost.Network().Peers()) == 0 {
 		t.Fatal("No peers")
 	}
 
 	p := &Service{
-		host:   p1.Host,
+		host:   p1.BHost,
 		pubsub: p1.PubSub(),
 		cfg: &Config{
 			Encoding: "ssz",
