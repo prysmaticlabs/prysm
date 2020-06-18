@@ -1,4 +1,4 @@
-package attaggregation
+package aggregation
 
 import (
 	"errors"

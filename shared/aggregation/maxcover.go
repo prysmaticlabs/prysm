@@ -1,4 +1,4 @@
-package attaggregation
+package aggregation
 
 import (
 	"fmt"
@@ -8,9 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 )
-
-// MaxCoverAggregation is a strategy based on Maximum Coverage greedy algorithm.
-const MaxCoverAggregation AttestationAggregationStrategy = "max_cover"
 
 // ErrInvalidAttestationCount is returned when insufficient number
 // of attestations is provided for aggregation.
