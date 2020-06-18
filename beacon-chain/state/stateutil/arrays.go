@@ -1,3 +1,5 @@
+// Package stateutil defines utility functions to compute state roots
+// using advanced merkle branch caching techniques.package stateutil
 package stateutil
 
 import (
@@ -7,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
 )
 
 var (
@@ -29,7 +32,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	defer lock.Unlock()
 	hashFunc := hashutil.CustomSHA256Hasher()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
-		depth := GetDepth(length)
+		depth := htrutils.GetDepth(length)
 		layersCache[fieldName] = make([][][32]byte, depth+1)
 	}
 
@@ -92,7 +95,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		return root
 	}
 	hashLayer := leaves
-	layers := make([][][32]byte, GetDepth(length)+1)
+	layers := make([][][32]byte, htrutils.GetDepth(length)+1)
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items

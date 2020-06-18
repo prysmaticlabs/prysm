@@ -3,6 +3,8 @@ package testing
 import (
 	"sync"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -33,7 +35,7 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 		if err != nil {
 			log.WithError(err).Debug("Cannot decode")
 		}
-		m.peers.Add(new(enr.Record), id0, ma0, network.DirInbound)
+		m.peers.Add(createENR(), id0, ma0, network.DirInbound)
 		m.peers.SetConnectionState(id0, peers.PeerConnected)
 		m.peers.SetChainState(id0, &pb.Status{FinalizedEpoch: uint64(10)})
 		id1, err := peer.IDB58Decode("16Uiu2HAm4HgJ9N1o222xK61o7LSgToYWoAy1wNTJRkh9gLZapVAy")
@@ -44,9 +46,19 @@ func (m *MockPeersProvider) Peers() *peers.Status {
 		if err != nil {
 			log.WithError(err).Debug("Cannot decode")
 		}
-		m.peers.Add(new(enr.Record), id1, ma1, network.DirOutbound)
+		m.peers.Add(createENR(), id1, ma1, network.DirOutbound)
 		m.peers.SetConnectionState(id1, peers.PeerConnected)
 		m.peers.SetChainState(id1, &pb.Status{FinalizedEpoch: uint64(11)})
 	}
 	return m.peers
+}
+
+func createENR() *enr.Record {
+	key, err := crypto.GenerateKey()
+	db, err := enode.OpenDB("")
+	if err != nil {
+		log.Error("could not open node's peer database")
+	}
+	lNode := enode.NewLocalNode(db, key)
+	return lNode.Node().Record()
 }

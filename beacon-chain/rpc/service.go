@@ -85,6 +85,7 @@ type Service struct {
 	credentialError         error
 	p2p                     p2p.Broadcaster
 	peersFetcher            p2p.PeersProvider
+	peerManager             p2p.PeerManager
 	depositFetcher          depositcache.DepositFetcher
 	pendingDepositFetcher   depositcache.PendingDepositsFetcher
 	stateNotifier           statefeed.Notifier
@@ -124,6 +125,7 @@ type Config struct {
 	SyncService             sync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
+	PeerManager             p2p.PeerManager
 	DepositFetcher          depositcache.DepositFetcher
 	PendingDepositFetcher   depositcache.PendingDepositsFetcher
 	SlasherProvider         string
@@ -152,6 +154,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		blockReceiver:           cfg.BlockReceiver,
 		p2p:                     cfg.Broadcaster,
 		peersFetcher:            cfg.PeersFetcher,
+		peerManager:             cfg.PeerManager,
 		powChainService:         cfg.POWChainService,
 		chainStartFetcher:       cfg.ChainStartFetcher,
 		mockEth1Votes:           cfg.MockEth1Votes,
@@ -208,8 +211,6 @@ func (s *Service) Start() {
 		)),
 	}
 	grpc_prometheus.EnableHandlingTimeHistogram()
-	// TODO(#791): Utilize a certificate for secure connections
-	// between beacon nodes and validator clients.
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -218,7 +219,9 @@ func (s *Service) Start() {
 		}
 		opts = append(opts, grpc.Creds(creds))
 	} else {
-		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
+		log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
+			"validator on the same machines, you can ignore this message. If you want to know " +
+			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 
@@ -255,6 +258,7 @@ func (s *Service) Start() {
 		SyncChecker:        s.syncService,
 		GenesisTimeFetcher: s.genesisTimeFetcher,
 		PeersFetcher:       s.peersFetcher,
+		PeerManager:        s.peerManager,
 		GenesisFetcher:     s.genesisFetcher,
 	}
 	beaconChainServer := &beacon.Server{
