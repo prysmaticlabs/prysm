@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -65,7 +66,7 @@ func BenchmarkMerkleize(b *testing.B) {
 		leafIndexer := func(i uint64) []byte {
 			return chunks[i][:]
 		}
-		return stateutil.Merkleize(stateutil.NewHasherFunc(hashutil.CustomSHA256Hasher()), count, limit, leafIndexer), nil
+		return htrutils.Merkleize(htrutils.NewHasherFunc(hashutil.CustomSHA256Hasher()), count, limit, leafIndexer), nil
 	}
 
 	b.Run("Non Buffered Merkleizer", func(b *testing.B) {

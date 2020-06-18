@@ -20,7 +20,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	bitfield := [8]byte{'A', 'B'}
@@ -40,7 +40,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	pcl := protocol.ID("/testing")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := new(pb.MetaData)
@@ -51,7 +51,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 			t.Fatalf("Metadata unequal, received %v but wanted %v", out, p1.LocalMetadata)
 		}
 	})
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	conns := p1.Host.Network().ConnsToPeer(p2.Host.ID())
+	conns := p1.BHost.Network().ConnsToPeer(p2.BHost.ID())
 	if len(conns) == 0 {
 		t.Error("Peer is disconnected despite receiving a valid ping")
 	}
@@ -75,7 +75,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	bitfield := [8]byte{'A', 'B'}
@@ -100,7 +100,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	pcl := protocol.ID(p2p.RPCMetaDataTopic + r.p2p.Encoding().ProtocolSuffix())
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 
 		err := r2.metaDataHandler(context.Background(), new(interface{}), stream)
@@ -109,7 +109,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 		}
 	})
 
-	metadata, err := r.sendMetaDataRequest(context.Background(), p2.Host.ID())
+	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	if err != nil {
 		t.Errorf("Unxpected error: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
 
-	conns := p1.Host.Network().ConnsToPeer(p2.Host.ID())
+	conns := p1.BHost.Network().ConnsToPeer(p2.BHost.ID())
 	if len(conns) == 0 {
 		t.Error("Peer is disconnected despite receiving a valid ping")
 	}
