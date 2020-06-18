@@ -304,6 +304,7 @@ func ConfigureValidator(ctx *cli.Context) {
 func enableDevModeFlags(ctx *cli.Context) {
 	log.Warn("Enabling development mode flags")
 	for _, f := range devModeFlags {
+		log.WithField("flag", f.Names()[0]).Debug("Enabling development mode flag")
 		if !ctx.IsSet(f.Names()[0]) {
 			if err := ctx.Set(f.Names()[0], "true"); err != nil {
 				log.WithError(err).Debug("Error enabling development mode flag")
