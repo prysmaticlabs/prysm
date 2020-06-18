@@ -28,7 +28,7 @@ go_library(
         "//contracts/deposit-contract:go_default_library",
         "//proto/beacon/db:go_default_library",
         "//shared/bytesutil:go_default_library",
-        "//shared/featureconfig:go_default_library",
+        "//shared/cmd:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
