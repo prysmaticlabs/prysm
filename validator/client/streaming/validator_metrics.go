@@ -1,27 +1,14 @@
-package client
+package streaming
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	"github.com/sirupsen/logrus"
-)
-
-var validatorBalancesGaugeVec = promauto.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Namespace: "validator",
-		Name:      "balance",
-		Help:      "current validator balance.",
-	},
-	[]string{
-		// validator pubkey
-		"pubkey",
-	},
 )
 
 // LogValidatorGainsAndLosses logs important metrics related to this validator client's
@@ -54,7 +41,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	if v.emitAccountMetrics {
 		for _, missingPubKey := range resp.MissingValidators {
 			fmtKey := fmt.Sprintf("%#x", missingPubKey[:])
-			validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
+			metrics.ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)
 		}
 	}
 
@@ -73,7 +60,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 		}
 
-		fmtKey := fmt.Sprintf("%#x", pubKey)
 		truncatedKey := fmt.Sprintf("%#x", pubKey[:8])
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
@@ -92,7 +78,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
-				validatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
+				metrics.ValidatorBalancesGaugeVec.WithLabelValues(truncatedKey).Set(newBalance)
 			}
 		}
 
