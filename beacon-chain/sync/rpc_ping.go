@@ -39,6 +39,7 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
 		}
+		return err
 	}
 
 	if valid {
@@ -46,26 +47,28 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
 		}
-	} else {
-		// send metadata request in a new routine.
-		go func() {
-			defer func() {
-				if err := stream.Close(); err != nil {
-					log.WithError(err).Error("Failed to close stream")
-				}
-			}()
-			// New context so the calling function doesn't cancel on us.
-			ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
-			defer cancel()
-			md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
-			if err != nil {
-				log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
-				return
-			}
-			// update metadata if there is no error
-			r.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
-		}()
+		return nil
 	}
+
+	// The sequence number was not valid.  Start our own ping back to the peer.
+	go func() {
+		defer func() {
+			if err := stream.Close(); err != nil {
+				log.WithError(err).Error("Failed to close stream")
+			}
+		}()
+		// New context so the calling function doesn't cancel on us.
+		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
+		defer cancel()
+		md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+		if err != nil {
+			log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
+			return
+		}
+		// update metadata if there is no error
+		r.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+	}()
+
 	return nil
 }
 
