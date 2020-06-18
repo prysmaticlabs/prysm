@@ -69,7 +69,7 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error
 	return solution, nil
 }
 
-// score updates scores of Candidates, taking into account the uncovered elements only.
+// score updates scores of candidates, taking into account the uncovered elements only.
 func (cl *MaxCoverCandidates) score(uncovered bitfield.Bitlist) *MaxCoverCandidates {
 	for i := 0; i < len(*cl); i++ {
 		(*cl)[i].score = (*cl)[i].bits.And(uncovered).Count()
@@ -77,7 +77,7 @@ func (cl *MaxCoverCandidates) score(uncovered bitfield.Bitlist) *MaxCoverCandida
 	return cl
 }
 
-// filter removes processed, overlapping and zero-score Candidates.
+// filter removes processed, overlapping and zero-score candidates.
 func (cl *MaxCoverCandidates) filter(covered bitfield.Bitlist, allowOverlaps bool) *MaxCoverCandidates {
 	overlaps := func(e bitfield.Bitlist) bool {
 		return !allowOverlaps && covered.Len() == e.Len() && covered.Overlaps(e)
@@ -96,7 +96,7 @@ func (cl *MaxCoverCandidates) filter(covered bitfield.Bitlist, allowOverlaps boo
 	return cl
 }
 
-// sort orders Candidates by their score, starting from the candidate with the highest score.
+// sort orders candidates by their score, starting from the candidate with the highest score.
 func (cl *MaxCoverCandidates) sort() *MaxCoverCandidates {
 	sort.Slice(*cl, func(i, j int) bool {
 		if (*cl)[i].score == (*cl)[j].score {
@@ -118,7 +118,7 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 	return ret
 }
 
-// String provides string representation of Candidates list.
+// String provides string representation of candidates list.
 func (cl *MaxCoverCandidates) String() string {
 	return fmt.Sprintf("Candidates: %v", *cl)
 }
