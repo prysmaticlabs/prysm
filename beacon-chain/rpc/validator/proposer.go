@@ -235,10 +235,10 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaconBlock) ([]byte, error) {
-		beaconState, err := vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
+	beaconState, err := vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
+	}
 	root, err := state.CalculateStateRoot(
 		ctx,
 		beaconState,
