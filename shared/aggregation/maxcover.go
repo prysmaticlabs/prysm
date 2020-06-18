@@ -59,8 +59,8 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error
 					continue
 				}
 				solution.Coverage = solution.Coverage.Or(*candidate.bits)
-				remainingBits = remainingBits.And(candidate.bits.Not())
 				solution.Keys = append(solution.Keys, candidate.key)
+				remainingBits = remainingBits.And(candidate.bits.Not())
 				candidate.processed = true
 				break
 			}
