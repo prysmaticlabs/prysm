@@ -1,5 +1,5 @@
 // Package accounts defines tools to manage an encrypted validator keystore.
-package v1
+package accounts
 
 import (
 	"bufio"
