@@ -7,14 +7,13 @@ import (
 	"testing"
 	"time"
 
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = shared.Service(&ValidatorService{})

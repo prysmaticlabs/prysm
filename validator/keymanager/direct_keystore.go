@@ -6,13 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
-
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Keystore is a key manager that loads keys from a standard keystore.
