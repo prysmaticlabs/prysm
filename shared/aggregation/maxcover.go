@@ -5,13 +5,8 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 )
-
-// ErrInvalidAttestationCount is returned when insufficient number
-// of attestations is provided for aggregation.
-var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 
 // ErrInvalidMaxCoverProblem is returned when Maximum Coverage problem was initialized incorrectly.
 var ErrInvalidMaxCoverProblem = errors.New("invalid max_cover problem")
@@ -37,36 +32,6 @@ type maxCoverCandidateList []*maxCoverCandidate
 type maxCoverSolution struct {
 	coverage bitfield.Bitlist
 	keys     []int
-}
-
-// newMaxCoverProblem returns initialized Maximum Coverage problem, with all necessary pre-tests done.
-func newMaxCoverProblem(atts []*ethpb.Attestation) (*maxCoverProblem, error) {
-	candidates, err := candidateListFromAttestations(atts)
-	if err != nil {
-		return nil, err
-	}
-	return &maxCoverProblem{candidates}, nil
-}
-
-// candidateListFromAttestations transforms list of attestations into candidate sets.
-func candidateListFromAttestations(atts []*ethpb.Attestation) (maxCoverCandidateList, error) {
-	if len(atts) == 0 {
-		return nil, errors.Wrap(ErrInvalidAttestationCount, "cannot create list of candidates")
-	}
-	// Assert that all attestations have the same bitlist length.
-	for i := 1; i < len(atts); i++ {
-		if atts[i-1].AggregationBits.Len() != atts[i].AggregationBits.Len() {
-			return nil, ErrBitsDifferentLen
-		}
-	}
-	candidates := make([]*maxCoverCandidate, len(atts))
-	for i := 0; i < len(atts); i++ {
-		candidates[i] = &maxCoverCandidate{
-			key:  i,
-			bits: &atts[i].AggregationBits,
-		}
-	}
-	return candidates, nil
 }
 
 // cover calculates solution to Maximum k-Cover problem.

@@ -1,3 +1,4 @@
+// Package aggregation contains implementations of bit aggregation algorithms and heuristics.
 package aggregation
 
 import (
@@ -9,10 +10,10 @@ import (
 var log = logrus.WithField("prefix", "aggregation")
 
 var (
-	// ErrBitsOverlap is returned when two attestations aggregation bits overlap with each other.
+	// ErrBitsOverlap is returned when two bitlists overlap with each other.
 	ErrBitsOverlap = errors.New("overlapping aggregation bits")
 
-	// ErrBitsDifferentLen is returned when two attestation aggregation bits have different lengths.
+	// ErrBitsDifferentLen is returned when two bitlists have different lengths.
 	ErrBitsDifferentLen = errors.New("different bitlist lengths")
 
 	// ErrInvalidStrategy is returned when invalid aggregation strategy is selected.

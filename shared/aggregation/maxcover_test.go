@@ -6,103 +6,10 @@ import (
 	"sort"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
-func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
-	type args struct {
-		atts []*ethpb.Attestation
-	}
-	tests := []struct {
-		name        string
-		args        args
-		want        *maxCoverProblem
-		wantErr     bool
-		expectedErr error
-	}{
-		{
-			name: "nil attestations",
-			args: args{
-				atts: nil,
-			},
-			want:        nil,
-			wantErr:     true,
-			expectedErr: ErrInvalidAttestationCount,
-		},
-		{
-			name: "no attestations",
-			args: args{
-				atts: []*ethpb.Attestation{},
-			},
-			want:        nil,
-			wantErr:     true,
-			expectedErr: ErrInvalidAttestationCount,
-		},
-		{
-			name: "attestations of different bitlist length",
-			args: args{
-				atts: []*ethpb.Attestation{
-					{AggregationBits: bitfield.NewBitlist(64)},
-					{AggregationBits: bitfield.NewBitlist(128)},
-				},
-			},
-			want:        nil,
-			wantErr:     true,
-			expectedErr: ErrBitsDifferentLen,
-		},
-		{
-			name: "single attestation",
-			args: args{
-				atts: []*ethpb.Attestation{
-					{AggregationBits: bitfield.Bitlist{0b00001010, 0b1}},
-				},
-			},
-			want: &maxCoverProblem{
-				candidates: maxCoverCandidateList{
-					{0, &bitfield.Bitlist{0b00001010, 0b1}, 0, false},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "multiple attestations",
-			args: args{
-				atts: []*ethpb.Attestation{
-					{AggregationBits: bitfield.Bitlist{0b00001010, 0b1}},
-					{AggregationBits: bitfield.Bitlist{0b00101010, 0b1}},
-					{AggregationBits: bitfield.Bitlist{0b11111010, 0b1}},
-					{AggregationBits: bitfield.Bitlist{0b00000010, 0b1}},
-					{AggregationBits: bitfield.Bitlist{0b00000001, 0b1}},
-				},
-			},
-			want: &maxCoverProblem{
-				candidates: maxCoverCandidateList{
-					{0, &bitfield.Bitlist{0b00001010, 0b1}, 0, false},
-					{1, &bitfield.Bitlist{0b00101010, 0b1}, 0, false},
-					{2, &bitfield.Bitlist{0b11111010, 0b1}, 0, false},
-					{3, &bitfield.Bitlist{0b00000010, 0b1}, 0, false},
-					{4, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := newMaxCoverProblem(tt.args.atts)
-			if (err != nil) != tt.wantErr || !errors.Is(err, tt.expectedErr) {
-				t.Errorf("newMaxCoverProblem() unexpected error, got: %v, want: %v", err, tt.expectedErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newMaxCoverProblem() got: %v, want: %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMaxCoverAttestationAggregation_maxCoverCandidateList_filter(t *testing.T) {
+func TestMaxCover_maxCoverCandidateList_filter(t *testing.T) {
 	type args struct {
 		covered       bitfield.Bitlist
 		allowOverlaps bool
@@ -238,7 +145,7 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_filter(t *testing.
 	}
 }
 
-func TestMaxCoverAttestationAggregation_maxCoverCandidateList_sort(t *testing.T) {
+func TestMaxCover_maxCoverCandidateList_sort(t *testing.T) {
 	var problem maxCoverCandidateList
 	tests := []struct {
 		name string
@@ -325,7 +232,7 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_sort(t *testing.T)
 	}
 }
 
-func TestMaxCoverAttestationAggregation_maxCoverCandidateList_union(t *testing.T) {
+func TestMaxCover_maxCoverCandidateList_union(t *testing.T) {
 	tests := []struct {
 		name string
 		cl   maxCoverCandidateList
@@ -373,7 +280,7 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_union(t *testing.T
 	}
 }
 
-func TestMaxCoverAttestationAggregation_maxCoverCandidateList_score(t *testing.T) {
+func TestMaxCover_maxCoverCandidateList_score(t *testing.T) {
 	var problem maxCoverCandidateList
 	tests := []struct {
 		name      string
@@ -450,7 +357,7 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_score(t *testing.T
 	}
 }
 
-func TestMaxCoverAttestationAggregation_maxCoverProblem_cover(t *testing.T) {
+func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
 	problemSet := func() maxCoverCandidateList {
 		// test vectors originally from:
 		// https://github.com/sigp/lighthouse/blob/master/beacon_node/operation_pool/src/max_cover.rs
