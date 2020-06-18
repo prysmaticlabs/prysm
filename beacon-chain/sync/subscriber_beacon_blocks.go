@@ -6,8 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -31,15 +29,6 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	if err != nil {
 		return err
 	}
-
-	// Broadcast the block on a feed to notify other services in the beacon node
-	// of a received block (even if it does not process correctly through a state transition).
-	r.blockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.ReceivedBlock,
-		Data: &blockfeed.ReceivedBlockData{
-			SignedBlock: signed,
-		},
-	})
 
 	if err := r.chain.ReceiveBlockNoPubsub(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)

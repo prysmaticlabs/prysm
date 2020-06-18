@@ -1,4 +1,5 @@
-package stateutil
+// Package htrutils defines HashTreeRoot utility functions.
+package htrutils
 
 import "encoding/binary"
 

@@ -353,6 +353,12 @@ func (s *Service) PubSub() *pubsub.PubSub {
 	return s.pubsub
 }
 
+// Host returns the currently running libp2p
+// host of the service.
+func (s *Service) Host() host.Host {
+	return s.host
+}
+
 // SetStreamHandler sets the protocol handler on the p2p host multiplexer.
 // This method is a pass through to libp2pcore.Host.SetStreamHandler.
 func (s *Service) SetStreamHandler(topic string, handler network.StreamHandler) {
@@ -377,6 +383,14 @@ func (s *Service) Connect(pi peer.AddrInfo) error {
 // Peers returns the peer status interface.
 func (s *Service) Peers() *peers.Status {
 	return s.peers
+}
+
+// ENR returns the local node's current ENR.
+func (s *Service) ENR() *enr.Record {
+	if s.dv5Listener == nil {
+		return nil
+	}
+	return s.dv5Listener.Self().Record()
 }
 
 // Metadata returns a copy of the peer's metadata.

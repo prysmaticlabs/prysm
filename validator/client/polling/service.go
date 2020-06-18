@@ -95,7 +95,12 @@ func (v *ValidatorService) Start() {
 		grpc_retry.StreamClientInterceptor(),
 	))
 	dialOpts := ConstructDialOptions(
-		v.maxCallRecvMsgSize, v.withCert, v.grpcHeaders, v.grpcRetries, streamInterceptor)
+		v.maxCallRecvMsgSize,
+		v.withCert,
+		v.grpcHeaders,
+		v.grpcRetries,
+		streamInterceptor,
+	)
 	if dialOpts == nil {
 		return
 	}
@@ -104,7 +109,9 @@ func (v *ValidatorService) Start() {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return
 	}
-	log.Debug("Successfully started gRPC connection")
+	if v.withCert != "" {
+		log.Info("Established secure gRPC connection")
+	}
 
 	pubkeys, err := v.keyManager.FetchValidatingKeys()
 	if err != nil {
@@ -207,7 +214,9 @@ func ConstructDialOptions(
 		transportSecurity = grpc.WithTransportCredentials(creds)
 	} else {
 		transportSecurity = grpc.WithInsecure()
-		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+		log.Warn("You are using an insecure gRPC connection. If you are running your beacon node and " +
+			"validator on the same machines, you can ignore this message. If you want to know " +
+			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
 	}
 
 	if maxCallRecvMsgSize == 0 {
