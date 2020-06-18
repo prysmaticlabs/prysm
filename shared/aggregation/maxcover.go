@@ -41,7 +41,7 @@ type MaxCoverCandidate struct {
 type MaxCoverCandidates []*MaxCoverCandidate
 
 // Cover calculates solution to Maximum k-Cover problem in O(knm), where
-// n is number of candidates and m, length of bitlist in each candidate.
+// n is number of candidates and m is a length of bitlist in each candidate.
 func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error) {
 	if len(mc.Candidates) == 0 {
 		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
