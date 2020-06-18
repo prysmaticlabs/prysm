@@ -357,7 +357,7 @@ func TestMaxCover_MaxCoverCandidates_score(t *testing.T) {
 	}
 }
 
-func TestMaxCover_maxCoverProblem_cover(t *testing.T) {
+func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 	problemSet := func() MaxCoverCandidates {
 		// test vectors originally from:
 		// https://github.com/sigp/lighthouse/blob/master/beacon_node/operation_pool/src/max_cover.rs

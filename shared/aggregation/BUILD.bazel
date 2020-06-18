@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "aggregation.go",
+        "attestations.go",
         "maxcover.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/aggregation",
@@ -21,6 +22,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "aggregation_test.go",
+        "attestations_test.go",
         "maxcover_test.go",
     ],
     embed = [":go_default_library"],
