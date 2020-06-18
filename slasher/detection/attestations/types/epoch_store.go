@@ -97,7 +97,7 @@ func (es *EpochStore) ToMap() (map[uint64]Span, error) {
 	var err error
 	spansLen := uint64(len(es.spans)) / SpannerEncodedLength
 	if spansLen > 0 {
-		spansLen -= 1
+		spansLen--
 	} else if spansLen == 0 {
 		return spanMap, nil
 	}
