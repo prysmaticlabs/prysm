@@ -1,7 +1,6 @@
 package aggregation
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -116,15 +115,4 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 		ret = ret.Or(*(*cl)[i].bits)
 	}
 	return ret
-}
-
-// String provides string representation of candidates list.
-func (cl *MaxCoverCandidates) String() string {
-	return fmt.Sprintf("Candidates: %v", *cl)
-}
-
-// String provides string representation of a candidate.
-func (c *MaxCoverCandidate) String() string {
-	return fmt.Sprintf("{%v, %#b:%d, s%d, %t}",
-		c.key, c.bits.Bytes(), c.bits.Len(), c.score, c.processed)
 }
