@@ -3,7 +3,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     testonly = True,
-    srcs = ["setup_db.go"],
+    srcs = [
+        "cleanup_db.go",
+        "setup_db.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/testing",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [

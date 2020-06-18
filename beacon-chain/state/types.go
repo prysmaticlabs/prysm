@@ -77,6 +77,7 @@ var fieldMap map[fieldIndex]dataType
 // copy is performed then the state must increment the refs counter.
 type reference struct {
 	refs uint
+	lock sync.Mutex
 }
 
 // ErrNilInnerState returns when the inner state is nil and no copy set or get
@@ -104,14 +105,18 @@ type ReadOnlyValidator struct {
 }
 
 func (r *reference) AddRef() {
+	r.lock.Lock()
 	r.refs++
+	r.lock.Unlock()
 }
 
 func (r *reference) MinusRef() {
+	r.lock.Lock()
 	// Do not reduce further if object
 	// already has 0 reference to prevent overflow.
 	if r.refs == 0 {
 		return
 	}
 	r.refs--
+	r.lock.Unlock()
 }

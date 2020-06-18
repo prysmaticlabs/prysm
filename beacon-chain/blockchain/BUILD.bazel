@@ -114,6 +114,7 @@ go_test(
     name = "go_raceon_test",
     srcs = [
         "chain_info_norace_test.go",
+        "receive_block_test.go",
         "service_norace_test.go",
     ],
     embed = [":go_default_library"],
@@ -127,6 +128,7 @@ go_test(
     race = "on",
     tags = ["race_on"],
     deps = [
+        "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
