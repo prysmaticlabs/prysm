@@ -7,6 +7,8 @@ import (
 	"context"
 	"os"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	gethlog "github.com/ethereum/go-ethereum/log"
 	ptypes "github.com/gogo/protobuf/types"
 	golog "github.com/ipfs/go-log/v2"
@@ -27,6 +29,8 @@ type Server struct {
 	GenesisTimeFetcher blockchain.TimeFetcher
 	StateGen           *stategen.State
 	HeadFetcher        blockchain.HeadFetcher
+	PeerManager        p2p.PeerManager
+	PeersFetcher       p2p.PeersProvider
 }
 
 // SetLoggingLevel of a beacon node according to a request type,
