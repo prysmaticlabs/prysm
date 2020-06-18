@@ -77,9 +77,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-		if !s.stateGen.StateSummaryExists(ctx, headRoot) {
-			return nil
-		}
+	if !s.stateGen.StateSummaryExists(ctx, headRoot) {
+		return nil
+	}
 
 	// Get the new head block from DB.
 	newHeadBlock, err := s.beaconDB.Block(ctx, headRoot)
@@ -91,10 +91,10 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	// Get the new head state from cached state or DB.
-		newHeadState, err := s.stateGen.StateByRoot(ctx, headRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head state in DB")
-		}
+	newHeadState, err := s.stateGen.StateByRoot(ctx, headRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
 	if newHeadState == nil {
 		return errors.New("cannot save nil head state")
 	}
@@ -135,10 +135,10 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return errors.New("cannot save nil head block")
 	}
 
-		headState, err := s.stateGen.StateByRootInitialSync(ctx, r)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head state in DB")
-		}
+	headState, err := s.stateGen.StateByRootInitialSync(ctx, r)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
 	if headState == nil {
 		return errors.New("nil head state")
 	}
@@ -265,10 +265,10 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 	}
 	s.clearInitSyncBlocks()
 
-		justifiedState, err := s.stateGen.StateByRoot(ctx, justifiedRoot)
-		if err != nil {
-			return err
-		}
+	justifiedState, err := s.stateGen.StateByRoot(ctx, justifiedRoot)
+	if err != nil {
+		return err
+	}
 
 	epoch := helpers.CurrentEpoch(justifiedState)
 	validators := justifiedState.Validators()

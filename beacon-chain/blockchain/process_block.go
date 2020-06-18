@@ -89,9 +89,9 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-		if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
-			return nil, errors.Wrap(err, "could not save state")
-		}
+	if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
+		return nil, errors.Wrap(err, "could not save state")
+	}
 
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
@@ -128,13 +128,13 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return nil, errors.Wrap(err, "could not save new justified")
 		}
 
-			fBlock, err := s.beaconDB.Block(ctx, fRoot)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get finalized block to migrate")
-			}
-			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
-				return nil, errors.Wrap(err, "could not migrate to cold")
-			}
+		fBlock, err := s.beaconDB.Block(ctx, fRoot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get finalized block to migrate")
+		}
+		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
+			return nil, errors.Wrap(err, "could not migrate to cold")
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -218,9 +218,9 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-		if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
-			return errors.Wrap(err, "could not save state")
-		}
+	if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
 
 	if flags.Get().EnableArchive {
 		atts := signed.Block.Body.Attestations
@@ -253,14 +253,14 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 
-			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-			fBlock, err := s.beaconDB.Block(ctx, fRoot)
-			if err != nil {
-				return errors.Wrap(err, "could not get finalized block to migrate")
-			}
-			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
-				return errors.Wrap(err, "could not migrate to cold")
-			}
+		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
+		fBlock, err := s.beaconDB.Block(ctx, fRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized block to migrate")
+		}
+		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
+			return errors.Wrap(err, "could not migrate to cold")
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.

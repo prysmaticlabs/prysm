@@ -42,13 +42,13 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 		return nil, err
 	}
 
-		preState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-		}
-		if preState == nil {
-			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
-		}
+	preState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+	}
+	if preState == nil {
+		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+	}
 
 	// Verify block slot time is not from the feature.
 	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
@@ -73,28 +73,28 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
 	defer span.End()
 
-		parentRoot := bytesutil.ToBytes32(b.ParentRoot)
-		// Loosen the check to HasBlock because state summary gets saved in batches
-		// during initial syncing. There's no risk given a state summary object is just a
-		// a subset of the block object.
-		if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
-			return nil, errors.New("could not reconstruct parent state")
+	parentRoot := bytesutil.ToBytes32(b.ParentRoot)
+	// Loosen the check to HasBlock because state summary gets saved in batches
+	// during initial syncing. There's no risk given a state summary object is just a
+	// a subset of the block object.
+	if !s.stateGen.StateSummaryExists(ctx, parentRoot) && !s.beaconDB.HasBlock(ctx, parentRoot) {
+		return nil, errors.New("could not reconstruct parent state")
+	}
+	if !s.stateGen.HasState(ctx, parentRoot) {
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return nil, errors.Wrap(err, "could not save initial sync blocks")
 		}
-		if !s.stateGen.HasState(ctx, parentRoot) {
-			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-				return nil, errors.Wrap(err, "could not save initial sync blocks")
-			}
-			s.clearInitSyncBlocks()
-		}
-		preState, err := s.stateGen.StateByRootInitialSync(ctx, parentRoot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-		}
-		if preState == nil {
-			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
-		}
+		s.clearInitSyncBlocks()
+	}
+	preState, err := s.stateGen.StateByRootInitialSync(ctx, parentRoot)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+	}
+	if preState == nil {
+		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+	}
 
-		return preState, nil // No copy needed from newly hydrated state gen object.
+	return preState, nil // No copy needed from newly hydrated state gen object.
 }
 
 // verifyBlkDescendant validates input block root is a descendant of the

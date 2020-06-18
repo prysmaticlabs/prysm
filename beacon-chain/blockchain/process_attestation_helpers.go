@@ -30,34 +30,34 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
-		if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root)) {
-			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-				return nil, errors.Wrap(err, "could not save initial sync blocks")
-			}
-			s.clearInitSyncBlocks()
+	if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(c.Root)) {
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return nil, errors.Wrap(err, "could not save initial sync blocks")
 		}
+		s.clearInitSyncBlocks()
+	}
 
-		baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+	}
+
+	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
+		baseState = baseState.Copy()
+		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
+			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
+	}
 
-		if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-			baseState = baseState.Copy()
-			baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
-			}
-		}
+	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: c,
+		State:      baseState,
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+	}
 
-		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-			Checkpoint: c,
-			State:      baseState,
-		}); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
-
-		return baseState, nil
+	return baseState, nil
 
 }
 
@@ -116,16 +116,16 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 		if err == helpers.ErrSigFailedToVerify {
 			// When sig fails to verify, check if there's a differences in committees due to
 			// different seeds.
-				if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) {
-					if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-						return nil, errors.Wrap(err, "could not save initial sync blocks")
-					}
-					s.clearInitSyncBlocks()
+			if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) {
+				if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+					return nil, errors.Wrap(err, "could not save initial sync blocks")
 				}
-				aState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				if err != nil {
-					return nil, err
-				}
+				s.clearInitSyncBlocks()
+			}
+			aState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+			if err != nil {
+				return nil, err
+			}
 
 			if aState == nil {
 				return nil, fmt.Errorf("nil state for block root %#x", a.Data.BeaconBlockRoot)

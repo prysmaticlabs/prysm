@@ -147,10 +147,10 @@ func (s *Service) Start() {
 	}
 
 	if beaconState == nil {
-			beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
-			if err != nil {
-				log.Fatalf("Could not fetch beacon state by root: %v", err)
-			}
+		beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
+		if err != nil {
+			log.Fatalf("Could not fetch beacon state by root: %v", err)
+		}
 	}
 
 	// Make sure that attestation processor is subscribed and ready for state initializing event.
@@ -333,14 +333,14 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
-			return errors.Wrap(err, "could not save genesis state")
-		}
-		if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-			Slot: 0,
-			Root: genesisBlkRoot[:],
-		}); err != nil {
-			return err
-		}
+		return errors.Wrap(err, "could not save genesis state")
+	}
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: 0,
+		Root: genesisBlkRoot[:],
+	}); err != nil {
+		return err
+	}
 
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")
@@ -420,18 +420,17 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	var finalizedState *stateTrie.BeaconState
 
-
-		finalizedState, err = s.stateGen.Resume(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized state from db")
+	finalizedState, err = s.stateGen.Resume(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized state from db")
+	}
+	if !featureconfig.Get().SkipRegenHistoricalStates {
+		// Since historical states were skipped, the node should start from last finalized check point.
+		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+		if finalizedRoot == params.BeaconConfig().ZeroHash {
+			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 		}
-		if !featureconfig.Get().SkipRegenHistoricalStates {
-			// Since historical states were skipped, the node should start from last finalized check point.
-			finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
-			if finalizedRoot == params.BeaconConfig().ZeroHash {
-				finalizedRoot = bytesutil.ToBytes32(finalized.Root)
-			}
-		}
+	}
 
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
