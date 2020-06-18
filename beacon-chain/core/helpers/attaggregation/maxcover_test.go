@@ -60,12 +60,7 @@ func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
 			},
 			want: &maxCoverProblem{
 				candidates: maxCoverCandidateList{
-					&maxCoverCandidate{
-						key:       0,
-						bits:      &bitfield.Bitlist{0b00001010, 0b1},
-						score:     2,
-						processed: false,
-					},
+					{0, &bitfield.Bitlist{0b00001010, 0b1}, 0, false},
 				},
 			},
 			wantErr: false,
@@ -83,11 +78,11 @@ func TestMaxCoverAttestationAggregation_newMaxCoverProblem(t *testing.T) {
 			},
 			want: &maxCoverProblem{
 				candidates: maxCoverCandidateList{
-					{0, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
-					{1, &bitfield.Bitlist{0b00101010, 0b1}, 3, false},
-					{2, &bitfield.Bitlist{0b11111010, 0b1}, 6, false},
-					{3, &bitfield.Bitlist{0b00000010, 0b1}, 1, false},
-					{4, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
+					{0, &bitfield.Bitlist{0b00001010, 0b1}, 0, false},
+					{1, &bitfield.Bitlist{0b00101010, 0b1}, 0, false},
+					{2, &bitfield.Bitlist{0b11111010, 0b1}, 0, false},
+					{3, &bitfield.Bitlist{0b00000010, 0b1}, 0, false},
+					{4, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
 				},
 			},
 			wantErr: false,
@@ -229,7 +224,7 @@ func TestMaxCoverAttestationAggregation_maxCoverCandidateList_filter(t *testing.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.cl.filter(tt.args.covered)
+			got := tt.cl.filter(tt.args.covered, tt.args.allowOverlaps)
 			sort.Slice(*got, func(i, j int) bool {
 				return (*got)[i].key < (*got)[j].key
 			})
@@ -460,11 +455,11 @@ func TestMaxCoverAttestationAggregation_maxCoverProblem_cover(t *testing.T) {
 		// test vectors originally from:
 		// https://github.com/sigp/lighthouse/blob/master/beacon_node/operation_pool/src/max_cover.rs
 		return maxCoverCandidateList{
-			{0, &bitfield.Bitlist{0b00000100, 0b1}, 1, false},
-			{1, &bitfield.Bitlist{0b00011011, 0b1}, 4, false},
-			{2, &bitfield.Bitlist{0b00011011, 0b1}, 4, false},
-			{3, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
-			{4, &bitfield.Bitlist{0b00011010, 0b1}, 3, false},
+			{0, &bitfield.Bitlist{0b00000100, 0b1}, 0, false},
+			{1, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
+			{2, &bitfield.Bitlist{0b00011011, 0b1}, 0, false},
+			{3, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+			{4, &bitfield.Bitlist{0b00011010, 0b1}, 0, false},
 		}
 	}
 	type args struct {
@@ -543,12 +538,12 @@ func TestMaxCoverAttestationAggregation_maxCoverProblem_cover(t *testing.T) {
 		{
 			name: "suboptimal", // Greedy algorithm selects: 0, 2, 3, while 1,4,5 is optimal.
 			args: args{k: 3, candidates: maxCoverCandidateList{
-				{0, &bitfield.Bitlist{0b00000000, 0b00011111, 0b1}, 5, false},
-				{2, &bitfield.Bitlist{0b00000001, 0b11100000, 0b1}, 4, false},
-				{3, &bitfield.Bitlist{0b00000110, 0b00000000, 0b1}, 2, false},
-				{1, &bitfield.Bitlist{0b00110000, 0b01110000, 0b1}, 5, false},
-				{4, &bitfield.Bitlist{0b00000110, 0b10001100, 0b1}, 5, false},
-				{5, &bitfield.Bitlist{0b01001001, 0b00000011, 0b1}, 5, false},
+				{0, &bitfield.Bitlist{0b00000000, 0b00011111, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000001, 0b11100000, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b00000110, 0b00000000, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00110000, 0b01110000, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00000110, 0b10001100, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b01001001, 0b00000011, 0b1}, 0, false},
 			}},
 			want: &maxCoverSolution{
 				coverage: bitfield.Bitlist{0b00000111, 0b11111111, 0b1},
@@ -557,19 +552,19 @@ func TestMaxCoverAttestationAggregation_maxCoverProblem_cover(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "prevent overlaps",
-			args: args{k: 5, candidates: maxCoverCandidateList{
-				{0, &bitfield.Bitlist{0b00000000, 0b00000001, 0b11111110, 0b1}, 8, false},
-				{1, &bitfield.Bitlist{0b00000000, 0b00001110, 0b00001110, 0b1}, 6, false},
-				{2, &bitfield.Bitlist{0b00000000, 0b01110000, 0b01110000, 0b1}, 6, false},
-				{3, &bitfield.Bitlist{0b00000111, 0b10000001, 0b10000000, 0b1}, 6, false},
-				{4, &bitfield.Bitlist{0b00000000, 0b00000110, 0b00000110, 0b1}, 4, false},
-				{5, &bitfield.Bitlist{0b00000000, 0b00000001, 0b01100010, 0b1}, 4, false},
-				{6, &bitfield.Bitlist{0b00001000, 0b00001000, 0b10000010, 0b1}, 4, false},
+			name: "allow overlaps",
+			args: args{k: 5, allowOverlaps: true, candidates: maxCoverCandidateList{
+				{0, &bitfield.Bitlist{0b00000000, 0b00000001, 0b11111110, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000000, 0b00001110, 0b00001110, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000000, 0b01110000, 0b01110000, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b00000111, 0b10000001, 0b10000000, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00000000, 0b00000110, 0b00000110, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b00000000, 0b00000001, 0b01100010, 0b1}, 0, false},
+				{6, &bitfield.Bitlist{0b00001000, 0b00001000, 0b10000010, 0b1}, 0, false},
 			}},
 			want: &maxCoverSolution{
-				coverage: bitfield.Bitlist{0b00000111, 0b11111111, 0b1},
-				keys:     []int{0},
+				coverage: bitfield.Bitlist{0b00001111, 0xff, 0b11111110, 0b1},
+				keys:     []int{0, 3, 1, 2, 6},
 			},
 			wantErr: false,
 		},

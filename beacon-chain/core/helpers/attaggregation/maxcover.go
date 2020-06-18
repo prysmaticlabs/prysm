@@ -82,9 +82,8 @@ func candidateListFromAttestations(atts []*ethpb.Attestation) (maxCoverCandidate
 	candidates := make([]*maxCoverCandidate, len(atts))
 	for i := 0; i < len(atts); i++ {
 		candidates[i] = &maxCoverCandidate{
-			key:   i,
-			bits:  &atts[i].AggregationBits,
-			score: atts[i].AggregationBits.Count(),
+			key:  i,
+			bits: &atts[i].AggregationBits,
 		}
 	}
 	return candidates, nil
@@ -100,35 +99,32 @@ func (mc *maxCoverProblem) cover(k int, allowOverlaps bool) (*maxCoverSolution, 
 	}
 
 	remainingBits := mc.candidates.union()
-
-	fmt.Printf("remaining bits: %v\n", remainingBits)
-
 	solution := &maxCoverSolution{
 		coverage: bitfield.NewBitlist(mc.candidates[0].bits.Len()),
 		keys:     make([]int, 0, k),
 	}
 
-	fmt.Printf("problemset: %v\n", mc.candidates)
 	for len(solution.keys) < k && len(mc.candidates) > 0 {
-		// Filter out processed and overlapping, sort by score in a descending order.
-		mc.candidates.filter(solution.coverage).sort()
-		fmt.Printf("problemset (sorted): %v\n", mc.candidates)
+		// Score candidates against remaining bits.
+		// Filter out processed and overlapping (when disallowed).
+		// Sort by score in a descending order.
+		mc.candidates.score(remainingBits).filter(solution.coverage, allowOverlaps).sort()
 
-		// Pick enough non-overlapping candidates.
 		for _, candidate := range mc.candidates {
+			if len(solution.keys) >= k {
+				break
+			}
 			if !candidate.processed {
-				if solution.coverage.Overlaps(*candidate.bits) {
-					fmt.Printf("del: %v\n", candidate)
+				if !allowOverlaps && solution.coverage.Overlaps(*candidate.bits) {
 					// Overlapping candidates violate non-intersection invariant.
 					candidate.processed = true
-				} else {
-					fmt.Printf("sel: %v\n", candidate)
-					solution.coverage = solution.coverage.Or(*candidate.bits)
-					solution.keys = append(solution.keys, candidate.key)
-					candidate.processed = true
+					continue
 				}
-			}
-			if len(solution.keys) >= k {
+
+				solution.coverage = solution.coverage.Or(*candidate.bits)
+				remainingBits = remainingBits.And(candidate.bits.Not())
+				solution.keys = append(solution.keys, candidate.key)
+				candidate.processed = true
 				break
 			}
 		}
@@ -192,7 +188,8 @@ func (cl *maxCoverCandidateList) String() string {
 
 // String provides string representation of a candidate.
 func (c *maxCoverCandidate) String() string {
-	return fmt.Sprintf("{%v, %#b, s%d, %t}", c.key, c.bits.Bytes(), c.score, c.processed)
+	return fmt.Sprintf("{%v, %#b:%d, s%d, %t}",
+		c.key, c.bits.Bytes(), c.bits.Len(), c.score, c.processed)
 }
 
 // String provides string representation of a Maximum Coverage problem solution.
