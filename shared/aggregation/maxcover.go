@@ -11,6 +11,20 @@ import (
 var ErrInvalidMaxCoverProblem = errors.New("invalid max_cover problem")
 
 // MaxCoverProblem defines Maximum Coverage problem.
+//
+// Problem is defined as MaxCover(U, S, k): S', where:
+// U is a finite set of objects, where |U| = n. Furthermore, let S = {S_1, ..., S_m} be all
+// subsets of U, that's their union is equal to U. Then, Maximum Coverage is the problem of
+// finding such a collection S' of subsets from S, where |S'| <= k, and union of all subsets in S'
+// covering U with maximum cardinality.
+//
+// The current implementation captures the original MaxCover problem, and the variant where
+// additional invariant is enforced: all elements of S' must be disjoint. This comes handy when
+// we need to aggregate bitsets, and overlaps are not allowed.
+//
+// For more details, see:
+// "Analysis of the Greedy Approach in Problems of Maximum k-Coverage" by Hochbaum and Pathria.
+// https://hochbaum.ieor.berkeley.edu/html/pub/HPathria-max-k-coverage-greedy.pdf
 type MaxCoverProblem struct {
 	Candidates MaxCoverCandidates
 }
@@ -26,7 +40,8 @@ type MaxCoverCandidate struct {
 // MaxCoverCandidates is defined to allow group operations (filtering, sorting) on all candidates.
 type MaxCoverCandidates []*MaxCoverCandidate
 
-// Cover calculates solution to Maximum k-Cover problem.
+// Cover calculates solution to Maximum k-Cover problem in O(knm), where
+// n is number of candidates and m, length of bitlist in each candidate.
 func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error) {
 	if len(mc.Candidates) == 0 {
 		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
@@ -106,6 +121,7 @@ func (cl *MaxCoverCandidates) sort() *MaxCoverCandidates {
 	return cl
 }
 
+// union merges all candidate bitlists using logical OR operator.
 func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 	if len(*cl) == 0 {
 		return nil
