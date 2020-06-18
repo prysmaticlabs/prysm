@@ -81,7 +81,6 @@ type Flags struct {
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 
 	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 }
 
 var featureConfig *Flags
