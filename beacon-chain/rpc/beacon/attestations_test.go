@@ -1003,7 +1003,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 				PageSize:  int32(numAtts),
 			},
 			res: &ethpb.AttestationPoolResponse{
-				NextPageToken: "1",
+				NextPageToken: "",
 				TotalSize:     int32(numAtts),
 			},
 		},
