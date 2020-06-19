@@ -37,7 +37,13 @@ service Debug {
             get: "/eth/v1alpha1/debug/forkchoice"
         };
     }
-
+    // Returns all the related data for every peer tracked by the host node.
+    rpc ListPeers(google.protobuf.Empty) returns (DebugPeerResponses){
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/peers"
+        };
+    }
+    // Returns requested peer with specified peer id if it exists.
     rpc GetPeer(ethereum.eth.v1alpha1.PeerRequest) returns (DebugPeerResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/debug/peer"
@@ -104,6 +110,10 @@ message ProtoArrayNode {
     uint64 best_child = 7;
     // Best descendant of the proto array node.
     uint64 best_descendant = 8;
+}
+
+message DebugPeerResponses {
+ repeated DebugPeerResponse responses = 1;
 }
 
 message DebugPeerResponse {

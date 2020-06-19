@@ -3,6 +3,7 @@ package debug
 import (
 	"context"
 
+	"github.com/gogo/protobuf/types"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,11 +19,31 @@ func (ds *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*pbr
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Unable to parse provided peer id: %v", err)
 	}
-	addr, err := ds.PeersFetcher.Peers().Address(pid)
+	return ds.getPeer(pid)
+}
+
+// ListPeers returns all peers known to the host node, irregardless of if they are connected/
+// disconnected.
+func (ds *Server) ListPeers(ctx context.Context, _ *types.Empty) (*pbrpc.DebugPeerResponses, error) {
+	responses := []*pbrpc.DebugPeerResponse{}
+	for _, pid := range ds.PeersFetcher.Peers().All() {
+		resp, err := ds.getPeer(pid)
+		if err != nil {
+			return nil, err
+		}
+		responses = append(responses, resp)
+	}
+	return &pbrpc.DebugPeerResponses{Responses: responses}, nil
+}
+
+func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
+	peers := ds.PeersFetcher.Peers()
+	peerStore := ds.PeerManager.Host().Peerstore()
+	addr, err := peers.Address(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
-	dir, err := ds.PeersFetcher.Peers().Direction(pid)
+	dir, err := peers.Direction(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
@@ -33,11 +54,11 @@ func (ds *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*pbr
 	case network.DirOutbound:
 		pbDirection = ethpb.PeerDirection_OUTBOUND
 	}
-	connState, err := ds.PeersFetcher.Peers().ConnectionState(pid)
+	connState, err := peers.ConnectionState(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
-	record, err := ds.PeersFetcher.Peers().ENR(pid)
+	record, err := peers.ENR(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
@@ -48,48 +69,63 @@ func (ds *Server) GetPeer(ctx context.Context, peerReq *ethpb.PeerRequest) (*pbr
 			return nil, status.Errorf(codes.Internal, "Unable to serialize enr: %v", err)
 		}
 	}
-	metadata, err := ds.PeersFetcher.Peers().Metadata(pid)
+	metadata, err := peers.Metadata(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
-	protocols, err := ds.PeerManager.Host().Peerstore().GetProtocols(pid)
+	protocols, err := peerStore.GetProtocols(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
-	resp, err := ds.PeersFetcher.Peers().BadResponses(pid)
+	resp, err := peers.BadResponses(pid)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
 
-	pVersion, err := ds.PeerManager.Host().Peerstore().Get(pid, "ProtocolVersion")
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "Could not find protocol version: %v", err)
+	rawPversion, err := peerStore.Get(pid, "ProtocolVersion")
+	pVersion, ok := rawPversion.(string)
+	if !ok || err != nil {
+		pVersion = ""
 	}
-	aVersion, err := ds.PeerManager.Host().Peerstore().Get(pid, "AgentVersion")
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "Could not find agent version: %v", err)
+	rawAversion, err := peerStore.Get(pid, "AgentVersion")
+	aVersion, ok := rawAversion.(string)
+	if !ok || err != nil {
+		aVersion = ""
 	}
 	peerInfo := &pbrpc.DebugPeerResponse_PeerInfo{
-		Metadata:             metadata,
-		Protocols:            protocols,
-		FaultCount:           uint64(resp),
-		ProtocolVersion:      pVersion,
-		AgentVersion:         "",
-		PeerLatency:          0,
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
+		Metadata:        metadata,
+		Protocols:       protocols,
+		FaultCount:      uint64(resp),
+		ProtocolVersion: pVersion,
+		AgentVersion:    aVersion,
+		PeerLatency:     uint64(peerStore.LatencyEWMA(pid).Milliseconds()),
 	}
-	res := &pbrpc.DebugPeerResponse{
-		ListeningAddresses:   nil,
-		Direction:            pbDirection,
-		ConnectionState:      ethpb.ConnectionState(connState),
-		PeerId:               pid.String(),
-		Enr:                  enr,
-		PeerInfo:             nil,
-		PeerStatus:           nil,
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
+	addresses := peerStore.Addrs(pid)
+	stringAddrs := []string{}
+	stringAddrs = append(stringAddrs, addr.String())
+	for _, a := range addresses {
+		// Do not double count address
+		if addr.String() == a.String() {
+			continue
+		}
+		stringAddrs = append(stringAddrs, a.String())
 	}
+	pStatus, err := peers.ChainState(pid)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	lastUpdated, err := peers.ChainStateLastUpdated(pid)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
+	}
+	return &pbrpc.DebugPeerResponse{
+		ListeningAddresses: stringAddrs,
+		Direction:          pbDirection,
+		ConnectionState:    ethpb.ConnectionState(connState),
+		PeerId:             pid.String(),
+		Enr:                enr,
+		PeerInfo:           peerInfo,
+		PeerStatus:         pStatus,
+		LastUpdated:        uint64(lastUpdated.Second()),
+	}, nil
 }
