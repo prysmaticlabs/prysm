@@ -12,6 +12,42 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// BeaconState getters may be accessed from inside or outside the package.  To
+// avoid duplicating locks, we have internal and external versions of the
+// getter The external function carries out the short-circuit conditions,
+// obtains a read lock, then calls the internal function.  The internal function
+// carries out the short-circuit conditions and returns the required data
+// without further locking, allowing it to be used by other package-level
+// functions that already hold a lock.  Hence the functions look something
+// like this:
+//
+// func (b *BeaconState) Foo() uint64 {
+//   // Short-circuit conditions.
+//   if !b.HasInnerState() {
+//     return 0
+//   }
+//
+//   // Read lock.
+//   b.lock.RLock()
+//   defer b.lock.RUnlock()
+//
+//   // Internal getter.
+//   return b.foo()
+// }
+//
+// func (b *BeaconState) foo() uint64 {
+//   // Short-circuit conditions.
+//   if !b.HasInnerState() {
+//     return 0
+//   }
+//
+//   return b.state.foo
+// }
+//
+// Although it is technically possible to remove the short-circuit conditions
+// from the external function, that would require every read to obtain a lock
+// even if the data was not present, leading to potential slowdowns.
+
 // EffectiveBalance returns the effective balance of the
 // read only validator.
 func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
@@ -103,28 +139,31 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	if b == nil || b.state == nil {
 		return nil
 	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return &pbp2p.BeaconState{
-		GenesisTime:                 b.GenesisTime(),
-		GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
-		Slot:                        b.Slot(),
-		Fork:                        b.Fork(),
-		LatestBlockHeader:           b.LatestBlockHeader(),
-		BlockRoots:                  b.BlockRoots(),
-		StateRoots:                  b.StateRoots(),
-		HistoricalRoots:             b.HistoricalRoots(),
-		Eth1Data:                    b.Eth1Data(),
-		Eth1DataVotes:               b.Eth1DataVotes(),
-		Eth1DepositIndex:            b.Eth1DepositIndex(),
-		Validators:                  b.Validators(),
-		Balances:                    b.Balances(),
-		RandaoMixes:                 b.RandaoMixes(),
-		Slashings:                   b.Slashings(),
-		PreviousEpochAttestations:   b.PreviousEpochAttestations(),
-		CurrentEpochAttestations:    b.CurrentEpochAttestations(),
-		JustificationBits:           b.JustificationBits(),
-		PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
-		CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
-		FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+		GenesisTime:                 b.genesisTime(),
+		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+		Slot:                        b.slot(),
+		Fork:                        b.fork(),
+		LatestBlockHeader:           b.latestBlockHeader(),
+		BlockRoots:                  b.blockRoots(),
+		StateRoots:                  b.stateRoots(),
+		HistoricalRoots:             b.historicalRoots(),
+		Eth1Data:                    b.eth1Data(),
+		Eth1DataVotes:               b.eth1DataVotes(),
+		Eth1DepositIndex:            b.eth1DepositIndex(),
+		Validators:                  b.validators(),
+		Balances:                    b.balances(),
+		RandaoMixes:                 b.randaoMixes(),
+		Slashings:                   b.slashings(),
+		PreviousEpochAttestations:   b.previousEpochAttestations(),
+		CurrentEpochAttestations:    b.currentEpochAttestations(),
+		JustificationBits:           b.justificationBits(),
+		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         b.finalizedCheckpoint(),
 	}
 }
 
@@ -139,6 +178,20 @@ func (b *BeaconState) GenesisTime() uint64 {
 	if !b.HasInnerState() {
 		return 0
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.genesisTime()
+}
+
+// genesisTime of the beacon state as a uint64.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisTime() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
+
 	return b.state.GenesisTime
 }
 
@@ -147,7 +200,22 @@ func (b *BeaconState) GenesisValidatorRoot() []byte {
 	if !b.HasInnerState() {
 		return nil
 	}
+	if b.state.GenesisValidatorsRoot == nil {
+		return params.BeaconConfig().ZeroHash[:]
+	}
 
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.genesisValidatorRoot()
+}
+
+// genesisValidatorRoot of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisValidatorRoot() []byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.GenesisValidatorsRoot == nil {
 		return params.BeaconConfig().ZeroHash[:]
 	}
@@ -162,6 +230,20 @@ func (b *BeaconState) GenesisUnixTime() time.Time {
 	if !b.HasInnerState() {
 		return time.Unix(0, 0)
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.genesisUnixTime()
+}
+
+// genesisUnixTime returns the genesis time as time.Time.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) genesisUnixTime() time.Time {
+	if !b.HasInnerState() {
+		return time.Unix(0, 0)
+	}
+
 	return time.Unix(int64(b.state.GenesisTime), 0)
 }
 
@@ -170,8 +252,19 @@ func (b *BeaconState) Slot() uint64 {
 	if !b.HasInnerState() {
 		return 0
 	}
+
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.slot()
+}
+
+// slot of the current beacon chain state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) slot() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
 
 	return b.state.Slot
 }
@@ -187,6 +280,19 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.fork()
+}
+
+// fork version of the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) fork() *pbp2p.Fork {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Fork == nil {
+		return nil
+	}
 
 	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
 	copy(prevVersion, b.state.Fork.PreviousVersion)
@@ -211,6 +317,19 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.latestBlockHeader()
+}
+
+// latestBlockHeader stored within the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) latestBlockHeader() *ethpb.BeaconBlockHeader {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.LatestBlockHeader == nil {
+		return nil
+	}
+
 	hdr := &ethpb.BeaconBlockHeader{
 		Slot:          b.state.LatestBlockHeader.Slot,
 		ProposerIndex: b.state.LatestBlockHeader.ProposerIndex,
@@ -234,6 +353,20 @@ func (b *BeaconState) ParentRoot() [32]byte {
 	if !b.HasInnerState() {
 		return [32]byte{}
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.parentRoot()
+}
+
+// parentRoot is a convenience method to access state.LatestBlockRoot.ParentRoot.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) parentRoot() [32]byte {
+	if !b.HasInnerState() {
+		return [32]byte{}
+	}
+
 	parentRoot := [32]byte{}
 	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
 	return parentRoot
@@ -244,12 +377,26 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	if !b.HasInnerState() {
 		return nil
 	}
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	if b.state.BlockRoots == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.blockRoots()
+}
+
+// blockRoots kept track of in the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) blockRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.BlockRoots == nil {
+		return nil
+	}
+
 	roots := make([][]byte, len(b.state.BlockRoots))
 	for i, r := range b.state.BlockRoots {
 		tmpRt := make([]byte, len(r))
@@ -272,6 +419,20 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.blockRootAtIndex(idx)
+}
+
+// blockRootAtIndex retrieves a specific block root based on an
+// input index value.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) blockRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	if b.state.BlockRoots == nil {
+		return nil, nil
+	}
+
 	if len(b.state.BlockRoots) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
@@ -291,6 +452,19 @@ func (b *BeaconState) StateRoots() [][]byte {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.stateRoots()
+}
+
+// StateRoots kept track of in the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) stateRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.StateRoots == nil {
+		return nil
+	}
 
 	roots := make([][]byte, len(b.state.StateRoots))
 	for i, r := range b.state.StateRoots {
@@ -313,6 +487,19 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.historicalRoots()
+}
+
+// historicalRoots based on epochs stored in the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) historicalRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.HistoricalRoots == nil {
+		return nil
+	}
+
 	roots := make([][]byte, len(b.state.HistoricalRoots))
 	for i, r := range b.state.HistoricalRoots {
 		tmpRt := make([]byte, len(r))
@@ -330,6 +517,23 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	if b.state.Eth1Data == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.eth1Data()
+}
+
+// eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) eth1Data() *ethpb.Eth1Data {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Eth1Data == nil {
+		return nil
+	}
+
 	return CopyETH1Data(b.state.Eth1Data)
 }
 
@@ -342,6 +546,24 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	if b.state.Eth1DataVotes == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.eth1DataVotes()
+}
+
+// eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
+// data retrieved from eth1.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) eth1DataVotes() []*ethpb.Eth1Data {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Eth1DataVotes == nil {
+		return nil
+	}
+
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
 		res[i] = CopyETH1Data(b.state.Eth1DataVotes[i])
@@ -355,6 +577,21 @@ func (b *BeaconState) Eth1DepositIndex() uint64 {
 	if !b.HasInnerState() {
 		return 0
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.eth1DepositIndex()
+}
+
+// eth1DepositIndex corresponds to the index of the deposit made to the
+// validator deposit contract at the time of this state's eth1 data.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) eth1DepositIndex() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
+
 	return b.state.Eth1DepositIndex
 }
 
@@ -369,6 +606,19 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.validators()
+}
+
+// validators participating in consensus on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) validators() []*ethpb.Validator {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Validators == nil {
+		return nil
+	}
 
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
@@ -531,8 +781,22 @@ func (b *BeaconState) Balances() []uint64 {
 	if b.state.Balances == nil {
 		return nil
 	}
+
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.balances()
+}
+
+// balances of validators participating in consensus on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) balances() []uint64 {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Balances == nil {
+		return nil
+	}
 
 	res := make([]uint64, len(b.state.Balances))
 	copy(res, b.state.Balances)
@@ -569,6 +833,19 @@ func (b *BeaconState) BalancesLength() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.balancesLength()
+}
+
+// balancesLength returns the length of the balances slice.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) balancesLength() int {
+	if !b.HasInnerState() {
+		return 0
+	}
+	if b.state.Balances == nil {
+		return 0
+	}
+
 	return len(b.state.Balances)
 }
 
@@ -583,6 +860,19 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.randaoMixes()
+}
+
+// randaoMixes of block proposers on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) randaoMixes() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.RandaoMixes == nil {
+		return nil
+	}
 
 	mixes := make([][]byte, len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
@@ -606,6 +896,20 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.randaoMixAtIndex(idx)
+}
+
+// randaoMixAtIndex retrieves a specific block root based on an
+// input index value.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) randaoMixAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	if b.state.RandaoMixes == nil {
+		return nil, nil
+	}
+
 	if len(b.state.RandaoMixes) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
@@ -626,6 +930,19 @@ func (b *BeaconState) RandaoMixesLength() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.randaoMixesLength()
+}
+
+// randaoMixesLength returns the length of the randao mixes slice.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) randaoMixesLength() int {
+	if !b.HasInnerState() {
+		return 0
+	}
+	if b.state.RandaoMixes == nil {
+		return 0
+	}
+
 	return len(b.state.RandaoMixes)
 }
 
@@ -640,6 +957,19 @@ func (b *BeaconState) Slashings() []uint64 {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.slashings()
+}
+
+// slashings of validators on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) slashings() []uint64 {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.Slashings == nil {
+		return nil
+	}
 
 	res := make([]uint64, len(b.state.Slashings))
 	copy(res, b.state.Slashings)
@@ -657,6 +987,19 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.previousEpochAttestations()
+}
+
+// previousEpochAttestations corresponding to blocks on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) previousEpochAttestations() []*pbp2p.PendingAttestation {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.PreviousEpochAttestations == nil {
+		return nil
+	}
 
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
@@ -677,6 +1020,19 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.currentEpochAttestations()
+}
+
+// currentEpochAttestations corresponding to blocks on the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) currentEpochAttestations() []*pbp2p.PendingAttestation {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.CurrentEpochAttestations == nil {
+		return nil
+	}
+
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
 		res[i] = CopyPendingAttestation(b.state.CurrentEpochAttestations[i])
@@ -696,6 +1052,19 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.justificationBits()
+}
+
+// justificationBits marking which epochs have been justified in the beacon chain.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) justificationBits() bitfield.Bitvector4 {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.JustificationBits == nil {
+		return nil
+	}
+
 	res := make([]byte, len(b.state.JustificationBits.Bytes()))
 	copy(res, b.state.JustificationBits.Bytes())
 	return res
@@ -713,6 +1082,19 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.previousJustifiedCheckpoint()
+}
+
+// previousJustifiedCheckpoint denoting an epoch and block root.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) previousJustifiedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.PreviousJustifiedCheckpoint == nil {
+		return nil
+	}
+
 	return CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
@@ -727,6 +1109,19 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.currentJustifiedCheckpoint()
+}
+
+// currentJustifiedCheckpoint denoting an epoch and block root.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) currentJustifiedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.CurrentJustifiedCheckpoint == nil {
+		return nil
+	}
 
 	return CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
@@ -743,6 +1138,19 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	return b.finalizedCheckpoint()
+}
+
+// finalizedCheckpoint denoting an epoch and block root.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) finalizedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
+	if b.state.FinalizedCheckpoint == nil {
+		return nil
+	}
+
 	return CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
@@ -754,8 +1162,21 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	if b.state.FinalizedCheckpoint == nil {
 		return 0
 	}
+
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	return b.finalizedCheckpointEpoch()
+}
+
+// finalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
+func (b *BeaconState) finalizedCheckpointEpoch() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
+	if b.state.FinalizedCheckpoint == nil {
+		return 0
+	}
 
 	return b.state.FinalizedCheckpoint.Epoch
 }
