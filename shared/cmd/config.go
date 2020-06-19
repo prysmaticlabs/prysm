@@ -9,7 +9,7 @@ import (
 type Flags struct {
 	// Configuration related flags.
 	MinimalConfig      bool   // MinimalConfig as defined in the spec.
-	E2EConfig          bool   //E2EConfig made specifically for testing, do not use except in E2E.
+	E2EConfig          bool   // E2EConfig made specifically for testing, do not use except in E2E.
 	CustomGenesisDelay uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 }
 
@@ -40,8 +40,7 @@ func InitWithReset(c *Flags) func() {
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
-	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
+	cfg := newConfig(ctx)
 	delay := params.BeaconConfig().GenesisDelay
 	if ctx.IsSet(CustomGenesisDelayFlag.Name) {
 		delay = ctx.Uint64(CustomGenesisDelayFlag.Name)
@@ -54,20 +53,19 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // ConfigureSlasher sets the global config based
 // on what flags are enabled for the slasher client.
 func ConfigureSlasher(ctx *cli.Context) {
-	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
+	cfg := newConfig(ctx)
 	Init(cfg)
 }
 
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
-	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
+	cfg := newConfig(ctx)
 	Init(cfg)
 }
 
-func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
+func newConfig(ctx *cli.Context) *Flags {
+	cfg := &Flags{}
 	if ctx.Bool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
