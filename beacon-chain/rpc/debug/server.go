@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-
 	gethlog "github.com/ethereum/go-ethereum/log"
 	ptypes "github.com/gogo/protobuf/types"
 	golog "github.com/ipfs/go-log/v2"
