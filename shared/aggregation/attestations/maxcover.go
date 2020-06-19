@@ -19,8 +19,6 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		return atts, err
 	}
 	return atts, nil
-	// TODO
-	//return mc.cover()
 }
 
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
