@@ -3,22 +3,55 @@ package attestations
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 // MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
-//
-// For full analysis or running time, see "Analysis of the Greedy Approach in Problems of
-// Maximum k-Coverage" by Hochbaum and Pathria.
+// Aggregation occurs in many rounds, up until no more aggregation is possible (all attestations
+// are overlapping).
 func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	if len(atts) < 2 {
 		return atts, nil
 	}
-	_, err := NewMaxCover(atts)
-	if err != nil {
-		return atts, err
+
+	aggregated := attList(make([]*ethpb.Attestation, 0, len(atts)))
+	unaggregated := attList(atts)
+
+	// Aggregation over n/2 rounds is enough to find all aggregatable items (exits earlier if there
+	// are many items that can be aggregated).
+	for i := 0; i < len(atts)/2; i++ {
+		if len(unaggregated) < 2 {
+			break
+		}
+
+		// Find maximum non-overlapping coverage.
+		maxCover, err := NewMaxCover(unaggregated)
+		if err != nil {
+			return aggregated.merge(unaggregated), err
+		}
+		solution, err := maxCover.Cover(len(atts), false /* allowOverlaps */)
+		if err != nil {
+			return aggregated.merge(unaggregated), err
+		}
+
+		// Exit earlier, if possible cover does not allow aggregation (less than two items).
+		if len(solution.Keys) < 2 {
+			break
+		}
+
+		// Create aggregated attestation and update solution lists.
+		att, err := unaggregated.filter(solution.Keys).aggregate(solution.Coverage)
+		if err != nil {
+			return aggregated.merge(unaggregated), err
+		}
+		aggregated = append(aggregated, att)
+		unaggregated = unaggregated.complementFilter(solution.Keys)
 	}
-	return atts, nil
+
+	return aggregated.merge(unaggregated), nil
 }
 
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
@@ -39,4 +72,69 @@ func NewMaxCover(atts []*ethpb.Attestation) (*aggregation.MaxCoverProblem, error
 		candidates[i] = aggregation.NewMaxCoverCandidate(i, &atts[i].AggregationBits)
 	}
 	return &aggregation.MaxCoverProblem{Candidates: candidates}, nil
+}
+
+// aggregate returns list as an aggregated attestation.
+func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, error) {
+	if len(al) < 2 {
+		return nil, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate")
+	}
+	signs := make([]*bls.Signature, len(al))
+	for i := 0; i < len(al); i++ {
+		sig, err := signatureFromBytes(al[i].Signature)
+		if err != nil {
+			return nil, err
+		}
+		signs[i] = sig
+	}
+	return &ethpb.Attestation{
+		AggregationBits: coverage,
+		Data:            stateTrie.CopyAttestationData(al[0].Data),
+		Signature:       aggregateSignatures(signs).Marshal(),
+	}, nil
+}
+
+// merge combines two attestation lists into one.
+func (al attList) merge(al1 attList) attList {
+	merged := make([]*ethpb.Attestation, len(al)+len(al1))
+	i := 0
+	for _, att := range al {
+		merged[i] = att
+		i++
+	}
+	for _, att := range al1 {
+		merged[i] = att
+		i++
+	}
+	return merged
+}
+
+// filter returns only items contained in keys.
+func (al attList) filter(keys []int) attList {
+	filtered := make([]*ethpb.Attestation, len(keys))
+	for i, key := range keys {
+		filtered[i] = al[key]
+	}
+	return filtered
+}
+
+// complementFilter returns only items that are NOT contained in keys.
+func (al attList) complementFilter(keys []int) attList {
+	filtered := make([]*ethpb.Attestation, 0, len(keys))
+	foundInKeys := func(key int) bool {
+		for i := 0; i < len(keys); i++ {
+			if keys[i] == key {
+				keys[i] = keys[len(keys)-1]
+				keys = keys[:len(keys)-1]
+				return true
+			}
+		}
+		return false
+	}
+	for i, att := range al {
+		if !foundInKeys(i) {
+			filtered = append(filtered, att)
+		}
+	}
+	return filtered
 }

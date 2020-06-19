@@ -18,6 +18,15 @@ const (
 	MaxCoverAggregation AttestationAggregationStrategy = "max_cover"
 )
 
+// AttestationAggregationStrategy defines attestation aggregation strategy.
+type AttestationAggregationStrategy string
+
+// selectedAggregateFn holds reference to currently selected aggregation strategy.
+var selectedAggregateFn func(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error)
+
+// attList represents list of attestations, defined for easier en masse operations (filtering, sorting).
+type attList []*ethpb.Attestation
+
 // BLS aggregate signature aliases for testing / benchmark substitution. These methods are
 // significantly more expensive than the inner logic of AggregateAttestations so they must be
 // substituted for benchmarks which analyze AggregateAttestations.
@@ -29,12 +38,6 @@ var log = logrus.WithField("prefix", "aggregation.attestations")
 // ErrInvalidAttestationCount is returned when insufficient number
 // of attestations is provided for aggregation.
 var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
-
-// AttestationAggregationStrategy defines attestation aggregation strategy.
-type AttestationAggregationStrategy string
-
-// selectedAggregateFn holds reference to currently selected aggregation strategy.
-var selectedAggregateFn func(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error)
 
 // Aggregate aggregates attestations. The minimal number of attestations is returned.
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
