@@ -2,6 +2,8 @@ package attestations
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"sort"
 	"testing"
 
@@ -10,8 +12,20 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
+
+func TestMain(m *testing.M) {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+		AttestationAggregationStrategy: "naive",
+	})
+	defer resetCfg()
+	os.Exit(m.Run())
+}
 
 func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	tests := []struct {
