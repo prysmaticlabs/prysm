@@ -7,12 +7,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	ptypes "github.com/gogo/protobuf/types"
 	golog "github.com/ipfs/go-log/v2"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
