@@ -84,12 +84,12 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 
 	rawPversion, err := peerStore.Get(pid, "ProtocolVersion")
 	pVersion, ok := rawPversion.(string)
-	if !ok || err != nil {
+	if err != nil || !ok {
 		pVersion = ""
 	}
 	rawAversion, err := peerStore.Get(pid, "AgentVersion")
 	aVersion, ok := rawAversion.(string)
-	if !ok || err != nil {
+	if err != nil || !ok {
 		aVersion = ""
 	}
 	peerInfo := &pbrpc.DebugPeerResponse_PeerInfo{
@@ -118,6 +118,10 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Requested peer does not exist: %v", err)
 	}
+	unixTime := uint64(0)
+	if !lastUpdated.IsZero() {
+		unixTime = uint64(lastUpdated.Unix())
+	}
 	return &pbrpc.DebugPeerResponse{
 		ListeningAddresses: stringAddrs,
 		Direction:          pbDirection,
@@ -126,6 +130,6 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 		Enr:                enr,
 		PeerInfo:           peerInfo,
 		PeerStatus:         pStatus,
-		LastUpdated:        uint64(lastUpdated.Second()),
+		LastUpdated:        unixTime,
 	}, nil
 }
