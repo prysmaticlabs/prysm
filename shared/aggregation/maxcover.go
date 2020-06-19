@@ -40,6 +40,14 @@ type MaxCoverCandidate struct {
 // MaxCoverCandidates is defined to allow group operations (filtering, sorting) on all candidates.
 type MaxCoverCandidates []*MaxCoverCandidate
 
+// NewMaxCoverCandidate returns initialized candidate.
+func NewMaxCoverCandidate(key int, bits *bitfield.Bitlist) *MaxCoverCandidate {
+	return &MaxCoverCandidate{
+		key:  key,
+		bits: bits,
+	}
+}
+
 // Cover calculates solution to Maximum k-Cover problem in O(knm), where
 // n is number of candidates and m is a length of bitlist in each candidate.
 func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error) {
