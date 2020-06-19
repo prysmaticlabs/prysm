@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 )
 
 func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
@@ -72,7 +73,7 @@ func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
 				{4, &bitfield.Bitlist{0b00001010, 0b1}, 2, false},
 			},
 			args: args{
-				covered: bitlistWithAllBitsSet(t, 8),
+				covered: aggtesting.BitlistWithAllBitsSet(t, 8),
 			},
 			want: &MaxCoverCandidates{},
 		},
@@ -255,7 +256,7 @@ func TestMaxCover_MaxCoverCandidates_union(t *testing.T) {
 			cl: MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b11111111, 0b1}, 8, false},
 			},
-			want: bitlistWithAllBitsSet(t, 8),
+			want: aggtesting.BitlistWithAllBitsSet(t, 8),
 		},
 		{
 			name: "mixed",
@@ -320,7 +321,7 @@ func TestMaxCover_MaxCoverCandidates_score(t *testing.T) {
 				{3, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
 				{4, &bitfield.Bitlist{0b00011010, 0b1}, 0, false},
 			},
-			uncovered: bitlistWithAllBitsSet(t, 8),
+			uncovered: aggtesting.BitlistWithAllBitsSet(t, 8),
 			want: &MaxCoverCandidates{
 				{0, &bitfield.Bitlist{0b00000100, 0b1}, 1, false},
 				{1, &bitfield.Bitlist{0b00011011, 0b1}, 4, false},

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 )
 
-func TestAttestations_MaxCover_NewMaxCover(t *testing.T) {
+func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 	type args struct {
 		atts []*ethpb.Attestation
 	}

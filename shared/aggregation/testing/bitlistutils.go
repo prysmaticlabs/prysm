@@ -1,4 +1,4 @@
-package aggregation
+package testing
 
 import (
 	"math/rand"
@@ -10,7 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func bitlistWithAllBitsSet(t testing.TB, length uint64) bitfield.Bitlist {
+// BitlistWithAllBitsSet creates list of bitlists with all bits set.
+func BitlistWithAllBitsSet(t testing.TB, length uint64) bitfield.Bitlist {
 	b := bitfield.NewBitlist(length)
 	for i := uint64(0); i < length; i++ {
 		b.SetBitAt(i, true)
@@ -18,7 +19,8 @@ func bitlistWithAllBitsSet(t testing.TB, length uint64) bitfield.Bitlist {
 	return b
 }
 
-func bitlistsWithSingleBitSet(t testing.TB, n, length uint64) []bitfield.Bitlist {
+// BitlistsWithSingleBitSet creates list of bitlists with a single bit set in each.
+func BitlistsWithSingleBitSet(t testing.TB, n, length uint64) []bitfield.Bitlist {
 	lists := make([]bitfield.Bitlist, n)
 	for i := uint64(0); i < n; i++ {
 		b := bitfield.NewBitlist(length)
@@ -28,7 +30,8 @@ func bitlistsWithSingleBitSet(t testing.TB, n, length uint64) []bitfield.Bitlist
 	return lists
 }
 
-func bitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfield.Bitlist {
+// BitlistsWithMultipleBitSet creates list of bitlists with random n bits set.
+func BitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfield.Bitlist {
 	seed := time.Now().UnixNano()
 	t.Logf("bitlistsWithMultipleBitSet random seed: %v", seed)
 	rand.Seed(seed)
@@ -44,7 +47,8 @@ func bitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfiel
 	return lists
 }
 
-func makeAttestationsFromBitlists(t testing.TB, bl []bitfield.Bitlist) []*ethpb.Attestation {
+// MakeAttestationsFromBitlists creates list of bitlists from list of attestations.
+func MakeAttestationsFromBitlists(t testing.TB, bl []bitfield.Bitlist) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, len(bl))
 	for i, b := range bl {
 		atts[i] = &ethpb.Attestation{

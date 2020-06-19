@@ -1,4 +1,4 @@
-package attaggregation
+package attestations
 
 import (
 	"bytes"
@@ -8,10 +8,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/aggregation"
+	aggtesting "github.com/prysmaticlabs/prysm/shared/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestAggregate_AggregatePair(t *testing.T) {
+func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	tests := []struct {
 		a1   *ethpb.Attestation
 		a2   *ethpb.Attestation
@@ -44,7 +46,7 @@ func TestAggregate_AggregatePair(t *testing.T) {
 	}
 }
 
-func TestAggregate_AggregatePair_OverlapFails(t *testing.T) {
+func TestAggregateAttestations_AggregatePair_OverlapFails(t *testing.T) {
 	tests := []struct {
 		a1 *ethpb.Attestation
 		a2 *ethpb.Attestation
@@ -60,13 +62,13 @@ func TestAggregate_AggregatePair_OverlapFails(t *testing.T) {
 	}
 	for _, tt := range tests {
 		_, err := AggregatePair(tt.a1, tt.a2)
-		if err != ErrBitsOverlap {
+		if err != aggregation.ErrBitsOverlap {
 			t.Error("Did not receive wanted error")
 		}
 	}
 }
 
-func TestAggregate_AggregatePair_DiffLengthFails(t *testing.T) {
+func TestAggregateAttestations_AggregatePair_DiffLengthFails(t *testing.T) {
 	tests := []struct {
 		a1 *ethpb.Attestation
 		a2 *ethpb.Attestation
@@ -78,13 +80,13 @@ func TestAggregate_AggregatePair_DiffLengthFails(t *testing.T) {
 	}
 	for _, tt := range tests {
 		_, err := AggregatePair(tt.a1, tt.a2)
-		if err != ErrBitsDifferentLen {
+		if err != aggregation.ErrBitsDifferentLen {
 			t.Error("Did not receive wanted error")
 		}
 	}
 }
 
-func TestAggregate_Aggregate(t *testing.T) {
+func TestAggregateAttestations_Aggregate(t *testing.T) {
 	// Each test defines the aggregation bitfield inputs and the wanted output result.
 	bitlistLen := params.BeaconConfig().MaxValidatorsPerCommittee
 	tests := []struct {
@@ -118,16 +120,16 @@ func TestAggregate_Aggregate(t *testing.T) {
 		},
 		{
 			name:   "256 attestations with single bit set",
-			inputs: bitlistsWithSingleBitSet(256, bitlistLen),
+			inputs: aggtesting.BitlistsWithSingleBitSet(t, 256, bitlistLen),
 			want: []bitfield.Bitlist{
-				bitlistWithAllBitsSet(256),
+				aggtesting.BitlistWithAllBitsSet(t, 256),
 			},
 		},
 		{
 			name:   "1024 attestations with single bit set",
-			inputs: bitlistsWithSingleBitSet(1024, bitlistLen),
+			inputs: aggtesting.BitlistsWithSingleBitSet(t, 1024, bitlistLen),
 			want: []bitfield.Bitlist{
-				bitlistWithAllBitsSet(1024),
+				aggtesting.BitlistWithAllBitsSet(t, 1024),
 			},
 		},
 		{
@@ -203,7 +205,7 @@ func TestAggregate_Aggregate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Aggregate(makeAttestationsFromBitlists(tt.inputs))
+			got, err := Aggregate(aggtesting.MakeAttestationsFromBitlists(t, tt.inputs))
 			if err != nil {
 				t.Fatal(err)
 			}

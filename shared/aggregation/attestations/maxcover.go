@@ -6,6 +6,23 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/aggregation"
 )
 
+// MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
+//
+// For full analysis or running time, see "Analysis of the Greedy Approach in Problems of
+// Maximum k-Coverage" by Hochbaum and Pathria.
+func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	if len(atts) < 2 {
+		return atts, nil
+	}
+	_, err := NewMaxCover(atts)
+	if err != nil {
+		return atts, err
+	}
+	return atts, nil
+	// TODO
+	//return mc.cover()
+}
+
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
 func NewMaxCover(atts []*ethpb.Attestation) (*aggregation.MaxCoverProblem, error) {
 	if len(atts) == 0 {
