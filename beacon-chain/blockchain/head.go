@@ -263,8 +263,8 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 	if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	s.clearInitSyncBlocks()
 
+	s.clearInitSyncBlocks()
 	justifiedState, err := s.stateGen.StateByRoot(ctx, justifiedRoot)
 	if err != nil {
 		return err

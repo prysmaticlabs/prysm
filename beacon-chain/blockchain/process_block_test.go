@@ -89,7 +89,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "parent block root does not have a state",
 			blk:           &ethpb.BeaconBlock{},
 			s:             st.Copy(),
-			wantErrString: "provided block root does not have block saved in the db",
+			wantErrString: "could not reconstruct parent state",
 		},
 		{
 			name:          "block is from the future",
@@ -678,11 +678,18 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		if err := beaconState.SetCurrentJustifiedCheckpoint(test.args.stateCheckPoint); err != nil {
 			t.Fatal(err)
 		}
-		service, err := NewService(ctx, &Config{BeaconDB: db})
+		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())})
 		if err != nil {
 			t.Fatal(err)
 		}
 		service.justifiedCheckpt = test.args.cachedCheckPoint
+		if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo(test.want.Root, 32)}); err != nil {
+			t.Fatal(err)
+		}
+		genesisState := testutil.NewBeaconState()
+		if err := service.beaconDB.SaveState(ctx, genesisState, bytesutil.ToBytes32(test.want.Root)); err != nil {
+			t.Fatal(err)
+		}
 
 		if test.args.diffFinalizedCheckPoint {
 			b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'a'}}
