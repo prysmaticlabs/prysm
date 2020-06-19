@@ -3,11 +3,11 @@ package testing
 import (
 	"math/rand"
 	"testing"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // BitlistWithAllBitsSet creates list of bitlists with all bits set.
@@ -32,7 +32,7 @@ func BitlistsWithSingleBitSet(t testing.TB, n, length uint64) []bitfield.Bitlist
 
 // BitlistsWithMultipleBitSet creates list of bitlists with random n bits set.
 func BitlistsWithMultipleBitSet(t testing.TB, n, length, count uint64) []bitfield.Bitlist {
-	seed := time.Now().UnixNano()
+	seed := roughtime.Now().UnixNano()
 	t.Logf("bitlistsWithMultipleBitSet random seed: %v", seed)
 	rand.Seed(seed)
 	lists := make([]bitfield.Bitlist, n)

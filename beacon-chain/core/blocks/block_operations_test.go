@@ -19,6 +19,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -1246,7 +1247,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	if _, err = attaggregation.AggregatePair(att1, att2); err != attaggregation.ErrBitsOverlap {
+	if _, err = attaggregation.AggregatePair(att1, att2); err != aggregation.ErrBitsOverlap {
 		t.Error("Did not receive wanted error")
 	}
 }
