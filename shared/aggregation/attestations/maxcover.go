@@ -43,12 +43,12 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		}
 
 		// Create aggregated attestation and update solution lists.
-		att, err := unaggregated.filter(solution.Keys).aggregate(solution.Coverage)
+		att, err := unaggregated.selectUsingKeys(solution.Keys).aggregate(solution.Coverage)
 		if err != nil {
 			return aggregated.merge(unaggregated), err
 		}
 		aggregated = append(aggregated, att)
-		unaggregated = unaggregated.complementFilter(solution.Keys)
+		unaggregated = unaggregated.selectComplementUsingKeys(solution.Keys)
 	}
 
 	return aggregated.merge(unaggregated), nil
@@ -109,8 +109,8 @@ func (al attList) merge(al1 attList) attList {
 	return merged
 }
 
-// filter returns only items contained in keys.
-func (al attList) filter(keys []int) attList {
+// selectUsingKeys returns only items with specified keys.
+func (al attList) selectUsingKeys(keys []int) attList {
 	filtered := make([]*ethpb.Attestation, len(keys))
 	for i, key := range keys {
 		filtered[i] = al[key]
@@ -118,8 +118,8 @@ func (al attList) filter(keys []int) attList {
 	return filtered
 }
 
-// complementFilter returns only items that are NOT contained in keys.
-func (al attList) complementFilter(keys []int) attList {
+// selectComplementUsingKeys returns only items with keys that are NOT specified.
+func (al attList) selectComplementUsingKeys(keys []int) attList {
 	filtered := make([]*ethpb.Attestation, 0, len(keys))
 	foundInKeys := func(key int) bool {
 		for i := 0; i < len(keys); i++ {
