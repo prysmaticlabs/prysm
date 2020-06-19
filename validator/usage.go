@@ -44,6 +44,8 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
+			cmd.MinimalConfigFlag,
+			cmd.E2EConfigFlag,
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
 			cmd.ClearDB,
@@ -75,8 +77,6 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "validator",
 		Flags: []cli.Flag{
-			cmd.MinimalConfigFlag,
-			cmd.E2EConfigFlag,
 			flags.BeaconRPCProviderFlag,
 			flags.CertFlag,
 			flags.KeyManager,

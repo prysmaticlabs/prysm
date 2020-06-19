@@ -44,6 +44,8 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
+			cmd.MinimalConfigFlag,
+			cmd.E2EConfigFlag,
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
 			cmd.EnableTracingFlag,
@@ -73,8 +75,6 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "slasher",
 		Flags: []cli.Flag{
-			cmd.MinimalConfigFlag,
-			cmd.E2EConfigFlag,
 			flags.BeaconCertFlag,
 			flags.CertFlag,
 			flags.KeyFlag,
