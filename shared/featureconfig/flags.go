@@ -175,7 +175,7 @@ var (
 	}
 	attestationAggregationStrategy = &cli.StringFlag{
 		Name:  "attestation-aggregation-strategy",
-		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover, max_independent_set.",
+		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "max_cover",
 	}
 )
