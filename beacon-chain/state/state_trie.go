@@ -48,7 +48,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		b.dirtyIndices[fieldIndex(i)] = []uint64{}
 		b.stateFieldLeaves[fieldIndex(i)] = &FieldTrie{
 			field:     fieldIndex(i),
-			reference: &reference{1},
+			reference: &reference{refs: 1},
 			Mutex:     new(sync.Mutex),
 		}
 	}
@@ -158,7 +158,7 @@ func (b *BeaconState) Copy() *BeaconState {
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for field, v := range b.sharedFieldReferences {
-			v.refs--
+			v.MinusRef()
 			if b.stateFieldLeaves[field].reference != nil {
 				b.stateFieldLeaves[field].MinusRef()
 			}
