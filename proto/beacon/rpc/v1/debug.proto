@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ethereum.beacon.rpc.v1;
 
+import "eth/v1alpha1/node.proto";
+import "proto/beacon/p2p/v1/messages.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
@@ -33,6 +35,18 @@ service Debug {
     rpc GetProtoArrayForkChoice(google.protobuf.Empty) returns (ProtoArrayForkChoiceResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/debug/forkchoice"
+        };
+    }
+    // Returns all the related data for every peer tracked by the host node.
+    rpc ListPeers(google.protobuf.Empty) returns (DebugPeerResponses){
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/peers"
+        };
+    }
+    // Returns requested peer with specified peer id if it exists.
+    rpc GetPeer(ethereum.eth.v1alpha1.PeerRequest) returns (DebugPeerResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/debug/peer"
         };
     }
 }
@@ -96,4 +110,43 @@ message ProtoArrayNode {
     uint64 best_child = 7;
     // Best descendant of the proto array node.
     uint64 best_descendant = 8;
+}
+
+message DebugPeerResponses {
+ repeated DebugPeerResponse responses = 1;
+}
+
+message DebugPeerResponse {
+    // Peer related metadata that is useful for debugging.
+    message PeerInfo {
+        // Metadata of the peer, containing their bitfield
+        // and sequence number.
+        ethereum.beacon.p2p.v1.MetaData metadata = 1;
+        // List of protocols the peer supports.
+        repeated string protocols = 2;
+        // Number of times peer has been penalised.
+        uint64 fault_count = 3;
+        // Protocol Version peer is running.
+        string protocol_version = 4;
+        // Agent Version peer is running.
+        string agent_version = 5;
+        // Latency of responses from peer(in ms).
+        uint64 peer_latency = 6;
+    }
+    // Listening addresses know of the peer.
+    repeated string listening_addresses = 1;
+    // Direction of current connection.
+    ethereum.eth.v1alpha1.PeerDirection direction = 2;
+    // Current connection between host and peer.
+    ethereum.eth.v1alpha1.ConnectionState connection_state = 3;
+    // Peer ID of peer.
+    string peer_id = 4;
+    // ENR of peer at the current moment.
+    string enr = 5;
+    // Peer Info of the peer containing all relevant metadata.
+    PeerInfo peer_info = 6;
+    // Peer Status of the peer.
+    ethereum.beacon.p2p.v1.Status peer_status = 7;
+    // Last know update time for peer status.
+    uint64 last_updated = 8;
 }
