@@ -59,6 +59,10 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool, allowDuplicates bool
 		k = len(mc.Candidates)
 	}
 
+	if err := mc.Candidates.validate(); err != nil {
+		return nil, err
+	}
+
 	if !allowDuplicates {
 		mc.Candidates.dedup(allowOverlaps)
 	}
@@ -171,6 +175,26 @@ func (cl *MaxCoverCandidates) dedup(allowOverlaps bool) *MaxCoverCandidates {
 		}
 	}
 	return cl.filter(bitfield.NewBitlist((*cl)[0].bits.Len()), allowOverlaps)
+}
+
+// validate checks candidates for validity (equal bitlength etc).
+func (cl *MaxCoverCandidates) validate() error {
+	if len(*cl) == 0 {
+		return errors.Wrap(ErrInvalidMaxCoverProblem, "empty list of candidates")
+	}
+	if (*cl)[0].bits == nil || (*cl)[0].bits.Len() == 0 {
+		return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
+	}
+	bitlistLen := (*cl)[0].bits.Len()
+	for i := 1; i < len(*cl); i++ {
+		if (*cl)[i].bits == nil || (*cl)[i].bits.Len() == 0 {
+			return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
+		}
+		if bitlistLen != (*cl)[i].bits.Len() {
+			return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlists of different length")
+		}
+	}
+	return nil
 }
 
 // String provides string representation of candidates list.
