@@ -3,6 +3,7 @@ package aggregation
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/sirupsen/logrus"
@@ -27,4 +28,9 @@ type Aggregation struct {
 	Coverage bitfield.Bitlist
 	// Keys is a list of candidate keys in the best available solution.
 	Keys []int
+}
+
+// String provides string representation of a solution.
+func (ag *Aggregation) String() string {
+	return fmt.Sprintf("{coverage: %#b, keys: %v}", ag.Coverage, ag.Keys)
 }
