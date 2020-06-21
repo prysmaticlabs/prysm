@@ -1,6 +1,8 @@
 package attestations
 
 import (
+	"sort"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -30,9 +32,12 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		// Find maximum non-overlapping coverage.
 		maxCover, err := NewMaxCover(unaggregated)
 		if err != nil {
+			if err == aggregation.ErrBitsDifferentLen {
+				return atts, nil
+			}
 			return aggregated.merge(unaggregated), err
 		}
-		solution, err := maxCover.Cover(len(atts), false /* allowOverlaps */)
+		solution, err := maxCover.Cover(len(atts), false /* allowOverlaps */, false /* allowDuplicates */)
 		if err != nil {
 			return aggregated.merge(unaggregated), err
 		}
@@ -43,15 +48,17 @@ func MaxCoverAttestationAggregation(atts []*ethpb.Attestation) ([]*ethpb.Attesta
 		}
 
 		// Create aggregated attestation and update solution lists.
-		att, err := unaggregated.selectUsingKeys(solution.Keys).aggregate(solution.Coverage)
-		if err != nil {
-			return aggregated.merge(unaggregated), err
+		if !aggregated.hasCoverage(solution.Coverage) {
+			att, err := unaggregated.selectUsingKeys(solution.Keys).aggregate(solution.Coverage)
+			if err != nil {
+				return aggregated.merge(unaggregated), err
+			}
+			aggregated = append(aggregated, att)
 		}
-		aggregated = append(aggregated, att)
 		unaggregated = unaggregated.selectComplementUsingKeys(solution.Keys)
 	}
 
-	return aggregated.merge(unaggregated), nil
+	return aggregated.merge(unaggregated.filterContained()), nil
 }
 
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
@@ -135,6 +142,35 @@ func (al attList) selectComplementUsingKeys(keys []int) attList {
 		if !foundInKeys(i) {
 			filtered = append(filtered, att)
 		}
+	}
+	return filtered
+}
+
+// hasCoverage returns true if a given coverage is found in attestations list.
+func (al attList) hasCoverage(coverage bitfield.Bitlist) bool {
+	for _, att := range al {
+		if att.AggregationBits.Xor(coverage).Count() == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// filterContained removes attestations that are contained within other attestations.
+func (al attList) filterContained() attList {
+	if len(al) < 2 {
+		return al
+	}
+	sort.Slice(al, func(i, j int) bool {
+		return al[i].AggregationBits.Count() > al[j].AggregationBits.Count()
+	})
+	filtered := make([]*ethpb.Attestation, 0, len(al))
+	filtered = append(filtered, al[0])
+	for i := 1; i < len(al); i++ {
+		if filtered[len(filtered)-1].AggregationBits.Contains(al[i].AggregationBits) {
+			continue
+		}
+		filtered = append(filtered, al[i])
 	}
 	return filtered
 }
