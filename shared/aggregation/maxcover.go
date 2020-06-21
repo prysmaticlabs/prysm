@@ -1,6 +1,7 @@
 package aggregation
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -50,7 +51,7 @@ func NewMaxCoverCandidate(key int, bits *bitfield.Bitlist) *MaxCoverCandidate {
 
 // Cover calculates solution to Maximum k-Cover problem in O(knm), where
 // n is number of candidates and m is a length of bitlist in each candidate.
-func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error) {
+func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool, allowDuplicates bool) (*Aggregation, error) {
 	if len(mc.Candidates) == 0 {
 		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
 	}
@@ -58,11 +59,18 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error
 		k = len(mc.Candidates)
 	}
 
+	if !allowDuplicates {
+		mc.Candidates.dedup(allowOverlaps)
+	}
+
 	solution := &Aggregation{
 		Coverage: bitfield.NewBitlist(mc.Candidates[0].bits.Len()),
 		Keys:     make([]int, 0, k),
 	}
 	remainingBits := mc.Candidates.union()
+	if remainingBits == nil {
+		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "empty bitlists")
+	}
 
 	for len(solution.Keys) < k && len(mc.Candidates) > 0 {
 		// Score candidates against remaining bits.
@@ -134,9 +142,46 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 	if len(*cl) == 0 {
 		return nil
 	}
+	if (*cl)[0].bits == nil || (*cl)[0].bits.Len() == 0 {
+		return nil
+	}
 	ret := bitfield.NewBitlist((*cl)[0].bits.Len())
 	for i := 0; i < len(*cl); i++ {
-		ret = ret.Or(*(*cl)[i].bits)
+		if *(*cl)[i].bits != nil {
+			ret = ret.Or(*(*cl)[i].bits)
+		}
 	}
 	return ret
+}
+
+// dedup removes duplicate candidates (ones with the same bits set on).
+func (cl *MaxCoverCandidates) dedup(allowOverlaps bool) *MaxCoverCandidates {
+	if len(*cl) < 2 {
+		return cl
+	}
+	uncoveredBits := cl.union()
+	if uncoveredBits == nil {
+		return cl
+	}
+	cl.score(uncoveredBits).sort()
+	for i := 1; i < len(*cl); i++ {
+		nonOverlappingBits := (*cl)[i-1].bits.Xor(*(*cl)[i].bits)
+		if (*cl)[i-1].score == (*cl)[i].score && nonOverlappingBits.Count() == 0 {
+			(*cl)[i-1].processed = true
+		}
+	}
+	return cl.filter(bitfield.NewBitlist((*cl)[0].bits.Len()), allowOverlaps)
+}
+
+// String provides string representation of candidates list.
+func (cl *MaxCoverCandidates) String() string {
+	return fmt.Sprintf("Candidates: %v", *cl)
+}
+
+// String provides string representation of a candidate.
+func (c *MaxCoverCandidate) String() string {
+	if c.bits == nil {
+		return fmt.Sprintf("{%v, bits: nil, s%d, %t}", c.key, c.score, c.processed)
+	}
+	return fmt.Sprintf("{%v, %#b, s%d, %t}", c.key, c.bits, c.score, c.processed)
 }

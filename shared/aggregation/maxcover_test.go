@@ -358,6 +358,181 @@ func TestMaxCover_MaxCoverCandidates_score(t *testing.T) {
 	}
 }
 
+func TestMaxCover_MaxCoverCandidates_dedup(t *testing.T) {
+	var problem MaxCoverCandidates
+	tests := []struct {
+		name string
+		cl   MaxCoverCandidates
+		want *MaxCoverCandidates
+	}{
+		{
+			name: "nil list",
+			cl:   nil,
+			want: &problem,
+		},
+		{
+			name: "empty list",
+			cl:   MaxCoverCandidates{},
+			want: &MaxCoverCandidates{},
+		},
+		{
+			name: "single item",
+			cl: MaxCoverCandidates{
+				{0, &bitfield.Bitlist{}, 5, false},
+			},
+			want: &MaxCoverCandidates{
+				{0, &bitfield.Bitlist{}, 5, false},
+			},
+		},
+		{
+			name: "two items nil bitlists",
+			cl: MaxCoverCandidates{
+				{0, nil, 0, false},
+				{0, nil, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{0, nil, 0, false},
+				{0, nil, 0, false},
+			},
+		},
+		{
+			name: "two items empty bitlists",
+			cl: MaxCoverCandidates{
+				{0, &bitfield.Bitlist{}, 0, false},
+				{0, &bitfield.Bitlist{}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{0, &bitfield.Bitlist{}, 0, false},
+				{0, &bitfield.Bitlist{}, 0, false},
+			},
+		},
+		{
+			name: "two items no duplicates",
+			cl: MaxCoverCandidates{
+				{0, &bitfield.Bitlist{0xfe, 0x01}, 0, false},
+				{0, &bitfield.Bitlist{0xff, 0x01}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{0, &bitfield.Bitlist{0xff, 0x01}, 8, false},
+				{0, &bitfield.Bitlist{0xfe, 0x01}, 7, false},
+			},
+		},
+		{
+			name: "two items with duplicates",
+			cl: MaxCoverCandidates{
+				{0, &bitfield.Bitlist{0xba, 0x01}, 0, false},
+				{0, &bitfield.Bitlist{0xba, 0x01}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{0, &bitfield.Bitlist{0xba, 0x01}, 5, false},
+			},
+		},
+		{
+			name: "sorted no duplicates",
+			cl: MaxCoverCandidates{
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
+			},
+		},
+		{
+			name: "sorted with duplicates",
+			cl: MaxCoverCandidates{
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
+			},
+		},
+		{
+			name: "all equal",
+			cl: MaxCoverCandidates{
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
+			},
+		},
+		{
+			name: "unsorted no duplicates",
+			cl: MaxCoverCandidates{
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
+			},
+		},
+		{
+			name: "unsorted with duplicates",
+			cl: MaxCoverCandidates{
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 0, false},
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 0, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 0, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 0, false},
+			},
+			want: &MaxCoverCandidates{
+				{3, &bitfield.Bitlist{0b11001111, 0b1}, 6, false},
+				{5, &bitfield.Bitlist{0b01101101, 0b1}, 5, false},
+				{4, &bitfield.Bitlist{0b00001111, 0b1}, 4, false},
+				{2, &bitfield.Bitlist{0b00000011, 0b1}, 2, false},
+				{1, &bitfield.Bitlist{0b00000001, 0b1}, 1, false},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.cl.dedup(false)
+			sort.Slice(*got, func(i, j int) bool {
+				if (*got)[i].score == (*got)[j].score {
+					return (*got)[i].key < (*got)[j].key
+				}
+				return (*got)[i].score > (*got)[j].score
+			})
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("dedup() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestMaxCover_MaxCoverProblem_cover(t *testing.T) {
 	problemSet := func() MaxCoverCandidates {
 		// test vectors originally from:
