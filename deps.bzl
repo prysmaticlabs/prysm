@@ -2277,8 +2277,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_libp2p_kbucket",
         importpath = "github.com/libp2p/go-libp2p-kbucket",
-        sum = "h1:XtNfN4WUy0cfeJoJgWCf1lor4Pp3kBkFJ9vQ+Zs+VUM=",
-        version = "v0.2.3",
+        sum = "h1:wg+VPpCtY61bCasGRexCuXOmEmdKjN+k1w+JtTwu9gA=",
+        version = "v0.4.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_loggables",
@@ -3078,8 +3078,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_kad_dht",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-kad-dht",
-        sum = "h1:+pb1DCkV/6oNQjTZVXl+Y++eV0rnelx/L8y1t4J+Rnw=",
-        version = "v0.2.1",
+        sum = "h1:s7y38B+hdj1AkNR3PCTpvNqBsZHxOf7hoUy7+fNlSZQ=",
+        version = "v0.8.2",
     )
     go_repository(
         name = "com_github_mattn_go_colorable",
