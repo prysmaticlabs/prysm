@@ -143,13 +143,13 @@ func TestGetBlock_OK(t *testing.T) {
 	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
 		t.Fatal("Expected block to have correct graffiti")
 	}
-	if len(block.Body.ProposerSlashings) != int(params.BeaconConfig().MaxProposerSlashings) {
+	if uint64(len(block.Body.ProposerSlashings)) != params.BeaconConfig().MaxProposerSlashings {
 		t.Fatalf("Wanted %d proposer slashings, got %d", params.BeaconConfig().MaxProposerSlashings, len(block.Body.ProposerSlashings))
 	}
 	if !reflect.DeepEqual(block.Body.ProposerSlashings, proposerSlashings) {
 		t.Errorf("Wanted proposer slashing %v, got %v", proposerSlashings, block.Body.ProposerSlashings)
 	}
-	if len(block.Body.AttesterSlashings) != int(params.BeaconConfig().MaxAttesterSlashings) {
+	if uint64(len(block.Body.AttesterSlashings)) != params.BeaconConfig().MaxAttesterSlashings {
 		t.Fatalf("Wanted %d attester slashings, got %d", params.BeaconConfig().MaxAttesterSlashings, len(block.Body.AttesterSlashings))
 	}
 	if !reflect.DeepEqual(block.Body.AttesterSlashings, attSlashings) {
@@ -266,7 +266,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
 		t.Fatal("Expected block to have correct graffiti")
 	}
-	if len(block.Body.Attestations) != int(params.BeaconConfig().MaxAttestations) {
+	if uint64(len(block.Body.Attestations)) != params.BeaconConfig().MaxAttestations {
 		t.Fatalf("Expected a full block of attestations, only received %d", len(block.Body.Attestations))
 	}
 	hasUnaggregatedAtt := false
@@ -994,7 +994,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(deposits) != int(params.BeaconConfig().MaxDeposits) {
+	if uint64(len(deposits)) != params.BeaconConfig().MaxDeposits {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
 			len(deposits),

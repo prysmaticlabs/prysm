@@ -287,7 +287,7 @@ func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEp
 // returns the "default" FAR_FUTURE_EPOCH value.
 func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64) uint64 {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	if targetEpoch > history.LatestEpochWritten || int(targetEpoch) < int(history.LatestEpochWritten)-int(wsPeriod) {
+	if targetEpoch > history.LatestEpochWritten || targetEpoch < history.LatestEpochWritten-wsPeriod {
 		return params.BeaconConfig().FarFutureEpoch
 	}
 	return history.TargetToSource[targetEpoch%wsPeriod]
