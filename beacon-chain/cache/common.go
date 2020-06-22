@@ -8,12 +8,12 @@ import (
 var (
 	// maxCacheSize is 4x of the epoch length for additional cache padding.
 	// Requests should be only accessing committees within defined epoch length.
-	maxCacheSize = int(4 * params.BeaconConfig().SlotsPerEpoch)
+	maxCacheSize = 4 * params.BeaconConfig().SlotsPerEpoch
 )
 
 // trim the FIFO queue to the maxSize.
-func trim(queue *cache.FIFO, maxSize int) {
-	for s := len(queue.ListKeys()); s > maxSize; s-- {
+func trim(queue *cache.FIFO, maxSize uint64) {
+	for s := uint64(len(queue.ListKeys())); s > maxSize; s-- {
 		_, err := queue.Pop(popProcessNoopFunc)
 		if err != nil {
 			// popProcessNoopFunc never returns an error, but we handle this anyway to make linter

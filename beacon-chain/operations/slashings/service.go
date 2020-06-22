@@ -39,7 +39,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state *beaconstate.
 	pending := make([]*ethpb.AttesterSlashing, 0, params.BeaconConfig().MaxAttesterSlashings)
 	for i := 0; i < len(p.pendingAttesterSlashing); i++ {
 		slashing := p.pendingAttesterSlashing[i]
-		if len(pending) >= int(params.BeaconConfig().MaxAttesterSlashings) {
+		if uint64(len(pending)) >= params.BeaconConfig().MaxAttesterSlashings {
 			break
 		}
 		valid, err := p.validatorSlashingPreconditionCheck(state, slashing.validatorToSlash)
@@ -78,7 +78,7 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, state *beaconstate.
 	pending := make([]*ethpb.ProposerSlashing, 0, params.BeaconConfig().MaxProposerSlashings)
 	for i := 0; i < len(p.pendingProposerSlashing); i++ {
 		slashing := p.pendingProposerSlashing[i]
-		if len(pending) >= int(params.BeaconConfig().MaxProposerSlashings) {
+		if uint64(len(pending)) >= params.BeaconConfig().MaxProposerSlashings {
 			break
 		}
 		valid, err := p.validatorSlashingPreconditionCheck(state, slashing.Header_1.Header.ProposerIndex)

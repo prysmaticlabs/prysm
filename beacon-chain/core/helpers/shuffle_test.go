@@ -53,18 +53,18 @@ func TestShuffleList_OK(t *testing.T) {
 
 func TestSplitIndices_OK(t *testing.T) {
 	var l []uint64
-	validators := 64000
-	for i := 0; i < validators; i++ {
-		l = append(l, uint64(i))
+	numValidators := uint64(64000)
+	for i := uint64(0); i < numValidators; i++ {
+		l = append(l, i)
 	}
 	split := SplitIndices(l, params.BeaconConfig().SlotsPerEpoch)
-	if len(split) != int(params.BeaconConfig().SlotsPerEpoch) {
+	if uint64(len(split)) != params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.BeaconConfig().SlotsPerEpoch, len(split))
 	}
 
 	for _, s := range split {
-		if len(s) != validators/int(params.BeaconConfig().SlotsPerEpoch) {
-			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.BeaconConfig().SlotsPerEpoch), len(s))
+		if uint64(len(s)) != numValidators/params.BeaconConfig().SlotsPerEpoch {
+			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", numValidators/params.BeaconConfig().SlotsPerEpoch, len(s))
 		}
 	}
 }

@@ -29,7 +29,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().EpochsPerHistoricalVector != 65536 {
 		t.Error("EpochsPerHistoricalVector should be 8192 for these tests to pass")
 	}
-	latestRandaoMixesLength := int(params.BeaconConfig().EpochsPerHistoricalVector)
+	latestRandaoMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
 
 	if params.BeaconConfig().HistoricalRootsLimit != 16777216 {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
@@ -90,7 +90,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Randomness and committees fields checks.
-	if len(newState.RandaoMixes()) != latestRandaoMixesLength {
+	if uint64(len(newState.RandaoMixes())) != latestRandaoMixesLength {
 		t.Error("Length of RandaoMixes was not correctly initialized")
 	}
 	mix, err := newState.RandaoMixAtIndex(0)
