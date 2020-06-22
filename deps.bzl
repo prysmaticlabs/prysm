@@ -3075,6 +3075,13 @@ def prysm_deps():
         version = "v0.1.0",
     )
     go_repository(
+        name = "com_github_libp2p_go_libp2p_kad_dht",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/libp2p/go-libp2p-kad-dht",
+        sum = "h1:+pb1DCkV/6oNQjTZVXl+Y++eV0rnelx/L8y1t4J+Rnw=",
+        version = "v0.2.1",
+    )
+    go_repository(
         name = "com_github_mattn_go_colorable",
         importpath = "github.com/mattn/go-colorable",
         sum = "h1:snbPLB8fVfU9iwbbo30TPtbLRzwWu6aJS6Xh4eaaviA=",
