@@ -133,6 +133,7 @@ func (f *blocksFetcher) start() error {
 // stop terminates all fetcher operations.
 func (f *blocksFetcher) stop() {
 	f.cancel()
+	f.rateLimiter.Free()
 	<-f.quit // make sure that loop() is done
 }
 
