@@ -12,6 +12,26 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
+// For our setters, we have a field reference counter through
+// which we can track shared field references. This helps when
+// performing state copies, as we simply copy the reference to the
+// field. When we do need to do need to modify these fields, we
+// perform a full copy of the field. This is true of most of our
+// fields except for the following below.
+// 1) BlockRoots
+// 2) StateRoots
+// 3) Eth1DataVotes
+// 4) RandaoMixes
+// 5) HistoricalRoots
+// 6) CurrentEpochAttestations
+// 7) PreviousEpochAttestations
+//
+// The fields referred to above are instead copied by reference, where
+// we simply copy the reference to the underlying object instead of the
+// whole object. This is possible due to how we have structured our state
+// as we copy the value on read, so as to ensure the underlying object is
+// not mutated.
+
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.lock.Lock()
