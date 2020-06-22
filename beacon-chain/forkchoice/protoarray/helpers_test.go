@@ -140,16 +140,16 @@ func TestComputeDelta_MovingVotes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(delta) != int(validatorCount) {
+	if uint64(len(delta)) != validatorCount {
 		t.Error("Incorrect length")
 	}
 
 	for i, d := range delta {
-		if i == 0 {
+		if uint64(i) == 0 {
 			if d != -balance*validatorCount {
 				t.Error("First root should have negative delta")
 			}
-		} else if i == int(lastIndex) {
+		} else if uint64(i) == lastIndex {
 			if d != balance*validatorCount {
 				t.Error("Last root should have positive delta")
 			}

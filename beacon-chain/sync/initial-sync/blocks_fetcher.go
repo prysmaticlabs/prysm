@@ -327,14 +327,14 @@ func (f *blocksFetcher) fetchBlocksFromPeers(
 
 	// Spread load evenly among available peers.
 	perPeerCount := mathutil.Min(count/uint64(len(peers)), f.blocksPerSecond)
-	remainder := int(count % uint64(len(peers)))
+	remainder := count % uint64(len(peers))
 	for i, pid := range peers {
 		start, step := start+uint64(i)*step, step*uint64(len(peers))
 
 		// If the count was divided by an odd number of peers, there will be some blocks
 		// missing from the first requests so we accommodate that scenario.
 		count := perPeerCount
-		if i < remainder {
+		if uint64(i) < remainder {
 			count++
 		}
 		// Asking for no blocks may cause the client to hang.

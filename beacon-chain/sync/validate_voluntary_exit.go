@@ -54,7 +54,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	}
 
 	exitedEpochSlot := exit.Exit.Epoch * params.BeaconConfig().SlotsPerEpoch
-	if int(exit.Exit.ValidatorIndex) >= headState.NumValidators() {
+	if exit.Exit.ValidatorIndex >= uint64(headState.NumValidators()) {
 		return pubsub.ValidationReject
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)

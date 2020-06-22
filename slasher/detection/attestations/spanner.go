@@ -234,7 +234,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	epoch := source - 1
 	lookbackEpoch := epoch - epochLookback
 	untilEpoch := lookbackEpoch
-	if int(untilEpoch) < 0 || featureconfig.Get().DisableLookback {
+	if untilEpoch < 0 || featureconfig.Get().DisableLookback {
 		untilEpoch = 0
 	}
 	var err error
