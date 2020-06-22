@@ -30,7 +30,7 @@ import (
 // we simply copy the reference to the underlying object instead of the
 // whole object. This is possible due to how we have structured our state
 // as we copy the value on read, so as to ensure the underlying object is
-// not mutated.
+// not mutated while it is being accessed during a state read.
 
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
