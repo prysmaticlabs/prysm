@@ -181,14 +181,14 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
-	discv5Nodes = parseGenericAddrs(addrs)
+	discv5Nodes, _ = parseGenericAddrs(addrs)
 	if len(discv5Nodes) == 0 {
 		log.Warn("No bootstrap addresses supplied")
 	}
 	return discv5Nodes
 }
 
-func parseGenericAddrs(addrs []string) (enodeString []string) {
+func parseGenericAddrs(addrs []string) (enodeString []string, multiAddrString []string) {
 	for _, addr := range addrs {
 		if addr == "" {
 			// Ignore empty entries
@@ -199,9 +199,14 @@ func parseGenericAddrs(addrs []string) (enodeString []string) {
 			enodeString = append(enodeString, addr)
 			continue
 		}
-		log.Errorf("Invalid address of %s provided", addr)
+		_, err = multiAddrFromString(addr)
+		if err == nil {
+			multiAddrString = append(multiAddrString, addr)
+			continue
+		}
+		log.Errorf("Invalid address of %s provided: %v", addr, err)
 	}
-	return enodeString
+	return enodeString, multiAddrString
 }
 
 func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
@@ -254,7 +259,14 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 
 func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 	var allAddrs []ma.Multiaddr
-	enodeString := parseGenericAddrs(addrs)
+	enodeString, multiAddrString := parseGenericAddrs(addrs)
+	for _, stringAddr := range multiAddrString {
+		addr, err := multiAddrFromString(stringAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not get multiaddr from string")
+		}
+		allAddrs = append(allAddrs, addr)
+	}
 	for _, stringAddr := range enodeString {
 		enodeAddr, err := enode.Parse(enode.ValidSchemes, stringAddr)
 		if err != nil {
