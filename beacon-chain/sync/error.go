@@ -22,12 +22,12 @@ var responseCodeSuccess = byte(0x00)
 var responseCodeInvalidRequest = byte(0x01)
 var responseCodeServerError = byte(0x02)
 
-func (r *Service) generateErrorResponse(code byte, reason string) ([]byte, error) {
+func (s *Service) generateErrorResponse(code byte, reason string) ([]byte, error) {
 	buf := bytes.NewBuffer([]byte{code})
 	resp := &pb.ErrorResponse{
 		Message: []byte(reason),
 	}
-	if _, err := r.p2p.Encoding().EncodeWithLength(buf, resp); err != nil {
+	if _, err := s.p2p.Encoding().EncodeWithLength(buf, resp); err != nil {
 		return nil, err
 	}
 
