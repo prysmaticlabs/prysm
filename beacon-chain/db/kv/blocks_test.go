@@ -508,21 +508,21 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(block1, highestAt[0]) {
+	if len(highestAt) > 0 && !proto.Equal(block1, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", block1, highestAt)
 	}
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(genesisBlock, highestAt[0]) {
+	if len(highestAt) > 0 && !proto.Equal(genesisBlock, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", genesisBlock, highestAt)
 	}
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(genesisBlock, highestAt[0]) {
+	if len(highestAt) > 0 && !proto.Equal(genesisBlock, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", genesisBlock, highestAt)
 	}
 }

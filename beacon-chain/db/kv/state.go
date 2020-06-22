@@ -366,7 +366,7 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
 		if len(savedSlots) == 0 {
-			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
+			savedSlots = bytesutil.MakeEmptyBitlists(slot)
 		}
 		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, slot)
 		if err != nil {

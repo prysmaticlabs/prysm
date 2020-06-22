@@ -118,12 +118,12 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < maxCheckpointStateSize+100; i++ {
-		if err := st.SetSlot(uint64(i)); err != nil {
+	for i := uint64(0); i < maxCheckpointStateSize+100; i++ {
+		if err := st.SetSlot(i); err != nil {
 			t.Fatal(err)
 		}
 		info := &CheckpointState{
-			Checkpoint: &ethpb.Checkpoint{Epoch: uint64(i)},
+			Checkpoint: &ethpb.Checkpoint{Epoch: i},
 			State:      st,
 		}
 		if err := c.AddCheckpointState(info); err != nil {
@@ -131,7 +131,7 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 		}
 	}
 
-	if len(c.cache.ListKeys()) != maxCheckpointStateSize {
+	if uint64(len(c.cache.ListKeys())) != maxCheckpointStateSize {
 		t.Errorf(
 			"Expected hash cache key size to be %d, got %d",
 			maxCheckpointStateSize,

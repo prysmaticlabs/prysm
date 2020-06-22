@@ -182,7 +182,7 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	}
 
 	k := cache.CommitteeCache.ListKeys()
-	if len(k) != maxCommitteesCacheSize {
+	if uint64(len(k)) != maxCommitteesCacheSize {
 		t.Errorf("wanted: %d, got: %d", maxCommitteesCacheSize, len(k))
 	}
 

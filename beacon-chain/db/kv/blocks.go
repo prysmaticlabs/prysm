@@ -343,7 +343,7 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 		sBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := sBkt.Get(savedBlockSlotsKey)
 		if len(savedSlots) == 0 {
-			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
+			savedSlots = bytesutil.MakeEmptyBitlists(slot)
 		}
 		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, slot)
 		if err != nil {

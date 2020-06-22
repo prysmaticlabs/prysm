@@ -257,7 +257,7 @@ func ClearBit(b []byte, i uint64) []byte {
 
 // MakeEmptyBitlists returns an empty bitlist with
 // input size `i`.
-func MakeEmptyBitlists(i int) []byte {
+func MakeEmptyBitlists(i uint64) []byte {
 	return make([]byte, (i+(8-i%8))/8)
 }
 
@@ -292,7 +292,7 @@ func HighestBitIndexAt(b []byte, index uint64) (uint64, error) {
 	}
 
 	mask := byte(1<<(index%8) - 1)
-	for i := start; i >= 0; i-- {
+	for i := start; i > 0; i-- {
 		if index/8 > i {
 			mask = 0xff
 		}

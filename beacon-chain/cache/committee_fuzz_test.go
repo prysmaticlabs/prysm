@@ -38,7 +38,7 @@ func TestCommitteeCache_FuzzCommitteesByEpoch(t *testing.T) {
 		}
 	}
 
-	if len(cache.CommitteeCache.ListKeys()) != maxCommitteesCacheSize {
+	if uint64(len(cache.CommitteeCache.ListKeys())) != maxCommitteesCacheSize {
 		t.Error("Incorrect key size")
 	}
 }
@@ -62,7 +62,7 @@ func TestCommitteeCache_FuzzActiveIndices(t *testing.T) {
 		}
 	}
 
-	if len(cache.CommitteeCache.ListKeys()) != maxCommitteesCacheSize {
+	if uint64(len(cache.CommitteeCache.ListKeys())) != maxCommitteesCacheSize {
 		t.Error("Incorrect key size")
 	}
 }
