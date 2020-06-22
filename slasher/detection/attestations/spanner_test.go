@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	dbTypes "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
@@ -472,13 +473,19 @@ func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 			// We only care about validator index 0 for these tests for simplicity.
 			validatorIndex := uint64(0)
 			for k, v := range tt.spansByEpochForValidator {
-				span := map[uint64]types.Span{
-					validatorIndex: {
-						MinSpan: v[0],
-						MaxSpan: v[1],
-					},
+				epochStore, err := types.NewEpochStore([]byte{})
+				if err != nil {
+					t.Fatal(err)
 				}
-				if err := sd.slasherDB.SaveEpochSpansMap(ctx, k, span); err != nil {
+				span := types.Span{
+					MinSpan: v[0],
+					MaxSpan: v[1],
+				}
+				epochStore, err = epochStore.SetValidatorSpan(validatorIndex, span)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := sd.slasherDB.SaveEpochSpans(ctx, k, epochStore, dbTypes.UseDB); err != nil {
 					t.Fatalf("Failed to save to slasherDB: %v", err)
 				}
 			}
@@ -823,12 +830,16 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 				t.Fatal(err)
 			}
 			for epoch := range tt.want {
-				sm, _, err := sd.slasherDB.EpochSpansMap(ctx, uint64(epoch))
+				sm, err := sd.slasherDB.EpochSpans(ctx, uint64(epoch), dbTypes.UseDB)
 				if err != nil {
 					t.Fatalf("Failed to read from slasherDB: %v", err)
 				}
-				if !reflect.DeepEqual(sm, tt.want[epoch]) {
-					t.Errorf("Wanted and received:\n%v \n%v", tt.want, sm)
+				resMap, err := sm.ToMap()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(resMap, tt.want[epoch]) {
+					t.Errorf("Wanted and received:\n%v \n%v", tt.want[epoch], resMap)
 				}
 			}
 		})
