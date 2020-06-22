@@ -80,6 +80,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// mitigation. We are already convinced that we are on the correct finalized chain. Any blocks
 	// we receive there after must build on the finalized chain or be considered invalid during
 	// fork choice resolution / block processing.
+	blocksFetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+		p2p:         s.p2p,
+		headFetcher: s.chain,
+	})
 	_, _, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	for len(pids) == 0 {
 		log.Info("Waiting for a suitable peer before syncing to the head of the chain")
@@ -90,7 +94,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		count := mathutil.Min(
-			helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, queue.blocksFetcher.blocksPerSecond)
+			helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, blocksFetcher.blocksPerSecond)
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			StartSlot: s.chain.HeadSlot() + 1,
 			Count:     count,
@@ -100,7 +104,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			"req":  req,
 			"peer": best.Pretty(),
 		}).Debug("Sending batch block request")
-		resp, err := queue.blocksFetcher.requestBlocks(ctx, req, best)
+		resp, err := blocksFetcher.requestBlocks(ctx, req, best)
 		if err != nil {
 			log.WithError(err).Error("Failed to receive blocks, exiting init sync")
 			return nil
