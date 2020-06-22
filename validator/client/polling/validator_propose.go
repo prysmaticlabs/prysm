@@ -91,7 +91,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		if !v.protector.VerifyBlock(ctx, bh) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
 			if v.emitAccountMetrics {
-				validatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
+				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
 			return
 		}
@@ -122,11 +122,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		bh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
+		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
 		if err != nil {
 			log.WithError(err).Error("Failed to get block header from block")
 		}
-		if !v.protector.CommitBlock(ctx, bh) {
+		if !v.protector.CommitBlock(ctx, sbh) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
