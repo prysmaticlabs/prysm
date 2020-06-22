@@ -66,8 +66,14 @@ var (
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
 	BootstrapNode = &cli.StringFlag{
 		Name:  "bootstrap-node",
-		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT.  Multiple nodes can be separated with a comma",
+		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT.  Multiple nodes can be separated with a comma.  Ignored if the bootstrap-node-file flag is used.",
 		Value: "enr:-Ku4QMKVC_MowDsmEa20d5uGjrChI0h8_KsKXDmgVQbIbngZV0idV6_RL7fEtZGo-kTNZ5o7_EJI_vCPJ6scrhwX0Z4Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQJxCnE6v_x2ekgY_uoE1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A",
+	}
+	//BootStrapNodeFile identifies a YAML file that lists bootstrap nodes
+	BootStrapNodeFile = &cli.StringFlag{
+		Name:  "bootstrap-node-file",
+		Usage: "Path to a YAML file that lists bootstrap nodes that the beacon node will connect for peer discovery via DHT.  Setting this flag will cause the bootstrap-node flag to be ignored.  One line per node in YAML list format.",
+		Value: "",
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
 	RelayNode = &cli.StringFlag{

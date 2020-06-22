@@ -48,6 +48,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -297,7 +298,6 @@ func (b *BeaconNode) startStateGen() {
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodeAddrs := strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
 	for i, addr := range bootnodeAddrs {
 		if filepath.Ext(addr) == ".enr" {
@@ -307,6 +307,16 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 			}
 			bootnodeAddrs[i] = string(b)
 		}
+	}
+	if bootstrapFile := cliCtx.String(cmd.BootStrapNodeFile.Name); bootstrapFile != "" {
+		bootnodeAddrs = make([]string, 0)
+		fileContent, err := ioutil.ReadFile(bootstrapFile)
+		if err != nil {
+			return err
+		}
+		listNodes := make([]string, 0)
+		yaml.Unmarshal(fileContent, &listNodes)
+		bootnodeAddrs = append(bootnodeAddrs, listNodes...)
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)

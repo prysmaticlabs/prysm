@@ -46,6 +46,7 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			cmd.NoDiscovery,
 			cmd.BootstrapNode,
+			cmd.BootStrapNodeFile,
 			cmd.RelayNode,
 			cmd.P2PUDPPort,
 			cmd.P2PTCPPort,
