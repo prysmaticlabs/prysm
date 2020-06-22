@@ -78,23 +78,23 @@ var (
 	)
 )
 
-func (r *Service) updateMetrics() {
+func (s *Service) updateMetrics() {
 	// do not update metrics if genesis time
 	// has not been initialized
-	if r.chain.GenesisTime().IsZero() {
+	if s.chain.GenesisTime().IsZero() {
 		return
 	}
 	// We update the dynamic subnet topics.
-	digest, err := r.forkDigest()
+	digest, err := s.forkDigest()
 	if err != nil {
 		log.WithError(err).Errorf("Could not compute fork digest")
 	}
-	indices := r.aggregatorSubnetIndices(r.chain.CurrentSlot())
+	indices := s.aggregatorSubnetIndices(s.chain.CurrentSlot())
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
-	attTopic += r.p2p.Encoding().ProtocolSuffix()
+	attTopic += s.p2p.Encoding().ProtocolSuffix()
 	for _, committeeIdx := range indices {
 		formattedTopic := fmt.Sprintf(attTopic, digest, committeeIdx)
-		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(r.p2p.PubSub().ListPeers(formattedTopic))))
+		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
 	}
 	// We update all other gossip topics.
 	for topic := range p2p.GossipTopicMappings {
@@ -102,12 +102,12 @@ func (r *Service) updateMetrics() {
 		if strings.Contains(topic, "beacon_attestation") {
 			continue
 		}
-		topic += r.p2p.Encoding().ProtocolSuffix()
+		topic += s.p2p.Encoding().ProtocolSuffix()
 		if !strings.Contains(topic, "%x") {
-			topicPeerCount.WithLabelValues(topic).Set(float64(len(r.p2p.PubSub().ListPeers(topic))))
+			topicPeerCount.WithLabelValues(topic).Set(float64(len(s.p2p.PubSub().ListPeers(topic))))
 			continue
 		}
 		formattedTopic := fmt.Sprintf(topic, digest)
-		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(r.p2p.PubSub().ListPeers(formattedTopic))))
+		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.p2p.PubSub().ListPeers(formattedTopic))))
 	}
 }

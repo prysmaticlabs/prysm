@@ -12,7 +12,7 @@ import (
 )
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
-func (r *Service) metaDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
@@ -25,15 +25,15 @@ func (r *Service) metaDataHandler(ctx context.Context, msg interface{}, stream l
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, r.p2p.Metadata())
+	_, err := s.p2p.Encoding().EncodeWithLength(stream, s.p2p.Metadata())
 	return err
 }
 
-func (r *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaData, error) {
+func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaData, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	stream, err := r.p2p.Send(ctx, new(interface{}), p2p.RPCMetaDataTopic, id)
+	stream, err := s.p2p.Send(ctx, new(interface{}), p2p.RPCMetaDataTopic, id)
 	if err != nil {
 		return nil, err
 	}
@@ -45,16 +45,16 @@ func (r *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 			log.WithError(err).Errorf("Failed to reset stream for protocol %s", stream.Protocol())
 		}
 	}()
-	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
+	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
 		return nil, err
 	}
 	if code != 0 {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
 	msg := new(pb.MetaData)
-	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil
