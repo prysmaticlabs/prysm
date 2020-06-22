@@ -24,8 +24,8 @@ import (
 
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
-func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
-	if pid == r.p2p.PeerID() {
+func (xx *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+	if pid == xx.p2p.PeerID() {
 		return pubsub.ValidationAccept
 	}
 
@@ -34,11 +34,11 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	// To process the following it requires the recent blocks to be present in the database, so we'll skip
 	// validating or processing aggregated attestations until fully synced.
-	if r.initialSync.Syncing() {
+	if xx.initialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
 
-	raw, err := r.decodePubsubMessage(msg)
+	raw, err := xx.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode message")
 		traceutil.AnnotateError(span, err)
@@ -53,12 +53,12 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject
 	}
 	// Verify this is the first aggregate received from the aggregator with index and slot.
-	if r.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
+	if xx.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
 		return pubsub.ValidationIgnore
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := r.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	seen, err := xx.attPool.HasAggregatedAttestation(m.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
@@ -66,33 +66,33 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if seen {
 		return pubsub.ValidationIgnore
 	}
-	if !r.validateBlockInAttestation(ctx, m) {
+	if !xx.validateBlockInAttestation(ctx, m) {
 		return pubsub.ValidationIgnore
 	}
 
-	validationRes := r.validateAggregatedAtt(ctx, m)
+	validationRes := xx.validateAggregatedAtt(ctx, m)
 	if validationRes != pubsub.ValidationAccept {
 		return validationRes
 	}
 
-	r.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
+	xx.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
 
 	return pubsub.ValidationAccept
 }
 
-func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) pubsub.ValidationResult {
+func (xx *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.SignedAggregateAttestationAndProof) pubsub.ValidationResult {
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregatedAtt")
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
-	if err := validateAggregateAttTime(attSlot, r.chain.GenesisTime()); err != nil {
+	if err := validateAggregateAttTime(attSlot, xx.chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
 
-	s, err := r.chain.AttestationPreState(ctx, signed.Message.Aggregate)
+	s, err := xx.chain.AttestationPreState(ctx, signed.Message.Aggregate)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
@@ -136,44 +136,44 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	return pubsub.ValidationAccept
 }
 
-func (r *Service) validateBlockInAttestation(ctx context.Context, s *ethpb.SignedAggregateAttestationAndProof) bool {
-	a := s.Message
+func (xx *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.SignedAggregateAttestationAndProof) bool {
+	a := satt.Message
 	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
 	blockRoot := bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)
-	hasStateSummary := featureconfig.Get().NewStateMgmt && r.db.HasStateSummary(ctx, blockRoot) || r.stateSummaryCache.Has(blockRoot)
-	hasState := r.db.HasState(ctx, blockRoot) || hasStateSummary
-	hasBlock := r.db.HasBlock(ctx, blockRoot)
+	hasStateSummary := featureconfig.Get().NewStateMgmt && xx.db.HasStateSummary(ctx, blockRoot) || xx.stateSummaryCache.Has(blockRoot)
+	hasState := xx.db.HasState(ctx, blockRoot) || hasStateSummary
+	hasBlock := xx.db.HasBlock(ctx, blockRoot)
 	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		r.savePendingAtt(s)
+		xx.savePendingAtt(satt)
 		return false
 	}
 	return true
 }
 
 // Returns true if the node has received aggregate for the aggregator with index and target epoch.
-func (r *Service) hasSeenAggregatorIndexEpoch(epoch uint64, aggregatorIndex uint64) bool {
-	r.seenAttestationLock.RLock()
-	defer r.seenAttestationLock.RUnlock()
+func (xx *Service) hasSeenAggregatorIndexEpoch(epoch uint64, aggregatorIndex uint64) bool {
+	xx.seenAttestationLock.RLock()
+	defer xx.seenAttestationLock.RUnlock()
 	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
-	_, seen := r.seenAttestationCache.Get(string(b))
+	_, seen := xx.seenAttestationCache.Get(string(b))
 	return seen
 }
 
 // Set aggregate's aggregator index target epoch as seen.
-func (r *Service) setAggregatorIndexEpochSeen(epoch uint64, aggregatorIndex uint64) {
-	r.seenAttestationLock.Lock()
-	defer r.seenAttestationLock.Unlock()
+func (xx *Service) setAggregatorIndexEpochSeen(epoch uint64, aggregatorIndex uint64) {
+	xx.seenAttestationLock.Lock()
+	defer xx.seenAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(epoch), bytesutil.Bytes32(aggregatorIndex)...)
-	r.seenAttestationCache.Add(string(b), true)
+	xx.seenAttestationCache.Add(string(b), true)
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
-func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
+func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(bs, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -211,11 +211,11 @@ func validateAggregateAttTime(attSlot uint64, genesisTime time.Time) error {
 
 // This validates selection proof by validating it's from the correct validator index of the slot and selection
 // proof is a valid signature.
-func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
+func validateSelection(ctx context.Context, bs *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
 	_, span := trace.StartSpan(ctx, "sync.validateSelection")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommitteeFromState(s, data.Slot, data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(bs, data.Slot, data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
-	domain, err := helpers.Domain(s.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainSelectionProof, s.GenesisValidatorRoot())
+	domain, err := helpers.Domain(bs.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainSelectionProof, bs.GenesisValidatorRoot())
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 	if err != nil {
 		return err
 	}
-	pubkeyState := s.PubkeyAtIndex(validatorIndex)
+	pubkeyState := bs.PubkeyAtIndex(validatorIndex)
 	pubKey, err := bls.PublicKeyFromBytes(pubkeyState[:])
 	if err != nil {
 		return err
