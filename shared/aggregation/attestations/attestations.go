@@ -21,9 +21,6 @@ const (
 // AttestationAggregationStrategy defines attestation aggregation strategy.
 type AttestationAggregationStrategy string
 
-// selectedAggregateFn holds reference to currently selected aggregation strategy.
-var selectedAggregateFn func(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error)
-
 // attList represents list of attestations, defined for easier en masse operations (filtering, sorting).
 type attList []*ethpb.Attestation
 
@@ -41,19 +38,15 @@ var ErrInvalidAttestationCount = errors.New("invalid number of attestations")
 
 // Aggregate aggregates attestations. The minimal number of attestations is returned.
 func Aggregate(atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	// Setup aggregation function once.
-	if selectedAggregateFn == nil {
-		strategy := AttestationAggregationStrategy(featureconfig.Get().AttestationAggregationStrategy)
-		switch strategy {
-		case "", NaiveAggregation:
-			selectedAggregateFn = NaiveAttestationAggregation
-		case MaxCoverAggregation:
-			selectedAggregateFn = MaxCoverAttestationAggregation
-		default:
-			return nil, errors.Wrapf(aggregation.ErrInvalidStrategy, "%q", strategy)
-		}
+	strategy := AttestationAggregationStrategy(featureconfig.Get().AttestationAggregationStrategy)
+	switch strategy {
+	case "", NaiveAggregation:
+		return NaiveAttestationAggregation(atts)
+	case MaxCoverAggregation:
+		return MaxCoverAttestationAggregation(atts)
+	default:
+		return nil, errors.Wrapf(aggregation.ErrInvalidStrategy, "%q", strategy)
 	}
-	return selectedAggregateFn(atts)
 }
 
 // AggregatePair aggregates pair of attestations a1 and a2 together.
