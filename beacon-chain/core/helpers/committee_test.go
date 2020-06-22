@@ -567,7 +567,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(indices) != int(params.BeaconConfig().TargetCommitteeSize) {
+	if uint64(len(indices)) != params.BeaconConfig().TargetCommitteeSize {
 		t.Errorf("Did not save correct indices lengths, got %d wanted %d", len(indices), params.BeaconConfig().TargetCommitteeSize)
 	}
 }

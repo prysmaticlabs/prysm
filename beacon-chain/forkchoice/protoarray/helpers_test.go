@@ -27,7 +27,7 @@ func TestComputeDelta_ZeroHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(delta) != int(validatorCount) {
+	if uint64(len(delta)) != validatorCount {
 		t.Error("Incorrect length")
 	}
 	for _, d := range delta {
@@ -61,13 +61,13 @@ func TestComputeDelta_AllVoteTheSame(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(delta) != int(validatorCount) {
+	if uint64(len(delta)) != validatorCount {
 		t.Error("Incorrect length")
 	}
 
 	for i, d := range delta {
 		if i == 0 {
-			if uint64(d) != balance*validatorCount {
+			if d != balance*validatorCount {
 				t.Error("Did not get correct balance")
 			}
 		} else {
@@ -103,12 +103,12 @@ func TestComputeDelta_DifferentVotes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(delta) != int(validatorCount) {
+	if uint64(len(delta)) != validatorCount {
 		t.Error("Incorrect length")
 	}
 
 	for _, d := range delta {
-		if uint64(d) != balance {
+		if d != balance {
 			t.Error("Did not get correct delta")
 		}
 	}
@@ -146,11 +146,11 @@ func TestComputeDelta_MovingVotes(t *testing.T) {
 
 	for i, d := range delta {
 		if i == 0 {
-			if d != -int(balance*validatorCount) {
+			if d != -balance*validatorCount {
 				t.Error("First root should have negative delta")
 			}
 		} else if i == int(lastIndex) {
-			if d != int(balance*validatorCount) {
+			if d != balance*validatorCount {
 				t.Error("Last root should have positive delta")
 			}
 		} else {
@@ -187,7 +187,7 @@ func TestComputeDelta_MoveOutOfTree(t *testing.T) {
 		t.Error("Incorrect length")
 	}
 
-	if delta[0] != 0-2*int(balance) {
+	if delta[0] != 0-2*balance {
 		t.Error("Incorrect delta")
 	}
 
@@ -225,11 +225,11 @@ func TestComputeDelta_ChangingBalances(t *testing.T) {
 	}
 	for i, d := range delta {
 		if i == 0 {
-			if d != -int(oldBalance*validatorCount) {
+			if d != -oldBalance*validatorCount {
 				t.Error("First root should have negative delta")
 			}
 		} else if i == 1 {
-			if d != int(newBalance*validatorCount) {
+			if d != newBalance*validatorCount {
 				t.Error("Last root should have positive delta")
 			}
 		} else {
@@ -268,10 +268,10 @@ func TestComputeDelta_ValidatorAppear(t *testing.T) {
 		t.Error("Incorrect length")
 	}
 
-	if delta[0] != 0-int(balance) {
+	if delta[0] != 0-balance {
 		t.Error("Incorrect delta")
 	}
-	if delta[1] != 2*int(balance) {
+	if delta[1] != 2*balance {
 		t.Error("Incorrect delta")
 	}
 
@@ -304,10 +304,10 @@ func TestComputeDelta_ValidatorDisappears(t *testing.T) {
 		t.Error("Incorrect length")
 	}
 
-	if delta[0] != 0-2*int(balance) {
+	if delta[0] != 0-2*balance {
 		t.Error("Incorrect delta")
 	}
-	if delta[1] != int(balance) {
+	if delta[1] != balance {
 		t.Error("Incorrect delta")
 	}
 

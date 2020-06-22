@@ -113,7 +113,7 @@ func (s *Store) insert(ctx context.Context,
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the Nodes delta to its parents delta. After scoring changes,
 // the best child is then updated along with best descendant.
-func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
+func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, finalizedEpoch uint64, delta []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
@@ -142,7 +142,7 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 
 		if nodeDelta < 0 {
 			// A node's weight can not be negative but the delta can be negative.
-			if int(n.Weight)+nodeDelta < 0 {
+			if n.Weight+nodeDelta < 0 {
 				n.Weight = 0
 			} else {
 				// Subtract node's weight.
@@ -150,7 +150,7 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 			}
 		} else {
 			// Add node's weight.
-			n.Weight += uint64(nodeDelta)
+			n.Weight += nodeDelta
 		}
 
 		s.Nodes[i] = n
@@ -158,7 +158,7 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 		// Update parent's best child and descendent if the node has a known parent.
 		if n.Parent != NonExistentNode {
 			// Protection against node parent index out of bound. This should not happen.
-			if int(n.Parent) >= len(delta) {
+			if n.Parent >= uint64(len(delta)) {
 				return errInvalidParentDelta
 			}
 			// Back propagate the Nodes delta to its parent.
@@ -299,14 +299,14 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	// Remove the key/values from indices mapping on to be pruned Nodes.
 	// These Nodes are before the finalized index.
 	for i := uint64(0); i < finalizedIndex; i++ {
-		if int(i) >= len(s.Nodes) {
+		if i >= uint64(len(s.Nodes)) {
 			return errInvalidNodeIndex
 		}
 		delete(s.NodeIndices, s.Nodes[i].Root)
 	}
 
 	// Finalized index can not be greater than the length of the node.
-	if int(finalizedIndex) >= len(s.Nodes) {
+	if finalizedIndex >= uint64(len(s.Nodes)) {
 		return errors.New("invalid finalized index")
 	}
 	s.Nodes = s.Nodes[finalizedIndex:]

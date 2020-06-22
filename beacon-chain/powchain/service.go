@@ -483,7 +483,7 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 
 	// Only add pending deposits if the container slice length
 	// is more than the current index in state.
-	if len(ctrs) > int(currIndex) {
+	if uint64(len(ctrs)) > currIndex {
 		for _, c := range ctrs[currIndex:] {
 			s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
 		}

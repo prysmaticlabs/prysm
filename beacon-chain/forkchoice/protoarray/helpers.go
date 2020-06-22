@@ -15,11 +15,11 @@ func computeDeltas(
 	votes []Vote,
 	oldBalances []uint64,
 	newBalances []uint64,
-) ([]int, []Vote, error) {
+) ([]uint64, []Vote, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.computeDeltas")
 	defer span.End()
 
-	deltas := make([]int, len(blockIndices))
+	deltas := make([]uint64, len(blockIndices))
 
 	for validatorIndex, vote := range votes {
 		oldBalance := uint64(0)
@@ -47,19 +47,19 @@ func computeDeltas(
 			if ok {
 				// Protection against out of bound, the `nextDeltaIndex` which defines
 				// the block location in the dag can not exceed the total `delta` length.
-				if int(nextDeltaIndex) >= len(deltas) {
+				if nextDeltaIndex >= uint64(len(deltas)) {
 					return nil, nil, errInvalidNodeDelta
 				}
-				deltas[nextDeltaIndex] += int(newBalance)
+				deltas[nextDeltaIndex] += newBalance
 			}
 
 			currentDeltaIndex, ok := blockIndices[vote.currentRoot]
 			if ok {
 				// Protection against out of bound (same as above)
-				if int(currentDeltaIndex) >= len(deltas) {
+				if currentDeltaIndex >= uint64(len(deltas)) {
 					return nil, nil, errInvalidNodeDelta
 				}
-				deltas[currentDeltaIndex] -= int(oldBalance)
+				deltas[currentDeltaIndex] -= oldBalance
 			}
 		}
 
