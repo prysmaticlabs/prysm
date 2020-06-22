@@ -14,7 +14,7 @@ import (
 var genesisBlockRoot = bytesutil.ToBytes32([]byte{'G', 'E', 'N', 'E', 'S', 'I', 'S'})
 
 func TestStore_IsFinalizedBlock(t *testing.T) {
-	slotsPerEpoch := int(params.BeaconConfig().SlotsPerEpoch)
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -48,7 +48,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 	}
 
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
-	for i := 0; i < slotsPerEpoch*2; i++ {
+	for i := uint64(0); i < slotsPerEpoch*2; i++ {
 		root, err := stateutil.BlockRoot(blks[i].Block)
 		if err != nil {
 			t.Fatal(err)
@@ -57,7 +57,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 			t.Errorf("Block at index %d was not considered finalized in the index", i)
 		}
 	}
-	for i := slotsPerEpoch * 3; i < len(blks); i++ {
+	for i := slotsPerEpoch * 3; i < uint64(len(blks)); i++ {
 		root, err := stateutil.BlockRoot(blks[i].Block)
 		if err != nil {
 			t.Fatal(err)
@@ -99,7 +99,7 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 // be c, e, and g. In this scenario, c was a finalized checkpoint root but no block built upon it so
 // it should not be considered "final and canonical" in the view at slot 6.
 func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
-	slotsPerEpoch := int(params.BeaconConfig().SlotsPerEpoch)
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	blocks0 := makeBlocks(t, slotsPerEpoch*0, slotsPerEpoch, genesisBlockRoot)
 	blocks1 := append(
 		makeBlocks(t, slotsPerEpoch*1, 1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1]))), // No block builds off of the first block in epoch.
@@ -181,14 +181,14 @@ func sszRootOrDie(t *testing.T, block *ethpb.SignedBeaconBlock) []byte {
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n int, previousRoot [32]byte) []*ethpb.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []*ethpb.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
 		blocks[j-i] = &ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
-				Slot:       uint64(j + 1),
+				Slot:       j + 1,
 				ParentRoot: parentRoot,
 			},
 		}

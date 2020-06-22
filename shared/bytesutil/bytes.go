@@ -231,10 +231,10 @@ func PadTo(b []byte, size int) []byte {
 // SetBit sets the index `i` of bitlist `b` to 1.
 // It grows and returns a longer bitlist with 1 set
 // if index `i` is out of range.
-func SetBit(b []byte, i int) []byte {
-	if i >= len(b)*8 {
+func SetBit(b []byte, i uint64) []byte {
+	if i >= uint64(len(b))*8 {
 		h := (i + (8 - i%8)) / 8
-		b = append(b, make([]byte, h-len(b))...)
+		b = append(b, make([]byte, h-uint64(len(b)))...)
 	}
 
 	bit := uint8(1 << (i % 8))
@@ -245,8 +245,8 @@ func SetBit(b []byte, i int) []byte {
 // ClearBit clears the index `i` of bitlist `b`.
 // Returns the original bitlist if the index `i`
 // is out of range.
-func ClearBit(b []byte, i int) []byte {
-	if i >= len(b)*8 {
+func ClearBit(b []byte, i uint64) []byte {
+	if i >= uint64(len(b))*8 {
 		return b
 	}
 
@@ -263,16 +263,16 @@ func MakeEmptyBitlists(i int) []byte {
 
 // HighestBitIndex returns the index of the highest
 // bit set from bitlist `b`.
-func HighestBitIndex(b []byte) (int, error) {
+func HighestBitIndex(b []byte) (uint64, error) {
 	if b == nil || len(b) == 0 {
 		return 0, errors.New("input list can't be empty or nil")
 	}
 
-	for i := len(b) - 1; i >= 0; i-- {
+	for i := uint64(len(b) - 1); i >= 0; i-- {
 		if b[i] == 0 {
 			continue
 		}
-		return bits.Len8(b[i]) + (i * 8), nil
+		return uint64(bits.Len8(b[i])) + (i * 8), nil
 	}
 
 	return 0, nil
@@ -280,8 +280,8 @@ func HighestBitIndex(b []byte) (int, error) {
 
 // HighestBitIndexAt returns the index of the highest
 // bit set from bitlist `b` that is at `index` (inclusive).
-func HighestBitIndexAt(b []byte, index int) (int, error) {
-	bLength := len(b)
+func HighestBitIndexAt(b []byte, index uint64) (uint64, error) {
+	bLength := uint64(len(b))
 	if b == nil || bLength == 0 {
 		return 0, errors.New("input list can't be empty or nil")
 	}
@@ -302,7 +302,7 @@ func HighestBitIndexAt(b []byte, index int) (int, error) {
 			continue
 		}
 
-		return minBitsMasked + (i * 8), nil
+		return uint64(minBitsMasked) + (i * 8), nil
 	}
 
 	return 0, nil

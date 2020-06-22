@@ -235,7 +235,7 @@ func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	// Previously pruned, we should return false.
-	if int(targetEpoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
+	if targetEpoch <= history.LatestEpochWritten-wsPeriod {
 		return false
 	}
 

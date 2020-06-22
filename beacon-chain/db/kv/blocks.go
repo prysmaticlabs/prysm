@@ -345,7 +345,7 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 		if len(savedSlots) == 0 {
 			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
 		}
-		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
+		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, slot)
 		if err != nil {
 			return err
 		}
@@ -361,12 +361,12 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 
 // blocksAtSlotBitfieldIndex retrieves the blocks in DB given the input index. The index represents
 // the position of the slot bitfield the saved block maps to.
-func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*ethpb.SignedBeaconBlock, error) {
+func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
 	defer span.End()
 
 	highestSlot := index - 1
-	highestSlot = int(math.Max(0, float64(highestSlot)))
+	highestSlot = uint64(math.Max(0, float64(highestSlot)))
 
 	if highestSlot == 0 {
 		gBlock, err := k.GenesisBlock(ctx)
@@ -376,7 +376,7 @@ func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 		return []*ethpb.SignedBeaconBlock{gBlock}, nil
 	}
 
-	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
+	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)
 	if err != nil {
@@ -414,7 +414,7 @@ func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 	tmp := make([]byte, len(slotBitfields))
 	copy(tmp, slotBitfields)
 
-	slotBitfields = bytesutil.SetBit(tmp, int(slot))
+	slotBitfields = bytesutil.SetBit(tmp, slot)
 	return bucket.Put(savedBlockSlotsKey, slotBitfields)
 }
 
@@ -435,7 +435,7 @@ func (k *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot ui
 	tmp := make([]byte, len(slotBitfields))
 	copy(tmp, slotBitfields)
 
-	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
+	slotBitfields = bytesutil.ClearBit(tmp, slot)
 	return bucket.Put(savedBlockSlotsKey, slotBitfields)
 }
 

@@ -204,8 +204,8 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 		assignedIndex := rand.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
 		assignedIdxs = append(assignedIdxs, uint64(assignedIndex))
 	}
-	assignedDuration := rand.Intn(int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription))
-	assignedDuration += int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
+	assignedDuration := uint64(rand.Intn(int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)))
+	assignedDuration += params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription
 
 	totalDuration := epochDuration * time.Duration(assignedDuration)
 	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)

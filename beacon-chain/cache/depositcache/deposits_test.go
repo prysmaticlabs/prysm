@@ -217,7 +217,7 @@ func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLes
 	}
 
 	n, root := dc.DepositsNumberAndRootAtHeight(context.Background(), big.NewInt(2))
-	if int(n) != 0 {
+	if n != 0 {
 		t.Errorf("Returned unexpected deposits number %d wanted %d", n, 0)
 	}
 

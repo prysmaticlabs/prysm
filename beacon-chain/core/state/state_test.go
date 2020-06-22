@@ -175,12 +175,12 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	got, want := len(s.BlockRoots()), int(params.BeaconConfig().SlotsPerHistoricalRoot)
+	got, want := uint64(len(s.BlockRoots())), params.BeaconConfig().SlotsPerHistoricalRoot
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	got = cap(s.BlockRoots())
+	got = uint64(cap(s.BlockRoots()))
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}

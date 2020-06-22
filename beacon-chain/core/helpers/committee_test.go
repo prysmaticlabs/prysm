@@ -535,14 +535,14 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearCache()
-	validatorCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, validatorCount)
 	indices := make([]uint64, validatorCount)
-	for i := 0; i < validatorCount; i++ {
+	for i := uint64(0); i < validatorCount; i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
-		indices[i] = uint64(i)
+		indices[i] = i
 	}
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
