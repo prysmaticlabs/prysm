@@ -22,7 +22,7 @@ func (k *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, i
 
 // SaveLastArchivedIndex to the db.
 func (k *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastArchivedIndex")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
@@ -72,7 +72,7 @@ func (k *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 // ArchivedPointRoot returns the block root of an archived point from the DB.
 // This is essential for cold state management and to restore a cold state.
 func (k *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivePointRoot")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointRoot")
 	defer span.End()
 
 	var blockRoot []byte
