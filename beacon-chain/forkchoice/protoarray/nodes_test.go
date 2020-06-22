@@ -123,12 +123,7 @@ func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
 	s := &Store{}
 
 	// This will fail because node indices has length of 0, and delta list has a length of 1.
-	if err := s.applyWeightChanges(
-		context.Background(),
-		0,
-		0,
-		[]uint64{1},
-	); err.Error() != errInvalidDeltaLength.Error() {
+	if err := s.applyWeightChanges(context.Background(), 0, 0, []int{1}); err.Error() != errInvalidDeltaLength.Error() {
 		t.Error("Did not get wanted error")
 	}
 }
@@ -137,12 +132,7 @@ func TestStore_ApplyScoreChanges_UpdateEpochs(t *testing.T) {
 	s := &Store{}
 
 	// The justified and finalized epochs in Store should be updated to 1 and 1 given the following input.
-	if err := s.applyWeightChanges(
-		context.Background(),
-		1,
-		1,
-		[]uint64{},
-	); err != nil {
+	if err := s.applyWeightChanges(context.Background(), 1, 1, []int{}); err != nil {
 		t.Error("Did not get wanted error")
 	}
 
@@ -163,12 +153,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
 
 	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
 	// they get propagated back.
-	if err := s.applyWeightChanges(
-		context.Background(),
-		0,
-		0,
-		[]uint64{1, 1, 1},
-	); err != nil {
+	if err := s.applyWeightChanges(context.Background(), 0, 0, []int{1, 1, 1}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -192,12 +177,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsNegativeDelta(t *testing.T) {
 
 	// Each node gets one unique vote which contributes to negative delta.
 	// The weight should look like 97 <- 98 <- 99 because they get propagated back.
-	if err := s.applyWeightChanges(
-		context.Background(),
-		0,
-		0,
-		[]uint64{-1, -1, -1},
-	); err != nil {
+	if err := s.applyWeightChanges(context.Background(), 0, 0, []int{-1, -1, -1}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -220,12 +200,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
 		{Parent: 1, Root: [32]byte{'A'}, Weight: 100}}}
 
 	// Each node gets one mixed vote. The weight should look like 100 <- 200 <- 250.
-	if err := s.applyWeightChanges(
-		context.Background(),
-		0,
-		0,
-		[]uint64{-100, -50, 150},
-	); err != nil {
+	if err := s.applyWeightChanges(context.Background(), 0, 0, []int{-100, -50, 150}); err != nil {
 		t.Fatal(err)
 	}
 
