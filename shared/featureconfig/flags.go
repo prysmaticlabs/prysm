@@ -133,10 +133,6 @@ var (
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
 	}
-	disableStateRefCopy = &cli.BoolFlag{
-		Name:  "disable-state-ref-copy",
-		Usage: "Disables the usage of a new copying method for our state fields.",
-	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -430,6 +426,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableStateRefCopy = &cli.BoolFlag{
+		Name:   "disable-state-ref-copy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -482,6 +483,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
 	deprecatedEnableInitSyncWeightedRoundRobin,
+	deprecatedDisableStateRefCopy,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -539,7 +541,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipRegenHistoricalStates,
 	disableInitSyncWeightedRoundRobin,
 	disableFieldTrie,
-	disableStateRefCopy,
 	disableNewStateMgmt,
 	enableKadDht,
 	disableReduceAttesterStateCopy,
