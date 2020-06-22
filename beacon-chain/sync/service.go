@@ -159,7 +159,12 @@ func (r *Service) Start() {
 
 // Stop the regular sync service.
 func (r *Service) Stop() error {
-	defer r.blocksRateLimiter.Free()
+	defer func() {
+		if r.blocksRateLimiter != nil {
+			r.blocksRateLimiter.Free()
+			r.blocksRateLimiter = nil
+		}
+	}()
 	defer r.cancel()
 	return nil
 }
