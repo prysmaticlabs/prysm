@@ -124,11 +124,6 @@ var (
 		Name:  "disable-new-state-mgmt",
 		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
-	disableFieldTrie = &cli.BoolFlag{
-		Name:  "disable-state-field-trie",
-		Usage: "Disables the usage of state field tries to compute the state root",
-	}
-
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
@@ -428,6 +423,11 @@ var (
 	}
 	deprecatedDisableStateRefCopy = &cli.BoolFlag{
 		Name:   "disable-state-ref-copy",
+    Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableFieldTrie = &cli.BoolFlag{
+		Name:   "disable-state-field-trie",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -484,6 +484,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecateReduceAttesterStateCopies,
 	deprecatedEnableInitSyncWeightedRoundRobin,
 	deprecatedDisableStateRefCopy,
+	deprecatedDisableFieldTrie,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -541,6 +542,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	skipRegenHistoricalStates,
 	disableInitSyncWeightedRoundRobin,
 	disableFieldTrie,
+	disableStateRefCopy,
 	disableNewStateMgmt,
 	enableKadDht,
 	disableReduceAttesterStateCopy,
