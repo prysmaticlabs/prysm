@@ -536,7 +536,7 @@ func (s *Service) listenForNewNodes() {
 			break
 		}
 		if s.isPeerAtLimit() {
-			// Pause the loop for 15 seconds to stop looking
+			// Pause the main loop for a period to stop looking
 			// for new peers.
 			log.Trace("Not looking for peers, at peer limit")
 			time.Sleep(pollingPeriod)
