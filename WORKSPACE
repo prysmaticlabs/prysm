@@ -157,7 +157,7 @@ go_rules_dependencies()
 
 go_register_toolchains(nogo = "@//:nogo")
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 
 gazelle_dependencies()
 
@@ -354,3 +354,10 @@ load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 geth_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_kad_dht",
+    importpath = "github.com/libp2p/go-libp2p-kad-dht",
+    sum = "h1:s7y38B+hdj1AkNR3PCTpvNqBsZHxOf7hoUy7+fNlSZQ=",
+    version = "v0.8.2",
+)
