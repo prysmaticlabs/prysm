@@ -54,7 +54,6 @@ type Flags struct {
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
-	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
@@ -195,11 +194,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableNewStateMgmt.Name) {
 		log.Warn("Disabling new state management service")
 		cfg.NewStateMgmt = false
-	}
-	cfg.EnableFieldTrie = true
-	if ctx.Bool(disableFieldTrie.Name) {
-		log.Warn("Disabling state field trie")
-		cfg.EnableFieldTrie = false
 	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
