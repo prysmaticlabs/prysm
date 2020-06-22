@@ -179,11 +179,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 func (v *validator) preSigningValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", indexedAtt.Data.Slot)
-
-	v.attesterHistoryByPubKeyLock.RLock()
-	attesterHistory := v.attesterHistoryByPubKey[pubKey]
-	v.attesterHistoryByPubKeyLock.RUnlock()
 	if featureconfig.Get().ProtectAttester {
+		v.attesterHistoryByPubKeyLock.RLock()
+		attesterHistory := v.attesterHistoryByPubKey[pubKey]
+		v.attesterHistoryByPubKeyLock.RUnlock()
 		if isNewAttSlashable(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch) {
 			log.WithFields(logrus.Fields{
 				"sourceEpoch": indexedAtt.Data.Source.Epoch,
