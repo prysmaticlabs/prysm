@@ -30,7 +30,7 @@ var (
 
 // DepositFetcher defines a struct which can retrieve deposit information from a store.
 type DepositFetcher interface {
-	AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit
+	AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
 	DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
 	DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
 }
@@ -121,7 +121,7 @@ func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) b
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
-func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
+func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.AllDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
@@ -129,7 +129,7 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*
 
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range dc.deposits {
-		if beforeBlk == nil || beforeBlk.Uint64() >= ctnr.Eth1BlockHeight {
+		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			deposits = append(deposits, ctnr.Deposit)
 		}
 	}

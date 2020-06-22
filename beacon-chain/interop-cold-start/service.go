@@ -123,7 +123,7 @@ func (s *Service) Status() error {
 }
 
 // AllDeposits mocks out the deposit cache functionality for interop.
-func (s *Service) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
+func (s *Service) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
