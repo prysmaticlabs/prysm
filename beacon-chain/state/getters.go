@@ -24,6 +24,9 @@ func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
 // ActivationEligibilityEpoch returns the activation eligibility epoch of the
 // read only validator.
 func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
+	if v == nil || v.validator == nil {
+		return 0
+	}
 	return v.validator.ActivationEligibilityEpoch
 }
 
