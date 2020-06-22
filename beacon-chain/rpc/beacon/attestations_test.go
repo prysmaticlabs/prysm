@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -1159,7 +1160,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	}
 
 	for dataRoot, sameDataAtts := range atts {
-		aggAtts, err := helpers.AggregateAttestations(sameDataAtts)
+		aggAtts, err := attaggregation.Aggregate(sameDataAtts)
 		if err != nil {
 			t.Fatal(err)
 		}

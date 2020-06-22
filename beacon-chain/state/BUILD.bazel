@@ -17,9 +17,9 @@ go_library(
         "//fuzz:__pkg__",
         "//shared/benchutil:__pkg__",
         "//shared/testutil:__pkg__",
+        "//shared/aggregation:__subpackages__",
         "//tools/benchmark-files-gen:__pkg__",
         "//tools/pcli:__pkg__",
-        "//shared/aggregation:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",

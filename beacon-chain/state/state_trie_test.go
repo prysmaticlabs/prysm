@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -177,7 +178,10 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 	}
 }
 
-func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
+func TestBeaconState_HashTreeRoot_EnableFieldTrie(t *testing.T) {
+	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{EnableFieldTrie: true})
+	defer resetCfg()
+
 	testState, _ := testutil.DeterministicGenesisState(t, 64)
 
 	type test struct {

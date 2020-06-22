@@ -14,10 +14,10 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/operations/attestations/kv:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
+        "//shared/aggregation/attestations:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
@@ -42,8 +42,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/operations/attestations/kv:go_default_library",
+        "//shared/aggregation/attestations:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
