@@ -3,9 +3,9 @@ package sync
 import (
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 var defaultReadDuration = ttfbTimeout
