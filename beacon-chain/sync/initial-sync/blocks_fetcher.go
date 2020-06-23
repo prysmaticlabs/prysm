@@ -3,10 +3,12 @@ package initialsync
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
+	"math/big"
+	mathRand "math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -411,7 +413,7 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 		if bytes.Compare(root, root1) != 0 {
 			return nil, errors.Errorf("can not resend, root mismatch: %x:%x", root, root1)
 		}
-		newPID, _, err := f.selectFailOverPeer(pid, peers)
+		newPID, err := f.selectFailOverPeer(pid, peers)
 		if err != nil {
 			return nil, err
 		}
@@ -517,7 +519,7 @@ func (f *blocksFetcher) removeStalePeerLocks(age time.Duration) {
 }
 
 // selectFailOverPeer randomly selects fail over peer from the list of available peers.
-func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, []peer.ID, error) {
+func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
 	for i, pid := range peers {
 		if pid == excludedPID {
 			peers = append(peers[:i], peers[i+1:]...)
@@ -526,15 +528,14 @@ func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID)
 	}
 
 	if len(peers) == 0 {
-		return "", peers, errNoPeersAvailable
+		return "", errNoPeersAvailable
 	}
 
-	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
-	randGenerator.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
-
-	return peers[0], peers, nil
+	randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(peers))))
+	if err != nil {
+		return "", err
+	}
+	return peers[randInt.Int64()], nil
 }
 
 // waitForMinimumPeers spins and waits up until enough peers are available.
@@ -568,7 +569,8 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 
 	// Shuffle peers to prevent a bad peer from
 	// stalling sync with invalid blocks.
-	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
+	// Do I change this?
+	randGenerator := mathRand.New(mathRand.NewSource(roughtime.Now().Unix()))
 	randGenerator.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
@@ -614,7 +616,8 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	if len(peers) == 0 {
 		return 0, errNoPeersAvailable
 	}
-	randGenerator := rand.New(rand.NewSource(roughtime.Now().UnixNano()))
+	// Do I change this?
+	randGenerator := mathRand.New(mathRand.NewSource(roughtime.Now().UnixNano()))
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	pidInd := 0
 
