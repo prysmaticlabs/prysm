@@ -15,7 +15,7 @@ func init() {
 }
 
 func TestChainService_SaveHead_DataRace(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	s := &Service{
 		beaconDB: db,
 	}
