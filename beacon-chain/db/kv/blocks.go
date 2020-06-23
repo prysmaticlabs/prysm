@@ -145,7 +145,7 @@ func (kv *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return err
 		}
 		indicesByBucket := createBlockIndicesFromBlock(ctx, block.Block)
-		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		kv.blockCache.Del(string(blockRoot[:]))
@@ -173,7 +173,7 @@ func (kv *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error 
 				return err
 			}
 			indicesByBucket := createBlockIndicesFromBlock(ctx, block.Block)
-			if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+			if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
 			kv.blockCache.Del(string(blockRoot[:]))
@@ -213,7 +213,7 @@ func (kv *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock)
 			return err
 		}
 		indicesByBucket := createBlockIndicesFromBlock(ctx, signed.Block)
-		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+		if err := updateValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		kv.blockCache.Set(string(blockRoot[:]), signed, int64(len(enc)))
@@ -245,7 +245,7 @@ func (kv *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBlo
 				return err
 			}
 			indicesByBucket := createBlockIndicesFromBlock(ctx, block.Block)
-			if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+			if err := updateValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			kv.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
@@ -473,7 +473,7 @@ func getBlockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFil
 	// lookup index, we find the intersection across all of them and use
 	// that list of roots to lookup the block. These block will
 	// meet the filter criteria.
-	indices := lookupValuesForIndices(indicesByBucket, tx)
+	indices := lookupValuesForIndices(ctx, indicesByBucket, tx)
 	keys := rootsBySlotRange
 	if len(indices) > 0 {
 		// If we have found indices that meet the filter criteria, and there are also

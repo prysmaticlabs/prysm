@@ -64,7 +64,7 @@ func (kv *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*e
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the attestations. These attestations will
 		// meet the filter criteria.
-		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indicesByBucket, tx)...)
+		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(ctx, indicesByBucket, tx)...)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			ac := &dbpb.AttestationContainer{}
@@ -108,7 +108,7 @@ func (kv *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) er
 			return err
 		}
 		indicesByBucket := createAttestationIndicesFromData(ctx, ac.Data)
-		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+		if err := deleteValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		return bkt.Delete(attDataRoot[:])
@@ -129,7 +129,7 @@ func (kv *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte
 				return err
 			}
 			indicesByBucket := createAttestationIndicesFromData(ctx, ac.Data)
-			if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+			if err := deleteValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
 			if err := bkt.Delete(attDataRoot[:]); err != nil {
@@ -178,7 +178,7 @@ func (kv *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) er
 		}
 
 		indicesByBucket := createAttestationIndicesFromData(ctx, att.Data)
-		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+		if err := updateValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(attDataRoot[:], enc)
@@ -220,7 +220,7 @@ func (kv *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation
 			}
 
 			indicesByBucket := createAttestationIndicesFromData(ctx, att.Data)
-			if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+			if err := updateValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 
