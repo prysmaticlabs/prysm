@@ -45,7 +45,7 @@ func (store *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys
 					TargetToSource: newMap,
 				}
 			} else {
-				attestationHistory, err = unmarshalAttestationHistory(enc)
+				attestationHistory, err = unmarshalAttestationHistory(ctx, enc)
 				if err != nil {
 					return err
 				}
