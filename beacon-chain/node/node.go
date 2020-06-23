@@ -297,26 +297,26 @@ func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
 }
 
-func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	bootnodeAddrs := strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
-	for i, addr := range bootnodeAddrs {
-		if filepath.Ext(addr) == ".enr" {
-			b, err := ioutil.ReadFile(addr)
-			if err != nil {
-				return err
-			}
-			bootnodeAddrs[i] = string(b)
-		}
+func readbootNodes(fileName string) ([]string, error) {
+	fileContent, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
 	}
-	if bootstrapFile := cliCtx.String(cmd.BootStrapNodeFile.Name); bootstrapFile != "" {
-		bootnodeAddrs = make([]string, 0)
-		fileContent, err := ioutil.ReadFile(bootstrapFile)
+	listNodes := make([]string, 0)
+	yaml.Unmarshal(fileContent, &listNodes)
+	return listNodes, nil
+}
+
+func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
+	bootnodeAddrs := make([]string, 0)
+	var err error
+	if bootstrapfileName := cliCtx.String(cmd.BootStrapNodeFile.Name); bootstrapfileName != "" {
+		bootnodeAddrs, err = readbootNodes(bootstrapfileName)
 		if err != nil {
 			return err
 		}
-		listNodes := make([]string, 0)
-		yaml.Unmarshal(fileContent, &listNodes)
-		bootnodeAddrs = append(bootnodeAddrs, listNodes...)
+	} else {
+		bootnodeAddrs = strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
