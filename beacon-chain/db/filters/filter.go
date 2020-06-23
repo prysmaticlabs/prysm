@@ -16,31 +16,31 @@ package filters
 
 // FilterType defines an enum which is used as the keys in a map that tracks
 // set attribute filters for data as part of the `FilterQuery` struct type.
-type FilterType int
+type FilterType uint8
 
 const (
 	// ParentRoot defines a filter for parent roots of blocks using Simple Serialize (SSZ).
-	ParentRoot FilterType = 0
+	ParentRoot FilterType = iota
 	// StartSlot is used for range filters of objects by their slot (inclusive).
-	StartSlot FilterType = 1
+	StartSlot
 	// EndSlot is used for range filters of objects by their slot (inclusive).
-	EndSlot FilterType = 2
+	EndSlot
 	// StartEpoch is used for range filters of objects by their epoch (inclusive).
-	StartEpoch FilterType = 3
+	StartEpoch
 	// EndEpoch is used for range filters of objects by their epoch (inclusive).
-	EndEpoch FilterType = 4
+	EndEpoch
 	// HeadBlockRoot defines a filter for the head block root attribute of objects.
-	HeadBlockRoot FilterType = 5
+	HeadBlockRoot
 	// SourceEpoch defines a filter for the source epoch attribute of objects.
-	SourceEpoch FilterType = 6
+	SourceEpoch
 	// SourceRoot defines a filter for the source root attribute of objects.
-	SourceRoot FilterType = 7
+	SourceRoot
 	// TargetEpoch defines a filter for the target epoch attribute of objects.
-	TargetEpoch FilterType = 8
+	TargetEpoch
 	// TargetRoot defines a filter for the target root attribute of objects.
-	TargetRoot FilterType = 9
+	TargetRoot
 	// SlotStep is used for range filters of objects by their slot in step increments.
-	SlotStep FilterType = 10
+	SlotStep
 )
 
 // QueryFilter defines a generic interface for type-asserting
