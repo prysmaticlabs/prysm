@@ -21,7 +21,6 @@ go_library(
         "//shared/featureconfig:go_default_library",
         "//shared/logutil:go_default_library",
         "//shared/version:go_default_library",
-        "@com_github_go_yaml_yaml//:go_default_library",
         "@com_github_ethereum_go_ethereum//log:go_default_library",
         "@com_github_ipfs_go_log_v2//:go_default_library",
         "@com_github_joonix_log//:go_default_library",
