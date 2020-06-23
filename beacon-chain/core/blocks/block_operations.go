@@ -113,6 +113,9 @@ func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.Bea
 }
 
 func areEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+	if a == nil && b == nil {
+		return true
+	}
 	if a == nil || b == nil {
 		return false
 	}
