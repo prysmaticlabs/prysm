@@ -78,11 +78,11 @@ var (
 	})
 	totalEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "total_eligible_balances",
-		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
+		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
 	totalVotedTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "total_voted_target_balances",
-		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
+		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
 	})
 	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "beacon_reorg_total",

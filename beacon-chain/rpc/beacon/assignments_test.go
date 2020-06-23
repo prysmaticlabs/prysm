@@ -13,7 +13,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -28,7 +27,7 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 	bs := &Server{
 		BeaconDB:           db,
@@ -52,7 +51,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 
@@ -74,7 +73,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 	wanted := &ethpb.ValidatorAssignments{
 		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
@@ -101,7 +100,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
 	setupValidators(t, db, 1)
 	headState, err := db.HeadState(ctx)
@@ -127,7 +126,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 0, 0)
@@ -157,7 +156,7 @@ func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.T) {
 	helpers.ClearCache()
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
 	count := 500
 	validators := make([]*ethpb.Validator, 0, count)
@@ -212,7 +211,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
@@ -254,7 +253,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testing.T) {
 	helpers.ClearCache()
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -313,7 +312,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 
 	// Construct the wanted assignments.
@@ -354,7 +353,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 
 func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) {
 	helpers.ClearCache()
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
@@ -393,7 +392,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 
 	pubKey1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -441,7 +440,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
@@ -477,7 +476,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Indices: []uint64{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
