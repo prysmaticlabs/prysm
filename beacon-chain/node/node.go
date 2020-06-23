@@ -103,6 +103,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		params.OverrideBeaconConfig(c)
 	}
 
+	cmd.ConfigureBeaconChain(cliCtx)
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
 	registry := shared.NewServiceRegistry()
