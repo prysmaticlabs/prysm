@@ -2,8 +2,11 @@ package validator
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"time"
+
+	"github.com/pkg/errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -176,8 +179,12 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		validatorAssignments = append(validatorAssignments, assignment)
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 		// Assign relevant validator to subnet.
-		assignValidatorToSubnet(pubKey, assignment.Status)
-		assignValidatorToSubnet(pubKey, nextAssignment.Status)
+		if err := assignValidatorToSubnet(pubKey, assignment.Status); err != nil {
+			return nil, errors.Wrap(err, "could not assign validator to subnet")
+		}
+		if err := assignValidatorToSubnet(pubKey, nextAssignment.Status); err != nil {
+			return nil, errors.Wrap(err, "could not assign validator to subnet")
+		}
 	}
 
 	return &ethpb.DutiesResponse{
@@ -189,25 +196,33 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 
 // assignValidatorToSubnet checks the status and pubkey of a particular validator
 // to discern whether persistent subnets need to be registered for them.
-func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
+func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) error {
 	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
-		return
+		return nil
 	}
 
 	_, ok, expTime := cache.SubnetIDs.GetPersistentSubnets(pubkey)
 	if ok && expTime.After(roughtime.Now()) {
-		return
+		return nil
 	}
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	assignedIdxs := []uint64{}
 	for i := uint64(0); i < params.BeaconNetworkConfig().RandomSubnetsPerValidator; i++ {
-		// Should this be changed?
-		assignedIndex := rand.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
-		assignedIdxs = append(assignedIdxs, uint64(assignedIndex))
+		randInt, err := rand.Int(rand.Reader, big.NewInt(int64(params.BeaconNetworkConfig().AttestationSubnetCount)))
+		if err != nil {
+			return errors.Wrap(err, "could not get random subnet index")
+		}
+		assignedIdxs = append(assignedIdxs, randInt.Uint64())
 	}
-	assignedDuration := rand.Intn(int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription))
-	assignedDuration += int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
+
+	randInt, err := rand.Int(rand.Reader, big.NewInt(int64(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)))
+	if err != nil {
+		return errors.Wrap(err, "could not get random subnet duration")
+	}
+	assignedDuration := randInt.Int64()
+	assignedDuration += int64(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
 
 	totalDuration := epochDuration * time.Duration(assignedDuration)
 	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)
+	return nil
 }
