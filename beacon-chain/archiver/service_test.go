@@ -436,7 +436,7 @@ func setupState(validatorCount uint64) (*stateTrie.BeaconState, error) {
 }
 
 func setupService(t *testing.T) (*Service, db.Database) {
-	beaconDB := dbutil.SetupDB(t)
+	beaconDB, _ := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	validatorCount := uint64(100)
 	totalBalance := validatorCount * params.BeaconConfig().MaxEffectiveBalance
