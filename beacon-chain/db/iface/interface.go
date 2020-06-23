@@ -16,7 +16,7 @@ import (
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// ReadOnlyDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.ReadOnlyDatabase
+// ReadOnlyDatabase defines a struct which only has read access to database methods.
 type ReadOnlyDatabase interface {
 	// Attestation related methods.
 	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error)
@@ -65,7 +65,7 @@ type ReadOnlyDatabase interface {
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 }
 
-// NoHeadAccessDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.NoHeadAccessDatabase
+// NoHeadAccessDatabase defines a struct without access to chain head data.
 type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
@@ -111,7 +111,7 @@ type NoHeadAccessDatabase interface {
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
 }
 
-// HeadAccessDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.HeadAccessDatabase
+// HeadAccessDatabase defines a struct with access to reading chain head data.
 type HeadAccessDatabase interface {
 	NoHeadAccessDatabase
 
@@ -122,7 +122,7 @@ type HeadAccessDatabase interface {
 	HeadState(ctx context.Context) (*state.BeaconState, error)
 }
 
-// Database -- See github.com/prysmaticlabs/prysm/beacon-chain/db.Database
+// Database interface with full access.
 type Database interface {
 	io.Closer
 	HeadAccessDatabase

@@ -15,8 +15,8 @@ import (
 )
 
 func TestSaveHead_Same(t *testing.T) {
-	db := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db)
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
 
 	r := [32]byte{'A'}
 	service.head = &head{slot: 0, root: r}
@@ -35,8 +35,8 @@ func TestSaveHead_Same(t *testing.T) {
 }
 
 func TestSaveHead_Different(t *testing.T) {
-	db := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db)
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
 
 	oldRoot := [32]byte{'A'}
 	service.head = &head{slot: 0, root: oldRoot}
@@ -86,8 +86,8 @@ func TestSaveHead_Different(t *testing.T) {
 
 func TestSaveHead_Different_Reorg(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db)
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
 
 	oldRoot := [32]byte{'A'}
 	service.head = &head{slot: 0, root: oldRoot}
@@ -141,8 +141,8 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 }
 
 func TestUpdateRecentCanonicalBlocks_CanUpdateWithoutParent(t *testing.T) {
-	db := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db)
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
 
 	r := [32]byte{'a'}
 	if err := service.updateRecentCanonicalBlocks(context.Background(), r); err != nil {
@@ -158,8 +158,8 @@ func TestUpdateRecentCanonicalBlocks_CanUpdateWithoutParent(t *testing.T) {
 }
 
 func TestUpdateRecentCanonicalBlocks_CanUpdateWithParent(t *testing.T) {
-	db := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db)
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
 	oldHead := [32]byte{'a'}
 	if err := service.forkChoiceStore.ProcessBlock(context.Background(), 1, oldHead, [32]byte{'g'}, [32]byte{}, 0, 0); err != nil {
 		t.Fatal(err)
@@ -200,8 +200,8 @@ func TestUpdateRecentCanonicalBlocks_CanUpdateWithParent(t *testing.T) {
 }
 
 func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
-	db := testDB.SetupDB(t)
-	service := setupBeaconChain(t, db)
+	db, sc := testDB.SetupDB(t)
+	service := setupBeaconChain(t, db, sc)
 
 	state, _ := testutil.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}

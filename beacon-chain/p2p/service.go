@@ -357,8 +357,8 @@ func (s *Service) MetadataSeq() uint64 {
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
-// with the tracked committee id's for the epoch, allowing our node
-// to be dynamically discoverable by others given our tracked committee id's.
+// with the tracked committee ids for the epoch, allowing our node
+// to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {
