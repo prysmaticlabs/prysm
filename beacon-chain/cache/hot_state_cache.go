@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"sync"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -24,6 +26,7 @@ var (
 // HotStateCache is used to store the processed beacon state after finalized check point..
 type HotStateCache struct {
 	cache *lru.Cache
+	lock  sync.RWMutex
 }
 
 // NewHotStateCache initializes the map and underlying cache.
@@ -40,6 +43,8 @@ func NewHotStateCache() *HotStateCache {
 // Get returns a cached response via input block root, if any.
 // The response is copied by default.
 func (c *HotStateCache) Get(root [32]byte) *stateTrie.BeaconState {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	item, exists := c.cache.Get(root)
 
 	if exists && item != nil {
@@ -52,6 +57,8 @@ func (c *HotStateCache) Get(root [32]byte) *stateTrie.BeaconState {
 
 // GetWithoutCopy returns a non-copied cached response via input block root.
 func (c *HotStateCache) GetWithoutCopy(root [32]byte) *stateTrie.BeaconState {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	item, exists := c.cache.Get(root)
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
@@ -63,15 +70,21 @@ func (c *HotStateCache) GetWithoutCopy(root [32]byte) *stateTrie.BeaconState {
 
 // Put the response in the cache.
 func (c *HotStateCache) Put(root [32]byte, state *stateTrie.BeaconState) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.cache.Add(root, state)
 }
 
 // Has returns true if the key exists in the cache.
 func (c *HotStateCache) Has(root [32]byte) bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	return c.cache.Contains(root)
 }
 
 // Delete deletes the key exists in the cache.
 func (c *HotStateCache) Delete(root [32]byte) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	return c.cache.Remove(root)
 }
