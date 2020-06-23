@@ -21,7 +21,7 @@ import (
 
 func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -53,7 +53,7 @@ func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
 
 func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -85,7 +85,7 @@ func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
 }
 
 func TestReplayBlocks_AllSkipSlots(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
@@ -129,7 +129,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 }
 
 func TestReplayBlocks_SameSlot(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
@@ -173,7 +173,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 }
 
 func TestLoadBlocks_FirstBranch(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -206,7 +206,7 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 }
 
 func TestLoadBlocks_SecondBranch(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -237,7 +237,7 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 }
 
 func TestLoadBlocks_ThirdBranch(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -270,7 +270,7 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 }
 
 func TestLoadBlocks_SameSlots(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -301,7 +301,7 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 }
 
 func TestLoadBlocks_SameEndSlots(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -331,7 +331,7 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 }
 
 func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -360,7 +360,7 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 }
 
 func TestLoadBlocks_BadStart(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB: db,
@@ -377,7 +377,7 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 }
 
 func TestLastSavedBlock_Genesis(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -409,7 +409,7 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 }
 
 func TestLastSavedBlock_CanGet(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -446,7 +446,7 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 }
 
 func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -463,7 +463,7 @@ func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 }
 
 func TestLastSavedState_Genesis(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -492,7 +492,7 @@ func TestLastSavedState_Genesis(t *testing.T) {
 }
 
 func TestLastSavedState_CanGet(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -534,7 +534,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 }
 
 func TestLastSavedState_NoSavedBlockState(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &State{
 		beaconDB:  db,
@@ -554,7 +554,7 @@ func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 
 func TestArchivedRoot_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
@@ -572,7 +572,7 @@ func TestArchivedRoot_CanGetSpecificIndex(t *testing.T) {
 
 func TestArchivedRoot_CanGetOlderOlder(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
@@ -594,7 +594,7 @@ func TestArchivedRoot_CanGetOlderOlder(t *testing.T) {
 
 func TestArchivedRoot_CanGetGenesisIndex(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	gBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -619,7 +619,7 @@ func TestArchivedRoot_CanGetGenesisIndex(t *testing.T) {
 
 func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
@@ -648,7 +648,7 @@ func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 
 func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -667,7 +667,7 @@ func TestProcessStateUpToSlot_CanExitEarly(t *testing.T) {
 
 func TestProcessStateUpToSlot_CanProcess(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
