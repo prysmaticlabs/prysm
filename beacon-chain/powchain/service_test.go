@@ -125,7 +125,7 @@ var depositsReqForChainStart = 64
 
 func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := dbutil.SetupDB(t)
+	beaconDB, _ := dbutil.SetupDB(t)
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -164,7 +164,7 @@ func TestStop_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	beaconDB := dbutil.SetupDB(t)
+	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -197,7 +197,7 @@ func TestService_Eth1Synced(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	beaconDB := dbutil.SetupDB(t)
+	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -228,7 +228,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	beaconDB := dbutil.SetupDB(t)
+	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -289,7 +289,7 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	beaconDB := dbutil.SetupDB(t)
+	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
@@ -342,7 +342,7 @@ func TestStatus(t *testing.T) {
 
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := dbutil.SetupDB(t)
+	beaconDB, _ := dbutil.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,

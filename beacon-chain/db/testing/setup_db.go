@@ -17,7 +17,7 @@ import (
 )
 
 // SetupDB instantiates and returns database backed by key value store.
-func SetupDB(t testing.TB) db.Database {
+func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("could not generate random file path: %v", err)
@@ -26,7 +26,8 @@ func SetupDB(t testing.TB) db.Database {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("failed to remove directory: %v", err)
 	}
-	s, err := kv.NewKVStore(p, cache.NewStateSummaryCache())
+	sc := cache.NewStateSummaryCache()
+	s, err := kv.NewKVStore(p, sc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,5 +39,5 @@ func SetupDB(t testing.TB) db.Database {
 			t.Fatalf("could not remove tmp db dir: %v", err)
 		}
 	})
-	return s
+	return s, sc
 }

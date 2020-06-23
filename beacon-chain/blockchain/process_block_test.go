@@ -9,7 +9,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -28,11 +27,11 @@ import (
 
 func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -133,7 +132,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -185,7 +184,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 
 func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -231,11 +230,11 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	defer resetCfg()
 
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -265,14 +264,15 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 }
 
 func TestCachedPreState_CanGetFromDB(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
+	ctx := context.Background()
+	db, sc := testDB.SetupDB(t)
+
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -311,7 +311,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 
 func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -361,7 +361,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -414,7 +414,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 
 func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -562,7 +562,7 @@ func TestCurrentSlot_HandlesOverflow(t *testing.T) {
 
 func TestAncestor_HandleSkipSlot(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -635,7 +635,7 @@ func TestEnsureRootNotZeroHashes(t *testing.T) {
 }
 
 func TestFinalizedImpliesNewJustified(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 	ctx := context.Background()
 	type args struct {
 		cachedCheckPoint        *ethpb.Checkpoint
@@ -678,7 +678,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		if err := beaconState.SetCurrentJustifiedCheckpoint(test.args.stateCheckPoint); err != nil {
 			t.Fatal(err)
 		}
-		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())})
+		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(db, sc)})
 		if err != nil {
 			t.Fatal(err)
 		}

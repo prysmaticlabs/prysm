@@ -31,7 +31,7 @@ import (
 
 func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -61,7 +61,7 @@ func TestProcessPendingAtts_NoBlockRequestBlock(t *testing.T) {
 
 func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
@@ -115,7 +115,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
 	testutil.ResetCache()
