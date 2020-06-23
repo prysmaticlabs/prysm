@@ -205,7 +205,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 				}
 			}
 			buf := new(bytes.Buffer)
-			_, err := p.Encoding().Encode(buf, tt.msg)
+			_, err := p.Encoding().EncodeGossip(buf, tt.msg)
 			if err != nil {
 				t.Error(err)
 			}

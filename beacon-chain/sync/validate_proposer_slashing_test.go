@@ -142,7 +142,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -185,7 +185,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -215,7 +215,7 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{

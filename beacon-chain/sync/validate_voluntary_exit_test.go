@@ -101,7 +101,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, exit); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, exit); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -136,7 +136,7 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, exit); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, exit); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
