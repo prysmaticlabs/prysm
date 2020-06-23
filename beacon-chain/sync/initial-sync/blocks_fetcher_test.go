@@ -802,7 +802,10 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				pids = append(pids, pid.ID)
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
-			got := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			got, err := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			if err != nil {
+				t.Fatal(err)
+			}
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
