@@ -21,28 +21,28 @@ import (
 )
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
-func (r *Service) maintainPeerStatuses() {
+func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
 	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
-	runutil.RunEvery(r.ctx, interval, func() {
-		for _, pid := range r.p2p.Peers().Connected() {
+	runutil.RunEvery(s.ctx, interval, func() {
+		for _, pid := range s.p2p.Peers().Connected() {
 			go func(id peer.ID) {
-				if r.p2p.Peers().IsBad(id) {
-					if err := r.sendGoodByeAndDisconnect(r.ctx, codeGenericError, id); err != nil {
+				if s.p2p.Peers().IsBad(id) {
+					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
 						log.Errorf("Error when disconnecting with bad peer: %v", err)
 					}
 					return
 				}
 				// If the status hasn't been updated in the recent interval time.
-				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(id)
+				lastUpdated, err := s.p2p.Peers().ChainStateLastUpdated(id)
 				if err != nil {
 					// Peer has vanished; nothing to do.
 					return
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
-					if err := r.reValidatePeer(r.ctx, id); err != nil {
+					if err := s.reValidatePeer(s.ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Error("Failed to revalidate peer")
-						r.p2p.Peers().IncrementBadResponses(id)
+						s.p2p.Peers().IncrementBadResponses(id)
 					}
 				}
 			}(pid)
@@ -52,23 +52,23 @@ func (r *Service) maintainPeerStatuses() {
 
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
 // in which case we attempt a resync using the initial sync method to catch up.
-func (r *Service) resyncIfBehind() {
+func (s *Service) resyncIfBehind() {
 	millisecondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch * 1000
 	// Run sixteen times per epoch.
 	interval := time.Duration(int64(millisecondsPerEpoch)/16) * time.Millisecond
-	runutil.RunEvery(r.ctx, interval, func() {
-		if r.shouldReSync() {
-			syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
-			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
+	runutil.RunEvery(s.ctx, interval, func() {
+		if s.shouldReSync() {
+			syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
+			_, highestEpoch, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
+			if helpers.StartSlot(highestEpoch) > s.chain.HeadSlot() {
 				log.WithFields(logrus.Fields{
-					"currentEpoch": helpers.SlotToEpoch(r.chain.CurrentSlot()),
+					"currentEpoch": helpers.SlotToEpoch(s.chain.CurrentSlot()),
 					"syncedEpoch":  syncedEpoch,
 					"peersEpoch":   highestEpoch,
 				}).Info("Fallen behind peers; reverting to initial sync to catch up")
 				numberOfTimesResyncedCounter.Inc()
-				r.clearPendingSlots()
-				if err := r.initialSync.Resync(); err != nil {
+				s.clearPendingSlots()
+				if err := s.initialSync.Resync(); err != nil {
 					log.Errorf("Could not resync chain: %v", err)
 				}
 			}
@@ -77,38 +77,38 @@ func (r *Service) resyncIfBehind() {
 }
 
 // shouldReSync returns true if the node is not syncing and falls behind two epochs.
-func (r *Service) shouldReSync() bool {
-	syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
-	currentEpoch := helpers.SlotToEpoch(r.chain.CurrentSlot())
+func (s *Service) shouldReSync() bool {
+	syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
+	currentEpoch := helpers.SlotToEpoch(s.chain.CurrentSlot())
 	prevEpoch := uint64(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}
-	return r.initialSync != nil && !r.initialSync.Syncing() && syncedEpoch < prevEpoch
+	return s.initialSync != nil && !s.initialSync.Syncing() && syncedEpoch < prevEpoch
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
-func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
+func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	headRoot, err := r.chain.HeadRoot(ctx)
+	headRoot, err := s.chain.HeadRoot(ctx)
 	if err != nil {
 		return err
 	}
 
-	forkDigest, err := r.forkDigest()
+	forkDigest, err := s.forkDigest()
 	if err != nil {
 		return err
 	}
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
-		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
+		FinalizedRoot:  s.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch: s.chain.FinalizedCheckpt().Epoch,
 		HeadRoot:       headRoot,
-		HeadSlot:       r.chain.HeadSlot(),
+		HeadSlot:       s.chain.HeadSlot(),
 	}
-	stream, err := r.p2p.Send(ctx, resp, p2p.RPCStatusTopic, id)
+	stream, err := s.p2p.Send(ctx, resp, p2p.RPCStatusTopic, id)
 	if err != nil {
 		return err
 	}
@@ -118,28 +118,28 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		}
 	}()
 
-	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
+	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
 		return err
 	}
 
 	if code != 0 {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 
 	msg := &pb.Status{}
-	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return err
 	}
-	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
+	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
 
-	err = r.validateStatusMessage(ctx, msg)
+	err = s.validateStatusMessage(ctx, msg)
 	if err != nil {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		// Disconnect if on a wrong fork.
 		if err == errWrongForkDigestVersion {
-			if err := r.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
 			}
 		}
@@ -147,24 +147,24 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	return err
 }
 
-func (r *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
-	if err := r.sendRPCStatusRequest(ctx, id); err != nil {
+func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
+	if err := s.sendRPCStatusRequest(ctx, id); err != nil {
 		return err
 	}
 	// Do not return an error for ping requests.
-	if err := r.sendPingRequest(ctx, id); err != nil {
+	if err := s.sendPingRequest(ctx, id); err != nil {
 		log.WithError(err).Debug("Could not ping peer")
 	}
 	return nil
 }
 
-func (r *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
+func (s *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
 	return nil
 }
 
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
-func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
@@ -179,7 +179,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		return errors.New("message is not type *pb.Status")
 	}
 
-	if err := r.validateStatusMessage(ctx, m); err != nil {
+	if err := s.validateStatusMessage(ctx, m); err != nil {
 		log.WithFields(logrus.Fields{
 			"peer":  stream.Conn().RemotePeer(),
 			"error": err}).Debug("Invalid status message from peer")
@@ -190,24 +190,24 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			respCode = responseCodeServerError
 		case errWrongForkDigestVersion:
 			// Respond with our status and disconnect with the peer.
-			r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
-			if err := r.respondWithStatus(ctx, stream); err != nil {
+			s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
+			if err := s.respondWithStatus(ctx, stream); err != nil {
 				return err
 			}
 			if err := stream.Close(); err != nil { // Close before disconnecting.
 				log.WithError(err).Error("Failed to close stream")
 			}
-			if err := r.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, codeWrongNetwork, stream.Conn().RemotePeer()); err != nil {
 				return err
 			}
 			return nil
 		default:
 			respCode = responseCodeInvalidRequest
-			r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+			s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		}
 
 		originalErr := err
-		resp, err := r.generateErrorResponse(respCode, err.Error())
+		resp, err := s.generateErrorResponse(respCode, err.Error())
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
@@ -222,51 +222,51 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		// Add a short delay to allow the stream to flush before closing the connection.
 		// There is still a chance that the peer won't receive the message.
 		time.Sleep(50 * time.Millisecond)
-		if err := r.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
+		if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
 			log.WithError(err).Error("Failed to disconnect from peer")
 		}
 		return originalErr
 	}
-	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
+	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
 
-	return r.respondWithStatus(ctx, stream)
+	return s.respondWithStatus(ctx, stream)
 }
 
-func (r *Service) respondWithStatus(ctx context.Context, stream network.Stream) error {
-	headRoot, err := r.chain.HeadRoot(ctx)
+func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) error {
+	headRoot, err := s.chain.HeadRoot(ctx)
 	if err != nil {
 		return err
 	}
 
-	forkDigest, err := r.forkDigest()
+	forkDigest, err := s.forkDigest()
 	if err != nil {
 		return err
 	}
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
-		FinalizedRoot:  r.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: r.chain.FinalizedCheckpt().Epoch,
+		FinalizedRoot:  s.chain.FinalizedCheckpt().Root,
+		FinalizedEpoch: s.chain.FinalizedCheckpt().Epoch,
 		HeadRoot:       headRoot,
-		HeadSlot:       r.chain.HeadSlot(),
+		HeadSlot:       s.chain.HeadSlot(),
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err = r.p2p.Encoding().EncodeWithLength(stream, resp)
+	_, err = s.p2p.Encoding().EncodeWithLength(stream, resp)
 	return err
 }
 
-func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
-	forkDigest, err := r.forkDigest()
+func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
+	forkDigest, err := s.forkDigest()
 	if err != nil {
 		return err
 	}
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
 		return errWrongForkDigestVersion
 	}
-	genesis := r.chain.GenesisTime()
-	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
+	genesis := s.chain.GenesisTime()
+	finalizedEpoch := s.chain.FinalizedCheckpt().Epoch
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
@@ -288,10 +288,10 @@ func (r *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
-	if !r.db.IsFinalizedBlock(context.Background(), bytesutil.ToBytes32(msg.FinalizedRoot)) {
+	if !s.db.IsFinalizedBlock(context.Background(), bytesutil.ToBytes32(msg.FinalizedRoot)) {
 		return errInvalidFinalizedRoot
 	}
-	blk, err := r.db.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
+	blk, err := s.db.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 	if err != nil {
 		return errGeneric
 	}
