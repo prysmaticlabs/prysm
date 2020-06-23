@@ -30,7 +30,7 @@ func BlockRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) 
 //    """
 //    Return the block root at the start of a recent ``epoch``.
 //    """
-//    return get_block_root_at_slot(state, compute_start_slot_of_epoch(epoch))
+//    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
 func BlockRoot(state *stateTrie.BeaconState, epoch uint64) ([]byte, error) {
 	return BlockRootAtSlot(state, StartSlot(epoch))
 }
