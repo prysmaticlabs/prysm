@@ -133,6 +133,7 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64) (*stateTrie
 		return nil, err
 	}
 
+	// The slashing amount is represented by epochs per slashing vector. The validator's effective balance is then applied to that amount.
 	slashings := state.Slashings()
 	currentSlashing := slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector]
 	if err := state.UpdateSlashingsAtIndex(
