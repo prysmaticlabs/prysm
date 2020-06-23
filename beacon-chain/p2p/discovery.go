@@ -173,7 +173,9 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 	return true
 }
 
-// check if peer is at max limit.
+// This checks our set max peers in our config, and
+// determines whether our currently connected and
+// active peers are above our set max peer limit.
 func (s *Service) isPeerAtLimit() bool {
 	numOfConns := len(s.host.Network().Peers())
 	maxPeers := int(s.cfg.MaxPeers)
