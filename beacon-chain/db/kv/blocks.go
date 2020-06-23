@@ -524,12 +524,12 @@ func fetchBlockRootsBySlotRange(
 	max := []byte(fmt.Sprintf("%07d", endSlot))
 	var conditional func(key, max []byte) bool
 	if endSlot == 0 {
-		conditional = func(k, max []byte) bool {
-			return k != nil
+		conditional = func(key, max []byte) bool {
+			return key != nil
 		}
 	} else {
-		conditional = func(k, max []byte) bool {
-			return k != nil && bytes.Compare(k, max) <= 0
+		conditional = func(key, max []byte) bool {
+			return key != nil && bytes.Compare(key, max) <= 0
 		}
 	}
 	rootsRange := (endSlot - startSlot) / step
