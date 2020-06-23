@@ -113,7 +113,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "pre state of target block 0 does not exist",
+			wantErrString: "could not get pre state for slot 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",

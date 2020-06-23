@@ -100,13 +100,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 					continue
 				}
 
-				var hasState bool
-				if featureconfig.Get().NewStateMgmt {
-					hasState = s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				} else {
-					hasState = s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
-				}
-
+				hasState := s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if !(hasState && hasBlock) {
 					continue
