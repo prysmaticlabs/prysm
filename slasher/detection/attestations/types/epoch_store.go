@@ -95,7 +95,13 @@ func (es *EpochStore) Bytes() []byte {
 func (es *EpochStore) ToMap() (map[uint64]Span, error) {
 	spanMap := make(map[uint64]Span, es.highestObservedIdx)
 	var err error
-	for i := uint64(0); i < es.highestObservedIdx; i++ {
+	spansLen := uint64(len(es.spans)) / SpannerEncodedLength
+	if spansLen > 0 {
+		spansLen--
+	} else if spansLen == 0 {
+		return spanMap, nil
+	}
+	for i := uint64(0); i <= spansLen; i++ {
 		spanMap[i], err = es.GetValidatorSpan(i)
 		if err != nil {
 			return nil, err

@@ -124,11 +124,6 @@ var (
 		Name:  "disable-new-state-mgmt",
 		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
-	disableFieldTrie = &cli.BoolFlag{
-		Name:  "disable-state-field-trie",
-		Usage: "Disables the usage of state field tries to compute the state root",
-	}
-
 	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
@@ -156,6 +151,10 @@ var (
 	disableReduceAttesterStateCopy = &cli.BoolFlag{
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
+	}
+	enableStreamDuties = &cli.BoolFlag{
+		Name:  "enable-stream-duties",
+		Usage: "Enables validator duties streaming in the validator client",
 	}
 	enableKadDht = &cli.BoolFlag{
 		Name:  "enable-kad-dht",
@@ -426,6 +425,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableFieldTrie = &cli.BoolFlag{
+		Name:   "disable-state-field-trie",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -478,6 +482,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
 	deprecatedEnableInitSyncWeightedRoundRobin,
+	deprecatedDisableFieldTrie,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -486,6 +491,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	e2eConfigFlag,
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
+	enableStreamDuties,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
@@ -503,6 +509,7 @@ var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
+	"--enable-stream-duties",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -532,7 +539,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	disableInitSyncWeightedRoundRobin,
-	disableFieldTrie,
 	disableStateRefCopy,
 	disableNewStateMgmt,
 	enableKadDht,

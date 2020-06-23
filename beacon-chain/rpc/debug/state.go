@@ -5,7 +5,6 @@ import (
 
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -16,10 +15,6 @@ func (ds *Server) GetBeaconState(
 	ctx context.Context,
 	req *pbrpc.BeaconStateRequest,
 ) (*pbrpc.SSZResponse, error) {
-	if !featureconfig.Get().NewStateMgmt {
-		return nil, status.Error(codes.FailedPrecondition, "Requires --enable-new-state-mgmt to function")
-	}
-
 	switch q := req.QueryFilter.(type) {
 	case *pbrpc.BeaconStateRequest_Slot:
 		currentSlot := ds.GenesisTimeFetcher.CurrentSlot()

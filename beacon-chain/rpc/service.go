@@ -85,6 +85,7 @@ type Service struct {
 	credentialError         error
 	p2p                     p2p.Broadcaster
 	peersFetcher            p2p.PeersProvider
+	peerManager             p2p.PeerManager
 	depositFetcher          depositcache.DepositFetcher
 	pendingDepositFetcher   depositcache.PendingDepositsFetcher
 	stateNotifier           statefeed.Notifier
@@ -124,6 +125,7 @@ type Config struct {
 	SyncService             sync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
+	PeerManager             p2p.PeerManager
 	DepositFetcher          depositcache.DepositFetcher
 	PendingDepositFetcher   depositcache.PendingDepositsFetcher
 	SlasherProvider         string
@@ -152,6 +154,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		blockReceiver:           cfg.BlockReceiver,
 		p2p:                     cfg.Broadcaster,
 		peersFetcher:            cfg.PeersFetcher,
+		peerManager:             cfg.PeerManager,
 		powChainService:         cfg.POWChainService,
 		chainStartFetcher:       cfg.ChainStartFetcher,
 		mockEth1Votes:           cfg.MockEth1Votes,
@@ -255,6 +258,7 @@ func (s *Service) Start() {
 		SyncChecker:        s.syncService,
 		GenesisTimeFetcher: s.genesisTimeFetcher,
 		PeersFetcher:       s.peersFetcher,
+		PeerManager:        s.peerManager,
 		GenesisFetcher:     s.genesisFetcher,
 	}
 	beaconChainServer := &beacon.Server{
@@ -287,6 +291,8 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.genesisTimeFetcher,
 			StateGen:           s.stateGen,
 			HeadFetcher:        s.headFetcher,
+			PeerManager:        s.peerManager,
+			PeersFetcher:       s.peersFetcher,
 		}
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
 	}

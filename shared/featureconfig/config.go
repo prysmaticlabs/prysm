@@ -35,6 +35,7 @@ type Flags struct {
 	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
 
 	// Feature related flags.
+	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -53,7 +54,6 @@ type Flags struct {
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
-	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
@@ -195,11 +195,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling new state management service")
 		cfg.NewStateMgmt = false
 	}
-	cfg.EnableFieldTrie = true
-	if ctx.Bool(disableFieldTrie.Name) {
-		log.Warn("Disabling state field trie")
-		cfg.EnableFieldTrie = false
-	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
@@ -272,6 +267,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	cfg = configureConfig(ctx, cfg)
+	if ctx.Bool(enableStreamDuties.Name) {
+		log.Warn("Enabled validator duties streaming.")
+		cfg.EnableStreamDuties = true
+	}
 	if ctx.Bool(enableProtectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")
 		cfg.ProtectProposer = true
@@ -296,6 +295,7 @@ func ConfigureValidator(ctx *cli.Context) {
 func enableDevModeFlags(ctx *cli.Context) {
 	log.Warn("Enabling development mode flags")
 	for _, f := range devModeFlags {
+		log.WithField("flag", f.Names()[0]).Debug("Enabling development mode flag")
 		if !ctx.IsSet(f.Names()[0]) {
 			if err := ctx.Set(f.Names()[0], "true"); err != nil {
 				log.WithError(err).Debug("Error enabling development mode flag")

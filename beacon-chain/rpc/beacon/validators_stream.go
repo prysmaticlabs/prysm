@@ -334,6 +334,7 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 		var ok bool
 		deposit, ok = fetchedDeposit.(*eth1Deposit)
 		if !ok {
+			is.eth1DepositsMutex.Unlock()
 			return nil, errors.New("cached eth1 deposit is not type *eth1Deposit")
 		}
 	} else {
@@ -501,6 +502,7 @@ func (is *infostream) depositQueueTimestamp(eth1BlockNumber *big.Int) (uint64, e
 		var ok bool
 		blockTimestamp, ok = cachedTimestamp.(uint64)
 		if !ok {
+			is.eth1BlocktimesMutex.Unlock()
 			return 0, errors.New("cached timestamp is not type uint64")
 		}
 	} else {

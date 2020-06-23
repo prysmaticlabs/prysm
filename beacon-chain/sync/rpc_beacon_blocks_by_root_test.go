@@ -26,7 +26,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
@@ -52,7 +52,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		for i := range blkRoots {
 			expectSuccess(t, r, stream)
@@ -66,7 +66,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		}
 	})
 
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.BeaconBlocksByRootRequest{BlockRoots: [][]byte{}}
 		if err := p2.Encoding().DecodeWithLength(stream, out); err != nil {

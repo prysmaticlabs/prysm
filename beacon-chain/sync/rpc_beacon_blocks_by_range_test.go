@@ -24,7 +24,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
@@ -49,7 +49,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
@@ -63,7 +63,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 		}
 	})
 
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
@@ -115,7 +115,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		prevSlot := uint64(0)
 		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
@@ -131,7 +131,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 		}
 	})
 
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
-	if len(p1.Host.Network().Peers()) != 1 {
+	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
 	d := db.SetupDB(t)
@@ -183,7 +183,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		// check for genesis block
 		expectSuccess(t, r, stream)
@@ -203,7 +203,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		}
 	})
 
-	stream1, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +235,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		pcl := protocol.ID("/testing")
-		p2.Host.SetStreamHandler(pcl, func(stream network.Stream) {
+		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
 			if !validateBlocks {
 				return
@@ -251,7 +251,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 				}
 			}
 		})
-		stream, err := p1.Host.NewStream(context.Background(), p2.Host.ID(), pcl)
+		stream, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -268,7 +268,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
-		if len(p1.Host.Network().Peers()) != 1 {
+		if len(p1.BHost.Network().Peers()) != 1 {
 			t.Error("Expected peers to be connected")
 		}
 
@@ -299,7 +299,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
-		if len(p1.Host.Network().Peers()) != 1 {
+		if len(p1.BHost.Network().Peers()) != 1 {
 			t.Error("Expected peers to be connected")
 		}
 
@@ -334,7 +334,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
 		p1.Connect(p2)
-		if len(p1.Host.Network().Peers()) != 1 {
+		if len(p1.BHost.Network().Peers()) != 1 {
 			t.Error("Expected peers to be connected")
 		}
 
