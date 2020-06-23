@@ -102,10 +102,12 @@ func (ds *Server) getPeer(pid peer.ID) (*pbrpc.DebugPeerResponse, error) {
 	}
 	addresses := peerStore.Addrs(pid)
 	stringAddrs := []string{}
-	stringAddrs = append(stringAddrs, addr.String())
+	if addr != nil {
+		stringAddrs = append(stringAddrs, addr.String())
+	}
 	for _, a := range addresses {
 		// Do not double count address
-		if addr.String() == a.String() {
+		if addr != nil && addr.String() == a.String() {
 			continue
 		}
 		stringAddrs = append(stringAddrs, a.String())
