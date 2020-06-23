@@ -225,6 +225,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
+	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
+		log.Warn("Forcing max_cover strategy on attestation aggregation")
+		cfg.AttestationAggregationStrategy = "max_cover"
+	}
 	Init(cfg)
 }
 
