@@ -25,7 +25,7 @@ import (
 const historicalStatesSize = 80
 
 func (kv *Store) regenHistoricalStates(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "db.regenHistoricalStates")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.regenHistoricalStates")
 	defer span.End()
 
 	genesisState, err := kv.GenesisState(ctx)
@@ -148,7 +148,7 @@ func regenHistoricalStateTransition(
 	if signed == nil || signed.Block == nil {
 		return nil, errors.New("block can't be nil")
 	}
-	ctx, span := trace.StartSpan(ctx, "db.regenHistoricalStateTransition")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.regenHistoricalStateTransition")
 	defer span.End()
 	var err error
 	state, err = regenHistoricalStateProcessSlots(ctx, state, signed.Block.Slot)
@@ -164,7 +164,7 @@ func regenHistoricalStateTransition(
 
 // This runs slot transition to recompute historical state.
 func regenHistoricalStateProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "db.regenHistoricalStateProcessSlots")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.regenHistoricalStateProcessSlots")
 	defer span.End()
 	if state == nil {
 		return nil, errors.New("state can't be nil")
@@ -196,6 +196,8 @@ func regenHistoricalStateProcessSlots(ctx context.Context, state *stateTrie.Beac
 
 // This retrieves the last saved block's archived index.
 func (kv *Store) lastSavedBlockArchivedIndex(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.lastSavedBlockArchivedIndex")
+	defer span.End()
 	b, err := kv.HighestSlotBlocks(ctx)
 	if err != nil {
 		return 0, err
@@ -217,7 +219,10 @@ func (kv *Store) lastSavedBlockArchivedIndex(ctx context.Context) (uint64, error
 func (kv *Store) saveArchivedInfo(ctx context.Context,
 	currentState *stateTrie.BeaconState,
 	blocks []*ethpb.SignedBeaconBlock,
-	archivedIndex uint64) error {
+	archivedIndex uint64,
+) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.saveArchivedInfo")
+	defer span.End()
 	lastBlocksRoot, err := stateutil.BlockRoot(blocks[len(blocks)-1].Block)
 	if err != nil {
 		return nil
