@@ -90,7 +90,6 @@ func StartBootnode(t *testing.T) (string, int) {
 	args := []string{
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.BootNodePort),
-		fmt.Sprintf("--kad-port=%d", e2e.TestParams.BootNodePort+10),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BootNodePort+20),
 		"--debug",
 	}

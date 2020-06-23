@@ -83,6 +83,19 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			return
 		}
 	}
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
+		bh, err := blockutil.BeaconBlockHeaderFromBlock(b)
+		if err != nil {
+			log.WithError(err).Error("Failed to get block header from block")
+		}
+		if !v.protector.VerifyBlock(ctx, bh) {
+			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
+			if v.emitAccountMetrics {
+				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+	}
 
 	// Sign returned block from beacon node
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
@@ -98,20 +111,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		bh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
-		if err != nil {
-			log.WithError(err).Error("Failed to get block header from block")
-		}
-		if !v.protector.VerifyBlock(ctx, bh) {
-			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
-			if v.emitAccountMetrics {
-				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
 	if err != nil {
@@ -122,6 +121,19 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	if featureconfig.Get().SlasherProtection && v.protector != nil {
+		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
+		if err != nil {
+			log.WithError(err).Error("Failed to get block header from block")
+		}
+		if !v.protector.CommitBlock(ctx, sbh) {
+			log.WithField("epoch", epoch).Fatal("Tried to sign a double proposal, rejected by external slasher")
+			if v.emitAccountMetrics {
+				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+	}
 	if featureconfig.Get().ProtectProposer {
 		slotBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
 		if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {

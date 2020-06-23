@@ -312,11 +312,7 @@ func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
 // If the archived root is not available at that exact input slot due to an event of skip block,
 // this will look back and return the last available archived root (ie. the one with the highest slot below input slot).
 func (s *State) archivedRoot(ctx context.Context, slot uint64) ([32]byte, error) {
-	archivedIndex := uint64(0)
-	if slot/params.BeaconConfig().SlotsPerArchivedPoint > 1 {
-		archivedIndex = slot/params.BeaconConfig().SlotsPerArchivedPoint - 1
-	}
-
+	archivedIndex := slot / params.BeaconConfig().SlotsPerArchivedPoint
 	for archivedIndex > 0 {
 		if ctx.Err() != nil {
 			return [32]byte{}, ctx.Err()

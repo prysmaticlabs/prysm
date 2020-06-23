@@ -15,11 +15,11 @@ import (
 var errMissingStateForCheckpoint = errors.New("missing state summary for finalized root")
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
-func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+func (kv *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.JustifiedCheckpoint")
 	defer span.End()
 	var checkpoint *ethpb.Checkpoint
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(checkpointBucket)
 		enc := bkt.Get(justifiedCheckpointKey)
 		if enc == nil {
@@ -35,11 +35,11 @@ func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 }
 
 // FinalizedCheckpoint returns the latest finalized checkpoint in beacon chain.
-func (k *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
+func (kv *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedCheckpoint")
 	defer span.End()
 	var checkpoint *ethpb.Checkpoint
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(checkpointBucket)
 		enc := bkt.Get(finalizedCheckpointKey)
 		if enc == nil {
@@ -55,7 +55,7 @@ func (k *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 }
 
 // SaveJustifiedCheckpoint saves justified checkpoint in beacon chain.
-func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
+func (kv *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
 	defer span.End()
 
@@ -63,11 +63,11 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	if err != nil {
 		return err
 	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
 		if featureconfig.Get().NewStateMgmt {
 			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
-			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+			hasStateSummaryInCache := kv.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
 			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
 			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
 				return errors.New("missing state summary for finalized root")
@@ -86,7 +86,7 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 }
 
 // SaveFinalizedCheckpoint saves finalized checkpoint in beacon chain.
-func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
+func (kv *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedCheckpoint")
 	defer span.End()
 
@@ -94,11 +94,11 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	if err != nil {
 		return err
 	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
 		if featureconfig.Get().NewStateMgmt {
 			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
-			hasStateSummaryInCache := k.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+			hasStateSummaryInCache := kv.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
 			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
 			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
 				return errors.New("missing state summary for finalized root")
@@ -117,6 +117,6 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 			return err
 		}
 
-		return k.updateFinalizedBlockRoots(ctx, tx, checkpoint)
+		return kv.updateFinalizedBlockRoots(ctx, tx, checkpoint)
 	})
 }

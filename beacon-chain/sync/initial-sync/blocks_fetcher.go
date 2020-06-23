@@ -335,12 +335,12 @@ func (f *blocksFetcher) fetchBlocksFromPeers(
 
 		// If the count was divided by an odd number of peers, there will be some blocks
 		// missing from the first requests so we accommodate that scenario.
-		count := perPeerCount
+		peerCount := perPeerCount
 		if i < remainder {
-			count++
+			peerCount++
 		}
 		// Asking for no blocks may cause the client to hang.
-		if count == 0 {
+		if peerCount == 0 {
 			p2pRequests.Done()
 			continue
 		}
@@ -348,7 +348,7 @@ func (f *blocksFetcher) fetchBlocksFromPeers(
 		go func(ctx context.Context, pid peer.ID) {
 			defer p2pRequests.Done()
 
-			blocks, err := f.requestBeaconBlocksByRange(ctx, pid, root, start, step, count)
+			blocks, err := f.requestBeaconBlocksByRange(ctx, pid, root, start, step, peerCount)
 			if err != nil {
 				select {
 				case <-ctx.Done():

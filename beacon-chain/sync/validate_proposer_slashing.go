@@ -14,22 +14,22 @@ import (
 
 // Clients who receive a proposer slashing on this topic MUST validate the conditions within VerifyProposerSlashing before
 // forwarding it across the network.
-func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
+func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
-	if pid == r.p2p.PeerID() {
+	if pid == s.p2p.PeerID() {
 		return pubsub.ValidationAccept
 	}
 
 	// The head state will be too far away to validate any slashing.
-	if r.initialSync.Syncing() {
+	if s.initialSync.Syncing() {
 		return pubsub.ValidationIgnore
 	}
 
 	ctx, span := trace.StartSpan(ctx, "sync.validateProposerSlashing")
 	defer span.End()
 
-	m, err := r.decodePubsubMessage(msg)
+	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode message")
 		traceutil.AnnotateError(span, err)
@@ -44,28 +44,28 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	if slashing.Header_1 == nil || slashing.Header_1.Header == nil {
 		return pubsub.ValidationReject
 	}
-	if r.hasSeenProposerSlashingIndex(slashing.Header_1.Header.ProposerIndex) {
+	if s.hasSeenProposerSlashingIndex(slashing.Header_1.Header.ProposerIndex) {
 		return pubsub.ValidationIgnore
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
-	s, err := r.chain.HeadState(ctx)
+	headState, err := s.chain.HeadState(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore
 	}
 	slashSlot := slashing.Header_1.Header.Slot
-	if s.Slot() < slashSlot {
+	if headState.Slot() < slashSlot {
 		if ctx.Err() != nil {
 			return pubsub.ValidationIgnore
 		}
 		var err error
-		s, err = state.ProcessSlots(ctx, s, slashSlot)
+		headState, err = state.ProcessSlots(ctx, headState, slashSlot)
 		if err != nil {
 			return pubsub.ValidationIgnore
 		}
 	}
 
-	if err := blocks.VerifyProposerSlashing(s, slashing); err != nil {
+	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
 		return pubsub.ValidationReject
 	}
 
@@ -74,16 +74,16 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 }
 
 // Returns true if the node has already received a valid proposer slashing received for the proposer with index
-func (r *Service) hasSeenProposerSlashingIndex(i uint64) bool {
-	r.seenProposerSlashingLock.RLock()
-	defer r.seenProposerSlashingLock.RUnlock()
-	_, seen := r.seenProposerSlashingCache.Get(i)
+func (s *Service) hasSeenProposerSlashingIndex(i uint64) bool {
+	s.seenProposerSlashingLock.RLock()
+	defer s.seenProposerSlashingLock.RUnlock()
+	_, seen := s.seenProposerSlashingCache.Get(i)
 	return seen
 }
 
 // Set proposer slashing index in proposer slashing cache.
-func (r *Service) setProposerSlashingIndexSeen(i uint64) {
-	r.seenProposerSlashingLock.Lock()
-	defer r.seenProposerSlashingLock.Unlock()
-	r.seenProposerSlashingCache.Add(i, true)
+func (s *Service) setProposerSlashingIndexSeen(i uint64) {
+	s.seenProposerSlashingLock.Lock()
+	defer s.seenProposerSlashingLock.Unlock()
+	s.seenProposerSlashingCache.Add(i, true)
 }
