@@ -12,13 +12,13 @@ import (
 )
 
 // ArchivedActiveValidatorChanges retrieval by epoch.
-func (k *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*pb.ArchivedActiveSetChanges, error) {
+func (kv *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*pb.ArchivedActiveSetChanges, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedActiveValidatorChanges")
 	defer span.End()
 
 	buf := bytesutil.Uint64ToBytes(epoch)
 	var target *pb.ArchivedActiveSetChanges
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedValidatorSetChangesBucket)
 		enc := bkt.Get(buf)
 		if enc == nil {
@@ -31,7 +31,7 @@ func (k *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64
 }
 
 // SaveArchivedActiveValidatorChanges by epoch.
-func (k *Store) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *pb.ArchivedActiveSetChanges) error {
+func (kv *Store) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *pb.ArchivedActiveSetChanges) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedActiveValidatorChanges")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
@@ -39,20 +39,20 @@ func (k *Store) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch ui
 	if err != nil {
 		return err
 	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedValidatorSetChangesBucket)
 		return bucket.Put(buf, enc)
 	})
 }
 
 // ArchivedCommitteeInfo retrieval by epoch.
-func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.ArchivedCommitteeInfo, error) {
+func (kv *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.ArchivedCommitteeInfo, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedCommitteeInfo")
 	defer span.End()
 
 	buf := bytesutil.Uint64ToBytes(epoch)
 	var target *pb.ArchivedCommitteeInfo
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedCommitteeInfoBucket)
 		enc := bkt.Get(buf)
 		if enc == nil {
@@ -65,7 +65,7 @@ func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.Ar
 }
 
 // SaveArchivedCommitteeInfo by epoch.
-func (k *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *pb.ArchivedCommitteeInfo) error {
+func (kv *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *pb.ArchivedCommitteeInfo) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedCommitteeInfo")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
@@ -73,20 +73,20 @@ func (k *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, inf
 	if err != nil {
 		return err
 	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedCommitteeInfoBucket)
 		return bucket.Put(buf, enc)
 	})
 }
 
 // ArchivedBalances retrieval by epoch.
-func (k *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error) {
+func (kv *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedBalances")
 	defer span.End()
 
 	buf := bytesutil.Uint64ToBytes(epoch)
 	var target []uint64
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedBalancesBucket)
 		enc := bkt.Get(buf)
 		if enc == nil {
@@ -99,25 +99,25 @@ func (k *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, e
 }
 
 // SaveArchivedBalances by epoch.
-func (k *Store) SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error {
+func (kv *Store) SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedBalances")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
 	enc := marshalBalances(ctx, balances)
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedBalancesBucket)
 		return bucket.Put(buf, enc)
 	})
 }
 
 // ArchivedValidatorParticipation retrieval by epoch.
-func (k *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error) {
+func (kv *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedValidatorParticipation")
 	defer span.End()
 
 	buf := bytesutil.Uint64ToBytes(epoch)
 	var target *ethpb.ValidatorParticipation
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(archivedValidatorParticipationBucket)
 		enc := bkt.Get(buf)
 		if enc == nil {
@@ -130,7 +130,7 @@ func (k *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64
 }
 
 // SaveArchivedValidatorParticipation by epoch.
-func (k *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *ethpb.ValidatorParticipation) error {
+func (kv *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *ethpb.ValidatorParticipation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedValidatorParticipation")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
@@ -138,7 +138,7 @@ func (k *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch ui
 	if err != nil {
 		return err
 	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedValidatorParticipationBucket)
 		return bucket.Put(buf, enc)
 	})
