@@ -12,7 +12,7 @@ import (
 )
 
 func TestServer_GetBlock(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
 		Slot: 100,
