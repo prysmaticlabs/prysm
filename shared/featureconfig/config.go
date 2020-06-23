@@ -75,6 +75,7 @@ type Flags struct {
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 
 	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
 var featureConfig *Flags
@@ -223,6 +224,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
+	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	Init(cfg)
 }
 

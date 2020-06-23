@@ -151,6 +151,11 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
+	attestationAggregationStrategy = &cli.StringFlag{
+		Name:  "attestation-aggregation-strategy",
+		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
+		Value: "naive",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -526,6 +531,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
+	attestationAggregationStrategy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -533,5 +539,6 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
+	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 }
