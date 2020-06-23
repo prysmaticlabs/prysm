@@ -416,7 +416,7 @@ var (
 	}
 	deprecatedDisableStateRefCopy = &cli.BoolFlag{
 		Name:   "disable-state-ref-copy",
-    Usage:  deprecatedUsage,
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 	deprecatedDisableFieldTrie = &cli.BoolFlag{
@@ -529,8 +529,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	disableInitSyncWeightedRoundRobin,
-	disableFieldTrie,
-	disableStateRefCopy,
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
