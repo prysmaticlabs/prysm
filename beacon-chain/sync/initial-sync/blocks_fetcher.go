@@ -263,12 +263,16 @@ func (f *blocksFetcher) fetchBlocksFromSinglePeer(
 	ctx context.Context,
 	start, count uint64,
 	peers []peer.ID,
-) (blocks []*eth.SignedBeaconBlock, err error) {
+) ([]*eth.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromSinglePeer")
 	defer span.End()
 
-	blocks = []*eth.SignedBeaconBlock{}
-	peers = f.filterPeers(peers, peersPercentagePerRequest)
+	blocks := []*eth.SignedBeaconBlock{}
+	var err error
+	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	if err != nil {
+		return blocks, err
+	}
 	if len(peers) == 0 {
 		return blocks, errNoPeersAvailable
 	}
@@ -279,10 +283,10 @@ func (f *blocksFetcher) fetchBlocksFromSinglePeer(
 	}
 	for i := 0; i < len(peers); i++ {
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
-			return
+			return blocks, err
 		}
 	}
-	return
+	return blocks, nil
 }
 
 // fetchBlocksFromPeers orchestrates block fetching from the available peers.
@@ -306,7 +310,10 @@ func (f *blocksFetcher) fetchBlocksFromPeers(
 		return []*eth.SignedBeaconBlock{}, ctx.Err()
 	}
 
-	peers = f.filterPeers(peers, peersPercentagePerRequest)
+	peers, err := f.filterPeers(peers, peersPercentagePerRequest)
+	if err != nil {
+		return []*eth.SignedBeaconBlock{}, err
+	}
 	if len(peers) == 0 {
 		return []*eth.SignedBeaconBlock{}, errNoPeersAvailable
 	}
@@ -562,15 +569,18 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 
 // filterPeers returns transformed list of peers,
 // weight ordered or randomized, constrained if necessary.
-func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []peer.ID {
+func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
 	if len(peers) == 0 {
-		return peers
+		return peers, nil
 	}
 
 	// Shuffle peers to prevent a bad peer from
 	// stalling sync with invalid blocks.
-	// Do I change this?
-	randGenerator := mathRand.New(mathRand.NewSource(roughtime.Now().Unix()))
+	randSource, err := rand.Int(rand.Reader, big.NewInt(roughtime.Now().Unix()))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate random int")
+	}
+	randGenerator := mathRand.New(mathRand.NewSource(randSource.Int64()))
 	randGenerator.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
@@ -598,7 +608,7 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 		})
 	}
 
-	return peers
+	return peers, nil
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -612,12 +622,20 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	_, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	peers = f.filterPeers(peers, peersPercentagePerRequest)
+	var err error
+	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	if err != nil {
+		return 0, err
+	}
 	if len(peers) == 0 {
 		return 0, errNoPeersAvailable
 	}
-	// Do I change this?
-	randGenerator := mathRand.New(mathRand.NewSource(roughtime.Now().UnixNano()))
+
+	randSource, err := rand.Int(rand.Reader, big.NewInt(roughtime.Now().Unix()))
+	if err != nil {
+		return 0, errors.Wrap(err, "could not generate random int")
+	}
+	randGenerator := mathRand.New(mathRand.NewSource(randSource.Int64()))
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	pidInd := 0
 
