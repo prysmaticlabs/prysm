@@ -64,7 +64,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //    return compute_committee(
 //        indices=get_active_validator_indices(state, epoch),
 //        seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
-//        index=epoch_offset,
+//        index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
 func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committeeIndex uint64) ([]uint64, error) {

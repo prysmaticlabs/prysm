@@ -151,7 +151,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 //     # Verify that proposer index is the correct index
 //    assert block.proposer_index == get_beacon_proposer_index(state)
 //    # Verify that the parent matches
-//    assert block.parent_root == signing_root(state.latest_block_header)
+//    assert block.parent_root == hash_tree_root(state.latest_block_header)
 //    # Save current block as the new latest block
 //    state.latest_block_header = BeaconBlockHeader(
 //        slot=block.slot,
@@ -211,7 +211,7 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 //     # Verify that proposer index is the correct index
 //    assert block.proposer_index == get_beacon_proposer_index(state)
 //    # Verify that the parent matches
-//    assert block.parent_root == signing_root(state.latest_block_header)
+//    assert block.parent_root == hash_tree_root(state.latest_block_header)
 //    # Save current block as the new latest block
 //    state.latest_block_header = BeaconBlockHeader(
 //        slot=block.slot,

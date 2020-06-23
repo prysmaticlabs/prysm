@@ -111,10 +111,11 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 //    # Apply proposer and whistleblower rewards
 //    proposer_index = get_beacon_proposer_index(state)
 //    if whistleblower_index is None:
+//        whistleblower_index = proposer_index
 //    whistleblower_reward = Gwei(validator.effective_balance // WHISTLEBLOWER_REWARD_QUOTIENT)
 //    proposer_reward = Gwei(whistleblower_reward // PROPOSER_REWARD_QUOTIENT)
 //    increase_balance(state, proposer_index, proposer_reward)
-//    increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
+//    increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
 func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64) (*stateTrie.BeaconState, error) {
 	state, err := InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
