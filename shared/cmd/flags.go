@@ -6,6 +6,22 @@ import (
 )
 
 var (
+	// MinimalConfigFlag declares to use the minimal config for running Eth2.0.
+	MinimalConfigFlag = &cli.BoolFlag{
+		Name:  "minimal-config",
+		Usage: "Use minimal config with parameters as defined in the spec.",
+	}
+	// E2EConfigFlag declares to use a testing specific config for running Eth2.0 in end-to-end testing.
+	E2EConfigFlag = &cli.BoolFlag{
+		Name:  "e2e-config",
+		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
+	}
+	// CustomGenesisDelayFlag declares a genesis delay for use with handling the beacon chain start.
+	CustomGenesisDelayFlag = &cli.Uint64Flag{
+		Name: "custom-genesis-delay",
+		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
+			"This flag should be used for local development and testing only.",
+	}
 	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = &cli.StringFlag{
 		Name:  "verbosity",
