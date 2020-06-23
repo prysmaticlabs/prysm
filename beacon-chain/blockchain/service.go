@@ -346,7 +346,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return errors.Wrap(err, "could not save head block root")
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could save genesis block root")
+		return errors.Wrap(err, "could not save genesis block root")
 	}
 
 	// Finalized checkpoint at genesis is a zero hash.
