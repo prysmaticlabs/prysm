@@ -9,7 +9,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
@@ -98,16 +98,16 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[0], blockAtts[0]})
+	wanted, err := attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[0], blockAtts[0]})
 	if err != nil {
 		t.Fatal(err)
 	}
-	aggregated, err := helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[1], blockAtts[1]})
+	aggregated, err := attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[1], blockAtts[1]})
 	if err != nil {
 		t.Fatal(err)
 	}
 	wanted = append(wanted, aggregated...)
-	aggregated, err = helpers.AggregateAttestations([]*ethpb.Attestation{aggregatedAtts[2], blockAtts[2]})
+	aggregated, err = attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[2], blockAtts[2]})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,12 +174,12 @@ func TestBatchAttestations_Single(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations(append(aggregatedAtts, unaggregatedAtts...))
+	wanted, err := attaggregation.Aggregate(append(aggregatedAtts, unaggregatedAtts...))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wanted, err = helpers.AggregateAttestations(append(wanted, blockAtts...))
+	wanted, err = attaggregation.Aggregate(append(wanted, blockAtts...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations(atts)
+	wanted, err := attaggregation.Aggregate(atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,11 +269,11 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations(atts1)
+	wanted, err := attaggregation.Aggregate(atts1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	aggregated, err := helpers.AggregateAttestations(atts2)
+	aggregated, err := attaggregation.Aggregate(atts2)
 	if err != nil {
 		t.Fatal(err)
 	}
