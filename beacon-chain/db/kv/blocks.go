@@ -23,15 +23,15 @@ import (
 )
 
 // Block retrieval by root.
-func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
+func (kv *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Block")
 	defer span.End()
 	// Return block from cache if it exists.
-	if v, ok := k.blockCache.Get(string(blockRoot[:])); v != nil && ok {
+	if v, ok := kv.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return v.(*ethpb.SignedBeaconBlock), nil
 	}
 	var block *ethpb.SignedBeaconBlock
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
@@ -44,11 +44,11 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBea
 }
 
 // HeadBlock returns the latest canonical block in eth2.
-func (k *Store) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+func (kv *Store) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadBlock")
 	defer span.End()
 	var headBlock *ethpb.SignedBeaconBlock
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		headRoot := bkt.Get(headBlockRootKey)
 		if headRoot == nil {
@@ -65,11 +65,11 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 }
 
 // Blocks retrieves a list of beacon blocks by filter criteria.
-func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.SignedBeaconBlock, error) {
+func (kv *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Blocks")
 	defer span.End()
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
 		keys, err := getBlockRootsByFilter(ctx, tx, f)
@@ -91,11 +91,11 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Si
 }
 
 // BlockRoots retrieves a list of beacon block roots by filter criteria.
-func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error) {
+func (kv *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRoots")
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		keys, err := getBlockRootsByFilter(ctx, tx, f)
 		if err != nil {
 			return err
@@ -113,14 +113,14 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 }
 
 // HasBlock checks if a block by root exists in the db.
-func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
+func (kv *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
 	defer span.End()
-	if v, ok := k.blockCache.Get(string(blockRoot[:])); v != nil && ok {
+	if v, ok := kv.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return true
 	}
 	exists := false
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		exists = bkt.Get(blockRoot[:]) != nil
 		return nil
@@ -131,10 +131,10 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // DeleteBlock by block root.
-func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
+func (kv *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
@@ -148,8 +148,8 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
-		k.blockCache.Del(string(blockRoot[:]))
-		if err := k.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+		kv.blockCache.Del(string(blockRoot[:]))
+		if err := kv.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 			return err
 		}
 		return bkt.Delete(blockRoot[:])
@@ -157,11 +157,11 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 }
 
 // DeleteBlocks by block roots.
-func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
+func (kv *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		for _, blockRoot := range blockRoots {
 			enc := bkt.Get(blockRoot[:])
@@ -176,8 +176,8 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 			if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
-			k.blockCache.Del(string(blockRoot[:]))
-			if err := k.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+			kv.blockCache.Del(string(blockRoot[:]))
+			if err := kv.clearBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 				return err
 			}
 			if err := bkt.Delete(blockRoot[:]); err != nil {
@@ -189,18 +189,18 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 }
 
 // SaveBlock to the db.
-func (k *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
+func (kv *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
 	defer span.End()
 	blockRoot, err := stateutil.BlockRoot(signed.Block)
 	if err != nil {
 		return err
 	}
-	if v, ok := k.blockCache.Get(string(blockRoot[:])); v != nil && ok {
+	if v, ok := kv.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
-	return k.db.Update(func(tx *bolt.Tx) error {
-		if err := k.setBlockSlotBitField(ctx, tx, signed.Block.Slot); err != nil {
+	return kv.db.Update(func(tx *bolt.Tx) error {
+		if err := kv.setBlockSlotBitField(ctx, tx, signed.Block.Slot); err != nil {
 			return err
 		}
 
@@ -216,20 +216,20 @@ func (k *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
-		k.blockCache.Set(string(blockRoot[:]), signed, int64(len(enc)))
+		kv.blockCache.Set(string(blockRoot[:]), signed, int64(len(enc)))
 		return bkt.Put(blockRoot[:], enc)
 	})
 }
 
 // SaveBlocks via bulk updates to the db.
-func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBlock) error {
+func (kv *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		for _, block := range blocks {
-			if err := k.setBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
+			if err := kv.setBlockSlotBitField(ctx, tx, block.Block.Slot); err != nil {
 				return err
 			}
 			blockRoot, err := stateutil.BlockRoot(block.Block)
@@ -248,7 +248,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 			if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			k.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
+			kv.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
 
 			if err := bkt.Put(blockRoot[:], enc); err != nil {
 				return err
@@ -259,12 +259,12 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBloc
 }
 
 // SaveHeadBlockRoot to the db.
-func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+func (kv *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		if featureconfig.Get().NewStateMgmt {
-			hasStateSummaryInCache := k.stateSummaryCache.Has(blockRoot)
+			hasStateSummaryInCache := kv.stateSummaryCache.Has(blockRoot)
 			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
 			hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
 			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
@@ -282,11 +282,11 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 }
 
 // GenesisBlock retrieves the genesis block of the beacon chain.
-func (k *Store) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
+func (kv *Store) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlock")
 	defer span.End()
 	var block *ethpb.SignedBeaconBlock
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		root := bkt.Get(genesisBlockRootKey)
 		enc := bkt.Get(root)
@@ -300,22 +300,22 @@ func (k *Store) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, err
 }
 
 // SaveGenesisBlockRoot to the db.
-func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
+func (kv *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(genesisBlockRootKey, blockRoot[:])
 	})
 }
 
 // HighestSlotBlocks returns the blocks with the highest slot from the db.
-func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
+func (kv *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocks")
 	defer span.End()
 
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		sBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := sBkt.Get(savedBlockSlotsKey)
 		highestIndex, err := bytesutil.HighestBitIndex(savedSlots)
@@ -323,7 +323,7 @@ func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlo
 			return err
 		}
 
-		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
+		blocks, err = kv.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
 		if err != nil {
 			return err
 		}
@@ -334,12 +334,12 @@ func (k *Store) HighestSlotBlocks(ctx context.Context) ([]*ethpb.SignedBeaconBlo
 }
 
 // HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
-func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
+func (kv *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
 	blocks := make([]*ethpb.SignedBeaconBlock, 0)
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		sBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := sBkt.Get(savedBlockSlotsKey)
 		if len(savedSlots) == 0 {
@@ -349,7 +349,7 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 		if err != nil {
 			return err
 		}
-		blocks, err = k.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
+		blocks, err = kv.blocksAtSlotBitfieldIndex(ctx, tx, highestIndex)
 		if err != nil {
 			return err
 		}
@@ -361,7 +361,7 @@ func (k *Store) HighestSlotBlocksBelow(ctx context.Context, slot uint64) ([]*eth
 
 // blocksAtSlotBitfieldIndex retrieves the blocks in DB given the input index. The index represents
 // the position of the slot bitfield the saved block maps to.
-func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*ethpb.SignedBeaconBlock, error) {
+func (kv *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*ethpb.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
 	defer span.End()
 
@@ -369,7 +369,7 @@ func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 	highestSlot = int(math.Max(0, float64(highestSlot)))
 
 	if highestSlot == 0 {
-		gBlock, err := k.GenesisBlock(ctx)
+		gBlock, err := kv.GenesisBlock(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -399,12 +399,12 @@ func (k *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 
 // setBlockSlotBitField sets the block slot bit in DB.
 // This helps to track which slot has a saved block in db.
-func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+func (kv *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.setBlockSlotBitField")
 	defer span.End()
 
-	k.blockSlotBitLock.Lock()
-	defer k.blockSlotBitLock.Unlock()
+	kv.blockSlotBitLock.Lock()
+	defer kv.blockSlotBitLock.Unlock()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedBlockSlotsKey)
@@ -420,12 +420,12 @@ func (k *Store) setBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 
 // clearBlockSlotBitField clears the block slot bit in DB.
 // This helps to track which slot has a saved block in db.
-func (k *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+func (kv *Store) clearBlockSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearBlockSlotBitField")
 	defer span.End()
 
-	k.blockSlotBitLock.Lock()
-	defer k.blockSlotBitLock.Unlock()
+	kv.blockSlotBitLock.Lock()
+	defer kv.blockSlotBitLock.Unlock()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedBlockSlotsKey)

@@ -10,11 +10,11 @@ import (
 )
 
 // SavePowchainData saves the pow chain data.
-func (k *Store) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
+func (kv *Store) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SavePowchainData")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(powchainBucket)
 		enc, err := proto.Marshal(data)
 		if err != nil {
@@ -25,12 +25,12 @@ func (k *Store) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) er
 }
 
 // PowchainData retrieves the powchain data.
-func (k *Store) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
+func (kv *Store) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.PowchainData")
 	defer span.End()
 
 	var data *db.ETH1ChainData
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(powchainBucket)
 		enc := bkt.Get(powchainDataKey)
 		if len(enc) == 0 {
