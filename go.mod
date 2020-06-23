@@ -40,7 +40,6 @@ require (
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/influxdata/influxdb v1.8.0 // indirect
 	github.com/ipfs/go-cid v0.0.6 // indirect
-	github.com/ipfs/go-datastore v0.4.4
 	github.com/ipfs/go-ipfs-addr v0.0.1
 	github.com/ipfs/go-log v1.0.4
 	github.com/ipfs/go-log/v2 v2.1.1
@@ -55,14 +54,12 @@ require (
 	github.com/libp2p/go-libp2p-core v0.5.6
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-host v0.1.0
-	github.com/libp2p/go-libp2p-kad-dht v0.2.1
-	github.com/libp2p/go-libp2p-kbucket v0.2.3 // indirect
+	github.com/libp2p/go-libp2p-kad-dht v0.8.2
 	github.com/libp2p/go-libp2p-net v0.1.0
 	github.com/libp2p/go-libp2p-noise v0.1.1
 	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/libp2p/go-libp2p-peerstore v0.2.4
 	github.com/libp2p/go-libp2p-pubsub v0.3.1
-	github.com/libp2p/go-libp2p-record v0.1.2 // indirect
 	github.com/libp2p/go-libp2p-swarm v0.2.5
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
