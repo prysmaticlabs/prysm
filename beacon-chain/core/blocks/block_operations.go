@@ -556,8 +556,7 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 }
 
 // ProcessAttestations applies processing operations to a block's inner attestation
-// records. This function returns a list of pending attestations which can then be
-// appended to the BeaconState's latest attestations.
+// records.
 func ProcessAttestations(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
