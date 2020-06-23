@@ -496,7 +496,7 @@ func getBlockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFil
 
 // fetchBlockRootsBySlotRange looks into a boltDB bucket and performs a binary search
 // range scan using sorted left-padded byte keys using a start slot and an end slot.
-// If both the start and end slot are the same, and are 0, the function returns nil.
+// However, if step is one, the implemented logic won’t skip half of the slots in the range.
 func fetchBlockRootsBySlotRange(
 	ctx context.Context,
 	bkt *bolt.Bucket,
@@ -591,8 +591,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block *ethpb.BeaconBlock) 
 }
 
 // createBlockFiltersFromIndices takes in filter criteria and returns
-// a list of of byte keys used to retrieve the values stored
-// for the indices from the DB.
+// a map with a single key-value pair: "block-parent-root-indices” -> parentRoot (array of bytes).
 //
 // For blocks, these are list of signing roots of block
 // objects. If a certain filter criterion does not apply to

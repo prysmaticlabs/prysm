@@ -148,7 +148,7 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	att := &ethpb.Attestation{
@@ -199,7 +199,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -293,7 +293,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -369,7 +369,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -496,7 +496,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 }
 
 func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)

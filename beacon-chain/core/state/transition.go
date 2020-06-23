@@ -233,7 +233,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	return state, nil
 }
 
-// ProcessSlots process through skip skips and apply epoch transition when it's needed
+// ProcessSlots process through skip slots and apply epoch transition when it's needed
 //
 // Spec pseudocode definition:
 //  def process_slots(state: BeaconState, slot: Slot) -> None:

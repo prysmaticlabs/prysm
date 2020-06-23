@@ -31,7 +31,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	defer resetCfg()
 
 	ctx := context.Background()
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	s, sKeys := testutil.DeterministicGenesisState(t, 64 /*validators*/)
 	if err := s.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
 		t.Fatal(err)
