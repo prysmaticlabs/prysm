@@ -152,11 +152,16 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "naive",
 	}
+	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
+		Name:  "attestation-aggregation-force-maxcover",
+		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	initSyncVerifyEverythingFlag,
+	forceMaxCoverAttestationAggregation,
 }
 
 // Deprecated flags list.
@@ -533,6 +538,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
+	forceMaxCoverAttestationAggregation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

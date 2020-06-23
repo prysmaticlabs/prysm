@@ -28,6 +28,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -1666,7 +1667,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aa, err := helpers.AggregateAttestations(aggregatedAtts)
+	aa, err := attaggregation.Aggregate(aggregatedAtts)
 	if err != nil {
 		t.Error(err)
 	}
