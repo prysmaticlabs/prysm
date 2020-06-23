@@ -72,7 +72,7 @@ var (
 	//BootStrapNodeFile identifies a YAML file that lists bootstrap nodes.
 	BootStrapNodeFile = &cli.StringFlag{
 		Name:  "bootstrap-node-file",
-		Usage: "Path to a YAML file that lists bootstrap nodes that the beacon node will connect for peer discovery via DHT.  Setting this flag will cause the bootstrap-node flag to be ignored.  One line per node in YAML list format.",
+		Usage: "Path to a YAML file that lists bootstrap nodes that the beacon node will connect for peer discovery via DiscoveryV5.  Setting this flag will cause the bootstrap-node flag to be ignored.",
 		Value: "",
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
