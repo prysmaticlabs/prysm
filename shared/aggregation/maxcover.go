@@ -40,9 +40,17 @@ type MaxCoverCandidate struct {
 // MaxCoverCandidates is defined to allow group operations (filtering, sorting) on all candidates.
 type MaxCoverCandidates []*MaxCoverCandidate
 
+// NewMaxCoverCandidate returns initialized candidate.
+func NewMaxCoverCandidate(key int, bits *bitfield.Bitlist) *MaxCoverCandidate {
+	return &MaxCoverCandidate{
+		key:  key,
+		bits: bits,
+	}
+}
+
 // Cover calculates solution to Maximum k-Cover problem in O(knm), where
 // n is number of candidates and m is a length of bitlist in each candidate.
-func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error) {
+func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool, allowDuplicates bool) (*Aggregation, error) {
 	if len(mc.Candidates) == 0 {
 		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "cannot calculate set coverage")
 	}
@@ -50,11 +58,22 @@ func (mc *MaxCoverProblem) Cover(k int, allowOverlaps bool) (*Aggregation, error
 		k = len(mc.Candidates)
 	}
 
+	if err := mc.Candidates.validate(); err != nil {
+		return nil, err
+	}
+
+	if !allowDuplicates {
+		mc.Candidates.dedup(allowOverlaps)
+	}
+
 	solution := &Aggregation{
 		Coverage: bitfield.NewBitlist(mc.Candidates[0].bits.Len()),
 		Keys:     make([]int, 0, k),
 	}
 	remainingBits := mc.Candidates.union()
+	if remainingBits == nil {
+		return nil, errors.Wrap(ErrInvalidMaxCoverProblem, "empty bitlists")
+	}
 
 	for len(solution.Keys) < k && len(mc.Candidates) > 0 {
 		// Score candidates against remaining bits.
@@ -126,9 +145,53 @@ func (cl *MaxCoverCandidates) union() bitfield.Bitlist {
 	if len(*cl) == 0 {
 		return nil
 	}
+	if (*cl)[0].bits == nil || (*cl)[0].bits.Len() == 0 {
+		return nil
+	}
 	ret := bitfield.NewBitlist((*cl)[0].bits.Len())
 	for i := 0; i < len(*cl); i++ {
-		ret = ret.Or(*(*cl)[i].bits)
+		if *(*cl)[i].bits != nil {
+			ret = ret.Or(*(*cl)[i].bits)
+		}
 	}
 	return ret
+}
+
+// dedup removes duplicate candidates (ones with the same bits set on).
+func (cl *MaxCoverCandidates) dedup(allowOverlaps bool) *MaxCoverCandidates {
+	if len(*cl) < 2 {
+		return cl
+	}
+	uncoveredBits := cl.union()
+	if uncoveredBits == nil {
+		return cl
+	}
+	cl.score(uncoveredBits).sort()
+	for i := 1; i < len(*cl); i++ {
+		nonOverlappingBits := (*cl)[i-1].bits.Xor(*(*cl)[i].bits)
+		if (*cl)[i-1].score == (*cl)[i].score && nonOverlappingBits.Count() == 0 {
+			(*cl)[i-1].processed = true
+		}
+	}
+	return cl.filter(bitfield.NewBitlist((*cl)[0].bits.Len()), allowOverlaps)
+}
+
+// validate checks candidates for validity (equal bitlength etc).
+func (cl *MaxCoverCandidates) validate() error {
+	if len(*cl) == 0 {
+		return errors.Wrap(ErrInvalidMaxCoverProblem, "empty list of candidates")
+	}
+	if (*cl)[0].bits == nil || (*cl)[0].bits.Len() == 0 {
+		return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
+	}
+	bitlistLen := (*cl)[0].bits.Len()
+	for i := 1; i < len(*cl); i++ {
+		if (*cl)[i].bits == nil || (*cl)[i].bits.Len() == 0 {
+			return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlist cannot be nil or empty")
+		}
+		if bitlistLen != (*cl)[i].bits.Len() {
+			return errors.Wrap(ErrInvalidMaxCoverProblem, "bitlists of different length")
+		}
+	}
+	return nil
 }

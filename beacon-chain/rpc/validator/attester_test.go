@@ -659,6 +659,45 @@ func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
 	}
 }
 
+func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
+	db := dbutil.SetupDB(t)
+
+	// fixed seed
+	s := rand.NewSource(10)
+	randGen := rand.New(s)
+
+	attesterServer := &Server{
+		HeadFetcher:       &mock.ChainService{},
+		P2P:               &mockp2p.MockBroadcaster{},
+		BeaconDB:          db,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           attestations.NewPool(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+	}
+
+	var slots []uint64
+	var comIdxs []uint64
+	var isAggregator []bool
+
+	for i := uint64(100); i < 200; i++ {
+		slots = append(slots, i)
+		comIdxs = append(comIdxs, uint64(randGen.Int63n(64)))
+		boolVal := randGen.Uint64()%2 == 0
+		isAggregator = append(isAggregator, boolVal)
+	}
+
+	slots = append(slots, 321)
+
+	_, err := attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
+		Slots:        slots,
+		CommitteeIds: comIdxs,
+		IsAggregator: isAggregator,
+	})
+	if err == nil || !strings.Contains(err.Error(), "request fields are not the same length") {
+		t.Fatalf("Expected request fields are not the same length error, received: %v", err)
+	}
+}
+
 func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	// fixed seed
