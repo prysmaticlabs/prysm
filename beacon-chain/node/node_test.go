@@ -49,14 +49,13 @@ func TestNodeClose_OK(t *testing.T) {
 	}
 }
 func TestBootStrapNodeFile(t *testing.T) {
-	if _, err := os.Stat("sampleNodes.enr"); os.IsExist(err) {
-		t.Fatalf("File sampleNodes.enr already exists. Aborting test so that file is not altered.")
+	file, err := ioutil.TempFile(testutil.TempDir(), "bootstrapFile")
+	if err != nil {
+		t.Fatalf("Error in TempFile call:  %v", err)
 	}
-
 	defer func() {
-		err := os.Remove("sampleNodes.enr")
-		if err != nil {
-			t.Error("Could not delete temporary file sampleNodes.enr")
+		if err := os.Remove(file.Name()); err != nil {
+			t.Log(err)
 		}
 	}()
 
@@ -66,11 +65,14 @@ func TestBootStrapNodeFile(t *testing.T) {
 		"E1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A"
 	sampleNode1 := "- enr:-TESTNODE2"
 	sampleNode2 := "- enr:-TESTNODE3"
-	err := ioutil.WriteFile("sampleNodes.enr", []byte(sampleNode0+"\n"+sampleNode1+"\n"+sampleNode2), 0644)
+	err = ioutil.WriteFile(file.Name(), []byte(sampleNode0+"\n"+sampleNode1+"\n"+sampleNode2), 0644)
 	if err != nil {
-		t.Fatalf("Could not write sample file sampleNodes.enr")
+		t.Fatalf("Error in WriteFile call:  %v", err)
 	}
-	nodeList, err := readbootNodes("sampleNodes.enr")
+	nodeList, err := readbootNodes(file.Name())
+	if err != nil {
+		t.Fatalf("Error in readbootNodes call:  %v", err)
+	}
 	if nodeList[0] != sampleNode0[2:] || nodeList[1] != sampleNode1[2:] || nodeList[2] != sampleNode2[2:] {
 		// nodeList's YAML parsing will have removed the leading "- "
 		t.Fatalf("TestBootStrapNodeFile failed.  Nodes do not match")
