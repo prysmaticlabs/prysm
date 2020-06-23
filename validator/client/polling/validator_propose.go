@@ -127,7 +127,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 			log.WithError(err).Error("Failed to get block header from block")
 		}
 		if !v.protector.CommitBlock(ctx, sbh) {
-			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
+			log.WithField("epoch", epoch).Fatal("Tried to sign a double proposal, rejected by external slasher")
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
