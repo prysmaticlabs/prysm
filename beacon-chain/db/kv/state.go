@@ -366,9 +366,9 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
 		if len(savedSlots) == 0 {
-			savedSlots = bytesutil.MakeEmptyBitlists(slot)
+			savedSlots = bytesutil.MakeEmptyBitlists(int(slot))
 		}
-		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, slot)
+		highestIndex, err := bytesutil.HighestBitIndexAt(savedSlots, int(slot))
 		if err != nil {
 			return err
 		}
@@ -390,11 +390,11 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 
 // statesAtSlotBitfieldIndex retrieves the states in DB given the input index. The index represents
 // the position of the slot bitfield the saved state maps to.
-func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index uint64) ([]*state.BeaconState, error) {
+func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.statesAtSlotBitfieldIndex")
 	defer span.End()
 
-	highestSlot := index - 1
+	highestSlot := uint64(index - 1)
 	highestSlot = uint64(math.Max(0, float64(highestSlot)))
 
 	if highestSlot == 0 {
@@ -405,7 +405,7 @@ func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 		return []*state.BeaconState{gState}, nil
 	}
 
-	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
+	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)
 	if err != nil {
@@ -453,7 +453,7 @@ func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 	// See: https://github.com/etcd-io/bbolt/pull/201
 	tmp := make([]byte, len(slotBitfields))
 	copy(tmp, slotBitfields)
-	slotBitfields = bytesutil.SetBit(tmp, slot)
+	slotBitfields = bytesutil.SetBit(tmp, int(slot))
 	return bucket.Put(savedStateSlotsKey, slotBitfields)
 }
 
@@ -473,6 +473,6 @@ func (k *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot ui
 	// See: https://github.com/etcd-io/bbolt/pull/201
 	tmp := make([]byte, len(slotBitfields))
 	copy(tmp, slotBitfields)
-	slotBitfields = bytesutil.ClearBit(tmp, slot)
+	slotBitfields = bytesutil.ClearBit(tmp, int(slot))
 	return bucket.Put(savedStateSlotsKey, slotBitfields)
 }
