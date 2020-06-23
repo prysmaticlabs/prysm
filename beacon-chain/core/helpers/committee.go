@@ -345,11 +345,12 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return nil
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	proposerIndices, err := precomputeProposerIndices(state, indices)
 	if err != nil {
 		return err
 	}
-	proposerIndices, err := precomputeProposerIndices(state, indices)
+	// The committee cache uses attester domain seed as key.
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return err
 	}
