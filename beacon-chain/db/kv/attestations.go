@@ -17,11 +17,11 @@ import (
 )
 
 // AttestationsByDataRoot returns any (aggregated) attestations matching this data root.
-func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
+func (kv *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
 	defer span.End()
 	var atts []*ethpb.Attestation
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
@@ -41,11 +41,11 @@ func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte
 }
 
 // Attestations retrieves a list of attestations by filter criteria.
-func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
+func (kv *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestations")
 	defer span.End()
 	atts := make([]*ethpb.Attestation, 0)
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 
 		// If no filter criteria are specified, return an error.
@@ -79,11 +79,11 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 }
 
 // HasAttestation checks if an attestation by its attestation data root exists in the db.
-func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
+func (kv *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttestation")
 	defer span.End()
 	exists := false
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		exists = bkt.Get(attDataRoot[:]) != nil
 		return nil
@@ -94,10 +94,10 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 }
 
 // DeleteAttestation by attestation data root.
-func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
+func (kv *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
@@ -116,11 +116,11 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 }
 
 // DeleteAttestations by attestation data roots.
-func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
+func (kv *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		for _, attDataRoot := range attDataRoots {
 			enc := bkt.Get(attDataRoot[:])
@@ -141,7 +141,7 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 }
 
 // SaveAttestation to the db.
-func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
+func (kv *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
 	defer span.End()
 
@@ -158,7 +158,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		return err
 	}
 
-	err = k.db.Update(func(tx *bolt.Tx) error {
+	err = kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		ac := &dbpb.AttestationContainer{
 			Data: att.Data,
@@ -190,11 +190,11 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 }
 
 // SaveAttestations via batch updates to the db.
-func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
+func (kv *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestations")
 	defer span.End()
 
-	err := k.db.Update(func(tx *bolt.Tx) error {
+	err := kv.db.Update(func(tx *bolt.Tx) error {
 		for _, att := range atts {
 			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 			if err != nil {
