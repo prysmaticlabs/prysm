@@ -20,8 +20,8 @@ import (
 var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 
 // onAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
-// it to the DB. As a pure function, this does not delay attestation based on the spec outline. The delay is handled
-// by the caller in `processAttestation`.
+// it to the DB. As a stateless function, this does not hold nor delay attestation based on the spec descriptions. 
+// The delay is handled by the caller in `processAttestation`.
 //
 // Spec pseudocode definition:
 //   def on_attestation(store: Service, attestation: Attestation) -> None:
