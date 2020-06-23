@@ -36,7 +36,7 @@ func CurrentEpoch(state *stateTrie.BeaconState) uint64 {
 }
 
 // PrevEpoch returns the previous epoch number calculated from
-// the slot number stored in beacon state. It alswo checks for
+// the slot number stored in beacon state. It also checks for
 // underflow condition.
 //
 // Spec pseudocode definition:
@@ -54,7 +54,7 @@ func PrevEpoch(state *stateTrie.BeaconState) uint64 {
 	return currentEpoch - 1
 }
 
-// NextEpoch returns the next epoch number calculated form
+// NextEpoch returns the next epoch number calculated from
 // the slot number stored in beacon state.
 func NextEpoch(state *stateTrie.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot()) + 1
@@ -64,7 +64,7 @@ func NextEpoch(state *stateTrie.BeaconState) uint64 {
 // current epoch.
 //
 // Spec pseudocode definition:
-//  def compute_start_slot_of_epoch(epoch: Epoch) -> Slot:
+//  def compute_start_slot_at_epoch(epoch: Epoch) -> Slot:
 //    """
 //    Return the start slot of ``epoch``.
 //    """

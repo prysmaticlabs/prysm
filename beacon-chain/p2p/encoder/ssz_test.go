@@ -117,7 +117,7 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 	}
 	decoded := &testpb.TestSimpleMessage{}
 	err = e.DecodeWithMaxLength(buf, decoded, maxLength)
-	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", maxLength)
+	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxLength)
 	if err == nil {
 		t.Fatalf("wanted this error %s but got nothing", wanted)
 	}
