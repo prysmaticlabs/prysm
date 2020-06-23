@@ -23,31 +23,31 @@ type Store struct {
 }
 
 // Close closes the underlying boltdb database.
-func (db *Store) Close() error {
-	return db.db.Close()
+func (store *Store) Close() error {
+	return store.db.Close()
 }
 
-func (db *Store) update(fn func(*bolt.Tx) error) error {
-	return db.db.Update(fn)
+func (store *Store) update(fn func(*bolt.Tx) error) error {
+	return store.db.Update(fn)
 }
-func (db *Store) batch(fn func(*bolt.Tx) error) error {
-	return db.db.Batch(fn)
+func (store *Store) batch(fn func(*bolt.Tx) error) error {
+	return store.db.Batch(fn)
 }
-func (db *Store) view(fn func(*bolt.Tx) error) error {
-	return db.db.View(fn)
+func (store *Store) view(fn func(*bolt.Tx) error) error {
+	return store.db.View(fn)
 }
 
 // ClearDB removes any previously stored data at the configured data directory.
-func (db *Store) ClearDB() error {
-	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
+func (store *Store) ClearDB() error {
+	if _, err := os.Stat(store.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.Remove(filepath.Join(db.databasePath, databaseFileName))
+	return os.Remove(filepath.Join(store.databasePath, databaseFileName))
 }
 
 // DatabasePath at which this database writes files.
-func (db *Store) DatabasePath() string {
-	return db.databasePath
+func (store *Store) DatabasePath() string {
+	return store.databasePath
 }
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
@@ -113,9 +113,9 @@ func GetKVStore(directory string) (*Store, error) {
 }
 
 // Size returns the db size in bytes.
-func (db *Store) Size() (int64, error) {
+func (store *Store) Size() (int64, error) {
 	var size int64
-	err := db.db.View(func(tx *bolt.Tx) error {
+	err := store.db.View(func(tx *bolt.Tx) error {
 		size = tx.Size()
 		return nil
 	})
