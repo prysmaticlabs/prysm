@@ -17,11 +17,11 @@ import (
 
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
-func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+func (kv *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	var s *pb.BeaconState
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
@@ -42,11 +42,11 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSta
 }
 
 // HeadState returns the latest canonical state in beacon chain.
-func (k *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
+func (kv *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
 	var s *pb.BeaconState
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		// Retrieve head block's signing root from blocks bucket,
 		// to look up what the head state is.
 		bucket := tx.Bucket(blocksBucket)
@@ -76,11 +76,11 @@ func (k *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 }
 
 // GenesisState returns the genesis state in beacon chain.
-func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
+func (kv *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
 	var s *pb.BeaconState
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
 		bucket := tx.Bucket(blocksBucket)
@@ -106,7 +106,7 @@ func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
+func (kv *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
 	if state == nil {
@@ -117,17 +117,17 @@ func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRo
 		return err
 	}
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		if err := bucket.Put(blockRoot[:], enc); err != nil {
 			return err
 		}
-		return k.setStateSlotBitField(ctx, tx, state.Slot())
+		return kv.setStateSlotBitField(ctx, tx, state.Slot())
 	})
 }
 
 // SaveStates stores multiple states to the db using the provided corresponding roots.
-func (k *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
+func (kv *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
 	defer span.End()
 	if states == nil {
@@ -142,10 +142,10 @@ func (k *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blo
 		}
 	}
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		for i, rt := range blockRoots {
-			if err := k.setStateSlotBitField(ctx, tx, states[i].Slot()); err != nil {
+			if err := kv.setStateSlotBitField(ctx, tx, states[i].Slot()); err != nil {
 				return err
 			}
 			err = bucket.Put(rt[:], multipleEncs[i])
@@ -158,11 +158,11 @@ func (k *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blo
 }
 
 // HasState checks if a state by root exists in the db.
-func (k *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
+func (kv *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
 	var exists bool
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
@@ -173,11 +173,11 @@ func (k *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // DeleteState by block root.
-func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
+func (kv *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 
@@ -202,7 +202,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		if err != nil {
 			return err
 		}
-		if err := k.clearStateSlotBitField(ctx, tx, slot); err != nil {
+		if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
 			return err
 		}
 
@@ -217,7 +217,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 // cursor is faster when there are a large set of keys to delete. This method is O(n) deletion where
 // n is the number of keys in the database. The alternative of calling  bkt.Delete on each key to
 // delete would be O(m*log(n)) which would be much slower given a large set of keys to delete.
-func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
+func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
 
@@ -226,7 +226,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 		rootMap[blockRoot] = true
 	}
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 
@@ -255,7 +255,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 				if err != nil {
 					return err
 				}
-				if err := k.clearStateSlotBitField(ctx, tx, slot); err != nil {
+				if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
 					return err
 				}
 
@@ -328,18 +328,18 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 // Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
 // reuslts states. This returns a list of states.
-func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
+func (kv *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotState")
 	defer span.End()
 	var states []*state.BeaconState
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
 		highestIndex, err := bytesutil.HighestBitIndex(savedSlots)
 		if err != nil {
 			return err
 		}
-		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
+		states, err = kv.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
 
 		return err
 	})
@@ -358,11 +358,11 @@ func (k *Store) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, er
 // from the db. Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
 // reuslts states. This returns a list of states.
-func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
+func (kv *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotStatesBelow")
 	defer span.End()
 	var states []*state.BeaconState
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		slotBkt := tx.Bucket(slotsHasObjectBucket)
 		savedSlots := slotBkt.Get(savedStateSlotsKey)
 		if len(savedSlots) == 0 {
@@ -373,7 +373,7 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 			return err
 		}
 
-		states, err = k.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
+		states, err = kv.statesAtSlotBitfieldIndex(ctx, tx, highestIndex)
 
 		return err
 	})
@@ -390,7 +390,7 @@ func (k *Store) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*sta
 
 // statesAtSlotBitfieldIndex retrieves the states in DB given the input index. The index represents
 // the position of the slot bitfield the saved state maps to.
-func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*state.BeaconState, error) {
+func (kv *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, index int) ([]*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.statesAtSlotBitfieldIndex")
 	defer span.End()
 
@@ -398,7 +398,7 @@ func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 	highestSlot = int(math.Max(0, float64(highestSlot)))
 
 	if highestSlot == 0 {
-		gState, err := k.GenesisState(ctx)
+		gState, err := kv.GenesisState(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -439,12 +439,12 @@ func (k *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, inde
 
 // setStateSlotBitField sets the state slot bit in DB.
 // This helps to track which slot has a saved state in db.
-func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+func (kv *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.setStateSlotBitField")
 	defer span.End()
 
-	k.stateSlotBitLock.Lock()
-	defer k.stateSlotBitLock.Unlock()
+	kv.stateSlotBitLock.Lock()
+	defer kv.stateSlotBitLock.Unlock()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)
@@ -459,12 +459,12 @@ func (k *Store) setStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint
 
 // clearStateSlotBitField clears the state slot bit in DB.
 // This helps to track which slot has a saved state in db.
-func (k *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
+func (kv *Store) clearStateSlotBitField(ctx context.Context, tx *bolt.Tx, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.clearStateSlotBitField")
 	defer span.End()
 
-	k.stateSlotBitLock.Lock()
-	defer k.stateSlotBitLock.Unlock()
+	kv.stateSlotBitLock.Lock()
+	defer kv.stateSlotBitLock.Unlock()
 
 	bucket := tx.Bucket(slotsHasObjectBucket)
 	slotBitfields := bucket.Get(savedStateSlotsKey)

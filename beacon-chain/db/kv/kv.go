@@ -127,26 +127,26 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 }
 
 // ClearDB removes the previously stored database in the data directory.
-func (k *Store) ClearDB() error {
-	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
+func (kv *Store) ClearDB() error {
+	if _, err := os.Stat(kv.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	prometheus.Unregister(createBoltCollector(k.db))
-	if err := os.Remove(path.Join(k.databasePath, databaseFileName)); err != nil {
+	prometheus.Unregister(createBoltCollector(kv.db))
+	if err := os.Remove(path.Join(kv.databasePath, databaseFileName)); err != nil {
 		return errors.Wrap(err, "could not remove database file")
 	}
 	return nil
 }
 
 // Close closes the underlying BoltDB database.
-func (k *Store) Close() error {
-	prometheus.Unregister(createBoltCollector(k.db))
-	return k.db.Close()
+func (kv *Store) Close() error {
+	prometheus.Unregister(createBoltCollector(kv.db))
+	return kv.db.Close()
 }
 
 // DatabasePath at which this database writes files.
-func (k *Store) DatabasePath() string {
-	return k.databasePath
+func (kv *Store) DatabasePath() string {
+	return kv.databasePath
 }
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
