@@ -45,7 +45,10 @@ import (
 
 var _ = shared.Service(&Service{})
 
-// Check local table every 15 seconds for newly added peers.
+// In the event that we are at our peer limit, we
+// stop looking for new peers and instead poll
+// for the current peer limit status for the time period
+// defined below.
 var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
