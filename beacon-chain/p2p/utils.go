@@ -143,7 +143,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 }
 
 func ipAddr() net.IP {
-	ip, err := iputils.ExternalIPv4()
+	ip, err := iputils.ExternalIP()
 	if err != nil {
 		log.Fatalf("Could not get IPv4 address: %v", err)
 	}

@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 	"net"
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -239,22 +238,13 @@ func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, ma.Multiaddr, error) {
 }
 
 func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
-	ip4 := node.IP().To4()
-	if ip4 == nil {
-		return nil, errors.Errorf("node doesn't have an ip4 address, it's stated IP is %s", node.IP().String())
-	}
 	pubkey := node.Pubkey()
 	assertedKey := convertToInterfacePubkey(pubkey)
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
 	}
-	multiAddrString := fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ip4.String(), node.TCP(), id)
-	multiAddr, err := ma.NewMultiaddr(multiAddrString)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get multiaddr")
-	}
-	return multiAddr, nil
+	return multiAddressBuilderWithID(node.IP().String(), uint(node.TCP()), id)
 }
 
 func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {

@@ -1,6 +1,7 @@
 package iputils_test
 
 import (
+	"net"
 	"regexp"
 	"testing"
 
@@ -20,5 +21,16 @@ func TestExternalIPv4(t *testing.T) {
 
 	if !valid.MatchString(test) {
 		t.Errorf("Wanted: %v, got: %v", IPv4Format, test)
+	}
+}
+
+func TestRetrieveIP(t *testing.T) {
+	ip, err := iputils.ExternalIP()
+	if err != nil {
+		t.Fatal(err)
+	}
+	retIP := net.ParseIP(ip)
+	if retIP.To4() == nil && retIP.To16() == nil {
+		t.Errorf("An invalid IP was retrieved: %s", ip)
 	}
 }
