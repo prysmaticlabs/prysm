@@ -80,8 +80,7 @@ func (s *Service) Start() {
 		// Wait for state to be initialized.
 		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-		genesisSet := false
-		for !genesisSet {
+		for genesisSet := false; !genesisSet; {
 			select {
 			case event := <-stateChannel:
 				if event.Type == statefeed.Initialized {
