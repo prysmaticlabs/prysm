@@ -143,10 +143,6 @@ var (
 		Name:  "enable-stream-duties",
 		Usage: "Enables validator duties streaming in the validator client",
 	}
-	enableKadDht = &cli.BoolFlag{
-		Name:  "enable-kad-dht",
-		Usage: "Enables libp2p's kademlia based discovery to start running",
-	}
 	disableInitSyncWeightedRoundRobin = &cli.BoolFlag{
 		Name:  "disable-init-sync-wrr",
 		Usage: "Disables weighted round robin fetching optimization",
@@ -166,6 +162,11 @@ var devModeFlags = []cli.Flag{
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedEnableKadDht = &cli.BoolFlag{
+		Name:   "enable-kad-dht",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedWeb3ProviderFlag = &cli.StringFlag{
 		Name:   "web3provider",
 		Usage:  deprecatedUsage,
@@ -420,6 +421,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedEnableKadDht,
 	deprecatedWeb3ProviderFlag,
 	deprecatedEnableDynamicCommitteeSubnets,
 	deprecatedNoCustomConfigFlag,
@@ -522,7 +524,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableInitSyncWeightedRoundRobin,
 	disableStateRefCopy,
 	disableNewStateMgmt,
-	enableKadDht,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 }...)
