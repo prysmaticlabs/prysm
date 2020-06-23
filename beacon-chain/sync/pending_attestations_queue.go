@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"encoding/hex"
-	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
@@ -27,13 +26,10 @@ var processPendingAttsPeriod = slotutil.DivideSlotBy(2 /* twice per slot */)
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
 	ctx := context.Background()
-	mutex := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
-		mutex.Lock()
 		if err := s.processPendingAtts(ctx); err != nil {
 			log.WithError(err).Errorf("Could not process pending attestation: %v", err)
 		}
-		mutex.Unlock()
 	})
 }
 

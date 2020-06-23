@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"sort"
-	"sync"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -24,13 +23,10 @@ var processPendingBlocksPeriod = slotutil.DivideSlotBy(3 /* times per slot */)
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (s *Service) processPendingBlocksQueue() {
 	ctx := context.Background()
-	locker := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
-		locker.Lock()
 		if err := s.processPendingBlocks(ctx); err != nil {
 			log.WithError(err).Error("Failed to process pending blocks")
 		}
-		locker.Unlock()
 	})
 }
 
