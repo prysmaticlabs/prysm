@@ -467,7 +467,9 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 func TestAssignValidatorToSubnet(t *testing.T) {
 	k := pubKey(3)
 
-	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
+	if err := assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE); err != nil {
+		t.Fatal(err)
+	}
 	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	if !ok {
 		t.Fatal("No cache entry found for validator")
