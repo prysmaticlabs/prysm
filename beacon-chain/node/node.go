@@ -303,7 +303,10 @@ func readbootNodes(fileName string) ([]string, error) {
 		return nil, err
 	}
 	listNodes := make([]string, 0)
-	yaml.Unmarshal(fileContent, &listNodes)
+	err = yaml.Unmarshal(fileContent, &listNodes)
+	if err != nil {
+		return nil, err
+	}
 	return listNodes, nil
 }
 
