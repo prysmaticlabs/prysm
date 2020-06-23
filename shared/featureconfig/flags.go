@@ -505,7 +505,7 @@ var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
-	"--enable-stream-duties",
+	// "--enable-stream-duties", // Currently disabled due to e2e flakes.
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
