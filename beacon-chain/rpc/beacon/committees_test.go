@@ -10,7 +10,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -26,7 +25,7 @@ import (
 )
 
 func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
@@ -41,7 +40,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(ctx, b); err != nil {
@@ -91,7 +90,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	helpers.ClearCache()
 
 	numValidators := 128
@@ -163,7 +162,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 
@@ -261,7 +260,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 
@@ -274,7 +273,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(ctx, b); err != nil {

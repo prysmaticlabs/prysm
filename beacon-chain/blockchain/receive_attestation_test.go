@@ -11,9 +11,9 @@ import (
 
 func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
 	helpers.ClearCache()
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 
-	chainService := setupBeaconChain(t, db)
+	chainService := setupBeaconChain(t, db, sc)
 	chainService.genesisTime = time.Now()
 
 	if !chainService.verifyCheckpointEpoch(&ethpb.Checkpoint{}) {

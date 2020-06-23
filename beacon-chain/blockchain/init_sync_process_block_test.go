@@ -6,7 +6,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -18,8 +17,8 @@ import (
 )
 
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
-	db := testDB.SetupDB(t)
-	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, cache.NewStateSummaryCache())}
+	db, sc := testDB.SetupDB(t)
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, sc)}
 	service, err := NewService(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
