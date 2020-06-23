@@ -6,11 +6,14 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -126,9 +129,8 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := testDB.SetupDB(t)
-			defer testDB.Cleanup(t, db)
-			gBlkRoot := [32]byte{'g', 'e', 'n', 'e', 's', 'i', 's'}
-			if err := db.SaveState(ctx, genesis, gBlkRoot); err != nil {
+			genesisBlockRoot := bytesutil.ToBytes32(nil)
+			if err := db.SaveState(ctx, genesis, genesisBlockRoot); err != nil {
 				t.Fatal(err)
 			}
 
@@ -137,11 +139,12 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 				ForkChoiceStore: protoarray.New(
 					0, // justifiedEpoch
 					0, // finalizedEpoch
-					gBlkRoot,
+					genesisBlockRoot,
 				),
 				AttPool:       attestations.NewPool(),
 				ExitPool:      voluntaryexits.NewPool(),
 				StateNotifier: &blockchainTesting.MockStateNotifier{},
+				StateGen:      stategen.New(db, cache.NewStateSummaryCache()),
 			}
 			s, err := NewService(ctx, cfg)
 			if err != nil {
