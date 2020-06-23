@@ -14,8 +14,8 @@ var (
 	}
 	InteropNumValidators = &cli.Uint64Flag{
 		Name: "interop-num-validators",
-		Usage: "The number of validators to deterministically generate when used in combination with " +
-			"--interop-num-validators. Example: --interop-start-index=5 --interop-num-validators=3 would generate " +
+		Usage: "The number of validators to deterministically generate. " +
+			"Example: --interop-start-index=5 --interop-num-validators=3 would generate " +
 			"keys from index 5 to 7.",
 	}
 )

@@ -120,7 +120,7 @@ func (r *reference) MinusRef() {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	// Do not reduce further if object
-	// already has 0 reference to prevent overflow.
+	// already has 0 reference to prevent underflow.
 	if r.refs == 0 {
 		return
 	}

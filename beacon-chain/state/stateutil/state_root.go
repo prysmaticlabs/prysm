@@ -191,7 +191,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	// CurrentEpochAttestations slice root.
 	currAttsRoot, err := h.epochAttestationsRoot(state.CurrentEpochAttestations)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
+		return nil, errors.Wrap(err, "could not compute current epoch attestations merkleization")
 	}
 	fieldRoots[16] = currAttsRoot[:]
 

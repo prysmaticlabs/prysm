@@ -76,7 +76,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	return nil
 }
 
-// SetBlockRoots for the beacon state. This PR updates the entire
+// SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	if !b.HasInnerState() {
@@ -93,7 +93,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	return nil
 }
 
-// UpdateBlockRootAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateBlockRootAtIndex for the beacon state. Updates the block root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
 	if !b.HasInnerState() {
@@ -131,8 +131,8 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	return nil
 }
 
-// SetStateRoots for the beacon state. This PR updates the entire
-// to a new value by overwriting the previous one.
+// SetStateRoots for the beacon state. Updates the state roots
+// to a new value by overwriting the previous value.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
@@ -149,7 +149,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	return nil
 }
 
-// UpdateStateRootAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateStateRootAtIndex for the beacon state. Updates the state root
 // at a specific index to a new value.
 func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
 	if !b.HasInnerState() {
@@ -188,7 +188,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	return nil
 }
 
-// SetHistoricalRoots for the beacon state. This PR updates the entire
+// SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	if !b.HasInnerState() {
@@ -218,7 +218,7 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 	return nil
 }
 
-// SetEth1DataVotes for the beacon state. This PR updates the entire
+// SetEth1DataVotes for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	if !b.HasInnerState() {
@@ -236,7 +236,7 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	return nil
 }
 
-// AppendEth1DataVotes for the beacon state. This PR appends the new value
+// AppendEth1DataVotes for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	if !b.HasInnerState() {
@@ -278,7 +278,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	return nil
 }
 
-// SetValidators for the beacon state. This PR updates the entire
+// SetValidators for the beacon state. Updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	if !b.HasInnerState() {
@@ -333,7 +333,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	return nil
 }
 
-// UpdateValidatorAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
 	if !b.HasInnerState() {
@@ -378,7 +378,7 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ui
 	b.valIdxMap = m
 }
 
-// SetBalances for the beacon state. This PR updates the entire
+// SetBalances for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
 	if !b.HasInnerState() {
@@ -423,8 +423,8 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	return nil
 }
 
-// SetRandaoMixes for the beacon state. This PR updates the entire
-// list to a new value by overwriting the previous one.
+// SetRandaoMixes for the beacon state. Updates the entire
+// randao mixes to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
@@ -441,7 +441,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	return nil
 }
 
-// UpdateRandaoMixesAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateRandaoMixesAtIndex for the beacon state. Updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	if !b.HasInnerState() {
@@ -476,7 +476,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	return nil
 }
 
-// SetSlashings for the beacon state. This PR updates the entire
+// SetSlashings for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
 	if !b.HasInnerState() {
@@ -493,7 +493,7 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 	return nil
 }
 
-// UpdateSlashingsAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateSlashingsAtIndex for the beacon state. Updates the slashings
 // at a specific index to a new value.
 func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 	if !b.HasInnerState() {
@@ -523,7 +523,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 	return nil
 }
 
-// SetPreviousEpochAttestations for the beacon state. This PR updates the entire
+// SetPreviousEpochAttestations for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -541,7 +541,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 	return nil
 }
 
-// SetCurrentEpochAttestations for the beacon state. This PR updates the entire
+// SetCurrentEpochAttestations for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -559,7 +559,7 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	return nil
 }
 
-// AppendHistoricalRoots for the beacon state. This PR appends the new value
+// AppendHistoricalRoots for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	if !b.HasInnerState() {
@@ -587,7 +587,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	return nil
 }
 
-// AppendCurrentEpochAttestations for the beacon state. This PR appends the new value
+// AppendCurrentEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -617,7 +617,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 	return nil
 }
 
-// AppendPreviousEpochAttestations for the beacon state. This PR appends the new value
+// AppendPreviousEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
 	if !b.HasInnerState() {
@@ -647,7 +647,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	return nil
 }
 
-// AppendValidator for the beacon state. This PR appends the new value
+// AppendValidator for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	if !b.HasInnerState() {
@@ -677,7 +677,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	return nil
 }
 
-// AppendBalance for the beacon state. This PR appends the new value
+// AppendBalance for the beacon state. Appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
 	if !b.HasInnerState() {
