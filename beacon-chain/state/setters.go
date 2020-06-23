@@ -159,6 +159,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	if len(b.state.StateRoots) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
+	b.lock.RUnlock()
 
 	// Check if we hold the only reference to the shared state roots slice.
 	r := b.state.StateRoots
@@ -174,7 +175,6 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	}
-	b.lock.RUnlock()
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()

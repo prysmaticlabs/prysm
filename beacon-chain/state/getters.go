@@ -333,12 +333,13 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.Eth1Data == nil {
-		return nil
-	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	if b.state.Eth1Data == nil {
+		return nil
+	}
 
 	return CopyETH1Data(b.state.Eth1Data)
 }
@@ -349,12 +350,13 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	if !b.HasInnerState() {
 		return nil
 	}
-	if b.state.Eth1DataVotes == nil {
-		return nil
-	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	if b.state.Eth1DataVotes == nil {
+		return nil
+	}
 
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
@@ -425,12 +427,13 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.Validators == nil {
-		return &ethpb.Validator{}, nil
-	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	if b.state.Validators == nil {
+		return &ethpb.Validator{}, nil
+	}
 
 	if uint64(len(b.state.Validators)) <= idx {
 		return nil, fmt.Errorf("index %d out of range", idx)
