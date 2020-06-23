@@ -235,7 +235,7 @@ func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	// Previously pruned, we should return false.
-	if targetEpoch <= history.LatestEpochWritten-wsPeriod {
+	if targetEpoch+wsPeriod <= history.LatestEpochWritten {
 		return false
 	}
 
@@ -287,7 +287,7 @@ func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEp
 // returns the "default" FAR_FUTURE_EPOCH value.
 func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64) uint64 {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	if targetEpoch > history.LatestEpochWritten || targetEpoch < history.LatestEpochWritten-wsPeriod {
+	if targetEpoch > history.LatestEpochWritten || targetEpoch+wsPeriod < history.LatestEpochWritten {
 		return params.BeaconConfig().FarFutureEpoch
 	}
 	return history.TargetToSource[targetEpoch%wsPeriod]
