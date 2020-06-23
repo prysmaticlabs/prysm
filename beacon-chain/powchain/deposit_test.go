@@ -19,7 +19,7 @@ import (
 const pubKeyErr = "could not convert bytes to public key"
 
 func TestProcessDeposit_OK(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
+	beaconDB, _ := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -53,7 +53,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 }
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
+	beaconDB, _ := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -90,7 +90,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := testDB.SetupDB(t)
+	beaconDB, _ := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -135,7 +135,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := testDB.SetupDB(t)
+	beaconDB, _ := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -179,7 +179,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
-	beaconDB := testDB.SetupDB(t)
+	beaconDB, _ := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -221,7 +221,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 }
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
+	beaconDB, _ := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
@@ -300,7 +300,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 }
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
+	beaconDB, _ := testDB.SetupDB(t)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		HTTPEndPoint: endpoint,
 		BeaconDB:     beaconDB,
