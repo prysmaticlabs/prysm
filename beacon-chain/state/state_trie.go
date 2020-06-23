@@ -75,45 +75,89 @@ func (b *BeaconState) Copy() *BeaconState {
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	dst := &BeaconState{
-		state: &pbp2p.BeaconState{
-			// Primitive types, safe to copy.
-			GenesisTime:      b.state.GenesisTime,
-			Slot:             b.state.Slot,
-			Eth1DepositIndex: b.state.Eth1DepositIndex,
+	var dst *BeaconState
+	if featureconfig.Get().NewBeaconStateLocks {
+		dst = &BeaconState{
+			state: &pbp2p.BeaconState{
+				// Primitive types, safe to copy.
+				GenesisTime:      b.state.GenesisTime,
+				Slot:             b.state.Slot,
+				Eth1DepositIndex: b.state.Eth1DepositIndex,
 
-			// Large arrays, infrequently changed, constant size.
-			RandaoMixes:               b.state.RandaoMixes,
-			StateRoots:                b.state.StateRoots,
-			BlockRoots:                b.state.BlockRoots,
-			PreviousEpochAttestations: b.state.PreviousEpochAttestations,
-			CurrentEpochAttestations:  b.state.CurrentEpochAttestations,
-			Slashings:                 b.state.Slashings,
-			Eth1DataVotes:             b.state.Eth1DataVotes,
+				// Large arrays, infrequently changed, constant size.
+				RandaoMixes:               b.state.RandaoMixes,
+				StateRoots:                b.state.StateRoots,
+				BlockRoots:                b.state.BlockRoots,
+				PreviousEpochAttestations: b.state.PreviousEpochAttestations,
+				CurrentEpochAttestations:  b.state.CurrentEpochAttestations,
+				Slashings:                 b.state.Slashings,
+				Eth1DataVotes:             b.state.Eth1DataVotes,
 
-			// Large arrays, increases over time.
-			Validators:      b.state.Validators,
-			Balances:        b.state.Balances,
-			HistoricalRoots: b.state.HistoricalRoots,
+				// Large arrays, increases over time.
+				Validators:      b.state.Validators,
+				Balances:        b.state.Balances,
+				HistoricalRoots: b.state.HistoricalRoots,
 
-			// Everything else, too small to be concerned about, constant size.
-			Fork:                        b.fork(),
-			LatestBlockHeader:           b.latestBlockHeader(),
-			Eth1Data:                    b.eth1Data(),
-			JustificationBits:           b.justificationBits(),
-			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
-			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
-			FinalizedCheckpoint:         b.finalizedCheckpoint(),
-			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
-		},
-		dirtyFields:           make(map[fieldIndex]interface{}, 21),
-		dirtyIndices:          make(map[fieldIndex][]uint64, 21),
-		rebuildTrie:           make(map[fieldIndex]bool, 21),
-		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
+				// Everything else, too small to be concerned about, constant size.
+				Fork:                        b.fork(),
+				LatestBlockHeader:           b.latestBlockHeader(),
+				Eth1Data:                    b.eth1Data(),
+				JustificationBits:           b.justificationBits(),
+				PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
+				CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
+				FinalizedCheckpoint:         b.finalizedCheckpoint(),
+				GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+			},
+			dirtyFields:           make(map[fieldIndex]interface{}, 21),
+			dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+			rebuildTrie:           make(map[fieldIndex]bool, 21),
+			sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
 
-		// Copy on write validator index map.
-		valIdxMap: b.valIdxMap,
+			// Copy on write validator index map.
+			valIdxMap: b.valIdxMap,
+		}
+	} else {
+		dst = &BeaconState{
+			state: &pbp2p.BeaconState{
+				// Primitive types, safe to copy.
+				GenesisTime:      b.state.GenesisTime,
+				Slot:             b.state.Slot,
+				Eth1DepositIndex: b.state.Eth1DepositIndex,
+
+				// Large arrays, infrequently changed, constant size.
+				RandaoMixes:               b.state.RandaoMixes,
+				StateRoots:                b.state.StateRoots,
+				BlockRoots:                b.state.BlockRoots,
+				PreviousEpochAttestations: b.state.PreviousEpochAttestations,
+				CurrentEpochAttestations:  b.state.CurrentEpochAttestations,
+				Slashings:                 b.state.Slashings,
+				Eth1DataVotes:             b.state.Eth1DataVotes,
+
+				// Large arrays, increases over time.
+				Validators:      b.state.Validators,
+				Balances:        b.state.Balances,
+				HistoricalRoots: b.state.HistoricalRoots,
+
+				// Everything else, too small to be concerned about, constant size.
+				Fork:                        b.Fork(),
+				LatestBlockHeader:           b.LatestBlockHeader(),
+				Eth1Data:                    b.Eth1Data(),
+				JustificationBits:           b.JustificationBits(),
+				PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
+				CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
+				FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+				GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
+			},
+			dirtyFields:           make(map[fieldIndex]interface{}, 21),
+			dirtyIndices:          make(map[fieldIndex][]uint64, 21),
+			rebuildTrie:           make(map[fieldIndex]bool, 21),
+			sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+			stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 21),
+
+			// Copy on write validator index map.
+			valIdxMap: b.valIdxMap,
+		}
 	}
 
 	for field, ref := range b.sharedFieldReferences {

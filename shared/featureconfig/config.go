@@ -30,6 +30,9 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	// State locks
+	NewBeaconStateLocks bool // NewStateLocks for updated beacon state locking.
+
 	// Configuration related flags.
 	MinimalConfig bool // MinimalConfig as defined in the spec.
 	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
@@ -246,6 +249,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	}
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		cfg.DisableGRPCConnectionLogs = true
+	}
+	if ctx.Bool(newBeaconStateLocks.Name) {
+		log.Warn("Using new beacon state locks")
+		cfg.NewBeaconStateLocks = true
 	}
 	Init(cfg)
 }

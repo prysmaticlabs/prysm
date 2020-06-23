@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -142,28 +143,53 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if featureconfig.Get().NewBeaconStateLocks {
+		return &pbp2p.BeaconState{
+			GenesisTime:                 b.genesisTime(),
+			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+			Slot:                        b.slot(),
+			Fork:                        b.fork(),
+			LatestBlockHeader:           b.latestBlockHeader(),
+			BlockRoots:                  b.blockRoots(),
+			StateRoots:                  b.stateRoots(),
+			HistoricalRoots:             b.historicalRoots(),
+			Eth1Data:                    b.eth1Data(),
+			Eth1DataVotes:               b.eth1DataVotes(),
+			Eth1DepositIndex:            b.eth1DepositIndex(),
+			Validators:                  b.validators(),
+			Balances:                    b.balances(),
+			RandaoMixes:                 b.randaoMixes(),
+			Slashings:                   b.slashings(),
+			PreviousEpochAttestations:   b.previousEpochAttestations(),
+			CurrentEpochAttestations:    b.currentEpochAttestations(),
+			JustificationBits:           b.justificationBits(),
+			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
+			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
+			FinalizedCheckpoint:         b.finalizedCheckpoint(),
+		}
+	}
 	return &pbp2p.BeaconState{
-		GenesisTime:                 b.genesisTime(),
-		GenesisValidatorsRoot:       b.genesisValidatorRoot(),
-		Slot:                        b.slot(),
-		Fork:                        b.fork(),
-		LatestBlockHeader:           b.latestBlockHeader(),
-		BlockRoots:                  b.blockRoots(),
-		StateRoots:                  b.stateRoots(),
-		HistoricalRoots:             b.historicalRoots(),
-		Eth1Data:                    b.eth1Data(),
-		Eth1DataVotes:               b.eth1DataVotes(),
-		Eth1DepositIndex:            b.eth1DepositIndex(),
-		Validators:                  b.validators(),
-		Balances:                    b.balances(),
-		RandaoMixes:                 b.randaoMixes(),
-		Slashings:                   b.slashings(),
-		PreviousEpochAttestations:   b.previousEpochAttestations(),
-		CurrentEpochAttestations:    b.currentEpochAttestations(),
-		JustificationBits:           b.justificationBits(),
-		PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
-		CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
-		FinalizedCheckpoint:         b.finalizedCheckpoint(),
+		GenesisTime:                 b.GenesisTime(),
+		GenesisValidatorsRoot:       b.GenesisValidatorRoot(),
+		Slot:                        b.Slot(),
+		Fork:                        b.Fork(),
+		LatestBlockHeader:           b.LatestBlockHeader(),
+		BlockRoots:                  b.BlockRoots(),
+		StateRoots:                  b.StateRoots(),
+		HistoricalRoots:             b.HistoricalRoots(),
+		Eth1Data:                    b.Eth1Data(),
+		Eth1DataVotes:               b.Eth1DataVotes(),
+		Eth1DepositIndex:            b.Eth1DepositIndex(),
+		Validators:                  b.Validators(),
+		Balances:                    b.Balances(),
+		RandaoMixes:                 b.RandaoMixes(),
+		Slashings:                   b.Slashings(),
+		PreviousEpochAttestations:   b.PreviousEpochAttestations(),
+		CurrentEpochAttestations:    b.CurrentEpochAttestations(),
+		JustificationBits:           b.JustificationBits(),
+		PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 	}
 }
 
