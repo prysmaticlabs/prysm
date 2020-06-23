@@ -53,6 +53,8 @@ func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
 	return typeAssertedKey
 }
 
+// Determines a private key for p2p networking from the p2p service's
+// configuration struct. If no key is found, it generates a new one.
 func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, keyPath)
 	privateKeyPath := cfg.PrivateKey
@@ -86,6 +88,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 	return retrievePrivKeyFromFile(privateKeyPath)
 }
 
+// Retrieves a p2p networking private key from a file path.
 func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	src, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -104,6 +107,8 @@ func retrievePrivKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	return convertFromInterfacePrivKey(unmarshalledKey), nil
 }
 
+// Retrieves node p2p metadata from a set of configuration values
+// from the p2p service.
 func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
 	metaDataPath := cfg.MetaDataDir
@@ -142,6 +147,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 	return metaData, nil
 }
 
+// Retrieves an external ipv4 address and converts into a libp2p formatted value.
 func ipAddr() net.IP {
 	ip, err := iputils.ExternalIPv4()
 	if err != nil {

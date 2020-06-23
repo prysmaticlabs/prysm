@@ -29,7 +29,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 
 	var blkRoots [][]byte
 	// Populate the database with blocks that would match the request.
