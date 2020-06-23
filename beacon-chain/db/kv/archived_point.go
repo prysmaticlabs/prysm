@@ -35,7 +35,7 @@ func (kv *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndex")
 	defer span.End()
 	var index uint64
-	err := kv.db.Update(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		b := bucket.Get(lastArchivedIndexKey)
 		if b == nil {
