@@ -16,7 +16,7 @@ package filters
 
 // FilterType defines an enum which is used as the keys in a map that tracks
 // set attribute filters for data as part of the `FilterQuery` struct type.
-type FilterType int
+type FilterType uint8
 
 const (
 	// ParentRoot defines a filter for parent roots of blocks using Simple Serialize (SSZ).
