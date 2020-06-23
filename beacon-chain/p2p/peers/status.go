@@ -250,6 +250,14 @@ func (p *Status) SetConnectionState(pid peer.ID, state PeerConnectionState) {
 	status.peerState = state
 }
 
+// RemoveConnectionState deletes the connection state of the given remote peer.
+func (p *Status) RemoveConnectionState(pid peer.ID) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	delete(p.status, pid)
+}
+
 // ConnectionState gets the connection state of the given remote peer.
 // This will error if the peer does not exist.
 func (p *Status) ConnectionState(pid peer.ID) (PeerConnectionState, error) {

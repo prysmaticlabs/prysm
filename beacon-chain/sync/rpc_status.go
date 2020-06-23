@@ -159,6 +159,7 @@ func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 }
 
 func (s *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
+	s.p2p.Peers().RemoveConnectionState(pid)
 	return nil
 }
 
