@@ -21,7 +21,6 @@ package featureconfig
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -30,10 +29,6 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	// Configuration related flags.
-	MinimalConfig bool // MinimalConfig as defined in the spec.
-	E2EConfig     bool //E2EConfig made specifically for testing, do not use except in E2E.
-
 	// Feature related flags.
 	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -79,9 +74,7 @@ type Flags struct {
 	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 
-	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
-
+	KafkaBootstrapServers          string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
@@ -114,16 +107,9 @@ func InitWithReset(c *Flags) func() {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	delay := params.BeaconConfig().GenesisDelay
-	if ctx.IsSet(customGenesisDelayFlag.Name) {
-		delay = ctx.Uint64(customGenesisDelayFlag.Name)
-		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
-	}
-	cfg.CustomGenesisDelay = delay
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
@@ -239,6 +225,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
+	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
+		log.Warn("Forcing max_cover strategy on attestation aggregation")
+		cfg.AttestationAggregationStrategy = "max_cover"
+	}
 	Init(cfg)
 }
 
@@ -247,7 +237,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureSlasher(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
 	if ctx.Bool(enableHistoricalDetectionFlag.Name) {
 		log.Warn("Enabling historical attestation detection")
 		cfg.EnableHistoricalDetection = true
@@ -264,7 +253,6 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	cfg = configureConfig(ctx, cfg)
 	if ctx.Bool(enableStreamDuties.Name) {
 		log.Warn("Enabled validator duties streaming.")
 		cfg.EnableStreamDuties = true
@@ -308,18 +296,4 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.Names()[0])
 		}
 	}
-}
-
-func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
-	if ctx.Bool(minimalConfigFlag.Name) {
-		log.Warn("Using minimal config")
-		cfg.MinimalConfig = true
-		params.UseMinimalConfig()
-	}
-	if ctx.Bool(e2eConfigFlag.Name) {
-		log.Warn("Using end-to-end testing config")
-		cfg.MinimalConfig = true
-		params.UseE2EConfig()
-	}
-	return cfg
 }

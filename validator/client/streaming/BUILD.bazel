@@ -86,6 +86,7 @@ go_test(
         "//validator/accounts:go_default_library",
         "//validator/db:go_default_library",
         "//validator/keymanager:go_default_library",
+        "//validator/testing:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",

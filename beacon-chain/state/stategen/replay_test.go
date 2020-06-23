@@ -630,7 +630,14 @@ func TestArchivedState_CanGetSpecificIndex(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
-	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
+	got, err := service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not get wanted state")
+	}
+	got, err = service.archivedState(ctx, params.BeaconConfig().SlotsPerArchivedPoint*2)
 	if err != nil {
 		t.Fatal(err)
 	}
