@@ -156,10 +156,6 @@ var (
 		Name:  "enable-stream-duties",
 		Usage: "Enables validator duties streaming in the validator client",
 	}
-	enableKadDht = &cli.BoolFlag{
-		Name:  "enable-kad-dht",
-		Usage: "Enables libp2p's kademlia based discovery to start running",
-	}
 	disableInitSyncWeightedRoundRobin = &cli.BoolFlag{
 		Name:  "disable-init-sync-wrr",
 		Usage: "Disables weighted round robin fetching optimization",
@@ -167,6 +163,11 @@ var (
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
+	}
+	attestationAggregationStrategy = &cli.StringFlag{
+		Name:  "attestation-aggregation-strategy",
+		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
+		Value: "naive",
 	}
 )
 
@@ -179,6 +180,11 @@ var devModeFlags = []cli.Flag{
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedEnableKadDht = &cli.BoolFlag{
+		Name:   "enable-kad-dht",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedWeb3ProviderFlag = &cli.StringFlag{
 		Name:   "web3provider",
 		Usage:  deprecatedUsage,
@@ -433,6 +439,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedEnableKadDht,
 	deprecatedWeb3ProviderFlag,
 	deprecatedEnableDynamicCommitteeSubnets,
 	deprecatedNoCustomConfigFlag,
@@ -541,9 +548,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableInitSyncWeightedRoundRobin,
 	disableStateRefCopy,
 	disableNewStateMgmt,
-	enableKadDht,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
+	attestationAggregationStrategy,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -551,5 +558,6 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
+	"--attestation-aggregation-strategy=max_cover",
 	"--dev",
 }

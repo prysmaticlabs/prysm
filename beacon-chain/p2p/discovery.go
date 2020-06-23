@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"net"
@@ -10,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	iaddr "github.com/ipfs/go-ipfs-addr"
-	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -184,26 +182,12 @@ func (s *Service) isPeerAtLimit() bool {
 	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
-// startDHTDiscovery supports discovery via DHT.
-func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
-	multiAddr, err := multiAddrFromString(bootstrapAddr)
-	if err != nil {
-		return err
-	}
-	peerInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
-	if err != nil {
-		return err
-	}
-	err = host.Connect(context.Background(), *peerInfo)
-	return err
-}
-
-func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
-	discv5Nodes, kadDHTNodes = parseGenericAddrs(addrs)
-	if len(discv5Nodes) == 0 && len(kadDHTNodes) == 0 {
+func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
+	discv5Nodes, _ = parseGenericAddrs(addrs)
+	if len(discv5Nodes) == 0 {
 		log.Warn("No bootstrap addresses supplied")
 	}
-	return discv5Nodes, kadDHTNodes
+	return discv5Nodes
 }
 
 func parseGenericAddrs(addrs []string) (enodeString []string, multiAddrString []string) {
@@ -222,7 +206,7 @@ func parseGenericAddrs(addrs []string) (enodeString []string, multiAddrString []
 			multiAddrString = append(multiAddrString, addr)
 			continue
 		}
-		log.Errorf("Invalid address of %s provided", addr)
+		log.Errorf("Invalid address of %s provided: %v", addr, err)
 	}
 	return enodeString, multiAddrString
 }
