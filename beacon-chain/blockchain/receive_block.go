@@ -93,7 +93,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		}
 	} else {
 		if err := s.updateHead(ctx, s.getJustifiedBalances()); err != nil {
-			return errors.Wrap(err, "could not save head")
+			return errors.Wrap(err, "could not update head")
 		}
 	}
 
