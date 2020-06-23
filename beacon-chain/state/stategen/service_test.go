@@ -13,7 +13,7 @@ import (
 
 func TestResume(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	root := [32]byte{'A'}
