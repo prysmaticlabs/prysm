@@ -133,7 +133,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 }
 
 // HeadBlock returns the head block of the chain.
-// If the head state is nil from service struct,
+// If the head is nil from service struct,
 // it will attempt to get the head block from DB.
 func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
 	if s.hasHeadState() {
@@ -144,7 +144,7 @@ func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, erro
 }
 
 // HeadState returns the head state of the chain.
-// If the head state is nil from service struct,
+// If the head is nil from service struct,
 // it will attempt to get the head state from DB.
 func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	if s.hasHeadState() {
