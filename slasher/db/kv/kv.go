@@ -34,7 +34,7 @@ type Config struct {
 
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
-	db.spanCache.Purge()
+	db.flatSpanCache.Purge()
 	return db.db.Close()
 }
 
@@ -42,13 +42,13 @@ func (db *Store) Close() error {
 func (db *Store) RemoveOldestFromCache(ctx context.Context) uint64 {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.removeOldestFromCache")
 	defer span.End()
-	epochRemoved := db.spanCache.PruneOldest()
+	epochRemoved := db.flatSpanCache.PruneOldest()
 	return epochRemoved
 }
 
 // ClearSpanCache clears the spans cache.
 func (db *Store) ClearSpanCache() {
-	db.spanCache.Purge()
+	db.flatSpanCache.Purge()
 }
 
 func (db *Store) update(fn func(*bolt.Tx) error) error {
