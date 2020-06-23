@@ -205,10 +205,12 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 
 	state, _ := testutil.DeterministicGenesisState(t, 100)
 	r := [32]byte{'a'}
+	if err := service.beaconDB.SaveStateSummary(context.Background(), &pb.StateSummary{Root: r[:]}); err != nil {
+		t.Fatal(err)
+	}
 	if err := service.beaconDB.SaveState(context.Background(), state, r); err != nil {
 		t.Fatal(err)
 	}
-
 	if err := service.cacheJustifiedStateBalances(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
