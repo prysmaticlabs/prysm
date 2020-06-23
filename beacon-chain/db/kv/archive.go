@@ -92,7 +92,7 @@ func (k *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, e
 		if enc == nil {
 			return nil
 		}
-		target = unmarshalBalances(enc)
+		target = unmarshalBalances(ctx, enc)
 		return nil
 	})
 	return target, err
@@ -103,7 +103,7 @@ func (k *Store) SaveArchivedBalances(ctx context.Context, epoch uint64, balances
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedBalances")
 	defer span.End()
 	buf := bytesutil.Uint64ToBytes(epoch)
-	enc := marshalBalances(balances)
+	enc := marshalBalances(ctx, balances)
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedBalancesBucket)
 		return bucket.Put(buf, enc)
@@ -144,7 +144,10 @@ func (k *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch ui
 	})
 }
 
-func marshalBalances(bals []uint64) []byte {
+func marshalBalances(ctx context.Context, bals []uint64) []byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.marshalBalances")
+	defer span.End()
+
 	res := make([]byte, len(bals)*8)
 	offset := 0
 	for i := 0; i < len(bals); i++ {
@@ -154,7 +157,10 @@ func marshalBalances(bals []uint64) []byte {
 	return res
 }
 
-func unmarshalBalances(bals []byte) []uint64 {
+func unmarshalBalances(ctx context.Context, bals []byte) []uint64 {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.unmarshalBalances")
+	defer span.End()
+
 	numItems := len(bals) / 8
 	res := make([]uint64, numItems)
 	offset := 0

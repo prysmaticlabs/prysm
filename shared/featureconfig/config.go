@@ -54,14 +54,12 @@ type Flags struct {
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
-	EnableFieldTrie                            bool // EnableFieldTrie enables the state from using field specific tries when computing the root.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
-	EnableKadDHT                               bool // EnableKadDHT stops libp2p's kademlia based discovery from running.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -83,6 +81,8 @@ type Flags struct {
 
 	KafkaBootstrapServers string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	CustomGenesisDelay    uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
+
+	AttestationAggregationStrategy string // AttestationAggregationStrategy defines aggregation strategy to be used when aggregating.
 }
 
 var featureConfig *Flags
@@ -196,11 +196,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling new state management service")
 		cfg.NewStateMgmt = false
 	}
-	cfg.EnableFieldTrie = true
-	if ctx.Bool(disableFieldTrie.Name) {
-		log.Warn("Disabling state field trie")
-		cfg.EnableFieldTrie = false
-	}
 	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
 		log.Warn("Disabling init sync batch save blocks mode")
 		cfg.NoInitSyncBatchSaveBlocks = true
@@ -223,10 +218,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling state reference copy")
 		cfg.EnableStateRefCopy = false
 	}
-	if ctx.Bool(enableKadDht.Name) {
-		log.Warn("Enabling libp2p's kademlia discovery")
-		cfg.EnableKadDHT = true
-	}
 	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
 		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
 		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
@@ -247,6 +238,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.IsSet(disableGRPCConnectionLogging.Name) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
+	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
 	Init(cfg)
 }
 

@@ -53,7 +53,7 @@ func main() {
 	for i, p := range resp.GetCloserPeers() {
 		log.Printf("Dialing peer %d: %+v\n", i, p.Addresses())
 
-		if err := pingPeer(ctx, h, p); err != nil {
+		if err := pingPeer(ctx, h, &p); err != nil {
 			log.Printf("Error: unable to ping peer %v\n", err)
 		} else {
 			log.Println("OK")
@@ -62,8 +62,8 @@ func main() {
 }
 
 func pingPeer(ctx context.Context, h host.Host, p *dhtpb.Message_Peer) error {
-	pi := dhtpb.PBPeerToPeerInfo(p)
-	if err := h.Connect(ctx, *pi); err != nil {
+	pi := dhtpb.PBPeerToPeerInfo(*p)
+	if err := h.Connect(ctx, pi); err != nil {
 		return err
 	}
 
