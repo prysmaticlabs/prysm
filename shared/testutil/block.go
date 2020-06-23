@@ -322,7 +322,6 @@ func generateAttesterSlashings(
 		if err != nil {
 			return nil, err
 		}
-		// Should this be changed?
 		randIndex := rand.Uint64() % uint64(len(committee))
 		valIndex := committee[randIndex]
 		slashing, err := GenerateAttesterSlashingForValidator(bState, privs[valIndex], valIndex)
@@ -524,7 +523,6 @@ func generateVoluntaryExits(
 }
 
 func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
-	// Should this be changed?
 	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
