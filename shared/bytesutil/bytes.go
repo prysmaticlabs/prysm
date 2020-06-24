@@ -21,21 +21,21 @@ func ToBytes(x uint64, length int) []byte {
 	return bytes[:length]
 }
 
-// Bytes1 returns integer x to bytes in little-endian format, x.to_bytes(1, 'big').
+// Bytes1 returns integer x to bytes in little-endian format, x.to_bytes(1, 'little').
 func Bytes1(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:1]
 }
 
-// Bytes2 returns integer x to bytes in little-endian format, x.to_bytes(2, 'big').
+// Bytes2 returns integer x to bytes in little-endian format, x.to_bytes(2, 'little').
 func Bytes2(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:2]
 }
 
-// Bytes3 returns integer x to bytes in little-endian format, x.to_bytes(3, 'big').
+// Bytes3 returns integer x to bytes in little-endian format, x.to_bytes(3, 'little').
 func Bytes3(x uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)

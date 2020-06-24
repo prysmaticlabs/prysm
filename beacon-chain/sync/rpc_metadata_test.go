@@ -30,7 +30,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	r := &Service{
 		db:  d,
 		p2p: p1,
@@ -85,7 +85,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	r := &Service{
 		db:  d,
 		p2p: p1,

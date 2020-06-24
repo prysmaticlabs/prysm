@@ -41,7 +41,7 @@ var initialSyncBlockCacheSize = 2 * params.BeaconConfig().SlotsPerEpoch
 //        store.finalized_checkpoint.root
 //    )
 //    # Check that block is later than the finalized epoch slot
-//    assert block.slot > compute_start_slot_of_epoch(store.finalized_checkpoint.epoch)
+//    assert block.slot > compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
 //    # Check the block is valid and compute the post-state
 //    state = state_transition(pre_state, block)
 //    # Add new state for this block to the store
@@ -89,14 +89,8 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if featureconfig.Get().NewStateMgmt {
-		if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
-			return nil, errors.Wrap(err, "could not save state")
-		}
-	} else {
-		if err := s.beaconDB.SaveState(ctx, postState, blockRoot); err != nil {
-			return nil, errors.Wrap(err, "could not save state")
-		}
+	if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
+		return nil, errors.Wrap(err, "could not save state")
 	}
 
 	// Update justified check point.
@@ -119,16 +113,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		if !featureconfig.Get().NewStateMgmt {
-			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-			if endSlot > startSlot {
-				if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-					return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-						startSlot, endSlot)
-				}
-			}
-		}
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 
 		// Prune proto array fork choice nodes, all nodes before finalized check point will
@@ -144,15 +128,12 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return nil, errors.Wrap(err, "could not save new justified")
 		}
 
-		if featureconfig.Get().NewStateMgmt {
-			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-			fBlock, err := s.beaconDB.Block(ctx, fRoot)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get finalized block to migrate")
-			}
-			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
-				return nil, errors.Wrap(err, "could not migrate to cold")
-			}
+		fBlock, err := s.beaconDB.Block(ctx, fRoot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get finalized block to migrate")
+		}
+		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
+			return nil, errors.Wrap(err, "could not migrate to cold")
 		}
 	}
 
@@ -237,15 +218,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if featureconfig.Get().NewStateMgmt {
-		if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
-			return errors.Wrap(err, "could not save state")
-		}
-	} else {
-		s.initSyncStateLock.Lock()
-		defer s.initSyncStateLock.Unlock()
-		s.initSyncState[blockRoot] = postState.Copy()
-		s.filterBoundaryCandidates(ctx, blockRoot, postState)
+	if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
+		return errors.Wrap(err, "could not save state")
 	}
 
 	if flags.Get().EnableArchive {
@@ -265,21 +239,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		if !featureconfig.Get().NewStateMgmt {
-			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-			if endSlot > startSlot {
-				if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-					return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-						startSlot, endSlot)
-				}
-			}
-
-			if err := s.saveInitState(ctx, postState); err != nil {
-				return errors.Wrap(err, "could not save init sync finalized state")
-			}
-		}
-
 		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
 			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 				return err
@@ -294,27 +253,13 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 
-		if featureconfig.Get().NewStateMgmt {
-			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-			fBlock, err := s.beaconDB.Block(ctx, fRoot)
-			if err != nil {
-				return errors.Wrap(err, "could not get finalized block to migrate")
-			}
-			if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
-				return errors.Wrap(err, "could not migrate to cold")
-			}
+		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
+		fBlock, err := s.beaconDB.Block(ctx, fRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized block to migrate")
 		}
-	}
-
-	if !featureconfig.Get().NewStateMgmt {
-		numOfStates := len(s.boundaryRoots)
-		if numOfStates > initialSyncCacheSize {
-			if err = s.persistCachedStates(ctx, numOfStates); err != nil {
-				return err
-			}
-		}
-		if len(s.initSyncState) > maxCacheSize {
-			s.pruneOldNonFinalizedStates()
+		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
+			return errors.Wrap(err, "could not migrate to cold")
 		}
 	}
 
@@ -329,12 +274,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		}
 		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
-		}
-
-		if !featureconfig.Get().NewStateMgmt && helpers.IsEpochStart(postState.Slot()) {
-			if err := s.beaconDB.SaveState(ctx, postState, blockRoot); err != nil {
-				return errors.Wrap(err, "could not save state")
-			}
 		}
 	}
 

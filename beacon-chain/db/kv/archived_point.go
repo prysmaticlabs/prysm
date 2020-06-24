@@ -10,32 +10,32 @@ import (
 )
 
 // SaveArchivedPointRoot saves an archived point root to the DB. This is used for cold state management.
-func (k *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
+func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedPointRoot")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		return bucket.Put(bytesutil.Uint64ToBytes(index), blockRoot[:])
 	})
 }
 
 // SaveLastArchivedIndex to the db.
-func (k *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
+func (kv *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastArchivedIndex")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		return bucket.Put(lastArchivedIndexKey, bytesutil.Uint64ToBytes(index))
 	})
 }
 
 // LastArchivedIndex from the db.
-func (k *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
+func (kv *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndex")
 	defer span.End()
 	var index uint64
-	err := k.db.Update(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		b := bucket.Get(lastArchivedIndexKey)
 		if b == nil {
@@ -49,12 +49,12 @@ func (k *Store) LastArchivedIndex(ctx context.Context) (uint64, error) {
 }
 
 // LastArchivedIndexRoot from the db.
-func (k *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
+func (kv *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastArchivedIndexRoot")
 	defer span.End()
 
 	var blockRoot []byte
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		lastArchivedIndex := bucket.Get(lastArchivedIndexKey)
 		if lastArchivedIndex == nil {
@@ -71,12 +71,12 @@ func (k *Store) LastArchivedIndexRoot(ctx context.Context) [32]byte {
 
 // ArchivedPointRoot returns the block root of an archived point from the DB.
 // This is essential for cold state management and to restore a cold state.
-func (k *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivePointRoot")
+func (kv *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointRoot")
 	defer span.End()
 
 	var blockRoot []byte
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
 		blockRoot = bucket.Get(bytesutil.Uint64ToBytes(index))
 		return nil
@@ -88,11 +88,11 @@ func (k *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 }
 
 // HasArchivedPoint returns true if an archived point exists in DB.
-func (k *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
+func (kv *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
 	defer span.End()
 	var exists bool
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		iBucket := tx.Bucket(archivedIndexRootBucket)
 		exists = iBucket.Get(bytesutil.Uint64ToBytes(index)) != nil
 		return nil

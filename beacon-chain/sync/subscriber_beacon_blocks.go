@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
 
-func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
+func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
 	signed, ok := msg.(*ethpb.SignedBeaconBlock)
 	if !ok {
 		return errors.New("message is not type *ethpb.SignedBeaconBlock")
@@ -21,7 +21,7 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return errors.New("nil block")
 	}
 
-	r.setSeenBlockIndexSlot(signed.Block.Slot, signed.Block.ProposerIndex)
+	s.setSeenBlockIndexSlot(signed.Block.Slot, signed.Block.ProposerIndex)
 
 	block := signed.Block
 
@@ -30,12 +30,12 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 
-	if err := r.chain.ReceiveBlockNoPubsub(ctx, signed, root); err != nil {
+	if err := s.chain.ReceiveBlockNoPubsub(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)
 	}
 
 	// Delete attestations from the block in the pool to avoid inclusion in future block.
-	if err := r.deleteAttsInPool(block.Body.Attestations); err != nil {
+	if err := s.deleteAttsInPool(block.Body.Attestations); err != nil {
 		log.Errorf("Could not delete attestations in pool: %v", err)
 		return nil
 	}
@@ -45,15 +45,15 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 // The input attestations are seen by the network, this deletes them from pool
 // so proposers don't include them in a block for the future.
-func (r *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
+func (s *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
-			if err := r.attPool.DeleteAggregatedAttestation(att); err != nil {
+			if err := s.attPool.DeleteAggregatedAttestation(att); err != nil {
 				return err
 			}
 		} else {
 			// Ideally there's shouldn't be any unaggregated attestation in the block.
-			if err := r.attPool.DeleteUnaggregatedAttestation(att); err != nil {
+			if err := s.attPool.DeleteUnaggregatedAttestation(att); err != nil {
 				return err
 			}
 		}

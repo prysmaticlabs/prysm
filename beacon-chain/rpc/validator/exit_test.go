@@ -22,7 +22,7 @@ import (
 )
 
 func TestSub(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	testutil.ResetCache()
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -111,7 +111,7 @@ func TestSub(t *testing.T) {
 }
 
 func TestProposeExit_NoPanic(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	testutil.ResetCache()
 	deposits, keys, err := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)

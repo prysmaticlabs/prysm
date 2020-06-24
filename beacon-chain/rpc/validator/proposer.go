@@ -2,9 +2,9 @@ package validator
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -224,8 +223,18 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	}
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
-	depRoot := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
-	blockHash := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
+	randomDepBytes := make([]byte, 32)
+	randomBlkBytes := make([]byte, 32)
+	_, err = rand.Read(randomDepBytes)
+	if err != nil {
+		return nil, err
+	}
+	_, err = rand.Read(randomBlkBytes)
+	if err != nil {
+		return nil, err
+	}
+	depRoot := hashutil.Hash(randomDepBytes)
+	blockHash := hashutil.Hash(randomBlkBytes)
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),
@@ -236,20 +245,10 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaconBlock) ([]byte, error) {
-	var beaconState *stateTrie.BeaconState
-	var err error
-	if featureconfig.Get().NewStateMgmt {
-		beaconState, err = vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
-	} else {
-		beaconState, err = vs.BeaconDB.State(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve beacon state")
-		}
+	beaconState, err := vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}
-
 	root, err := state.CalculateStateRoot(
 		ctx,
 		beaconState,

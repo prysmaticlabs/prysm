@@ -33,6 +33,7 @@ type Exporter struct {
 // the database, but returns the underlying database pointer itself.
 func Wrap(db iface.Database) (iface.Database, error) {
 	if featureconfig.Get().KafkaBootstrapServers == "" {
+		log.Debug("Empty Kafka bootstrap servers list, database was not wrapped with Kafka exporter")
 		return db, nil
 	}
 

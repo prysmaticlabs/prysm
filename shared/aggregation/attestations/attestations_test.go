@@ -2,6 +2,7 @@ package attestations
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -21,7 +22,7 @@ func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		AttestationAggregationStrategy: string(NaiveAggregation),
+		AttestationAggregationStrategy: string(MaxCoverAggregation),
 	})
 	defer resetCfg()
 	os.Exit(m.Run())
@@ -218,7 +219,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		runner := func() {
 			got, err := Aggregate(aggtesting.MakeAttestationsFromBitlists(t, tt.inputs))
 			if err != nil {
 				t.Fatal(err)
@@ -238,6 +239,20 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 					t.Errorf("Unexpected bitlist at index %d, got %b, wanted %b", i, got[i].AggregationBits.Bytes(), w.Bytes())
 				}
 			}
+		}
+		t.Run(fmt.Sprintf("%s/%s", tt.name, NaiveAggregation), func(t *testing.T) {
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				AttestationAggregationStrategy: string(NaiveAggregation),
+			})
+			defer resetCfg()
+			runner()
+		})
+		t.Run(fmt.Sprintf("%s/%s", tt.name, MaxCoverAggregation), func(t *testing.T) {
+			resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
+				AttestationAggregationStrategy: string(MaxCoverAggregation),
+			})
+			defer resetCfg()
+			runner()
 		})
 	}
 }

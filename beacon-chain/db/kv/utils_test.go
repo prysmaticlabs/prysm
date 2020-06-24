@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"context"
 	"crypto/rand"
 	"reflect"
 	"testing"
@@ -128,7 +129,7 @@ func Test_deleteValueForIndices(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				if err := deleteValueForIndices(tt.inputIndices, tt.root, tx); (err != nil) != tt.wantErr {
+				if err := deleteValueForIndices(context.Background(), tt.inputIndices, tt.root, tx); (err != nil) != tt.wantErr {
 					t.Errorf("deleteValueForIndices() error = %v, wantErr %v", err, tt.wantErr)
 				}
 				// Check updated indices.

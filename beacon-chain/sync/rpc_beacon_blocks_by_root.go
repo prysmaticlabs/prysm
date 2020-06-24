@@ -17,12 +17,12 @@ import (
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
-func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][]byte, id peer.ID) error {
+func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots [][]byte, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	req := &pbp2p.BeaconBlocksByRootRequest{BlockRoots: blockRoots}
-	stream, err := r.p2p.Send(ctx, req, p2p.RPCBlocksByRootTopic, id)
+	stream, err := s.p2p.Send(ctx, req, p2p.RPCBlocksByRootTopic, id)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {
-		blk, err := ReadChunkedBlock(stream, r.p2p)
+		blk, err := ReadChunkedBlock(stream, s.p2p)
 		if err == io.EOF {
 			break
 		}
@@ -49,17 +49,17 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		if err != nil {
 			return err
 		}
-		r.pendingQueueLock.Lock()
-		r.slotToPendingBlocks[blk.Block.Slot] = blk
-		r.seenPendingBlocks[blkRoot] = true
-		r.pendingQueueLock.Unlock()
+		s.pendingQueueLock.Lock()
+		s.slotToPendingBlocks[blk.Block.Slot] = blk
+		s.seenPendingBlocks[blkRoot] = true
+		s.pendingQueueLock.Unlock()
 
 	}
 	return nil
 }
 
 // beaconBlocksRootRPCHandler looks up the request blocks from the database from the given block roots.
-func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
@@ -75,7 +75,7 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		return errors.New("message is not type BeaconBlocksByRootRequest")
 	}
 	if len(req.BlockRoots) == 0 {
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
+		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "no block roots provided in request")
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
@@ -86,17 +86,17 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		return errors.New("no block roots provided")
 	}
 
-	if int64(len(req.BlockRoots)) > r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String()) {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
-		if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
+	if int64(len(req.BlockRoots)) > s.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String()) {
+		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		if s.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			log.Debug("Disconnecting bad peer")
 			defer func() {
-				if err := r.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
+				if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
 					log.WithError(err).Error("Failed to disconnect peer")
 				}
 			}()
 		}
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
+		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
@@ -108,7 +108,7 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	}
 
 	if uint64(len(req.BlockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
-		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, "requested more than the max block limit")
+		resp, err := s.generateErrorResponse(responseCodeInvalidRequest, "requested more than the max block limit")
 		if err != nil {
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
@@ -119,13 +119,13 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		return errors.New("requested more than the max block limit")
 	}
 
-	r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(len(req.BlockRoots)))
+	s.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(len(req.BlockRoots)))
 
 	for _, root := range req.BlockRoots {
-		blk, err := r.db.Block(ctx, bytesutil.ToBytes32(root))
+		blk, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
 			log.WithError(err).Error("Failed to fetch block")
-			resp, err := r.generateErrorResponse(responseCodeServerError, genericError)
+			resp, err := s.generateErrorResponse(responseCodeServerError, genericError)
 			if err != nil {
 				log.WithError(err).Error("Failed to generate a response error")
 			} else {
@@ -138,7 +138,7 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		if blk == nil {
 			continue
 		}
-		if err := r.chunkWriter(stream, blk); err != nil {
+		if err := s.chunkWriter(stream, blk); err != nil {
 			return err
 		}
 	}

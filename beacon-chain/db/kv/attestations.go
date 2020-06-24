@@ -17,11 +17,11 @@ import (
 )
 
 // AttestationsByDataRoot returns any (aggregated) attestations matching this data root.
-func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
+func (kv *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestation")
 	defer span.End()
 	var atts []*ethpb.Attestation
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
@@ -41,11 +41,11 @@ func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte
 }
 
 // Attestations retrieves a list of attestations by filter criteria.
-func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
+func (kv *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestations")
 	defer span.End()
 	atts := make([]*ethpb.Attestation, 0)
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 
 		// If no filter criteria are specified, return an error.
@@ -56,7 +56,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		// Creates a list of indices from the passed in filter values, such as:
 		// []byte("parent-root-0x2093923"), etc. to be used for looking up
 		// block roots that were stored under each of those indices for O(1) lookup.
-		indicesByBucket, err := createAttestationIndicesFromFilters(f)
+		indicesByBucket, err := createAttestationIndicesFromFilters(ctx, f)
 		if err != nil {
 			return errors.Wrap(err, "could not determine lookup indices")
 		}
@@ -64,7 +64,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the attestations. These attestations will
 		// meet the filter criteria.
-		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indicesByBucket, tx)...)
+		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(ctx, indicesByBucket, tx)...)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			ac := &dbpb.AttestationContainer{}
@@ -79,11 +79,11 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 }
 
 // HasAttestation checks if an attestation by its attestation data root exists in the db.
-func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
+func (kv *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttestation")
 	defer span.End()
 	exists := false
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		exists = bkt.Get(attDataRoot[:]) != nil
 		return nil
@@ -94,10 +94,10 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 }
 
 // DeleteAttestation by attestation data root.
-func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
+func (kv *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
 	defer span.End()
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
@@ -107,8 +107,8 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 		if err := decode(enc, ac); err != nil {
 			return err
 		}
-		indicesByBucket := createAttestationIndicesFromData(ac.Data)
-		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+		indicesByBucket := createAttestationIndicesFromData(ctx, ac.Data)
+		if err := deleteValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 		return bkt.Delete(attDataRoot[:])
@@ -116,11 +116,11 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 }
 
 // DeleteAttestations by attestation data roots.
-func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
+func (kv *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		for _, attDataRoot := range attDataRoots {
 			enc := bkt.Get(attDataRoot[:])
@@ -128,8 +128,8 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 			if err := decode(enc, ac); err != nil {
 				return err
 			}
-			indicesByBucket := createAttestationIndicesFromData(ac.Data)
-			if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+			indicesByBucket := createAttestationIndicesFromData(ctx, ac.Data)
+			if err := deleteValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
 			if err := bkt.Delete(attDataRoot[:]); err != nil {
@@ -141,7 +141,7 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 }
 
 // SaveAttestation to the db.
-func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
+func (kv *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
 	defer span.End()
 
@@ -158,7 +158,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		return err
 	}
 
-	err = k.db.Update(func(tx *bolt.Tx) error {
+	err = kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		ac := &dbpb.AttestationContainer{
 			Data: att.Data,
@@ -177,8 +177,8 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 			return err
 		}
 
-		indicesByBucket := createAttestationIndicesFromData(att.Data)
-		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+		indicesByBucket := createAttestationIndicesFromData(ctx, att.Data)
+		if err := updateValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
 		return bkt.Put(attDataRoot[:], enc)
@@ -190,11 +190,11 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 }
 
 // SaveAttestations via batch updates to the db.
-func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
+func (kv *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestations")
 	defer span.End()
 
-	err := k.db.Update(func(tx *bolt.Tx) error {
+	err := kv.db.Update(func(tx *bolt.Tx) error {
 		for _, att := range atts {
 			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 			if err != nil {
@@ -219,8 +219,8 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 				return err
 			}
 
-			indicesByBucket := createAttestationIndicesFromData(att.Data)
-			if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+			indicesByBucket := createAttestationIndicesFromData(ctx, att.Data)
+			if err := updateValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
 
@@ -240,7 +240,10 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 // createAttestationIndicesFromData takes in attestation data and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
-func createAttestationIndicesFromData(attData *ethpb.AttestationData) map[string][]byte {
+func createAttestationIndicesFromData(ctx context.Context, attData *ethpb.AttestationData) map[string][]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.createAttestationIndicesFromData")
+	defer span.End()
+
 	indicesByBucket := make(map[string][]byte)
 	buckets := make([][]byte, 0)
 	indices := make([][]byte, 0)
@@ -277,7 +280,10 @@ func createAttestationIndicesFromData(attData *ethpb.AttestationData) map[string
 // For attestations, these are list of hash tree roots of attestation.Data
 // objects. If a certain filter criterion does not apply to
 // attestations, an appropriate error is returned.
-func createAttestationIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, error) {
+func createAttestationIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) (map[string][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.createAttestationIndicesFromFilters")
+	defer span.End()
+
 	indicesByBucket := make(map[string][]byte)
 	for k, v := range f.Filters() {
 		switch k {

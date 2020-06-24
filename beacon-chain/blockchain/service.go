@@ -147,16 +147,9 @@ func (s *Service) Start() {
 	}
 
 	if beaconState == nil {
-		if featureconfig.Get().NewStateMgmt {
-			beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
-			if err != nil {
-				log.Fatalf("Could not fetch beacon state by root: %v", err)
-			}
-		} else {
-			beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
-			if err != nil {
-				log.Fatalf("Could not fetch beacon state: %v", err)
-			}
+		beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
+		if err != nil {
+			log.Fatalf("Could not fetch beacon state by root: %v", err)
 		}
 	}
 
@@ -194,14 +187,6 @@ func (s *Service) Start() {
 		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
-
-		if !featureconfig.Get().NewStateMgmt {
-			if finalizedCheckpoint.Epoch > 1 {
-				if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
-					log.WithError(err).Warn("Could not prune old states")
-				}
-			}
-		}
 
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
@@ -347,26 +332,21 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if featureconfig.Get().NewStateMgmt {
-		if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
-			return errors.Wrap(err, "could not save genesis state")
-		}
-		if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-			Slot: 0,
-			Root: genesisBlkRoot[:],
-		}); err != nil {
-			return err
-		}
-	} else {
-		if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-			return errors.Wrap(err, "could not save genesis state")
-		}
+	if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
+		return errors.Wrap(err, "could not save genesis state")
 	}
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: 0,
+		Root: genesisBlkRoot[:],
+	}); err != nil {
+		return err
+	}
+
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could save genesis block root")
+		return errors.Wrap(err, "could not save genesis block root")
 	}
 
 	// Finalized checkpoint at genesis is a zero hash.
@@ -440,24 +420,18 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	var finalizedState *stateTrie.BeaconState
 
-	if featureconfig.Get().NewStateMgmt {
-		finalizedState, err = s.stateGen.Resume(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized state from db")
-		}
-		if !featureconfig.Get().SkipRegenHistoricalStates {
-			// Since historical states were skipped, the node should start from last finalized check point.
-			finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
-			if finalizedRoot == params.BeaconConfig().ZeroHash {
-				finalizedRoot = bytesutil.ToBytes32(finalized.Root)
-			}
-		}
-	} else {
-		finalizedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized state from db")
+	finalizedState, err = s.stateGen.Resume(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized state from db")
+	}
+	if !featureconfig.Get().SkipRegenHistoricalStates {
+		// Since historical states were skipped, the node should start from last finalized check point.
+		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+		if finalizedRoot == params.BeaconConfig().ZeroHash {
+			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 		}
 	}
+
 	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block from db")
@@ -466,7 +440,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	// To skip the regeneration of historical state, the node has to generate the parent of the last finalized state.
 	// We don't need to do this for genesis.
 	atGenesis := s.CurrentSlot() == 0
-	if featureconfig.Get().NewStateMgmt && featureconfig.Get().SkipRegenHistoricalStates && !atGenesis {
+	if featureconfig.Get().SkipRegenHistoricalStates && !atGenesis {
 		parentRoot := bytesutil.ToBytes32(finalizedBlock.Block.ParentRoot)
 		parentState, err := s.generateState(ctx, finalizedRoot, parentRoot)
 		if err != nil {

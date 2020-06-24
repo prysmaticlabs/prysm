@@ -8,7 +8,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -21,7 +20,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
 	st := testutil.NewBeaconState()
 	slot := uint64(100)
@@ -38,7 +37,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gen := stategen.New(db, cache.NewStateSummaryCache())
+	gen := stategen.New(db, sc)
 	if err := gen.SaveState(ctx, gRoot, st); err != nil {
 		t.Fatal(err)
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 // SaveStateSummary saves a state summary object to the DB.
-func (k *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
+func (kv *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
 
@@ -17,18 +17,18 @@ func (k *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) 
 	if err != nil {
 		return err
 	}
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		return bucket.Put(summary.Root, enc)
 	})
 }
 
 // SaveStateSummaries saves state summary objects to the DB.
-func (k *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
+func (kv *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
+	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		for _, summary := range summaries {
 			enc, err := encode(summary)
@@ -44,12 +44,12 @@ func (k *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSum
 }
 
 // StateSummary returns the state summary object from the db using input block root.
-func (k *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+func (kv *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.StateSummary")
 	defer span.End()
 
 	var summary *pb.StateSummary
-	err := k.db.View(func(tx *bolt.Tx) error {
+	err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
@@ -63,11 +63,11 @@ func (k *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.State
 }
 
 // HasStateSummary returns true if a state summary exists in DB.
-func (k *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
+func (kv *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
 	var exists bool
-	if err := k.db.View(func(tx *bolt.Tx) error {
+	if err := kv.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
