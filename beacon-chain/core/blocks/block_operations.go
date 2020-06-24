@@ -759,14 +759,14 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	}
 	indices := indexedAtt.AttestingIndices
 	pubkeys := []*bls.PublicKey{}
-		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
-			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-			if err != nil {
-				return errors.Wrap(err, "could not deserialize validator public key")
-			}
-			pubkeys = append(pubkeys, pk)
+	for i := 0; i < len(indices); i++ {
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+		if err != nil {
+			return errors.Wrap(err, "could not deserialize validator public key")
 		}
+		pubkeys = append(pubkeys, pk)
+	}
 	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
 }
 
