@@ -24,7 +24,7 @@ var goodByes = map[uint64]string{
 }
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
-func (r *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer func() {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
@@ -41,27 +41,27 @@ func (r *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	log := log.WithField("Reason", goodbyeMessage(*m))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Peer has sent a goodbye message")
 	// closes all streams with the peer
-	return r.p2p.Disconnect(stream.Conn().RemotePeer())
+	return s.p2p.Disconnect(stream.Conn().RemotePeer())
 }
 
-func (r *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id peer.ID) error {
-	if err := r.sendGoodByeMessage(ctx, code, id); err != nil {
+func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id peer.ID) error {
+	if err := s.sendGoodByeMessage(ctx, code, id); err != nil {
 		log.WithFields(logrus.Fields{
 			"error": err,
 			"peer":  id,
 		}).Debug("Could not send goodbye message to peer")
 	}
-	if err := r.p2p.Disconnect(id); err != nil {
+	if err := s.p2p.Disconnect(id); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {
+func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	stream, err := r.p2p.Send(ctx, &code, p2p.RPCGoodByeTopic, id)
+	stream, err := s.p2p.Send(ctx, &code, p2p.RPCGoodByeTopic, id)
 	if err != nil {
 		return err
 	}
@@ -79,8 +79,8 @@ func (r *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.I
 }
 
 // sends a goodbye message for a generic error
-func (r *Service) sendGenericGoodbyeMessage(ctx context.Context, id peer.ID) error {
-	return r.sendGoodByeMessage(ctx, codeGenericError, id)
+func (s *Service) sendGenericGoodbyeMessage(ctx context.Context, id peer.ID) error {
+	return s.sendGoodByeMessage(ctx, codeGenericError, id)
 }
 
 func goodbyeMessage(num uint64) string {

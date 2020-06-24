@@ -26,7 +26,7 @@ type AttestationReceiver interface {
 	AttestationPreState(ctx context.Context, att *ethpb.Attestation) (*state.BeaconState, error)
 }
 
-// ReceiveAttestationNoPubsub is a function that defines the operations that are preformed on
+// ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
 // attestation that is received from regular sync. The operations consist of:
 //  1. Validate attestation, update validator's latest vote
 //  2. Apply fork choice to the processed attestation
@@ -100,13 +100,7 @@ func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 					continue
 				}
 
-				var hasState bool
-				if featureconfig.Get().NewStateMgmt {
-					hasState = s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				} else {
-					hasState = s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
-				}
-
+				hasState := s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if !(hasState && hasBlock) {
 					continue

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -11,9 +12,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"gopkg.in/d4l3k/messagediff.v1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,6 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	mockSlasher "github.com/prysmaticlabs/prysm/validator/testing"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
@@ -210,6 +211,84 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
+}
+
+func TestPostSignatureUpdate(t *testing.T) {
+	config := &featureconfig.Flags{
+		ProtectAttester:   false,
+		SlasherProtection: true,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
+	validator, _, finish := setup(t)
+	defer finish()
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: []byte("great block"),
+			Source: &ethpb.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 10,
+				Root:  []byte("good target"),
+			},
+		},
+	}
+	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
+	validator.protector = mockProtector
+	err := validator.postSignatureUpdate(context.Background(), att, validatorPubKey)
+	if err == nil || !strings.Contains(err.Error(), "made a slashable attestation,") {
+		t.Fatalf("Expected error to be thrown when post signature update is detected as slashable. got: %v", err)
+	}
+	mockProtector.AllowAttestation = true
+	err = validator.postSignatureUpdate(context.Background(), att, validatorPubKey)
+	if err != nil {
+		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
+	}
+}
+
+func TestPreSignatureValidation(t *testing.T) {
+	config := &featureconfig.Flags{
+		ProtectAttester:   false,
+		SlasherProtection: true,
+	}
+	reset := featureconfig.InitWithReset(config)
+	defer reset()
+	validator, _, finish := setup(t)
+	defer finish()
+	hook := logTest.NewGlobal()
+	att := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            5,
+			CommitteeIndex:  2,
+			BeaconBlockRoot: []byte("great block"),
+			Source: &ethpb.Checkpoint{
+				Epoch: 4,
+				Root:  []byte("good source"),
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 10,
+				Root:  []byte("good target"),
+			},
+		},
+	}
+	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
+	validator.protector = mockProtector
+	err := validator.preSigningValidations(context.Background(), att, validatorPubKey)
+	if err == nil || !strings.Contains(err.Error(), "rejected by external slasher service") {
+		t.Fatal(err)
+	}
+	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected by external slasher service")
+	mockProtector.AllowAttestation = true
+	err = validator.preSigningValidations(context.Background(), att, validatorPubKey)
+	if err != nil {
+		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
+	}
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {

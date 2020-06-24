@@ -182,17 +182,17 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.
 		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could save genesis block root")
+		return errors.Wrap(err, "could not save genesis block root")
 	}
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")
 	}
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
 	if err := s.beaconDB.SaveJustifiedCheckpoint(ctx, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "could save justified checkpoint")
+		return errors.Wrap(err, "could not save justified checkpoint")
 	}
 	if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "could save finalized checkpoint")
+		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
 	pubKeys := make([][48]byte, 0, genesisState.NumValidators())

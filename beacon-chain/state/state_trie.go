@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/htrutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -201,7 +200,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
 // the resulting layers of the trie based on the appropriate depth. This function
-// pads the leaves to a power-of-two length.
+// pads the leaves to a length of 32.
 func merkleize(leaves [][]byte) [][][]byte {
 	hashFunc := hashutil.CustomSHA256Hasher()
 	layers := make([][][]byte, htrutils.GetDepth(uint64(len(leaves)))+1)
@@ -246,111 +245,90 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case latestBlockHeader:
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
-		if featureconfig.Get().EnableFieldTrie {
-			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				b.dirtyIndices[field] = []uint64{}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(blockRoots, b.state.BlockRoots)
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
+		return b.recomputeFieldTrie(blockRoots, b.state.BlockRoots)
 	case stateRoots:
-		if featureconfig.Get().EnableFieldTrie {
-			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				b.dirtyIndices[field] = []uint64{}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.RootsArrayHashTreeRoot(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+		return b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 	case historicalRoots:
 		return htrutils.HistoricalRootsRoot(b.state.HistoricalRoots)
 	case eth1Data:
 		return stateutil.Eth1Root(hasher, b.state.Eth1Data)
 	case eth1DataVotes:
-		if featureconfig.Get().EnableFieldTrie {
-			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				b.dirtyIndices[field] = []uint64{}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.Eth1DataVotes, params.BeaconConfig().EpochsPerEth1VotingPeriod*params.BeaconConfig().SlotsPerEpoch)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(field, b.state.Eth1DataVotes)
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
+		return b.recomputeFieldTrie(field, b.state.Eth1DataVotes)
 	case validators:
-		if featureconfig.Get().EnableFieldTrie {
-			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.Validators, params.BeaconConfig().ValidatorRegistryLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				b.dirtyIndices[validators] = []uint64{}
-				delete(b.rebuildTrie, validators)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.Validators, params.BeaconConfig().ValidatorRegistryLimit)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(validators, b.state.Validators)
+			b.dirtyIndices[validators] = []uint64{}
+			delete(b.rebuildTrie, validators)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.ValidatorRegistryRoot(b.state.Validators)
+		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
 		return stateutil.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
-		if featureconfig.Get().EnableFieldTrie {
-			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				b.dirtyIndices[field] = []uint64{}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
+		return b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
 	case slashings:
 		return htrutils.SlashingsRoot(b.state.Slashings)
 	case previousEpochAttestations:
-		if featureconfig.Get().EnableFieldTrie {
-			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.PreviousEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				b.dirtyIndices[field] = []uint64{}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.PreviousEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(field, b.state.PreviousEpochAttestations)
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
+		return b.recomputeFieldTrie(field, b.state.PreviousEpochAttestations)
 	case currentEpochAttestations:
-		if featureconfig.Get().EnableFieldTrie {
-			if b.rebuildTrie[field] {
-				err := b.resetFieldTrie(field, b.state.CurrentEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				b.dirtyIndices[field] = []uint64{}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			err := b.resetFieldTrie(field, b.state.CurrentEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(field, b.state.CurrentEpochAttestations)
+			b.dirtyIndices[field] = []uint64{}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
+		return b.recomputeFieldTrie(field, b.state.CurrentEpochAttestations)
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil
 	case previousJustifiedCheckpoint:

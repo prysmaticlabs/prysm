@@ -75,6 +75,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
+	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
 
 	keyManager, err := selectKeyManager(cliCtx)
@@ -335,7 +336,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 		deniedText := "The historical actions database will not be deleted. No changes have been made."
 		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
 		if err != nil {
-			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+			return errors.Wrapf(err, "Could not clear DB in dir %s", dataDir)
 		}
 	}
 

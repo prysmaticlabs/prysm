@@ -116,8 +116,8 @@ func IsUint64Sorted(a []uint64) bool {
 	return true
 }
 
-// NotUint64 returns the uint64 in slice a that are
-// not in slice b with time complexity of approximately
+// NotUint64 returns the uint64 in slice b that are
+// not in slice a with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
 func NotUint64(a []uint64, b []uint64) []uint64 {
@@ -231,7 +231,7 @@ func IsInInt64(a int64, b []int64) bool {
 	return false
 }
 
-// UnionByteSlices returns the common elements between sets of byte slices.
+// UnionByteSlices returns the all elements between sets of byte slices.
 func UnionByteSlices(s ...[][]byte) [][]byte {
 	if len(s) == 0 {
 		return [][]byte{}

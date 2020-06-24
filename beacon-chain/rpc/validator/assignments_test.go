@@ -35,7 +35,7 @@ func pubKey(i uint64) []byte {
 	return pubKey
 }
 func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
@@ -75,7 +75,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 }
 
 func TestGetDuties_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -162,7 +162,7 @@ func TestGetDuties_OK(t *testing.T) {
 }
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -219,7 +219,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(64)
@@ -306,7 +306,7 @@ func TestStreamDuties_SyncNotReady(t *testing.T) {
 }
 
 func TestStreamDuties_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -377,7 +377,7 @@ func TestStreamDuties_OK(t *testing.T) {
 }
 
 func TestStreamDuties_OK_ChainReorg(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -467,7 +467,9 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 func TestAssignValidatorToSubnet(t *testing.T) {
 	k := pubKey(3)
 
-	assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE)
+	if err := assignValidatorToSubnet(k, ethpb.ValidatorStatus_ACTIVE); err != nil {
+		t.Fatal(err)
+	}
 	coms, ok, exp := cache.SubnetIDs.GetPersistentSubnets(k)
 	if !ok {
 		t.Fatal("No cache entry found for validator")
@@ -484,7 +486,7 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 }
 
 func BenchmarkCommitteeAssignment(b *testing.B) {
-	db := dbutil.SetupDB(b)
+	db, _ := dbutil.SetupDB(b)
 
 	genesis := testutil.NewBeaconBlock()
 	depChainStart := uint64(8192 * 2)

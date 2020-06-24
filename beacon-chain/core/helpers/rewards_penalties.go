@@ -26,8 +26,8 @@ func TotalBalance(state *stateTrie.BeaconState, indices []uint64) uint64 {
 		total += val.EffectiveBalance()
 	}
 
-	// Return EFFECTIVE_BALANCE_INCREMENT to avoid divisions by zero.
-	if total == 0 {
+	// EFFECTIVE_BALANCE_INCREMENT is the lower bound for total balance.
+	if total < params.BeaconConfig().EffectiveBalanceIncrement {
 		return params.BeaconConfig().EffectiveBalanceIncrement
 	}
 

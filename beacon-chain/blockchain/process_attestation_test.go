@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -23,12 +22,12 @@ import (
 
 func TestStore_OnAttestation(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB:        db,
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
-		StateGen:        stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:        stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -113,7 +112,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "pre state of target block 0 does not exist",
+			wantErrString: "could not get pre state for slot 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
@@ -162,11 +161,11 @@ func TestStore_OnAttestation(t *testing.T) {
 
 func TestStore_SaveCheckpointState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -282,11 +281,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 func TestStore_UpdateCheckpointState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -346,7 +345,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -365,7 +364,7 @@ func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
 
 func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -384,7 +383,7 @@ func TestAttEpoch_MatchCurrentEpoch(t *testing.T) {
 
 func TestAttEpoch_NotMatch(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -404,7 +403,7 @@ func TestAttEpoch_NotMatch(t *testing.T) {
 
 func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -420,7 +419,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -446,7 +445,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 
 func TestVerifyBeaconBlock_OK(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -471,7 +470,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)
@@ -504,7 +503,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	cfg := &Config{BeaconDB: db}
 	service, err := NewService(ctx, cfg)

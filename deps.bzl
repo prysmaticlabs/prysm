@@ -53,15 +53,15 @@ def prysm_deps():
         build_file_generation = "off",
         importpath = "github.com/prysmaticlabs/bazel-go-ethereum",
         replace = "github.com/ethereum/go-ethereum",
-        sum = "h1:BgFL+G37WhgPOvkQveBXevApdusxtkrRoTzN9O3jnDM=",
-        version = "v0.0.0-20200615030327-5f59060ced70",
+        sum = "h1:6TlvcghiASejE0zd3ZEhd2ZQ+e+S2EALSgixivLzi8Q=",
+        version = "v0.0.0-20200622172343-b50bad5c6f58",
     )
 
     # Note: It is required to define com_github_ethereum_go_ethereum like this for some reason...
     # Note: The keep directives help gazelle leave this alone.
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        commit = "5f59060ced70d1107fd3df26bf248c95af388738",  # keep
+        commit = "b50bad5c6f5855d5821c9b6b6f0fee9c79aa350b",  # keep
         importpath = "github.com/ethereum/go-ethereum",  # keep
         # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
         # a fork that has resolved these issues by disabling HID/USB support and
@@ -2275,17 +2275,10 @@ def prysm_deps():
         version = "v0.1.0",
     )
     go_repository(
-        name = "com_github_libp2p_go_libp2p_kad_dht",
-        build_file_proto_mode = "disable_global",
-        importpath = "github.com/libp2p/go-libp2p-kad-dht",
-        sum = "h1:+pb1DCkV/6oNQjTZVXl+Y++eV0rnelx/L8y1t4J+Rnw=",
-        version = "v0.2.1",
-    )
-    go_repository(
         name = "com_github_libp2p_go_libp2p_kbucket",
         importpath = "github.com/libp2p/go-libp2p-kbucket",
-        sum = "h1:XtNfN4WUy0cfeJoJgWCf1lor4Pp3kBkFJ9vQ+Zs+VUM=",
-        version = "v0.2.3",
+        sum = "h1:wg+VPpCtY61bCasGRexCuXOmEmdKjN+k1w+JtTwu9gA=",
+        version = "v0.4.2",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_loggables",
@@ -3080,6 +3073,13 @@ def prysm_deps():
         importpath = "github.com/libp2p/go-libp2p-routing",
         sum = "h1:hFnj3WR3E2tOcKaGpyzfP4gvFZ3t8JkQmbapN0Ct+oU=",
         version = "v0.1.0",
+    )
+    go_repository(
+        name = "com_github_libp2p_go_libp2p_kad_dht",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/libp2p/go-libp2p-kad-dht",
+        sum = "h1:s7y38B+hdj1AkNR3PCTpvNqBsZHxOf7hoUy7+fNlSZQ=",
+        version = "v0.8.2",
     )
     go_repository(
         name = "com_github_mattn_go_colorable",

@@ -255,7 +255,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cache.initializeRootCache(tt.expectedBlockSlots, t)
 
-			beaconDB := dbtest.SetupDB(t)
+			beaconDB, _ := dbtest.SetupDB(t)
 
 			p := p2pt.NewTestP2P(t)
 			connectPeers(t, p, tt.peers, p.Peers())
@@ -633,7 +633,7 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _, err := fetcher.selectFailOverPeer(tt.args.excludedPID, tt.args.peers)
+			got, err := fetcher.selectFailOverPeer(tt.args.excludedPID, tt.args.peers)
 			if err != nil && err != tt.wantErr {
 				t.Errorf("selectFailOverPeer() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -802,7 +802,10 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				pids = append(pids, pid.ID)
 				fetcher.rateLimiter.Add(pid.ID.String(), pid.usedCapacity)
 			}
-			got := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			got, err := fetcher.filterPeers(pids, tt.args.peersPercentage)
+			if err != nil {
+				t.Fatal(err)
+			}
 			// Re-arrange peers with the same remaining capacity, deterministically .
 			// They are deliberately shuffled - so that on the same capacity any of
 			// such peers can be selected. That's why they are sorted here.
