@@ -39,8 +39,11 @@ import (
 
 var _ = shared.Service(&Service{})
 
-// Check local table every 15 seconds for newly added peers.
-var pollingPeriod = 15 * time.Second
+// In the event that we are at our peer limit, we
+// stop looking for new peers and instead poll
+// for the current peer limit status for the time period
+// defined below.
+var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
@@ -484,6 +487,13 @@ func (s *Service) listenForNewNodes() {
 		// Exit if service's context is canceled
 		if s.ctx.Err() != nil {
 			break
+		}
+		if s.isPeerAtLimit() {
+			// Pause the main loop for a period to stop looking
+			// for new peers.
+			log.Trace("Not looking for peers, at peer limit")
+			time.Sleep(pollingPeriod)
+			continue
 		}
 		exists := iterator.Next()
 		if !exists {
