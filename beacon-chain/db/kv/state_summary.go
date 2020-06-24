@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -17,6 +18,7 @@ func (kv *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary)
 	if err != nil {
 		return err
 	}
+	kv.stateSummaryCache.Put(bytesutil.ToBytes32(summary.Root), summary)
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		return bucket.Put(summary.Root, enc)
@@ -27,7 +29,9 @@ func (kv *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary)
 func (kv *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
-
+	for _, summary := range summaries {
+		kv.stateSummaryCache.Put(bytesutil.ToBytes32(summary.Root), summary)
+	}
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		for _, summary := range summaries {
