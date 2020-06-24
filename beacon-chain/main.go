@@ -56,6 +56,7 @@ var appFlags = []cli.Flag{
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.CustomGenesisDelayFlag,
+	cmd.RPCMaxPageSizeFlag,
 	cmd.BootstrapNode,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,

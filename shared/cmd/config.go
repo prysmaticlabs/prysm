@@ -49,8 +49,8 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	}
 	cfg.CustomGenesisDelay = delay
 	maxPageSize := params.BeaconConfig().DefaultPageSize
-	if ctx.IsSet(RPCMaxPageSize.Name) {
-		maxPageSize = ctx.Int(RPCMaxPageSize.Name)
+	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
+		maxPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
 		log.Warnf("Starting beacon chain with max RPC page size of %d", maxPageSize)
 	}
 	cfg.MaxRPCPageSize = maxPageSize
@@ -62,8 +62,8 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureSlasher(ctx *cli.Context) {
 	cfg := newConfig(ctx)
 	maxPageSize := params.BeaconConfig().DefaultPageSize
-	if ctx.IsSet(RPCMaxPageSize.Name) {
-		maxPageSize = ctx.Int(RPCMaxPageSize.Name)
+	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
+		maxPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
 		log.Warnf("Starting slasher with max RPC page size of %d", maxPageSize)
 	}
 	cfg.MaxRPCPageSize = maxPageSize
