@@ -80,7 +80,9 @@ func (s *Service) Start() {
 		// Wait for state to be initialized.
 		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-		for genesisSet := false; !genesisSet; {
+		defer stateSub.Unsubscribe()
+		genesisSet := false
+		for !genesisSet {
 			select {
 			case event := <-stateChannel:
 				if event.Type == statefeed.Initialized {
@@ -95,10 +97,10 @@ func (s *Service) Start() {
 				}
 			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting goroutine")
-				break
+				return
 			case err := <-stateSub.Err():
 				log.WithError(err).Error("Subscription to state notifier failed")
-				break
+				return
 			}
 		}
 		stateSub.Unsubscribe()
