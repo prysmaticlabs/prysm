@@ -139,6 +139,7 @@ func ComputeCommittee(
 	copy(shuffledIndices, indices)
 	// UnshuffleList is used here as it is an optimized implementation created
 	// for fast computation of committees.
+	// Reference implementation: https://github.com/protolambda/eth2-shuffle
 	shuffledList, err := UnshuffleList(shuffledIndices, seed)
 	return shuffledList[start:end], err
 }
