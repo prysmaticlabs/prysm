@@ -1,22 +1,23 @@
-package bls_test
+package bls12_test
 
 import (
 	"bytes"
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls/bls12"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
-	b := bls.RandKey().Marshal()
+	b := bls12.RandKey().Marshal()
 	b32 := bytesutil.ToBytes32(b)
-	pk, err := bls.SecretKeyFromBytes(b32[:])
+	pk, err := bls12.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
-	pk2, err := bls.SecretKeyFromBytes(b32[:])
+	pk2, err := bls12.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +27,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 }
 
 func TestSignVerify(t *testing.T) {
-	priv := bls.RandKey()
+	priv := bls12.RandKey()
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
@@ -36,47 +37,46 @@ func TestSignVerify(t *testing.T) {
 }
 
 func TestAggregateVerify(t *testing.T) {
-	pubkeys := make([]*bls.PublicKey, 0, 100)
-	sigs := make([]*bls.Signature, 0, 100)
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := bls.RandKey()
+		priv := bls12.RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggSig := bls.Aggregate(sigs)
+	aggSig := bls12.Aggregate(sigs)
 	if !aggSig.AggregateVerify(pubkeys, msgs) {
 		t.Error("Signature did not verify")
 	}
 }
 
 func TestFastAggregateVerify(t *testing.T) {
-	pubkeys := make([]*bls.PublicKey, 0, 100)
-	sigs := make([]*bls.Signature, 0, 100)
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	for i := 0; i < 100; i++ {
-		priv := bls.RandKey()
+		priv := bls12.RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 	}
-	aggSig := bls.AggregateSignatures(sigs)
+	aggSig := bls12.AggregateSignatures(sigs)
 	if !aggSig.FastAggregateVerify(pubkeys, msg) {
 		t.Error("Signature did not verify")
 	}
 }
 
 func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
-	var pubkeys []*bls.PublicKey
-	sigs := make([]*bls.Signature, 0, 100)
+	var pubkeys []iface.PublicKey
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
-	aggSig := bls.AggregateSignatures(sigs)
+	aggSig := bls12.NewAggregateSignature()
 	if aggSig.FastAggregateVerify(pubkeys, msg) != false {
 		t.Error("Expected FastAggregateVerify to return false with empty input " +
 			"of public keys.")
@@ -121,7 +121,7 @@ func TestSecretKeyFromBytes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := bls.SecretKeyFromBytes(test.input)
+			res, err := bls12.SecretKeyFromBytes(test.input)
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("No error returned: expected %v", test.err)
@@ -180,7 +180,7 @@ func TestPublicKeyFromBytes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := bls.PublicKeyFromBytes(test.input)
+			res, err := bls12.PublicKeyFromBytes(test.input)
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("No error returned: expected %v", test.err)
@@ -239,7 +239,7 @@ func TestSignatureFromBytes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := bls.SignatureFromBytes(test.input)
+			res, err := bls12.SignatureFromBytes(test.input)
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("No error returned: expected %v", test.err)
@@ -261,14 +261,11 @@ func TestSignatureFromBytes(t *testing.T) {
 }
 
 func TestPublicKey_Copy(t *testing.T) {
-	pubkeyA := bls.RandKey().PublicKey()
+	pubkeyA := bls12.RandKey().PublicKey()
 	pubkeyBytes := pubkeyA.Marshal()
 
-	pubkeyB, err := pubkeyA.Copy()
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubkeyB.Aggregate(bls.RandKey().PublicKey())
+	pubkeyB := pubkeyA.Copy()
+	pubkeyB.Aggregate(bls12.RandKey().PublicKey())
 
 	if !bytes.Equal(pubkeyA.Marshal(), pubkeyBytes) {
 		t.Fatal("Pubkey was mutated after copy")
@@ -276,10 +273,10 @@ func TestPublicKey_Copy(t *testing.T) {
 }
 
 func TestSerialize(t *testing.T) {
-	rk := bls.RandKey()
+	rk := bls12.RandKey()
 	b := rk.Marshal()
 
-	if _, err := bls.SecretKeyFromBytes(b); err != nil {
+	if _, err := bls12.SecretKeyFromBytes(b); err != nil {
 		t.Error(err)
 	}
 }

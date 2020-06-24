@@ -3519,3 +3519,9 @@ def prysm_deps():
         sum = "h1:Qh4dB5D/WpoUUp3lSod7qgoyEHbDGPUWjIbnqdqqe1k=",
         version = "v0.0.0-20190515093506-e2840ee46a6b",
     )
+    go_repository(
+        name = "com_github_supranational_blst",
+        importpath = "github.com/supranational/blst",
+        sum = "h1:2LzeBbOidhTD87UezqGvIffWZAd3FOCfhi2b7IbJCMc=",
+        version = "v0.1.0",
+    )

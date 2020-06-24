@@ -1,50 +1,16 @@
 load("@prysm//tools/go:def.bzl", "go_library")
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
-
-# gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library
 
 go_library(
     name = "go_default_library",
-    srcs = ["bls.go"],
+    srcs = [
+        "bls.go",
+        "constants.go",
+        "interface.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls",
     visibility = ["//visibility:public"],
     deps = [
-        "//shared/featureconfig:go_default_library",
-        "//shared/params:go_default_library",
-        "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
-        "@herumi_bls_eth_go_binary//:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_test",
-    size = "small",
-    srcs = ["bls_test.go"],
-    embed = [":go_default_library"],
-    deps = ["//shared/bytesutil:go_default_library"],
-)
-
-# gazelle:exclude bls_benchmark_test.go
-go_test(
-    name = "go_benchmark_test",
-    size = "small",
-    srcs = ["bls_benchmark_test.go"],
-    args = [
-        "-test.bench=.",
-        "-test.benchmem",
-        "-test.v",
-    ],
-    local = True,
-    tags = [
-        "benchmark",
-        "manual",
-        "no-cache",
-    ],
-    deps = [
-        "//shared/bls:go_default_library",
-        "//shared/bytesutil:go_default_library",
-        "//shared/hashutil:go_default_library",
-        "@herumi_bls_eth_go_binary//:go_default_library",
+        "//shared/bls/bls12:go_default_library",
+        "//shared/bls/iface:go_default_library",
     ],
 )
