@@ -233,12 +233,12 @@ func TestPostSignatureUpdate(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
-	err := validator.postSignatureUpdate(context.Background(), att, validatorPubKey)
+	err := validator.postAttSignUpdate(context.Background(), att, validatorPubKey)
 	if err == nil || !strings.Contains(err.Error(), "made a slashable attestation,") {
 		t.Fatalf("Expected error to be thrown when post signature update is detected as slashable. got: %v", err)
 	}
 	mockProtector.AllowAttestation = true
-	err = validator.postSignatureUpdate(context.Background(), att, validatorPubKey)
+	err = validator.postAttSignUpdate(context.Background(), att, validatorPubKey)
 	if err != nil {
 		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
 	}
@@ -272,13 +272,13 @@ func TestPreSignatureValidation(t *testing.T) {
 	}
 	mockProtector := &mockSlasher.MockProtector{AllowAttestation: false}
 	validator.protector = mockProtector
-	err := validator.preSigningValidations(context.Background(), att, validatorPubKey)
+	err := validator.preAttSignValidations(context.Background(), att, validatorPubKey)
 	if err == nil || !strings.Contains(err.Error(), "rejected by external slasher service") {
 		t.Fatal(err)
 	}
 	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected by external slasher service")
 	mockProtector.AllowAttestation = true
-	err = validator.preSigningValidations(context.Background(), att, validatorPubKey)
+	err = validator.preAttSignValidations(context.Background(), att, validatorPubKey)
 	if err != nil {
 		t.Fatalf("Expected allowed attestation not to throw error. got: %v", err)
 	}

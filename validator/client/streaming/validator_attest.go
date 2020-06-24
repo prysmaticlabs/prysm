@@ -284,7 +284,7 @@ func (v *validator) preSigningValidations(ctx context.Context, indexedAtt *ethpb
 		}
 	}
 	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		if !v.protector.VerifyAttestation(ctx, indexedAtt) {
+		if !v.protector.CheckAttestationSafety(ctx, indexedAtt) {
 			log.WithFields(logrus.Fields{
 				"sourceEpoch": indexedAtt.Data.Source.Epoch,
 				"targetEpoch": indexedAtt.Data.Target.Epoch,

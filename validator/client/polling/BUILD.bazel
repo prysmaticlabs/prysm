@@ -4,6 +4,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "attest_protection.gp.go",
+        "propose_protection.go",
         "runner.go",
         "service.go",
         "validator.go",

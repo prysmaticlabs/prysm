@@ -88,7 +88,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		if err != nil {
 			log.WithError(err).Error("Failed to get block header from block")
 		}
-		if !v.protector.VerifyBlock(ctx, bh) {
+		if !v.protector.CheckBlockSafety(ctx, bh) {
 			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
