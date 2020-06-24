@@ -22,7 +22,7 @@ func SlotToEpoch(slot uint64) uint64 {
 	return slot / params.BeaconConfig().SlotsPerEpoch
 }
 
-// HighestEpoch returns the current epoch number calculated from
+// CurrentEpoch returns the current epoch number calculated from
 // the slot number stored in beacon state.
 //
 // Spec pseudocode definition:
