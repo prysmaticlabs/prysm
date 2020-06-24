@@ -2,11 +2,17 @@
 package roughtime
 
 import (
+	"context"
 	"time"
 
 	rt "github.com/cloudflare/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/sirupsen/logrus"
 )
+
+// RecalibrationInterval for roughtime and system time differences. Set
+// as a default of once per hour.
+const RecalibrationInterval = time.Hour
 
 // offset is the difference between the system time and the time returned by
 // the roughtime server
@@ -15,10 +21,12 @@ var offset time.Duration
 var log = logrus.WithField("prefix", "roughtime")
 
 func init() {
+	runutil.RunEvery(context.Background(), RecalibrationInterval, recalibrateRoughtime)
+}
+
+func recalibrateRoughtime() {
 	t0 := time.Now()
-
 	results := rt.Do(rt.Ecosystem, rt.DefaultQueryAttempts, rt.DefaultQueryTimeout, nil)
-
 	// Compute the average difference between the system's time and the
 	// Roughtime responses from the servers, rejecting responses whose radii
 	// are larger than 2 seconds.
