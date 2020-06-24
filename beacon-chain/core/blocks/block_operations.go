@@ -759,7 +759,6 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	}
 	indices := indexedAtt.AttestingIndices
 	pubkeys := []*bls.PublicKey{}
-	if len(indices) > 0 {
 		for i := 0; i < len(indices); i++ {
 			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
@@ -768,9 +767,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 			}
 			pubkeys = append(pubkeys, pk)
 		}
-	}
 	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
-
 }
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
