@@ -13,7 +13,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -133,14 +132,6 @@ func (s *Service) startDiscoveryV5(
 // 5) Peer's fork digest in their ENR matches that of
 // 	  our localnodes.
 func (s *Service) filterPeer(node *enode.Node) bool {
-	numOfConns := len(s.host.Network().Peers())
-	maxPeers := int(s.cfg.MaxPeers)
-	activePeers := len(s.Peers().Active())
-	if activePeers >= maxPeers || numOfConns >= maxPeers {
-		log.WithFields(logrus.Fields{"peer": node.String(),
-			"reason": "at peer limit"}).Trace("Not dialing peer")
-		return false
-	}
 	// ignore nodes with no ip address stored.
 	if node.IP() == nil {
 		return false
@@ -178,6 +169,17 @@ func (s *Service) filterPeer(node *enode.Node) bool {
 	// Add peer to peer handler.
 	s.peers.Add(nodeENR, peerData.ID, multiAddr, network.DirUnknown)
 	return true
+}
+
+// This checks our set max peers in our config, and
+// determines whether our currently connected and
+// active peers are above our set max peer limit.
+func (s *Service) isPeerAtLimit() bool {
+	numOfConns := len(s.host.Network().Peers())
+	maxPeers := int(s.cfg.MaxPeers)
+	activePeers := len(s.Peers().Active())
+
+	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
