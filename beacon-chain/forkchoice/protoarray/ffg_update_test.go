@@ -251,7 +251,7 @@ func setup(justifiedEpoch uint64, finalizedEpoch uint64) *ForkChoice {
 		JustifiedEpoch: justifiedEpoch,
 		FinalizedEpoch: finalizedEpoch,
 		BestChild:      NonExistentNode,
-		BestDescendent: NonExistentNode,
+		BestDescendant: NonExistentNode,
 		Weight:         0,
 	})
 
