@@ -11,7 +11,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func unmarshalAttestationHistory(enc []byte) (*slashpb.AttestationHistory, error) {
+func unmarshalAttestationHistory(ctx context.Context, enc []byte) (*slashpb.AttestationHistory, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.unmarshalAttestationHistory")
+	defer span.End()
 	history := &slashpb.AttestationHistory{}
 	err := proto.Unmarshal(enc, history)
 	if err != nil {
@@ -21,7 +23,7 @@ func unmarshalAttestationHistory(enc []byte) (*slashpb.AttestationHistory, error
 }
 
 // AttestationHistoryForPubKeys accepts an array of validator public keys and returns a mapping of corresponding attestation history.
-func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error) {
+func (store *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys [][48]byte) (map[[48]byte]*slashpb.AttestationHistory, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistory")
 	defer span.End()
 
@@ -31,7 +33,7 @@ func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys []
 
 	var err error
 	attestationHistoryForVals := make(map[[48]byte]*slashpb.AttestationHistory)
-	err = db.view(func(tx *bolt.Tx) error {
+	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
 		for _, key := range publicKeys {
 			enc := bucket.Get(key[:])
@@ -43,7 +45,7 @@ func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys []
 					TargetToSource: newMap,
 				}
 			} else {
-				attestationHistory, err = unmarshalAttestationHistory(enc)
+				attestationHistory, err = unmarshalAttestationHistory(ctx, enc)
 				if err != nil {
 					return err
 				}
@@ -56,7 +58,7 @@ func (db *Store) AttestationHistoryForPubKeys(ctx context.Context, publicKeys []
 }
 
 // SaveAttestationHistoryForPubKeys saves the attestation histories for the requested validator public keys.
-func (db *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*slashpb.AttestationHistory) error {
+func (store *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyByPubKeys map[[48]byte]*slashpb.AttestationHistory) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistory")
 	defer span.End()
 
@@ -69,7 +71,7 @@ func (db *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyBy
 		encoded[pubKey] = enc
 	}
 
-	err := db.update(func(tx *bolt.Tx) error {
+	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
 		for pubKey, encodedHistory := range encoded {
 			if err := bucket.Put(pubKey[:], encodedHistory); err != nil {
@@ -82,11 +84,11 @@ func (db *Store) SaveAttestationHistoryForPubKeys(ctx context.Context, historyBy
 }
 
 // DeleteAttestationHistory deletes the attestation history for the corresponding validator public key.
-func (db *Store) DeleteAttestationHistory(ctx context.Context, pubkey []byte) error {
+func (store *Store) DeleteAttestationHistory(ctx context.Context, pubkey []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.DeleteAttestationHistory")
 	defer span.End()
 
-	return db.update(func(tx *bolt.Tx) error {
+	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
 		if err := bucket.Delete(pubkey); err != nil {
 			return errors.Wrap(err, "failed to delete the attestation history")

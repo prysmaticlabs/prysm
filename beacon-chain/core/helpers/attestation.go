@@ -14,8 +14,9 @@ import (
 //
 // Spec pseudocode definition:
 //   def get_slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
-//    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
-//    return bls_sign(privkey, hash_tree_root(slot), domain)
+//    domain = get_domain(state, DOMAIN_SELECTION_PROOF, compute_epoch_at_slot(slot))
+//    signing_root = compute_signing_root(slot, domain)
+//    return bls.Sign(privkey, signing_root)
 func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
 	d, err := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {

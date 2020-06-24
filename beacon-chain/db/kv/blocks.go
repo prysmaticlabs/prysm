@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	log "github.com/sirupsen/logrus"
@@ -263,17 +262,11 @@ func (kv *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) erro
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return kv.db.Update(func(tx *bolt.Tx) error {
-		if featureconfig.Get().NewStateMgmt {
-			hasStateSummaryInCache := kv.stateSummaryCache.Has(blockRoot)
-			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
-			hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
-			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
-				return errors.New("no state or state summary found with head block root")
-			}
-		} else {
-			if tx.Bucket(stateBucket).Get(blockRoot[:]) == nil {
-				return errors.New("no state found with head block root")
-			}
+		hasStateSummaryInCache := kv.stateSummaryCache.Has(blockRoot)
+		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
+		hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
+		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+			return errors.New("no state or state summary found with head block root")
 		}
 
 		bucket := tx.Bucket(blocksBucket)
@@ -495,7 +488,7 @@ func getBlockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFil
 
 // fetchBlockRootsBySlotRange looks into a boltDB bucket and performs a binary search
 // range scan using sorted left-padded byte keys using a start slot and an end slot.
-// If both the start and end slot are the same, and are 0, the function returns nil.
+// However, if step is one, the implemented logic won’t skip half of the slots in the range.
 func fetchBlockRootsBySlotRange(
 	ctx context.Context,
 	bkt *bolt.Bucket,
@@ -590,8 +583,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block *ethpb.BeaconBlock) 
 }
 
 // createBlockFiltersFromIndices takes in filter criteria and returns
-// a list of of byte keys used to retrieve the values stored
-// for the indices from the DB.
+// a map with a single key-value pair: "block-parent-root-indices” -> parentRoot (array of bytes).
 //
 // For blocks, these are list of signing roots of block
 // objects. If a certain filter criterion does not apply to

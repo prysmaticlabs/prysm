@@ -115,10 +115,6 @@ var (
 		Name:  "disable-init-sync-batch-save-blocks",
 		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
 	}
-	disableStateRefCopy = &cli.BoolFlag{
-		Name:  "disable-state-ref-copy",
-		Usage: "Disables the usage of a new copying method for our state fields.",
-	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -423,6 +419,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableStateRefCopy = &cli.BoolFlag{
+		Name:   "disable-state-ref-copy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableFieldTrie = &cli.BoolFlag{
 		Name:   "disable-state-field-trie",
 		Usage:  deprecatedUsage,
@@ -481,6 +482,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
 	deprecatedEnableInitSyncWeightedRoundRobin,
+	deprecatedDisableStateRefCopy,
 	deprecatedDisableFieldTrie,
 }
 
@@ -505,7 +507,7 @@ var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
-	"--enable-stream-duties",
+	// "--enable-stream-duties", // Currently disabled due to e2e flakes.
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -532,7 +534,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	disableInitSyncWeightedRoundRobin,
-	disableStateRefCopy,
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
