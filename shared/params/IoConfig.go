@@ -11,7 +11,7 @@ var defaultIoConfig = &IoConfig{
 	FilePermission: 0600, //-rw------- Read and Write permissions for user
 }
 
-// BeaconNetworkConfig returns the current network config for
+// BeaconIoConfig returns the current io config for
 // the beacon chain.
 func BeaconIoConfig() *IoConfig {
 	return defaultIoConfig
