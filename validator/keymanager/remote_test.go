@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -136,21 +137,21 @@ func TestNewRemoteWallet(t *testing.T) {
 				}
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
-					if err := ioutil.WriteFile(caCertPath, []byte(test.caCert), 0600); err != nil {
+					if err := ioutil.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().FilePermission); err != nil {
 						t.Fatalf("Failed to write CA certificate: %v", err)
 					}
 					test.opts = strings.ReplaceAll(test.opts, "<<cacert>>", caCertPath)
 				}
 				if test.clientCert != "" {
 					clientCertPath := fmt.Sprintf("%s/client.crt", dir)
-					if err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), 0600); err != nil {
+					if err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().FilePermission); err != nil {
 						t.Fatalf("Failed to write client certificate: %v", err)
 					}
 					test.opts = strings.ReplaceAll(test.opts, "<<clientcert>>", clientCertPath)
 				}
 				if test.clientKey != "" {
 					clientKeyPath := fmt.Sprintf("%s/client.key", dir)
-					if err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), 0600); err != nil {
+					if err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().FilePermission); err != nil {
 						t.Fatalf("Failed to write client key: %v", err)
 					}
 					test.opts = strings.ReplaceAll(test.opts, "<<clientkey>>", clientKeyPath)

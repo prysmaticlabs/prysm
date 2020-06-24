@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -35,7 +36,7 @@ func (kv *Store) Backup(ctx context.Context) error {
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
 	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
 
-	copyDB, err := bolt.Open(backupPath, 0600, nil)
+	copyDB, err := bolt.Open(backupPath, params.BeaconIoConfig().FilePermission, nil)
 	if err != nil {
 		panic(err)
 	}

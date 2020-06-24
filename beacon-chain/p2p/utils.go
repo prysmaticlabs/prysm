@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/iputils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -76,7 +77,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		}
 		dst := make([]byte, hex.EncodedLen(len(rawbytes)))
 		hex.Encode(dst, rawbytes)
-		if err = ioutil.WriteFile(defaultKeyPath, dst, 0600); err != nil {
+		if err = ioutil.WriteFile(defaultKeyPath, dst, params.BeaconIoConfig().FilePermission); err != nil {
 			return nil, err
 		}
 		convertedKey := convertFromInterfacePrivKey(priv)
@@ -127,7 +128,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err = ioutil.WriteFile(defaultKeyPath, dst, 0600); err != nil {
+		if err = ioutil.WriteFile(defaultKeyPath, dst, params.BeaconIoConfig().FilePermission); err != nil {
 			return nil, err
 		}
 		return metaData, nil
