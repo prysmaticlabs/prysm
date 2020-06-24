@@ -283,7 +283,6 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 				switch fsm.state {
 				case stateNew, stateScheduled, stateDataParsed:
 					return m.state, nil
-				default:
 				}
 			}
 		}

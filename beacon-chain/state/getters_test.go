@@ -85,3 +85,10 @@ func TestReadOnlyValidator_NoPanic(t *testing.T) {
 		t.Error("Expected nil result")
 	}
 }
+
+func TestReadOnlyValidator_ActivationEligibilityEpochNoPanic(t *testing.T) {
+	v := &ReadOnlyValidator{}
+	if v.ActivationEligibilityEpoch() != 0 {
+		t.Error("Expected 0 and not panic")
+	}
+}

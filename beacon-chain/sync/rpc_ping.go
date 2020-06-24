@@ -12,7 +12,7 @@ import (
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
-func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	setRPCStreamDeadlines(stream)
 
 	m, ok := msg.(*uint64)
@@ -22,7 +22,7 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		}
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
-	valid, err := r.validateSequenceNum(*m, stream.Conn().RemotePeer())
+	valid, err := s.validateSequenceNum(*m, stream.Conn().RemotePeer())
 	if err != nil {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
@@ -35,7 +35,7 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		}
 		return err
 	}
-	if _, err := r.p2p.Encoding().EncodeWithLength(stream, r.p2p.MetadataSeq()); err != nil {
+	if _, err := s.p2p.Encoding().EncodeWithLength(stream, s.p2p.MetadataSeq()); err != nil {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
 		}
@@ -60,24 +60,24 @@ func (r *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		// New context so the calling function doesn't cancel on us.
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
-		md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+		md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
 		if err != nil {
 			log.WithField("peer", stream.Conn().RemotePeer()).WithError(err).Debug("Failed to send metadata request")
 			return
 		}
 		// update metadata if there is no error
-		r.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+		s.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
 	}()
 
 	return nil
 }
 
-func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
+func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	metadataSeq := r.p2p.MetadataSeq()
-	stream, err := r.p2p.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
+	metadataSeq := s.p2p.MetadataSeq()
+	stream, err := s.p2p.Send(ctx, &metadataSeq, p2p.RPCPingTopic, id)
 	if err != nil {
 		return err
 	}
@@ -87,40 +87,40 @@ func (r *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		}
 	}()
 
-	code, errMsg, err := ReadStatusCode(stream, r.p2p.Encoding())
+	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
 	if err != nil {
 		return err
 	}
 
 	if code != 0 {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 	msg := new(uint64)
-	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return err
 	}
-	valid, err := r.validateSequenceNum(*msg, stream.Conn().RemotePeer())
+	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
 	if err != nil {
-		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return err
 	}
 	if valid {
 		return nil
 	}
-	md, err := r.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
+	md, err := s.sendMetaDataRequest(ctx, stream.Conn().RemotePeer())
 	if err != nil {
 		// do not increment bad responses, as its
 		// already done in the request method.
 		return err
 	}
-	r.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
+	s.p2p.Peers().SetMetadata(stream.Conn().RemotePeer(), md)
 	return nil
 }
 
 // validates the peer's sequence number.
-func (r *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
-	md, err := r.p2p.Peers().Metadata(id)
+func (s *Service) validateSequenceNum(seq uint64, id peer.ID) (bool, error) {
+	md, err := s.p2p.Peers().Metadata(id)
 	if err != nil {
 		return false, err
 	}

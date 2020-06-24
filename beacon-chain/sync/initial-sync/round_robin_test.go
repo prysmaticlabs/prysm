@@ -231,7 +231,7 @@ func TestService_roundRobinSync(t *testing.T) {
 			cache.initializeRootCache(tt.expectedBlockSlots, t)
 
 			p := p2pt.NewTestP2P(t)
-			beaconDB := dbtest.SetupDB(t)
+			beaconDB, _ := dbtest.SetupDB(t)
 
 			connectPeers(t, p, tt.peers, p.Peers())
 			cache.RLock()
@@ -283,7 +283,7 @@ func TestService_roundRobinSync(t *testing.T) {
 }
 
 func TestService_processBlock(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
+	beaconDB, _ := dbtest.SetupDB(t)
 	genesisBlk := &eth.BeaconBlock{
 		Slot: 0,
 	}

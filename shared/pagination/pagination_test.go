@@ -48,6 +48,14 @@ func TestStartAndEndPage(t *testing.T) {
 			start:     99,
 			end:       100,
 		},
+		{
+			token:     "34",
+			pageSize:  500,
+			totalSize: 17500,
+			nextToken: "",
+			start:     17000,
+			end:       17500,
+		},
 	}
 
 	for _, test := range tests {

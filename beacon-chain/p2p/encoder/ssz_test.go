@@ -13,36 +13,14 @@ import (
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
-	testRoundTrip(t, e)
 	testRoundTripWithLength(t, e)
 	testRoundTripWithGossip(t, e)
 }
 
 func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: true}
-	testRoundTrip(t, e)
 	testRoundTripWithLength(t, e)
 	testRoundTripWithGossip(t, e)
-}
-
-func testRoundTrip(t *testing.T, e *encoder.SszNetworkEncoder) {
-	buf := new(bytes.Buffer)
-	msg := &testpb.TestSimpleMessage{
-		Foo: []byte("fooooo"),
-		Bar: 9001,
-	}
-	_, err := e.Encode(buf, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	decoded := &testpb.TestSimpleMessage{}
-	if err := e.Decode(buf.Bytes(), decoded); err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(decoded, msg) {
-		t.Logf("decoded=%+v\n", decoded)
-		t.Error("Decoded message is not the same as original")
-	}
 }
 
 func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
@@ -111,13 +89,13 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 	}
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
 	maxLength := uint64(5)
-	_, err := e.Encode(buf, msg)
+	_, err := e.EncodeGossip(buf, msg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	decoded := &testpb.TestSimpleMessage{}
 	err = e.DecodeWithMaxLength(buf, decoded, maxLength)
-	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", maxLength)
+	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxLength)
 	if err == nil {
 		t.Fatalf("wanted this error %s but got nothing", wanted)
 	}

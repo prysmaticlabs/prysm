@@ -108,7 +108,7 @@ type Service struct {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
-	// Intialize block limits.
+	// Initialize block limits.
 	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
 	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
 
@@ -140,39 +140,44 @@ func NewRegularSync(cfg *Config) *Service {
 }
 
 // Start the regular sync service.
-func (r *Service) Start() {
-	if err := r.initCaches(); err != nil {
+func (s *Service) Start() {
+	if err := s.initCaches(); err != nil {
 		panic(err)
 	}
 
-	r.p2p.AddConnectionHandler(r.reValidatePeer, r.sendGenericGoodbyeMessage)
-	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
-	r.p2p.AddPingMethod(r.sendPingRequest)
-	r.processPendingBlocksQueue()
-	r.processPendingAttsQueue()
-	r.maintainPeerStatuses()
-	r.resyncIfBehind()
+	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGenericGoodbyeMessage)
+	s.p2p.AddPingMethod(s.sendPingRequest)
+	s.processPendingBlocksQueue()
+	s.processPendingAttsQueue()
+	s.maintainPeerStatuses()
+	s.resyncIfBehind()
 
 	// Update sync metrics.
-	runutil.RunEvery(r.ctx, time.Second*10, r.updateMetrics)
+	runutil.RunEvery(s.ctx, time.Second*10, s.updateMetrics)
 }
 
 // Stop the regular sync service.
-func (r *Service) Stop() error {
-	defer r.cancel()
+func (s *Service) Stop() error {
+	defer func() {
+		if s.blocksRateLimiter != nil {
+			s.blocksRateLimiter.Free()
+			s.blocksRateLimiter = nil
+		}
+	}()
+	defer s.cancel()
 	return nil
 }
 
 // Status of the currently running regular sync service.
-func (r *Service) Status() error {
-	if r.chainStarted {
-		if r.initialSync.Syncing() {
+func (s *Service) Status() error {
+	if s.chainStarted {
+		if s.initialSync.Syncing() {
 			return errors.New("waiting for initial sync")
 		}
 		// If our head slot is on a previous epoch and our peers are reporting their head block are
 		// in the most recent epoch, then we might be out of sync.
-		if headEpoch := helpers.SlotToEpoch(r.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(r.chain.CurrentSlot()) &&
-			headEpoch+1 < r.p2p.Peers().CurrentEpoch() {
+		if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
+			headEpoch+1 < s.p2p.Peers().CurrentEpoch() {
 			return errors.New("out of sync")
 		}
 	}
@@ -181,7 +186,7 @@ func (r *Service) Status() error {
 
 // This initializes the caches to update seen beacon objects coming in from the wire
 // and prevent DoS.
-func (r *Service) initCaches() error {
+func (s *Service) initCaches() error {
 	blkCache, err := lru.New(seenBlockSize)
 	if err != nil {
 		return err
@@ -202,21 +207,21 @@ func (r *Service) initCaches() error {
 	if err != nil {
 		return err
 	}
-	r.seenBlockCache = blkCache
-	r.seenAttestationCache = attCache
-	r.seenExitCache = exitCache
-	r.seenAttesterSlashingCache = attesterSlashingCache
-	r.seenProposerSlashingCache = proposerSlashingCache
+	s.seenBlockCache = blkCache
+	s.seenAttestationCache = attCache
+	s.seenExitCache = exitCache
+	s.seenAttesterSlashingCache = attesterSlashingCache
+	s.seenProposerSlashingCache = proposerSlashingCache
 
 	return nil
 }
 
-func (r *Service) registerHandlers() {
+func (s *Service) registerHandlers() {
 	// Wait until chain start.
 	stateChannel := make(chan *feed.Event, 1)
-	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	for r.chainStarted == false {
+	for s.chainStarted == false {
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.Initialized {
@@ -228,16 +233,16 @@ func (r *Service) registerHandlers() {
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 
 				// Register respective rpc and pubsub handlers at state initialized event.
-				r.registerRPCHandlers()
-				r.registerSubscribers()
+				s.registerRPCHandlers()
+				s.registerSubscribers()
 
 				if data.StartTime.After(roughtime.Now()) {
 					stateSub.Unsubscribe()
 					time.Sleep(roughtime.Until(data.StartTime))
 				}
-				r.chainStarted = true
+				s.chainStarted = true
 			}
-		case <-r.ctx.Done():
+		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():

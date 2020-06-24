@@ -16,7 +16,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -26,8 +25,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -36,7 +37,7 @@ import (
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -68,7 +69,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Genesis(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
@@ -155,7 +156,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 }
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := uint64(8)
@@ -205,7 +206,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 }
 
 func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	someRoot := [32]byte{1, 2, 3}
@@ -330,7 +331,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := params.BeaconConfig().SlotsPerEpoch * 4
@@ -448,7 +449,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 	testutil.NewBeaconBlock()
 	count := uint64(1)
@@ -500,9 +501,9 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
-	exceedsMax := int32(featureconfig.Get().MaxRPCPageSize + 1)
+	exceedsMax := int32(cmd.Get().MaxRPCPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, featureconfig.Get().MaxRPCPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -510,7 +511,7 @@ func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
-	db := dbTest.SetupDB(t)
+	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
 
 	count := uint64(params.BeaconConfig().DefaultPageSize)
@@ -609,7 +610,7 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
 	numValidators := uint64(128)
 	state, _ := testutil.DeterministicGenesisState(t, numValidators)
@@ -617,7 +618,7 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &chainMock.ChainService{State: state},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 	_, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
@@ -641,7 +642,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	defer resetCfg()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
@@ -733,7 +734,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &chainMock.ChainService{State: state},
-		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, sc),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: targetRoot1[:],
@@ -782,7 +783,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	defer resetCfg()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 
@@ -854,7 +855,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		GenesisTimeFetcher: &chainMock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(db, sc),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
@@ -886,9 +887,9 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
-	exceedsMax := int32(featureconfig.Get().MaxRPCPageSize + 1)
+	exceedsMax := int32(cmd.Get().MaxRPCPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, featureconfig.Get().MaxRPCPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
 	req := &ethpb.AttestationPoolRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -1001,7 +1002,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 				PageSize:  int32(numAtts),
 			},
 			res: &ethpb.AttestationPoolResponse{
-				NextPageToken: "1",
+				NextPageToken: "",
 				TotalSize:     int32(numAtts),
 			},
 		},
@@ -1053,7 +1054,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	db := dbTest.SetupDB(t)
+	db, sc := dbTest.SetupDB(t)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1154,11 +1155,11 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		},
 		AttestationNotifier:         chainService.OperationNotifier(),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
-		StateGen:                    stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:                    stategen.New(db, sc),
 	}
 
 	for dataRoot, sameDataAtts := range atts {
-		aggAtts, err := helpers.AggregateAttestations(sameDataAtts)
+		aggAtts, err := attaggregation.Aggregate(sameDataAtts)
 		if err != nil {
 			t.Fatal(err)
 		}

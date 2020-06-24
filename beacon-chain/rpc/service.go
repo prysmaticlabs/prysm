@@ -291,6 +291,8 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.genesisTimeFetcher,
 			StateGen:           s.stateGen,
 			HeadFetcher:        s.headFetcher,
+			PeerManager:        s.peerManager,
+			PeersFetcher:       s.peersFetcher,
 		}
 		pbrpc.RegisterDebugServer(s.grpcServer, debugServer)
 	}

@@ -28,7 +28,7 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 	if elements == nil {
 		return &FieldTrie{
 			field:     field,
-			reference: &reference{1},
+			reference: &reference{refs: 1},
 			Mutex:     new(sync.Mutex),
 		}, nil
 	}
@@ -45,14 +45,14 @@ func NewFieldTrie(field fieldIndex, elements interface{}, length uint64) (*Field
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayer(fieldRoots, length),
 			field:       field,
-			reference:   &reference{1},
+			reference:   &reference{refs: 1},
 			Mutex:       new(sync.Mutex),
 		}, nil
 	case compositeArray:
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
-			reference:   &reference{1},
+			reference:   &reference{refs: 1},
 			Mutex:       new(sync.Mutex),
 		}, nil
 	default:
@@ -104,7 +104,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:     f.field,
-			reference: &reference{1},
+			reference: &reference{refs: 1},
 			Mutex:     new(sync.Mutex),
 		}
 	}
@@ -121,7 +121,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	return &FieldTrie{
 		fieldLayers: dstFieldTrie,
 		field:       f.field,
-		reference:   &reference{1},
+		reference:   &reference{refs: 1},
 		Mutex:       new(sync.Mutex),
 	}
 }

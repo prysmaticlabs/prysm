@@ -13,8 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -56,9 +58,9 @@ func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethp
 func (bs *Server) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	if int(req.PageSize) > featureconfig.Get().MaxRPCPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, featureconfig.Get().MaxRPCPageSize)
+			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 	var blocks []*ethpb.SignedBeaconBlock
 	var err error
@@ -338,7 +340,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
-				aggAtts, err := helpers.AggregateAttestations(atts)
+				aggAtts, err := attaggregation.Aggregate(atts)
 				if err != nil {
 					log.WithError(err).Error("Could not aggregate collected attestations")
 					continue
@@ -380,12 +382,12 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 func (bs *Server) AttestationPool(
 	ctx context.Context, req *ethpb.AttestationPoolRequest,
 ) (*ethpb.AttestationPoolResponse, error) {
-	if int(req.PageSize) > featureconfig.Get().MaxRPCPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Requested page size %d can not be greater than max size %d",
 			req.PageSize,
-			featureconfig.Get().MaxRPCPageSize,
+			cmd.Get().MaxRPCPageSize,
 		)
 	}
 	atts := bs.AttestationsPool.AggregatedAttestations()

@@ -34,7 +34,7 @@ func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, s
 	end := start + pageSize
 	nextPageToken := strconv.Itoa(token + 1)
 
-	if end > totalSize {
+	if end >= totalSize {
 		end = totalSize
 		nextPageToken = "" // Return an empty next page token for the last page of a set
 	}

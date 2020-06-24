@@ -8,6 +8,8 @@ import (
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
+	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -467,6 +469,243 @@ func (m *ProtoArrayNode) GetBestDescendant() uint64 {
 	return 0
 }
 
+type DebugPeerResponses struct {
+	Responses            []*DebugPeerResponse `protobuf:"bytes,1,rep,name=responses,proto3" json:"responses,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
+}
+
+func (m *DebugPeerResponses) Reset()         { *m = DebugPeerResponses{} }
+func (m *DebugPeerResponses) String() string { return proto.CompactTextString(m) }
+func (*DebugPeerResponses) ProtoMessage()    {}
+func (*DebugPeerResponses) Descriptor() ([]byte, []int) {
+	return fileDescriptor_851e5cb2de3d61dd, []int{6}
+}
+func (m *DebugPeerResponses) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DebugPeerResponses) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DebugPeerResponses.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DebugPeerResponses) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DebugPeerResponses.Merge(m, src)
+}
+func (m *DebugPeerResponses) XXX_Size() int {
+	return m.Size()
+}
+func (m *DebugPeerResponses) XXX_DiscardUnknown() {
+	xxx_messageInfo_DebugPeerResponses.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DebugPeerResponses proto.InternalMessageInfo
+
+func (m *DebugPeerResponses) GetResponses() []*DebugPeerResponse {
+	if m != nil {
+		return m.Responses
+	}
+	return nil
+}
+
+type DebugPeerResponse struct {
+	ListeningAddresses   []string                    `protobuf:"bytes,1,rep,name=listening_addresses,json=listeningAddresses,proto3" json:"listening_addresses,omitempty"`
+	Direction            v1alpha1.PeerDirection      `protobuf:"varint,2,opt,name=direction,proto3,enum=ethereum.eth.v1alpha1.PeerDirection" json:"direction,omitempty"`
+	ConnectionState      v1alpha1.ConnectionState    `protobuf:"varint,3,opt,name=connection_state,json=connectionState,proto3,enum=ethereum.eth.v1alpha1.ConnectionState" json:"connection_state,omitempty"`
+	PeerId               string                      `protobuf:"bytes,4,opt,name=peer_id,json=peerId,proto3" json:"peer_id,omitempty"`
+	Enr                  string                      `protobuf:"bytes,5,opt,name=enr,proto3" json:"enr,omitempty"`
+	PeerInfo             *DebugPeerResponse_PeerInfo `protobuf:"bytes,6,opt,name=peer_info,json=peerInfo,proto3" json:"peer_info,omitempty"`
+	PeerStatus           *v1.Status                  `protobuf:"bytes,7,opt,name=peer_status,json=peerStatus,proto3" json:"peer_status,omitempty"`
+	LastUpdated          uint64                      `protobuf:"varint,8,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
+	XXX_unrecognized     []byte                      `json:"-"`
+	XXX_sizecache        int32                       `json:"-"`
+}
+
+func (m *DebugPeerResponse) Reset()         { *m = DebugPeerResponse{} }
+func (m *DebugPeerResponse) String() string { return proto.CompactTextString(m) }
+func (*DebugPeerResponse) ProtoMessage()    {}
+func (*DebugPeerResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_851e5cb2de3d61dd, []int{7}
+}
+func (m *DebugPeerResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DebugPeerResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DebugPeerResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DebugPeerResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DebugPeerResponse.Merge(m, src)
+}
+func (m *DebugPeerResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *DebugPeerResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_DebugPeerResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DebugPeerResponse proto.InternalMessageInfo
+
+func (m *DebugPeerResponse) GetListeningAddresses() []string {
+	if m != nil {
+		return m.ListeningAddresses
+	}
+	return nil
+}
+
+func (m *DebugPeerResponse) GetDirection() v1alpha1.PeerDirection {
+	if m != nil {
+		return m.Direction
+	}
+	return v1alpha1.PeerDirection_UNKNOWN
+}
+
+func (m *DebugPeerResponse) GetConnectionState() v1alpha1.ConnectionState {
+	if m != nil {
+		return m.ConnectionState
+	}
+	return v1alpha1.ConnectionState_DISCONNECTED
+}
+
+func (m *DebugPeerResponse) GetPeerId() string {
+	if m != nil {
+		return m.PeerId
+	}
+	return ""
+}
+
+func (m *DebugPeerResponse) GetEnr() string {
+	if m != nil {
+		return m.Enr
+	}
+	return ""
+}
+
+func (m *DebugPeerResponse) GetPeerInfo() *DebugPeerResponse_PeerInfo {
+	if m != nil {
+		return m.PeerInfo
+	}
+	return nil
+}
+
+func (m *DebugPeerResponse) GetPeerStatus() *v1.Status {
+	if m != nil {
+		return m.PeerStatus
+	}
+	return nil
+}
+
+func (m *DebugPeerResponse) GetLastUpdated() uint64 {
+	if m != nil {
+		return m.LastUpdated
+	}
+	return 0
+}
+
+type DebugPeerResponse_PeerInfo struct {
+	Metadata             *v1.MetaData `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Protocols            []string     `protobuf:"bytes,2,rep,name=protocols,proto3" json:"protocols,omitempty"`
+	FaultCount           uint64       `protobuf:"varint,3,opt,name=fault_count,json=faultCount,proto3" json:"fault_count,omitempty"`
+	ProtocolVersion      string       `protobuf:"bytes,4,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	AgentVersion         string       `protobuf:"bytes,5,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
+	PeerLatency          uint64       `protobuf:"varint,6,opt,name=peer_latency,json=peerLatency,proto3" json:"peer_latency,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
+}
+
+func (m *DebugPeerResponse_PeerInfo) Reset()         { *m = DebugPeerResponse_PeerInfo{} }
+func (m *DebugPeerResponse_PeerInfo) String() string { return proto.CompactTextString(m) }
+func (*DebugPeerResponse_PeerInfo) ProtoMessage()    {}
+func (*DebugPeerResponse_PeerInfo) Descriptor() ([]byte, []int) {
+	return fileDescriptor_851e5cb2de3d61dd, []int{7, 0}
+}
+func (m *DebugPeerResponse_PeerInfo) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DebugPeerResponse_PeerInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DebugPeerResponse_PeerInfo.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DebugPeerResponse_PeerInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DebugPeerResponse_PeerInfo.Merge(m, src)
+}
+func (m *DebugPeerResponse_PeerInfo) XXX_Size() int {
+	return m.Size()
+}
+func (m *DebugPeerResponse_PeerInfo) XXX_DiscardUnknown() {
+	xxx_messageInfo_DebugPeerResponse_PeerInfo.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DebugPeerResponse_PeerInfo proto.InternalMessageInfo
+
+func (m *DebugPeerResponse_PeerInfo) GetMetadata() *v1.MetaData {
+	if m != nil {
+		return m.Metadata
+	}
+	return nil
+}
+
+func (m *DebugPeerResponse_PeerInfo) GetProtocols() []string {
+	if m != nil {
+		return m.Protocols
+	}
+	return nil
+}
+
+func (m *DebugPeerResponse_PeerInfo) GetFaultCount() uint64 {
+	if m != nil {
+		return m.FaultCount
+	}
+	return 0
+}
+
+func (m *DebugPeerResponse_PeerInfo) GetProtocolVersion() string {
+	if m != nil {
+		return m.ProtocolVersion
+	}
+	return ""
+}
+
+func (m *DebugPeerResponse_PeerInfo) GetAgentVersion() string {
+	if m != nil {
+		return m.AgentVersion
+	}
+	return ""
+}
+
+func (m *DebugPeerResponse_PeerInfo) GetPeerLatency() uint64 {
+	if m != nil {
+		return m.PeerLatency
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterEnum("ethereum.beacon.rpc.v1.LoggingLevelRequest_Level", LoggingLevelRequest_Level_name, LoggingLevelRequest_Level_value)
 	proto.RegisterType((*BeaconStateRequest)(nil), "ethereum.beacon.rpc.v1.BeaconStateRequest")
@@ -476,60 +715,87 @@ func init() {
 	proto.RegisterType((*ProtoArrayForkChoiceResponse)(nil), "ethereum.beacon.rpc.v1.ProtoArrayForkChoiceResponse")
 	proto.RegisterMapType((map[string]uint64)(nil), "ethereum.beacon.rpc.v1.ProtoArrayForkChoiceResponse.IndicesEntry")
 	proto.RegisterType((*ProtoArrayNode)(nil), "ethereum.beacon.rpc.v1.ProtoArrayNode")
+	proto.RegisterType((*DebugPeerResponses)(nil), "ethereum.beacon.rpc.v1.DebugPeerResponses")
+	proto.RegisterType((*DebugPeerResponse)(nil), "ethereum.beacon.rpc.v1.DebugPeerResponse")
+	proto.RegisterType((*DebugPeerResponse_PeerInfo)(nil), "ethereum.beacon.rpc.v1.DebugPeerResponse.PeerInfo")
 }
 
 func init() { proto.RegisterFile("proto/beacon/rpc/v1/debug.proto", fileDescriptor_851e5cb2de3d61dd) }
 
 var fileDescriptor_851e5cb2de3d61dd = []byte{
-	// 754 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x54, 0xcf, 0x4f, 0xdb, 0x48,
-	0x14, 0xc6, 0x89, 0x13, 0xc8, 0x10, 0x85, 0xec, 0x2c, 0xca, 0x7a, 0x03, 0x84, 0xac, 0x59, 0x01,
-	0xda, 0x55, 0x6d, 0x85, 0xf6, 0x50, 0x71, 0x23, 0x10, 0x02, 0x12, 0xa2, 0x95, 0x43, 0x2f, 0xe5,
-	0x10, 0x39, 0xf6, 0x4b, 0xec, 0xc6, 0x78, 0x8c, 0x3d, 0x4e, 0x9b, 0xf6, 0x86, 0xaa, 0xf6, 0xd8,
-	0x43, 0x0f, 0xfd, 0x97, 0x7a, 0xac, 0xd4, 0x7f, 0xa0, 0x42, 0xfd, 0x43, 0xaa, 0x99, 0x71, 0x42,
-	0x10, 0x89, 0xfa, 0x43, 0xbd, 0xcd, 0xf7, 0xbd, 0x6f, 0xbe, 0x37, 0xf3, 0x66, 0xde, 0x43, 0xeb,
-	0x41, 0x48, 0x28, 0xd1, 0x3b, 0x60, 0x5a, 0xc4, 0xd7, 0xc3, 0xc0, 0xd2, 0x07, 0x35, 0xdd, 0x86,
-	0x4e, 0xdc, 0xd3, 0x78, 0x04, 0x97, 0x80, 0x3a, 0x10, 0x42, 0x7c, 0xa1, 0x09, 0x8d, 0x16, 0x06,
-	0x96, 0x36, 0xa8, 0x95, 0x57, 0x7b, 0x84, 0xf4, 0x3c, 0xd0, 0xcd, 0xc0, 0xd5, 0x4d, 0xdf, 0x27,
-	0xd4, 0xa4, 0x2e, 0xf1, 0x23, 0xb1, 0xab, 0xbc, 0x92, 0x44, 0x39, 0xea, 0xc4, 0x5d, 0x1d, 0x2e,
-	0x02, 0x3a, 0x14, 0x41, 0xf5, 0x1c, 0xe1, 0x3a, 0xf7, 0x6a, 0x51, 0x93, 0x82, 0x01, 0x97, 0x31,
-	0x44, 0x14, 0x2f, 0x23, 0x39, 0xf2, 0x08, 0x55, 0xa4, 0xaa, 0xb4, 0x2d, 0x1f, 0xcd, 0x19, 0x1c,
-	0xe1, 0x75, 0x84, 0x3a, 0x1e, 0xb1, 0xfa, 0xed, 0x90, 0x10, 0xaa, 0xa4, 0xaa, 0xd2, 0x76, 0xfe,
-	0x68, 0xce, 0xc8, 0x71, 0xce, 0x20, 0x84, 0xd6, 0x0b, 0x28, 0x7f, 0x19, 0x43, 0x38, 0x6c, 0x77,
-	0x5d, 0x8f, 0x42, 0xa8, 0xde, 0x43, 0xf9, 0x3a, 0x0f, 0x26, 0xb6, 0x6b, 0xb7, 0x0c, 0x98, 0x79,
-	0x7e, 0x62, 0xbb, 0xba, 0x85, 0x16, 0x5b, 0xad, 0xa7, 0x06, 0x44, 0x01, 0xf1, 0x23, 0xc0, 0x0a,
-	0x9a, 0x07, 0xdf, 0x22, 0x36, 0xd8, 0x89, 0x74, 0x04, 0xd5, 0xb7, 0x12, 0xfa, 0xf3, 0x84, 0xf4,
-	0x7a, 0xae, 0xdf, 0x3b, 0x81, 0x01, 0x78, 0x23, 0xff, 0x26, 0xca, 0x78, 0x0c, 0x73, 0x7d, 0x61,
-	0xa7, 0xa6, 0x4d, 0xaf, 0x97, 0x36, 0x65, 0xaf, 0x26, 0x80, 0xd8, 0xaf, 0x6e, 0xa1, 0x0c, 0xc7,
-	0x78, 0x01, 0xc9, 0xc7, 0xa7, 0x87, 0x8f, 0x8a, 0x73, 0x38, 0x87, 0x32, 0x07, 0x8d, 0xfa, 0x93,
-	0x66, 0x51, 0x62, 0xcb, 0x33, 0x63, 0x6f, 0xbf, 0x51, 0x4c, 0xa9, 0x6f, 0xd2, 0x68, 0xf5, 0x31,
-	0x2b, 0xe4, 0x5e, 0x18, 0x9a, 0xc3, 0x43, 0x12, 0xf6, 0xf7, 0x1d, 0xe2, 0x5a, 0x30, 0xbe, 0xc4,
-	0x16, 0x5a, 0x0a, 0xc2, 0xd8, 0x87, 0x36, 0x75, 0x42, 0x88, 0x1c, 0xe2, 0x89, 0xcb, 0xc8, 0x46,
-	0x81, 0xd3, 0x67, 0x23, 0x96, 0x09, 0x9f, 0xc5, 0x11, 0x75, 0xbb, 0x2e, 0xd8, 0x6d, 0x08, 0x88,
-	0xe5, 0xf0, 0x0a, 0xcb, 0x46, 0x61, 0x4c, 0x37, 0x18, 0xcb, 0x84, 0x5d, 0xd7, 0x37, 0x3d, 0xf7,
-	0xe5, 0x58, 0x98, 0x16, 0xc2, 0x31, 0x2d, 0x84, 0x06, 0xfa, 0x83, 0xbf, 0x71, 0xdb, 0x64, 0x67,
-	0x6b, 0xfb, 0xc4, 0x86, 0x48, 0x91, 0xab, 0xe9, 0xed, 0xc5, 0x9d, 0xcd, 0x59, 0x95, 0xb9, 0xb9,
-	0xcb, 0x29, 0xb1, 0xc1, 0x58, 0x0a, 0x6e, 0xe1, 0x08, 0x9f, 0xa3, 0x79, 0xd7, 0xb7, 0x5d, 0x0b,
-	0x22, 0x25, 0xc3, 0x9d, 0xf6, 0xbe, 0xef, 0x74, 0xb7, 0x2a, 0xda, 0xb1, 0xf0, 0x68, 0xf8, 0x34,
-	0x1c, 0x1a, 0x23, 0xc7, 0xf2, 0x2e, 0xca, 0x4f, 0x06, 0x70, 0x11, 0xa5, 0xfb, 0x30, 0xe4, 0xf5,
-	0xca, 0x19, 0x6c, 0x89, 0x97, 0x51, 0x66, 0x60, 0x7a, 0x31, 0x24, 0xa5, 0x11, 0x60, 0x37, 0xf5,
-	0x50, 0x52, 0xaf, 0x52, 0xa8, 0x70, 0xfb, 0xf0, 0x18, 0x4f, 0x7e, 0xe2, 0xe4, 0x0b, 0x63, 0x24,
-	0xdf, 0x7c, 0x5e, 0x83, 0xaf, 0x71, 0x09, 0x65, 0x03, 0x33, 0x04, 0x9f, 0x26, 0x75, 0x4c, 0xd0,
-	0xb4, 0x17, 0x91, 0x7f, 0xf4, 0x45, 0x32, 0x53, 0x5f, 0xa4, 0x84, 0xb2, 0xcf, 0xc1, 0xed, 0x39,
-	0x54, 0xc9, 0x8a, 0x4c, 0x02, 0xf1, 0xbe, 0x80, 0x88, 0xb6, 0x2d, 0xc7, 0xf5, 0x6c, 0x65, 0x9e,
-	0xc7, 0x72, 0x8c, 0xd9, 0x67, 0x04, 0xf3, 0xe7, 0x61, 0x1b, 0x22, 0x0b, 0x7c, 0xdb, 0xf4, 0xa9,
-	0xb2, 0x20, 0xfc, 0x19, 0x7d, 0x30, 0x66, 0x77, 0x3e, 0xc8, 0x28, 0x73, 0xc0, 0xe6, 0x05, 0x7e,
-	0x2d, 0xa1, 0x42, 0x13, 0xe8, 0x44, 0x6b, 0xe3, 0xff, 0x66, 0xbd, 0xd4, 0xdd, 0xfe, 0x2f, 0x6f,
-	0xcc, 0xd2, 0x4e, 0xf4, 0xa7, 0xfa, 0xcf, 0xd5, 0xe7, 0xaf, 0xef, 0x53, 0x2b, 0xf8, 0x6f, 0x1d,
-	0xa8, 0xa3, 0x0f, 0x6a, 0xa6, 0x17, 0x38, 0x66, 0x32, 0xb0, 0xf4, 0x88, 0xe7, 0x7c, 0x81, 0x16,
-	0xd8, 0x29, 0x58, 0x87, 0xe3, 0x7f, 0x67, 0xe6, 0x9f, 0x18, 0x11, 0xbf, 0x21, 0x33, 0x9f, 0x27,
-	0xf8, 0x15, 0x5a, 0x6a, 0x01, 0x9d, 0x6c, 0x74, 0xfc, 0xff, 0x4f, 0x8c, 0x83, 0x72, 0x49, 0x13,
-	0x53, 0x53, 0x1b, 0x4d, 0x4d, 0xad, 0xc1, 0xa6, 0xa6, 0xba, 0xc1, 0x53, 0xaf, 0xa9, 0x2b, 0xd3,
-	0x52, 0x7b, 0xc2, 0x08, 0xbf, 0x93, 0xd0, 0x5f, 0x4d, 0xa0, 0xd3, 0x5a, 0x00, 0xcf, 0x30, 0x2e,
-	0x3f, 0xf8, 0x95, 0x46, 0x52, 0x37, 0xf9, 0x71, 0xaa, 0xb8, 0x32, 0xed, 0x38, 0x5d, 0x12, 0xf6,
-	0x2d, 0xae, 0xaf, 0xe7, 0x3f, 0x5e, 0x57, 0xa4, 0x4f, 0xd7, 0x15, 0xe9, 0xcb, 0x75, 0x45, 0xea,
-	0x64, 0x79, 0xee, 0xfb, 0xdf, 0x02, 0x00, 0x00, 0xff, 0xff, 0x2e, 0x2a, 0x67, 0x24, 0x71, 0x06,
-	0x00, 0x00,
+	// 1150 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0xcd, 0x6e, 0x1c, 0x45,
+	0x10, 0xce, 0xd8, 0xbb, 0xb6, 0xa7, 0x76, 0x59, 0x3b, 0x9d, 0xc8, 0x59, 0x36, 0x89, 0xe3, 0x4c,
+	0xa2, 0xfc, 0x21, 0x66, 0xe4, 0x85, 0x03, 0x8a, 0x90, 0x90, 0xff, 0xe2, 0x58, 0x32, 0x49, 0x18,
+	0x27, 0x1c, 0x88, 0xd0, 0xa8, 0x3d, 0x53, 0xbb, 0x3b, 0x78, 0xdc, 0x3d, 0xe9, 0xee, 0x31, 0x38,
+	0xdc, 0x22, 0x44, 0x8e, 0x1c, 0x78, 0x19, 0x1e, 0x81, 0x23, 0x12, 0x2f, 0x80, 0x2c, 0x9e, 0x82,
+	0x13, 0xea, 0xee, 0x9d, 0xfd, 0x91, 0x77, 0x83, 0x41, 0xdc, 0xba, 0xbe, 0xaa, 0xfa, 0xaa, 0xbb,
+	0xaa, 0xba, 0xab, 0xe1, 0x46, 0x2e, 0xb8, 0xe2, 0xc1, 0x01, 0xd2, 0x98, 0xb3, 0x40, 0xe4, 0x71,
+	0x70, 0xbc, 0x16, 0x24, 0x78, 0x50, 0x74, 0x7d, 0xa3, 0x21, 0xcb, 0xa8, 0x7a, 0x28, 0xb0, 0x38,
+	0xf2, 0xad, 0x8d, 0x2f, 0xf2, 0xd8, 0x3f, 0x5e, 0x6b, 0x5d, 0x41, 0xd5, 0x0b, 0x8e, 0xd7, 0x68,
+	0x96, 0xf7, 0xe8, 0x5a, 0xc0, 0x78, 0x82, 0xd6, 0xa1, 0xe5, 0x8d, 0x31, 0xe6, 0xed, 0x5c, 0x33,
+	0x1e, 0xa1, 0x94, 0xb4, 0x8b, 0xb2, 0x6f, 0x73, 0xad, 0xcb, 0x79, 0x37, 0xc3, 0x80, 0xe6, 0x69,
+	0x40, 0x19, 0xe3, 0x8a, 0xaa, 0x94, 0xb3, 0x52, 0x7b, 0xb5, 0xaf, 0x35, 0xd2, 0x41, 0xd1, 0x09,
+	0xf0, 0x28, 0x57, 0x27, 0x56, 0xe9, 0xbd, 0x04, 0xb2, 0x61, 0xa8, 0xf7, 0x15, 0x55, 0x18, 0xe2,
+	0xab, 0x02, 0xa5, 0x22, 0x97, 0xa1, 0x22, 0x33, 0xae, 0x9a, 0xce, 0xaa, 0x73, 0xaf, 0xf2, 0xf8,
+	0x42, 0x68, 0x24, 0x72, 0x03, 0xe0, 0x20, 0xe3, 0xf1, 0x61, 0x24, 0x38, 0x57, 0xcd, 0x99, 0x55,
+	0xe7, 0x5e, 0xfd, 0xf1, 0x85, 0xd0, 0x35, 0x58, 0xc8, 0xb9, 0xda, 0x68, 0x40, 0xfd, 0x55, 0x81,
+	0xe2, 0x24, 0xea, 0xa4, 0x99, 0x42, 0xe1, 0x7d, 0x08, 0xf5, 0x0d, 0xa3, 0xec, 0xd3, 0x5e, 0x1f,
+	0x23, 0xd0, 0xe4, 0xf5, 0x11, 0x77, 0xef, 0x2e, 0xd4, 0xf6, 0xf7, 0xbf, 0x0a, 0x51, 0xe6, 0x9c,
+	0x49, 0x24, 0x4d, 0x98, 0x47, 0x16, 0xf3, 0x04, 0x93, 0xbe, 0x69, 0x29, 0x7a, 0x6f, 0x1d, 0xb8,
+	0xb4, 0xc7, 0xbb, 0xdd, 0x94, 0x75, 0xf7, 0xf0, 0x18, 0xb3, 0x92, 0x7f, 0x07, 0xaa, 0x99, 0x96,
+	0x8d, 0x7d, 0xa3, 0xbd, 0xe6, 0x4f, 0x4e, 0xb6, 0x3f, 0xc1, 0xd7, 0xb7, 0x82, 0xf5, 0xf7, 0xee,
+	0x42, 0xd5, 0xc8, 0x64, 0x01, 0x2a, 0xbb, 0x4f, 0x1e, 0x3d, 0x5d, 0xba, 0x40, 0x5c, 0xa8, 0x6e,
+	0x6d, 0x6f, 0xbc, 0xd8, 0x59, 0x72, 0xf4, 0xf2, 0x79, 0xb8, 0xbe, 0xb9, 0xbd, 0x34, 0xe3, 0xfd,
+	0x38, 0x0b, 0xd7, 0x9e, 0xe9, 0x44, 0xae, 0x0b, 0x41, 0x4f, 0x1e, 0x71, 0x71, 0xb8, 0xd9, 0xe3,
+	0x69, 0x8c, 0x83, 0x43, 0xdc, 0x85, 0xc5, 0x5c, 0x14, 0x0c, 0x23, 0xd5, 0x13, 0x28, 0x7b, 0x3c,
+	0xb3, 0x87, 0xa9, 0x84, 0x0d, 0x03, 0x3f, 0x2f, 0x51, 0x6d, 0xf8, 0x4d, 0x21, 0x55, 0xda, 0x49,
+	0x31, 0x89, 0x30, 0xe7, 0x71, 0xcf, 0x64, 0xb8, 0x12, 0x36, 0x06, 0xf0, 0xb6, 0x46, 0xb5, 0x61,
+	0x27, 0x65, 0x34, 0x4b, 0x5f, 0x0f, 0x0c, 0x67, 0xad, 0xe1, 0x00, 0xb6, 0x86, 0x21, 0x5c, 0x34,
+	0x35, 0x8e, 0xa8, 0xde, 0x5b, 0xa4, 0x7b, 0x4a, 0x36, 0x2b, 0xab, 0xb3, 0xf7, 0x6a, 0xed, 0x3b,
+	0xd3, 0x32, 0x33, 0x3c, 0xcb, 0x13, 0x9e, 0x60, 0xb8, 0x98, 0x8f, 0xc9, 0x92, 0xbc, 0x84, 0xf9,
+	0x94, 0x25, 0x69, 0x8c, 0xb2, 0x59, 0x35, 0x4c, 0xeb, 0xff, 0xcc, 0x74, 0x36, 0x2b, 0xfe, 0xae,
+	0xe5, 0xd8, 0x66, 0x4a, 0x9c, 0x84, 0x25, 0x63, 0xeb, 0x21, 0xd4, 0x47, 0x15, 0x64, 0x09, 0x66,
+	0x0f, 0xf1, 0xc4, 0xe4, 0xcb, 0x0d, 0xf5, 0x92, 0x5c, 0x86, 0xea, 0x31, 0xcd, 0x0a, 0xec, 0xa7,
+	0xc6, 0x0a, 0x0f, 0x67, 0x3e, 0x71, 0xbc, 0x37, 0x33, 0xd0, 0x18, 0xdf, 0x3c, 0x21, 0xa3, 0x4d,
+	0xdc, 0x6f, 0x61, 0x02, 0x95, 0x61, 0xf3, 0x86, 0x66, 0x4d, 0x96, 0x61, 0x2e, 0xa7, 0x02, 0x99,
+	0xea, 0xe7, 0xb1, 0x2f, 0x4d, 0xaa, 0x48, 0xe5, 0xbc, 0x15, 0xa9, 0x4e, 0xac, 0xc8, 0x32, 0xcc,
+	0x7d, 0x8b, 0x69, 0xb7, 0xa7, 0x9a, 0x73, 0x36, 0x92, 0x95, 0xcc, 0xbd, 0x40, 0xa9, 0xa2, 0xb8,
+	0x97, 0x66, 0x49, 0x73, 0xde, 0xe8, 0x5c, 0x8d, 0x6c, 0x6a, 0x40, 0xf3, 0x1b, 0x75, 0x82, 0x32,
+	0x46, 0x96, 0x50, 0xa6, 0x9a, 0x0b, 0x96, 0x5f, 0xc3, 0x5b, 0x03, 0xd4, 0xfb, 0x1a, 0xc8, 0x96,
+	0x7e, 0x6b, 0x9e, 0x21, 0x8a, 0x32, 0xd7, 0x92, 0xec, 0x80, 0x2b, 0x4a, 0xa1, 0xe9, 0x98, 0xaa,
+	0xdd, 0x9f, 0x56, 0xb5, 0x33, 0xee, 0xe1, 0xd0, 0xd7, 0xfb, 0xa5, 0x0a, 0x17, 0xcf, 0x18, 0x90,
+	0x00, 0x2e, 0x65, 0xa9, 0x54, 0xc8, 0x52, 0xd6, 0x8d, 0x68, 0x92, 0x08, 0x94, 0x65, 0x20, 0x37,
+	0x24, 0x03, 0xd5, 0x7a, 0xa9, 0x21, 0x1b, 0xe0, 0x26, 0xa9, 0xc0, 0x58, 0xbf, 0x51, 0xa6, 0x10,
+	0x8d, 0xf6, 0xed, 0xe1, 0x7e, 0x50, 0xf5, 0xfc, 0xf2, 0x1d, 0xf4, 0x75, 0xa0, 0xad, 0xd2, 0x36,
+	0x1c, 0xba, 0x91, 0x2f, 0x60, 0x29, 0xe6, 0x8c, 0x59, 0x29, 0x92, 0xfa, 0xed, 0x32, 0xd5, 0x6b,
+	0x8c, 0xb6, 0xf6, 0x18, 0xd5, 0xe6, 0xc0, 0xdc, 0xbe, 0x74, 0x8b, 0xf1, 0x38, 0x40, 0xae, 0xc0,
+	0x7c, 0x8e, 0x28, 0xa2, 0x34, 0x31, 0x65, 0x76, 0xc3, 0x39, 0x2d, 0xee, 0x26, 0xba, 0x0d, 0x91,
+	0x09, 0x53, 0x52, 0x37, 0xd4, 0x4b, 0xf2, 0x14, 0x5c, 0x6b, 0xca, 0x3a, 0xdc, 0x94, 0xb2, 0xd6,
+	0x6e, 0x9f, 0x3b, 0xa3, 0xe6, 0x50, 0xbb, 0xac, 0xc3, 0xc3, 0x85, 0xbc, 0xbf, 0x22, 0x9f, 0x41,
+	0xcd, 0x10, 0xea, 0x83, 0x14, 0xd2, 0x74, 0x40, 0xad, 0xbd, 0x72, 0x86, 0x32, 0x6f, 0xe7, 0x9a,
+	0x72, 0xdf, 0x58, 0x85, 0xa0, 0x5d, 0xec, 0x9a, 0xdc, 0x84, 0x7a, 0x46, 0xa5, 0x8a, 0x8a, 0x3c,
+	0xa1, 0x0a, 0x93, 0x7e, 0x7f, 0xd4, 0x34, 0xf6, 0xc2, 0x42, 0xad, 0xbf, 0x1c, 0x58, 0x28, 0x43,
+	0x93, 0x4f, 0x61, 0xe1, 0x08, 0x15, 0x4d, 0xa8, 0xa2, 0xe6, 0x7e, 0xd4, 0xda, 0xab, 0xd3, 0xa2,
+	0x7d, 0x8e, 0x8a, 0x6e, 0x51, 0x45, 0xc3, 0x81, 0x07, 0xb9, 0x06, 0xae, 0x79, 0x18, 0x62, 0x9e,
+	0xc9, 0xe6, 0x8c, 0x29, 0xf4, 0x10, 0x20, 0x37, 0xa0, 0xd6, 0xa1, 0x45, 0xa6, 0xa2, 0x98, 0x17,
+	0x83, 0x4b, 0x05, 0x06, 0xda, 0xd4, 0x08, 0xb9, 0x0f, 0x4b, 0xa5, 0x75, 0x74, 0x8c, 0x42, 0xea,
+	0x3e, 0xb0, 0x29, 0x5f, 0x2c, 0xf1, 0x2f, 0x2d, 0x4c, 0x6e, 0xc1, 0x7b, 0xb4, 0x8b, 0x4c, 0x0d,
+	0xec, 0x6c, 0x15, 0xea, 0x06, 0x2c, 0x8d, 0x6e, 0x42, 0xdd, 0x64, 0x2f, 0xa3, 0x0a, 0x59, 0x7c,
+	0xd2, 0xbf, 0x5c, 0x26, 0xa3, 0x7b, 0x16, 0x6a, 0xbf, 0x9d, 0x83, 0xaa, 0xa9, 0x04, 0xf9, 0xc1,
+	0x81, 0xc6, 0x0e, 0xaa, 0x91, 0xa1, 0x47, 0x1e, 0x4c, 0xab, 0xdd, 0xd9, 0xc9, 0xd8, 0xba, 0x35,
+	0xcd, 0x76, 0x64, 0x72, 0x79, 0x37, 0xdf, 0xfc, 0xfe, 0xe7, 0xcf, 0x33, 0x57, 0xc9, 0xfb, 0xc1,
+	0xd8, 0x54, 0x37, 0xff, 0x80, 0xc0, 0x34, 0x2b, 0xf9, 0x0e, 0x16, 0xf4, 0x2e, 0xf4, 0xec, 0x23,
+	0xb7, 0xa7, 0xc6, 0x1f, 0x19, 0x9e, 0xff, 0x43, 0x64, 0x33, 0x69, 0xc9, 0xf7, 0xb0, 0xb8, 0x8f,
+	0x6a, 0x74, 0x04, 0x92, 0x0f, 0xfe, 0xc5, 0xa0, 0x6c, 0x2d, 0xfb, 0xf6, 0x3f, 0xe1, 0x97, 0xff,
+	0x09, 0x7f, 0x5b, 0xff, 0x27, 0xbc, 0x5b, 0x26, 0xf4, 0x75, 0xef, 0xea, 0xa4, 0xd0, 0x99, 0x25,
+	0x22, 0x3f, 0x39, 0x70, 0x65, 0x07, 0xd5, 0xa4, 0xe1, 0x40, 0xa6, 0x10, 0xb7, 0x3e, 0xfe, 0x2f,
+	0x23, 0xc6, 0xbb, 0x63, 0xb6, 0xb3, 0x4a, 0x56, 0x26, 0x6d, 0xa7, 0xc3, 0xc5, 0x61, 0x6c, 0xa3,
+	0x0a, 0x70, 0xf7, 0x52, 0xa9, 0xf4, 0xcd, 0x90, 0x53, 0xb7, 0xf0, 0xe0, 0xdc, 0xb7, 0x5b, 0xbe,
+	0xbb, 0x04, 0xb9, 0x09, 0xf3, 0x1a, 0xe6, 0x75, 0x12, 0x10, 0x05, 0xf1, 0xde, 0xf1, 0xf2, 0x95,
+	0x19, 0x3f, 0xff, 0x6b, 0xed, 0xad, 0x9a, 0xe0, 0x2d, 0xd2, 0x9c, 0x16, 0x7c, 0xa3, 0xfe, 0xeb,
+	0xe9, 0x8a, 0xf3, 0xdb, 0xe9, 0x8a, 0xf3, 0xc7, 0xe9, 0x8a, 0x73, 0x30, 0x67, 0x0e, 0xfa, 0xd1,
+	0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0xb0, 0xb3, 0x9f, 0x03, 0xb8, 0x0a, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -548,6 +814,8 @@ type DebugClient interface {
 	GetBlock(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*SSZResponse, error)
 	SetLoggingLevel(ctx context.Context, in *LoggingLevelRequest, opts ...grpc.CallOption) (*types.Empty, error)
 	GetProtoArrayForkChoice(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*ProtoArrayForkChoiceResponse, error)
+	ListPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error)
+	GetPeer(ctx context.Context, in *v1alpha1.PeerRequest, opts ...grpc.CallOption) (*DebugPeerResponse, error)
 }
 
 type debugClient struct {
@@ -594,12 +862,32 @@ func (c *debugClient) GetProtoArrayForkChoice(ctx context.Context, in *types.Emp
 	return out, nil
 }
 
+func (c *debugClient) ListPeers(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*DebugPeerResponses, error) {
+	out := new(DebugPeerResponses)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/ListPeers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *debugClient) GetPeer(ctx context.Context, in *v1alpha1.PeerRequest, opts ...grpc.CallOption) (*DebugPeerResponse, error) {
+	out := new(DebugPeerResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.Debug/GetPeer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DebugServer is the server API for Debug service.
 type DebugServer interface {
 	GetBeaconState(context.Context, *BeaconStateRequest) (*SSZResponse, error)
 	GetBlock(context.Context, *BlockRequest) (*SSZResponse, error)
 	SetLoggingLevel(context.Context, *LoggingLevelRequest) (*types.Empty, error)
 	GetProtoArrayForkChoice(context.Context, *types.Empty) (*ProtoArrayForkChoiceResponse, error)
+	ListPeers(context.Context, *types.Empty) (*DebugPeerResponses, error)
+	GetPeer(context.Context, *v1alpha1.PeerRequest) (*DebugPeerResponse, error)
 }
 
 // UnimplementedDebugServer can be embedded to have forward compatible implementations.
@@ -617,6 +905,12 @@ func (*UnimplementedDebugServer) SetLoggingLevel(ctx context.Context, req *Loggi
 }
 func (*UnimplementedDebugServer) GetProtoArrayForkChoice(ctx context.Context, req *types.Empty) (*ProtoArrayForkChoiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProtoArrayForkChoice not implemented")
+}
+func (*UnimplementedDebugServer) ListPeers(ctx context.Context, req *types.Empty) (*DebugPeerResponses, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
+}
+func (*UnimplementedDebugServer) GetPeer(ctx context.Context, req *v1alpha1.PeerRequest) (*DebugPeerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeer not implemented")
 }
 
 func RegisterDebugServer(s *grpc.Server, srv DebugServer) {
@@ -695,6 +989,42 @@ func _Debug_GetProtoArrayForkChoice_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Debug_ListPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(types.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DebugServer).ListPeers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.Debug/ListPeers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DebugServer).ListPeers(ctx, req.(*types.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Debug_GetPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1alpha1.PeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DebugServer).GetPeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.Debug/GetPeer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DebugServer).GetPeer(ctx, req.(*v1alpha1.PeerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Debug_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.beacon.rpc.v1.Debug",
 	HandlerType: (*DebugServer)(nil),
@@ -714,6 +1044,14 @@ var _Debug_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetProtoArrayForkChoice",
 			Handler:    _Debug_GetProtoArrayForkChoice_Handler,
+		},
+		{
+			MethodName: "ListPeers",
+			Handler:    _Debug_ListPeers_Handler,
+		},
+		{
+			MethodName: "GetPeer",
+			Handler:    _Debug_GetPeer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1026,6 +1364,208 @@ func (m *ProtoArrayNode) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *DebugPeerResponses) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DebugPeerResponses) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DebugPeerResponses) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Responses) > 0 {
+		for iNdEx := len(m.Responses) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Responses[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintDebug(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DebugPeerResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DebugPeerResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DebugPeerResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.LastUpdated != 0 {
+		i = encodeVarintDebug(dAtA, i, uint64(m.LastUpdated))
+		i--
+		dAtA[i] = 0x40
+	}
+	if m.PeerStatus != nil {
+		{
+			size, err := m.PeerStatus.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintDebug(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.PeerInfo != nil {
+		{
+			size, err := m.PeerInfo.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintDebug(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Enr) > 0 {
+		i -= len(m.Enr)
+		copy(dAtA[i:], m.Enr)
+		i = encodeVarintDebug(dAtA, i, uint64(len(m.Enr)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.PeerId) > 0 {
+		i -= len(m.PeerId)
+		copy(dAtA[i:], m.PeerId)
+		i = encodeVarintDebug(dAtA, i, uint64(len(m.PeerId)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.ConnectionState != 0 {
+		i = encodeVarintDebug(dAtA, i, uint64(m.ConnectionState))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Direction != 0 {
+		i = encodeVarintDebug(dAtA, i, uint64(m.Direction))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.ListeningAddresses) > 0 {
+		for iNdEx := len(m.ListeningAddresses) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.ListeningAddresses[iNdEx])
+			copy(dAtA[i:], m.ListeningAddresses[iNdEx])
+			i = encodeVarintDebug(dAtA, i, uint64(len(m.ListeningAddresses[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DebugPeerResponse_PeerInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DebugPeerResponse_PeerInfo) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DebugPeerResponse_PeerInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.PeerLatency != 0 {
+		i = encodeVarintDebug(dAtA, i, uint64(m.PeerLatency))
+		i--
+		dAtA[i] = 0x30
+	}
+	if len(m.AgentVersion) > 0 {
+		i -= len(m.AgentVersion)
+		copy(dAtA[i:], m.AgentVersion)
+		i = encodeVarintDebug(dAtA, i, uint64(len(m.AgentVersion)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.ProtocolVersion) > 0 {
+		i -= len(m.ProtocolVersion)
+		copy(dAtA[i:], m.ProtocolVersion)
+		i = encodeVarintDebug(dAtA, i, uint64(len(m.ProtocolVersion)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.FaultCount != 0 {
+		i = encodeVarintDebug(dAtA, i, uint64(m.FaultCount))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.Protocols) > 0 {
+		for iNdEx := len(m.Protocols) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Protocols[iNdEx])
+			copy(dAtA[i:], m.Protocols[iNdEx])
+			i = encodeVarintDebug(dAtA, i, uint64(len(m.Protocols[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if m.Metadata != nil {
+		{
+			size, err := m.Metadata.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintDebug(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintDebug(dAtA []byte, offset int, v uint64) int {
 	offset -= sovDebug(v)
 	base := offset
@@ -1185,6 +1725,103 @@ func (m *ProtoArrayNode) Size() (n int) {
 	}
 	if m.BestDescendant != 0 {
 		n += 1 + sovDebug(uint64(m.BestDescendant))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *DebugPeerResponses) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Responses) > 0 {
+		for _, e := range m.Responses {
+			l = e.Size()
+			n += 1 + l + sovDebug(uint64(l))
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *DebugPeerResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.ListeningAddresses) > 0 {
+		for _, s := range m.ListeningAddresses {
+			l = len(s)
+			n += 1 + l + sovDebug(uint64(l))
+		}
+	}
+	if m.Direction != 0 {
+		n += 1 + sovDebug(uint64(m.Direction))
+	}
+	if m.ConnectionState != 0 {
+		n += 1 + sovDebug(uint64(m.ConnectionState))
+	}
+	l = len(m.PeerId)
+	if l > 0 {
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	l = len(m.Enr)
+	if l > 0 {
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	if m.PeerInfo != nil {
+		l = m.PeerInfo.Size()
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	if m.PeerStatus != nil {
+		l = m.PeerStatus.Size()
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	if m.LastUpdated != 0 {
+		n += 1 + sovDebug(uint64(m.LastUpdated))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *DebugPeerResponse_PeerInfo) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Metadata != nil {
+		l = m.Metadata.Size()
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	if len(m.Protocols) > 0 {
+		for _, s := range m.Protocols {
+			l = len(s)
+			n += 1 + l + sovDebug(uint64(l))
+		}
+	}
+	if m.FaultCount != 0 {
+		n += 1 + sovDebug(uint64(m.FaultCount))
+	}
+	l = len(m.ProtocolVersion)
+	if l > 0 {
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	l = len(m.AgentVersion)
+	if l > 0 {
+		n += 1 + l + sovDebug(uint64(l))
+	}
+	if m.PeerLatency != 0 {
+		n += 1 + sovDebug(uint64(m.PeerLatency))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -2004,6 +2641,597 @@ func (m *ProtoArrayNode) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.BestDescendant |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDebug(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DebugPeerResponses) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDebug
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DebugPeerResponses: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DebugPeerResponses: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Responses", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Responses = append(m.Responses, &DebugPeerResponse{})
+			if err := m.Responses[len(m.Responses)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDebug(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DebugPeerResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDebug
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DebugPeerResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DebugPeerResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ListeningAddresses", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ListeningAddresses = append(m.ListeningAddresses, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Direction", wireType)
+			}
+			m.Direction = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Direction |= v1alpha1.PeerDirection(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ConnectionState", wireType)
+			}
+			m.ConnectionState = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ConnectionState |= v1alpha1.ConnectionState(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeerId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PeerId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Enr", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Enr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeerInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.PeerInfo == nil {
+				m.PeerInfo = &DebugPeerResponse_PeerInfo{}
+			}
+			if err := m.PeerInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeerStatus", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.PeerStatus == nil {
+				m.PeerStatus = &v1.Status{}
+			}
+			if err := m.PeerStatus.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastUpdated", wireType)
+			}
+			m.LastUpdated = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LastUpdated |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDebug(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DebugPeerResponse_PeerInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDebug
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PeerInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PeerInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Metadata", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Metadata == nil {
+				m.Metadata = &v1.MetaData{}
+			}
+			if err := m.Metadata.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Protocols", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Protocols = append(m.Protocols, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FaultCount", wireType)
+			}
+			m.FaultCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FaultCount |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ProtocolVersion", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ProtocolVersion = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AgentVersion", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDebug
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDebug
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AgentVersion = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeerLatency", wireType)
+			}
+			m.PeerLatency = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDebug
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.PeerLatency |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}

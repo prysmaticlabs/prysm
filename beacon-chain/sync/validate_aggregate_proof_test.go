@@ -148,7 +148,7 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	att := &ethpb.Attestation{
@@ -180,7 +180,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
 
@@ -199,7 +199,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -255,7 +255,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
 
@@ -275,7 +275,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	att.Data.Slot = 1<<32 - 1
 
 	buf = new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
 
@@ -293,7 +293,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 }
 
 func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -344,7 +344,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
 
@@ -369,7 +369,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -473,7 +473,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
 
@@ -496,7 +496,7 @@ func TestValidateAggregateAndProofWithNewStateMgmt_CanValidate(t *testing.T) {
 }
 
 func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
@@ -600,7 +600,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
 
@@ -620,7 +620,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	// Should fail with another attestation in the same epoch.
 	signedAggregateAndProof.Message.Aggregate.Data.Slot++
 	buf = new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, signedAggregateAndProof); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, signedAggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
 	msg = &pubsub.Message{

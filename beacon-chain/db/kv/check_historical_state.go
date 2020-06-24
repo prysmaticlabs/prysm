@@ -6,10 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
+	"go.opencensus.io/trace"
 )
 
 var historicalStateDeletedKey = []byte("historical-states-deleted")
@@ -17,12 +17,8 @@ var archivedSlotsPerPointKey = []byte("slots-per-archived-point")
 
 // HistoricalStatesDeleted verifies historical states exist in DB.
 func (kv *Store) HistoricalStatesDeleted(ctx context.Context) error {
-	if !featureconfig.Get().NewStateMgmt {
-		return kv.db.Update(func(tx *bolt.Tx) error {
-			bkt := tx.Bucket(newStateServiceCompatibleBucket)
-			return bkt.Put(historicalStateDeletedKey, []byte{0x01})
-		})
-	}
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HistoricalStatesDeleted")
+	defer span.End()
 
 	if err := kv.verifySlotsPerArchivePoint(); err != nil {
 		return err

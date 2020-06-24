@@ -31,44 +31,44 @@ var maxChunkSize = params.BeaconNetworkConfig().MaxChunkSize
 type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
-func (r *Service) registerRPCHandlers() {
-	r.registerRPC(
+func (s *Service) registerRPCHandlers() {
+	s.registerRPC(
 		p2p.RPCStatusTopic,
 		&pb.Status{},
-		r.statusRPCHandler,
+		s.statusRPCHandler,
 	)
-	r.registerRPC(
+	s.registerRPC(
 		p2p.RPCGoodByeTopic,
 		new(uint64),
-		r.goodbyeRPCHandler,
+		s.goodbyeRPCHandler,
 	)
-	r.registerRPC(
+	s.registerRPC(
 		p2p.RPCBlocksByRangeTopic,
 		&pb.BeaconBlocksByRangeRequest{},
-		r.beaconBlocksByRangeRPCHandler,
+		s.beaconBlocksByRangeRPCHandler,
 	)
-	r.registerRPC(
+	s.registerRPC(
 		p2p.RPCBlocksByRootTopic,
 		&pb.BeaconBlocksByRootRequest{},
-		r.beaconBlocksRootRPCHandler,
+		s.beaconBlocksRootRPCHandler,
 	)
-	r.registerRPC(
+	s.registerRPC(
 		p2p.RPCPingTopic,
 		new(uint64),
-		r.pingHandler,
+		s.pingHandler,
 	)
-	r.registerRPC(
+	s.registerRPC(
 		p2p.RPCMetaDataTopic,
 		new(interface{}),
-		r.metaDataHandler,
+		s.metaDataHandler,
 	)
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler) {
-	topic += r.p2p.Encoding().ProtocolSuffix()
+func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler) {
+	topic += s.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
-	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
+	s.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer func() {
@@ -109,7 +109,7 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		t := reflect.TypeOf(base)
 		if t.Kind() == reflect.Ptr {
 			msg := reflect.New(t.Elem())
-			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+			if err := s.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
 				// Debug logs for goodbye/status errors
 				if strings.Contains(topic, p2p.RPCGoodByeTopic) || strings.Contains(topic, p2p.RPCStatusTopic) {
 					log.WithError(err).Debug("Failed to decode goodbye stream message")
@@ -129,7 +129,7 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 			}
 		} else {
 			msg := reflect.New(t)
-			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+			if err := s.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
 				log.WithError(err).Warn("Failed to decode stream message")
 				traceutil.AnnotateError(span, err)
 				return

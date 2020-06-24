@@ -16,17 +16,12 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/gogo/protobuf/proto"
-	ds "github.com/ipfs/go-datastore"
-	dsync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
-	kaddht "github.com/libp2p/go-libp2p-kad-dht"
-	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	filter "github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -38,15 +33,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 var _ = shared.Service(&Service{})
 
-// Check local table every 15 seconds for newly added peers.
-var pollingPeriod = 15 * time.Second
+// In the event that we are at our peer limit, we
+// stop looking for new peers and instead poll
+// for the current peer limit status for the time period
+// defined below.
+var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
@@ -76,7 +73,6 @@ type Service struct {
 	cancel                context.CancelFunc
 	cfg                   *Config
 	peers                 *peers.Status
-	dht                   *kaddht.IpfsDHT
 	addrFilter            *filter.Filters
 	privKey               *ecdsa.PrivateKey
 	exclusionList         *ristretto.Cache
@@ -115,10 +111,9 @@ func NewService(cfg *Config) (*Service, error) {
 		isPreGenesis:  true,
 	}
 
-	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
+	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
 
 	cfg.Discv5BootStrapAddr = dv5Nodes
-	cfg.KademliaBootStrapAddr = kadDHTNodes
 
 	ipAddr := ipAddr()
 	s.privKey, err = privKey(s.cfg)
@@ -143,22 +138,6 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 
-	if len(cfg.KademliaBootStrapAddr) != 0 && !cfg.NoDiscovery && featureconfig.Get().EnableKadDHT {
-		dopts := []dhtopts.Option{
-			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-			dhtopts.Protocols(
-				prysmProtocolPrefix + "/dht",
-			),
-		}
-
-		s.dht, err = kaddht.New(ctx, h, dopts...)
-		if err != nil {
-			return nil, err
-		}
-		// Wrap host with a routed host so that peers can be looked up in the
-		// distributed hash table by their peer ID.
-		h = rhost.Wrap(h, s.dht)
-	}
 	s.host = h
 
 	// TODO(3147): Add gossip sub options
@@ -240,32 +219,6 @@ func (s *Service) Start() {
 		}
 		s.dv5Listener = listener
 		go s.listenForNewNodes()
-	}
-
-	if len(s.cfg.KademliaBootStrapAddr) != 0 && !s.cfg.NoDiscovery && featureconfig.Get().EnableKadDHT {
-		for _, addr := range s.cfg.KademliaBootStrapAddr {
-			peersToWatch = append(peersToWatch, addr)
-			err := startDHTDiscovery(s.host, addr)
-			if err != nil {
-				log.WithError(err).Error("Could not connect to bootnode")
-				s.startupErr = err
-				return
-			}
-			if err := s.addKadDHTNodesToExclusionList(addr); err != nil {
-				s.startupErr = err
-				return
-			}
-			peer, err := MakePeer(addr)
-			if err != nil {
-				log.WithError(err).Errorf("Could not create peer")
-			}
-			s.host.ConnManager().Protect(peer.ID, "bootnode")
-		}
-		bcfg := kaddht.DefaultBootstrapConfig
-		bcfg.Period = 30 * time.Second
-		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
-			log.WithError(err).Error("Failed to bootstrap DHT")
-		}
 	}
 
 	s.started = true
@@ -404,8 +357,8 @@ func (s *Service) MetadataSeq() uint64 {
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
-// with the tracked committee id's for the epoch, allowing our node
-// to be dynamically discoverable by others given our tracked committee id's.
+// with the tracked committee ids for the epoch, allowing our node
+// to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {
@@ -535,6 +488,13 @@ func (s *Service) listenForNewNodes() {
 		if s.ctx.Err() != nil {
 			break
 		}
+		if s.isPeerAtLimit() {
+			// Pause the main loop for a period to stop looking
+			// for new peers.
+			log.Trace("Not looking for peers, at peer limit")
+			time.Sleep(pollingPeriod)
+			continue
+		}
 		exists := iterator.Next()
 		if !exists {
 			break
@@ -601,20 +561,6 @@ func (s *Service) connectToBootnodes() error {
 	}
 	multiAddresses := convertToMultiAddr(nodes)
 	s.connectWithAllPeers(multiAddresses)
-	return nil
-}
-
-func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
-	multiAddr, err := ma.NewMultiaddr(addr)
-	if err != nil {
-		return errors.Wrap(err, "could not get multiaddr")
-	}
-	addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
-	if err != nil {
-		return err
-	}
-	// bootnode is never dialled, so ttl is tentatively 1 year
-	s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	return nil
 }
 

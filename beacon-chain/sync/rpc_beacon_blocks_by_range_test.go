@@ -27,7 +27,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
@@ -92,7 +92,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 200,
@@ -153,7 +153,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 0,
@@ -219,7 +219,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 }
 
 func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	hook := logTest.NewGlobal()
 	saveBlocks := func(req *pb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.

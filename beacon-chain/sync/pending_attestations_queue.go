@@ -27,6 +27,7 @@ var processPendingAttsPeriod = slotutil.DivideSlotBy(2 /* twice per slot */)
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
 	ctx := context.Background()
+	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
 		mutex.Lock()
@@ -123,7 +124,10 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer or equal to the pending attestation's target boundary slot.
+			// If there are no peer id's available, then we should exit from this function. The function will
+			// be run again periodically, and there may be peers available in future runs.
 			if len(pids) == 0 {
+				log.Debug("No peer IDs available to request missing block from for pending attestation")
 				return nil
 			}
 			pid := pids[rand.Int()%len(pids)]

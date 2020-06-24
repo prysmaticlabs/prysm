@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -25,9 +27,9 @@ import (
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
-	if int(req.PageSize) > featureconfig.Get().MaxRPCPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, featureconfig.Get().MaxRPCPageSize)
+			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
 	if !featureconfig.Get().NewStateMgmt {
@@ -313,9 +315,9 @@ func (bs *Server) ListValidators(
 	ctx context.Context,
 	req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
-	if int(req.PageSize) > featureconfig.Get().MaxRPCPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, featureconfig.Get().MaxRPCPageSize)
+			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)

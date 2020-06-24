@@ -44,6 +44,9 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
+			cmd.MinimalConfigFlag,
+			cmd.E2EConfigFlag,
+			cmd.CustomGenesisDelayFlag,
 			cmd.NoDiscovery,
 			cmd.BootstrapNode,
 			cmd.RelayNode,
