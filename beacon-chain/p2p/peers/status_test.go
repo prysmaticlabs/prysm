@@ -676,20 +676,6 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 	}
 }
 
-func TestRemoveConnectionState(t *testing.T) {
-	p := peers.NewStatus(1)
-	// Peer 1
-	pid1 := addPeer(t, p, peers.PeerConnected)
-	if len(p.All()) != 1 {
-		t.Errorf("Expected peer map to have one element got: %d", len(p.All()))
-	}
-	p.RemoveConnectionState(pid1)
-	if len(p.All()) != 0 {
-		t.Errorf("Expected peer map to be empty got: %d", len(p.All()))
-	}
-
-}
-
 // addPeer is a helper to add a peer with a given connection state)
 func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) peer.ID {
 	// Set up some peers with different states

@@ -158,11 +158,6 @@ func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 	return nil
 }
 
-func (s *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
-	s.p2p.Peers().RemoveConnectionState(pid)
-	return nil
-}
-
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
 func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {

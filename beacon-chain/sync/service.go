@@ -146,7 +146,6 @@ func (s *Service) Start() {
 	}
 
 	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGenericGoodbyeMessage)
-	s.p2p.AddDisconnectionHandler(s.removeDisconnectedPeerStatus)
 	s.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
