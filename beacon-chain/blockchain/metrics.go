@@ -138,6 +138,7 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 	for i, validator := range state.Validators() {
 		bal, err := state.BalanceAtIndex(uint64(i))
 		if err != nil {
+			log.Errorf("Could not load validator balance: %v", err)
 			continue
 		}
 		if validator.Slashed {

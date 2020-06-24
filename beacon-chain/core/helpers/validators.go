@@ -201,7 +201,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
-	if err := UpdateProposerIndicesInCache(state, CurrentEpoch(state)); err != nil {
+	if err := UpdateProposerIndicesInCache(state, e); err != nil {
 		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
