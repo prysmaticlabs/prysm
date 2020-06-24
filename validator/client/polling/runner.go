@@ -116,24 +116,24 @@ func run(ctx context.Context, v Validator) {
 				log.WithError(err).Error("Could not get validator roles")
 				continue
 			}
-			for id, roles := range allRoles {
+			for pubKey, roles := range allRoles {
 				wg.Add(len(roles))
 				for _, role := range roles {
-					go func(role validatorRole, id [48]byte) {
+					go func(role validatorRole, pubKey [48]byte) {
 						defer wg.Done()
 						switch role {
 						case roleAttester:
-							v.SubmitAttestation(slotCtx, slot, id)
+							v.SubmitAttestation(slotCtx, slot, pubKey)
 						case roleProposer:
-							v.ProposeBlock(slotCtx, slot, id)
+							v.ProposeBlock(slotCtx, slot, pubKey)
 						case roleAggregator:
-							v.SubmitAggregateAndProof(slotCtx, slot, id)
+							v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
 						case roleUnknown:
-							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
+							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)
 						}
-					}(role, id)
+					}(role, pubKey)
 				}
 			}
 			// Wait for all processes to complete, then report span complete.
