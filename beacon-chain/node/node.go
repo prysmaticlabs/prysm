@@ -106,6 +106,24 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	cmd.ConfigureBeaconChain(cliCtx)
 	featureconfig.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
+
+	// Setting chain network specific flags.
+	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
+		c := params.BeaconNetworkConfig()
+		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
+		params.OverrideBeaconNetworkConfig(c)
+	}
+	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
+		c := params.BeaconNetworkConfig()
+		c.BootstrapNodes = strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
+		params.OverrideBeaconNetworkConfig(c)
+	}
+	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
+		networkCfg := params.BeaconNetworkConfig()
+		networkCfg.ContractDeploymentBlock = uint64(cliCtx.Int(flags.ContractDeploymentBlock.Name))
+		params.OverrideBeaconNetworkConfig(networkCfg)
+	}
+
 	registry := shared.NewServiceRegistry()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -320,7 +338,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 			return err
 		}
 	} else {
-		bootnodeAddrs = strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
+		bootnodeAddrs = params.BeaconNetworkConfig().BootstrapNodes
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
@@ -410,9 +428,9 @@ func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
-	depAddress := b.cliCtx.String(flags.DepositContractFlag.Name)
+	depAddress := params.BeaconNetworkConfig().DepositContractAddress
 	if depAddress == "" {
-		log.Fatal(fmt.Sprintf("%s is required", flags.DepositContractFlag.Name))
+		log.Fatal("Valid deposit contract is required")
 	}
 
 	if !common.IsHexAddress(depAddress) {
