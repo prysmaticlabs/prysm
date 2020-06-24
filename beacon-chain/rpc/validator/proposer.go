@@ -294,19 +294,37 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 		return []*ethpb.Deposit{}, nil
 	}
 
-	upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
-	depositData := [][]byte{}
-	for _, dep := range upToEth1DataDeposits {
-		depHash, err := ssz.HashTreeRoot(dep.Data)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not hash deposit data")
-		}
-		depositData = append(depositData, depHash[:])
-	}
+	var depositTrie *trieutil.SparseMerkleTrie
 
-	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
+	if finalizedDeposits != nil {
+		depositTrie = finalizedDeposits.Deposits
+
+		upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+		insertIndex := finalizedDeposits.LastIndex + 1
+		for _, dep := range upToEth1DataDeposits {
+			depHash, err := ssz.HashTreeRoot(dep.Data)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash deposit data")
+			}
+			depositTrie.Insert(depHash[:], int(insertIndex))
+			insertIndex++
+		}
+	} else {
+		upToEth1DataDeposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
+		depositData := [][]byte{}
+		for _, dep := range upToEth1DataDeposits {
+			depHash, err := ssz.HashTreeRoot(dep.Data)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash deposit data")
+			}
+			depositData = append(depositData, depHash[:])
+		}
+
+		depositTrie, err = trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+		}
 	}
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
