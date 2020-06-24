@@ -136,21 +136,21 @@ func TestNewRemoteWallet(t *testing.T) {
 				}
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
-					if err := ioutil.WriteFile(caCertPath, []byte(test.caCert), 0666); err != nil {
+					if err := ioutil.WriteFile(caCertPath, []byte(test.caCert), 0600); err != nil {
 						t.Fatalf("Failed to write CA certificate: %v", err)
 					}
 					test.opts = strings.ReplaceAll(test.opts, "<<cacert>>", caCertPath)
 				}
 				if test.clientCert != "" {
 					clientCertPath := fmt.Sprintf("%s/client.crt", dir)
-					if err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), 0666); err != nil {
+					if err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), 0600); err != nil {
 						t.Fatalf("Failed to write client certificate: %v", err)
 					}
 					test.opts = strings.ReplaceAll(test.opts, "<<clientcert>>", clientCertPath)
 				}
 				if test.clientKey != "" {
 					clientKeyPath := fmt.Sprintf("%s/client.key", dir)
-					if err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), 0666); err != nil {
+					if err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), 0600); err != nil {
 						t.Fatalf("Failed to write client key: %v", err)
 					}
 					test.opts = strings.ReplaceAll(test.opts, "<<clientkey>>", clientKeyPath)

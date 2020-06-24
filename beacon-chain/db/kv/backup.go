@@ -35,7 +35,7 @@ func (kv *Store) Backup(ctx context.Context) error {
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
 	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
 
-	copyDB, err := bolt.Open(backupPath, 0666, nil)
+	copyDB, err := bolt.Open(backupPath, 0600, nil)
 	if err != nil {
 		panic(err)
 	}
