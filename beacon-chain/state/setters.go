@@ -171,7 +171,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	}
 
 	b.lock.RLock()
-	if uint64(len(b.state.StateRoots)) <= idx
+	if uint64(len(b.state.StateRoots)) <= idx {
 		b.lock.RUnlock()
 		return errors.Errorf("invalid index provided %d", idx)
 	}
