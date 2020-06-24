@@ -41,6 +41,7 @@ type DepositFetcher interface {
 	NonFinalizedDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
 }
 
+// FinalizedDeposits stores data and information about cached finalized deposits.
 type FinalizedDeposits struct {
 	Deposits  *trieutil.SparseMerkleTrie
 	LastIndex int64
