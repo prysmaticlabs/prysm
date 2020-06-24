@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/go-bitfield"
+
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -49,7 +51,6 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           0,
 		},
-		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 
 		StateRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
@@ -169,7 +170,14 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 
 	slashing, state := setupValidProposerSlashing(t)
 	slashing.Header_1.Header.Slot = 100000000
-
+	err := state.SetJustificationBits(bitfield.Bitvector4{0x0F}) // 0b1111
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = state.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 0, Root: []byte{}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
