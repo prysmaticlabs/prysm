@@ -325,7 +325,6 @@ func AltonaConfig() *BeaconChainConfig {
 	altCfg.MinGenesisActiveValidatorCount = 640
 	altCfg.MinGenesisTime = 1593086400
 	altCfg.GenesisForkVersion = []byte{0x00, 0x00, 0x01, 0x21}
-	altCfg.Eth1FollowDistance = 10
 	return altCfg
 }
 
