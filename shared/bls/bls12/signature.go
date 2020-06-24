@@ -151,6 +151,7 @@ func (s *Signature) Marshal() []byte {
 	return s.s.Serialize()
 }
 
+// Copy returns a full deep copy of a signature.
 func (s *Signature) Copy() iface.Signature {
 	return &Signature{s: &*s.s}
 }
