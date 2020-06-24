@@ -156,6 +156,10 @@ var (
 		Name:  "attestation-aggregation-force-maxcover",
 		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
 	}
+	altonaTestnet = &cli.BoolFlag{
+		Name:  "altona",
+		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -494,6 +498,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
+	altonaTestnet,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -539,6 +544,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
 	forceMaxCoverAttestationAggregation,
+	altonaTestnet,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
