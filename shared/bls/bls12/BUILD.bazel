@@ -28,7 +28,11 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["bls_test.go"],
+    srcs = [
+        "public_key_test.go",
+        "secret_key_test.go",
+        "signature_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/bls/iface:go_default_library",
