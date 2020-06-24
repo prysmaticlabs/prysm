@@ -160,12 +160,12 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 	if err != nil {
 		return err
 	}
+	if msgLen > maxSize {
+		return fmt.Errorf("remaining bytes %d goes over the provided max limit of %d", msgLen, maxSize)
+	}
 	if e.UseSnappyCompression {
 		r = newBufferedReader(r)
 		defer bufReaderPool.Put(r)
-	}
-	if msgLen > maxSize {
-		return fmt.Errorf("remaining bytes %d goes over the provided max limit of %d", msgLen, maxSize)
 	}
 	b := make([]byte, e.MaxLength(int(msgLen)))
 	numOfBytes, err := r.Read(b)
