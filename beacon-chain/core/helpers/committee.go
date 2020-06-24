@@ -59,12 +59,11 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //    Return the beacon committee at ``slot`` for ``index``.
 //    """
 //    epoch = compute_epoch_at_slot(slot)
-//    committees_per_slot = get_committee_count_at_slot(state, slot)
-//    epoch_offset = index + (slot % SLOTS_PER_EPOCH) * committees_per_slot
+//    committees_per_slot = get_committee_count_per_slot(state, epoch)
 //    return compute_committee(
 //        indices=get_active_validator_indices(state, epoch),
 //        seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
-//        index=epoch_offset,
+//        index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
 func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committeeIndex uint64) ([]uint64, error) {
@@ -137,6 +136,9 @@ func ComputeCommittee(
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
 	shuffledIndices := make([]uint64, len(indices))
 	copy(shuffledIndices, indices)
+	// UnshuffleList is used here as it is an optimized implementation created
+	// for fast computation of committees.
+	// Reference implementation: https://github.com/protolambda/eth2-shuffle
 	shuffledList, err := UnshuffleList(shuffledIndices, seed)
 	return shuffledList[start:end], err
 }
@@ -295,6 +297,7 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 		return nil, err
 	}
 
+	// UnshuffleList is used as an optimized implementation for raw speed.
 	return UnshuffleList(indices, seed)
 }
 
@@ -345,11 +348,12 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return nil
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	proposerIndices, err := precomputeProposerIndices(state, indices)
 	if err != nil {
 		return err
 	}
-	proposerIndices, err := precomputeProposerIndices(state, indices)
+	// The committee cache uses attester domain seed as key.
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return err
 	}
