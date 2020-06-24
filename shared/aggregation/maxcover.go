@@ -197,15 +197,7 @@ func (cl *MaxCoverCandidates) validate() error {
 	return nil
 }
 
-// String provides string representation of candidates list.
-func (cl *MaxCoverCandidates) String() string {
-	return fmt.Sprintf("Candidates: %v", *cl)
-}
-
 // String provides string representation of a candidate.
 func (c *MaxCoverCandidate) String() string {
-	if c.bits == nil {
-		return fmt.Sprintf("{%v, bits: nil, s%d, %t}", c.key, c.score, c.processed)
-	}
 	return fmt.Sprintf("{%v, %#b, s%d, %t}", c.key, c.bits, c.score, c.processed)
 }
