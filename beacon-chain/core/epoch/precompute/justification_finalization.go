@@ -10,6 +10,44 @@ import (
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 // Note: this is an optimized version by passing in precomputed total and attesting balances.
+// def process_justification_and_finalization(state: BeaconState) -> None:
+//    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+//        return
+//
+//    previous_epoch = get_previous_epoch(state)
+//    current_epoch = get_current_epoch(state)
+//    old_previous_justified_checkpoint = state.previous_justified_checkpoint
+//    old_current_justified_checkpoint = state.current_justified_checkpoint
+//
+//    # Process justifications
+//    state.previous_justified_checkpoint = state.current_justified_checkpoint
+//    state.justification_bits[1:] = state.justification_bits[:-1]
+//    state.justification_bits[0] = 0b0
+//    matching_target_attestations = get_matching_target_attestations(state, previous_epoch)  # Previous epoch
+//    if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+//        state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
+//                                                        root=get_block_root(state, previous_epoch))
+//        state.justification_bits[1] = 0b1
+//    matching_target_attestations = get_matching_target_attestations(state, current_epoch)  # Current epoch
+//    if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+//        state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
+//                                                        root=get_block_root(state, current_epoch))
+//        state.justification_bits[0] = 0b1
+//
+//    # Process finalizations
+//    bits = state.justification_bits
+//    # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+//    if all(bits[1:4]) and old_previous_justified_checkpoint.epoch + 3 == current_epoch:
+//        state.finalized_checkpoint = old_previous_justified_checkpoint
+//    # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+//    if all(bits[1:3]) and old_previous_justified_checkpoint.epoch + 2 == current_epoch:
+//        state.finalized_checkpoint = old_previous_justified_checkpoint
+//    # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+//    if all(bits[0:3]) and old_current_justified_checkpoint.epoch + 2 == current_epoch:
+//        state.finalized_checkpoint = old_current_justified_checkpoint
+//    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+//    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
+//        state.finalized_checkpoint = old_current_justified_checkpoint
 func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState, pBal *Balance) (*stateTrie.BeaconState, error) {
 	if state.Slot() <= helpers.StartSlot(2) {
 		return state, nil

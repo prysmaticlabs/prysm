@@ -21,6 +21,7 @@ package featureconfig
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -29,6 +30,8 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	// Testnet Flags.
+	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
 	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -50,7 +53,6 @@ type Flags struct {
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
 	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
-	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
@@ -109,6 +111,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
+	}
+	if ctx.Bool(altonaTestnet.Name) {
+		log.Warn("Running Node on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -199,11 +207,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling weighted round robin in initial syncing")
 		cfg.EnableInitSyncWeightedRoundRobin = false
 	}
-	cfg.EnableStateRefCopy = true
-	if ctx.Bool(disableStateRefCopy.Name) {
-		log.Warn("Disabling state reference copy")
-		cfg.EnableStateRefCopy = false
-	}
 	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
 		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
 		if err := ctx.Set(cmd.P2PAllowList.Name, ctx.String(deprecatedP2PWhitelist.Name)); err != nil {
@@ -253,6 +256,12 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
+	if ctx.Bool(altonaTestnet.Name) {
+		log.Warn("Running Validator on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
+	}
 	if ctx.Bool(enableStreamDuties.Name) {
 		log.Warn("Enabled validator duties streaming.")
 		cfg.EnableStreamDuties = true
