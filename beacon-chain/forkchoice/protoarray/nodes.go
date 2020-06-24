@@ -200,7 +200,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 
 	// Define 3 variables for the 3 outcomes mentioned above. This is to
-	// set `parent.BestChild` and `parent.bestDescendent` to. These
+	// set `parent.BestChild` and `parent.bestDescendant` to. These
 	// aliases are to assist readability.
 	changeToNone := []uint64{NonExistentNode, NonExistentNode}
 	bestDescendant := child.BestDescendant
