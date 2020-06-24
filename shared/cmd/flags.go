@@ -27,7 +27,6 @@ var (
 	RPCMaxPageSizeFlag = &cli.IntFlag{
 		Name:  "rpc-max-page-size",
 		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
-		Value: 500,
 	}
 	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = &cli.StringFlag{
