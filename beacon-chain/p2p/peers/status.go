@@ -484,8 +484,8 @@ func (p *Status) fetch(pid peer.ID) *peerStatus {
 	return p.status[pid]
 }
 
-// CurrentEpoch returns the highest reported epoch amongst peers.
-func (p *Status) CurrentEpoch() uint64 {
+// HighestEpoch returns the highest epoch reported epoch amongst peers.
+func (p *Status) HighestEpoch() uint64 {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	var highestSlot uint64
