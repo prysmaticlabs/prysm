@@ -21,6 +21,7 @@ var offset time.Duration
 var log = logrus.WithField("prefix", "roughtime")
 
 func init() {
+	recalibrateRoughtime()
 	runutil.RunEvery(context.Background(), RecalibrationInterval, recalibrateRoughtime)
 }
 
