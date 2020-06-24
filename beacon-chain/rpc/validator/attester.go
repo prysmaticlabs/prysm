@@ -194,7 +194,7 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.SubscribeCommitteeSubnets")
 	defer span.End()
 
-	if len(req.Slots) != len(req.CommitteeIds) && len(req.CommitteeIds) != len(req.IsAggregator) {
+	if len(req.Slots) != len(req.CommitteeIds) || len(req.CommitteeIds) != len(req.IsAggregator) {
 		return nil, status.Error(codes.InvalidArgument, "request fields are not the same length")
 	}
 	if len(req.Slots) == 0 {

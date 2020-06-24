@@ -22,8 +22,6 @@ type NetworkEncoding interface {
 	// DecodeWithMaxLength a bytes from a reader with a varint length prefix. The interface must be a pointer to the
 	// decoding destination. The length of the message should not be more than the provided limit.
 	DecodeWithMaxLength(io.Reader, interface{}, uint64) error
-	// Encode an arbitrary message to the provided writer. The interface must be a pointer object to encode.
-	Encode(io.Writer, interface{}) (int, error)
 	// EncodeGossip an arbitrary gossip message to the provided writer. The interface must be a pointer object to encode.
 	EncodeGossip(io.Writer, interface{}) (int, error)
 	// EncodeWithLength an arbitrary message to the provided writer with a varint length prefix. The interface must be

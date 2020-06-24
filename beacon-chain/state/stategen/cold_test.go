@@ -15,7 +15,7 @@ import (
 
 func TestSaveColdState_NonArchivedPoint(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
@@ -31,7 +31,7 @@ func TestSaveColdState_NonArchivedPoint(t *testing.T) {
 
 func TestSaveColdState_CanSave(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
@@ -56,7 +56,7 @@ func TestSaveColdState_CanSave(t *testing.T) {
 
 func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	if _, err := service.loadColdStateByRoot(ctx, [32]byte{'a'}); !strings.Contains(err.Error(), errUnknownStateSummary.Error()) {
@@ -66,7 +66,7 @@ func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 
 func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
@@ -108,7 +108,7 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 
 func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 

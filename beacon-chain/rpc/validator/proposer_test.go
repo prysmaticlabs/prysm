@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -28,6 +27,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -38,7 +38,7 @@ import (
 )
 
 func TestGetBlock_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, sc := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	testutil.ResetCache()
@@ -79,7 +79,7 @@ func TestGetBlock_OK(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:          stategen.New(db, sc),
 	}
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
@@ -158,7 +158,7 @@ func TestGetBlock_OK(t *testing.T) {
 }
 
 func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, sc := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(t)
@@ -198,7 +198,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		SlashingsPool:     slashings.NewPool(),
 		AttPool:           attestations.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:          stategen.New(db, sc),
 	}
 
 	// Generate a bunch of random attestations at slot. These would be considered double votes, but
@@ -282,7 +282,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 }
 
 func TestProposeBlock_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -325,7 +325,7 @@ func TestProposeBlock_OK(t *testing.T) {
 }
 
 func TestComputeStateRoot_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, sc := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(t)
@@ -358,7 +358,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		StateGen:          stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:          stategen.New(db, sc),
 	}
 
 	req := &ethpb.SignedBeaconBlock{
@@ -1308,7 +1308,7 @@ func TestEth1Data_SmallerDepositCount(t *testing.T) {
 }
 
 func TestEth1Data_MockEnabled(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	// If a mock eth1 data votes is specified, we use the following for the
 	// eth1data we provide to every proposer based on https://github.com/ethereum/eth2.0-pm/issues/62:
 	//
@@ -1358,7 +1358,7 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 }
 
 func TestFilterAttestation_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(t)
@@ -1666,7 +1666,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aa, err := helpers.AggregateAttestations(aggregatedAtts)
+	aa, err := attaggregation.Aggregate(aggregatedAtts)
 	if err != nil {
 		t.Error(err)
 	}

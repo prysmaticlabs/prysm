@@ -5,13 +5,12 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 )
 
 func TestHeadSlot_DataRace(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	s := &Service{
 		beaconDB: db,
 	}
@@ -24,11 +23,11 @@ func TestHeadSlot_DataRace(t *testing.T) {
 }
 
 func TestHeadRoot_DataRace(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 	s := &Service{
 		beaconDB: db,
 		head:     &head{root: [32]byte{'A'}},
-		stateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		stateGen: stategen.New(db, sc),
 	}
 	go func() {
 		if err := s.saveHead(context.Background(), [32]byte{}); err != nil {
@@ -41,11 +40,11 @@ func TestHeadRoot_DataRace(t *testing.T) {
 }
 
 func TestHeadBlock_DataRace(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 	s := &Service{
 		beaconDB: db,
 		head:     &head{block: &ethpb.SignedBeaconBlock{}},
-		stateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		stateGen: stategen.New(db, sc),
 	}
 	go func() {
 		if err := s.saveHead(context.Background(), [32]byte{}); err != nil {
@@ -58,10 +57,10 @@ func TestHeadBlock_DataRace(t *testing.T) {
 }
 
 func TestHeadState_DataRace(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, sc := testDB.SetupDB(t)
 	s := &Service{
 		beaconDB: db,
-		stateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		stateGen: stategen.New(db, sc),
 	}
 	go func() {
 		if err := s.saveHead(context.Background(), [32]byte{}); err != nil {
