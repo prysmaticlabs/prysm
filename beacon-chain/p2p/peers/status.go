@@ -431,7 +431,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, 
 	connected := p.Connected()
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
-	pidEpochs := make(map[peer.ID]uint64)
+	pidEpoch := make(map[peer.ID]uint64)
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
@@ -439,7 +439,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, 
 			root := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
 			finalized[root]++
 			rootToEpoch[root] = peerChainState.FinalizedEpoch
-			pidEpochs[pid] = peerChainState.FinalizedEpoch
+			pidEpoch[pid] = peerChainState.FinalizedEpoch
 			potentialPIDs = append(potentialPIDs, pid)
 		}
 	}
@@ -457,12 +457,12 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, 
 
 	// Sort PIDs by finalized epoch, in decreasing order.
 	sort.Slice(potentialPIDs, func(i, j int) bool {
-		return pidEpochs[potentialPIDs[i]] > pidEpochs[potentialPIDs[j]]
+		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]]
 	})
 
 	// Trim potential peers to those on or after target epoch.
 	for i, pid := range potentialPIDs {
-		if pidEpochs[pid] < targetEpoch {
+		if pidEpoch[pid] < targetEpoch {
 			potentialPIDs = potentialPIDs[:i]
 			break
 		}
@@ -484,8 +484,8 @@ func (p *Status) fetch(pid peer.ID) *peerStatus {
 	return p.status[pid]
 }
 
-// CurrentEpoch returns the highest reported epoch amongst peers.
-func (p *Status) CurrentEpoch() uint64 {
+// HighestEpoch returns the highest epoch reported epoch amongst peers.
+func (p *Status) HighestEpoch() uint64 {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	var highestSlot uint64
