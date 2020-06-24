@@ -32,7 +32,6 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	options := []libp2p.Option{
 		privKeyOption(priKey),
-		libp2p.EnableRelay(),
 		libp2p.ListenAddrs(listen),
 		libp2p.UserAgent(version.GetBuildData()),
 		libp2p.ConnectionGater(s),
@@ -46,6 +45,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	if cfg.RelayNodeAddr != "" {
 		options = append(options, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
+		options = append(options, libp2p.EnableRelay())
 	}
 	if cfg.HostAddress != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
