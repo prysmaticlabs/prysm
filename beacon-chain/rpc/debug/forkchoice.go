@@ -24,7 +24,7 @@ func (ds *Server) GetProtoArrayForkChoice(ctx context.Context, _ *ptypes.Empty) 
 			FinalizedEpoch: nodes[i].FinalizedEpoch,
 			Weight:         nodes[i].Weight,
 			BestChild:      nodes[i].BestChild,
-			BestDescendant: nodes[i].BestDescendent,
+			BestDescendant: nodes[i].BestDescendant,
 		}
 	}
 

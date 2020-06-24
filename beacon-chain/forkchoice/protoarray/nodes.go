@@ -27,7 +27,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	}
 
 	justifiedNode := s.Nodes[justifiedIndex]
-	bestDescendantIndex := justifiedNode.BestDescendent
+	bestDescendantIndex := justifiedNode.BestDescendant
 	// If the justified node doesn't have a best descendent,
 	// the best node is itself.
 	if bestDescendantIndex == NonExistentNode {
@@ -88,7 +88,7 @@ func (s *Store) insert(ctx context.Context,
 		JustifiedEpoch: justifiedEpoch,
 		FinalizedEpoch: finalizedEpoch,
 		BestChild:      NonExistentNode,
-		BestDescendent: NonExistentNode,
+		BestDescendant: NonExistentNode,
 		Weight:         0,
 	}
 
@@ -203,12 +203,12 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	// set `parent.BestChild` and `parent.bestDescendent` to. These
 	// aliases are to assist readability.
 	changeToNone := []uint64{NonExistentNode, NonExistentNode}
-	bestDescendant := child.BestDescendent
+	bestDescendant := child.BestDescendant
 	if bestDescendant == NonExistentNode {
 		bestDescendant = childIndex
 	}
 	changeToChild := []uint64{childIndex, bestDescendant}
-	noChange := []uint64{parent.BestChild, parent.BestDescendent}
+	noChange := []uint64{parent.BestChild, parent.BestDescendant}
 	newParentChild := make([]uint64, 0)
 
 	if parent.BestChild != NonExistentNode {
@@ -267,7 +267,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 
 	// Update parent with the outcome.
 	parent.BestChild = newParentChild[0]
-	parent.BestDescendent = newParentChild[1]
+	parent.BestDescendant = newParentChild[1]
 	s.Nodes[parentIndex] = parent
 
 	return nil
@@ -332,11 +332,11 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 			}
 			node.BestChild -= finalizedIndex
 		}
-		if node.BestDescendent != NonExistentNode {
-			if node.BestDescendent < finalizedIndex {
+		if node.BestDescendant != NonExistentNode {
+			if node.BestDescendant < finalizedIndex {
 				return errInvalidBestDescendantIndex
 			}
-			node.BestDescendent -= finalizedIndex
+			node.BestDescendant -= finalizedIndex
 		}
 
 		s.Nodes[i] = node
@@ -352,7 +352,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 // should not be viable to head.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 	var bestDescendentViable bool
-	bestDescendentIndex := node.BestDescendent
+	bestDescendentIndex := node.BestDescendant
 
 	// If the best descendant is not part of the leaves.
 	if bestDescendentIndex != NonExistentNode {

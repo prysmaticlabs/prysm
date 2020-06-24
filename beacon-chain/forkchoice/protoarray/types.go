@@ -30,7 +30,7 @@ type Node struct {
 	FinalizedEpoch uint64   // FinalizedEpoch of this node.
 	Weight         uint64   // Weight of this node.
 	BestChild      uint64   // BestChild index of this node.
-	BestDescendent uint64   // BestDescendent of this node.
+	BestDescendant uint64   // BestDescendant of this node.
 	Graffiti       [32]byte // Graffiti of the block node.
 }
 
