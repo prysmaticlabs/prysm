@@ -18,12 +18,12 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -255,7 +255,7 @@ func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 // updates the deposit trie with the data from each individual log.
 func (s *Service) processPastLogs(ctx context.Context) error {
 	currentBlockNum := s.latestEth1Data.LastRequestedBlock
-	deploymentBlock := int64(flags.Get().DeploymentBlock)
+	deploymentBlock := int64(params.BeaconNetworkConfig().ContractDeploymentBlock)
 	if uint64(deploymentBlock) > currentBlockNum {
 		currentBlockNum = uint64(deploymentBlock)
 	}

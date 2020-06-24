@@ -3,7 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -113,40 +112,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	}
 	indexedAtt := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
-		if err == helpers.ErrSigFailedToVerify {
-			// When sig fails to verify, check if there's a differences in committees due to
-			// different seeds.
-			if !s.stateGen.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) {
-				if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-					return nil, errors.Wrap(err, "could not save initial sync blocks")
-				}
-				s.clearInitSyncBlocks()
-			}
-			aState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-			if err != nil {
-				return nil, err
-			}
-
-			if aState == nil {
-				return nil, fmt.Errorf("nil state for block root %#x", a.Data.BeaconBlockRoot)
-			}
-			epoch := helpers.SlotToEpoch(a.Data.Slot)
-			origSeed, err := helpers.Seed(baseState, epoch, params.BeaconConfig().DomainBeaconAttester)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get original seed")
-			}
-
-			aSeed, err := helpers.Seed(aState, epoch, params.BeaconConfig().DomainBeaconAttester)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get attester's seed")
-			}
-			if origSeed != aSeed {
-				return nil, fmt.Errorf("could not verify indexed attestation due to differences in seeds: %v != %v",
-					hex.EncodeToString(bytesutil.Trunc(origSeed[:])), hex.EncodeToString(bytesutil.Trunc(aSeed[:])))
-			}
-		}
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
-
 	return indexedAtt, nil
 }

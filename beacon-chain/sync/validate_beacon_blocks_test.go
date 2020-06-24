@@ -65,7 +65,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -114,7 +114,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 
@@ -206,7 +206,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -304,7 +304,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -355,7 +355,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -407,7 +407,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -462,7 +462,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -547,7 +547,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, msg); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -601,7 +601,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 		Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:], Body: &ethpb.BeaconBlockBody{}},
 	}
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, b); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, b); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -619,7 +619,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	hook.Reset()
 	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	buf = new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, b); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, b); err != nil {
 		t.Fatal(err)
 	}
 	m = &pubsub.Message{

@@ -108,7 +108,7 @@ type Service struct {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
-	// Intialize block limits.
+	// Initialize block limits.
 	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
 	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
 
@@ -146,7 +146,6 @@ func (s *Service) Start() {
 	}
 
 	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGenericGoodbyeMessage)
-	s.p2p.AddDisconnectionHandler(s.removeDisconnectedPeerStatus)
 	s.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
