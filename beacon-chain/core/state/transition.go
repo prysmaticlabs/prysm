@@ -28,13 +28,17 @@ import (
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> BeaconState:
+//    block = signed_block.message
 //    # Process slots (including those with no blocks) since block
 //    process_slots(state, block.slot)
+//    # Verify signature
+//    if validate_result:
+//        assert verify_block_signature(state, signed_block)
 //    # Process block
 //    process_block(state, block)
-//    # Validate state root (`validate_state_root == True` in production)
-//    if validate_state_root:
+//    # Verify state root
+//    if validate_result:
 //        assert block.state_root == hash_tree_root(state)
 //    # Return post-state
 //    return state
@@ -191,7 +195,7 @@ func CalculateStateRoot(
 //        state.latest_block_header.state_root = previous_state_root
 //
 //    # Cache block root
-//    previous_block_root = signing_root(state.latest_block_header)
+//    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
