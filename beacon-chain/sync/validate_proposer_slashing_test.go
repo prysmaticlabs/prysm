@@ -12,6 +12,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -142,7 +143,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -169,7 +170,14 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 
 	slashing, state := setupValidProposerSlashing(t)
 	slashing.Header_1.Header.Slot = 100000000
-
+	err := state.SetJustificationBits(bitfield.Bitvector4{0x0F}) // 0b1111
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = state.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 0, Root: []byte{}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
@@ -185,7 +193,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{
@@ -215,7 +223,7 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+	if _, err := p.Encoding().EncodeGossip(buf, slashing); err != nil {
 		t.Fatal(err)
 	}
 	m := &pubsub.Message{

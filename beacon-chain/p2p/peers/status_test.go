@@ -671,8 +671,8 @@ func TestStatus_CurrentEpoch(t *testing.T) {
 		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 4,
 	})
 
-	if p.CurrentEpoch() != 5 {
-		t.Fatalf("Expected current epoch to be 5, got %d", p.CurrentEpoch())
+	if p.HighestEpoch() != 5 {
+		t.Fatalf("Expected current epoch to be 5, got %d", p.HighestEpoch())
 	}
 }
 

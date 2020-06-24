@@ -50,7 +50,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
 	}
 
-	// Verify block slot time is not from the feature.
+	// Verify block slot time is not from the future.
 	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
@@ -294,7 +294,7 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	return nil
 }
 
-// This retrieves missing blocks from DB (ie. the blocks that couldn't received over sync) and inserts them to fork choice store.
+// This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
 	pendingNodes := make([]*ethpb.BeaconBlock, 0)

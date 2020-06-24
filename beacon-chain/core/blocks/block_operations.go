@@ -151,7 +151,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 //     # Verify that proposer index is the correct index
 //    assert block.proposer_index == get_beacon_proposer_index(state)
 //    # Verify that the parent matches
-//    assert block.parent_root == signing_root(state.latest_block_header)
+//    assert block.parent_root == hash_tree_root(state.latest_block_header)
 //    # Save current block as the new latest block
 //    state.latest_block_header = BeaconBlockHeader(
 //        slot=block.slot,
@@ -211,7 +211,7 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 //     # Verify that proposer index is the correct index
 //    assert block.proposer_index == get_beacon_proposer_index(state)
 //    # Verify that the parent matches
-//    assert block.parent_root == signing_root(state.latest_block_header)
+//    assert block.parent_root == hash_tree_root(state.latest_block_header)
 //    # Save current block as the new latest block
 //    state.latest_block_header = BeaconBlockHeader(
 //        slot=block.slot,
@@ -285,19 +285,14 @@ func ProcessBlockHeaderNoVerify(
 //
 // Spec pseudocode definition:
 //   def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
-//     proposer = state.validator_registry[get_beacon_proposer_index(state)]
-//     # Verify that the provided randao value is valid
-//     assert bls_verify(
-//         proposer.pubkey,
-//         hash_tree_root(get_current_epoch(state)),
-//         body.randao_reveal,
-//         get_domain(state, DOMAIN_RANDAO),
-//     )
-//     # Mix it in
-//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
-//         xor(get_randao_mix(state, get_current_epoch(state)),
-//             hash(body.randao_reveal))
-//     )
+//    epoch = get_current_epoch(state)
+//    # Verify RANDAO reveal
+//    proposer = state.validators[get_beacon_proposer_index(state)]
+//    signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
+//    assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
+//    # Mix in RANDAO reveal
+//    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
+//    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func ProcessRandao(
 	beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
@@ -740,24 +735,17 @@ func ProcessAttestationNoVerify(
 // Spec pseudocode definition:
 //  def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //    """
-//    Check if ``indexed_attestation`` has valid indices and signature.
+//    Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
 //    """
-//    indices = indexed_attestation.attesting_indices
-//
-//    # Verify max number of indices
-//    if not len(indices) <= MAX_VALIDATORS_PER_COMMITTEE:
-//        return False
 //    # Verify indices are sorted and unique
-//        if not indices == sorted(set(indices)):
-//    # Verify aggregate signature
-//    if not bls_verify(
-//        pubkey=bls_aggregate_pubkeys([state.validators[i].pubkey for i in indices]),
-//        message_hash=hash_tree_root(indexed_attestation.data),
-//        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch),
-//    ):
+//    indices = indexed_attestation.attesting_indices
+//    if len(indices) == 0 or not indices == sorted(set(indices)):
 //        return False
-//    return True
+//    # Verify aggregate signature
+//    pubkeys = [state.validators[i].pubkey for i in indices]
+//    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
+//    signing_root = compute_signing_root(indexed_attestation.data, domain)
+//    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
 func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()

@@ -43,21 +43,6 @@ func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
 	return ssz.Marshal(msg)
 }
 
-// Encode the proto message to the io.Writer.
-func (e SszNetworkEncoder) Encode(w io.Writer, msg interface{}) (int, error) {
-	if msg == nil {
-		return 0, nil
-	}
-	b, err := e.doEncode(msg)
-	if err != nil {
-		return 0, err
-	}
-	if e.UseSnappyCompression {
-		return writeSnappyBuffer(w, b)
-	}
-	return w.Write(b)
-}
-
 // EncodeGossip the proto gossip message to the io.Writer.
 func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
@@ -175,12 +160,12 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 	if err != nil {
 		return err
 	}
+	if msgLen > maxSize {
+		return fmt.Errorf("remaining bytes %d goes over the provided max limit of %d", msgLen, maxSize)
+	}
 	if e.UseSnappyCompression {
 		r = newBufferedReader(r)
 		defer bufReaderPool.Put(r)
-	}
-	if msgLen > maxSize {
-		return fmt.Errorf("remaining bytes %d goes over the provided max limit of %d", msgLen, maxSize)
 	}
 	b := make([]byte, e.MaxLength(int(msgLen)))
 	numOfBytes, err := r.Read(b)

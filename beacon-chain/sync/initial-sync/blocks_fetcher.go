@@ -3,10 +3,12 @@ package initialsync
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
+	"math/big"
+	mathRand "math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -261,12 +263,16 @@ func (f *blocksFetcher) fetchBlocksFromSinglePeer(
 	ctx context.Context,
 	start, count uint64,
 	peers []peer.ID,
-) (blocks []*eth.SignedBeaconBlock, err error) {
+) ([]*eth.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromSinglePeer")
 	defer span.End()
 
-	blocks = []*eth.SignedBeaconBlock{}
-	peers = f.filterPeers(peers, peersPercentagePerRequest)
+	blocks := []*eth.SignedBeaconBlock{}
+	var err error
+	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	if err != nil {
+		return blocks, err
+	}
 	if len(peers) == 0 {
 		return blocks, errNoPeersAvailable
 	}
@@ -277,10 +283,10 @@ func (f *blocksFetcher) fetchBlocksFromSinglePeer(
 	}
 	for i := 0; i < len(peers); i++ {
 		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
-			return
+			return blocks, err
 		}
 	}
-	return
+	return blocks, nil
 }
 
 // fetchBlocksFromPeers orchestrates block fetching from the available peers.
@@ -304,7 +310,10 @@ func (f *blocksFetcher) fetchBlocksFromPeers(
 		return []*eth.SignedBeaconBlock{}, ctx.Err()
 	}
 
-	peers = f.filterPeers(peers, peersPercentagePerRequest)
+	peers, err := f.filterPeers(peers, peersPercentagePerRequest)
+	if err != nil {
+		return []*eth.SignedBeaconBlock{}, err
+	}
 	if len(peers) == 0 {
 		return []*eth.SignedBeaconBlock{}, errNoPeersAvailable
 	}
@@ -411,7 +420,7 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 		if bytes.Compare(root, root1) != 0 {
 			return nil, errors.Errorf("can not resend, root mismatch: %x:%x", root, root1)
 		}
-		newPID, _, err := f.selectFailOverPeer(pid, peers)
+		newPID, err := f.selectFailOverPeer(pid, peers)
 		if err != nil {
 			return nil, err
 		}
@@ -517,7 +526,7 @@ func (f *blocksFetcher) removeStalePeerLocks(age time.Duration) {
 }
 
 // selectFailOverPeer randomly selects fail over peer from the list of available peers.
-func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, []peer.ID, error) {
+func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
 	for i, pid := range peers {
 		if pid == excludedPID {
 			peers = append(peers[:i], peers[i+1:]...)
@@ -526,15 +535,14 @@ func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID)
 	}
 
 	if len(peers) == 0 {
-		return "", peers, errNoPeersAvailable
+		return "", errNoPeersAvailable
 	}
 
-	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
-	randGenerator.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
-
-	return peers[0], peers, nil
+	randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(peers))))
+	if err != nil {
+		return "", err
+	}
+	return peers[randInt.Int64()], nil
 }
 
 // waitForMinimumPeers spins and waits up until enough peers are available.
@@ -561,14 +569,18 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 
 // filterPeers returns transformed list of peers,
 // weight ordered or randomized, constrained if necessary.
-func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []peer.ID {
+func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([]peer.ID, error) {
 	if len(peers) == 0 {
-		return peers
+		return peers, nil
 	}
 
 	// Shuffle peers to prevent a bad peer from
 	// stalling sync with invalid blocks.
-	randGenerator := rand.New(rand.NewSource(roughtime.Now().Unix()))
+	randSource, err := rand.Int(rand.Reader, big.NewInt(roughtime.Now().Unix()))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate random int")
+	}
+	randGenerator := mathRand.New(mathRand.NewSource(randSource.Int64()))
 	randGenerator.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
@@ -596,7 +608,7 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) []
 		})
 	}
 
-	return peers
+	return peers, nil
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -610,11 +622,20 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	_, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	peers = f.filterPeers(peers, peersPercentagePerRequest)
+	var err error
+	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
+	if err != nil {
+		return 0, err
+	}
 	if len(peers) == 0 {
 		return 0, errNoPeersAvailable
 	}
-	randGenerator := rand.New(rand.NewSource(roughtime.Now().UnixNano()))
+
+	randSource, err := rand.Int(rand.Reader, big.NewInt(roughtime.Now().Unix()))
+	if err != nil {
+		return 0, errors.Wrap(err, "could not generate random int")
+	}
+	randGenerator := mathRand.New(mathRand.NewSource(randSource.Int64()))
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	pidInd := 0
 
