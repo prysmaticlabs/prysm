@@ -237,6 +237,9 @@ func (b *BeaconState) ParentRoot() [32]byte {
 	if !b.HasInnerState() {
 		return [32]byte{}
 	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	parentRoot := [32]byte{}
 	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
 	return parentRoot
@@ -330,9 +333,14 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	if !b.HasInnerState() {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if b.state.Eth1Data == nil {
 		return nil
 	}
+
 	return CopyETH1Data(b.state.Eth1Data)
 }
 
@@ -342,9 +350,14 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	if !b.HasInnerState() {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if b.state.Eth1DataVotes == nil {
 		return nil
 	}
+
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
 		res[i] = CopyETH1Data(b.state.Eth1DataVotes[i])
@@ -358,6 +371,10 @@ func (b *BeaconState) Eth1DepositIndex() uint64 {
 	if !b.HasInnerState() {
 		return 0
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return b.state.Eth1DepositIndex
 }
 
@@ -410,16 +427,17 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.Validators == nil {
-		return &ethpb.Validator{}, nil
-	}
-	if uint64(len(b.state.Validators)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if b.state.Validators == nil {
+		return &ethpb.Validator{}, nil
+	}
+
+	if uint64(len(b.state.Validators)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
 	val := b.state.Validators[idx]
 	pubKey := make([]byte, len(val.PublicKey))
 	copy(pubKey, val.PublicKey)
@@ -502,6 +520,9 @@ func (b *BeaconState) NumValidators() int {
 	if !b.HasInnerState() {
 		return 0
 	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return len(b.state.Validators)
 }
 

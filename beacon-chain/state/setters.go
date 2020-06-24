@@ -9,9 +9,28 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
+
+// For our setters, we have a field reference counter through
+// which we can track shared field references. This helps when
+// performing state copies, as we simply copy the reference to the
+// field. When we do need to do need to modify these fields, we
+// perform a full copy of the field. This is true of most of our
+// fields except for the following below.
+// 1) BlockRoots
+// 2) StateRoots
+// 3) Eth1DataVotes
+// 4) RandaoMixes
+// 5) HistoricalRoots
+// 6) CurrentEpochAttestations
+// 7) PreviousEpochAttestations
+//
+// The fields referred to above are instead copied by reference, where
+// we simply copy the reference to the underlying object instead of the
+// whole object. This is possible due to how we have structured our state
+// as we copy the value on read, so as to ensure the underlying object is
+// not mutated while it is being accessed during a state read.
 
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
@@ -106,14 +125,9 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	b.lock.RLock()
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.Refs() > 1 {
-		// Copy on write since this is a shared array.
-		if featureconfig.Get().EnableStateRefCopy {
-			r = make([][]byte, len(b.state.BlockRoots))
-			copy(r, b.state.BlockRoots)
-		} else {
-			r = b.BlockRoots()
-		}
-
+		// Copy elements in underlying array by reference.
+		r = make([][]byte, len(b.state.BlockRoots))
+		copy(r, b.state.BlockRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
 	}
@@ -155,22 +169,19 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if uint64(len(b.state.StateRoots)) <= idx {
+
+	b.lock.RLock()
+	if uint64(len(b.state.StateRoots)) <= idx
+		b.lock.RUnlock()
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	b.lock.RLock()
 	// Check if we hold the only reference to the shared state roots slice.
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.Refs() > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		if featureconfig.Get().EnableStateRefCopy {
-			r = make([][]byte, len(b.state.StateRoots))
-			copy(r, b.state.StateRoots)
-		} else {
-			r = b.StateRoots()
-		}
-
+		// Copy elements in underlying array by reference.
+		r = make([][]byte, len(b.state.StateRoots))
+		copy(r, b.state.StateRoots)
 		ref.MinusRef()
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	}
@@ -245,12 +256,9 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.lock.RLock()
 	votes := b.state.Eth1DataVotes
 	if b.sharedFieldReferences[eth1DataVotes].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
-			copy(votes, b.state.Eth1DataVotes)
-		} else {
-			votes = b.Eth1DataVotes()
-		}
+		// Copy elements in underlying array by reference.
+		votes = make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+		copy(votes, b.state.Eth1DataVotes)
 		b.sharedFieldReferences[eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	}
@@ -454,12 +462,9 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].Refs(); refs > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			mixes = make([][]byte, len(b.state.RandaoMixes))
-			copy(mixes, b.state.RandaoMixes)
-		} else {
-			mixes = b.RandaoMixes()
-		}
+		// Copy elements in underlying array by reference.
+		mixes = make([][]byte, len(b.state.RandaoMixes))
+		copy(mixes, b.state.RandaoMixes)
 		b.sharedFieldReferences[randaoMixes].MinusRef()
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
@@ -568,12 +573,8 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	b.lock.RLock()
 	roots := b.state.HistoricalRoots
 	if b.sharedFieldReferences[historicalRoots].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			roots = make([][]byte, len(b.state.HistoricalRoots))
-			copy(roots, b.state.HistoricalRoots)
-		} else {
-			roots = b.HistoricalRoots()
-		}
+		roots = make([][]byte, len(b.state.HistoricalRoots))
+		copy(roots, b.state.HistoricalRoots)
 		b.sharedFieldReferences[historicalRoots].MinusRef()
 		b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 	}
@@ -597,12 +598,9 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
-			copy(atts, b.state.CurrentEpochAttestations)
-		} else {
-			atts = b.CurrentEpochAttestations()
-		}
+		// Copy elements in underlying array by reference.
+		atts = make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
+		copy(atts, b.state.CurrentEpochAttestations)
 		b.sharedFieldReferences[currentEpochAttestations].MinusRef()
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 	}
@@ -626,12 +624,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.lock.RLock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].Refs() > 1 {
-		if featureconfig.Get().EnableStateRefCopy {
-			atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
-			copy(atts, b.state.PreviousEpochAttestations)
-		} else {
-			atts = b.PreviousEpochAttestations()
-		}
+		atts = make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
+		copy(atts, b.state.PreviousEpochAttestations)
 		b.sharedFieldReferences[previousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
