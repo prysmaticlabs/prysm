@@ -112,7 +112,8 @@ func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.Bea
 	return beaconState, nil
 }
 
-func areEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+// AreEth1DataEqual checks equality between two eth1 data objects.
+func AreEth1DataEqual(a, b *ethpb.Eth1Data) bool {
 	if a == nil && b == nil {
 		return true
 	}
@@ -133,7 +134,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 	data = stateTrie.CopyETH1Data(data)
 
 	for _, vote := range beaconState.Eth1DataVotes() {
-		if areEth1DataEqual(vote, data) {
+		if AreEth1DataEqual(vote, data) {
 			voteCount++
 		}
 	}

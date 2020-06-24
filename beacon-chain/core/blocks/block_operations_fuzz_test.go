@@ -90,8 +90,8 @@ func TestFuzzareEth1DataEqual_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(eth1data)
 		fuzzer.Fuzz(eth1data2)
-		areEth1DataEqual(eth1data, eth1data2)
-		areEth1DataEqual(eth1data, eth1data)
+		AreEth1DataEqual(eth1data, eth1data2)
+		AreEth1DataEqual(eth1data, eth1data)
 	}
 }
 

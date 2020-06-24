@@ -2224,3 +2224,75 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAreEth1DataEqual(t *testing.T) {
+	type args struct {
+		a *ethpb.Eth1Data
+		b *ethpb.Eth1Data
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "true when both are nil",
+			args: args{
+				a: nil,
+				b: nil,
+			},
+			want: true,
+		},
+		{
+			name: "false when only one is nil",
+			args: args{
+				a: nil,
+				b: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "true when real equality",
+			args: args{
+				a: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+				b: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "false is field value differs",
+			args: args{
+				a: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+				b: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 64,
+					BlockHash:    make([]byte, 32),
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := blocks.AreEth1DataEqual(tt.args.a, tt.args.b); got != tt.want {
+				t.Errorf("AreEth1DataEqual() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
