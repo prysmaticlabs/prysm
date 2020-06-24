@@ -77,7 +77,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		}
 		dst := make([]byte, hex.EncodedLen(len(rawbytes)))
 		hex.Encode(dst, rawbytes)
-		if err = ioutil.WriteFile(defaultKeyPath, dst, params.BeaconIoConfig().FilePermission); err != nil {
+		if err = ioutil.WriteFile(defaultKeyPath, dst, params.BeaconIoConfig().ReadWritePermissions); err != nil {
 			return nil, err
 		}
 		convertedKey := convertFromInterfacePrivKey(priv)
@@ -128,7 +128,7 @@ func metaDataFromConfig(cfg *Config) (*pbp2p.MetaData, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err = ioutil.WriteFile(defaultKeyPath, dst, params.BeaconIoConfig().FilePermission); err != nil {
+		if err = ioutil.WriteFile(defaultKeyPath, dst, params.BeaconIoConfig().ReadWritePermissions); err != nil {
 			return nil, err
 		}
 		return metaData, nil

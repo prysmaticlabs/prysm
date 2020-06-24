@@ -53,7 +53,7 @@ type db struct {
 
 func newDB(dbPath string) *db {
 	datafile := path.Join(dbPath, dbFileName)
-	boltdb, err := bolt.Open(datafile, params.BeaconIoConfig().FilePermission, &bolt.Options{Timeout: 1 * time.Second})
+	boltdb, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		panic(err)
 	}

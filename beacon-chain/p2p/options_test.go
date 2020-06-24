@@ -33,7 +33,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 	}
 	out := hex.EncodeToString(raw)
 
-	err = ioutil.WriteFile(file.Name(), []byte(out), params.BeaconIoConfig().FilePermission)
+	err = ioutil.WriteFile(file.Name(), []byte(out), params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
 		t.Fatalf("Could not write key to file: %v", err)
 	}

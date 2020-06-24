@@ -53,7 +53,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 		return nil, err
 	}
 	datafile := path.Join(dirPath, databaseFileName)
-	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().FilePermission, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
+	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
 	if err != nil {
 		if err == bolt.ErrTimeout {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
