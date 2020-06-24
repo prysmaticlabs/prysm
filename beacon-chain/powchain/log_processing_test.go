@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -497,7 +496,9 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	bConfig.MinGenesisTime = 0
 	bConfig.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(bConfig)
-	flags.Get().DeploymentBlock = 0
+	nConfig := params.BeaconNetworkConfig()
+	nConfig.ContractDeploymentBlock = 0
+	params.OverrideBeaconNetworkConfig(nConfig)
 
 	testAcc.Backend.Commit()
 

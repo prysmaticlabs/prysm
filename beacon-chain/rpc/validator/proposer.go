@@ -2,9 +2,9 @@ package validator
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"time"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -223,8 +223,18 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	}
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
-	depRoot := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
-	blockHash := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
+	randomDepBytes := make([]byte, 32)
+	randomBlkBytes := make([]byte, 32)
+	_, err = rand.Read(randomDepBytes)
+	if err != nil {
+		return nil, err
+	}
+	_, err = rand.Read(randomBlkBytes)
+	if err != nil {
+		return nil, err
+	}
+	depRoot := hashutil.Hash(randomDepBytes)
+	blockHash := hashutil.Hash(randomBlkBytes)
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),

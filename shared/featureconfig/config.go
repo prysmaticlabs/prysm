@@ -21,6 +21,7 @@ package featureconfig
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -29,6 +30,8 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	// Testnet Flags.
+	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
 	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
@@ -108,6 +111,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
+	}
+	if ctx.Bool(altonaTestnet.Name) {
+		log.Warn("Running Node on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -247,6 +256,12 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
+	if ctx.Bool(altonaTestnet.Name) {
+		log.Warn("Running Validator on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
+	}
 	if ctx.Bool(enableStreamDuties.Name) {
 		log.Warn("Enabled validator duties streaming.")
 		cfg.EnableStreamDuties = true

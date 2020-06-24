@@ -146,7 +146,6 @@ func (s *Service) Start() {
 	}
 
 	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGenericGoodbyeMessage)
-	s.p2p.AddDisconnectionHandler(s.removeDisconnectedPeerStatus)
 	s.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
@@ -178,7 +177,7 @@ func (s *Service) Status() error {
 		// If our head slot is on a previous epoch and our peers are reporting their head block are
 		// in the most recent epoch, then we might be out of sync.
 		if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
-			headEpoch+1 < s.p2p.Peers().CurrentEpoch() {
+			headEpoch+1 < s.p2p.Peers().HighestEpoch() {
 			return errors.New("out of sync")
 		}
 	}
