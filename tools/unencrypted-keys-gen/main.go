@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 )
