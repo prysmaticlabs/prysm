@@ -80,6 +80,14 @@ func (s *Service) Start() {
 		// Wait for state to be initialized.
 		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+		// We have two instances in which we call unsubscribe. The first 
+		// instance below is to account for the fact that we exit
+		// the for-select loop through a return when we receive a closed 
+		// context or error from our subscription. The only way to correctly
+		// close the subscription would be through a defer. The second instance we 
+		// call unsubscribe when we have already received the state 
+		// initialized event and are proceeding with the main synchronization
+		// routine. 
 		defer stateSub.Unsubscribe()
 		genesisSet := false
 		for !genesisSet {
