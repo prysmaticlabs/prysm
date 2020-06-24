@@ -223,10 +223,7 @@ func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposit
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	if dc.finalizedDeposits != nil {
-		return dc.finalizedDeposits
-	}
-	return nil
+	return dc.finalizedDeposits
 }
 
 // NonFinalizedDeposits returns the list of non-finalized historical deposits until the given block number
