@@ -31,7 +31,7 @@ func TestStore_Head_Itself(t *testing.T) {
 
 	// Since the justified node does not have a best descendant so the best node
 	// is itself.
-	s := &Store{NodeIndices: indices, Nodes: []*Node{{Root: r, BestDescendent: NonExistentNode}}}
+	s := &Store{NodeIndices: indices, Nodes: []*Node{{Root: r, BestDescendant: NonExistentNode}}}
 	h, err := s.head(context.Background(), r)
 	if err != nil {
 		t.Fatal("Did not get wanted error")
@@ -50,7 +50,7 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 
 	// Since the justified node's best descendent is at index 1 and it's root is `best`,
 	// the head should be `best`.
-	s := &Store{NodeIndices: indices, Nodes: []*Node{{Root: r, BestDescendent: 1}, {Root: best}}}
+	s := &Store{NodeIndices: indices, Nodes: []*Node{{Root: r, BestDescendant: 1}, {Root: best}}}
 	h, err := s.head(context.Background(), r)
 	if err != nil {
 		t.Fatal("Did not get wanted error")
@@ -227,14 +227,14 @@ func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
 	if s.Nodes[0].BestChild != NonExistentNode {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != NonExistentNode {
+	if s.Nodes[0].BestDescendant != NonExistentNode {
 		t.Error("Did not get correct best descendant index")
 	}
 }
 
 func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 	// Make parent's best child equal to child index and child is viable.
-	s := &Store{Nodes: []*Node{{BestChild: 1}, {BestDescendent: NonExistentNode}}}
+	s := &Store{Nodes: []*Node{{BestChild: 1}, {BestDescendant: NonExistentNode}}}
 
 	if err := s.updateBestChildAndDescendant(0, 1); err != nil {
 		t.Fatal(err)
@@ -244,7 +244,7 @@ func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 	if s.Nodes[0].BestChild != 1 {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != 1 {
+	if s.Nodes[0].BestDescendant != 1 {
 		t.Error("Did not get correct best descendant index")
 	}
 }
@@ -256,8 +256,8 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T)
 		JustifiedEpoch: 1,
 		FinalizedEpoch: 1,
 		Nodes: []*Node{{BestChild: 1, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1}}}
+			{BestDescendant: NonExistentNode},
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1}}}
 
 	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
@@ -267,7 +267,7 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T)
 	if s.Nodes[0].BestChild != 2 {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != 2 {
+	if s.Nodes[0].BestDescendant != 2 {
 		t.Error("Did not get correct best descendant index")
 	}
 }
@@ -279,8 +279,8 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByWeight(t *testing.T) {
 		JustifiedEpoch: 1,
 		FinalizedEpoch: 1,
 		Nodes: []*Node{{BestChild: 1, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1, Weight: 1}}}
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1, Weight: 1}}}
 
 	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
@@ -290,7 +290,7 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByWeight(t *testing.T) {
 	if s.Nodes[0].BestChild != 2 {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != 2 {
+	if s.Nodes[0].BestDescendant != 2 {
 		t.Error("Did not get correct best descendant index")
 	}
 }
@@ -301,8 +301,8 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildAtLeaf(t *testing.T) {
 		JustifiedEpoch: 1,
 		FinalizedEpoch: 1,
 		Nodes: []*Node{{BestChild: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1}}}
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1}}}
 
 	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
@@ -312,7 +312,7 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildAtLeaf(t *testing.T) {
 	if s.Nodes[0].BestChild != 2 {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != 2 {
+	if s.Nodes[0].BestDescendant != 2 {
 		t.Error("Did not get correct best descendant index")
 	}
 }
@@ -324,8 +324,8 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByViability(t *testing.T) {
 		JustifiedEpoch: 1,
 		FinalizedEpoch: 1,
 		Nodes: []*Node{{BestChild: 1, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode}}}
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
+			{BestDescendant: NonExistentNode}}}
 
 	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
@@ -335,7 +335,7 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByViability(t *testing.T) {
 	if s.Nodes[0].BestChild != 1 {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != 0 {
+	if s.Nodes[0].BestDescendant != 0 {
 		t.Error("Did not get correct best descendant index")
 	}
 }
@@ -347,8 +347,8 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByWeight(t *testing.T) {
 		JustifiedEpoch: 1,
 		FinalizedEpoch: 1,
 		Nodes: []*Node{{BestChild: 1, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1, Weight: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1}}}
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1, Weight: 1},
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1}}}
 
 	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
@@ -358,7 +358,7 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByWeight(t *testing.T) {
 	if s.Nodes[0].BestChild != 1 {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != 0 {
+	if s.Nodes[0].BestDescendant != 0 {
 		t.Error("Did not get correct best descendant index")
 	}
 }
@@ -369,8 +369,8 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
 		JustifiedEpoch: 1,
 		FinalizedEpoch: 1,
 		Nodes: []*Node{{BestChild: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
-			{BestDescendent: NonExistentNode}}}
+			{BestDescendant: NonExistentNode, JustifiedEpoch: 1, FinalizedEpoch: 1},
+			{BestDescendant: NonExistentNode}}}
 
 	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
@@ -380,7 +380,7 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
 	if s.Nodes[0].BestChild != NonExistentNode {
 		t.Error("Did not get correct best child index")
 	}
-	if s.Nodes[0].BestDescendent != 0 {
+	if s.Nodes[0].BestDescendant != 0 {
 		t.Error("Did not get correct best descendant index")
 	}
 }
@@ -419,7 +419,7 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
 		nodes = append(nodes, &Node{Slot: uint64(i), Root: indexToHash(uint64(i)),
-			BestDescendent: NonExistentNode, BestChild: NonExistentNode})
+			BestDescendant: NonExistentNode, BestChild: NonExistentNode})
 	}
 
 	s := &Store{Nodes: nodes, NodeIndices: indices}
@@ -445,7 +445,7 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
 		nodes = append(nodes, &Node{Slot: uint64(i), Root: indexToHash(uint64(i)),
-			BestDescendent: NonExistentNode, BestChild: NonExistentNode})
+			BestDescendant: NonExistentNode, BestChild: NonExistentNode})
 	}
 
 	s := &Store{Nodes: nodes, NodeIndices: indices}
