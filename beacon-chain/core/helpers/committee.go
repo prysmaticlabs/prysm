@@ -137,6 +137,8 @@ func ComputeCommittee(
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
 	shuffledIndices := make([]uint64, len(indices))
 	copy(shuffledIndices, indices)
+	// UnshuffleList is used here as it is an optimized implementation created
+	// for fast computation of committees.
 	shuffledList, err := UnshuffleList(shuffledIndices, seed)
 	return shuffledList[start:end], err
 }
@@ -295,6 +297,7 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 		return nil, err
 	}
 
+	// UnshuffleList is used as an optimized implementation for raw speed.
 	return UnshuffleList(indices, seed)
 }
 
