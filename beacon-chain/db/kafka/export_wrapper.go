@@ -3,7 +3,6 @@
 package kafka
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/golang/protobuf/proto"
@@ -14,14 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	jsonpb "google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	_ "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka/librdkafka" // Required for c++ kafka library.
 )
 
 var _ = iface.Database(&Exporter{})
 var log = logrus.WithField("prefix", "exporter")
-var marshaler = &jsonpb.Marshaler{}
 
 // Exporter wraps a database interface and exports certain objects to kafka topics.
 type Exporter struct {
@@ -49,8 +47,8 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 	ctx, span := trace.StartSpan(ctx, "kafka.publish")
 	defer span.End()
 
-	buf := bytes.NewBuffer(nil)
-	if err := marshaler.Marshal(buf, msg); err != nil {
+	enc, err := protojson.Marshal(proto.MessageV2(msg))
+	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -65,7 +63,7 @@ func (e Exporter) publish(ctx context.Context, topic string, msg proto.Message) 
 		TopicPartition: kafka.TopicPartition{
 			Topic: &topic,
 		},
-		Value: buf.Bytes(),
+		Value: enc,
 		Key:   key[:],
 	}, nil); err != nil {
 		traceutil.AnnotateError(span, err)
