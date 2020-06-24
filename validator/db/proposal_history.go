@@ -15,14 +15,14 @@ import (
 
 // ProposalHistoryForEpoch accepts a validator public key and returns the corresponding proposal history.
 // Returns nil if there is no proposal history for the validator.
-func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error) {
+func (store *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, epoch uint64) (bitfield.Bitlist, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForEpoch")
 	defer span.End()
 
 	var err error
 	// Adding an extra byte for the bitlist length.
 	slotBitlist := make(bitfield.Bitlist, params.BeaconConfig().SlotsPerEpoch/8+1)
-	err = db.view(func(tx *bolt.Tx) error {
+	err = store.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(publicKey)
 		if valBucket == nil {
@@ -40,11 +40,11 @@ func (db *Store) ProposalHistoryForEpoch(ctx context.Context, publicKey []byte, 
 }
 
 // SaveProposalHistoryForEpoch saves the proposal history for the requested validator public key.
-func (db *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte, epoch uint64, slotBits bitfield.Bitlist) error {
+func (store *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte, epoch uint64, slotBits bitfield.Bitlist) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
-	err := db.update(func(tx *bolt.Tx) error {
+	err := store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(pubKey)
 		if valBucket == nil {
@@ -62,11 +62,11 @@ func (db *Store) SaveProposalHistoryForEpoch(ctx context.Context, pubKey []byte,
 }
 
 // DeleteProposalHistory deletes the proposal history for the corresponding validator public key.
-func (db *Store) DeleteProposalHistory(ctx context.Context, pubkey []byte) error {
+func (store *Store) DeleteProposalHistory(ctx context.Context, pubkey []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.DeleteProposalHistory")
 	defer span.End()
 
-	return db.update(func(tx *bolt.Tx) error {
+	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		if err := bucket.DeleteBucket(pubkey); err != nil {
 			return errors.Wrap(err, "failed to delete the proposal history")
@@ -92,8 +92,8 @@ func pruneProposalHistory(valBucket *bolt.Bucket, newestEpoch uint64) error {
 	return nil
 }
 
-func (db *Store) initializeSubBuckets(pubKeys [][48]byte) error {
-	return db.update(func(tx *bolt.Tx) error {
+func (store *Store) initializeSubBuckets(pubKeys [][48]byte) error {
+	return store.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		for _, pubKey := range pubKeys {
 			if _, err := bucket.CreateBucketIfNotExists(pubKey[:]); err != nil {
