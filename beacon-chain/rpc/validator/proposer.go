@@ -401,7 +401,6 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
 
-	// TODO(3916): Insert optimizations to sort out the most profitable attestations
 	for i, att := range atts {
 		if i == int(params.BeaconConfig().MaxAttestations) {
 			break
