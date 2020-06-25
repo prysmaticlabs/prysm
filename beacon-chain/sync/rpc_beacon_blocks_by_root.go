@@ -25,6 +25,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	if err != nil {
 		return err
 	}
+	setStreamReadDeadline(stream, defaultReadDuration)
 	defer func() {
 		if err := stream.Reset(); err != nil {
 			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
@@ -71,6 +72,7 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 	if err != nil {
 		return err
 	}
+	setStreamReadDeadline(stream, defaultReadDuration)
 	defer func() {
 		if err := stream.Reset(); err != nil {
 			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
