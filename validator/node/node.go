@@ -106,6 +106,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 		if dataDir == "" {
+			dataDir = cmd.DefaultDataDir()
 			if dataDir == "" {
 				log.Fatal(
 					"Could not determine your system's HOME path, please specify a --datadir you wish " +
