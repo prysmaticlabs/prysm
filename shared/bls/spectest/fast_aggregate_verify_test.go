@@ -7,6 +7,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -25,7 +26,7 @@ func TestFastAggregateVerifyYaml(t *testing.T) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			pubkeys := make([]*bls.PublicKey, len(test.Input.Pubkeys))
+			pubkeys := make([]iface.PublicKey, len(test.Input.Pubkeys))
 			for j, raw := range test.Input.Pubkeys {
 				pkBytes, err := hex.DecodeString(raw[2:])
 				if err != nil {

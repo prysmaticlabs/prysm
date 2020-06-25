@@ -11,6 +11,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -108,7 +109,7 @@ type Service struct {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
-	// Intialize block limits.
+	// Initialize block limits.
 	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
 	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
 
@@ -146,7 +147,10 @@ func (s *Service) Start() {
 	}
 
 	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGenericGoodbyeMessage)
-	s.p2p.AddDisconnectionHandler(s.removeDisconnectedPeerStatus)
+	s.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
+		// no-op
+		return nil
+	})
 	s.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
@@ -178,7 +182,7 @@ func (s *Service) Status() error {
 		// If our head slot is on a previous epoch and our peers are reporting their head block are
 		// in the most recent epoch, then we might be out of sync.
 		if headEpoch := helpers.SlotToEpoch(s.chain.HeadSlot()); headEpoch+1 < helpers.SlotToEpoch(s.chain.CurrentSlot()) &&
-			headEpoch+1 < s.p2p.Peers().CurrentEpoch() {
+			headEpoch+1 < s.p2p.Peers().HighestEpoch() {
 			return errors.New("out of sync")
 		}
 	}

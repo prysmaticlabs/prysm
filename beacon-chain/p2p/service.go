@@ -39,8 +39,11 @@ import (
 
 var _ = shared.Service(&Service{})
 
-// Check local table every 15 seconds for newly added peers.
-var pollingPeriod = 15 * time.Second
+// In the event that we are at our peer limit, we
+// stop looking for new peers and instead poll
+// for the current peer limit status for the time period
+// defined below.
+var pollingPeriod = 6 * time.Second
 
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
@@ -137,7 +140,6 @@ func NewService(cfg *Config) (*Service, error) {
 
 	s.host = h
 
-	// TODO(3147): Add gossip sub options
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
@@ -354,8 +356,8 @@ func (s *Service) MetadataSeq() uint64 {
 }
 
 // RefreshENR uses an epoch to refresh the enr entry for our node
-// with the tracked committee id's for the epoch, allowing our node
-// to be dynamically discoverable by others given our tracked committee id's.
+// with the tracked committee ids for the epoch, allowing our node
+// to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshENR() {
 	// return early if discv5 isnt running
 	if s.dv5Listener == nil {
@@ -484,6 +486,13 @@ func (s *Service) listenForNewNodes() {
 		// Exit if service's context is canceled
 		if s.ctx.Err() != nil {
 			break
+		}
+		if s.isPeerAtLimit() {
+			// Pause the main loop for a period to stop looking
+			// for new peers.
+			log.Trace("Not looking for peers, at peer limit")
+			time.Sleep(pollingPeriod)
+			continue
 		}
 		exists := iterator.Next()
 		if !exists {

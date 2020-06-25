@@ -78,8 +78,8 @@ func NewKeystore(input string) (KeyManager, string, error) {
 
 	km := &Unencrypted{
 		Direct: &Direct{
-			publicKeys: make(map[[48]byte]*bls.PublicKey),
-			secretKeys: make(map[[48]byte]*bls.SecretKey),
+			publicKeys: make(map[[48]byte]bls.PublicKey),
+			secretKeys: make(map[[48]byte]bls.SecretKey),
 		},
 	}
 	for _, key := range keyMap {

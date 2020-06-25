@@ -53,8 +53,7 @@ func TestMain(m *testing.M) {
 	logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		EnableInitSyncWeightedRoundRobin: true,
-		NewStateMgmt:                     true,
+		NewStateMgmt: true,
 	})
 	defer resetCfg()
 
@@ -71,7 +70,7 @@ func TestMain(m *testing.M) {
 
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
 	cache.initializeRootCache(blocks, t)
-	beaconDB := dbtest.SetupDB(t)
+	beaconDB, _ := dbtest.SetupDB(t)
 
 	p := p2pt.NewTestP2P(t)
 	connectPeers(t, p, peers, p.Peers())

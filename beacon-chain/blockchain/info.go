@@ -64,7 +64,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 		}
 
 		if nodes[i].Slot == s.headSlot() &&
-			nodes[i].BestDescendent == ^uint64(0) {
+			nodes[i].BestDescendant == ^uint64(0) {
 			dotN = dotN.Attr("color", "green")
 		}
 
