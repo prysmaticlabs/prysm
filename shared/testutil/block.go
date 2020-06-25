@@ -64,7 +64,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
 	bState *stateTrie.BeaconState,
-	privs []*bls.SecretKey,
+	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot uint64,
 ) (*ethpb.SignedBeaconBlock, error) {
@@ -184,7 +184,7 @@ func GenerateFullBlock(
 // GenerateProposerSlashingForValidator for a specific validator index.
 func GenerateProposerSlashingForValidator(
 	bState *stateTrie.BeaconState,
-	priv *bls.SecretKey,
+	priv bls.SecretKey,
 	idx uint64,
 ) (*ethpb.ProposerSlashing, error) {
 	header1 := &ethpb.SignedBeaconBlockHeader{
@@ -230,7 +230,7 @@ func GenerateProposerSlashingForValidator(
 
 func generateProposerSlashings(
 	bState *stateTrie.BeaconState,
-	privs []*bls.SecretKey,
+	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
 	proposerSlashings := make([]*ethpb.ProposerSlashing, numSlashings)
@@ -251,7 +251,7 @@ func generateProposerSlashings(
 // GenerateAttesterSlashingForValidator for a specific validator index.
 func GenerateAttesterSlashingForValidator(
 	bState *stateTrie.BeaconState,
-	priv *bls.SecretKey,
+	priv bls.SecretKey,
 	idx uint64,
 ) (*ethpb.AttesterSlashing, error) {
 	currentEpoch := helpers.CurrentEpoch(bState)
@@ -280,7 +280,7 @@ func GenerateAttesterSlashingForValidator(
 		return nil, err
 	}
 	sig := priv.Sign(dataRoot[:])
-	att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
+	att1.Signature = bls.AggregateSignatures([]bls.Signature{sig}).Marshal()
 
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
@@ -302,7 +302,7 @@ func GenerateAttesterSlashingForValidator(
 		return nil, err
 	}
 	sig = priv.Sign(dataRoot[:])
-	att2.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
+	att2.Signature = bls.AggregateSignatures([]bls.Signature{sig}).Marshal()
 
 	return &ethpb.AttesterSlashing{
 		Attestation_1: att1,
@@ -312,7 +312,7 @@ func GenerateAttesterSlashingForValidator(
 
 func generateAttesterSlashings(
 	bState *stateTrie.BeaconState,
-	privs []*bls.SecretKey,
+	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
@@ -340,7 +340,7 @@ func generateAttesterSlashings(
 // for the same data with their aggregation bits split uniformly.
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
-func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey, numToGen uint64, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
+func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, numToGen uint64, slot uint64, randomRoot bool) ([]*ethpb.Attestation, error) {
 	currentEpoch := helpers.SlotToEpoch(slot)
 	attestations := []*ethpb.Attestation{}
 	generateHeadState := false
@@ -447,7 +447,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 		bitsPerAtt := committeeSize / uint64(attsPerCommittee)
 		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
 			aggregationBits := bitfield.NewBitlist(committeeSize)
-			sigs := []*bls.Signature{}
+			sigs := []bls.Signature{}
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
 				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:]))
@@ -491,7 +491,7 @@ func generateDepositsAndEth1Data(
 
 func generateVoluntaryExits(
 	bState *stateTrie.BeaconState,
-	privs []*bls.SecretKey,
+	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
 	currentEpoch := helpers.CurrentEpoch(bState)

@@ -762,7 +762,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return err
 	}
 	indices := indexedAtt.AttestingIndices
-	pubkeys := []*bls.PublicKey{}
+	pubkeys := []bls.PublicKey{}
 	if len(indices) > 0 {
 		for i := 0; i < len(indices); i++ {
 			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
@@ -851,8 +851,8 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 		return nil
 	}
 
-	sigs := make([]*bls.Signature, len(atts))
-	pks := make([]*bls.PublicKey, len(atts))
+	sigs := make([]bls.Signature, len(atts))
+	pks := make([]bls.PublicKey, len(atts))
 	msgs := make([][32]byte, len(atts))
 	for i, a := range atts {
 		sig, err := bls.SignatureFromBytes(a.Signature)
@@ -866,7 +866,7 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 		}
 		ia := attestationutil.ConvertToIndexed(ctx, a, c)
 		indices := ia.AttestingIndices
-		var pk *bls.PublicKey
+		var pk bls.PublicKey
 		for i := 0; i < len(indices); i++ {
 			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 			p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
