@@ -1,0 +1,8 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["interface.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/bls/iface",
+    visibility = ["//shared/bls:__subpackages__"],
+)
