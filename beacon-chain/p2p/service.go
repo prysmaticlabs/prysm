@@ -140,7 +140,6 @@ func NewService(cfg *Config) (*Service, error) {
 
 	s.host = h
 
-	// TODO(3147): Add gossip sub options
 	// Gossipsub registration is done before we add in any new peers
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
