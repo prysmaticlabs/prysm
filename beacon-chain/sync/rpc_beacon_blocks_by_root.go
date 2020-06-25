@@ -67,7 +67,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_root")
 
 	req, ok := msg.(*pbp2p.BeaconBlocksByRootRequest)
