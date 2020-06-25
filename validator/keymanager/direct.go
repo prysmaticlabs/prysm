@@ -8,16 +8,16 @@ import (
 // Direct is a key manager that holds all secret keys directly.
 type Direct struct {
 	// Key to the map is the bytes of the public key.
-	publicKeys map[[48]byte]*bls.PublicKey
+	publicKeys map[[48]byte]bls.PublicKey
 	// Key to the map is the bytes of the public key.
-	secretKeys map[[48]byte]*bls.SecretKey
+	secretKeys map[[48]byte]bls.SecretKey
 }
 
 // NewDirect creates a new direct key manager from the secret keys provided to it.
-func NewDirect(sks []*bls.SecretKey) *Direct {
+func NewDirect(sks []bls.SecretKey) *Direct {
 	res := &Direct{
-		publicKeys: make(map[[48]byte]*bls.PublicKey),
-		secretKeys: make(map[[48]byte]*bls.SecretKey),
+		publicKeys: make(map[[48]byte]bls.PublicKey),
+		secretKeys: make(map[[48]byte]bls.SecretKey),
 	}
 	for _, sk := range sks {
 		publicKey := sk.PublicKey()
@@ -38,7 +38,7 @@ func (km *Direct) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign signs a message for the validator to broadcast.
-func (km *Direct) Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error) {
+func (km *Direct) Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error) {
 	if secretKey, exists := km.secretKeys[pubKey]; exists {
 		return secretKey.Sign(root[:]), nil
 	}
