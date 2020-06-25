@@ -1,8 +1,8 @@
 package testdata
 
 import (
+	foobar "math/rand"
 	mathRand "math/rand"
-	xxx "math/rand"
 	"time"
 )
 
@@ -17,7 +17,7 @@ func UseRandNewCustomImport() {
 func UseWithoutSeeCustomImportd() {
 	assignedIndex := mathRand.Intn(128)
 	_ = assignedIndex
-	xxx.Shuffle(10, func(i, j int) {
+	foobar.Shuffle(10, func(i, j int) {
 
 	})
 }
