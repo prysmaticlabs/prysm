@@ -23,7 +23,8 @@ func SetRPCStreamDeadlines(stream network.Stream) {
 // NOTE: libp2p uses the system clock time for determining the deadline so we use
 // time.Now() instead of the synchronized roughtime.Now(). If the system
 // time is corrupted (i.e. time does not advance), the node will experience
-// significant.
+// issues being able to properly close streams, leading to unexpected failures and possible
+// memory leaks.
 func SetStreamReadDeadline(stream network.Stream, duration time.Duration) {
 	if err := stream.SetReadDeadline(time.Now().Add(duration)); err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
@@ -40,7 +41,8 @@ func SetStreamReadDeadline(stream network.Stream, duration time.Duration) {
 // NOTE: libp2p uses the system clock time for determining the deadline so we use
 // time.Now() instead of the synchronized roughtime.Now(). If the system
 // time is corrupted (i.e. time does not advance), the node will experience
-// significant.
+// issues being able to properly close streams, leading to unexpected failures and possible
+// memory leaks.
 func SetStreamWriteDeadline(stream network.Stream, duration time.Duration) {
 	if err := stream.SetWriteDeadline(time.Now().Add(duration)); err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
