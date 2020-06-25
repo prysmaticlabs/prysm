@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"strings"
+
 	"github.com/libp2p/go-libp2p/config"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -16,7 +18,7 @@ func withRelayAddrs(relay string) config.AddrsFactory {
 		var relayAddrs []ma.Multiaddr
 
 		for _, a := range addrs {
-			if a.String() == "/p2p-circuit" {
+			if strings.Contains(a.String(), "/p2p-circuit") {
 				continue
 			}
 			relayAddr, err := ma.NewMultiaddr(relay + "/p2p-circuit" + a.String())
