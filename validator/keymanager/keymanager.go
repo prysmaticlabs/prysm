@@ -22,18 +22,18 @@ type KeyManager interface {
 	FetchValidatingKeys() ([][48]byte, error)
 	// Sign signs a message for the validator to broadcast.
 	// Note that the domain should already be part of the root, but it is passed along for security purposes.
-	Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error)
+	Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error)
 }
 
 // ProtectingKeyManager provides access to a keymanager that protects its clients from slashing events.
 type ProtectingKeyManager interface {
 	// SignGeneric signs a generic root.
 	// Note that the domain should already be part of the root, but it is provided for authorisation purposes.
-	SignGeneric(pubKey [48]byte, root [32]byte, domain [32]byte) (*bls.Signature, error)
+	SignGeneric(pubKey [48]byte, root [32]byte, domain [32]byte) (bls.Signature, error)
 
 	// SignProposal signs a block proposal for the validator to broadcast.
-	SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.BeaconBlockHeader) (*bls.Signature, error)
+	SignProposal(pubKey [48]byte, domain [32]byte, data *ethpb.BeaconBlockHeader) (bls.Signature, error)
 
 	// SignAttestation signs an attestation for the validator to broadcast.
-	SignAttestation(pubKey [48]byte, domain [32]byte, data *ethpb.AttestationData) (*bls.Signature, error)
+	SignAttestation(pubKey [48]byte, domain [32]byte, data *ethpb.AttestationData) (bls.Signature, error)
 }
