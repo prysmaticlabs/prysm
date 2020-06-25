@@ -11,14 +11,19 @@ import (
 var defaultReadDuration = ttfbTimeout
 var defaultWriteDuration = params.BeaconNetworkConfig().RespTimeout // RESP_TIMEOUT
 
-func setRPCStreamDeadlines(stream network.Stream) {
-	setStreamReadDeadline(stream, defaultReadDuration)
-	setStreamWriteDeadline(stream, defaultWriteDuration)
+func SetRPCStreamDeadlines(stream network.Stream) {
+	SetStreamReadDeadline(stream, defaultReadDuration)
+	SetStreamWriteDeadline(stream, defaultWriteDuration)
 }
 
-func setStreamReadDeadline(stream network.Stream, duration time.Duration) {
-	// libp2p uses the system clock time for determining the deadline so we use
-	// time.Now() instead of the synchronized roughtime.Now().
+// SetStreamReadDeadline for libp2p connection streams, deciding when to close
+// a connection based on a particular duration.
+//
+// NOTE: libp2p uses the system clock time for determining the deadline so we use
+// time.Now() instead of the synchronized roughtime.Now(). If the system
+// time is corrupted (i.e. time does not advance), the node will experience
+// significant
+func SetStreamReadDeadline(stream network.Stream, duration time.Duration) {
 	if err := stream.SetReadDeadline(time.Now().Add(duration)); err != nil {
 		log.WithError(err).WithFields(logrus.Fields{
 			"peer":      stream.Conn().RemotePeer(),
@@ -28,7 +33,7 @@ func setStreamReadDeadline(stream network.Stream, duration time.Duration) {
 	}
 }
 
-func setStreamWriteDeadline(stream network.Stream, duration time.Duration) {
+func SetStreamWriteDeadline(stream network.Stream, duration time.Duration) {
 	// libp2p uses the system clock time for determining the deadline so we use
 	// time.Now() instead of the synchronized roughtime.Now().
 	if err := stream.SetWriteDeadline(time.Now().Add(duration)); err != nil {
