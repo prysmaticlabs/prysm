@@ -14,7 +14,7 @@ import (
 // stream.
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
 func (s *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
-	setStreamWriteDeadline(stream, defaultWriteDuration)
+	SetStreamWriteDeadline(stream, defaultWriteDuration)
 	return WriteChunk(stream, s.p2p.Encoding(), msg)
 }
 
@@ -41,7 +41,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.SignedBeaconB
 // readResponseChunk reads the response from the stream and decodes it into the
 // provided message type.
 func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) error {
-	setStreamReadDeadline(stream, 10*time.Second)
+	SetStreamReadDeadline(stream, 10*time.Second)
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {
 		return err
