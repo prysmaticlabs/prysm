@@ -52,7 +52,6 @@ type Flags struct {
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
-	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
 	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
@@ -189,10 +188,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableNewStateMgmt.Name) {
 		log.Warn("Disabling new state management service")
 		cfg.NewStateMgmt = false
-	}
-	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
-		log.Warn("Disabling init sync batch save blocks mode")
-		cfg.NoInitSyncBatchSaveBlocks = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
