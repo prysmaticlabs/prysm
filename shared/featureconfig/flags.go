@@ -421,7 +421,7 @@ var (
 		Hidden: true,
 	}
 	deprecateddisableInitSyncBatchSaveBlocks = &cli.BoolFlag{
-		Name: "disable-init-sync-batch-save-blocks",
+		Name:   "disable-init-sync-batch-save-blocks",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
