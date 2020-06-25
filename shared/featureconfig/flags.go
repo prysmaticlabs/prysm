@@ -111,10 +111,6 @@ var (
 		Name:  "disable-new-state-mgmt",
 		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
-	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
-		Name:  "disable-init-sync-batch-save-blocks",
-		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
-	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -424,6 +420,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecateddisableInitSyncBatchSaveBlocks = &cli.BoolFlag{
+		Name:   "disable-init-sync-batch-save-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableInitSyncWeightedRoundRobin = &cli.BoolFlag{
 		Name:   "disable-init-sync-wrr",
 		Usage:  deprecatedUsage,
@@ -484,6 +485,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableInitSyncWeightedRoundRobin,
 	deprecatedDisableStateRefCopy,
 	deprecatedDisableFieldTrie,
+	deprecateddisableInitSyncBatchSaveBlocks,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -531,7 +533,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
-	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
 	disableNewStateMgmt,

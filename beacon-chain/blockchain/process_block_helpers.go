@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -147,7 +146,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	var newJustifiedBlockSigned *ethpb.SignedBeaconBlock
 	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	var err error
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(justifiedRoot) {
+	if s.hasInitSyncBlock(justifiedRoot) {
 		newJustifiedBlockSigned = s.getInitSyncBlock(justifiedRoot)
 	} else {
 		newJustifiedBlockSigned, err = s.beaconDB.Block(ctx, justifiedRoot)
@@ -165,7 +164,7 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	}
 	var justifiedBlockSigned *ethpb.SignedBeaconBlock
 	cachedJustifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(s.justifiedCheckpt.Root))
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(cachedJustifiedRoot) {
+	if s.hasInitSyncBlock(cachedJustifiedRoot) {
 		justifiedBlockSigned = s.getInitSyncBlock(cachedJustifiedRoot)
 	} else {
 		justifiedBlockSigned, err = s.beaconDB.Block(ctx, cachedJustifiedRoot)
@@ -235,7 +234,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
 
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
+	if s.hasInitSyncBlock(bytesutil.ToBytes32(root)) {
 		signed = s.getInitSyncBlock(bytesutil.ToBytes32(root))
 	}
 
