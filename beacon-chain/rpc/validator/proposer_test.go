@@ -1429,7 +1429,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sigs := make([]*bls.Signature, len(attestingIndices))
+		sigs := make([]bls.Signature, len(attestingIndices))
 		zeroSig := [96]byte{}
 		atts[i].Signature = zeroSig[:]
 

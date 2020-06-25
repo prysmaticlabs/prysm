@@ -836,7 +836,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	sig0 := privKeys[0].Sign(signingRoot[:])
 	sig1 := privKeys[1].Sign(signingRoot[:])
-	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
 	att2 := &ethpb.IndexedAttestation{
@@ -852,7 +852,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	sig0 = privKeys[0].Sign(signingRoot[:])
 	sig1 = privKeys[1].Sign(signingRoot[:])
-	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att2.Signature = aggregateSig.Marshal()[:]
 
 	slashings := []*ethpb.AttesterSlashing{
@@ -1148,7 +1148,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := make([]*bls.Signature, len(attestingIndices))
+	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1212,7 +1212,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := make([]*bls.Signature, len(attestingIndices1))
+	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1240,7 +1240,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs = make([]*bls.Signature, len(attestingIndices2))
+	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1294,7 +1294,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := make([]*bls.Signature, len(attestingIndices1))
+	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1321,7 +1321,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs = make([]*bls.Signature, len(attestingIndices2))
+	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1540,7 +1540,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		var sig []*bls.Signature
+		var sig []bls.Signature
 		for _, idx := range tt.attestation.AttestingIndices {
 			validatorSig := keys[idx].Sign(root[:])
 			sig = append(sig, validatorSig)
@@ -2107,7 +2107,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var sigs []*bls.Signature
+	var sigs []bls.Signature
 	for i, u := range comm1 {
 		att1.AggregationBits.SetBitAt(uint64(i), true)
 		sigs = append(sigs, keys[u].Sign(root[:]))
@@ -2189,7 +2189,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var sigs []*bls.Signature
+	var sigs []bls.Signature
 	for i, u := range comm1 {
 		att1.AggregationBits.SetBitAt(uint64(i), true)
 		sigs = append(sigs, keys[u].Sign(root[:]))
