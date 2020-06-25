@@ -139,10 +139,6 @@ var (
 		Name:  "enable-stream-duties",
 		Usage: "Enables validator duties streaming in the validator client",
 	}
-	disableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:  "disable-init-sync-wrr",
-		Usage: "Disables weighted round robin fetching optimization",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -418,11 +414,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:   "enable-init-sync-wrr",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedDisableStateRefCopy = &cli.BoolFlag{
 		Name:   "disable-state-ref-copy",
 		Usage:  deprecatedUsage,
@@ -431,6 +422,11 @@ var (
 	deprecatedDisableFieldTrie = &cli.BoolFlag{
 		Name:   "disable-state-field-trie",
 		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:  "disable-init-sync-wrr",
+		Usage: deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -485,7 +481,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedP2PBlacklist,
 	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
-	deprecatedEnableInitSyncWeightedRoundRobin,
+	deprecatedDisableInitSyncWeightedRoundRobin,
 	deprecatedDisableStateRefCopy,
 	deprecatedDisableFieldTrie,
 }
@@ -538,7 +534,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
-	disableInitSyncWeightedRoundRobin,
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,

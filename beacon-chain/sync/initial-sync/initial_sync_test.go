@@ -53,8 +53,7 @@ func TestMain(m *testing.M) {
 	logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		EnableInitSyncWeightedRoundRobin: true,
-		NewStateMgmt:                     true,
+		NewStateMgmt: true,
 	})
 	defer resetCfg()
 
