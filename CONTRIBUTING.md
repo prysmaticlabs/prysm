@@ -1,6 +1,8 @@
 # Contribution Guidelines
 
-Excited by our work and want to get involved in building out our sharding releases? Or maybe you haven't learned as much about the Ethereum protocol but are a savvy developer? Our [READINGS.md](https://github.com/prysmaticlabs/prysm/blob/master/docs/READINGS.md) doc includes comprehensive information on Ethereum and sharding for both part-time and core contributors to the project.
+Note: The latest and most up to date documenation can be found on our [docs portal](https://docs.prylabs.network/docs/contribute/contribution-guidelines).
+
+Excited by our work and want to get involved in building out our sharding releases? Or maybe you haven't learned as much about the Ethereum protocol but are a savvy developer? 
 
 You can explore our [Open Issues](https://github.com/prysmaticlabs/prysm/issues) in-the works for our different releases. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Discord](https://discord.gg/che9auJ) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding) drop us a line there if you want to get more involved or have any questions on our implementation!
 
