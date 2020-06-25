@@ -7,13 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/shared/blockutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -63,38 +60,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	var slotBits bitfield.Bitlist
-	if featureconfig.Get().ProtectProposer {
-		slotBits, err = v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
-		if err != nil {
-			log.WithError(err).Error("Failed to get proposal history")
-			if v.emitAccountMetrics {
-				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-
-		// If the bit for the current slot is marked, do not propose.
-		if slotBits.BitAt(slot % params.BeaconConfig().SlotsPerEpoch) {
-			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected")
-			if v.emitAccountMetrics {
-				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		bh, err := blockutil.BeaconBlockHeaderFromBlock(b)
-		if err != nil {
-			log.WithError(err).Error("Failed to get block header from block")
-		}
-		if !v.protector.CheckBlockSafety(ctx, bh) {
-			log.WithField("epoch", epoch).Error("Tried to sign a double proposal, rejected by external slasher")
-			if v.emitAccountMetrics {
-				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
+	if err := v.preBlockSignValidations(ctx, pubKey, b); err != nil {
+		log.WithError(err).Error("Failed ")
+		return
 	}
 
 	// Sign returned block from beacon node
@@ -121,34 +89,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if featureconfig.Get().SlasherProtection && v.protector != nil {
-		sbh, err := blockutil.SignedBeaconBlockHeaderFromBlock(blk)
-		if err != nil {
-			log.WithError(err).Error("Failed to get block header from block")
-		}
-		if !v.protector.CommitBlock(ctx, sbh) {
-			log.WithField("epoch", epoch).Fatal("Tried to sign a double proposal, rejected by external slasher")
-			if v.emitAccountMetrics {
-				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-	if featureconfig.Get().ProtectProposer {
-		slotBits.SetBitAt(slot%params.BeaconConfig().SlotsPerEpoch, true)
-		if err := v.db.SaveProposalHistoryForEpoch(ctx, pubKey[:], epoch, slotBits); err != nil {
-			log.WithError(err).Error("Failed to save updated proposal history")
-			if v.emitAccountMetrics {
-				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-	}
-
-	if v.emitAccountMetrics {
-		metrics.ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
-	}
-
 	span.AddAttributes(
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
 		trace.Int64Attribute("numDeposits", int64(len(b.Body.Deposits))),
@@ -162,6 +102,15 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
 	}).Info("Submitted new block")
+
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk); err != nil {
+		log.WithError(err).Error("Failed post block signing validations")
+		return
+	}
+
+	if v.emitAccountMetrics {
+		metrics.ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
 }
 
 // ProposeExit --

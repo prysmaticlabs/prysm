@@ -10,7 +10,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -114,25 +112,12 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	indexedAtt.Signature = sig
-	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey); err != nil {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).Fatal("Made a slashable attestation, found by external slasher service")
-		return
-	}
-
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
 			metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
-	}
-
-	if v.emitAccountMetrics {
-		metrics.ValidatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
 
 	span.AddAttributes(
@@ -144,6 +129,16 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
+
+	indexedAtt.Signature = sig
+	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey); err != nil {
+		log.WithError(err).Fatal("Failed post attestation signing updates")
+		return
+	}
+
+	if v.emitAccountMetrics {
+		metrics.ValidatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
 }
 
 // Given the validator public key, this gets the validator assignment.
@@ -203,71 +198,6 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
 
 	return nil
-}
-
-// isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
-// and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
-func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) bool {
-	farFuture := params.BeaconConfig().FarFutureEpoch
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-
-	// Previously pruned, we should return false.
-	if int(targetEpoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
-		return false
-	}
-
-	// Check if there has already been a vote for this target epoch.
-	if safeTargetToSource(history, targetEpoch) != farFuture {
-		return true
-	}
-
-	// Check if the new attestation would be surrounding another attestation.
-	for i := sourceEpoch; i <= targetEpoch; i++ {
-		// Unattested for epochs are marked as FAR_FUTURE_EPOCH.
-		if safeTargetToSource(history, i) == farFuture {
-			continue
-		}
-		if history.TargetToSource[i%wsPeriod] > sourceEpoch {
-			return true
-		}
-	}
-
-	// Check if the new attestation is being surrounded.
-	for i := targetEpoch; i <= history.LatestEpochWritten; i++ {
-		if safeTargetToSource(history, i) < sourceEpoch {
-			return true
-		}
-	}
-
-	return false
-}
-
-// markAttestationForTargetEpoch returns the modified attestation history with the passed-in epochs marked
-// as attested for. This is done to prevent the validator client from signing any slashable attestations.
-func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) *slashpb.AttestationHistory {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-
-	if targetEpoch > history.LatestEpochWritten {
-		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
-		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		maxToWrite := history.LatestEpochWritten + wsPeriod
-		for i := history.LatestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
-			history.TargetToSource[i%wsPeriod] = params.BeaconConfig().FarFutureEpoch
-		}
-		history.LatestEpochWritten = targetEpoch
-	}
-	history.TargetToSource[targetEpoch%wsPeriod] = sourceEpoch
-	return history
-}
-
-// safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at
-// returns the "default" FAR_FUTURE_EPOCH value.
-func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64) uint64 {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	if targetEpoch > history.LatestEpochWritten || int(targetEpoch) < int(history.LatestEpochWritten)-int(wsPeriod) {
-		return params.BeaconConfig().FarFutureEpoch
-	}
-	return history.TargetToSource[targetEpoch%wsPeriod]
 }
 
 // waitToSlotOneThird waits until one third through the current slot period
