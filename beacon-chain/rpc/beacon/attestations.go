@@ -328,7 +328,6 @@ func (bs *Server) StreamIndexedAttestations(
 	}
 }
 
-// TODO(#5031): Instead of doing aggregation here, leverage the aggregation
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
