@@ -1203,7 +1203,6 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	}
 }
 
-// TODO(2312): Add more tests for edge cases and better coverage.
 func TestEth1Data(t *testing.T) {
 	slot := uint64(20000)
 
