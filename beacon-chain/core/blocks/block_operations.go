@@ -773,7 +773,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 
 }
 
-// CheckAttestationSafety converts and attestation into an indexed attestation and verifies
+// VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
 	if att == nil || att.Data == nil {
