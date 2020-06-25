@@ -167,7 +167,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 
 type testList [][32]byte
 
-func (_ *testList) Limit() uint64 {
+func (*testList) Limit() uint64 {
 	return 2 << 10
 }
 
