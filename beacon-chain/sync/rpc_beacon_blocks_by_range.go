@@ -27,7 +27,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}()
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_range")
 
 	// Ticker to stagger out large requests.
