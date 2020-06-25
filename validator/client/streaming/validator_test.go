@@ -639,7 +639,7 @@ func TestRolesAt_OK(t *testing.T) {
 	v, m, finish := setup(t)
 	defer finish()
 
-	sks := make([]*bls.SecretKey, 4)
+	sks := make([]bls.SecretKey, 4)
 	sks[0] = bls.RandKey()
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()
@@ -710,7 +710,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	v, m, finish := setup(t)
 	defer finish()
 
-	sks := make([]*bls.SecretKey, 3)
+	sks := make([]bls.SecretKey, 3)
 	sks[0] = bls.RandKey()
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()

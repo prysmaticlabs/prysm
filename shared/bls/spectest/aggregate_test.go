@@ -9,6 +9,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -25,7 +26,7 @@ func TestAggregateYaml(t *testing.T) {
 			if err := yaml.Unmarshal(file, test); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			var sigs []*bls.Signature
+			var sigs []iface.Signature
 			for _, s := range test.Input {
 				sigBytes, err := hex.DecodeString(s[2:])
 				if err != nil {
