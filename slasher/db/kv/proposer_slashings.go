@@ -58,7 +58,7 @@ func (db *Store) ProposalSlashingsByStatus(ctx context.Context, status types.Sla
 	return unmarshalProposerSlashingArray(ctx, encoded)
 }
 
-// deleteProposerSlashing deletes a proposer slashing proof.
+// DeleteProposerSlashing deletes a proposer slashing proof.
 func (db *Store) DeleteProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.deleteProposerSlashing")
 	defer span.End()
