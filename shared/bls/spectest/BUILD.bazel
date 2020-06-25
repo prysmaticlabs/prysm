@@ -32,6 +32,7 @@ go_test(
     tags = ["spectest"],
     deps = [
         "//shared/bls:go_default_library",
+        "//shared/bls/iface:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
