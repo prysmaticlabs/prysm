@@ -331,6 +331,12 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
 	if datadir == "" {
 		datadir = cmd.DefaultDataDir()
+		if datadir == "" {
+			log.Fatal(
+				"Could not determine your system's HOME path, please specify a --datadir you wish " +
+					"to use for your chain data",
+			)
+		}
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
