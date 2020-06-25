@@ -61,6 +61,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 // Deprecated: sendRecentBeaconBlocksRequestFallback sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer. This is a method implemented so that we are eventually
 // backward compatible with old Onyx nodes.
+// TODO(#6408)
 func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blockRoots [][32]byte, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
