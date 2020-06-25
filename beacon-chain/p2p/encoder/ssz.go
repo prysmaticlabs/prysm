@@ -117,7 +117,6 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 		// unmarshalling again. This is temporary to
 		// avoid too much disruption to live nodes.
 		if _, ok := to.([][32]byte); ok {
-			fmt.Sprintf("\n lopping off 4 bytes with length %d", len(b))
 			return ssz.Unmarshal(b[4:], to)
 		}
 		return err
