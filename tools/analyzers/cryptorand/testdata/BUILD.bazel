@@ -3,8 +3,8 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "custom_import.go",
         "rand_new.go",
-        "weak_crypto_custom_import.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/tools/analyzers/cryptorand/testdata",
     visibility = ["//visibility:public"],

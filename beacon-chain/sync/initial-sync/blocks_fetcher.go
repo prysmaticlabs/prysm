@@ -2,12 +2,9 @@ package initialsync
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"io"
 	"math"
-	"math/big"
-	mathRand "math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -24,6 +21,7 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -64,6 +62,7 @@ type blocksFetcher struct {
 	sync.Mutex
 	ctx             context.Context
 	cancel          context.CancelFunc
+	rand            *rand.Rand
 	headFetcher     blockchain.HeadFetcher
 	p2p             p2p.P2P
 	blocksPerSecond uint64
@@ -108,6 +107,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	return &blocksFetcher{
 		ctx:             ctx,
 		cancel:          cancel,
+		rand:            rand.NewRandomGenerator(),
 		headFetcher:     cfg.headFetcher,
 		p2p:             cfg.p2p,
 		blocksPerSecond: uint64(blocksPerSecond),
@@ -387,11 +387,7 @@ func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID)
 		return "", errNoPeersAvailable
 	}
 
-	randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(peers))))
-	if err != nil {
-		return "", err
-	}
-	return peers[randInt.Int64()], nil
+	return peers[f.rand.Int()%len(peers)], nil
 }
 
 // waitForMinimumPeers spins and waits up until enough peers are available.
@@ -425,12 +421,7 @@ func (f *blocksFetcher) filterPeers(peers []peer.ID, peersPercentage float64) ([
 
 	// Shuffle peers to prevent a bad peer from
 	// stalling sync with invalid blocks.
-	randSource, err := rand.Int(rand.Reader, big.NewInt(roughtime.Now().Unix()))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate random int")
-	}
-	randGenerator := mathRand.New(mathRand.NewSource(randSource.Int64()))
-	randGenerator.Shuffle(len(peers), func(i, j int) {
+	f.rand.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
 
@@ -478,11 +469,6 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 		return 0, errNoPeersAvailable
 	}
 
-	randSource, err := rand.Int(rand.Reader, big.NewInt(roughtime.Now().Unix()))
-	if err != nil {
-		return 0, errors.Wrap(err, "could not generate random int")
-	}
-	randGenerator := mathRand.New(mathRand.NewSource(randSource.Int64()))
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	pidInd := 0
 
@@ -525,7 +511,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	slot = slot + nonSkippedSlotsFullSearchEpochs*slotsPerEpoch
 	upperBoundSlot := helpers.StartSlot(epoch + 1)
 	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind + uint64(randGenerator.Intn(int(slotsPerEpoch)))
+		start := ind + uint64(f.rand.Intn(int(slotsPerEpoch)))
 		nextSlot, err := fetch(peers[pidInd%len(peers)], start, slotsPerEpoch/2, slotsPerEpoch)
 		if err != nil {
 			return 0, err
