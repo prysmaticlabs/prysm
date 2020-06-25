@@ -601,6 +601,8 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 				return nil, errors.New("parent root is not []byte")
 			}
 			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
+		// The following cases are passthroughs for blocks, as they are not used
+		// for filtering indices.
 		case filters.StartSlot:
 		case filters.EndSlot:
 		case filters.StartEpoch:
