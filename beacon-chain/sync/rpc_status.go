@@ -168,7 +168,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "status")
 	m, ok := msg.(*pb.Status)
 	if !ok {
