@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func validAttesterSlashingForValIdx(t *testing.T, beaconState *state.BeaconState, privs []*bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
+func validAttesterSlashingForValIdx(t *testing.T, beaconState *state.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
 	slashings := []*ethpb.AttesterSlashing{}
 	for _, idx := range valIdx {
 		slashing, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privs[idx], idx)
@@ -24,8 +24,8 @@ func validAttesterSlashingForValIdx(t *testing.T, beaconState *state.BeaconState
 		}
 		slashings = append(slashings, slashing)
 	}
-	allSig1 := []*bls.Signature{}
-	allSig2 := []*bls.Signature{}
+	allSig1 := []bls.Signature{}
+	allSig2 := []bls.Signature{}
 	for _, slashing := range slashings {
 		sig1 := slashing.Attestation_1.Signature
 		sig2 := slashing.Attestation_2.Signature

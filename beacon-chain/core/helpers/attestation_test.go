@@ -88,7 +88,7 @@ func TestAttestation_IsAggregator(t *testing.T) {
 
 func TestAttestation_AggregateSignature(t *testing.T) {
 	t.Run("verified", func(t *testing.T) {
-		pubkeys := make([]*bls.PublicKey, 0, 100)
+		pubkeys := make([]bls.PublicKey, 0, 100)
 		atts := make([]*ethpb.Attestation, 0, 100)
 		msg := bytesutil.ToBytes32([]byte("hello"))
 		for i := 0; i < 100; i++ {
@@ -109,7 +109,7 @@ func TestAttestation_AggregateSignature(t *testing.T) {
 	})
 
 	t.Run("not verified", func(t *testing.T) {
-		pubkeys := make([]*bls.PublicKey, 0, 100)
+		pubkeys := make([]bls.PublicKey, 0, 100)
 		atts := make([]*ethpb.Attestation, 0, 100)
 		msg := []byte("hello")
 		for i := 0; i < 100; i++ {
