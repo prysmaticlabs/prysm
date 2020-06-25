@@ -11,6 +11,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -146,6 +147,10 @@ func (s *Service) Start() {
 	}
 
 	s.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGenericGoodbyeMessage)
+	s.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
+		// no-op
+		return nil
+	})
 	s.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
