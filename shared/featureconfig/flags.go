@@ -425,8 +425,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedDisableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:  "disable-init-sync-wrr",
-		Usage: deprecatedUsage,
+		Name:   "disable-init-sync-wrr",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
