@@ -1203,7 +1203,6 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	}
 }
 
-// TODO(2312): Add more tests for edge cases and better coverage.
 func TestEth1Data(t *testing.T) {
 	slot := uint64(20000)
 
@@ -1430,7 +1429,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sigs := make([]*bls.Signature, len(attestingIndices))
+		sigs := make([]bls.Signature, len(attestingIndices))
 		zeroSig := [96]byte{}
 		atts[i].Signature = zeroSig[:]
 

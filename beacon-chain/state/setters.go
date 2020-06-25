@@ -109,6 +109,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
+	b.rebuildTrie[blockRoots] = true
 	return nil
 }
 
