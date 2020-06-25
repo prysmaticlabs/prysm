@@ -86,7 +86,7 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 	if len(al) < 2 {
 		return nil, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate")
 	}
-	signs := make([]*bls.Signature, len(al))
+	signs := make([]bls.Signature, len(al))
 	for i := 0; i < len(al); i++ {
 		sig, err := signatureFromBytes(al[i].Signature)
 		if err != nil {
