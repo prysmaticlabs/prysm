@@ -49,6 +49,7 @@ go_test(
     deps = [
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@com_github_wealdtech_go_eth2_wallet_nd//:go_default_library",
