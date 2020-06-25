@@ -50,7 +50,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	aggSigs := []*bls.Signature{}
+	aggSigs := []bls.Signature{}
 	for _, index := range setA {
 		sig := privKeys[index].Sign(signingRoot[:])
 		aggSigs = append(aggSigs, sig)
@@ -70,7 +70,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	aggSigs = []*bls.Signature{}
+	aggSigs = []bls.Signature{}
 	for _, index := range setB {
 		sig := privKeys[index].Sign(signingRoot[:])
 		aggSigs = append(aggSigs, sig)

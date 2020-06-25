@@ -86,7 +86,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	var sig []*bls.Signature
+	var sig []bls.Signature
 	for _, idx := range incomingAtt.AttestingIndices {
 		validatorSig := keys[idx].Sign(root[:])
 		sig = append(sig, validatorSig)
@@ -104,7 +104,7 @@ func TestServer_IsSlashableAttestation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sig = []*bls.Signature{}
+	sig = []bls.Signature{}
 	for _, idx := range savedAttestation.AttestingIndices {
 		validatorSig := keys[idx].Sign(root[:])
 		sig = append(sig, validatorSig)
@@ -195,7 +195,7 @@ func TestServer_IsSlashableAttestationNoUpdate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sig := []*bls.Signature{}
+	sig := []bls.Signature{}
 	for _, idx := range savedAttestation.AttestingIndices {
 		validatorSig := keys[idx].Sign(root[:])
 		sig = append(sig, validatorSig)
