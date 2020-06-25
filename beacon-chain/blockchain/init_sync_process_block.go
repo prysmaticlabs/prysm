@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot [32]byte) (*stateTrie.BeaconState, error) {
@@ -34,7 +33,7 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 		return nil, err
 	}
 	var endBlock *ethpb.SignedBeaconBlock
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks && s.hasInitSyncBlock(endRoot) {
+	if s.hasInitSyncBlock(endRoot) {
 		endBlock = s.getInitSyncBlock(endRoot)
 		s.clearInitSyncBlocks()
 	} else {
