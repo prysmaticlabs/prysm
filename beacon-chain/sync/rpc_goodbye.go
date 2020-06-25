@@ -32,7 +32,7 @@ func (s *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 
 	m, ok := msg.(*uint64)
 	if !ok {
