@@ -2,7 +2,9 @@ package sync
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
+	"math/big"
 	"sort"
 	"sync"
 
@@ -16,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"golang.org/x/exp/rand"
 )
 
 var processPendingBlocksPeriod = slotutil.DivideSlotBy(3 /* times per slot */)
@@ -80,7 +81,11 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer than the block slot we are requesting.
-			pid := pids[rand.Int()%len(pids)]
+			randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(pids))))
+			if err != nil {
+				return err
+			}
+			pid := pids[randInt.Int64()%int64(len(pids))]
 			for _, p := range pids {
 				cs, err := s.p2p.Peers().ChainState(p)
 				if err != nil {
