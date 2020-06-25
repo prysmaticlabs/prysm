@@ -422,6 +422,8 @@ var (
 	}
 	deprecateddisableInitSyncBatchSaveBlocks = &cli.BoolFlag{
 		Name: "disable-init-sync-batch-save-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 	deprecatedDisableInitSyncWeightedRoundRobin = &cli.BoolFlag{
 		Name:   "disable-init-sync-wrr",
