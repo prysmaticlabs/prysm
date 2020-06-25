@@ -48,7 +48,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		case *ast.ImportSpec:
 			// Collect aliases to rand packages.
 			pkg := stmt.Path.Value
-			if strings.Contains(pkg, "/rand") && !strings.Contains(pkg, "crypto/rand") {
+			if strings.HasSuffix(pkg, "/rand\"") && !strings.Contains(pkg, "crypto/rand") {
 				if stmt.Name != nil {
 					aliases[stmt.Name.Name] = stmt.Path.Value
 				} else {
