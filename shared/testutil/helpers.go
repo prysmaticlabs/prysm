@@ -16,7 +16,7 @@ import (
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
-func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*bls.SecretKey) ([]byte, error) {
+func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []bls.SecretKey) ([]byte, error) {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -41,8 +41,8 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*
 func BlockSignature(
 	bState *stateTrie.BeaconState,
 	block *ethpb.BeaconBlock,
-	privKeys []*bls.SecretKey,
-) (*bls.Signature, error) {
+	privKeys []bls.SecretKey,
+) (bls.Signature, error) {
 	var err error
 	s, err := state.CalculateStateRoot(context.Background(), bState, &ethpb.SignedBeaconBlock{Block: block})
 	if err != nil {
