@@ -1,4 +1,4 @@
-package bls12
+package herumi
 
 import (
 	"fmt"

@@ -1,10 +1,10 @@
-package bls12_test
+package herumi_test
 
 import (
 	"testing"
 
 	"github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls/bls12"
+	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -39,7 +39,7 @@ func BenchmarkPairing(b *testing.B) {
 
 }
 func BenchmarkSignature_Verify(b *testing.B) {
-	sk := bls12.RandKey()
+	sk := herumi.RandKey()
 
 	msg := []byte("Some msg")
 	sig := sk.Sign(msg)
@@ -60,13 +60,13 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 	var msgs [][32]byte
 	for i := 0; i < sigN; i++ {
 		msg := [32]byte{'s', 'i', 'g', 'n', 'e', 'd', byte(i)}
-		sk := bls12.RandKey()
+		sk := herumi.RandKey()
 		sig := sk.Sign(msg[:])
 		pks = append(pks, sk.PublicKey())
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggregated := bls12.Aggregate(sigs)
+	aggregated := herumi.Aggregate(sigs)
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -78,12 +78,12 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 }
 
 func BenchmarkSecretKey_Marshal(b *testing.B) {
-	key := bls12.RandKey()
+	key := herumi.RandKey()
 	d := key.Marshal()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := bls12.SecretKeyFromBytes(d)
+		_, err := herumi.SecretKeyFromBytes(d)
 		_ = err
 	}
 }

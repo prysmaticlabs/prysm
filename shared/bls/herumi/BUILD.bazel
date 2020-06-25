@@ -12,7 +12,7 @@ go_library(
         "secret_key.go",
         "signature.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/bls/bls12",
+    importpath = "github.com/prysmaticlabs/prysm/shared/bls/herumi",
     visibility = [
         "//shared/bls:__pkg__",
     ],

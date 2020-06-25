@@ -1,4 +1,4 @@
-package bls12_test
+package herumi_test
 
 import (
 	"bytes"
@@ -7,11 +7,11 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/bls12"
+	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 )
 
 func TestSignVerify(t *testing.T) {
-	priv := bls12.RandKey()
+	priv := herumi.RandKey()
 	pub := priv.PublicKey()
 	msg := []byte("hello")
 	sig := priv.Sign(msg)
@@ -26,14 +26,14 @@ func TestAggregateVerify(t *testing.T) {
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
-		priv := bls12.RandKey()
+		priv := herumi.RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggSig := bls12.Aggregate(sigs)
+	aggSig := herumi.Aggregate(sigs)
 	if !aggSig.AggregateVerify(pubkeys, msgs) {
 		t.Error("Signature did not verify")
 	}
@@ -44,13 +44,13 @@ func TestFastAggregateVerify(t *testing.T) {
 	sigs := make([]iface.Signature, 0, 100)
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	for i := 0; i < 100; i++ {
-		priv := bls12.RandKey()
+		priv := herumi.RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:])
 		pubkeys = append(pubkeys, pub)
 		sigs = append(sigs, sig)
 	}
-	aggSig := bls12.AggregateSignatures(sigs)
+	aggSig := herumi.AggregateSignatures(sigs)
 	if !aggSig.FastAggregateVerify(pubkeys, msg) {
 		t.Error("Signature did not verify")
 	}
@@ -60,7 +60,7 @@ func TestFastAggregateVerify_ReturnsFalseOnEmptyPubKeyList(t *testing.T) {
 	var pubkeys []iface.PublicKey
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
 
-	aggSig := bls12.NewAggregateSignature()
+	aggSig := herumi.NewAggregateSignature()
 	if aggSig.FastAggregateVerify(pubkeys, msg) != false {
 		t.Error("Expected FastAggregateVerify to return false with empty input " +
 			"of public keys.")
@@ -105,7 +105,7 @@ func TestSignatureFromBytes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := bls12.SignatureFromBytes(test.input)
+			res, err := herumi.SignatureFromBytes(test.input)
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("No error returned: expected %v", test.err)

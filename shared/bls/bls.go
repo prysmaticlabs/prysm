@@ -4,36 +4,36 @@
 package bls
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/bls/bls12"
+	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 )
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
 func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {
-	return bls12.SecretKeyFromBytes(privKey)
+	return herumi.SecretKeyFromBytes(privKey)
 }
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
 func PublicKeyFromBytes(pubKey []byte) (PublicKey, error) {
-	return bls12.PublicKeyFromBytes(pubKey)
+	return herumi.PublicKeyFromBytes(pubKey)
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (Signature, error) {
-	return bls12.SignatureFromBytes(sig)
+	return herumi.SignatureFromBytes(sig)
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []iface.Signature) iface.Signature {
-	return bls12.AggregateSignatures(sigs)
+	return herumi.AggregateSignatures(sigs)
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
 func NewAggregateSignature() iface.Signature {
-	return bls12.NewAggregateSignature()
+	return herumi.NewAggregateSignature()
 }
 
 // RandKey creates a new private key using a random input.
 func RandKey() iface.SecretKey {
-	return bls12.RandKey()
+	return herumi.RandKey()
 }

@@ -1,11 +1,11 @@
-package bls12_test
+package herumi_test
 
 import (
 	"bytes"
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/bls12"
+	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 )
 
 func TestPublicKeyFromBytes(t *testing.T) {
@@ -46,7 +46,7 @@ func TestPublicKeyFromBytes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := bls12.PublicKeyFromBytes(test.input)
+			res, err := herumi.PublicKeyFromBytes(test.input)
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("No error returned: expected %v", test.err)
@@ -68,11 +68,11 @@ func TestPublicKeyFromBytes(t *testing.T) {
 }
 
 func TestPublicKey_Copy(t *testing.T) {
-	pubkeyA := bls12.RandKey().PublicKey()
+	pubkeyA := herumi.RandKey().PublicKey()
 	pubkeyBytes := pubkeyA.Marshal()
 
 	pubkeyB := pubkeyA.Copy()
-	pubkeyB.Aggregate(bls12.RandKey().PublicKey())
+	pubkeyB.Aggregate(herumi.RandKey().PublicKey())
 
 	if !bytes.Equal(pubkeyA.Marshal(), pubkeyBytes) {
 		t.Fatal("Pubkey was mutated after copy")

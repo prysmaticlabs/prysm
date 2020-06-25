@@ -1,22 +1,22 @@
-package bls12_test
+package herumi_test
 
 import (
 	"bytes"
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/bls12"
+	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
-	b := bls12.RandKey().Marshal()
+	b := herumi.RandKey().Marshal()
 	b32 := bytesutil.ToBytes32(b)
-	pk, err := bls12.SecretKeyFromBytes(b32[:])
+	pk, err := herumi.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
-	pk2, err := bls12.SecretKeyFromBytes(b32[:])
+	pk2, err := herumi.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestSecretKeyFromBytes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			res, err := bls12.SecretKeyFromBytes(test.input)
+			res, err := herumi.SecretKeyFromBytes(test.input)
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("No error returned: expected %v", test.err)
@@ -85,10 +85,10 @@ func TestSecretKeyFromBytes(t *testing.T) {
 }
 
 func TestSerialize(t *testing.T) {
-	rk := bls12.RandKey()
+	rk := herumi.RandKey()
 	b := rk.Marshal()
 
-	if _, err := bls12.SecretKeyFromBytes(b); err != nil {
+	if _, err := herumi.SecretKeyFromBytes(b); err != nil {
 		t.Error(err)
 	}
 }
