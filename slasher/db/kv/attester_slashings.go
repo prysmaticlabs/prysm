@@ -57,9 +57,9 @@ func (db *Store) AttesterSlashings(ctx context.Context, status types.SlashingSta
 	return unmarshalAttSlashings(encoded)
 }
 
-// DeleteAttesterSlashing deletes an attester slashing proof from db.
+// deleteAttesterSlashing deletes an attester slashing proof from db.
 func (db *Store) DeleteAttesterSlashing(ctx context.Context, attesterSlashing *ethpb.AttesterSlashing) error {
-	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteAttesterSlashing")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.deleteAttesterSlashing")
 	defer span.End()
 	root, err := hashutil.HashProto(attesterSlashing)
 	if err != nil {
