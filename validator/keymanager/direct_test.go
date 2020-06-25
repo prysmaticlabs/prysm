@@ -21,7 +21,7 @@ func TestDirectListValidatingKeysNil(t *testing.T) {
 }
 
 func TestDirectListValidatingKeysSingle(t *testing.T) {
-	sks := make([]*bls.SecretKey, 0)
+	sks := make([]bls.SecretKey, 0)
 	sks = append(sks, bls.RandKey())
 	direct := keymanager.NewDirect(sks)
 	keys, err := direct.FetchValidatingKeys()
@@ -34,7 +34,7 @@ func TestDirectListValidatingKeysSingle(t *testing.T) {
 }
 
 func TestDirectListValidatingKeysMultiple(t *testing.T) {
-	sks := make([]*bls.SecretKey, 0)
+	sks := make([]bls.SecretKey, 0)
 	numKeys := 256
 	for i := 0; i < numKeys; i++ {
 		sks = append(sks, bls.RandKey())
@@ -50,7 +50,7 @@ func TestDirectListValidatingKeysMultiple(t *testing.T) {
 }
 
 func TestSignNoSuchKey(t *testing.T) {
-	sks := make([]*bls.SecretKey, 0)
+	sks := make([]bls.SecretKey, 0)
 	//	sks = append(sks, bls.RandKey())
 	direct := keymanager.NewDirect(sks)
 
@@ -62,7 +62,7 @@ func TestSignNoSuchKey(t *testing.T) {
 }
 
 func TestSign(t *testing.T) {
-	sks := make([]*bls.SecretKey, 0)
+	sks := make([]bls.SecretKey, 0)
 	sks = append(sks, bls.RandKey())
 	direct := keymanager.NewDirect(sks)
 

@@ -1,23 +1,24 @@
-package bls_test
+package herumi_test
 
 import (
 	"testing"
 
-	bls2 "github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/herumi/bls-eth-go-binary/bls"
+	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func BenchmarkPairing(b *testing.B) {
-	if err := bls2.Init(bls2.BLS12_381); err != nil {
+	if err := bls.Init(bls.BLS12_381); err != nil {
 		b.Fatal(err)
 	}
-	if err := bls2.SetETHmode(bls2.EthModeDraft05); err != nil {
+	if err := bls.SetETHmode(bls.EthModeDraft07); err != nil {
 		panic(err)
 	}
-	newGt := &bls2.GT{}
-	newG1 := &bls2.G1{}
-	newG2 := &bls2.G2{}
+	newGt := &bls.GT{}
+	newG1 := &bls.G1{}
+	newG2 := &bls.G2{}
 
 	newGt.SetInt64(10)
 	hash := hashutil.Hash([]byte{})
@@ -33,12 +34,12 @@ func BenchmarkPairing(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		bls2.Pairing(newGt, newG1, newG2)
+		bls.Pairing(newGt, newG1, newG2)
 	}
 
 }
 func BenchmarkSignature_Verify(b *testing.B) {
-	sk := bls.RandKey()
+	sk := herumi.RandKey()
 
 	msg := []byte("Some msg")
 	sig := sk.Sign(msg)
@@ -54,18 +55,18 @@ func BenchmarkSignature_Verify(b *testing.B) {
 func BenchmarkSignature_AggregateVerify(b *testing.B) {
 	sigN := 128 // MAX_ATTESTATIONS per block.
 
-	var pks []*bls.PublicKey
-	var sigs []*bls.Signature
+	var pks []iface.PublicKey
+	var sigs []iface.Signature
 	var msgs [][32]byte
 	for i := 0; i < sigN; i++ {
 		msg := [32]byte{'s', 'i', 'g', 'n', 'e', 'd', byte(i)}
-		sk := bls.RandKey()
+		sk := herumi.RandKey()
 		sig := sk.Sign(msg[:])
 		pks = append(pks, sk.PublicKey())
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	aggregated := bls.Aggregate(sigs)
+	aggregated := herumi.Aggregate(sigs)
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -77,12 +78,12 @@ func BenchmarkSignature_AggregateVerify(b *testing.B) {
 }
 
 func BenchmarkSecretKey_Marshal(b *testing.B) {
-	key := bls.RandKey()
+	key := herumi.RandKey()
 	d := key.Marshal()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := bls.SecretKeyFromBytes(d)
+		_, err := herumi.SecretKeyFromBytes(d)
 		_ = err
 	}
 }

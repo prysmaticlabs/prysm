@@ -180,7 +180,7 @@ func (v *ValidatorService) Status() error {
 }
 
 // signObject signs a generic object, with protection if available.
-func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byte) (*bls.Signature, error) {
+func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byte) (bls.Signature, error) {
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 		root, err := ssz.HashTreeRoot(object)
 		if err != nil {

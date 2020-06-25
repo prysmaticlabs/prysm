@@ -58,15 +58,15 @@ func NewUnencrypted(input string) (*Unencrypted, string, error) {
 	if err != nil {
 		return nil, unencryptedOptsHelp, err
 	}
-	sks := make([]*bls.SecretKey, 0, len(keyMap))
+	sks := make([]bls.SecretKey, 0, len(keyMap))
 	for _, key := range keyMap {
 		sks = append(sks, key)
 	}
 
 	km := &Unencrypted{
 		Direct: &Direct{
-			publicKeys: make(map[[48]byte]*bls.PublicKey),
-			secretKeys: make(map[[48]byte]*bls.SecretKey),
+			publicKeys: make(map[[48]byte]bls.PublicKey),
+			secretKeys: make(map[[48]byte]bls.SecretKey),
 		},
 	}
 	for i := 0; i < len(sks); i++ {
@@ -87,7 +87,7 @@ type unencryptedKeys struct {
 }
 
 // unencryptedKeysFromReader loads the unencrypted keys from the given reader.
-func unencryptedKeysFromReader(reader io.Reader) ([]*bls.SecretKey, error) {
+func unencryptedKeysFromReader(reader io.Reader) ([]bls.SecretKey, error) {
 	log.Warn("Loading encrypted keys from disk. Do not do this in production!")
 
 	data, err := ioutil.ReadAll(reader)
@@ -99,7 +99,7 @@ func unencryptedKeysFromReader(reader io.Reader) ([]*bls.SecretKey, error) {
 		return nil, err
 	}
 
-	res := make([]*bls.SecretKey, 0, len(ctnr.Keys))
+	res := make([]bls.SecretKey, 0, len(ctnr.Keys))
 	for i := range ctnr.Keys {
 		secretKey, err := bls.SecretKeyFromBytes(ctnr.Keys[i].ValidatorKey)
 		if err != nil {
