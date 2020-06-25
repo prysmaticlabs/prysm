@@ -251,7 +251,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 }
 
-func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) (*ethpb.Attestation, error) {
+func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
@@ -273,7 +273,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 		return nil, err
 	}
 
-	sigs := make([]*bls.Signature, len(attestingIndices))
+	sigs := make([]bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 
@@ -291,7 +291,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 	return att, nil
 }
 
-func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) (*ethpb.Attestation, error) {
+func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
@@ -312,7 +312,7 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 		return nil, err
 	}
 
-	sigs := make([]*bls.Signature, len(attestingIndices))
+	sigs := make([]bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 
