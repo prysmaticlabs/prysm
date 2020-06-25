@@ -2594,8 +2594,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_protolambda_zssz",
         importpath = "github.com/protolambda/zssz",
-        sum = "h1:4jkt8sqwhOVR8B1JebREU/gVX0Ply4GypsV8+RWrDuw=",
-        version = "v0.1.4",
+        sum = "h1:7fjJjissZIIaa2QcvmhS/pZISMX21zVITt49sW1ouek=",
+        version = "v0.1.5",
     )
     go_repository(
         name = "com_github_prysmaticlabs_ethereumapis",

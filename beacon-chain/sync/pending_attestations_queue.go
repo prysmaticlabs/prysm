@@ -143,10 +143,12 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				}
 			}
 
-			req := [][]byte{bRoot[:]}
+			req := [][32]byte{bRoot}
 			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-				traceutil.AnnotateError(span, err)
-				log.Errorf("Could not send recent block request: %v", err)
+				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
+					traceutil.AnnotateError(span, err)
+					log.Errorf("Could not send recent block request: %v", err)
+				}
 			}
 		}
 	}

@@ -110,7 +110,19 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 	if v, ok := to.(fastssz.Unmarshaler); ok {
 		return v.UnmarshalSSZ(b)
 	}
-	return ssz.Unmarshal(b, to)
+	err := ssz.Unmarshal(b, to)
+	if err != nil {
+		// Check if we are unmarshalling block roots
+		// and then lop off the 4 byte offset and try
+		// unmarshalling again. This is temporary to
+		// avoid too much disruption to live nodes.
+		if _, ok := to.([][32]byte); ok {
+			fmt.Sprintf("\n lopping off 4 bytes with length %d", len(b))
+			return ssz.Unmarshal(b[4:], to)
+		}
+		return err
+	}
+	return nil
 }
 
 // Decode the bytes to the protobuf message provided.
