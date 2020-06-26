@@ -316,6 +316,19 @@ func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
 }
 
+func readbootNodes(fileName string) ([]string, error) {
+	fileContent, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	listNodes := make([]string, 0)
+	err = yaml.Unmarshal(fileContent, &listNodes)
+	if err != nil {
+		return nil, err
+	}
+	return listNodes, nil
+}
+
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes
@@ -325,11 +338,8 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		innerList := make([]string, 0)
 		allNodesTemp = append(allNodesTemp, innerList)
 		if filepath.Ext(addr) == ".enr" {
-			fileContent, err := ioutil.ReadFile(addr)
-			if err != nil {
-				return err
-			}
-			err = yaml.Unmarshal(fileContent, &(allNodesTemp[i]))
+			var err error
+			allNodesTemp[i], err = readbootNodes(addr)
 			if err != nil {
 				return err
 			}
