@@ -16,6 +16,7 @@ go_library(
     deps = [
         "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
         "//validator/db/iface:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

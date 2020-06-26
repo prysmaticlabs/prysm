@@ -75,9 +75,6 @@ func NewRandomGenerator() *Rand {
 // Use this method for performance, where deterministic pseudo-random behaviour is enough.
 // Otherwise, rely on NewRandomGenerator().
 func NewDeterministicRandomGenerator() *Rand {
-	var seed int64
-	if err := binary.Read(rand.Reader, binary.BigEndian, seed); err != nil {
-		panic(err)
-	}
-	return mrand.New(mrand.NewSource(seed))
+	randGen := NewRandomGenerator()
+	return mrand.New(mrand.NewSource(randGen.Int63()))
 }
