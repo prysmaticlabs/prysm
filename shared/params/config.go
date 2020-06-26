@@ -111,7 +111,8 @@ type BeaconChainConfig struct {
 	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
 }
 
-var beaconConfig = mainnetBeaconConfig
+// Using onyx as the default configuration for now.
+var beaconConfig = OnyxConfig()
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {

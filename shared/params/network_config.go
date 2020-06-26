@@ -6,6 +6,11 @@ import (
 	"github.com/mohae/deepcopy"
 )
 
+func init() {
+	// Using onyx as the default configuration for now.
+	UseOnyxNetworkConfig()
+}
+
 // NetworkConfig defines the spec based network parameters.
 type NetworkConfig struct {
 	GossipMaxSize                     uint64        `yaml:"GOSSIP_MAX_SIZE"`                       // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
