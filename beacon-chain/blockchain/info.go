@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/emicklei/dot"
 )
@@ -51,10 +50,10 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 
 	for i := len(nodes) - 1; i >= 0; i-- {
 		// Construct label for each node.
-		slot := strconv.Itoa(int(nodes[i].Slot))
-		weight := strconv.Itoa(int(nodes[i].Weight / 1e9)) // Convert unit Gwei to unit ETH.
-		votes := strconv.Itoa(int(nodes[i].Weight / 1e9 / avgBalance))
-		index := strconv.Itoa(i)
+		slot := fmt.Sprintf("%d", nodes[i].Slot)
+		weight := fmt.Sprintf("%d", nodes[i].Weight/1e9) // Convert unit Gwei to unit ETH.
+		votes := fmt.Sprintf("%d", nodes[i].Weight/1e9/avgBalance)
+		index := fmt.Sprintf("%d", i)
 		g := nodes[i].Graffiti[:]
 		graffiti := hex.EncodeToString(g[:8])
 		label := "slot: " + slot + "\n votes: " + votes + "\n weight: " + weight + "\n graffiti: " + graffiti

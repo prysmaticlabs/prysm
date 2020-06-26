@@ -243,7 +243,7 @@ func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64,
 			return 0, err
 		}
 		candidateIndex = activeIndices[candidateIndex]
-		if int(candidateIndex) >= bState.NumValidators() {
+		if candidateIndex >= uint64(bState.NumValidators()) {
 			return 0, errors.New("active index out of range")
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
@@ -295,7 +295,7 @@ func ComputeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 			return 0, err
 		}
 		candidateIndex = activeIndices[candidateIndex]
-		if int(candidateIndex) >= len(validators) {
+		if candidateIndex >= uint64(len(validators)) {
 			return 0, errors.New("active index out of range")
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
