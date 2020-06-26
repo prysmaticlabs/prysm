@@ -1,3 +1,31 @@
+/*
+Package rand defines methods of obtaining cryptographically secure random number generators.
+
+One is expected to use randomness from this package only, without introducing any other packages.
+This limits the scope of code that needs to be hardened.
+
+There are two modes, one for deterministic and another non-deterministic randomness:
+1. If deterministic pseudo-random generator is enough, use:
+
+	import "github.com/prysmaticlabs/prysm/shared/rand"
+	randGen := rand.NewDeterministicRandomGenerator()
+	randGen.Intn(32) // or any other func defined in math.rand API
+
+   In this mode, only seed is generated using cryptographically secure source (crypto/rand). So,
+   once seed is obtained, and generator is seeded, all the rest usage is deterministic, and fast.
+   This method is still better than using unix time for source of randomness - since time is not a
+   good source of seed randomness, when you have many concurrent servers using it.
+
+2. For cryptographically secure non-deterministic mode (CSPRNG), use:
+
+	import "github.com/prysmaticlabs/prysm/shared/rand"
+	randGen := rand.NewRandomGenerator()
+	randGen.Intn(32) // or any other func defined in math.rand API
+
+   Again, any of the functions from `math/rand` can be used, however, they all use custom source
+   of randomness (crypto/rand), on every step. This makes randomness non-deterministic. However,
+   you take a performance hit -- as it is an order of magnitude slower.
+*/
 package rand
 
 import (
@@ -40,12 +68,12 @@ func NewRandomGenerator() *Rand {
 	return mrand.New(&source{})
 }
 
-// NewPseudoRandomGenerator returns a random generator which is only seeded with crypto/rand, but
+// NewDeterministicRandomGenerator returns a random generator which is only seeded with crypto/rand, but
 // is deterministic otherwise (given seed, produces given results, deterministically).
 // Panics if crypto/rand input cannot be read.
 // Use this method for performance, where deterministic pseudo-random behaviour is enough. Otherwise,
 // rely on NewRandomGenerator().
-func NewPseudoRandomGenerator() *Rand {
+func NewDeterministicRandomGenerator() *Rand {
 	var seed int64
 	if err := binary.Read(rand.Reader, binary.BigEndian, seed); err != nil {
 		panic(err)

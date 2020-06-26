@@ -106,7 +106,8 @@
       "validator/.*": ""
     },
     "exclude_files": {
-      ".*/.*_test\\.go": "Tests are OK to use weak crypto"
+      ".*/.*_test\\.go": "Tests are OK to use weak crypto",
+      "shared/rand/rand\\.go": "Abstracts CSPRNGs for common use"
     }
   }
 }
