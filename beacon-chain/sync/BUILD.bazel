@@ -70,6 +70,7 @@ go_library(
         "//shared/messagehandler:go_default_library",
         "//shared/p2putils:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/runutil:go_default_library",
         "//shared/sliceutil:go_default_library",

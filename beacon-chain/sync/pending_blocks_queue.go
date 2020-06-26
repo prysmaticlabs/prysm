@@ -2,9 +2,7 @@ package sync
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
-	"math/big"
 	"sort"
 	"sync"
 
@@ -13,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -52,6 +51,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		trace.Int64Attribute("numPeers", int64(len(pids))),
 	)
 
+	randGen := rand.NewRandomGenerator()
 	for _, slot := range slots {
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
 		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
@@ -81,11 +81,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer than the block slot we are requesting.
-			randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(pids))))
-			if err != nil {
-				return err
-			}
-			pid := pids[randInt.Int64()%int64(len(pids))]
+			pid := pids[randGen.Int()%len(pids)]
 			for _, p := range pids {
 				cs, err := s.p2p.Peers().ChainState(p)
 				if err != nil {

@@ -2,9 +2,7 @@ package sync
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
-	"math/big"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -61,6 +60,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	}
 	s.pendingAttsLock.RUnlock()
 
+	randGen := rand.NewRandomGenerator()
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]
@@ -131,11 +131,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				log.Debug("No peer IDs available to request missing block from for pending attestation")
 				return nil
 			}
-			randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(pids))))
-			if err != nil {
-				return err
-			}
-			pid := pids[randInt.Int64()%int64(len(pids))]
+			pid := pids[randGen.Int()%len(pids)]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Message.Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
 				cs, err := s.p2p.Peers().ChainState(p)
