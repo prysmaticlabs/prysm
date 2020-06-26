@@ -439,20 +439,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	val := b.state.Validators[idx]
-	pubKey := make([]byte, len(val.PublicKey))
-	copy(pubKey, val.PublicKey)
-	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
-	copy(withdrawalCreds, val.WithdrawalCredentials)
-	return &ethpb.Validator{
-		PublicKey:                  pubKey,
-		WithdrawalCredentials:      withdrawalCreds,
-		EffectiveBalance:           val.EffectiveBalance,
-		Slashed:                    val.Slashed,
-		ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
-		ActivationEpoch:            val.ActivationEpoch,
-		ExitEpoch:                  val.ExitEpoch,
-		WithdrawableEpoch:          val.WithdrawableEpoch,
-	}, nil
+	return CopyValidator(val), nil
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
