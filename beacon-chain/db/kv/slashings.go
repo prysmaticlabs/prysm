@@ -59,9 +59,9 @@ func (kv *Store) SaveProposerSlashing(ctx context.Context, slashing *ethpb.Propo
 	})
 }
 
-// DeleteProposerSlashing clears a proposer slashing from the db by its hash tree root.
-func (kv *Store) DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteProposerSlashing")
+// deleteProposerSlashing clears a proposer slashing from the db by its hash tree root.
+func (kv *Store) deleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteProposerSlashing")
 	defer span.End()
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(proposerSlashingsBucket)
@@ -119,9 +119,9 @@ func (kv *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.Attes
 	})
 }
 
-// DeleteAttesterSlashing clears an attester slashing from the db by its hash tree root.
-func (kv *Store) DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttesterSlashing")
+// deleteAttesterSlashing clears an attester slashing from the db by its hash tree root.
+func (kv *Store) deleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteAttesterSlashing")
 	defer span.End()
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(attesterSlashingsBucket)
