@@ -331,24 +331,18 @@ func readbootNodes(fileName string) ([]string, error) {
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes
-	bootnodeAddrs := make([]string, 0)  //final list of nodes pending creation
-	allNodesTemp := make([][]string, 0) //each potential .enr file will end up as slice of strings
-	for i, addr := range bootnodesTemp {
-		innerList := make([]string, 0)
-		allNodesTemp = append(allNodesTemp, innerList)
+	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes //actual CLI values
+	bootnodeAddrs := make([]string, 0)                           //dest of final list of nodes
+	for _, addr := range bootnodesTemp {
 		if filepath.Ext(addr) == ".enr" {
-			var err error
-			allNodesTemp[i], err = readbootNodes(addr)
+			fileNodes, err := readbootNodes(addr)
 			if err != nil {
 				return err
 			}
+			bootnodeAddrs = append(bootnodeAddrs, fileNodes...)
 		} else {
-			allNodesTemp[i] = []string{bootnodesTemp[i]}
+			bootnodeAddrs = append(bootnodeAddrs, addr)
 		}
-	}
-	for _, nodeSlice := range allNodesTemp {
-		bootnodeAddrs = append(bootnodeAddrs, nodeSlice...)
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
