@@ -87,7 +87,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	if !proto.Equal(block, retrievedBlock) {
 		t.Errorf("Wanted %v, received %v", block, retrievedBlock)
 	}
-	if err := db.DeleteBlock(ctx, blockRoot); err != nil {
+	if err := db.deleteBlock(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	if db.HasBlock(ctx, blockRoot) {
@@ -128,7 +128,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 		t.Errorf("Received %d blocks, wanted 1000", len(retrieved))
 	}
 	// We delete all even indexed blocks.
-	if err := db.DeleteBlocks(ctx, blockRoots); err != nil {
+	if err := db.deleteBlocks(ctx, blockRoots); err != nil {
 		t.Fatal(err)
 	}
 	// When we retrieve the data, only the odd indexed blocks should remain.
@@ -201,7 +201,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	if !proto.Equal(block, retrievedBlock) {
 		t.Errorf("Wanted %v, received %v", block, retrievedBlock)
 	}
-	if err := db.DeleteBlock(ctx, blockRoot); err != nil {
+	if err := db.deleteBlock(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	if db.HasBlock(ctx, blockRoot) {
@@ -470,7 +470,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.DeleteBlock(ctx, r3); err != nil {
+	if err := db.deleteBlock(ctx, r3); err != nil {
 		t.Fatal(err)
 	}
 
@@ -618,7 +618,7 @@ func TestStore_DeleteBlock_CanGetHighest(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", b51, highestSavedBlock)
 	}
 
-	if err := db.DeleteBlock(ctx, r51); err != nil {
+	if err := db.deleteBlock(ctx, r51); err != nil {
 		t.Fatal(err)
 	}
 	highestSavedBlock, err = db.HighestSlotBlocks(ctx)
@@ -651,7 +651,7 @@ func TestStore_DeleteBlocks_CanGetHighest(t *testing.T) {
 	if err := db.SaveBlocks(ctx, totalBlocks); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.DeleteBlocks(ctx, [][32]byte{r[99], r[98], r[97]}); err != nil {
+	if err := db.deleteBlocks(ctx, [][32]byte{r[99], r[98], r[97]}); err != nil {
 		t.Fatal(err)
 	}
 	highestSavedBlock, err := db.HighestSlotBlocks(ctx)
