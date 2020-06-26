@@ -43,8 +43,8 @@ type HeadFetcher interface {
 	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (*state.BeaconState, error)
-	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
-	HeadSeed(epoch uint64) ([32]byte, error)
+	HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error)
+	HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error)
 	HeadGenesisValidatorRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	ProtoArrayStore() *protoarray.Store
@@ -155,27 +155,27 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	span.AddAttributes(trace.BoolAttribute("cache_hit", ok))
 
 	if ok {
-		return s.headState(), nil
+		return s.headState(ctx), nil
 	}
 
 	return s.beaconDB.HeadState(ctx)
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
-func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
 	if !s.hasHeadState() {
 		return []uint64{}, nil
 	}
-	return helpers.ActiveValidatorIndices(s.headState(), epoch)
+	return helpers.ActiveValidatorIndices(s.headState(ctx), epoch)
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.
-func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
+func (s *Service) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) {
 	if !s.hasHeadState() {
 		return [32]byte{}, nil
 	}
 
-	return helpers.Seed(s.headState(), epoch, params.BeaconConfig().DomainBeaconAttester)
+	return helpers.Seed(s.headState(ctx), epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // HeadGenesisValidatorRoot returns genesis validator root of the head state.

@@ -210,7 +210,10 @@ func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
 
 // This returns the head state.
 // It does a full copy on head state for immutability.
-func (s *Service) headState() *state.BeaconState {
+func (s *Service) headState(ctx context.Context) *stateTrie.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "blockchain.headState")
+	defer span.End()
+
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
