@@ -1,4 +1,4 @@
-package keymanager
+package v1
 
 import (
 	"encoding/json"
@@ -8,11 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	e2wallet "github.com/wealdtech/go-eth2-wallet"
 	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
 	e2wtypes "github.com/wealdtech/go-eth2-wallet-types/v2"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 type walletOpts struct {

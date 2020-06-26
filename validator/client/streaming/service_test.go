@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 

@@ -14,7 +14,7 @@ go_library(
         "remote.go",
         "wallet.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager",
+    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v1",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared/bls:go_default_library",
