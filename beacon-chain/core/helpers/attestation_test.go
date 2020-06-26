@@ -1,7 +1,6 @@
 package helpers_test
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"strconv"
 	"testing"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
