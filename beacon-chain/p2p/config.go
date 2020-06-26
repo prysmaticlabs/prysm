@@ -27,5 +27,4 @@ type Config struct {
 	DenyListCIDR        []string
 	Encoding            string
 	StateNotifier       statefeed.Notifier
-	PubSub              string
 }
