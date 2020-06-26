@@ -12,6 +12,13 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/reflection"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -36,12 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/plugin/ocgrpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/reflection"
 )
 
 var log logrus.FieldLogger
@@ -208,6 +209,16 @@ func (s *Service) Start() {
 		)),
 	}
 	grpc_prometheus.EnableHandlingTimeHistogram()
+
+	//// Determine if no TLS certs were specified in order to generate
+	//// self-signed certificates by default for secure gRPC connections.
+	//noCert := !cliCtx.IsSet(flags.CertFlag.Name)
+	//noTLSKey := !cliCtx.IsSet(flags.KeyFlag.Name)
+	//if noCert && noTLSKey {
+	//	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
+	//	// Generate self-signed certs.
+	//}
+
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -216,9 +227,15 @@ func (s *Service) Start() {
 		}
 		opts = append(opts, grpc.Creds(creds))
 	} else {
-		log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
-			"validator on the same machines, you can ignore this message. If you want to know " +
-			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
+		//if s.insecureGRPC {
+		//
+		//}
+		//log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
+		//	"validator on the same machines, you can ignore this message. If you want to know " +
+		//	"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
+
+		// Generate self-signed certs by default
+		generateSelfSignedCerts()
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 

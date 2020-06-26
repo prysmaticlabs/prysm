@@ -3,7 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["service.go"],
+    srcs = [
+        "service.go",
+        "tls.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
