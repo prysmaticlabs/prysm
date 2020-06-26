@@ -278,7 +278,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.BlockRoots) <= int(idx) {
+	if uint64(len(b.state.BlockRoots)) <= idx {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)
@@ -575,7 +575,7 @@ func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.Balances) <= int(idx) {
+	if uint64(len(b.state.Balances)) <= idx {
 		return 0, fmt.Errorf("index of %d does not exist", idx)
 	}
 	return b.state.Balances[idx], nil
@@ -630,7 +630,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.RandaoMixes) <= int(idx) {
+	if uint64(len(b.state.RandaoMixes)) <= idx {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)
