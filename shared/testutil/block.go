@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // BlockGenConfig is used to define the requested conditions
@@ -316,13 +316,14 @@ func generateAttesterSlashings(
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
+	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
-		committeeIndex := rand.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
+		committeeIndex := randGen.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
 		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), committeeIndex)
 		if err != nil {
 			return nil, err
 		}
-		randIndex := rand.Uint64() % uint64(len(committee))
+		randIndex := randGen.Uint64() % uint64(len(committee))
 		valIndex := committee[randIndex]
 		slashing, err := GenerateAttesterSlashingForValidator(bState, privs[valIndex], valIndex)
 		if err != nil {
@@ -379,8 +380,9 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 		}
 	}
 	if randomRoot {
+		randGen := rand.NewDeterministicGenerator()
 		b := make([]byte, 32)
-		_, err := rand.Read(b)
+		_, err := randGen.Read(b)
 		if err != nil {
 			return nil, err
 		}
@@ -527,5 +529,5 @@ func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return rand.Uint64() % activeCount, nil
+	return rand.NewGenerator().Uint64() % activeCount, nil
 }

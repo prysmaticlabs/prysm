@@ -11,12 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"golang.org/x/exp/rand"
 )
 
 var processPendingBlocksPeriod = slotutil.DivideSlotBy(3 /* times per slot */)
@@ -51,6 +51,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		trace.Int64Attribute("numPeers", int64(len(pids))),
 	)
 
+	randGen := rand.NewGenerator()
 	for _, slot := range slots {
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
 		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
@@ -80,7 +81,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer than the block slot we are requesting.
-			pid := pids[rand.Int()%len(pids)]
+			pid := pids[randGen.Int()%len(pids)]
 			for _, p := range pids {
 				cs, err := s.p2p.Peers().ChainState(p)
 				if err != nil {

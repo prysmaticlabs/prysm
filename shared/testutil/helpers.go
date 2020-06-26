@@ -3,7 +3,6 @@ package testutil
 import (
 	"context"
 	"encoding/binary"
-	"math/rand"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -13,6 +12,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
@@ -76,7 +76,7 @@ func BlockSignature(
 // Random32Bytes generates a random 32 byte slice.
 func Random32Bytes(t *testing.T) []byte {
 	b := make([]byte, 32)
-	_, err := rand.Read(b)
+	_, err := rand.NewDeterministicGenerator().Read(b)
 	if err != nil {
 		t.Fatal(err)
 	}
