@@ -334,7 +334,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes //actual CLI values
 	bootnodeAddrs := make([]string, 0)                           //dest of final list of nodes
 	for _, addr := range bootnodesTemp {
-		if addr[:5] != "enr:-" {
+		if filepath.Ext(addr) == ".yaml" {
 			fileNodes, err := readbootNodes(addr)
 			if err != nil {
 				return err
