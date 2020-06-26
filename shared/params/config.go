@@ -323,7 +323,7 @@ func E2ETestConfig() *BeaconChainConfig {
 func AltonaConfig() *BeaconChainConfig {
 	altCfg := MainnetConfig()
 	altCfg.MinGenesisActiveValidatorCount = 640
-	altCfg.MinGenesisTime = 1593086400
+	altCfg.MinGenesisTime = 1593261000
 	altCfg.GenesisForkVersion = []byte{0x00, 0x00, 0x01, 0x21}
 	return altCfg
 }
