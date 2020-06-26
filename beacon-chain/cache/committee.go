@@ -19,7 +19,7 @@ var (
 	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
 	// Due to reorgs, it's good to keep the old cache around for quickly switch over. 10 is a generous
 	// cache size as it considers 3 concurrent branches over 3 epochs.
-	maxCommitteesCacheSize = 10
+	maxCommitteesCacheSize = uint64(10)
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -96,7 +96,7 @@ func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]
 	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
 	start, end := startEndIndices(item, indexOffSet)
 
-	if int(end) > len(item.ShuffledIndices) || end < start {
+	if end > uint64(len(item.ShuffledIndices)) || end < start {
 		return nil, errors.New("requested index out of bound")
 	}
 

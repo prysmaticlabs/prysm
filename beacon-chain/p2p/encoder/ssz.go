@@ -51,7 +51,7 @@ func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg interface{}) (int, erro
 	if err != nil {
 		return 0, err
 	}
-	if len(b) > int(MaxGossipSize) {
+	if uint64(len(b)) > MaxGossipSize {
 		return 0, errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
 	}
 	if e.UseSnappyCompression {
@@ -133,7 +133,7 @@ func (e SszNetworkEncoder) DecodeGossip(b []byte, to interface{}) error {
 			return err
 		}
 	}
-	if len(b) > int(MaxGossipSize) {
+	if uint64(len(b)) > MaxGossipSize {
 		return errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
 	}
 	return e.doDecode(b, to)
