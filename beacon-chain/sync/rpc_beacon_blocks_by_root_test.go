@@ -186,7 +186,6 @@ func TestSSZCompatibility(t *testing.T) {
 		t.Error(err)
 	}
 	encodedPart := writer.Bytes()[:n]
-	t.Error(encodedPart)
 	fastSSZ, err := ssz.Marshal(list)
 	if err != nil {
 		t.Error(err)
