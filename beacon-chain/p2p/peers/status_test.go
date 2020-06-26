@@ -1,7 +1,6 @@
 package peers_test
 
 import (
-	"bytes"
 	"crypto/rand"
 	"fmt"
 	"reflect"
@@ -12,6 +11,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -625,9 +625,6 @@ func TestBestPeer(t *testing.T) {
 		FinalizedRoot:  junkRoot[:],
 	})
 	retEpoch, _ := p.BestFinalized(15, 0)
-	if !bytes.Equal(retRoot, expectedRoot[:]) {
-		t.Errorf("Incorrect Finalized Root retrieved; wanted %v but got %v", expectedRoot, retRoot)
-	}
 	if retEpoch != expectedFinEpoch {
 		t.Errorf("Incorrect Finalized epoch retrieved; wanted %v but got %v", expectedFinEpoch, retEpoch)
 	}
