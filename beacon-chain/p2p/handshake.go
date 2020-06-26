@@ -137,7 +137,6 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 						// This is only to ensure the smooth running of our testnets. This will not be
 						// used in production.
 						log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
-						s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
 						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 						return
 					}
@@ -158,6 +157,10 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 			log := log.WithField("peer", conn.RemotePeer().Pretty())
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
+				// Exit early if we are still connected to the peer.
+				if net.Connectedness(conn.RemotePeer()) == network.Connected {
+					return
+				}
 				priorState, err := s.peers.ConnectionState(conn.RemotePeer())
 				if err != nil {
 					// Can happen if the peer has already disconnected, so...
@@ -169,10 +172,9 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 					log.WithError(err).Error("Disconnect handler failed")
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
-				s.host.ConnManager().Unprotect(conn.RemotePeer(), "protocol")
 				// Only log disconnections if we were fully connected.
 				if priorState == peers.PeerConnected {
-					log.WithField("active", len(s.peers.Active())).Info("Peer disconnected")
+					log.WithField("activePeers", len(s.peers.Active())).Info("Peer Disconnected")
 				}
 			}()
 		},

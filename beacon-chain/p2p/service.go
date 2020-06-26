@@ -192,11 +192,6 @@ func (s *Service) Start() {
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
-		peer, err := MakePeer(s.cfg.RelayNodeAddr)
-		if err != nil {
-			log.WithError(err).Errorf("Could not create peer")
-		}
-		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
 	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
