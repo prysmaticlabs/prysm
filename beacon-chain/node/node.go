@@ -48,6 +48,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -114,7 +115,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
 		c := params.BeaconNetworkConfig()
-		c.BootstrapNodes = strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
+		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)
 	}
 	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
@@ -317,15 +318,27 @@ func (b *BeaconNode) startStateGen() {
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeAddrs := params.BeaconNetworkConfig().BootstrapNodes
-	for i, addr := range bootnodeAddrs {
+	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes
+	bootnodeAddrs := make([]string, 0)  //final list of nodes pending creation
+	allNodesTemp := make([][]string, 0) //each potential .enr file will end up as slice of strings
+	for i, addr := range bootnodesTemp {
+		innerList := make([]string, 0)
+		allNodesTemp = append(allNodesTemp, innerList)
 		if filepath.Ext(addr) == ".enr" {
-			b, err := ioutil.ReadFile(addr)
+			fileContent, err := ioutil.ReadFile(addr)
 			if err != nil {
 				return err
 			}
-			bootnodeAddrs[i] = string(b)
+			err = yaml.Unmarshal(fileContent, &(allNodesTemp[i]))
+			if err != nil {
+				return err
+			}
+		} else {
+			allNodesTemp[i] = []string{bootnodesTemp[i]}
 		}
+	}
+	for _, nodeSlice := range allNodesTemp {
+		bootnodeAddrs = append(bootnodeAddrs, nodeSlice...)
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
