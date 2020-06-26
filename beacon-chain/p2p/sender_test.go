@@ -32,7 +32,7 @@ func TestService_Send(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	p2.SetStreamHandler("/testing/1/ssz", func(stream network.Stream) {
+	p2.SetStreamHandler("/testing/1/ssz_snappy", func(stream network.Stream) {
 		rcvd := &testpb.TestSimpleMessage{}
 		if err := svc.Encoding().DecodeWithLength(stream, rcvd); err != nil {
 			t.Fatal(err)
