@@ -14,7 +14,8 @@ There are two modes, one for deterministic and another non-deterministic randomn
    In this mode, only seed is generated using cryptographically secure source (crypto/rand). So,
    once seed is obtained, and generator is seeded, all the rest usage is deterministic, and fast.
    This method is still better than using unix time for source of randomness - since time is not a
-   good source of seed randomness, when you have many concurrent servers using it.
+   good source of seed randomness, when you have many concurrent servers using it (and can coincide
+   in start times).
 
 2. For cryptographically secure non-deterministic mode (CSPRNG), use:
 
