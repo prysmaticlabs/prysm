@@ -112,8 +112,9 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) u
 	return computedSubnet
 }
 
-// Validates that the incoming attestation is in the desired time range. An attestation
-// is valid only if received within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
+// ValidateAttestationTime Validates that the incoming attestation is in the desired time range.
+// An attestation is valid only if received within the last ATTESTATION_PROPAGATION_SLOT_RANGE
+// slots.
 //
 // Example:
 //   ATTESTATION_PROPAGATION_SLOT_RANGE = 5
