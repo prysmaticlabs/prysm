@@ -376,7 +376,6 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		Encoding:          cliCtx.String(cmd.P2PEncoding.Name),
 		StateNotifier:     b,
-		PubSub:            cliCtx.String(cmd.P2PPubsub.Name),
 	})
 	if err != nil {
 		return err
