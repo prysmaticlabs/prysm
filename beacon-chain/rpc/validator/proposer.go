@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"time"
@@ -23,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -223,18 +223,9 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	}
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
-	randomDepBytes := make([]byte, 32)
-	randomBlkBytes := make([]byte, 32)
-	_, err = rand.Read(randomDepBytes)
-	if err != nil {
-		return nil, err
-	}
-	_, err = rand.Read(randomBlkBytes)
-	if err != nil {
-		return nil, err
-	}
-	depRoot := hashutil.Hash(randomDepBytes)
-	blockHash := hashutil.Hash(randomBlkBytes)
+	randGen := rand.NewRandomGenerator()
+	depRoot := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
+	blockHash := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
 		DepositCount: headState.Eth1DepositIndex(),
