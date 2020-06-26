@@ -239,6 +239,9 @@ func (s *Service) hasHeadState() bool {
 // This updates recent canonical block mapping. It uses input head root and retrieves
 // all the canonical block roots that are ancestor of the input head block root.
 func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockchain.updateRecentCanonicalBlocks")
+	defer span.End()
+
 	s.recentCanonicalBlocksLock.Lock()
 	defer s.recentCanonicalBlocksLock.Unlock()
 
