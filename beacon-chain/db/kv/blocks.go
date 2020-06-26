@@ -128,9 +128,9 @@ func (kv *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return exists
 }
 
-// DeleteBlock by block root.
-func (kv *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
+// deleteBlock by block root.
+func (kv *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlock")
 	defer span.End()
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -154,9 +154,9 @@ func (kv *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	})
 }
 
-// DeleteBlocks by block roots.
-func (kv *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
+// deleteBlocks by block roots.
+func (kv *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlocks")
 	defer span.End()
 
 	return kv.db.Update(func(tx *bolt.Tx) error {
