@@ -1,4 +1,4 @@
-// Package db defines a persistent backend for the validator service.
+// Package kv defines a persistent backend for the validator service.
 package kv
 
 import (
