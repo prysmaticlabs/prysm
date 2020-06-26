@@ -56,7 +56,7 @@ func TestStore_ProposerSlashing_CRUD(t *testing.T) {
 	if !proto.Equal(prop, retrieved) {
 		t.Errorf("Wanted %v, received %v", prop, retrieved)
 	}
-	if err := db.DeleteProposerSlashing(ctx, slashingRoot); err != nil {
+	if err := db.deleteProposerSlashing(ctx, slashingRoot); err != nil {
 		t.Fatal(err)
 	}
 	if db.HasProposerSlashing(ctx, slashingRoot) {
@@ -123,7 +123,7 @@ func TestStore_AttesterSlashing_CRUD(t *testing.T) {
 	if !proto.Equal(att, retrieved) {
 		t.Errorf("Wanted %v, received %v", att, retrieved)
 	}
-	if err := db.DeleteAttesterSlashing(ctx, slashingRoot); err != nil {
+	if err := db.deleteAttesterSlashing(ctx, slashingRoot); err != nil {
 		t.Fatal(err)
 	}
 	if db.HasAttesterSlashing(ctx, slashingRoot) {
