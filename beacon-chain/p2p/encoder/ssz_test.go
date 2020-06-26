@@ -71,7 +71,10 @@ func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 		Bar: 9001,
 	}
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
-	//maxLength := uint64(5)
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconNetworkConfig()
+	c.MaxChunkSize = uint64(5)
+	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeWithMaxLength(buf, msg)
 	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", params.BeaconNetworkConfig().MaxChunkSize)
 	if err == nil {
@@ -89,14 +92,18 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 		Bar: 4242,
 	}
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
-	maxLength := uint64(5)
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconNetworkConfig()
+	maxChunkSize := uint64(5)
+	c.MaxChunkSize = maxChunkSize
+	params.OverrideBeaconNetworkConfig(c)
 	_, err := e.EncodeGossip(buf, msg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	decoded := &testpb.TestSimpleMessage{}
 	err = e.DecodeWithMaxLength(buf, decoded)
-	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxLength)
+	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxChunkSize)
 	if err == nil {
 		t.Fatalf("wanted this error %s but got nothing", wanted)
 	}

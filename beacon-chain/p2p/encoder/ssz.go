@@ -15,9 +15,6 @@ import (
 
 var _ = NetworkEncoding(&SszNetworkEncoder{})
 
-// MaxChunkSize allowed for decoding messages.
-var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize // 1Mib
-
 // MaxGossipSize allowed for gossip messages.
 var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
 
@@ -70,11 +67,11 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}) (in
 	if err != nil {
 		return 0, err
 	}
-	if uint64(len(b)) > MaxChunkSize {
+	if uint64(len(b)) > params.BeaconNetworkConfig().MaxChunkSize {
 		return 0, fmt.Errorf(
 			"size of encoded message is %d which is larger than the provided max limit of %d",
 			len(b),
-			MaxChunkSize,
+			params.BeaconNetworkConfig().MaxChunkSize,
 		)
 	}
 	// write varint first
@@ -129,11 +126,11 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) erro
 	if err != nil {
 		return err
 	}
-	if msgLen > MaxChunkSize {
+	if msgLen > params.BeaconNetworkConfig().MaxChunkSize {
 		return fmt.Errorf(
 			"remaining bytes %d goes over the provided max limit of %d",
 			msgLen,
-			MaxChunkSize,
+			params.BeaconNetworkConfig().MaxChunkSize,
 		)
 	}
 	if e.UseSnappyCompression {
