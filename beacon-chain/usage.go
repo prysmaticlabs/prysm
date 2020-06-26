@@ -67,6 +67,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.ConfigFileFlag,
 			cmd.ChainConfigFileFlag,
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
+			cmd.InsecureGRPCFlag,
 		},
 	},
 	{

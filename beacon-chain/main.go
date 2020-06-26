@@ -79,6 +79,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
 	cmd.MonitoringHostFlag,
+	cmd.InsecureGRPCFlag,
 	flags.MonitoringPortFlag,
 	cmd.DisableMonitoringFlag,
 	cmd.ClearDB,

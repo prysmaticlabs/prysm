@@ -2,6 +2,7 @@ package polling
 
 import (
 	"context"
+	"crypto/tls"
 	"strings"
 
 	"github.com/dgraph-io/ristretto"
@@ -33,21 +34,22 @@ var log = logrus.WithField("prefix", "validator")
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	validator            Validator
-	graffiti             []byte
-	conn                 *grpc.ClientConn
-	endpoint             string
-	withCert             string
-	dataDir              string
-	keyManager           keymanager.KeyManager
-	logValidatorBalances bool
+	insecureGRPC         bool
 	emitAccountMetrics   bool
-	maxCallRecvMsgSize   int
+	logValidatorBalances bool
+	cancel               context.CancelFunc
 	grpcRetries          uint
-	grpcHeaders          []string
+	maxCallRecvMsgSize   int
+	conn                 *grpc.ClientConn
 	protector            slashingprotection.Protector
+	dataDir              string
+	withCert             string
+	endpoint             string
+	keyManager           keymanager.KeyManager
+	validator            Validator
+	ctx                  context.Context
+	graffiti             []byte
+	grpcHeaders          []string
 }
 
 // Config for the validator service.
@@ -59,6 +61,7 @@ type Config struct {
 	KeyManager                 keymanager.KeyManager
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	InsecureGRPC               bool
 	GrpcMaxCallRecvMsgSizeFlag int
 	GrpcRetriesFlag            uint
 	GrpcHeadersFlag            string
@@ -76,6 +79,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:             cfg.CertFlag,
 		dataDir:              cfg.DataDir,
 		graffiti:             []byte(cfg.GraffitiFlag),
+		insecureGRPC:         cfg.InsecureGRPC,
 		keyManager:           cfg.KeyManager,
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
@@ -99,6 +103,7 @@ func (v *ValidatorService) Start() {
 		v.withCert,
 		v.grpcHeaders,
 		v.grpcRetries,
+		v.insecureGRPC,
 		streamInterceptor,
 	)
 	if dialOpts == nil {
@@ -202,6 +207,7 @@ func ConstructDialOptions(
 	withCert string,
 	grpcHeaders []string,
 	grpcRetries uint,
+	insecureGRPC bool,
 	extraOpts ...grpc.DialOption,
 ) []grpc.DialOption {
 	var transportSecurity grpc.DialOption
@@ -213,10 +219,17 @@ func ConstructDialOptions(
 		}
 		transportSecurity = grpc.WithTransportCredentials(creds)
 	} else {
-		transportSecurity = grpc.WithInsecure()
-		log.Warn("You are using an insecure gRPC connection. If you are running your beacon node and " +
-			"validator on the same machines, you can ignore this message. If you want to know " +
-			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
+		if insecureGRPC {
+			transportSecurity = grpc.WithInsecure()
+			log.Warn("You are using an insecure gRPC connection. If you are running your beacon node and " +
+				"validator on the same machines, you can ignore this message. If you want to know " +
+				"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
+		} else {
+			transportSecurity = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
+				InsecureSkipVerify: true,
+			}))
+			log.Info("Establishing secure gRPC connection")
+		}
 	}
 
 	if maxCallRecvMsgSize == 0 {

@@ -199,6 +199,8 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 	graffiti := s.cliCtx.String(flags.GraffitiFlag.Name)
 	maxCallRecvMsgSize := s.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := s.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+	insecureGRPC := s.cliCtx.Bool(cmd.InsecureGRPCFlag.Name)
+
 	var sp *slashing_protection.Service
 	var protector slashing_protection.Protector
 	if err := s.services.FetchService(&sp); err == nil {
@@ -213,6 +215,7 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 			EmitAccountMetrics:         emitAccountMetrics,
 			CertFlag:                   cert,
 			GraffitiFlag:               graffiti,
+			InsecureGRPC:               insecureGRPC,
 			GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 			GrpcRetriesFlag:            grpcRetries,
 			GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),
@@ -232,6 +235,7 @@ func (s *ValidatorClient) registerClientService(keyManager keymanager.KeyManager
 		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
 		GraffitiFlag:               graffiti,
+		InsecureGRPC:               insecureGRPC,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 		GrpcRetriesFlag:            grpcRetries,
 		GrpcHeadersFlag:            s.cliCtx.String(flags.GrpcHeadersFlag.Name),

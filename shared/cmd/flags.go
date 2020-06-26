@@ -205,7 +205,13 @@ var (
 	// GrpcMaxCallRecvMsgSizeFlag defines the max call message size for GRPC
 	GrpcMaxCallRecvMsgSizeFlag = &cli.IntFlag{
 		Name:  "grpc-max-msg-size",
-		Usage: "Integer to define max recieve message call size (default: 4194304 (for 4MB))",
+		Usage: "Integer to define max receive message call size (default: 4194304 (for 4MB))",
 		Value: 1 << 22,
+	}
+	// InsecureGRPCFlag defines using an insecure gRPC connection (not recommended).
+	InsecureGRPCFlag = &cli.BoolFlag{
+		Name:  "insecure-grpc-flag",
+		Usage: "Utilize an insecure grpc connection (not recommended)",
+		Value: false,
 	}
 )

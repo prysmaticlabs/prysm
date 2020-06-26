@@ -53,49 +53,51 @@ func init() {
 
 // Service defining an RPC server for a beacon node.
 type Service struct {
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	beaconDB                db.HeadAccessDatabase
-	headFetcher             blockchain.HeadFetcher
-	forkFetcher             blockchain.ForkFetcher
-	finalizationFetcher     blockchain.FinalizationFetcher
-	participationFetcher    blockchain.ParticipationFetcher
-	genesisTimeFetcher      blockchain.TimeFetcher
-	genesisFetcher          blockchain.GenesisFetcher
-	attestationReceiver     blockchain.AttestationReceiver
-	blockReceiver           blockchain.BlockReceiver
-	powChainService         powchain.Chain
-	chainStartFetcher       powchain.ChainStartFetcher
+	insecureGRPC            bool
 	mockEth1Votes           bool
 	enableDebugRPCEndpoints bool
-	attestationsPool        attestations.Pool
-	exitPool                *voluntaryexits.Pool
 	slashingsPool           *slashings.Pool
-	syncService             sync.Checker
-	host                    string
-	port                    string
-	listener                net.Listener
-	withCert                string
-	withKey                 string
+	cancel                  context.CancelFunc
+	exitPool                *voluntaryexits.Pool
+	slasherConn             *grpc.ClientConn
+	stateGen                *stategen.State
 	grpcServer              *grpc.Server
 	canonicalStateChan      chan *pbp2p.BeaconState
+	connectedRPCClients     map[net.Addr]bool
 	incomingAttestation     chan *ethpb.Attestation
-	credentialError         error
-	p2p                     p2p.Broadcaster
-	peersFetcher            p2p.PeersProvider
-	peerManager             p2p.PeerManager
-	depositFetcher          depositcache.DepositFetcher
 	pendingDepositFetcher   depositcache.PendingDepositsFetcher
+	peersFetcher            p2p.PeersProvider
+	p2p                     p2p.Broadcaster
+	credentialError         error
+	depositFetcher          depositcache.DepositFetcher
 	stateNotifier           statefeed.Notifier
 	blockNotifier           blockfeed.Notifier
+	datadir                 string
+	withKey                 string
+	withCert                string
+	ctx                     context.Context
 	operationNotifier       opfeed.Notifier
-	slasherConn             *grpc.ClientConn
+	port                    string
+	host                    string
+	syncService             sync.Checker
+	listener                net.Listener
 	slasherProvider         string
+	attestationsPool        attestations.Pool
 	slasherCert             string
 	slasherCredentialError  error
+	chainStartFetcher       powchain.ChainStartFetcher
+	powChainService         powchain.Chain
+	blockReceiver           blockchain.BlockReceiver
+	attestationReceiver     blockchain.AttestationReceiver
+	genesisFetcher          blockchain.GenesisFetcher
+	genesisTimeFetcher      blockchain.TimeFetcher
+	participationFetcher    blockchain.ParticipationFetcher
+	finalizationFetcher     blockchain.FinalizationFetcher
+	forkFetcher             blockchain.ForkFetcher
+	headFetcher             blockchain.HeadFetcher
+	beaconDB                db.HeadAccessDatabase
 	slasherClient           slashpb.SlasherClient
-	stateGen                *stategen.State
-	connectedRPCClients     map[net.Addr]bool
+	peerManager             p2p.PeerManager
 }
 
 // Config options for the beacon node RPC server.
@@ -104,6 +106,7 @@ type Config struct {
 	Port                    string
 	CertFlag                string
 	KeyFlag                 string
+	DataDir                 string
 	BeaconDB                db.HeadAccessDatabase
 	HeadFetcher             blockchain.HeadFetcher
 	ForkFetcher             blockchain.ForkFetcher
@@ -116,6 +119,7 @@ type Config struct {
 	GenesisTimeFetcher      blockchain.TimeFetcher
 	GenesisFetcher          blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints bool
+	InsecureGRPC            bool
 	MockEth1Votes           bool
 	AttestationsPool        attestations.Pool
 	ExitPool                *voluntaryexits.Pool
@@ -148,9 +152,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		participationFetcher:    cfg.ParticipationFetcher,
 		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
+		datadir:                 cfg.DataDir,
 		attestationReceiver:     cfg.AttestationReceiver,
 		blockReceiver:           cfg.BlockReceiver,
 		p2p:                     cfg.Broadcaster,
+		insecureGRPC:            cfg.InsecureGRPC,
 		peersFetcher:            cfg.PeersFetcher,
 		peerManager:             cfg.PeerManager,
 		powChainService:         cfg.POWChainService,
@@ -210,15 +216,6 @@ func (s *Service) Start() {
 	}
 	grpc_prometheus.EnableHandlingTimeHistogram()
 
-	//// Determine if no TLS certs were specified in order to generate
-	//// self-signed certificates by default for secure gRPC connections.
-	//noCert := !cliCtx.IsSet(flags.CertFlag.Name)
-	//noTLSKey := !cliCtx.IsSet(flags.KeyFlag.Name)
-	//if noCert && noTLSKey {
-	//	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
-	//	// Generate self-signed certs.
-	//}
-
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -227,16 +224,26 @@ func (s *Service) Start() {
 		}
 		opts = append(opts, grpc.Creds(creds))
 	} else {
-		//if s.insecureGRPC {
-		//
-		//}
-		//log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
-		//	"validator on the same machines, you can ignore this message. If you want to know " +
-		//	"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
-
-		// Generate self-signed certs by default
-		generateSelfSignedCerts()
+		if s.insecureGRPC {
+			log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
+				"validator on the same machines, you can ignore this message. If you want to know " +
+				"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
+		} else {
+			// Generate self-signed certs by default.
+			certPath, certKeyPath, err := generateSelfSignedCerts(s.datadir)
+			if err != nil {
+				log.Fatalf("Could not generate self-signed, secure gRPC certificates: %v", err)
+			}
+			creds, err := credentials.NewServerTLSFromFile(certPath, certKeyPath)
+			if err != nil {
+				log.Errorf("Could not load TLS keys: %s", err)
+				s.credentialError = err
+			}
+			opts = append(opts, grpc.Creds(creds))
+			log.Info("Establishing secure gRPC server using self-signed certificates")
+		}
 	}
+
 	s.grpcServer = grpc.NewServer(opts...)
 
 	validatorServer := &validator.Server{

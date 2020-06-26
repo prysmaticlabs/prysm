@@ -562,20 +562,24 @@ func (b *BeaconNode) registerRPCService() error {
 	port := b.cliCtx.String(flags.RPCPort.Name)
 	cert := b.cliCtx.String(flags.CertFlag.Name)
 	key := b.cliCtx.String(flags.KeyFlag.Name)
+	datadir := b.cliCtx.String(cmd.DataDirFlag.Name)
 	slasherCert := b.cliCtx.String(flags.SlasherCertFlag.Name)
 	slasherProvider := b.cliCtx.String(flags.SlasherProviderFlag.Name)
 	mockEth1DataVotes := b.cliCtx.Bool(flags.InteropMockEth1DataVotesFlag.Name)
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+	insecureGRPC := b.cliCtx.Bool(cmd.InsecureGRPCFlag.Name)
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
 		Host:                    host,
 		Port:                    port,
 		CertFlag:                cert,
 		KeyFlag:                 key,
+		DataDir:                 datadir,
 		BeaconDB:                b.db,
 		Broadcaster:             p2pService,
 		PeersFetcher:            p2pService,
 		PeerManager:             p2pService,
+		InsecureGRPC:            insecureGRPC,
 		HeadFetcher:             chainService,
 		ForkFetcher:             chainService,
 		FinalizationFetcher:     chainService,

@@ -1,9 +1,6 @@
 package rpc
 
 import (
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -11,7 +8,12 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"path"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/rand"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 const (
@@ -19,36 +21,24 @@ const (
 	validFor = 365 * 24 * time.Hour
 )
 
-func publicKey(priv interface{}) interface{} {
-	switch k := priv.(type) {
-	case *rsa.PrivateKey:
-		return &k.PublicKey
-	case *ecdsa.PrivateKey:
-		return &k.PublicKey
-	case ed25519.PrivateKey:
-		return k.Public().(ed25519.PublicKey)
-	default:
-		return nil
-	}
-}
+var (
+	selfSignedCertName    = "beacon.pem"
+	selfSignedCertKeyName = "key.pem"
+)
 
-func generateSelfSignedCerts() {
-	var err error
-	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
+// Generates self-signed certificates at a datadir path. This function
+// returns the paths of the cert.pem and key.pem files that
+// were generated as a result.
+func generateSelfSignedCerts(datadir string) (string, string, error) {
+	priv, err := rsa.GenerateKey(rand.NewGenerator(), rsaBits)
 	if err != nil {
-		log.Fatalf("Failed to generate private key: %v", err)
+		return "", "", errors.Wrap(err, "nailed to generate private key")
 	}
 
-	var notBefore time.Time
-	notBefore = time.Now()
+	notBefore := roughtime.Now()
 	notAfter := notBefore.Add(validFor)
 
-	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
-	if err != nil {
-		log.Fatalf("Failed to generate serial number: %v", err)
-	}
-
+	serialNumber := big.NewInt(int64(rand.NewGenerator().Int() % 128))
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -60,47 +50,44 @@ func generateSelfSignedCerts() {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
-
-	if ip := net.ParseIP("localhost"); ip != nil {
-		template.IPAddresses = append(template.IPAddresses, ip)
-	} else {
-		template.DNSNames = append(template.DNSNames, "localhost")
-	}
+	template.IPAddresses = append(template.IPAddresses, net.ParseIP("127.0.0.1"))
 
 	template.IsCA = true
 	template.KeyUsage |= x509.KeyUsageCertSign
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	derBytes, err := x509.CreateCertificate(rand.NewGenerator(), &template, &template, &priv.PublicKey, priv)
 	if err != nil {
-		log.Fatalf("Failed to create certificate: %v", err)
+		return "", "", errors.Wrap(err, "failed to create x509 certificate")
 	}
 
-	certOut, err := os.Create("/tmp/cert.pem")
+	certPath := path.Join(datadir, selfSignedCertName)
+	certKeyPath := path.Join(datadir, selfSignedCertKeyName)
+	certOut, err := os.Create(certPath)
 	if err != nil {
-		log.Fatalf("Failed to open cert.pem for writing: %v", err)
+		return "", "", errors.Wrapf(err, "failed to open %s for writing", certPath)
 	}
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		log.Fatalf("Failed to write data to cert.pem: %v", err)
+		return "", "", errors.Wrapf(err, "failed to write data to %s", certPath)
 	}
 	if err := certOut.Close(); err != nil {
-		log.Fatalf("Error closing cert.pem: %v", err)
+		return "", "", errors.Wrapf(err, "error closing write buffer: %s", certPath)
 	}
-	log.Info("wrote /tmp/cert.pem")
+	log.WithField("certPath", certPath).Info("Wrote self-signed certificate file")
 
-	keyOut, err := os.OpenFile("/tmp/key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(certKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Failed to open key.pem for writing: %v", err)
-		return
+		return "", "", errors.Wrapf(err, "failed to open %s for writing", certKeyPath)
 	}
 	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
 	if err != nil {
-		log.Fatalf("Unable to marshal private key: %v", err)
+		return "", "", errors.Wrap(err, "unable to marshal private key")
 	}
 	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
-		log.Fatalf("Failed to write data to key.pem: %v", err)
+		return "", "", errors.Wrapf(err, "failed to write data to %s", certKeyPath)
 	}
 	if err := keyOut.Close(); err != nil {
-		log.Fatalf("Error closing key.pem: %v", err)
+		return "", "", errors.Wrapf(err, "error closing write buffer: %s", certKeyPath)
 	}
-	log.Info("Wrote /tmp/key.pem")
+	log.WithField("certKeyPath", certKeyPath).Info("Wrote self-signed certificate key file")
+	return certPath, certKeyPath, nil
 }
