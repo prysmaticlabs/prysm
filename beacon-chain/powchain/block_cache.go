@@ -21,7 +21,7 @@ var (
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
 	// Requests should be only accessing blocks within recent blocks within the
 	// Eth1FollowDistance.
-	maxCacheSize = int(2 * params.BeaconConfig().Eth1FollowDistance)
+	maxCacheSize = 2 * params.BeaconConfig().Eth1FollowDistance
 
 	// Metrics
 	blockCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -169,8 +169,8 @@ func (b *blockCache) AddBlock(blk *gethTypes.Block) error {
 }
 
 // trim the FIFO queue to the maxSize.
-func trim(queue *cache.FIFO, maxSize int) {
-	for s := len(queue.ListKeys()); s > maxSize; s-- {
+func trim(queue *cache.FIFO, maxSize uint64) {
+	for s := uint64(len(queue.ListKeys())); s > maxSize; s-- {
 		// #nosec G104 popProcessNoopFunc never returns an error
 		if _, err := queue.Pop(popProcessNoopFunc); err != nil { // This never returns an error, but we'll handle anyway for sanity.
 			panic(err)

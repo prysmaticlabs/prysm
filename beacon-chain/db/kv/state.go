@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"math"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -394,8 +393,10 @@ func (kv *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, ind
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.statesAtSlotBitfieldIndex")
 	defer span.End()
 
-	highestSlot := index - 1
-	highestSlot = int(math.Max(0, float64(highestSlot)))
+	highestSlot := uint64(0)
+	if uint64(index) > highestSlot+1 {
+		highestSlot = uint64(index - 1)
+	}
 
 	if highestSlot == 0 {
 		gState, err := kv.GenesisState(ctx)
@@ -405,7 +406,7 @@ func (kv *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, ind
 		return []*state.BeaconState{gState}, nil
 	}
 
-	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
+	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)
 	if err != nil {

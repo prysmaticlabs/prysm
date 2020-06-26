@@ -222,7 +222,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
-	if len(s.getInitSyncBlocks()) > int(initialSyncBlockCacheSize) {
+	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
