@@ -286,7 +286,7 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 
 	depositTrie, err := vs.depositTrie(ctx, canonicalEth1DataHeight)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+		return nil, errors.Wrap(err, "could not retrieve deposit trie")
 	}
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
@@ -371,8 +371,14 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 			depositData = append(depositData, depHash[:])
 		}
 
-		return trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+		var err error
+		depositTrie, err = trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
+		}
 	}
+	
+	return depositTrie, nil
 }
 
 // in case no vote for new eth1data vote considered best vote we
