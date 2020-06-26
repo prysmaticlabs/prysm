@@ -448,6 +448,9 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(highestAt) <= 0 {
+		t.Fatal("Got empty highest at slice")
+	}
 	if !proto.Equal(block1, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", block1, highestAt)
 	}
@@ -455,12 +458,18 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(highestAt) <= 0 {
+		t.Fatal("Got empty highest at slice")
+	}
 	if !proto.Equal(block2, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", block2, highestAt)
 	}
 	highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(highestAt) <= 0 {
+		t.Fatal("Got empty highest at slice")
 	}
 	if !proto.Equal(block3, highestAt[0]) {
 		t.Errorf("Wanted %v, received %v", block3, highestAt)

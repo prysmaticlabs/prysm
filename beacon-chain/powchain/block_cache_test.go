@@ -148,14 +148,14 @@ func TestBlockCache_maxSize(t *testing.T) {
 		}
 	}
 
-	if len(cache.hashCache.ListKeys()) != maxCacheSize {
+	if uint64(len(cache.hashCache.ListKeys())) != maxCacheSize {
 		t.Errorf(
 			"Expected hash cache key size to be %d, got %d",
 			maxCacheSize,
 			len(cache.hashCache.ListKeys()),
 		)
 	}
-	if len(cache.heightCache.ListKeys()) != maxCacheSize {
+	if uint64(len(cache.heightCache.ListKeys())) != maxCacheSize {
 		t.Errorf(
 			"Expected height cache key size to be %d, got %d",
 			maxCacheSize,
