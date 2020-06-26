@@ -1,20 +1,17 @@
 package db
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // SetupDB instantiates and returns a DB instance for the validator client.
 func SetupDB(t testing.TB, pubkeys [][48]byte) *Store {
-	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	if err != nil {
-		t.Fatalf("Could not generate random file path: %v", err)
-	}
+	randPath := rand.NewDeterministicGenerator().Int()
 	p := filepath.Join(TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
