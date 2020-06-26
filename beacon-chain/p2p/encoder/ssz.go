@@ -31,9 +31,7 @@ var bufReaderPool = new(sync.Pool)
 
 // SszNetworkEncoder supports p2p networking encoding using SimpleSerialize
 // with snappy compression (if enabled).
-type SszNetworkEncoder struct {
-	UseSnappyCompression bool
-}
+type SszNetworkEncoder struct{}
 
 func (e SszNetworkEncoder) doEncode(msg interface{}) ([]byte, error) {
 	if v, ok := msg.(fastssz.Marshaler); ok {
@@ -54,9 +52,7 @@ func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg interface{}) (int, erro
 	if uint64(len(b)) > MaxGossipSize {
 		return 0, errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
 	}
-	if e.UseSnappyCompression {
-		b = snappy.Encode(nil /*dst*/, b)
-	}
+	b = snappy.Encode(nil /*dst*/, b)
 	return w.Write(b)
 }
 
@@ -75,10 +71,7 @@ func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, 
 	if err != nil {
 		return 0, err
 	}
-	if e.UseSnappyCompression {
-		return writeSnappyBuffer(w, b)
-	}
-	return w.Write(b)
+	return writeSnappyBuffer(w, b)
 }
 
 // EncodeWithMaxLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
@@ -99,10 +92,7 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 	if err != nil {
 		return 0, err
 	}
-	if e.UseSnappyCompression {
-		return writeSnappyBuffer(w, b)
-	}
-	return w.Write(b)
+	return writeSnappyBuffer(w, b)
 }
 
 func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
@@ -114,12 +104,10 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
 func (e SszNetworkEncoder) DecodeGossip(b []byte, to interface{}) error {
-	if e.UseSnappyCompression {
-		var err error
-		b, err = snappy.Decode(nil /*dst*/, b)
-		if err != nil {
-			return err
-		}
+	var err error
+	b, err = snappy.Decode(nil /*dst*/, b)
+	if err != nil {
+		return err
 	}
 	if uint64(len(b)) > MaxGossipSize {
 		return errors.Errorf("gossip message exceeds max gossip size: %d bytes > %d bytes", len(b), MaxGossipSize)
@@ -145,10 +133,8 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 	if msgLen > maxSize {
 		return fmt.Errorf("remaining bytes %d goes over the provided max limit of %d", msgLen, maxSize)
 	}
-	if e.UseSnappyCompression {
-		r = newBufferedReader(r)
-		defer bufReaderPool.Put(r)
-	}
+	r = newBufferedReader(r)
+	defer bufReaderPool.Put(r)
 	b := make([]byte, e.MaxLength(int(msgLen)))
 	numOfBytes, err := r.Read(b)
 	if err != nil {
@@ -159,19 +145,13 @@ func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxS
 
 // ProtocolSuffix returns the appropriate suffix for protocol IDs.
 func (e SszNetworkEncoder) ProtocolSuffix() string {
-	if e.UseSnappyCompression {
-		return "/ssz_snappy"
-	}
-	return "/ssz"
+	return "/ssz_snappy"
 }
 
 // MaxLength specifies the maximum possible length of an encoded
 // chunk of data.
 func (e SszNetworkEncoder) MaxLength(length int) int {
-	if e.UseSnappyCompression {
-		return snappy.MaxEncodedLen(length)
-	}
-	return length
+	return snappy.MaxEncodedLen(length)
 }
 
 // Writes a bytes value through a snappy buffered writer.

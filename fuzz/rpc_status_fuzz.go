@@ -29,7 +29,6 @@ func init() {
 	var err error
 	p, err = p2p.NewService(&p2p.Config{
 		NoDiscovery: true,
-		Encoding:    "ssz",
 	})
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new p2p service"))

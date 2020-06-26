@@ -154,12 +154,6 @@ var (
 			"192.168.0.0/16 would deny connections from peers on your local network only. The " +
 			"default is to accept all connections.",
 	}
-	// P2PEncoding defines the encoding format for p2p messages.
-	P2PEncoding = &cli.StringFlag{
-		Name:  "p2p-encoding",
-		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
-		Value: "ssz-snappy",
-	}
 	// P2PPubsub defines the pubsub router to use for p2p messages.
 	P2PPubsub = &cli.StringFlag{
 		Name:  "p2p-pubsub",

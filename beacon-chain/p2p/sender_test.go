@@ -20,7 +20,7 @@ func TestService_Send(t *testing.T) {
 
 	svc := &Service{
 		host: p1.BHost,
-		cfg:  &Config{Encoding: "ssz"},
+		cfg:  &Config{},
 	}
 
 	msg := &testpb.TestSimpleMessage{

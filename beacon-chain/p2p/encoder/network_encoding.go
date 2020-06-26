@@ -4,12 +4,6 @@ import (
 	"io"
 )
 
-// Defines the different encoding formats
-const (
-	SSZ       = "ssz"        // SSZ is SSZ only.
-	SSZSnappy = "ssz-snappy" // SSZSnappy is SSZ with snappy compression.
-)
-
 // NetworkEncoding represents an encoder compatible with Ethereum 2.0 p2p.
 type NetworkEncoding interface {
 	// DecodeGossip to the provided gossip message. The interface must be a pointer to the decoding destination.

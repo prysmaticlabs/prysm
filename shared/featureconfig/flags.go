@@ -164,6 +164,11 @@ var devModeFlags = []cli.Flag{
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedP2PEncoding = &cli.StringFlag{
+		Name:   "p2p-encoding",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableKadDht = &cli.BoolFlag{
 		Name:   "enable-kad-dht",
 		Usage:  deprecatedUsage,
@@ -433,6 +438,7 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedP2PEncoding,
 	deprecatedEnableKadDht,
 	deprecatedWeb3ProviderFlag,
 	deprecatedEnableDynamicCommitteeSubnets,
