@@ -164,7 +164,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 
 	// Determine subnet to broadcast attestation to
 	wantedEpoch := helpers.SlotToEpoch(att.Data.Slot)
-	vals, err := vs.HeadFetcher.HeadValidatorsIndices(wantedEpoch)
+	vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 
 	fetchValsLen := func(slot uint64) (uint64, error) {
 		wantedEpoch := helpers.SlotToEpoch(slot)
-		vals, err := vs.HeadFetcher.HeadValidatorsIndices(wantedEpoch)
+		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return 0, err
 		}
