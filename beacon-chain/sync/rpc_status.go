@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -27,6 +29,16 @@ func (s *Service) maintainPeerStatuses() {
 	runutil.RunEvery(s.ctx, interval, func() {
 		for _, pid := range s.p2p.Peers().Connected() {
 			go func(id peer.ID) {
+				// If our peer status has not been updated correctly we disconnect over here
+				// and set the connection state over here instead.
+				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
+					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
+					if err := s.p2p.Disconnect(id); err != nil {
+						log.Errorf("Error when disconnecting with peer: %v", err)
+					}
+					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
+					return
+				}
 				if s.p2p.Peers().IsBad(id) {
 					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
 						log.Errorf("Error when disconnecting with bad peer: %v", err)
