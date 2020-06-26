@@ -77,7 +77,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				"currentSlot": b.Block.Slot,
 				"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block.ParentRoot)),
 			}).Info("Requesting parent block")
-			req := [][]byte{b.Block.ParentRoot}
+			req := [][32]byte{bytesutil.ToBytes32(b.Block.ParentRoot)}
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer than the block slot we are requesting.
@@ -94,8 +94,10 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-				traceutil.AnnotateError(span, err)
-				log.Errorf("Could not send recent block request: %v", err)
+				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
+					traceutil.AnnotateError(span, err)
+					log.Errorf("Could not send recent block request: %v", err)
+				}
 			}
 			span.End()
 			continue
