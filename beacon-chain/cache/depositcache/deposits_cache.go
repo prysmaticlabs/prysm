@@ -146,7 +146,8 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			finalizedDeposits = append(finalizedDeposits, hash[:])
 		}
 
-		depositTrie, err := trieutil.GenerateTrieFromItems(finalizedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
+		var err error
+		depositTrie, err = trieutil.GenerateTrieFromItems(finalizedDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
 		if err != nil {
 			log.WithError(err).Error("Could not generate deposit trie. Finalized deposit cache not updated.")
 			return
