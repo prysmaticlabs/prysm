@@ -20,7 +20,7 @@ func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream l
 	}()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
