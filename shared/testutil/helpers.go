@@ -76,7 +76,7 @@ func BlockSignature(
 // Random32Bytes generates a random 32 byte slice.
 func Random32Bytes(t *testing.T) []byte {
 	b := make([]byte, 32)
-	_, err := rand.NewDeterministicRandomGenerator().Read(b)
+	_, err := rand.NewDeterministicGenerator().Read(b)
 	if err != nil {
 		t.Fatal(err)
 	}

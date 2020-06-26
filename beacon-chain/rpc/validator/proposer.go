@@ -223,7 +223,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	}
 	// set random roots and block hashes to prevent a majority from being
 	// built if the eth1 node is offline
-	randGen := rand.NewRandomGenerator()
+	randGen := rand.NewGenerator()
 	depRoot := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
 	blockHash := hashutil.Hash(bytesutil.Bytes32(randGen.Uint64()))
 	return &ethpb.Eth1Data{

@@ -17,7 +17,7 @@ import (
 
 // SetupDB instantiates and returns database backed by key value store.
 func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
-	randPath := rand.NewDeterministicRandomGenerator().Int()
+	randPath := rand.NewDeterministicGenerator().Int()
 	p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("failed to remove directory: %v", err)

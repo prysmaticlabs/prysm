@@ -200,7 +200,7 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	}
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	assignedIdxs := []uint64{}
-	randGen := rand.NewRandomGenerator()
+	randGen := rand.NewGenerator()
 	for i := uint64(0); i < params.BeaconNetworkConfig().RandomSubnetsPerValidator; i++ {
 		assignedIdx := randGen.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
 		assignedIdxs = append(assignedIdxs, uint64(assignedIdx))

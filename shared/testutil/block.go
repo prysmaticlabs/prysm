@@ -316,7 +316,7 @@ func generateAttesterSlashings(
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
-	randGen := rand.NewDeterministicRandomGenerator()
+	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
 		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), committeeIndex)
@@ -380,7 +380,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []bls.SecretKey, 
 		}
 	}
 	if randomRoot {
-		randGen := rand.NewDeterministicRandomGenerator()
+		randGen := rand.NewDeterministicGenerator()
 		b := make([]byte, 32)
 		_, err := randGen.Read(b)
 		if err != nil {
@@ -529,5 +529,5 @@ func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return rand.NewRandomGenerator().Uint64() % activeCount, nil
+	return rand.NewGenerator().Uint64() % activeCount, nil
 }

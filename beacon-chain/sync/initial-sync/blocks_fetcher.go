@@ -107,7 +107,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	return &blocksFetcher{
 		ctx:             ctx,
 		cancel:          cancel,
-		rand:            rand.NewRandomGenerator(),
+		rand:            rand.NewGenerator(),
 		headFetcher:     cfg.headFetcher,
 		p2p:             cfg.p2p,
 		blocksPerSecond: uint64(blocksPerSecond),

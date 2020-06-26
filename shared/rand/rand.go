@@ -8,7 +8,7 @@ There are two modes, one for deterministic and another non-deterministic randomn
 1. If deterministic pseudo-random generator is enough, use:
 
 	import "github.com/prysmaticlabs/prysm/shared/rand"
-	randGen := rand.NewDeterministicRandomGenerator()
+	randGen := rand.NewDeterministicGenerator()
 	randGen.Intn(32) // or any other func defined in math.rand API
 
    In this mode, only seed is generated using cryptographically secure source (crypto/rand). So,
@@ -20,7 +20,7 @@ There are two modes, one for deterministic and another non-deterministic randomn
 2. For cryptographically secure non-deterministic mode (CSPRNG), use:
 
 	import "github.com/prysmaticlabs/prysm/shared/rand"
-	randGen := rand.NewRandomGenerator()
+	randGen := rand.NewGenerator()
 	randGen.Intn(32) // or any other func defined in math.rand API
 
    Again, any of the functions from `math/rand` can be used, however, they all use custom source
@@ -60,21 +60,21 @@ func (s *source) Uint64() (val uint64) {
 // Rand is alias for underlying random generator.
 type Rand = mrand.Rand
 
-// NewRandomGenerator returns a new generator that uses random values from crypto/rand as a source
+// NewGenerator returns a new generator that uses random values from crypto/rand as a source
 // (cryptographically secure random number generator).
 // Panics if crypto/rand input cannot be read.
 // Use it for everything where crypto secure non-deterministic randomness is required. Performance
 // takes a hit, so use sparingly.
-func NewRandomGenerator() *Rand {
+func NewGenerator() *Rand {
 	return mrand.New(&source{})
 }
 
-// NewDeterministicRandomGenerator returns a random generator which is only seeded with crypto/rand,
+// NewDeterministicGenerator returns a random generator which is only seeded with crypto/rand,
 // but is deterministic otherwise (given seed, produces given results, deterministically).
 // Panics if crypto/rand input cannot be read.
 // Use this method for performance, where deterministic pseudo-random behaviour is enough.
-// Otherwise, rely on NewRandomGenerator().
-func NewDeterministicRandomGenerator() *Rand {
-	randGen := NewRandomGenerator()
+// Otherwise, rely on NewGenerator().
+func NewDeterministicGenerator() *Rand {
+	randGen := NewGenerator()
 	return mrand.New(mrand.NewSource(randGen.Int63()))
 }

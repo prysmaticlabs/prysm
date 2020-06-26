@@ -60,7 +60,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	}
 	s.pendingAttsLock.RUnlock()
 
-	randGen := rand.NewRandomGenerator()
+	randGen := rand.NewGenerator()
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]

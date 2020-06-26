@@ -11,7 +11,7 @@ import (
 
 // SetupDB instantiates and returns a DB instance for the validator client.
 func SetupDB(t testing.TB, pubkeys [][48]byte) *Store {
-	randPath := rand.NewDeterministicRandomGenerator().Int()
+	randPath := rand.NewDeterministicGenerator().Int()
 	p := filepath.Join(TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)

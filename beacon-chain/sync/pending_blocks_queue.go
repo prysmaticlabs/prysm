@@ -51,7 +51,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		trace.Int64Attribute("numPeers", int64(len(pids))),
 	)
 
-	randGen := rand.NewRandomGenerator()
+	randGen := rand.NewGenerator()
 	for _, slot := range slots {
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
 		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
