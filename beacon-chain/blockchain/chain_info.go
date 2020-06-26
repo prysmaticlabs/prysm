@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -147,7 +148,13 @@ func (s *Service) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, erro
 // If the head is nil from service struct,
 // it will attempt to get the head state from DB.
 func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
-	if s.hasHeadState() {
+	ctx, span := trace.StartSpan(ctx, "blockchain.HeadState")
+	defer span.End()
+
+	ok := s.hasHeadState()
+	span.AddAttributes(trace.BoolAttribute("cache_hit", ok))
+
+	if ok {
 		return s.headState(), nil
 	}
 
