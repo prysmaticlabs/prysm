@@ -48,6 +48,7 @@ func TestNodeClose_OK(t *testing.T) {
 		t.Log(err)
 	}
 }
+
 func TestBootStrapNodeFile(t *testing.T) {
 	file, err := ioutil.TempFile(testutil.TempDir(), "bootstrapFile")
 	if err != nil {

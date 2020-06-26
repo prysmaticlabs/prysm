@@ -115,7 +115,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
 		c := params.BeaconNetworkConfig()
-		c.BootstrapNodes = strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
+		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)
 	}
 	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
@@ -330,15 +330,19 @@ func readbootNodes(fileName string) ([]string, error) {
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	bootnodeAddrs := make([]string, 0)
-	var err error
-	if bootstrapfileName := cliCtx.String(cmd.BootStrapNodeFile.Name); bootstrapfileName != "" {
-		bootnodeAddrs, err = readbootNodes(bootstrapfileName)
-		if err != nil {
-			return err
+	// Bootnode ENR may be a filepath to a YAML file
+	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes //actual CLI values
+	bootnodeAddrs := make([]string, 0)                           //dest of final list of nodes
+	for _, addr := range bootnodesTemp {
+		if addr[:5] != "enr:-" {
+			fileNodes, err := readbootNodes(addr)
+			if err != nil {
+				return err
+			}
+			bootnodeAddrs = append(bootnodeAddrs, fileNodes...)
+		} else {
+			bootnodeAddrs = append(bootnodeAddrs, addr)
 		}
-	} else {
-		bootnodeAddrs = params.BeaconNetworkConfig().BootstrapNodes
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)

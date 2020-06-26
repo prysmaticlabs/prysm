@@ -49,7 +49,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.CustomGenesisDelayFlag,
 			cmd.NoDiscovery,
 			cmd.BootstrapNode,
-			cmd.BootStrapNodeFile,
 			cmd.RelayNode,
 			cmd.P2PUDPPort,
 			cmd.P2PTCPPort,

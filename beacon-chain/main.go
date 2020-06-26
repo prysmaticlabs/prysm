@@ -58,7 +58,6 @@ var appFlags = []cli.Flag{
 	cmd.E2EConfigFlag,
 	cmd.CustomGenesisDelayFlag,
 	cmd.BootstrapNode,
-	cmd.BootStrapNodeFile,
 	cmd.NoDiscovery,
 	cmd.StaticPeers,
 	cmd.RelayNode,
