@@ -101,7 +101,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	// Update deposit cache.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
 			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
@@ -137,7 +136,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 			return nil, errors.Wrap(err, "could not migrate to cold")
 		}
 
-		s.depositCache.PrunePendingDeposits(ctx, int64(postState.Eth1DepositIndex()))
+		// Update deposit cache.
 		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
 	}
 
@@ -242,7 +241,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	// Update deposit cache.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
 			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
@@ -267,7 +265,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return errors.Wrap(err, "could not migrate to cold")
 		}
 
-		s.depositCache.PrunePendingDeposits(ctx, int64(postState.Eth1DepositIndex()))
+		// Update deposit cache.
 		s.depositCache.InsertFinalizedDeposits(ctx, int64(postState.Eth1DepositIndex()))
 	}
 
