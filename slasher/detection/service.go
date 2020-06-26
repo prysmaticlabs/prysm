@@ -154,7 +154,15 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			log.WithError(err).Error("Could not persist chain head to disk")
 		}
 		storedEpoch = epoch
-		ds.slasherDB.RemoveOldestFromCache(ctx)
+		if epoch == currentChainHead.HeadEpoch-1 {
+			currentChainHead, err = ds.chainFetcher.ChainHead(ctx)
+			if err != nil {
+				log.WithError(err).Fatal("Cannot retrieve chain head from beacon node")
+			}
+			if epoch != currentChainHead.HeadEpoch-1 {
+				log.Infof("Continuing historical detection from epoch %d to %d", epoch, currentChainHead.HeadEpoch)
+			}
+		}
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", storedEpoch)
 }
