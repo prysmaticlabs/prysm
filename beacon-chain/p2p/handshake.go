@@ -136,7 +136,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					if err.Error() == "protocol not supported" {
 						// This is only to ensure the smooth running of our testnets. This will not be
 						// used in production.
-						log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
+						log.Debug("Not disconnecting peer with unsupported protocol. This maybe the relay node.")
 						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 						return
 					}
