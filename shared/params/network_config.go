@@ -59,7 +59,6 @@ func UseAltonaNetworkConfig() {
 	cfg := BeaconNetworkConfig()
 	cfg.ContractDeploymentBlock = 2917810
 	cfg.DepositContractAddress = "0x16e82D77882A663454Ef92806b7DeCa1D394810f"
-	// Include Bootnodes for both Onyx and Altona to aid discovery.
 	cfg.BootstrapNodes = altonaBootnodes
 	OverrideBeaconNetworkConfig(cfg)
 }
