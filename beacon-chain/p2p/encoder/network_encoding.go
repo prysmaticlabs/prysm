@@ -12,8 +12,6 @@ const (
 
 // NetworkEncoding represents an encoder compatible with Ethereum 2.0 p2p.
 type NetworkEncoding interface {
-	// Decode to the provided message. The interface must be a pointer to the decoding destination.
-	Decode([]byte, interface{}) error
 	// DecodeGossip to the provided gossip message. The interface must be a pointer to the decoding destination.
 	DecodeGossip([]byte, interface{}) error
 	// DecodeWithLength a bytes from a reader with a varint length prefix. The interface must be a pointer to the
