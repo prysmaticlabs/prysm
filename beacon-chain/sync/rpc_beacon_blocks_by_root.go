@@ -24,7 +24,6 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	if err != nil {
 		return err
 	}
-	setStreamReadDeadline(stream, defaultReadDuration)
 	defer func() {
 		if err := stream.Reset(); err != nil {
 			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
@@ -32,8 +31,9 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	}()
 	for i := 0; i < len(blockRoots); i++ {
 		blk, err := ReadChunkedBlock(stream, s.p2p)
+		// Return error until #6408 is resolved.
 		if err == io.EOF {
-			break
+			return err
 		}
 		// Exit if peer sends more than max request blocks.
 		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
@@ -72,7 +72,6 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 	if err != nil {
 		return err
 	}
-	setStreamReadDeadline(stream, defaultReadDuration)
 	defer func() {
 		if err := stream.Reset(); err != nil {
 			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())

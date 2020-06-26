@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"io"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -144,7 +145,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			}
 
 			req := [][32]byte{bRoot}
-			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
+			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil && err == io.EOF {
 				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
 					traceutil.AnnotateError(span, err)
 					log.Errorf("Could not send recent block request: %v", err)

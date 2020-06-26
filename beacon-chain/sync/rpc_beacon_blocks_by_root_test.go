@@ -135,7 +135,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := [][32]byte{}
-		if err := p2.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := p2.Encoding().DecodeWithLength(stream, &out); err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(out, expectedRoots) {
