@@ -399,7 +399,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	for i := 0; i < int(limit)+10; i++ {
+	for i := uint64(0); i < limit+10; i++ {
 		base.Validators = append(base.Validators, &ethpb.Validator{
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
@@ -417,11 +417,11 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 			t.Errorf("Could not update registry %d, wanted activation eligibility epoch %d got %d",
 				i, currentEpoch, validator.ActivationEligibilityEpoch)
 		}
-		if i < int(limit) && validator.ActivationEpoch != helpers.ActivationExitEpoch(currentEpoch) {
+		if uint64(i) < limit && validator.ActivationEpoch != helpers.ActivationExitEpoch(currentEpoch) {
 			t.Errorf("Could not update registry %d, validators failed to activate: wanted activation epoch %d, got %d",
 				i, helpers.ActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
 		}
-		if i >= int(limit) && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
+		if uint64(i) >= limit && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
 			t.Errorf("Could not update registry %d, validators should not have been activated, wanted activation epoch: %d, got %d",
 				i, params.BeaconConfig().FarFutureEpoch, validator.ActivationEpoch)
 		}

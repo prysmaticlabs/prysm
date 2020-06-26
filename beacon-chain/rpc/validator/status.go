@@ -203,7 +203,7 @@ func retrieveStatusForPubKey(headState *stateTrie.BeaconState, pubKey []byte) (e
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
 	idx, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	if !ok || int(idx) >= headState.NumValidators() {
+	if !ok || idx >= uint64(headState.NumValidators()) {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errPubkeyDoesNotExist
 	}
 	return assignmentStatus(headState, idx), idx, nil
