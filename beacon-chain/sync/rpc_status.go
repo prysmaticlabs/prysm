@@ -71,7 +71,7 @@ func (s *Service) resyncIfBehind() {
 	runutil.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
-			_, highestEpoch, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
+			highestEpoch, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > s.chain.HeadSlot() {
 				log.WithFields(logrus.Fields{
 					"currentEpoch": helpers.SlotToEpoch(s.chain.CurrentSlot()),
