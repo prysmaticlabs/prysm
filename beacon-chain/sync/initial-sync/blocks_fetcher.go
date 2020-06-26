@@ -233,8 +233,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 	}
 
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	_, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-
+	finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	if len(peers) == 0 {
 		response.err = errNoPeersAvailable
 		return response
@@ -401,7 +400,7 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 			return nil, ctx.Err()
 		}
 		headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-		_, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+		_, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		if len(peers) >= required {
 			return peers, nil
 		}
@@ -459,7 +458,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 	defer span.End()
 
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	_, epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	epoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	var err error
 	peers, err = f.filterPeers(peers, peersPercentagePerRequest)
 	if err != nil {
@@ -541,6 +540,6 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot uint64) (u
 // bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
 func (f *blocksFetcher) bestFinalizedSlot() uint64 {
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
-	_, finalizedEpoch, _ := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
+	finalizedEpoch, _ := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	return helpers.StartSlot(finalizedEpoch)
 }
