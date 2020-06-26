@@ -32,7 +32,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -427,7 +426,7 @@ func (p *Status) Decay() {
 // Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their own latency, or because of
 // their finalized epoch at the time we queried them.
 // Returns the best finalized root, epoch number, and list of peers that are at or beyond that epoch.
-func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID, error) {
+func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
 	finalizedEpochVotes := make(map[uint64]uint64)
 	pidEpoch := make(map[peer.ID]uint64)
@@ -469,7 +468,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, 
 		potentialPIDs = potentialPIDs[:maxPeers]
 	}
 
-	return targetEpoch, potentialPIDs, nil
+	return targetEpoch, potentialPIDs
 }
 
 // fetch is a helper function that fetches a peer status, possibly creating it.
