@@ -10,6 +10,7 @@ go_library(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
+        "//shared/rand:go_default_library",
         "//shared/testutil:go_default_library",
     ],
 )
