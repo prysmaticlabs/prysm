@@ -11,7 +11,6 @@ func UseRandNew() {
 	start := uint64(randGenerator.Intn(32))
 	_ = start
 
-
 	randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
