@@ -330,11 +330,11 @@ func readbootNodes(fileName string) ([]string, error) {
 }
 
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	// Bootnode ENR may be a filepath to an ENR file.
+	// Bootnode ENR may be a filepath to a YAML file
 	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes //actual CLI values
 	bootnodeAddrs := make([]string, 0)                           //dest of final list of nodes
 	for _, addr := range bootnodesTemp {
-		if filepath.Ext(addr) == ".enr" {
+		if addr[:5] != "enr:-" {
 			fileNodes, err := readbootNodes(addr)
 			if err != nil {
 				return err
