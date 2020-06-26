@@ -41,6 +41,7 @@ var networkConfig = mainnetNetworkConfig
 func BeaconNetworkConfig() *NetworkConfig {
 	return networkConfig
 }
+
 // OverrideBeaconNetworkConfig will override the network
 // config with the added argument.
 func OverrideBeaconNetworkConfig(cfg *NetworkConfig) {

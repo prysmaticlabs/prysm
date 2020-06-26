@@ -14,4 +14,3 @@ func SetupTestConfigCleanup(t *testing.T) {
 		mainnetNetworkConfig = prevNetworkCfg
 	})
 }
-

@@ -25,5 +25,3 @@ func AltonaConfig() *BeaconChainConfig {
 	altCfg.GenesisForkVersion = []byte{0x00, 0x00, 0x01, 0x21}
 	return altCfg
 }
-
-
