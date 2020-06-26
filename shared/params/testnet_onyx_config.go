@@ -14,7 +14,8 @@ func OnyxConfig() *BeaconChainConfig {
 	return mainnetBeaconConfig
 }
 
-// UseMainnetConfig for beacon chain services.
+// UseOnyxConfig for beacon chain services. Currently, Onyx uses the unchanged mainnet
+// configuration.
 func UseOnyxConfig() {
 	beaconConfig = MainnetConfig().Copy()
 }
