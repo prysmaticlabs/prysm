@@ -14,12 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"golang.org/x/exp/rand"
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
@@ -61,6 +61,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	}
 	s.pendingAttsLock.RUnlock()
 
+	randGen := rand.NewGenerator()
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]
@@ -131,7 +132,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				log.Debug("No peer IDs available to request missing block from for pending attestation")
 				return nil
 			}
-			pid := pids[rand.Int()%len(pids)]
+			pid := pids[randGen.Int()%len(pids)]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Message.Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
 				cs, err := s.p2p.Peers().ChainState(p)
