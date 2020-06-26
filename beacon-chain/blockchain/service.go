@@ -298,7 +298,8 @@ func (s *Service) initializeBeaconChain(
 // Stop the blockchain service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	return nil
+
+	return s.stateGen.ForceCheckpoint(s.ctx, s.head.root, s.head.state)
 }
 
 // Status always returns nil unless there is an error condition that causes

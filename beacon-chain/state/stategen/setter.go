@@ -2,8 +2,8 @@ package stategen
 
 import (
 	"context"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
 
@@ -24,4 +24,24 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.Beaco
 // DeleteHotStateInCache deletes the hot state entry from the cache.
 func (s *State) DeleteHotStateInCache(root [32]byte) {
 	s.hotStateCache.Delete(root)
+}
+
+// ForceCheckpoint initates a cold state save of the given state.
+func (s *State) ForceCheckpoint(ctx context.Context, root [32]byte, state *state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
+	defer span.End()
+
+	finalizedStateRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint().Root)
+	fs, err := s.loadHotStateByRoot(ctx, finalizedStateRoot)
+	if err != nil {
+		return err
+	}
+	if err := s.beaconDB.SaveState(ctx, fs, finalizedStateRoot); err != nil {
+		return err
+	}
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, finalizedStateRoot, fs.Slot() / s.slotsPerArchivedPoint); err != nil {
+		return err
+	}
+
+	return nil
 }

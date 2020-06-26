@@ -2,6 +2,9 @@ package stategen
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"sync"
 	"testing"
 
 	//"github.com/gogo/protobuf/proto"
@@ -99,4 +102,47 @@ func TestSaveState_HotStateCached(t *testing.T) {
 		t.Error("Should have saved the state summary")
 	}
 	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+}
+
+func TestState_ForceCheckpoint(t *testing.T) {
+	t.Fail() // TODO!
+
+	type fields struct {
+		beaconDB                db.NoHeadAccessDatabase
+		slotsPerArchivedPoint   uint64
+		epochBoundarySlotToRoot map[uint64][32]byte
+		epochBoundaryLock       sync.RWMutex
+		hotStateCache           *cache.HotStateCache
+		splitInfo               *splitSlotAndRoot
+		stateSummaryCache       *cache.StateSummaryCache
+	}
+	type args struct {
+		ctx   context.Context
+		root  [32]byte
+		state *state.BeaconState
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &State{
+				beaconDB:                tt.fields.beaconDB,
+				slotsPerArchivedPoint:   tt.fields.slotsPerArchivedPoint,
+				epochBoundarySlotToRoot: tt.fields.epochBoundarySlotToRoot,
+				epochBoundaryLock:       tt.fields.epochBoundaryLock,
+				hotStateCache:           tt.fields.hotStateCache,
+				splitInfo:               tt.fields.splitInfo,
+				stateSummaryCache:       tt.fields.stateSummaryCache,
+			}
+			if err := s.ForceCheckpoint(tt.args.ctx, tt.args.root, tt.args.state); (err != nil) != tt.wantErr {
+				t.Errorf("ForceCheckpoint() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
