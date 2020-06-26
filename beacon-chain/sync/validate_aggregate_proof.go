@@ -191,20 +191,46 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 	return nil
 }
 
-// Validates that the incoming aggregate attestation is in the desired time range.
+// Validates that the incoming aggregate attestation is in the desired time range. An attestation
+// is valid only if received within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
+//
+// Example:
+//   ATTESTATION_PROPAGATION_SLOT_RANGE = 5
+//   current_slot = 100
+//   invalid_attestation_slot = 92
+//   invalid_attestation_slot = 101
+//   valid_attestation_slot = 98
+// In the attestation must be within the range of 95 to 100 in the example above.
 func validateAggregateAttTime(attSlot uint64, genesisTime time.Time) error {
-	// set expected boundaries for attestations
 	attTime := genesisTime.Add(time.Duration(attSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
-	attSlotRange := attSlot + params.BeaconNetworkConfig().AttestationPropagationSlotRange
-	attTimeRange := genesisTime.Add(time.Duration(attSlotRange*params.BeaconConfig().SecondsPerSlot) * time.Second)
-	currentTime := roughtime.Now()
+	currentSlot := helpers.SlotsSince(genesisTime)
+
+	// A clock disparity allows for minor tolerances outside of the expected range. This value is
+	// usually small, less than 1 second.
 	clockDisparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
 
-	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
-	currentSlot := helpers.SlotsSince(genesisTime)
-	if attTime.Add(-clockDisparity).After(currentTime) ||
-		currentTime.Add(-clockDisparity).After(attTimeRange) {
-		return fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconNetworkConfig().AttestationPropagationSlotRange)
+	// An attestation cannot be from the future, so the upper bounds is set to now, with a minor
+	// tolerance for peer clock disparity.
+	upperBounds := roughtime.Now().Add(clockDisparity)
+
+	// An attestation cannot be older than the current slot - attestation propagation slot range
+	// with a minor tolerance for peer clock disparity.
+	lowerBoundsSlot := uint64(0)
+	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
+		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
+	}
+	lowerBounds := genesisTime.Add(
+		time.Duration(lowerBoundsSlot*params.BeaconConfig().SecondsPerSlot) * time.Second,
+	).Add(-clockDisparity)
+
+	// Verify attestation slot within the time range.
+	if attTime.Before(lowerBounds) || attTime.After(upperBounds) {
+		return fmt.Errorf(
+			"attestation slot %d not within attestation propagation range of %d to %d (current slot)",
+			attSlot,
+			currentSlot-params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+			currentSlot,
+		)
 	}
 	return nil
 }
