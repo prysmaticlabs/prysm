@@ -60,8 +60,8 @@ func (s *source) Uint64() (val uint64) {
 // Rand is alias for underlying random generator.
 type Rand = mrand.Rand
 
-// New returns a new generator that uses random values from crypto/rand as a source (cryptographically
-// secure random number generator).
+// NewRandomGenerator returns a new generator that uses random values from crypto/rand as a source
+// (cryptographically secure random number generator).
 // Panics if crypto/rand input cannot be read.
 // Use it for everything where crypto secure non-deterministic randomness is required. Performance
 // takes a hit, so use sparingly.
@@ -69,11 +69,11 @@ func NewRandomGenerator() *Rand {
 	return mrand.New(&source{})
 }
 
-// NewDeterministicRandomGenerator returns a random generator which is only seeded with crypto/rand, but
-// is deterministic otherwise (given seed, produces given results, deterministically).
+// NewDeterministicRandomGenerator returns a random generator which is only seeded with crypto/rand,
+// but is deterministic otherwise (given seed, produces given results, deterministically).
 // Panics if crypto/rand input cannot be read.
-// Use this method for performance, where deterministic pseudo-random behaviour is enough. Otherwise,
-// rely on NewRandomGenerator().
+// Use this method for performance, where deterministic pseudo-random behaviour is enough.
+// Otherwise, rely on NewRandomGenerator().
 func NewDeterministicRandomGenerator() *Rand {
 	var seed int64
 	if err := binary.Read(rand.Reader, binary.BigEndian, seed); err != nil {
