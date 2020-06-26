@@ -118,11 +118,11 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 
 		insertIndex := dc.finalizedDeposits.MerkeTreeIndex + 1
 		for _, d := range dc.deposits {
-			if d.Index >= eth1DepositIndex {
-				break
-			}
 			if d.Index <= dc.finalizedDeposits.MerkeTreeIndex {
 				continue
+			}
+			if d.Index >= eth1DepositIndex {
+				break
 			}
 			depHash, err := ssz.HashTreeRoot(d.Deposit.Data)
 			if err != nil {
