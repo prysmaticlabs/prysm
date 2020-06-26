@@ -320,7 +320,7 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	}
 	// Limit the return of pending deposits to not be more than max deposits allowed in block.
 	var pendingDeposits []*ethpb.Deposit
-	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
+	for i := uint64(0); i < uint64(len(pendingDeps)) && i < params.BeaconConfig().MaxDeposits; i++ {
 		pendingDeposits = append(pendingDeposits, pendingDeps[i].Deposit)
 	}
 	return pendingDeposits, nil
@@ -393,7 +393,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, state
 	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
 
 	for i, att := range atts {
-		if i == int(params.BeaconConfig().MaxAttestations) {
+		if uint64(i) == params.BeaconConfig().MaxAttestations {
 			break
 		}
 
@@ -458,11 +458,13 @@ func (vs *Server) packAttestations(ctx context.Context, latestState *stateTrie.B
 	}
 
 	// If there is any room left in the block, consider unaggregated attestations as well.
-	if len(atts) < int(params.BeaconConfig().MaxAttestations) {
+	numAtts := uint64(len(atts))
+	if numAtts < params.BeaconConfig().MaxAttestations {
 		uAtts := vs.AttPool.UnaggregatedAttestations()
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, latestState, uAtts)
-		if len(uAtts)+len(atts) > int(params.BeaconConfig().MaxAttestations) {
-			uAtts = uAtts[:int(params.BeaconConfig().MaxAttestations)-len(atts)]
+		numUAtts := uint64(len(uAtts))
+		if numUAtts+numAtts > params.BeaconConfig().MaxAttestations {
+			uAtts = uAtts[:params.BeaconConfig().MaxAttestations-numAtts]
 		}
 		atts = append(atts, uAtts...)
 	}

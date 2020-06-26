@@ -81,7 +81,7 @@ func (bs *Server) ListValidatorBalances(
 
 		filtered[index] = true
 
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -95,7 +95,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	for _, index := range req.Indices {
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -225,7 +225,7 @@ func (bs *Server) listValidatorsBalancesUsingOldArchival(
 
 		filtered[index] = true
 
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -239,7 +239,7 @@ func (bs *Server) listValidatorsBalancesUsingOldArchival(
 	}
 
 	for _, index := range req.Indices {
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			if epoch <= helpers.CurrentEpoch(headState) {
 				return nil, status.Errorf(codes.OutOfRange, "Validator index %d does not exist in historical balances",
 					index)
@@ -878,7 +878,7 @@ func (bs *Server) GetValidatorQueue(
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
-	activationQueueChurn := len(activationQ)
+	activationQueueChurn := uint64(len(activationQ))
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
@@ -894,20 +894,20 @@ func (bs *Server) GetValidatorQueue(
 			exitQueueEpoch = i
 		}
 	}
-	exitQueueChurn := 0
+	exitQueueChurn := uint64(0)
 	for _, val := range vals {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
 	// Prevent churn limit from causing index out of bound issues.
-	if int(churnLimit) < activationQueueChurn {
-		activationQueueChurn = int(churnLimit)
+	if churnLimit < activationQueueChurn {
+		activationQueueChurn = churnLimit
 	}
-	if int(churnLimit) < exitQueueChurn {
+	if churnLimit < exitQueueChurn {
 		// If we are above the churn limit, we simply increase the churn by one.
 		exitQueueEpoch++
-		exitQueueChurn = int(churnLimit)
+		exitQueueChurn = churnLimit
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
@@ -1122,7 +1122,7 @@ func (bs *Server) GetIndividualVotes(
 	}
 	vals := requestedState.ValidatorsReadOnly()
 	for _, index := range filteredIndices {
-		if int(index) >= len(v) {
+		if index >= uint64(len(v)) {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
 			continue
 		}
