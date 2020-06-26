@@ -1,7 +1,6 @@
 package peers_test
 
 import (
-	"bytes"
 	"crypto/rand"
 	"fmt"
 	"reflect"
@@ -12,6 +11,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -561,7 +561,7 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 		FinalizedRoot:  mockroot2[:],
 	})
 
-	_, target, pids := p.BestFinalized(maxPeers, 0)
+	target, pids := p.BestFinalized(maxPeers, 0)
 	if target != expectedTarget {
 		t.Errorf("Incorrect target epoch retrieved; wanted %v but got %v", expectedTarget, target)
 	}
@@ -624,10 +624,7 @@ func TestBestPeer(t *testing.T) {
 		FinalizedEpoch: 3,
 		FinalizedRoot:  junkRoot[:],
 	})
-	retRoot, retEpoch, _ := p.BestFinalized(15, 0)
-	if !bytes.Equal(retRoot, expectedRoot[:]) {
-		t.Errorf("Incorrect Finalized Root retrieved; wanted %v but got %v", expectedRoot, retRoot)
-	}
+	retEpoch, _ := p.BestFinalized(15, 0)
 	if retEpoch != expectedFinEpoch {
 		t.Errorf("Incorrect Finalized epoch retrieved; wanted %v but got %v", expectedFinEpoch, retEpoch)
 	}
@@ -646,7 +643,7 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 		})
 	}
 
-	_, _, pids := p.BestFinalized(maxPeers, 0)
+	_, pids := p.BestFinalized(maxPeers, 0)
 	if len(pids) != maxPeers {
 		t.Fatalf("returned wrong number of peers, wanted %d, got %d", maxPeers, len(pids))
 	}
