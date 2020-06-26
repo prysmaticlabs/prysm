@@ -105,6 +105,7 @@ nogo(
         "@org_golang_x_tools//go/analysis/passes/asmdecl:go_tool_library",
         "//tools/analyzers/maligned:go_tool_library",
         "//tools/analyzers/roughtime:go_tool_library",
+        "//tools/analyzers/cryptorand:go_tool_library",
         "//tools/analyzers/errcheck:go_tool_library",
         "//tools/analyzers/featureconfig:go_tool_library",
     ] + select({

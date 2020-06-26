@@ -226,7 +226,7 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		return nil, err
 	}
 
-	var sig *bls.Signature
+	var sig bls.Signature
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 		sig, err = protectingKeymanager.SignAttestation(pubKey, bytesutil.ToBytes32(domain.SignatureDomain), data)
 	} else {
@@ -265,7 +265,7 @@ func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	// Previously pruned, we should return false.
-	if int(targetEpoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
+	if targetEpoch+wsPeriod <= history.LatestEpochWritten {
 		return false
 	}
 
@@ -317,7 +317,7 @@ func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEp
 // returns the "default" FAR_FUTURE_EPOCH value.
 func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64) uint64 {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	if targetEpoch > history.LatestEpochWritten || int(targetEpoch) < int(history.LatestEpochWritten)-int(wsPeriod) {
+	if targetEpoch > history.LatestEpochWritten || targetEpoch+wsPeriod < history.LatestEpochWritten {
 		return params.BeaconConfig().FarFutureEpoch
 	}
 	return history.TargetToSource[targetEpoch%wsPeriod]

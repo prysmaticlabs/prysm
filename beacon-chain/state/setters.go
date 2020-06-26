@@ -109,6 +109,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
+	b.rebuildTrie[blockRoots] = true
 	return nil
 }
 
@@ -118,7 +119,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.BlockRoots) <= int(idx) {
+	if uint64(len(b.state.BlockRoots)) <= idx {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 
@@ -169,8 +170,9 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
+
 	b.lock.RLock()
-	if len(b.state.StateRoots) <= int(idx) {
+	if uint64(len(b.state.StateRoots)) <= idx {
 		b.lock.RUnlock()
 		return errors.Errorf("invalid index provided %d", idx)
 	}
@@ -346,7 +348,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.Validators) <= int(idx) {
+	if uint64(len(b.state.Validators)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
@@ -408,7 +410,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.Balances) <= int(idx) {
+	if uint64(len(b.state.Balances)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
@@ -454,7 +456,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(idx uint64, val []byte) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.RandaoMixes) <= int(idx) {
+	if uint64(len(b.state.RandaoMixes)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
@@ -503,7 +505,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
-	if len(b.state.Slashings) <= int(idx) {
+	if uint64(len(b.state.Slashings)) <= idx {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.lock.RLock()

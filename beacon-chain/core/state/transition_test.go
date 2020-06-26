@@ -451,7 +451,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	sig0 := privKeys[0].Sign(hashTreeRoot[:])
 	sig1 := privKeys[1].Sign(hashTreeRoot[:])
-	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
 	mockRoot3 := [32]byte{'B'}
@@ -468,7 +468,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	sig0 = privKeys[0].Sign(hashTreeRoot[:])
 	sig1 = privKeys[1].Sign(hashTreeRoot[:])
-	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att2.Signature = aggregateSig.Marshal()[:]
 
 	attesterSlashings := []*ethpb.AttesterSlashing{
@@ -511,7 +511,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := make([]*bls.Signature, len(attestingIndices))
+	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -875,7 +875,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sigs := make([]*bls.Signature, len(attestingIndices))
+		sigs := make([]bls.Signature, len(attestingIndices))
 		for i, indice := range attestingIndices {
 			hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
 			if err != nil {

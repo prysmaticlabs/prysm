@@ -3,7 +3,6 @@ package testutil
 import (
 	"context"
 	"encoding/binary"
-	"math/rand"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -13,10 +12,11 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
-func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*bls.SecretKey) ([]byte, error) {
+func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []bls.SecretKey) ([]byte, error) {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -41,8 +41,8 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*
 func BlockSignature(
 	bState *stateTrie.BeaconState,
 	block *ethpb.BeaconBlock,
-	privKeys []*bls.SecretKey,
-) (*bls.Signature, error) {
+	privKeys []bls.SecretKey,
+) (bls.Signature, error) {
 	var err error
 	s, err := state.CalculateStateRoot(context.Background(), bState, &ethpb.SignedBeaconBlock{Block: block})
 	if err != nil {
@@ -76,7 +76,7 @@ func BlockSignature(
 // Random32Bytes generates a random 32 byte slice.
 func Random32Bytes(t *testing.T) []byte {
 	b := make([]byte, 32)
-	_, err := rand.Read(b)
+	_, err := rand.NewDeterministicGenerator().Read(b)
 	if err != nil {
 		t.Fatal(err)
 	}

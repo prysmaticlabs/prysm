@@ -48,6 +48,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -114,7 +115,7 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 	}
 	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
 		c := params.BeaconNetworkConfig()
-		c.BootstrapNodes = strings.Split(cliCtx.String(cmd.BootstrapNode.Name), ",")
+		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)
 	}
 	if cliCtx.IsSet(flags.ContractDeploymentBlock.Name) {
@@ -315,22 +316,44 @@ func (b *BeaconNode) startStateGen() {
 	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
 }
 
+func readbootNodes(fileName string) ([]string, error) {
+	fileContent, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	listNodes := make([]string, 0)
+	err = yaml.Unmarshal(fileContent, &listNodes)
+	if err != nil {
+		return nil, err
+	}
+	return listNodes, nil
+}
+
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
-	// Bootnode ENR may be a filepath to an ENR file.
-	bootnodeAddrs := params.BeaconNetworkConfig().BootstrapNodes
-	for i, addr := range bootnodeAddrs {
-		if filepath.Ext(addr) == ".enr" {
-			b, err := ioutil.ReadFile(addr)
+	// Bootnode ENR may be a filepath to a YAML file
+	bootnodesTemp := params.BeaconNetworkConfig().BootstrapNodes //actual CLI values
+	bootnodeAddrs := make([]string, 0)                           //dest of final list of nodes
+	for _, addr := range bootnodesTemp {
+		if filepath.Ext(addr) == ".yaml" {
+			fileNodes, err := readbootNodes(addr)
 			if err != nil {
 				return err
 			}
-			bootnodeAddrs[i] = string(b)
+			bootnodeAddrs = append(bootnodeAddrs, fileNodes...)
+		} else {
+			bootnodeAddrs = append(bootnodeAddrs, addr)
 		}
 	}
 
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
 	if datadir == "" {
 		datadir = cmd.DefaultDataDir()
+		if datadir == "" {
+			log.Fatal(
+				"Could not determine your system's HOME path, please specify a --datadir you wish " +
+					"to use for your chain data",
+			)
+		}
 	}
 
 	svc, err := p2p.NewService(&p2p.Config{
@@ -353,7 +376,6 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		Encoding:          cliCtx.String(cmd.P2PEncoding.Name),
 		StateNotifier:     b,
-		PubSub:            cliCtx.String(cmd.P2PPubsub.Name),
 	})
 	if err != nil {
 		return err

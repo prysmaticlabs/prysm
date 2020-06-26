@@ -80,10 +80,10 @@ var (
 		Usage: "Connect with this peer. This flag may be used multiple times.",
 	}
 	// BootstrapNode tells the beacon node which bootstrap node to connect to
-	BootstrapNode = &cli.StringFlag{
+	BootstrapNode = &cli.StringSliceFlag{
 		Name:  "bootstrap-node",
-		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT.  Multiple nodes can be separated with a comma",
-		Value: "enr:-Ku4QMKVC_MowDsmEa20d5uGjrChI0h8_KsKXDmgVQbIbngZV0idV6_RL7fEtZGo-kTNZ5o7_EJI_vCPJ6scrhwX0Z4Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQJxCnE6v_x2ekgY_uoE1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A",
+		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT.  Multiple nodes can be passed by using the flag multiple times but not comma-separated. You can also pass YAML files containing multiple nodes.",
+		Value: cli.NewStringSlice("enr:-Ku4QMKVC_MowDsmEa20d5uGjrChI0h8_KsKXDmgVQbIbngZV0idV6_RL7fEtZGo-kTNZ5o7_EJI_vCPJ6scrhwX0Z4Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQJxCnE6v_x2ekgY_uoE1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A"),
 	}
 	// RelayNode tells the beacon node which relay node to connect to.
 	RelayNode = &cli.StringFlag{
@@ -159,12 +159,6 @@ var (
 		Name:  "p2p-encoding",
 		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
 		Value: "ssz-snappy",
-	}
-	// P2PPubsub defines the pubsub router to use for p2p messages.
-	P2PPubsub = &cli.StringFlag{
-		Name:  "p2p-pubsub",
-		Usage: "The name of the pubsub router to use. Supported values are: gossip, flood, random",
-		Value: "gossip",
 	}
 	// ForceClearDB removes any previously stored data at the data directory.
 	ForceClearDB = &cli.BoolFlag{

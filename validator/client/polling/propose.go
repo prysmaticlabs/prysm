@@ -189,7 +189,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	var sig *bls.Signature
+	var sig bls.Signature
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 		bodyRoot, err := stateutil.BlockBodyRoot(b.Body)
 		if err != nil {

@@ -72,7 +72,6 @@ var appFlags = []cli.Flag{
 	cmd.P2PAllowList,
 	cmd.P2PDenyList,
 	cmd.P2PEncoding,
-	cmd.P2PPubsub,
 	cmd.DataDirFlag,
 	cmd.VerbosityFlag,
 	cmd.EnableTracingFlag,
@@ -131,17 +130,14 @@ func main() {
 			// the colors are ANSI codes and seen as gibberish in the log files.
 			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
-			break
 		case "fluentd":
 			f := joonix.NewFormatter()
 			if err := joonix.DisableTimestampFormat(f); err != nil {
 				panic(err)
 			}
 			logrus.SetFormatter(f)
-			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-			break
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

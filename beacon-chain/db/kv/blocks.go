@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -129,9 +128,9 @@ func (kv *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return exists
 }
 
-// DeleteBlock by block root.
-func (kv *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
+// deleteBlock by block root.
+func (kv *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlock")
 	defer span.End()
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -155,9 +154,9 @@ func (kv *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	})
 }
 
-// DeleteBlocks by block roots.
-func (kv *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
+// deleteBlocks by block roots.
+func (kv *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteBlocks")
 	defer span.End()
 
 	return kv.db.Update(func(tx *bolt.Tx) error {
@@ -358,8 +357,10 @@ func (kv *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, ind
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blocksAtSlotBitfieldIndex")
 	defer span.End()
 
-	highestSlot := index - 1
-	highestSlot = int(math.Max(0, float64(highestSlot)))
+	highestSlot := uint64(0)
+	if uint64(index) > highestSlot+1 {
+		highestSlot = uint64(index - 1)
+	}
 
 	if highestSlot == 0 {
 		gBlock, err := kv.GenesisBlock(ctx)
@@ -369,7 +370,7 @@ func (kv *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, ind
 		return []*ethpb.SignedBeaconBlock{gBlock}, nil
 	}
 
-	f := filters.NewFilter().SetStartSlot(uint64(highestSlot)).SetEndSlot(uint64(highestSlot))
+	f := filters.NewFilter().SetStartSlot(highestSlot).SetEndSlot(highestSlot)
 
 	keys, err := getBlockRootsByFilter(ctx, tx, f)
 	if err != nil {
@@ -600,6 +601,8 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 				return nil, errors.New("parent root is not []byte")
 			}
 			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
+		// The following cases are passthroughs for blocks, as they are not used
+		// for filtering indices.
 		case filters.StartSlot:
 		case filters.EndSlot:
 		case filters.StartEpoch:
