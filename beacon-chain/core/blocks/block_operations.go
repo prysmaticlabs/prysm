@@ -1109,7 +1109,7 @@ func ProcessVoluntaryExits(
 		if exit == nil || exit.Exit == nil {
 			return nil, errors.New("nil voluntary exit in block body")
 		}
-		if int(exit.Exit.ValidatorIndex) >= beaconState.NumValidators() {
+		if exit.Exit.ValidatorIndex >= uint64(beaconState.NumValidators()) {
 			return nil, fmt.Errorf(
 				"validator index out of bound %d > %d",
 				exit.Exit.ValidatorIndex,

@@ -65,7 +65,7 @@ func TestSubnetIDsCache_PersistentCommitteeRoundtrip(t *testing.T) {
 		c.AddPersistentCommittee(pubkey[:], []uint64{uint64(i)}, 0)
 	}
 
-	for i := 0; i < 20; i++ {
+	for i := uint64(0); i < 20; i++ {
 		pubkey := [48]byte{byte(i)}
 
 		idxs, ok, _ := c.GetPersistentSubnets(pubkey[:])
@@ -73,7 +73,7 @@ func TestSubnetIDsCache_PersistentCommitteeRoundtrip(t *testing.T) {
 			t.Errorf("Couldn't find entry in cache for pubkey %#x", pubkey)
 			continue
 		}
-		if int(idxs[0]) != i {
+		if idxs[0] != i {
 			t.Fatalf("Wanted index of %d but got %d", i, idxs[0])
 		}
 	}
