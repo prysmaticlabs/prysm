@@ -1,5 +1,5 @@
 // Package db defines a persistent backend for the validator service.
-package db
+package kv
 
 import (
 	"os"
@@ -7,11 +7,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/validator/db/iface"
 	bolt "go.etcd.io/bbolt"
 )
-
-var _ = iface.ValidatorDB(&Store{})
 
 var databaseFileName = "validator.db"
 

@@ -1,0 +1,46 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "attestation_history.go",
+        "db.go",
+        "manage.go",
+        "proposal_history.go",
+        "schema.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/validator/db/kv",
+    visibility = ["//validator:__subpackages__"],
+    deps = [
+        "//proto/slashing:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_wealdtech_go_bytesutil//:go_default_library",
+        "@io_etcd_go_bbolt//:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "attestation_history_test.go",
+        "db_test.go",
+        "manage_test.go",
+        "proposal_history_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//proto/slashing:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/rand:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@io_etcd_go_bbolt//:go_default_library",
+    ],
+)

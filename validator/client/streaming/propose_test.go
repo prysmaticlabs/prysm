@@ -8,6 +8,7 @@ import (
 	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -15,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/db"
 )
 
 type mocks struct {
@@ -23,7 +23,7 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
-	valDB := db.SetupDB(t, [][48]byte{validatorPubKey})
+	valDB := testing2.SetupDB(t, [][48]byte{validatorPubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),

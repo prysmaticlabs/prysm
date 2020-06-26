@@ -12,6 +12,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	testing2 "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 
@@ -21,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	db2 "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -526,7 +526,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	db := testing2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
@@ -596,7 +596,7 @@ func TestSaveProtections_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	db := testing2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
 	if err != nil {
