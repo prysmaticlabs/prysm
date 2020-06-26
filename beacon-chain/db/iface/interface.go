@@ -75,8 +75,6 @@ type NoHeadAccessDatabase interface {
 	SaveAttestation(ctx context.Context, att *eth.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
-	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
-	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
@@ -90,11 +88,8 @@ type NoHeadAccessDatabase interface {
 	// Slashing operations.
 	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error
 	SaveAttesterSlashing(ctx context.Context, slashing *eth.AttesterSlashing) error
-	DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error
-	DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error
 	// Block operations.
 	SaveVoluntaryExit(ctx context.Context, exit *eth.VoluntaryExit) error
-	DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error
 	// Checkpoint operations.
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error

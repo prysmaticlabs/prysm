@@ -58,6 +58,7 @@ go_library(
         "//beacon-chain/operations/voluntaryexits:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/encoder:go_default_library",
+        "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",

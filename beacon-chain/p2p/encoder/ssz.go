@@ -1,7 +1,6 @@
 package encoder
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"sync"
@@ -123,23 +122,6 @@ func (e SszNetworkEncoder) doDecode(b []byte, to interface{}) error {
 		return err
 	}
 	return nil
-}
-
-// Decode the bytes to the protobuf message provided.
-func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
-	if e.UseSnappyCompression {
-		newBuffer := bytes.NewBuffer(b)
-		r := newBufferedReader(newBuffer)
-		defer bufReaderPool.Put(r)
-
-		newObj := make([]byte, len(b))
-		numOfBytes, err := r.Read(newObj)
-		if err != nil {
-			return err
-		}
-		return e.doDecode(newObj[:numOfBytes], to)
-	}
-	return e.doDecode(b, to)
 }
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
