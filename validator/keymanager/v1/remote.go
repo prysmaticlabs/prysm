@@ -15,7 +15,6 @@ import (
 	pb "github.com/wealdtech/eth2-signer-api/pb/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
