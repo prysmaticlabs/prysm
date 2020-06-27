@@ -14,16 +14,14 @@ type Flags struct {
 	MaxRPCPageSize     int    //MaxRPCPageSize is used for a cap of page sizes in RPC requests.
 }
 
-func init() {
-	Init(&Flags{MaxRPCPageSize: params.BeaconConfig().DefaultPageSize})
-}
-
 var sharedConfig *Flags
 
 // Get retrieves feature config.
 func Get() *Flags {
 	if sharedConfig == nil {
-		return &Flags{}
+		return &Flags{
+			MaxRPCPageSize: params.BeaconConfig().DefaultPageSize,
+		}
 	}
 	return sharedConfig
 }
