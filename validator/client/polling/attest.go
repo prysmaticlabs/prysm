@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -65,7 +67,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Data:             data,
 	}
 	if err := v.preAttSignValidations(ctx, indexedAtt, pubKey); err != nil {
-		log.WithError(err).Error("Failed to attest")
+		log.WithFields(logrus.Fields{
+			"sourceEpoch": indexedAtt.Data.Source.Epoch,
+			"targetEpoch": indexedAtt.Data.Target.Epoch,
+		}).WithError(err).Fatal("Failed attestation safety check")
 		return
 	}
 
@@ -132,7 +137,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	indexedAtt.Signature = sig
 	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey); err != nil {
-		log.WithError(err).Fatal("Failed post attestation signing updates")
+		log.WithFields(logrus.Fields{
+			"sourceEpoch": indexedAtt.Data.Source.Epoch,
+			"targetEpoch": indexedAtt.Data.Target.Epoch,
+		}).WithError(err).Fatal("Failed post attestation signing updates")
 		return
 	}
 

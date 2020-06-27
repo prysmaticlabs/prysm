@@ -2,6 +2,7 @@ package polling
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -11,6 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 )
+
+var failedPreAttSignLocalErr = "attempted to make slashable attestation, rejected by local slashing protection"
+var failedPreAttSignExternalErr = "attempted to make slashable attestation, rejected by external slasher service"
+var failedPostAttSignExternalErr = "external slasher service detected a submitted slashable attestation"
 
 func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
@@ -22,11 +27,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 			if v.emitAccountMetrics {
 				metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf(
-				"attempted to make slashable attestation, rejected by local slasher protection: sourceEpoch=%d targetEpoch=%d",
-				indexedAtt.Data.Source.Epoch,
-				indexedAtt.Data.Target.Epoch,
-			)
+			return fmt.Errorf(failedPreAttSignLocalErr)
 		}
 	}
 
@@ -35,11 +36,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 			if v.emitAccountMetrics {
 				metrics.ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf(
-				"attempted to make slashable attestation, rejected by external slasher service: sourceEpoch=%d targetEpoch=%d",
-				indexedAtt.Data.Source.Epoch,
-				indexedAtt.Data.Target.Epoch,
-			)
+			return errors.New(failedPreAttSignExternalErr)
 		}
 	}
 	return nil
@@ -60,8 +57,7 @@ func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.Ind
 			if v.emitAccountMetrics {
 				metrics.ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf("made a slashable attestation, sourceEpoch: %dtargetEpoch: %d  "+
-				" found by external slasher service", indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
+			return errors.New(failedPostAttSignExternalErr)
 		}
 	}
 	return nil

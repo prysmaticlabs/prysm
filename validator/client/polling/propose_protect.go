@@ -13,6 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 )
 
+var failedPreBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
+var failedPreBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
+var failedPostBlockSignErr = "made a double proposal, considered slashable by remote slashing protection"
+
 func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	epoch := helpers.SlotToEpoch(block.Slot)
@@ -30,7 +34,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf("attempted to sign a double proposal, block rejected by local protection slot=%d", block.Slot)
+			return fmt.Errorf(failedPreBlockSignLocalErr)
 		}
 	}
 
@@ -43,7 +47,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf("attempted a double proposal, block rejected by remote slashing protection slot=%d", block.Slot)
+			return fmt.Errorf(failedPreBlockSignExternalErr)
 		}
 	}
 
@@ -62,7 +66,7 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf("made a double proposal, considered slashable by remote slashing protection slot=%d", block.Block.Slot)
+			return fmt.Errorf(failedPostBlockSignErr)
 		}
 	}
 
