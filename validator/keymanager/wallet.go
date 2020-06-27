@@ -134,7 +134,7 @@ func (km *Wallet) FetchValidatingKeys() ([][48]byte, error) {
 }
 
 // Sign signs a message for the validator to broadcast.
-func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error) {
+func (km *Wallet) Sign(pubKey [48]byte, root [32]byte) (bls.Signature, error) {
 	account, exists := km.accounts[pubKey]
 	if !exists {
 		return nil, ErrNoSuchKey

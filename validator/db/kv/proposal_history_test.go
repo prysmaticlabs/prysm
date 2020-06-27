@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 
 func TestProposalHistoryForEpoch_InitializesNewPubKeys(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
-	db := SetupDB(t, pubkeys)
+	db := setupDB(t, pubkeys)
 
 	for _, pub := range pubkeys {
 		slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pub[:], 0)
@@ -31,7 +31,7 @@ func TestProposalHistoryForEpoch_InitializesNewPubKeys(t *testing.T) {
 
 func TestProposalHistoryForEpoch_NilDB(t *testing.T) {
 	valPubkey := [48]byte{1, 2, 3}
-	db := SetupDB(t, [][48]byte{})
+	db := setupDB(t, [][48]byte{})
 
 	_, err := db.ProposalHistoryForEpoch(context.Background(), valPubkey[:], 0)
 	if err == nil {
@@ -45,7 +45,7 @@ func TestProposalHistoryForEpoch_NilDB(t *testing.T) {
 
 func TestSaveProposalHistoryForEpoch_OK(t *testing.T) {
 	pubkey := [48]byte{3}
-	db := SetupDB(t, [][48]byte{pubkey})
+	db := setupDB(t, [][48]byte{pubkey})
 
 	epoch := uint64(2)
 	slot := uint64(2)
@@ -94,7 +94,7 @@ func TestSaveProposalHistoryForEpoch_Overwrites(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		db := SetupDB(t, [][48]byte{pubkey})
+		db := setupDB(t, [][48]byte{pubkey})
 		if err := db.SaveProposalHistoryForEpoch(context.Background(), pubkey[:], 0, tt.slotBits); err != nil {
 			t.Fatalf("Saving proposal history failed: %v", err)
 		}
@@ -152,7 +152,7 @@ func TestProposalHistoryForEpoch_MultipleEpochs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		db := SetupDB(t, [][48]byte{pubKey})
+		db := setupDB(t, [][48]byte{pubKey})
 		for _, slot := range tt.slots {
 			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
 			if err != nil {
@@ -205,7 +205,7 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		db := SetupDB(t, [][48]byte{pubKey})
+		db := setupDB(t, [][48]byte{pubKey})
 		for _, slot := range tt.slots {
 			slotBits, err := db.ProposalHistoryForEpoch(context.Background(), pubKey[:], helpers.SlotToEpoch(slot))
 			if err != nil {
@@ -240,7 +240,7 @@ func TestPruneProposalHistory_OK(t *testing.T) {
 
 func TestDeleteProposalHistory_OK(t *testing.T) {
 	pubkey := [48]byte{2}
-	db := SetupDB(t, [][48]byte{pubkey})
+	db := setupDB(t, [][48]byte{pubkey})
 
 	slotBits := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x02}
 

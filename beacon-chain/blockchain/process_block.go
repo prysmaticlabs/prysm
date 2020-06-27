@@ -102,12 +102,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
-			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-				return nil, err
-			}
-			s.clearInitSyncBlocks()
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return nil, err
 		}
+		s.clearInitSyncBlocks()
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
@@ -206,13 +204,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
-		s.saveInitSyncBlock(blockRoot, signed)
-	} else {
-		if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
-			return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
-		}
-	}
+	s.saveInitSyncBlock(blockRoot, signed)
 
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
@@ -230,7 +222,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
-	if len(s.getInitSyncBlocks()) > int(initialSyncBlockCacheSize) {
+	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 			return err
 		}
@@ -239,12 +231,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
-		if !featureconfig.Get().NoInitSyncBatchSaveBlocks {
-			if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-				return err
-			}
-			s.clearInitSyncBlocks()
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return err
 		}
+		s.clearInitSyncBlocks()
 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")

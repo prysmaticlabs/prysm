@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/grpcutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
@@ -112,7 +112,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	valDB, err := db.NewKVStore(v.dataDir, pubkeys)
+	valDB, err := kv.NewKVStore(v.dataDir, pubkeys)
 	if err != nil {
 		log.Errorf("Could not initialize db: %v", err)
 		return
@@ -172,7 +172,7 @@ func (v *ValidatorService) Status() error {
 }
 
 // signObject signs a generic object, with protection if available.
-func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byte) (*bls.Signature, error) {
+func (v *validator) signObject(pubKey [48]byte, object interface{}, domain []byte) (bls.Signature, error) {
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
 		root, err := ssz.HashTreeRoot(object)
 		if err != nil {

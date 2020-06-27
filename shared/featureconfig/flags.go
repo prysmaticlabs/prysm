@@ -111,10 +111,6 @@ var (
 		Name:  "disable-new-state-mgmt",
 		Usage: "This disables the usage of state mgmt service across Prysm",
 	}
-	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
-		Name:  "disable-init-sync-batch-save-blocks",
-		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
-	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
 		Usage: "Uses WaitForSynced for validator startup, to ensure a validator is able to communicate with the beacon node as quick as possible",
@@ -138,10 +134,6 @@ var (
 	enableStreamDuties = &cli.BoolFlag{
 		Name:  "enable-stream-duties",
 		Usage: "Enables validator duties streaming in the validator client",
-	}
-	disableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:  "disable-init-sync-wrr",
-		Usage: "Disables weighted round robin fetching optimization",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
@@ -172,6 +164,11 @@ var devModeFlags = []cli.Flag{
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedP2PPubsub = &cli.StringFlag{
+		Name:   "p2p-pubsub",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableKadDht = &cli.BoolFlag{
 		Name:   "enable-kad-dht",
 		Usage:  deprecatedUsage,
@@ -418,11 +415,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:   "enable-init-sync-wrr",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedDisableStateRefCopy = &cli.BoolFlag{
 		Name:   "disable-state-ref-copy",
 		Usage:  deprecatedUsage,
@@ -433,9 +425,20 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecateddisableInitSyncBatchSaveBlocks = &cli.BoolFlag{
+		Name:   "disable-init-sync-batch-save-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:   "disable-init-sync-wrr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedP2PPubsub,
 	deprecatedEnableKadDht,
 	deprecatedWeb3ProviderFlag,
 	deprecatedEnableDynamicCommitteeSubnets,
@@ -485,9 +488,10 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedP2PBlacklist,
 	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
-	deprecatedEnableInitSyncWeightedRoundRobin,
+	deprecatedDisableInitSyncWeightedRoundRobin,
 	deprecatedDisableStateRefCopy,
 	deprecatedDisableFieldTrie,
+	deprecateddisableInitSyncBatchSaveBlocks,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -535,10 +539,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
-	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
-	disableInitSyncWeightedRoundRobin,
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,

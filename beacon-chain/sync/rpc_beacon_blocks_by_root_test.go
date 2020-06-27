@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"sync"
@@ -10,6 +11,8 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/protolambda/zssz"
+	"github.com/protolambda/zssz/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -17,7 +20,6 @@ import (
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -31,7 +33,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	}
 	d, _ := db.SetupDB(t)
 
-	var blkRoots [][]byte
+	var blkRoots [][32]byte
 	// Populate the database with blocks that would match the request.
 	for i := 1; i < 11; i++ {
 		blk := &ethpb.BeaconBlock{
@@ -44,7 +46,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		if err := d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: blk}); err != nil {
 			t.Fatal(err)
 		}
-		blkRoots = append(blkRoots, root[:])
+		blkRoots = append(blkRoots, root)
 	}
 
 	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
@@ -70,8 +72,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := &pb.BeaconBlocksByRootRequest{BlockRoots: blkRoots}
-	err = r.beaconBlocksRootRPCHandler(context.Background(), req, stream1)
+	err = r.beaconBlocksRootRPCHandler(context.Background(), blkRoots, stream1)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -112,7 +113,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		Root:  blockBRoot[:],
 	}
 
-	expectedRoots := [][]byte{blockBRoot[:], blockARoot[:]}
+	expectedRoots := [][32]byte{blockBRoot, blockARoot}
 
 	r := &Service{
 		p2p: p1,
@@ -133,12 +134,12 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := &pb.BeaconBlocksByRootRequest{BlockRoots: [][]byte{}}
-		if err := p2.Encoding().DecodeWithLength(stream, out); err != nil {
+		out := [][32]byte{}
+		if err := p2.Encoding().DecodeWithLength(stream, &out); err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(out.BlockRoots, expectedRoots) {
-			t.Fatalf("Did not receive expected message. Got %+v wanted %+v", out.BlockRoots, expectedRoots)
+		if !reflect.DeepEqual(out, expectedRoots) {
+			t.Fatalf("Did not receive expected message. Got %+v wanted %+v", out, expectedRoots)
 		}
 		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
 		for _, blk := range response {
@@ -159,5 +160,35 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 
 	if testutil.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
+	}
+}
+
+type testList [][32]byte
+
+func (*testList) Limit() uint64 {
+	return 2 << 10
+}
+
+func TestSSZCompatibility(t *testing.T) {
+	rootA := [32]byte{'a'}
+	rootB := [32]byte{'B'}
+	rootC := [32]byte{'C'}
+	list := testList{rootA, rootB, rootC}
+	writer := bytes.NewBuffer([]byte{})
+	sszType, err := types.SSZFactory(reflect.TypeOf(list))
+	if err != nil {
+		t.Error(err)
+	}
+	n, err := zssz.Encode(writer, list, sszType)
+	if err != nil {
+		t.Error(err)
+	}
+	encodedPart := writer.Bytes()[:n]
+	fastSSZ, err := ssz.Marshal(list)
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal(fastSSZ, encodedPart) {
+		t.Errorf("Wanted the same result as ZSSZ of %#x but got %#X", encodedPart, fastSSZ)
 	}
 }

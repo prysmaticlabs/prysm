@@ -112,7 +112,11 @@ func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.Bea
 	return beaconState, nil
 }
 
-func areEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+// AreEth1DataEqual checks equality between two eth1 data objects.
+func AreEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+	if a == nil && b == nil {
+		return true
+	}
 	if a == nil || b == nil {
 		return false
 	}
@@ -130,7 +134,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 	data = stateTrie.CopyETH1Data(data)
 
 	for _, vote := range beaconState.Eth1DataVotes() {
-		if areEth1DataEqual(vote, data) {
+		if AreEth1DataEqual(vote, data) {
 			voteCount++
 		}
 	}
@@ -758,19 +762,16 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return err
 	}
 	indices := indexedAtt.AttestingIndices
-	pubkeys := []*bls.PublicKey{}
-	if len(indices) > 0 {
-		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
-			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-			if err != nil {
-				return errors.Wrap(err, "could not deserialize validator public key")
-			}
-			pubkeys = append(pubkeys, pk)
+	pubkeys := []bls.PublicKey{}
+	for i := 0; i < len(indices); i++ {
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
+		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
+		if err != nil {
+			return errors.Wrap(err, "could not deserialize validator public key")
 		}
+		pubkeys = append(pubkeys, pk)
 	}
 	return attestationutil.VerifyIndexedAttestationSig(ctx, indexedAtt, pubkeys, domain)
-
 }
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
@@ -847,8 +848,8 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 		return nil
 	}
 
-	sigs := make([]*bls.Signature, len(atts))
-	pks := make([]*bls.PublicKey, len(atts))
+	sigs := make([]bls.Signature, len(atts))
+	pks := make([]bls.PublicKey, len(atts))
 	msgs := make([][32]byte, len(atts))
 	for i, a := range atts {
 		sig, err := bls.SignatureFromBytes(a.Signature)
@@ -862,7 +863,7 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 		}
 		ia := attestationutil.ConvertToIndexed(ctx, a, c)
 		indices := ia.AttestingIndices
-		var pk *bls.PublicKey
+		var pk bls.PublicKey
 		for i := 0; i < len(indices); i++ {
 			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 			p, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
@@ -1108,7 +1109,7 @@ func ProcessVoluntaryExits(
 		if exit == nil || exit.Exit == nil {
 			return nil, errors.New("nil voluntary exit in block body")
 		}
-		if int(exit.Exit.ValidatorIndex) >= beaconState.NumValidators() {
+		if exit.Exit.ValidatorIndex >= uint64(beaconState.NumValidators()) {
 			return nil, fmt.Errorf(
 				"validator index out of bound %d > %d",
 				exit.Exit.ValidatorIndex,

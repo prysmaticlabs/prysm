@@ -29,7 +29,7 @@ go_library(
         "//shared/version:go_default_library",
         "//validator/client/polling:go_default_library",
         "//validator/client/streaming:go_default_library",
-        "//validator/db:go_default_library",
+        "//validator/db/kv:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/slashing-protection:go_default_library",

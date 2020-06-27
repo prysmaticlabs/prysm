@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 	pubkeys := [][48]byte{{30}, {25}, {20}}
-	db := SetupDB(t, pubkeys)
+	db := setupDB(t, pubkeys)
 
 	historyForPubKeys, err := db.AttestationHistoryForPubKeys(context.Background(), pubkeys)
 	if err != nil {
@@ -39,7 +39,7 @@ func TestAttestationHistoryForPubKeys_EmptyVals(t *testing.T) {
 
 func TestSaveAttestationHistory_OK(t *testing.T) {
 	pubKeys := [][48]byte{{3}, {4}}
-	db := SetupDB(t, pubKeys)
+	db := setupDB(t, pubKeys)
 
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	newMap := make(map[uint64]uint64)
@@ -103,7 +103,7 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 }
 
 func TestSaveAttestationHistory_Overwrites(t *testing.T) {
-	db := SetupDB(t, [][48]byte{})
+	db := setupDB(t, [][48]byte{})
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	newMap1 := make(map[uint64]uint64)
 	newMap1[0] = farFuture
@@ -174,7 +174,7 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 
 func TestDeleteAttestationHistory_OK(t *testing.T) {
 	pubkey := [48]byte{2}
-	db := SetupDB(t, [][48]byte{pubkey})
+	db := setupDB(t, [][48]byte{pubkey})
 
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch

@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client/polling"
 	"github.com/prysmaticlabs/prysm/validator/client/streaming"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -107,6 +107,13 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
+			if dataDir == "" {
+				log.Fatal(
+					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+						"to use for your validator data",
+				)
+			}
+
 		}
 		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
 			return nil, err
@@ -341,7 +348,7 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := db.NewKVStore(dataDir, pubkeys)
+		valDB, err := kv.NewKVStore(dataDir, pubkeys)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}
