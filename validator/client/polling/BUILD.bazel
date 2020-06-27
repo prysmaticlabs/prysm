@@ -82,7 +82,7 @@ go_test(
         "//shared/roughtime:go_default_library",
         "//shared/slotutil:go_default_library",
         "//shared/testutil:go_default_library",
-        "//validator/accounts:go_default_library",
+        "//validator/accounts/v1:go_default_library",
         "//validator/db/testing:go_default_library",
         "//validator/keymanager/v1:go_default_library",
         "//validator/testing:go_default_library",
