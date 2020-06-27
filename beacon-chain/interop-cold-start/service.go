@@ -157,6 +157,16 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 	return 0, [32]byte{}
 }
 
+// FinalizedDeposits mocks out the deposit cache functionality for interop.
+func (s *Service) FinalizedDeposits(ctx context.Context) *depositcache.FinalizedDeposits {
+	return nil
+}
+
+// NonFinalizedDeposits mocks out the deposit cache functionality for interop.
+func (s *Service) NonFinalizedDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
+	return []*ethpb.Deposit{}
+}
+
 func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumValidators())
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
