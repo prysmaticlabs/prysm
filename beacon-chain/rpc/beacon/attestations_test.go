@@ -36,6 +36,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func init() {
+	resetCfg := cmd.InitWithReset(&cmd.Flags{MaxRPCPageSize: params.BeaconConfig().DefaultPageSize})
+	defer resetCfg()
+}
+
 func TestServer_ListAttestations_NoResults(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()

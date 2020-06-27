@@ -34,6 +34,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+func init() {
+	resetCfg := cmd.InitWithReset(&cmd.Flags{MaxRPCPageSize: params.BeaconConfig().DefaultPageSize})
+	defer resetCfg()
+}
+
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 	ctx := context.Background()
