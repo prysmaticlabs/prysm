@@ -345,7 +345,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	}
 }
 
-func TestFinalizedDeposits_UtilizePreviouslyCachedDeposits(t *testing.T) {
+func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	dc := DepositCache{}
 
 	oldFinalizedDeposits := []*dbpb.DepositContainer{
