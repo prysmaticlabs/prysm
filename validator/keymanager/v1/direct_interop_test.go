@@ -1,4 +1,4 @@
-package keymanager_test
+package v1_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 )
 
 func TestInteropListValidatingKeysZero(t *testing.T) {

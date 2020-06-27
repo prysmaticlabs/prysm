@@ -1,4 +1,4 @@
-package keymanager_test
+package v1_test
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	nd "github.com/wealdtech/go-eth2-wallet-nd"
 	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
