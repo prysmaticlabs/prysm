@@ -104,11 +104,13 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	// as the current chain head from the beacon node via gRPC.
 	latestStoredHead, err := ds.slasherDB.ChainHead(ctx)
 	if err != nil {
-		log.WithError(err).Fatal("Could not retrieve chain head from DB")
+		log.WithError(err).Error("Could not retrieve chain head from DB")
+		return
 	}
 	currentChainHead, err := ds.chainFetcher.ChainHead(ctx)
 	if err != nil {
-		log.WithError(err).Fatal("Cannot retrieve chain head from beacon node")
+		log.WithError(err).Error("Cannot retrieve chain head from beacon node")
+		return
 	}
 	var latestStoredEpoch uint64
 	if latestStoredHead != nil {
@@ -162,7 +164,8 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		if epoch == currentChainHead.HeadEpoch-1 {
 			currentChainHead, err = ds.chainFetcher.ChainHead(ctx)
 			if err != nil {
-				log.WithError(err).Fatal("Cannot retrieve chain head from beacon node")
+				log.WithError(err).Error("Cannot retrieve chain head from beacon node")
+				continue
 			}
 			if epoch != currentChainHead.HeadEpoch-1 {
 				log.Infof("Continuing historical detection from epoch %d to %d", epoch, currentChainHead.HeadEpoch)
