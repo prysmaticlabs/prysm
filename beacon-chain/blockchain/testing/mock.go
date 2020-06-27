@@ -228,7 +228,7 @@ func (ms *ChainService) AttestationPreState(ctx context.Context, att *ethpb.Atte
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+func (ms *ChainService) HeadValidatorsIndices(ctx context.Context, epoch uint64) ([]uint64, error) {
 	if ms.State == nil {
 		return []uint64{}, nil
 	}
@@ -236,7 +236,7 @@ func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 }
 
 // HeadSeed mocks the same method in the chain service.
-func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
+func (ms *ChainService) HeadSeed(ctx context.Context, epoch uint64) ([32]byte, error) {
 	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 

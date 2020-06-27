@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -81,7 +82,7 @@ func (bs *Server) ListValidatorBalances(
 
 		filtered[index] = true
 
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -95,7 +96,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	for _, index := range req.Indices {
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -225,7 +226,7 @@ func (bs *Server) listValidatorsBalancesUsingOldArchival(
 
 		filtered[index] = true
 
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -239,7 +240,7 @@ func (bs *Server) listValidatorsBalancesUsingOldArchival(
 	}
 
 	for _, index := range req.Indices {
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			if epoch <= helpers.CurrentEpoch(headState) {
 				return nil, status.Errorf(codes.OutOfRange, "Validator index %d does not exist in historical balances",
 					index)
@@ -319,10 +320,6 @@ func (bs *Server) ListValidators(
 			req.PageSize, flags.Get().MaxPageSize)
 	}
 
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 
@@ -343,9 +340,23 @@ func (bs *Server) ListValidators(
 		requestedEpoch = q.Epoch
 	}
 
-	if helpers.StartSlot(requestedEpoch) > headState.Slot() {
-		headState = headState.Copy()
-		headState, err = state.ProcessSlots(ctx, headState, helpers.StartSlot(requestedEpoch))
+	var reqState *beaconstate.BeaconState
+	var err error
+	if featureconfig.Get().NewStateMgmt {
+		reqState, err = bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get requested state")
+		}
+	} else {
+		reqState, err = bs.HeadFetcher.HeadState(ctx)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get head state")
+		}
+	}
+
+	if helpers.StartSlot(requestedEpoch) > reqState.Slot() {
+		reqState = reqState.Copy()
+		reqState, err = state.ProcessSlots(ctx, reqState, helpers.StartSlot(requestedEpoch))
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -359,7 +370,7 @@ func (bs *Server) ListValidators(
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
 
 	for _, index := range req.Indices {
-		val, err := headState.ValidatorAtIndex(index)
+		val, err := reqState.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get validator")
 		}
@@ -375,11 +386,11 @@ func (bs *Server) ListValidators(
 			continue
 		}
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)
-		index, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
+		index, ok := reqState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			continue
 		}
-		val, err := headState.ValidatorAtIndex(index)
+		val, err := reqState.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get validator")
 		}
@@ -394,8 +405,8 @@ func (bs *Server) ListValidators(
 	})
 
 	if len(req.PublicKeys) == 0 && len(req.Indices) == 0 {
-		for i := 0; i < headState.NumValidators(); i++ {
-			val, err := headState.ValidatorAtIndex(uint64(i))
+		for i := 0; i < reqState.NumValidators(); i++ {
+			val, err := reqState.ValidatorAtIndex(uint64(i))
 			if err != nil {
 				return nil, status.Error(codes.Internal, "Could not get validator")
 			}
@@ -406,7 +417,7 @@ func (bs *Server) ListValidators(
 		}
 	}
 
-	if requestedEpoch < currentEpoch {
+	if !featureconfig.Get().NewStateMgmt && requestedEpoch < currentEpoch {
 		stopIdx := len(validatorList)
 		for idx, item := range validatorList {
 			// The first time we see a validator with an activation epoch > the requested epoch,
@@ -878,7 +889,7 @@ func (bs *Server) GetValidatorQueue(
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
-	activationQueueChurn := len(activationQ)
+	activationQueueChurn := uint64(len(activationQ))
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
@@ -894,20 +905,20 @@ func (bs *Server) GetValidatorQueue(
 			exitQueueEpoch = i
 		}
 	}
-	exitQueueChurn := 0
+	exitQueueChurn := uint64(0)
 	for _, val := range vals {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
 	// Prevent churn limit from causing index out of bound issues.
-	if int(churnLimit) < activationQueueChurn {
-		activationQueueChurn = int(churnLimit)
+	if churnLimit < activationQueueChurn {
+		activationQueueChurn = churnLimit
 	}
-	if int(churnLimit) < exitQueueChurn {
+	if churnLimit < exitQueueChurn {
 		// If we are above the churn limit, we simply increase the churn by one.
 		exitQueueEpoch++
-		exitQueueChurn = int(churnLimit)
+		exitQueueChurn = churnLimit
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
@@ -1122,7 +1133,7 @@ func (bs *Server) GetIndividualVotes(
 	}
 	vals := requestedState.ValidatorsReadOnly()
 	for _, index := range filteredIndices {
-		if int(index) >= len(v) {
+		if index >= uint64(len(v)) {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
 			continue
 		}
