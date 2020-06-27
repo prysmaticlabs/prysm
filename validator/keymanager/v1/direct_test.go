@@ -1,4 +1,4 @@
-package keymanager_test
+package v1_test
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 )
 
 func TestDirectListValidatingKeysNil(t *testing.T) {
@@ -51,7 +51,6 @@ func TestDirectListValidatingKeysMultiple(t *testing.T) {
 
 func TestSignNoSuchKey(t *testing.T) {
 	sks := make([]bls.SecretKey, 0)
-	//	sks = append(sks, bls.RandKey())
 	direct := keymanager.NewDirect(sks)
 
 	sig, err := direct.Sign([48]byte{}, [32]byte{})
