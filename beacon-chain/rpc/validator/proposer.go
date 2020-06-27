@@ -377,7 +377,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1DataHeight *big.
 			return nil, errors.Wrap(err, "could not generate historical deposit trie from deposits")
 		}
 	}
-	
+
 	return depositTrie, nil
 }
 
