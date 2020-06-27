@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"bytes"
@@ -22,9 +22,9 @@ type storeHistory struct {
 
 func TestMerge(t *testing.T) {
 	firstStorePubKeys := [][48]byte{{1}, {2}}
-	firstStore := SetupDB(t, firstStorePubKeys)
+	firstStore := setupDB(t, firstStorePubKeys)
 	secondStorePubKeys := [][48]byte{{3}, {4}}
-	secondStore := SetupDB(t, secondStorePubKeys)
+	secondStore := setupDB(t, secondStorePubKeys)
 
 	storeHistory1, err := prepareStore(firstStore, firstStorePubKeys)
 	if err != nil {
@@ -79,7 +79,7 @@ func TestMerge(t *testing.T) {
 func TestSplit(t *testing.T) {
 	pubKey1 := [48]byte{1}
 	pubKey2 := [48]byte{2}
-	sourceStore := SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	sourceStore := setupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	storeHistory1, err := prepareStore(sourceStore, [][48]byte{pubKey1})
 	if err != nil {
@@ -155,7 +155,7 @@ func TestSplit(t *testing.T) {
 func TestSplit_AttestationsWithoutMatchingProposalsAreSplit(t *testing.T) {
 	pubKey1 := [48]byte{1}
 	pubKey2 := [48]byte{2}
-	sourceStore := SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	sourceStore := setupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	_, err := prepareStoreProposals(sourceStore, [][48]byte{pubKey1})
 	if err != nil {
