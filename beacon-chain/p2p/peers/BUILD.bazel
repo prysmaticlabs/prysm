@@ -9,7 +9,6 @@ go_library(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//shared/bytesutil:go_default_library",
         "//shared/roughtime:go_default_library",
         "@com_github_ethereum_go_ethereum//p2p/enr:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

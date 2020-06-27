@@ -278,7 +278,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.BlockRoots) <= int(idx) {
+	if uint64(len(b.state.BlockRoots)) <= idx {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)
@@ -439,20 +439,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	val := b.state.Validators[idx]
-	pubKey := make([]byte, len(val.PublicKey))
-	copy(pubKey, val.PublicKey)
-	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
-	copy(withdrawalCreds, val.WithdrawalCredentials)
-	return &ethpb.Validator{
-		PublicKey:                  pubKey,
-		WithdrawalCredentials:      withdrawalCreds,
-		EffectiveBalance:           val.EffectiveBalance,
-		Slashed:                    val.Slashed,
-		ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
-		ActivationEpoch:            val.ActivationEpoch,
-		ExitEpoch:                  val.ExitEpoch,
-		WithdrawableEpoch:          val.WithdrawableEpoch,
-	}, nil
+	return CopyValidator(val), nil
 }
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
@@ -575,7 +562,7 @@ func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.Balances) <= int(idx) {
+	if uint64(len(b.state.Balances)) <= idx {
 		return 0, fmt.Errorf("index of %d does not exist", idx)
 	}
 	return b.state.Balances[idx], nil
@@ -630,7 +617,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if len(b.state.RandaoMixes) <= int(idx) {
+	if uint64(len(b.state.RandaoMixes)) <= idx {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)

@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +25,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -48,22 +48,11 @@ var pollingPeriod = 6 * time.Second
 // Refresh rate of ENR set at twice per slot.
 var refreshRate = slotutil.DivideSlotBy(2)
 
-// search limit for number of peers in discovery v5.
-const searchLimit = 100
-
 // lookup limit whenever looking up for random nodes.
 const lookupLimit = 15
 
-const prysmProtocolPrefix = "/prysm/0.0.0"
-
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
-
-const (
-	pubsubFlood  = "flood"
-	pubsubGossip = "gossip"
-	pubsubRandom = "random"
-)
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -150,19 +139,7 @@ func NewService(cfg *Config) (*Service, error) {
 		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 
-	var gs *pubsub.PubSub
-	if cfg.PubSub == "" {
-		cfg.PubSub = pubsubGossip
-	}
-	if cfg.PubSub == pubsubFlood {
-		gs, err = pubsub.NewFloodSub(s.ctx, s.host, psOpts...)
-	} else if cfg.PubSub == pubsubGossip {
-		gs, err = pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
-	} else if cfg.PubSub == pubsubRandom {
-		gs, err = pubsub.NewRandomSub(s.ctx, s.host, int(cfg.MaxPeers), psOpts...)
-	} else {
-		return nil, fmt.Errorf("unknown pubsub type %s", cfg.PubSub)
-	}
+	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
 		log.WithError(err).Error("Failed to start pubsub")
 		return nil, err
@@ -192,11 +169,6 @@ func (s *Service) Start() {
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
-		peer, err := MakePeer(s.cfg.RelayNodeAddr)
-		if err != nil {
-			log.WithError(err).Errorf("Could not create peer")
-		}
-		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
 	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {

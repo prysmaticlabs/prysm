@@ -150,7 +150,7 @@ func (bs *Server) retrieveCommitteesForEpochUsingOldArchival(
 	startSlot := helpers.StartSlot(epoch)
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	if helpers.SlotToEpoch(startSlot)+1 < currentEpoch {
-		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(helpers.SlotToEpoch(startSlot))
+		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(ctx, helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, nil, status.Errorf(
 				codes.Internal,
@@ -179,7 +179,7 @@ func (bs *Server) retrieveCommitteesForEpochUsingOldArchival(
 	} else if helpers.SlotToEpoch(startSlot)+1 == currentEpoch || helpers.SlotToEpoch(startSlot) == currentEpoch {
 		// Otherwise, we use current beacon state to calculate the committees.
 		requestedEpoch := helpers.SlotToEpoch(startSlot)
-		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(requestedEpoch)
+		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(ctx, requestedEpoch)
 		if err != nil {
 			return nil, nil, status.Errorf(
 				codes.Internal,
@@ -188,7 +188,7 @@ func (bs *Server) retrieveCommitteesForEpochUsingOldArchival(
 				err,
 			)
 		}
-		attesterSeed, err = bs.HeadFetcher.HeadSeed(requestedEpoch)
+		attesterSeed, err = bs.HeadFetcher.HeadSeed(ctx, requestedEpoch)
 		if err != nil {
 			return nil, nil, status.Errorf(
 				codes.Internal,

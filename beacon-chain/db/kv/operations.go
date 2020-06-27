@@ -59,9 +59,9 @@ func (kv *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExi
 	})
 }
 
-// DeleteVoluntaryExit clears a voluntary exit from the db by its signing root.
-func (kv *Store) DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteVoluntaryExit")
+// deleteVoluntaryExit clears a voluntary exit from the db by its signing root.
+func (kv *Store) deleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteVoluntaryExit")
 	defer span.End()
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(voluntaryExitsBucket)
