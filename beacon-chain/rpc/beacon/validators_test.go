@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -617,7 +618,13 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 	if err := st.SetSlot(0); err != nil {
 		t.Fatal(err)
 	}
-
+	gRoot := [32]byte{'g'}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, st, gRoot); err != nil {
+		t.Fatal(err)
+	}
 	bs := &Server{
 		BeaconDB: db,
 		GenesisTimeFetcher: &mock.ChainService{
@@ -627,6 +634,7 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 	wanted := &ethpb.Validators{
 		ValidatorList: make([]*ethpb.Validators_ValidatorContainer, 0),
