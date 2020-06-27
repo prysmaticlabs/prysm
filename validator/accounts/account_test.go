@@ -12,13 +12,13 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
+	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
 )
@@ -196,11 +196,10 @@ func TestChangePassword_KeyNotMatchingOldPasswordNotEncryptedWithNewPassword(t *
 
 func TestMerge_SucceedsWhenNoDatabaseExistsInSomeSourceDirectory(t *testing.T) {
 	firstStorePubKey := [48]byte{1}
-	firstStore := db.SetupDB(t, [][48]byte{firstStorePubKey})
+	firstStore := dbTest.SetupDB(t, [][48]byte{firstStorePubKey})
 	secondStorePubKey := [48]byte{2}
-	secondStore := db.SetupDB(t, [][48]byte{secondStorePubKey})
-
-	history, err := prepareSourcesForMerging(firstStorePubKey, firstStore, secondStorePubKey, secondStore)
+	secondStore := dbTest.SetupDB(t, [][48]byte{secondStorePubKey})
+	history, err := prepareSourcesForMerging(firstStorePubKey, firstStore.(*kv.Store), secondStorePubKey, secondStore.(*kv.Store))
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -229,7 +228,7 @@ func TestMerge_SucceedsWhenNoDatabaseExistsInSomeSourceDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Merging failed: %v", err)
 	}
-	mergedStore, err := db.GetKVStore(targetDirectory)
+	mergedStore, err := kv.GetKVStore(targetDirectory)
 	if err != nil {
 		t.Fatalf("Retrieving the merged store failed: %v", err)
 	}
@@ -267,7 +266,7 @@ func TestMerge_FailsWhenNoDatabaseExistsInAllSourceDirectories(t *testing.T) {
 
 func TestSplit(t *testing.T) {
 	pubKeys := [][48]byte{{1}, {2}}
-	sourceStore := db.SetupDB(t, pubKeys)
+	sourceStore := dbTest.SetupDB(t, pubKeys)
 
 	proposalEpoch := uint64(0)
 	proposalHistory1 := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x01}
@@ -314,7 +313,7 @@ func TestSplit(t *testing.T) {
 	}
 }
 
-func prepareSourcesForMerging(firstStorePubKey [48]byte, firstStore *db.Store, secondStorePubKey [48]byte, secondStore *db.Store) (*sourceStoresHistory, error) {
+func prepareSourcesForMerging(firstStorePubKey [48]byte, firstStore *kv.Store, secondStorePubKey [48]byte, secondStore *kv.Store) (*sourceStoresHistory, error) {
 	proposalEpoch := uint64(0)
 	proposalHistory1 := bitfield.Bitlist{0x01, 0x00, 0x00, 0x00, 0x01}
 	if err := firstStore.SaveProposalHistoryForEpoch(context.Background(), firstStorePubKey[:], proposalEpoch, proposalHistory1); err != nil {
@@ -361,7 +360,7 @@ func prepareSourcesForMerging(firstStorePubKey [48]byte, firstStore *db.Store, s
 
 func assertMergedStore(
 	t *testing.T,
-	mergedStore *db.Store,
+	mergedStore *kv.Store,
 	firstStorePubKey [48]byte,
 	secondStorePubKey [48]byte,
 	history *sourceStoresHistory) {

@@ -1,4 +1,4 @@
-package db
+package kv
 
 var (
 	// Validator slashing protection from double proposals.
