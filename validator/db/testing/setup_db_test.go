@@ -1,4 +1,4 @@
-package db
+package testing
 
 import (
 	"crypto/rand"
@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 )
 
 func TestClearDB(t *testing.T) {
@@ -19,15 +21,15 @@ func TestClearDB(t *testing.T) {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewKVStore(p, [][48]byte{})
+	testDB, err := kv.NewKVStore(p, [][48]byte{})
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
-	if err := db.ClearDB(); err != nil {
+	if err := testDB.ClearDB(); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(filepath.Join(db.DatabasePath(), databaseFileName)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(testDB.DatabasePath(), "validator.db")); !os.IsNotExist(err) {
 		t.Fatalf("DB was not cleared: %v", err)
 	}
 }
