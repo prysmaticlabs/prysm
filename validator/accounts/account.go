@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -234,7 +234,7 @@ func HandleEmptyKeystoreFlags(cliCtx *cli.Context, confirmPassword bool) (string
 
 // Merge merges data from validator databases in sourceDirectories into a new store, which is created in targetDirectory.
 func Merge(ctx context.Context, sourceDirectories []string, targetDirectory string) (err error) {
-	var sourceStores []*db.Store
+	var sourceStores []*kv.Store
 	defer func() {
 		failedToClose := false
 		for _, store := range sourceStores {
@@ -252,7 +252,7 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 	}()
 
 	for _, dir := range sourceDirectories {
-		store, err := db.GetKVStore(dir)
+		store, err := kv.GetKVStore(dir)
 		if err != nil {
 			return errors.Wrapf(err, "failed to prepare the database in %s for merging", dir)
 		}
@@ -266,14 +266,14 @@ func Merge(ctx context.Context, sourceDirectories []string, targetDirectory stri
 		return errors.New("no validator databases found in source directories")
 	}
 
-	return db.Merge(ctx, sourceStores, targetDirectory)
+	return kv.Merge(ctx, sourceStores, targetDirectory)
 }
 
 // Split splits data from one validator database in sourceDirectory into several validator databases.
 // Each validator database is created in its own subdirectory inside targetDirectory.
 func Split(ctx context.Context, sourceDirectory string, targetDirectory string) (err error) {
-	var sourceStore *db.Store
-	sourceStore, err = db.GetKVStore(sourceDirectory)
+	var sourceStore *kv.Store
+	sourceStore, err = kv.GetKVStore(sourceDirectory)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare the source database for splitting")
 	}
@@ -292,7 +292,7 @@ func Split(ctx context.Context, sourceDirectory string, targetDirectory string) 
 		}
 	}()
 
-	return db.Split(ctx, sourceStore, targetDirectory)
+	return kv.Split(ctx, sourceStore, targetDirectory)
 }
 
 // ChangePassword changes the password for all keys located in a keystore.

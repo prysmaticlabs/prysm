@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	db2 "github.com/prysmaticlabs/prysm/validator/db"
+	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -695,7 +695,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
@@ -766,7 +766,7 @@ func TestSaveProtections_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
 	if err != nil {
