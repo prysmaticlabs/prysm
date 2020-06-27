@@ -2,11 +2,9 @@
 package params
 
 import (
-	"testing"
 	"time"
 
 	"github.com/mohae/deepcopy"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
@@ -113,240 +111,12 @@ type BeaconChainConfig struct {
 	ForkVersionSchedule map[uint64][]byte // Schedule of fork versions by epoch number.
 }
 
-var defaultBeaconConfig = &BeaconChainConfig{
-	// Constants (Non-configurable)
-	FarFutureEpoch:           1<<64 - 1,
-	BaseRewardsPerEpoch:      4,
-	DepositContractTreeDepth: 32,
-	GenesisDelay:             172800, // 2 days
-
-	// Misc constant.
-	TargetCommitteeSize:            128,
-	MaxValidatorsPerCommittee:      2048,
-	MaxCommitteesPerSlot:           64,
-	MinPerEpochChurnLimit:          4,
-	ChurnLimitQuotient:             1 << 16,
-	ShuffleRoundCount:              90,
-	MinGenesisActiveValidatorCount: 16384,
-	MinGenesisTime:                 0, // Zero until a proper time is decided.
-	TargetAggregatorsPerCommittee:  16,
-	HysteresisQuotient:             4,
-	HysteresisDownwardMultiplier:   1,
-	HysteresisUpwardMultiplier:     5,
-
-	// Gwei value constants.
-	MinDepositAmount:          1 * 1e9,
-	MaxEffectiveBalance:       32 * 1e9,
-	EjectionBalance:           16 * 1e9,
-	EffectiveBalanceIncrement: 1 * 1e9,
-
-	// Initial value constants.
-	BLSWithdrawalPrefixByte: byte(0),
-	ZeroHash:                [32]byte{},
-
-	// Time parameter constants.
-	MinAttestationInclusionDelay:     1,
-	SecondsPerSlot:                   12,
-	SlotsPerEpoch:                    32,
-	MinSeedLookahead:                 1,
-	MaxSeedLookahead:                 4,
-	EpochsPerEth1VotingPeriod:        32,
-	SlotsPerHistoricalRoot:           8192,
-	MinValidatorWithdrawabilityDelay: 256,
-	ShardCommitteePeriod:             256,
-	MinEpochsToInactivityPenalty:     4,
-	Eth1FollowDistance:               1024,
-	SafeSlotsToUpdateJustified:       8,
-	SecondsPerETH1Block:              14,
-
-	// State list length constants.
-	EpochsPerHistoricalVector: 65536,
-	EpochsPerSlashingsVector:  8192,
-	HistoricalRootsLimit:      16777216,
-	ValidatorRegistryLimit:    1099511627776,
-
-	// Reward and penalty quotients constants.
-	BaseRewardFactor:            64,
-	WhistleBlowerRewardQuotient: 512,
-	ProposerRewardQuotient:      8,
-	InactivityPenaltyQuotient:   1 << 24,
-	MinSlashingPenaltyQuotient:  32,
-
-	// Max operations per block constants.
-	MaxProposerSlashings: 16,
-	MaxAttesterSlashings: 2,
-	MaxAttestations:      128,
-	MaxDeposits:          16,
-	MaxVoluntaryExits:    16,
-
-	// BLS domain values.
-	DomainBeaconProposer:    bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:    bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:            bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:           bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:     bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:    bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof: bytesutil.ToBytes4(bytesutil.Bytes4(6)),
-
-	// Prysm constants.
-	GweiPerEth:                1000000000,
-	BLSSecretKeyLength:        32,
-	BLSPubkeyLength:           48,
-	BLSSignatureLength:        96,
-	DefaultBufferSize:         10000,
-	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
-	ValidatorPrivkeyFileName:  "/validatorprivatekey",
-	RPCSyncCheck:              1,
-	EmptySignature:            [96]byte{},
-	DefaultPageSize:           250,
-	MaxPeersToSync:            15,
-	SlotsPerArchivedPoint:     2048,
-	GenesisCountdownInterval:  time.Minute,
-
-	// Slasher related values.
-	WeakSubjectivityPeriod:    54000,
-	PruneSlasherStoragePeriod: 10,
-
-	// Fork related values.
-	GenesisForkVersion:  []byte{0, 0, 0, 0},
-	NextForkVersion:     []byte{0, 0, 0, 0}, // Set to GenesisForkVersion unless there is a scheduled fork
-	NextForkEpoch:       1<<64 - 1,          // Set to FarFutureEpoch unless there is a scheduled fork.
-	ForkVersionSchedule: map[uint64][]byte{
-		// Any further forks must be specified here by their epoch number.
-	},
-}
-
-var beaconConfig = defaultBeaconConfig
+// Using onyx as the default configuration for now.
+var beaconConfig = OnyxConfig()
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
 	return beaconConfig
-}
-
-// MainnetConfig returns the default config to
-// be used in the mainnet.
-func MainnetConfig() *BeaconChainConfig {
-	return defaultBeaconConfig
-}
-
-// MinimalSpecConfig retrieves the minimal config used in spec tests.
-func MinimalSpecConfig() *BeaconChainConfig {
-	minimalConfig := *defaultBeaconConfig
-	// Misc
-	minimalConfig.MaxCommitteesPerSlot = 4
-	minimalConfig.TargetCommitteeSize = 4
-	minimalConfig.MaxValidatorsPerCommittee = 2048
-	minimalConfig.MinPerEpochChurnLimit = 4
-	minimalConfig.ChurnLimitQuotient = 65536
-	minimalConfig.ShuffleRoundCount = 10
-	minimalConfig.MinGenesisActiveValidatorCount = 64
-	minimalConfig.MinGenesisTime = 0
-	minimalConfig.GenesisDelay = 300 // 5 minutes
-	minimalConfig.TargetAggregatorsPerCommittee = 3
-
-	// Gwei values
-	minimalConfig.MinDepositAmount = 1e9
-	minimalConfig.MaxEffectiveBalance = 32e9
-	minimalConfig.EjectionBalance = 16e9
-	minimalConfig.EffectiveBalanceIncrement = 1e9
-
-	// Initial values
-	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
-
-	// Time parameters
-	minimalConfig.SecondsPerSlot = 6
-	minimalConfig.MinAttestationInclusionDelay = 1
-	minimalConfig.SlotsPerEpoch = 8
-	minimalConfig.MinSeedLookahead = 1
-	minimalConfig.MaxSeedLookahead = 4
-	minimalConfig.EpochsPerEth1VotingPeriod = 4
-	minimalConfig.SlotsPerHistoricalRoot = 64
-	minimalConfig.MinValidatorWithdrawabilityDelay = 256
-	minimalConfig.ShardCommitteePeriod = 64
-	minimalConfig.MinEpochsToInactivityPenalty = 4
-	minimalConfig.Eth1FollowDistance = 16
-	minimalConfig.SafeSlotsToUpdateJustified = 2
-	minimalConfig.SecondsPerETH1Block = 14
-
-	// State vector lengths
-	minimalConfig.EpochsPerHistoricalVector = 64
-	minimalConfig.EpochsPerSlashingsVector = 64
-	minimalConfig.HistoricalRootsLimit = 16777216
-	minimalConfig.ValidatorRegistryLimit = 1099511627776
-
-	// Reward and penalty quotients
-	minimalConfig.BaseRewardFactor = 64
-	minimalConfig.WhistleBlowerRewardQuotient = 512
-	minimalConfig.ProposerRewardQuotient = 8
-	minimalConfig.InactivityPenaltyQuotient = 1 << 24
-	minimalConfig.MinSlashingPenaltyQuotient = 32
-
-	// Max operations per block
-	minimalConfig.MaxProposerSlashings = 16
-	minimalConfig.MaxAttesterSlashings = 2
-	minimalConfig.MaxAttestations = 128
-	minimalConfig.MaxDeposits = 16
-	minimalConfig.MaxVoluntaryExits = 16
-
-	// Signature domains
-	minimalConfig.DomainBeaconProposer = bytesutil.ToBytes4(bytesutil.Bytes4(0))
-	minimalConfig.DomainBeaconAttester = bytesutil.ToBytes4(bytesutil.Bytes4(1))
-	minimalConfig.DomainRandao = bytesutil.ToBytes4(bytesutil.Bytes4(2))
-	minimalConfig.DomainDeposit = bytesutil.ToBytes4(bytesutil.Bytes4(3))
-	minimalConfig.DomainVoluntaryExit = bytesutil.ToBytes4(bytesutil.Bytes4(4))
-	minimalConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
-
-	minimalConfig.DepositContractTreeDepth = 32
-	minimalConfig.FarFutureEpoch = 1<<64 - 1
-	return &minimalConfig
-}
-
-// E2ETestConfig retrieves the configurations made specifically for E2E testing.
-// Warning: This config is only for testing, it is not meant for use outside of E2E.
-func E2ETestConfig() *BeaconChainConfig {
-	e2eConfig := MinimalSpecConfig()
-
-	// Misc.
-	e2eConfig.MinGenesisActiveValidatorCount = 256
-	e2eConfig.GenesisDelay = 30 // 30 seconds so E2E has enough time to process deposits and get started.
-
-	// Time parameters.
-	e2eConfig.SecondsPerSlot = 8
-	e2eConfig.SecondsPerETH1Block = 2
-	e2eConfig.Eth1FollowDistance = 4
-	e2eConfig.ShardCommitteePeriod = 4
-	return e2eConfig
-}
-
-// AltonaConfig defines the config for the
-// altona testnet.
-func AltonaConfig() *BeaconChainConfig {
-	altCfg := MainnetConfig()
-	altCfg.MinGenesisActiveValidatorCount = 640
-	altCfg.MinGenesisTime = 1593433800
-	altCfg.GenesisForkVersion = []byte{0x00, 0x00, 0x01, 0x21}
-	return altCfg
-}
-
-// UseMinimalConfig for beacon chain services.
-func UseMinimalConfig() {
-	beaconConfig = MinimalSpecConfig()
-}
-
-// UseE2EConfig for beacon chain services.
-func UseE2EConfig() {
-	beaconConfig = E2ETestConfig()
-}
-
-// UseAltonaConfig sets the main beacon chain
-// config for altona.
-func UseAltonaConfig() {
-	beaconConfig = AltonaConfig()
-}
-
-// UseMainnetConfig for beacon chain services.
-func UseMainnetConfig() {
-	beaconConfig = MainnetConfig()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
@@ -357,24 +127,11 @@ func OverrideBeaconConfig(c *BeaconChainConfig) {
 	beaconConfig = c
 }
 
-// SetupTestConfigCleanup preserves configurations allowing to modify them within tests without any
-// restrictions, everything is restored after the test.
-func SetupTestConfigCleanup(t *testing.T) {
-	prevDefaultBeaconConfig := defaultBeaconConfig.Copy()
-	prevBeaconConfig := beaconConfig.Copy()
-	prevNetworkCfg := defaultNetworkConfig.Copy()
-	t.Cleanup(func() {
-		defaultBeaconConfig = prevDefaultBeaconConfig
-		beaconConfig = prevBeaconConfig
-		defaultNetworkConfig = prevNetworkCfg
-	})
-}
-
-// Copy returns Copy of the config object.
+// Copy returns a copy of the config object.
 func (c *BeaconChainConfig) Copy() *BeaconChainConfig {
 	config, ok := deepcopy.Copy(*c).(BeaconChainConfig)
 	if !ok {
-		config = *defaultBeaconConfig
+		config = *beaconConfig
 	}
 	return &config
 }
