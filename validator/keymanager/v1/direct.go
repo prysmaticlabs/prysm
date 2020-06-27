@@ -1,4 +1,4 @@
-package keymanager
+package v1
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
