@@ -143,10 +143,10 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	if b == nil || b.state == nil {
 		return nil
 	}
-	b.lock.RLock()
-	defer b.lock.RUnlock()
 
 	if featureconfig.Get().NewBeaconStateLocks {
+		b.lock.RLock()
+		defer b.lock.RUnlock()
 		return &pbp2p.BeaconState{
 			GenesisTime:                 b.genesisTime(),
 			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
@@ -791,9 +791,10 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValida
 		return errors.New("nil validators in state")
 	}
 	b.lock.RLock()
-	defer b.lock.RUnlock()
+	validators := b.state.Validators
+	b.lock.RUnlock()
 
-	for i, v := range b.state.Validators {
+	for i, v := range validators {
 		err := f(i, &ReadOnlyValidator{validator: v})
 		if err != nil {
 			return err

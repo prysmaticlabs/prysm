@@ -73,10 +73,10 @@ func (b *BeaconState) Copy() *BeaconState {
 	if !b.HasInnerState() {
 		return nil
 	}
-	b.lock.RLock()
-	defer b.lock.RUnlock()
 	var dst *BeaconState
 	if featureconfig.Get().NewBeaconStateLocks {
+		b.lock.RLock()
+		defer b.lock.RUnlock()
 		dst = &BeaconState{
 			state: &pbp2p.BeaconState{
 				// Primitive types, safe to copy.
