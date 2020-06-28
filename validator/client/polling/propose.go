@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/client/metrics"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -190,7 +190,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
 	var sig bls.Signature
-	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+	if protectingKeymanager, supported := v.keyManager.(km.ProtectingKeyManager); supported {
 		bodyRoot, err := stateutil.BlockBodyRoot(b.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root")
