@@ -291,6 +291,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	).Return(&ethpb.AttestResponse{}, nil /* error */)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	testutil.AssertLogsDoNotContain(t, hook, failedPreAttSignLocalErr)
 
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -302,7 +303,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
+	testutil.AssertLogsContain(t, hook, failedPreAttSignLocalErr)
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
