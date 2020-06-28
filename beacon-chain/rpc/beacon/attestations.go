@@ -177,7 +177,7 @@ func (bs *Server) ListIndexedAttestations(
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
-					"Could not retrieve committees from state %v",
+					"Could not retrieve committee from state %v",
 					err,
 				)
 			}
