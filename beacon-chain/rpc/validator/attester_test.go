@@ -408,8 +408,8 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 		Slot: 1000000000000,
 	}
 	_, err := attesterServer.GetAttestationData(ctx, req)
-	if s, ok := status.FromError(err); !ok || s.Message() != msgInvalidAttestationRequest {
-		t.Fatalf("Wrong error. Wanted %v, got %v", msgInvalidAttestationRequest, err)
+	if s, ok := status.FromError(err); !ok || !strings.Contains(s.Message(), "invalid request") {
+		t.Fatalf("Wrong error. Wanted error to start with %v, got %v", "invalid request", err)
 	}
 }
 
