@@ -121,7 +121,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			if d.Index <= dc.finalizedDeposits.MerkeTreeIndex {
 				continue
 			}
-			if d.Index >= eth1DepositIndex {
+			if d.Index > eth1DepositIndex {
 				break
 			}
 			depHash, err := ssz.HashTreeRoot(d.Deposit.Data)
@@ -135,7 +135,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	} else {
 		var finalizedDeposits [][]byte
 		for _, d := range dc.deposits {
-			if d.Index >= eth1DepositIndex {
+			if d.Index > eth1DepositIndex {
 				break
 			}
 			hash, err := ssz.HashTreeRoot(d.Deposit.Data)
@@ -156,7 +156,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 
 	dc.finalizedDeposits = &FinalizedDeposits{
 		Deposits:       depositTrie,
-		MerkeTreeIndex: eth1DepositIndex - 1,
+		MerkeTreeIndex: eth1DepositIndex,
 	}
 }
 

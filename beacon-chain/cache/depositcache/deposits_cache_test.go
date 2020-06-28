@@ -315,7 +315,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		Index: 3,
 	})
 
-	dc.InsertFinalizedDeposits(context.Background(), 3)
+	dc.InsertFinalizedDeposits(context.Background(), 2)
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	if cachedDeposits == nil {
@@ -375,11 +375,11 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 		Index: 2,
 	}
 	dc.deposits = oldFinalizedDeposits
-	dc.InsertFinalizedDeposits(context.Background(), 2)
+	dc.InsertFinalizedDeposits(context.Background(), 1)
 	// Artificially exclude old deposits so that they can only be retrieved from previously finalized deposits.
 	dc.deposits = []*dbpb.DepositContainer{&newFinalizedDeposit}
 
-	dc.InsertFinalizedDeposits(context.Background(), 3)
+	dc.InsertFinalizedDeposits(context.Background(), 2)
 
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	if cachedDeposits == nil {
@@ -451,7 +451,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 			},
 			Index: 3,
 		})
-	dc.InsertFinalizedDeposits(context.Background(), 2)
+	dc.InsertFinalizedDeposits(context.Background(), 1)
 
 	deps := dc.NonFinalizedDeposits(context.Background(), nil)
 	if len(deps) != 2 {
@@ -501,7 +501,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 			},
 			Index: 3,
 		})
-	dc.InsertFinalizedDeposits(context.Background(), 2)
+	dc.InsertFinalizedDeposits(context.Background(), 1)
 
 	deps := dc.NonFinalizedDeposits(context.Background(), big.NewInt(10))
 	if len(deps) != 1 {
