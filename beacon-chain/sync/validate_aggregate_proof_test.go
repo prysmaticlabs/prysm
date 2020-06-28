@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -636,91 +635,5 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
 	if r.validateAggregateAndProof(context.Background(), "", msg) == pubsub.ValidationAccept {
 		t.Fatal("Validated status is true")
-	}
-}
-
-func Test_validateAggregateAttTime(t *testing.T) {
-	if params.BeaconNetworkConfig().MaximumGossipClockDisparity < 200*time.Millisecond {
-		t.Fatal("This test expects the maximum clock disparity to be at least 200ms")
-	}
-
-	type args struct {
-		attSlot     uint64
-		genesisTime time.Time
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "attestation.slot == current_slot",
-			args: args{
-				attSlot:     15,
-				genesisTime: roughtime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
-			},
-			wantErr: false,
-		},
-		{
-			name: "attestation.slot == current_slot, received in middle of slot",
-			args: args{
-				attSlot: 15,
-				genesisTime: roughtime.Now().Add(
-					-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
-				).Add(-(time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second)),
-			},
-			wantErr: false,
-		},
-		{
-			name: "attestation.slot == current_slot, received 200ms early",
-			args: args{
-				attSlot: 16,
-				genesisTime: roughtime.Now().Add(
-					-16 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
-				).Add(-200 * time.Millisecond),
-			},
-			wantErr: false,
-		},
-		{
-			name: "attestation.slot > current_slot",
-			args: args{
-				attSlot:     16,
-				genesisTime: roughtime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
-			},
-			wantErr: true,
-		},
-		{
-			name: "attestation.slot < current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
-			args: args{
-				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange - 1,
-				genesisTime: roughtime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
-			},
-			wantErr: true,
-		},
-		{
-			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
-			args: args{
-				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
-				genesisTime: roughtime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
-			},
-			wantErr: false,
-		},
-		{
-			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE, received 200ms late",
-			args: args{
-				attSlot: 100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
-				genesisTime: roughtime.Now().Add(
-					-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
-				).Add(200 * time.Millisecond),
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := validateAggregateAttTime(tt.args.attSlot, tt.args.genesisTime); (err != nil) != tt.wantErr {
-				t.Errorf("validateAggregateAttTime() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
 	}
 }
