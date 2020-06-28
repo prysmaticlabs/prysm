@@ -43,8 +43,8 @@ type DepositFetcher interface {
 // FinalizedDeposits stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type FinalizedDeposits struct {
-	Deposits       *trieutil.SparseMerkleTrie
-	MerkeTreeIndex int64
+	Deposits        *trieutil.SparseMerkleTrie
+	MerkleTrieIndex int64
 }
 
 // DepositCache stores all in-memory deposit objects. This
@@ -116,9 +116,9 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	if dc.finalizedDeposits != nil {
 		depositTrie = dc.finalizedDeposits.Deposits
 
-		insertIndex := dc.finalizedDeposits.MerkeTreeIndex + 1
+		insertIndex := dc.finalizedDeposits.MerkleTrieIndex + 1
 		for _, d := range dc.deposits {
-			if d.Index <= dc.finalizedDeposits.MerkeTreeIndex {
+			if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
 				continue
 			}
 			if d.Index > eth1DepositIndex {
@@ -155,8 +155,8 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	}
 
 	dc.finalizedDeposits = &FinalizedDeposits{
-		Deposits:       depositTrie,
-		MerkeTreeIndex: eth1DepositIndex,
+		Deposits:        depositTrie,
+		MerkleTrieIndex: eth1DepositIndex,
 	}
 }
 
@@ -263,7 +263,7 @@ func (dc *DepositCache) NonFinalizedDeposits(ctx context.Context, untilBlk *big.
 		return dc.AllDeposits(ctx, untilBlk)
 	}
 
-	lastFinalizedDepositIndex := dc.finalizedDeposits.MerkeTreeIndex
+	lastFinalizedDepositIndex := dc.finalizedDeposits.MerkleTrieIndex
 	var deposits []*ethpb.Deposit
 	for _, d := range dc.deposits {
 		if (d.Index > lastFinalizedDepositIndex) && (untilBlk == nil || untilBlk.Uint64() >= d.Eth1BlockHeight) {

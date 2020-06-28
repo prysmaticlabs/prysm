@@ -321,8 +321,8 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	if cachedDeposits == nil {
 		t.Fatalf("Deposits not cached")
 	}
-	if cachedDeposits.MerkeTreeIndex != 2 {
-		t.Errorf("Incorrect index of last deposit (%d) vs expected 2", cachedDeposits.MerkeTreeIndex)
+	if cachedDeposits.MerkleTrieIndex != 2 {
+		t.Errorf("Incorrect index of last deposit (%d) vs expected 2", cachedDeposits.MerkleTrieIndex)
 	}
 
 	var deps [][]byte
@@ -385,8 +385,8 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	if cachedDeposits == nil {
 		t.Fatalf("Deposits not cached")
 	}
-	if cachedDeposits.MerkeTreeIndex != 2 {
-		t.Errorf("Incorrect index of last deposit (%d) vs expected 3", cachedDeposits.MerkeTreeIndex)
+	if cachedDeposits.MerkleTrieIndex != 2 {
+		t.Errorf("Incorrect index of last deposit (%d) vs expected 3", cachedDeposits.MerkleTrieIndex)
 	}
 
 	var deps [][]byte
