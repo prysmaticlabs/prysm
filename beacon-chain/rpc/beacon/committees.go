@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -114,7 +115,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 ) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, []uint64, error) {
 	requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
-		return nil, nil, status.Error(codes.Internal, "Could not get state")
+		return nil, nil, status.Error(codes.Internal, fmt.Sprintf("Could not get state: %v", err))
 	}
 	epoch := helpers.CurrentEpoch(requestedState)
 	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
