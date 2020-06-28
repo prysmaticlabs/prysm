@@ -2,12 +2,15 @@ package helpers
 
 import (
 	"encoding/binary"
+	"fmt"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // SlotSignature returns the signed signature of the hash tree root of input slot.
@@ -107,4 +110,49 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount, comIdx, attSlot uint64) u
 	commsSinceStart := comCount * slotSinceStart
 	computedSubnet := (commsSinceStart + comIdx) % params.BeaconNetworkConfig().AttestationSubnetCount
 	return computedSubnet
+}
+
+// ValidateAttestationTime Validates that the incoming attestation is in the desired time range.
+// An attestation is valid only if received within the last ATTESTATION_PROPAGATION_SLOT_RANGE
+// slots.
+//
+// Example:
+//   ATTESTATION_PROPAGATION_SLOT_RANGE = 5
+//   current_slot = 100
+//   invalid_attestation_slot = 92
+//   invalid_attestation_slot = 101
+//   valid_attestation_slot = 98
+// In the attestation must be within the range of 95 to 100 in the example above.
+func ValidateAttestationTime(attSlot uint64, genesisTime time.Time) error {
+	attTime := genesisTime.Add(time.Duration(attSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
+	currentSlot := SlotsSince(genesisTime)
+
+	// A clock disparity allows for minor tolerances outside of the expected range. This value is
+	// usually small, less than 1 second.
+	clockDisparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
+
+	// An attestation cannot be from the future, so the upper bounds is set to now, with a minor
+	// tolerance for peer clock disparity.
+	upperBounds := roughtime.Now().Add(clockDisparity)
+
+	// An attestation cannot be older than the current slot - attestation propagation slot range
+	// with a minor tolerance for peer clock disparity.
+	lowerBoundsSlot := uint64(0)
+	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
+		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
+	}
+	lowerBounds := genesisTime.Add(
+		time.Duration(lowerBoundsSlot*params.BeaconConfig().SecondsPerSlot) * time.Second,
+	).Add(-clockDisparity)
+
+	// Verify attestation slot within the time range.
+	if attTime.Before(lowerBounds) || attTime.After(upperBounds) {
+		return fmt.Errorf(
+			"attestation slot %d not within attestation propagation range of %d to %d (current slot)",
+			attSlot,
+			currentSlot-params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+			currentSlot,
+		)
+	}
+	return nil
 }
