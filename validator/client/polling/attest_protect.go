@@ -27,7 +27,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 			if v.emitAccountMetrics {
 				metrics.ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf(failedPreAttSignLocalErr)
+			return errors.New(failedPreAttSignLocalErr)
 		}
 	}
 

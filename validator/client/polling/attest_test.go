@@ -186,7 +186,6 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 		Target:          &ethpb.Checkpoint{Root: targetRoot[:], Epoch: 4},
 		Source:          &ethpb.Checkpoint{Root: sourceRoot[:], Epoch: 3},
 	}, nil)
-
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
@@ -199,7 +198,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
+	testutil.AssertLogsContain(t, hook, failedPreAttSignLocalErr)
 }
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
@@ -246,7 +245,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
+	testutil.AssertLogsContain(t, hook, failedPreAttSignLocalErr)
 }
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {

@@ -69,7 +69,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.WithFields(logrus.Fields{
 			"sourceEpoch": indexedAtt.Data.Source.Epoch,
 			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Fatal("Failed attestation safety check")
+		}).WithError(err).Error("Failed attestation safety check")
 		return
 	}
 

@@ -104,7 +104,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}).Info("Submitted new block")
 
 	if err := v.postBlockSignUpdate(ctx, pubKey, blk); err != nil {
-		log.WithField("slot", blk.Block.Slot).WithError(err).Error("Failed post block signing validations")
+		log.WithField("slot", blk.Block.Slot).WithError(err).Fatal("Failed post block signing validations")
 		return
 	}
 
