@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -60,4 +61,12 @@ func setupDBDiffCacheSize(t testing.TB, cacheSize int) *Store {
 		}
 	})
 	return db
+}
+
+func TestStore_DatabasePath(t *testing.T) {
+	db := setupDB(t, nil)
+	dbPath := db.DatabasePath()
+	if !strings.Contains(dbPath, databaseFileName) {
+		t.Fatal("Expected filepath to lead to database file")
+	}
 }

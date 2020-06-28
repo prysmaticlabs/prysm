@@ -5,7 +5,7 @@ package kv
 import (
 	"context"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -91,7 +91,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, databaseFileName)
+	datafile := filepath.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		if err == bolt.ErrTimeout {

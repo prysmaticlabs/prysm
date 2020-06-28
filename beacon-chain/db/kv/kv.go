@@ -4,7 +4,7 @@ package kv
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -52,7 +52,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, databaseFileName)
+	datafile := filepath.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
 	if err != nil {
 		if err == bolt.ErrTimeout {
@@ -81,7 +81,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 
 	kv := &Store{
 		db:                  boltDB,
-		databasePath:        dirPath,
+		databasePath:        datafile,
 		blockCache:          blockCache,
 		validatorIndexCache: validatorCache,
 		stateSummaryCache:   stateSummaryCache,
@@ -133,7 +133,7 @@ func (kv *Store) ClearDB() error {
 		return nil
 	}
 	prometheus.Unregister(createBoltCollector(kv.db))
-	if err := os.Remove(path.Join(kv.databasePath, databaseFileName)); err != nil {
+	if err := os.Remove(kv.databasePath); err != nil {
 		return errors.Wrap(err, "could not remove database file")
 	}
 	return nil

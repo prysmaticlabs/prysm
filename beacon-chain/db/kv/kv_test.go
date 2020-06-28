@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -35,4 +36,12 @@ func setupDB(t testing.TB) *Store {
 		}
 	})
 	return db
+}
+
+func TestStore_DatabasePath(t *testing.T) {
+	db := setupDB(t)
+	dbPath := db.DatabasePath()
+	if !strings.Contains(dbPath, databaseFileName) {
+		t.Fatal("Expected filepath to lead to database file")
+	}
 }

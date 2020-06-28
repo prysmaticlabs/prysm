@@ -39,7 +39,7 @@ func (store *Store) ClearDB() error {
 	if _, err := os.Stat(store.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.Remove(filepath.Join(store.databasePath, databaseFileName))
+	return os.Remove(filepath.Join(store.databasePath))
 }
 
 // DatabasePath at which this database writes files.
@@ -72,7 +72,7 @@ func NewKVStore(dirPath string, pubKeys [][48]byte) (*Store, error) {
 		return nil, err
 	}
 
-	kv := &Store{db: boltDB, databasePath: dirPath}
+	kv := &Store{db: boltDB, databasePath: datafile}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
@@ -106,7 +106,7 @@ func GetKVStore(directory string) (*Store, error) {
 		return nil, err
 	}
 
-	return &Store{db: boltDb, databasePath: directory}, nil
+	return &Store{db: boltDb, databasePath: fileName}, nil
 }
 
 // Size returns the db size in bytes.

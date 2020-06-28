@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/rand"
@@ -40,4 +41,12 @@ func tempdir() string {
 		return os.TempDir()
 	}
 	return d
+}
+
+func TestStore_DatabasePath(t *testing.T) {
+	db := setupDB(t, [][48]byte{})
+	dbPath := db.DatabasePath()
+	if !strings.Contains(dbPath, databaseFileName) {
+		t.Fatal("Expected filepath to lead to database file")
+	}
 }
