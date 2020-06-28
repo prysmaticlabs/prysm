@@ -222,9 +222,18 @@ func TestMerge_SucceedsWhenNoDatabaseExistsInSomeSourceDirectory(t *testing.T) {
 		}
 	})
 
+	firstStoreDBDirEndIndex := strings.LastIndex(firstStore.DatabasePath(), "/")
+	secondStoreDBDirEndIndex := strings.LastIndex(secondStore.DatabasePath(), "/")
+
 	err = Merge(
 		context.Background(),
-		[]string{firstStore.DatabasePath(), secondStore.DatabasePath(), sourceDirectoryWithoutStore}, targetDirectory)
+		[]string{
+			firstStore.DatabasePath()[0:firstStoreDBDirEndIndex],
+			secondStore.DatabasePath()[0:secondStoreDBDirEndIndex],
+			sourceDirectoryWithoutStore,
+		},
+		targetDirectory,
+	)
 	if err != nil {
 		t.Fatalf("Merging failed: %v", err)
 	}

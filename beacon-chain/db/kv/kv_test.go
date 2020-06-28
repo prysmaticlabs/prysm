@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"os"
 	"path"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -31,17 +30,9 @@ func setupDB(t testing.TB) *Store {
 		if err := db.Close(); err != nil {
 			t.Fatalf("Failed to close database: %v", err)
 		}
-		if err := os.RemoveAll(db.DatabasePath()); err != nil {
+		if err := os.Remove(db.DatabasePath()); err != nil {
 			t.Fatalf("Failed to remove directory: %v", err)
 		}
 	})
 	return db
-}
-
-func TestStore_DatabasePath(t *testing.T) {
-	db := setupDB(t)
-	dbPath := db.DatabasePath()
-	if !strings.Contains(dbPath, databaseFileName) {
-		t.Fatal("Expected filepath to lead to database file")
-	}
 }

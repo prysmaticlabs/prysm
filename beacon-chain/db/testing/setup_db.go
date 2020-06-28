@@ -31,7 +31,7 @@ func SetupDB(t testing.TB) (db.Database, *cache.StateSummaryCache) {
 		if err := s.Close(); err != nil {
 			t.Fatalf("failed to close database: %v", err)
 		}
-		if err := os.RemoveAll(s.DatabasePath()); err != nil {
+		if err := os.Remove(s.DatabasePath()); err != nil {
 			t.Fatalf("could not remove tmp db dir: %v", err)
 		}
 	})
