@@ -34,7 +34,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf(failedPreBlockSignLocalErr)
+			return errors.New(failedPreBlockSignLocalErr)
 		}
 	}
 
@@ -47,7 +47,7 @@ func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte
 			if v.emitAccountMetrics {
 				metrics.ValidatorProposeFailVecSlasher.WithLabelValues(fmtKey).Inc()
 			}
-			return fmt.Errorf(failedPreBlockSignExternalErr)
+			return errors.New(failedPreBlockSignExternalErr)
 		}
 	}
 
