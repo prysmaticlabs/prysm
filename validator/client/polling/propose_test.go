@@ -156,10 +156,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
@@ -194,10 +194,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 
 	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
@@ -232,11 +232,11 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 
 	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farAhead, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), past, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
@@ -272,10 +272,10 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	pubKey := validatorPubKey
 	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), farAhead-4, pubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {
