@@ -58,7 +58,10 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	return nil
 }
 
-func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain [4]byte) error {
+func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain []byte) error {
+	if len(deps) == 0 {
+		return nil
+	}
 	pks := make([]bls.PublicKey, len(deps))
 	sigs := make([]bls.Signature, len(deps))
 	msgs := make([][32]byte, len(deps))
@@ -86,7 +89,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		}
 		signingData := &pb.SigningData{
 			ObjectRoot: root[:],
-			Domain:     domain[:],
+			Domain:     domain,
 		}
 		ctrRoot, err := ssz.HashTreeRoot(signingData)
 		if err != nil {
@@ -949,7 +952,11 @@ func ProcessDeposits(
 	var err error
 	deposits := body.Deposits
 
-	if err := verifyDepositDataWithDomain(ctx, deposits, params.BeaconConfig().DomainDeposit); err != nil {
+	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := verifyDepositDataWithDomain(ctx, deposits, domain); err != nil {
 		// TODO: Use old path of skipping invalid deposits
 		log.WithError(err).Warn("Failed to verify deposit data")
 	}
