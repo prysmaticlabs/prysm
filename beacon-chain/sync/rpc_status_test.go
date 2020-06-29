@@ -64,7 +64,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		}
 	})
 
-	pcl2 := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz")
+	pcl2 := protocol.ID("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	var wg2 sync.WaitGroup
 	wg2.Add(1)
 	p2.BHost.SetStreamHandler(pcl2, func(stream network.Stream) {
@@ -333,7 +333,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r.Start()
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -359,7 +359,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		}
 	})
 
-	pcl = "/eth2/beacon_chain/req/ping/1/ssz"
+	pcl = "/eth2/beacon_chain/req/ping/1/ssz_snappy"
 	var wg2 sync.WaitGroup
 	wg2.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -474,7 +474,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -582,7 +582,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -656,7 +656,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	r.Start()
 
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
