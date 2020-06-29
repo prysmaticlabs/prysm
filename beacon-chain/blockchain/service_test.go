@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -392,53 +391,6 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	}
 	if reflect.DeepEqual(newB, b) {
 		t.Error("head block should not be equal")
-	}
-}
-
-func TestChainService_PruneOldStates(t *testing.T) {
-	db, _ := testDB.SetupDB(t)
-	ctx := context.Background()
-	s := &Service{
-		beaconDB: db,
-	}
-
-	for i := 0; i < 100; i++ {
-		block := &ethpb.BeaconBlock{Slot: uint64(i)}
-		if err := s.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
-			t.Fatal(err)
-		}
-		r, err := stateutil.BlockRoot(block)
-		if err != nil {
-			t.Fatal(err)
-		}
-		newState := testutil.NewBeaconState()
-		if err := newState.SetSlot(uint64(i)); err != nil {
-			t.Fatal(err)
-		}
-		if err := s.beaconDB.SaveState(ctx, newState, r); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// Delete half of the states.
-	if err := s.pruneGarbageState(ctx, 50); err != nil {
-		t.Fatal(err)
-	}
-
-	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(100)
-	roots, err := s.beaconDB.BlockRoots(ctx, filter)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for i := 1; i < 50; i++ {
-		s, err := s.beaconDB.State(ctx, roots[i])
-		if err != nil {
-			t.Fatal(err)
-		}
-		if s != nil {
-			t.Errorf("wanted nil for slot %d", i)
-		}
 	}
 }
 
