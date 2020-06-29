@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -268,7 +270,8 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if epoch < lookbackEpoch && dbOrCache == dbTypes.UseCache {
+		if epoch < untilEpoch && dbOrCache == dbTypes.UseCache {
+			log.Infof("cache is exhausted moving to db , epoch: %d look back epoch: %d", epoch, untilEpoch)
 			dbOrCache = dbTypes.UseDB
 		}
 		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbOrCache); err != nil {
