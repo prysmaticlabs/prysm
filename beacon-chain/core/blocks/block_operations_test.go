@@ -1811,7 +1811,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true, )
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
@@ -1865,7 +1865,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true, )
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}
