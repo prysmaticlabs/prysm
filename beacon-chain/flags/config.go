@@ -9,11 +9,11 @@ import (
 // GlobalFlags specifies all the global flags for the
 // beacon node.
 type GlobalFlags struct {
-	UnsafeSync                        bool
-	DisableDiscv5                     bool
-	MinimumSyncPeers                  int
-	BlockBatchLimit                   int
-	BlockBatchLimitBurstFactor        int
+	UnsafeSync                 bool
+	DisableDiscv5              bool
+	MinimumSyncPeers           int
+	BlockBatchLimit            int
+	BlockBatchLimitBurstFactor int
 }
 
 var globalConfig *GlobalFlags
