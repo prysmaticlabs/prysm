@@ -976,8 +976,8 @@ func ProcessDeposits(
 	return beaconState, nil
 }
 
-// ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
-func ProcessPreGenesisDeposit(
+// ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
+func ProcessPreGenesisDeposits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
 	deposits []*ethpb.Deposit,

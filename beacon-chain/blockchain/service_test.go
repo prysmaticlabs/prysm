@@ -257,7 +257,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		DepositRoot:  hashTreeRoot[:],
 		DepositCount: uint64(len(deposits)),
 	})
-	genState, err = b.ProcessPreGenesisDeposit(ctx, genState, deposits)
+	genState, err = b.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -340,7 +340,7 @@ func TestFuzzProcessPreGenesisDeposit_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(deposit)
 		s, err := beaconstate.InitializeFromProtoUnsafe(state)
-		r, err := ProcessPreGenesisDeposit(ctx, s, []*eth.Deposit{deposit})
+		r, err := ProcessPreGenesisDeposits(ctx, s, []*eth.Deposit{deposit})
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
 		}
