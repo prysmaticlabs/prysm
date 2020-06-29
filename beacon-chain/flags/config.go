@@ -16,7 +16,6 @@ type GlobalFlags struct {
 	UnsafeSync                        bool
 	DisableDiscv5                     bool
 	MinimumSyncPeers                  int
-	MaxPageSize                       int
 	BlockBatchLimit                   int
 	BlockBatchLimitBurstFactor        int
 }
@@ -60,7 +59,6 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	}
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
-	cfg.MaxPageSize = ctx.Int(RPCMaxPageSize.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)

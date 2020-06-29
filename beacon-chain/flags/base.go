@@ -31,13 +31,6 @@ var (
 		Usage: "RPC port exposed by a beacon node",
 		Value: 4000,
 	}
-	// RPCMaxPageSize defines the maximum numbers per page returned in RPC responses from this
-	// beacon node (default: 500).
-	RPCMaxPageSize = &cli.IntFlag{
-		Name:  "rpc-max-page-size",
-		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
-		Value: 500,
-	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.Int64Flag{
 		Name:  "monitoring-port",
