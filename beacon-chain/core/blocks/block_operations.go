@@ -58,6 +58,49 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	return nil
 }
 
+func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, domain [4]byte) error {
+	pks := make([]bls.PublicKey, len(deps))
+	sigs := make([]bls.Signature, len(deps))
+	msgs := make([][32]byte, len(deps))
+	for i, dep := range deps {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if dep == nil {
+			return errors.New("nil deposit")
+		}
+
+		dpk, err := bls.PublicKeyFromBytes(dep.Data.PublicKey)
+		if err != nil {
+			return err
+		}
+		pks[i] = dpk
+		dsig, err := bls.SignatureFromBytes(dep.Data.Signature)
+		if err != nil {
+			return err
+		}
+		sigs[i] = dsig
+		root, err := ssz.SigningRoot(dep.Data)
+		if err != nil {
+			return errors.Wrap(err, "could not get signing root")
+		}
+		signingData := &pb.SigningData{
+			ObjectRoot: root[:],
+			Domain:     domain[:],
+		}
+		ctrRoot, err := ssz.HashTreeRoot(signingData)
+		if err != nil {
+			return errors.Wrap(err, "could not get container root")
+		}
+		msgs[i] = ctrRoot
+	}
+	as := bls.AggregateSignatures(sigs)
+	if !as.AggregateVerify(pks, msgs) {
+		return errors.New("one or more deposit data signatures did not verify")
+	}
+	return nil
+}
+
 func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
@@ -905,6 +948,12 @@ func ProcessDeposits(
 ) (*stateTrie.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
+
+	if err := verifyDepositDataWithDomain(ctx, deposits, params.BeaconConfig().DomainDeposit); err != nil {
+		// TODO: Use old path of skipping invalid deposits
+		log.WithError(err).Warn("Failed to verify deposit data")
+	}
+
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
@@ -1009,16 +1058,16 @@ func ProcessDeposit(
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
-		domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		depositSig := deposit.Data.Signature
-		if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
-			// Ignore this error as in the spec pseudo code.
-			log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
-			return beaconState, nil
-		}
+		//domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+		//if err != nil {
+		//	return nil, err
+		//}
+		//depositSig := deposit.Data.Signature
+		//if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
+		//	// Ignore this error as in the spec pseudo code.
+		//	log.Debugf("Skipping deposit: could not verify deposit data signature: %v", err)
+		//	return beaconState, nil
+		//}
 
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
