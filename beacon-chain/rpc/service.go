@@ -95,6 +95,7 @@ type Service struct {
 	slasherClient           slashpb.SlasherClient
 	stateGen                *stategen.State
 	connectedRPCClients     map[net.Addr]bool
+	clientConnectionLock    sync.Mutex
 }
 
 // Config options for the beacon node RPC server.
@@ -400,6 +401,8 @@ func (s *Service) logNewClientConnection(ctx context.Context) {
 	if clientInfo, ok := peer.FromContext(ctx); ok {
 		// Check if we have not yet observed this grpc client connection
 		// in the running beacon node.
+		s.clientConnectionLock.Lock()
+		defer s.clientConnectionLock.Unlock()
 		if !s.connectedRPCClients[clientInfo.Addr] {
 			log.WithFields(logrus.Fields{
 				"addr": clientInfo.Addr.String(),
