@@ -21,7 +21,7 @@ import (
 // streams when the beacon chain is node does not respond.
 var reconnectPeriod = 5 * time.Second
 
-// receiveBlocks starts a gRPC client stream listener to obtain
+// ReceiveBlocks starts a gRPC client stream listener to obtain
 // blocks from the beacon node. Upon receiving a block, the service
 // broadcasts it to a feed for other services in slasher to subscribe to.
 func (bs *Service) ReceiveBlocks(ctx context.Context) {
@@ -81,7 +81,7 @@ func (bs *Service) ReceiveBlocks(ctx context.Context) {
 	}
 }
 
-// receiveAttestations starts a gRPC client stream listener to obtain
+// ReceiveAttestations starts a gRPC client stream listener to obtain
 // attestations from the beacon node. Upon receiving an attestation, the service
 // broadcasts it to a feed for other services in slasher to subscribe to.
 func (bs *Service) ReceiveAttestations(ctx context.Context) {
