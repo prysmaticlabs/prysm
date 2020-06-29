@@ -306,7 +306,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		FinalizedSlot:              helpers.StartSlot(finalizedCheckpoint.Epoch),
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		JustifiedSlot:              helpers.StartSlot(justifiedCheckpoint.Epoch,),
+		JustifiedSlot:              helpers.StartSlot(justifiedCheckpoint.Epoch),
 		JustifiedEpoch:             justifiedCheckpoint.Epoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
 		PreviousJustifiedSlot:      helpers.StartSlot(prevJustifiedCheckpoint.Epoch),
