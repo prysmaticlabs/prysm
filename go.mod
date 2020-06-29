@@ -65,6 +65,7 @@ require (
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
 	github.com/libp2p/go-maddr-filter v0.1.0 // indirect
+	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/highwayhash v1.0.0
 	github.com/minio/sha256-simd v0.1.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
