@@ -98,9 +98,9 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
-	enableNoiseHandshake = &cli.BoolFlag{
-		Name: "enable-noise",
-		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
+	disableNoiseHandshake = &cli.BoolFlag{
+		Name: "disable-noise",
+		Usage: "This disables the beacon node from using NOISE and instead uses SECIO instead for performing handshakes between peers and " +
 			"securing transports between peers",
 	}
 	dontPruneStateStartUp = &cli.BoolFlag{
@@ -435,6 +435,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableNoise = &cli.BoolFlag{
+		Name:   "enable-noise",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -492,6 +497,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableStateRefCopy,
 	deprecatedDisableFieldTrie,
 	deprecateddisableInitSyncBatchSaveBlocks,
+	deprecatedEnableNoise,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -536,7 +542,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableUpdateHeadPerAttestation,
 	enableStateGenSigVerify,
 	checkHeadState,
-	enableNoiseHandshake,
+	disableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,
