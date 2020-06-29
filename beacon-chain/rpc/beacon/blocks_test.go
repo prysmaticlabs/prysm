@@ -537,15 +537,15 @@ func TestServer_GetChainHead(t *testing.T) {
 		t.Errorf("Wanted FinalizedEpoch: %d, got: %d",
 			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedEpoch)
 	}
-	if head.PreviousJustifiedSlot != 3 {
+	if head.PreviousJustifiedSlot != 24 {
 		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
 			3, head.PreviousJustifiedSlot)
 	}
-	if head.JustifiedSlot != 2 {
+	if head.JustifiedSlot != 16 {
 		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
 			2, head.JustifiedSlot)
 	}
-	if head.FinalizedSlot != 1 {
+	if head.FinalizedSlot != 8 {
 		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
 			1, head.FinalizedSlot)
 	}
