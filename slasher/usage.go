@@ -46,6 +46,7 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			cmd.MinimalConfigFlag,
 			cmd.E2EConfigFlag,
+			cmd.RPCMaxPageSizeFlag,
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
 			cmd.EnableTracingFlag,
