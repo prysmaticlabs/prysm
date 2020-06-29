@@ -13,7 +13,7 @@ func TestMain(m *testing.M) {
 	prevConfig := params.BeaconConfig().Copy()
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	flags.Init(&flags.GlobalFlags{
-		MaxPageSize: 250,
+		MinimumSyncPeers: 30,
 	})
 
 	retVal := m.Run()
