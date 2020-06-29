@@ -375,18 +375,18 @@ func (f *blocksFetcher) removeStalePeerLocks(age time.Duration) {
 
 // selectFailOverPeer randomly selects fail over peer from the list of available peers.
 func (f *blocksFetcher) selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
-	for i, pid := range peers {
-		if pid == excludedPID {
-			peers = append(peers[:i], peers[i+1:]...)
-			break
-		}
-	}
-
 	if len(peers) == 0 {
 		return "", errNoPeersAvailable
 	}
+	if len(peers) == 1 && peers[0] == excludedPID {
+		return "", errNoPeersAvailable
+	}
 
-	return peers[f.rand.Int()%len(peers)], nil
+	ind := f.rand.Int() % len(peers)
+	if peers[ind] == excludedPID {
+		return f.selectFailOverPeer(excludedPID, append(peers[:ind], peers[ind+1:]...))
+	}
+	return peers[ind], nil
 }
 
 // waitForMinimumPeers spins and waits up until enough peers are available.
