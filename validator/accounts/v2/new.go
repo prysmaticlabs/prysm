@@ -5,10 +5,11 @@ import (
 	"unicode"
 
 	"github.com/manifoldco/promptui"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	logrus "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-
-	"github.com/prysmaticlabs/prysm/shared/cmd"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -60,6 +61,18 @@ func New(cliCtx *cli.Context) error {
 	_ = walletPassword
 
 	prompt = promptui.Prompt{
+		Label: "Confirm password",
+		Mask:  '*',
+	}
+	confirmPassword, err := prompt.Run()
+	if err != nil {
+		log.Fatalf("Could not read password confirmation: %v", formatPromptError(err))
+	}
+	if walletPassword != confirmPassword {
+		log.Fatal("Passwords do not match")
+	}
+
+	prompt = promptui.Prompt{
 		Label:    "Enter the directory where passwords will be stored",
 		Validate: validateDirectoryPath,
 		Default:  datadir,
@@ -69,7 +82,19 @@ func New(cliCtx *cli.Context) error {
 		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
 	}
 	_ = passwordsPath
+	createWalletPath()
 	return nil
+}
+
+func createWalletPath() {
+	key := bls.RandKey()
+	encryptor := keystorev4.New()
+	keystore, err := encryptor.Encrypt(key.Marshal(), []byte("hello world"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Info(keystore)
+	_ = keystore
 }
 
 func validatePasswordInput(input string) error {
