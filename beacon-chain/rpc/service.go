@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -29,7 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -70,7 +71,7 @@ type Service struct {
 	attestationsPool        attestations.Pool
 	exitPool                *voluntaryexits.Pool
 	slashingsPool           *slashings.Pool
-	syncService             sync.Checker
+	syncService             chainSync.Checker
 	host                    string
 	port                    string
 	listener                net.Listener
@@ -120,7 +121,7 @@ type Config struct {
 	AttestationsPool        attestations.Pool
 	ExitPool                *voluntaryexits.Pool
 	SlashingsPool           *slashings.Pool
-	SyncService             sync.Checker
+	SyncService             chainSync.Checker
 	Broadcaster             p2p.Broadcaster
 	PeersFetcher            p2p.PeersProvider
 	PeerManager             p2p.PeerManager
