@@ -2,12 +2,13 @@ package v2
 
 import (
 	"errors"
-	"fmt"
+	"unicode"
 
 	"github.com/manifoldco/promptui"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	logrus "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -20,36 +21,17 @@ var log = logrus.WithField("prefix", "accounts-v2")
 // Allow for creating more than 1 validator??
 // TODOS: mnemonic for withdrawal key, ensure they write it down.
 func New(cliCtx *cli.Context) error {
-	validate := func(input string) error {
-		if len(input) == 0 {
-			return errors.New("wallet directory path must not be empty")
-		}
-		return nil
-	}
 	datadir := cliCtx.String(cmd.DataDirFlag.Name)
-	if datadir == "" {
-		// Maybe too aggressive...
-		log.Fatal("Could not determine your system's home path")
-	}
-
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
-		Validate: validate,
+		Validate: validateDirectoryPath,
 		Default:  datadir,
 	}
-	result, err := prompt.Run()
+	walletPath, err := prompt.Run()
 	if err != nil {
-		switch err {
-		case promptui.ErrAbort:
-			log.Fatal("Wallet creation aborted, closing...")
-		case promptui.ErrInterrupt:
-			log.Fatal("Keyboard interrupt, closing...")
-		case promptui.ErrEOF:
-			log.Fatal("No input received, closing...")
-		default:
-			log.Fatalf("Could not complete wallet creation: %v", err)
-		}
+		log.Fatalf("Could not determine wallet directory: %v", formatPromptError(err))
 	}
+	_ = walletPath
 
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
@@ -59,44 +41,81 @@ func New(cliCtx *cli.Context) error {
 			"Remote (Advanced)",
 		},
 	}
-
-	_, resultSelect, err := promptSelect.Run()
+	_, walletType, err := promptSelect.Run()
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return nil
+		log.Fatalf("Could not select wallet type: %v", formatPromptError(err))
 	}
-	fmt.Println(resultSelect)
-	validate = func(input string) error {
-		if len(input) < 6 {
-			return errors.New("Password must have more than 6 characters")
-		}
-		return nil
-	}
+	_ = walletType
 
 	prompt = promptui.Prompt{
-		Label:    "Password",
-		Validate: validate,
+		Label:    "Strong password",
+		Validate: validatePasswordInput,
 		Mask:     '*',
 	}
 
-	result, err = prompt.Run()
+	walletPassword, err := prompt.Run()
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return nil
+		log.Fatalf("Could not read wallet password: %v", formatPromptError(err))
 	}
+	_ = walletPassword
 
-	fmt.Printf("Your password is %q\n", result)
 	prompt = promptui.Prompt{
-		Label:     "Delete Resource",
-		IsConfirm: true,
+		Label:    "Enter the directory where passwords will be stored",
+		Validate: validateDirectoryPath,
+		Default:  datadir,
 	}
-
-	result, err = prompt.Run()
+	passwordsPath, err := prompt.Run()
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return nil
+		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
 	}
-
-	fmt.Printf("You choose %q\n", result)
+	_ = passwordsPath
 	return nil
+}
+
+func validatePasswordInput(input string) error {
+	var (
+		hasMinLen  = false
+		hasLetter  = false
+		hasNumber  = false
+		hasSpecial = false
+	)
+	if len(input) >= 8 {
+		hasMinLen = true
+	}
+	for _, char := range input {
+		switch {
+		case unicode.IsLetter(char):
+			hasLetter = true
+		case unicode.IsNumber(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+	if !(hasMinLen && hasLetter && hasNumber && hasSpecial) {
+		return errors.New(
+			"password must have more than 8 characters, at least 1 special character, and 1 number",
+		)
+	}
+	return nil
+}
+
+func validateDirectoryPath(input string) error {
+	if len(input) == 0 {
+		return errors.New("directory path must not be empty")
+	}
+	return nil
+}
+
+func formatPromptError(err error) error {
+	switch err {
+	case promptui.ErrAbort:
+		return errors.New("wallet creation aborted, closing")
+	case promptui.ErrInterrupt:
+		return errors.New("keyboard interrupt, closing")
+	case promptui.ErrEOF:
+		return errors.New("no input received, closing")
+	default:
+		return err
+	}
 }

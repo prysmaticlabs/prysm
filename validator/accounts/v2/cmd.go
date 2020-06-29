@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/urfave/cli/v2"
@@ -20,6 +21,7 @@ contract in order to activate the validator client`,
 				[]cli.Flag{
 					flags.KeystorePathFlag,
 					flags.PasswordFlag,
+					cmd.DataDirFlag, // TODO: Replace by wallet path
 				}...),
 			Action: New,
 		},
