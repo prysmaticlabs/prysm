@@ -69,7 +69,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if dep == nil {
+		if dep == nil || dep.Data == nil {
 			return errors.New("nil deposit")
 		}
 
