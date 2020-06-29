@@ -965,6 +965,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
 
 	numEpochs := 30
 	validators := make([]*ethpb.Validator, numEpochs)
@@ -988,6 +989,20 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := st.SetValidators(validators); err != nil {
+		t.Fatal(err)
+	}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, st, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -1031,11 +1046,10 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
 
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	headSlot := uint64(0)
-	numValidators := uint64(64)
+	headSlot := uint64(32)
+	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, numValidators)
 	balances := make([]uint64, numValidators)
 	for i := uint64(0); i < numValidators; i++ {
@@ -1065,27 +1079,18 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	if err := st.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = make([]byte, 32)
-		stateRoots[i] = make([]byte, 32)
-	}
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-	if err := st.SetBlockRoots(blockRoots); err != nil {
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.SetStateRoots(stateRoots); err != nil {
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.SetRandaoMixes(randaoMixes); err != nil {
+	if err := db.SaveState(ctx, st, gRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.SetSlashings(slashings); err != nil {
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -1537,7 +1542,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 			State: headState,
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	wanted := "Cannot retrieve information about an epoch"

@@ -88,8 +88,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
+	params.UseMainnetConfig()
+	ctx := context.Background()
 
 	db, _ := dbTest.SetupDB(t)
 	helpers.ClearCache()
@@ -108,6 +108,21 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, headState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	m := &mock.ChainService{
 		State:   headState,
 		Genesis: roughtime.Now().Add(time.Duration(-1*int64(headState.Slot()*params.BeaconConfig().SecondsPerSlot)) * time.Second),
@@ -115,7 +130,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	bs := &Server{
 		HeadFetcher:        m,
 		GenesisTimeFetcher: m,
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 1)

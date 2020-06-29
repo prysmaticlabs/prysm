@@ -337,9 +337,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 }
 
 func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
-	defer resetCfg()
-
+	helpers.ClearCache()
 	db, sc := dbTest.SetupDB(t)
 	ctx := context.Background()
 	count := 100

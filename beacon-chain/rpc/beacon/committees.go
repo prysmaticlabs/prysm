@@ -43,14 +43,14 @@ func (bs *Server) ListBeaconCommittees(
 		)
 	}
 
-		committees, activeIndices, err := bs.retrieveCommitteesForEpoch(ctx, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve committees for epoch %d: %v",
-				requestedEpoch,
-				err,
-			)
+	committees, activeIndices, err := bs.retrieveCommitteesForEpoch(ctx, requestedEpoch)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve committees for epoch %d: %v",
+			requestedEpoch,
+			err,
+		)
 	}
 
 	return &ethpb.BeaconCommittees{
