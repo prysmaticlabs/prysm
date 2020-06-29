@@ -175,9 +175,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling check head state for chainservice")
 		cfg.CheckHeadState = true
 	}
-	if ctx.Bool(enableNoiseHandshake.Name) {
-		log.Warn("Enabling noise handshake for peer")
-		cfg.EnableNoise = true
+	cfg.EnableNoise = true
+	if ctx.Bool(disableNoiseHandshake.Name) {
+		log.Warn("Disabling noise handshake for peer")
+		cfg.EnableNoise = false
 	}
 	if ctx.Bool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
