@@ -1614,7 +1614,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
@@ -1662,7 +1662,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "deposit root did not verify"
-	_, err = blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	_, err = blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -1702,7 +1702,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
@@ -1772,7 +1772,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
@@ -1811,10 +1811,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	newState, err := blocks.ProcessDeposit(
-		beaconState,
-		dep[0],
-	)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true, )
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
@@ -1868,10 +1865,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposit(
-		beaconState,
-		dep[0],
-	)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true, )
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}

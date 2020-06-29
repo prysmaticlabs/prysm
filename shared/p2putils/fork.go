@@ -2,7 +2,6 @@
 package p2putils
 
 import (
-	log "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/pkg/errors"
@@ -31,8 +30,6 @@ func CreateForkDigest(
 	if err != nil {
 		return [4]byte{}, err
 	}
-
-	log.WithField("validator root", genesisValidatorsRoot).Error("Computing p2p digest")
 
 	digest, err := helpers.ComputeForkDigest(forkData.CurrentVersion, genesisValidatorsRoot)
 	if err != nil {

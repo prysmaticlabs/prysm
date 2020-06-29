@@ -6,11 +6,11 @@ package state
 import (
 	"context"
 	"fmt"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -96,12 +96,11 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		return nil, err
 	}
 
-	for i, deposit := range deposits {
-		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
-		}
+	state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
+
 	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data())
 }
 
