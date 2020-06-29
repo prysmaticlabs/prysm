@@ -22,6 +22,12 @@ var (
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
 			"This flag should be used for local development and testing only.",
 	}
+	// RPCMaxPageSizeFlag defines the maximum numbers per page returned in RPC responses from this
+	// beacon node (default: 500).
+	RPCMaxPageSizeFlag = &cli.IntFlag{
+		Name:  "rpc-max-page-size",
+		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
+	}
 	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = &cli.StringFlag{
 		Name:  "verbosity",
