@@ -278,7 +278,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 			return nil, status.Error(codes.Internal, "Could not get finalized block")
 		}
 	}
-	finalizedSlot := b.Block.Slot
 
 	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	if isGenesis(justifiedCheckpoint) {
@@ -289,7 +288,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 			return nil, status.Error(codes.Internal, "Could not get justified block")
 		}
 	}
-	justifiedSlot := b.Block.Slot
 
 	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	if isGenesis(prevJustifiedCheckpoint) {
@@ -300,19 +298,18 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 			return nil, status.Error(codes.Internal, "Could not get prev justified block")
 		}
 	}
-	prevJustifiedSlot := b.Block.Slot
 
 	return &ethpb.ChainHead{
 		HeadSlot:                   headBlock.Block.Slot,
 		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block.Slot),
 		HeadBlockRoot:              headBlockRoot[:],
-		FinalizedSlot:              finalizedSlot,
+		FinalizedSlot:              helpers.StartSlot(finalizedCheckpoint.Epoch),
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
 		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		JustifiedSlot:              justifiedSlot,
+		JustifiedSlot:              helpers.StartSlot(justifiedCheckpoint.Epoch,),
 		JustifiedEpoch:             justifiedCheckpoint.Epoch,
 		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      prevJustifiedSlot,
+		PreviousJustifiedSlot:      helpers.StartSlot(prevJustifiedCheckpoint.Epoch),
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
 	}, nil
