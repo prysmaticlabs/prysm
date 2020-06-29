@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"path"
+	"strings"
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -36,7 +37,8 @@ func TestStore_Backup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	files, err := ioutil.ReadDir(path.Join(db.databasePath, backupsDirectoryName))
+	dataDirEndIndex := strings.LastIndex(db.databasePath, "/")
+	files, err := ioutil.ReadDir(path.Join(db.databasePath[:dataDirEndIndex], backupsDirectoryName))
 	if err != nil {
 		t.Fatal(err)
 	}

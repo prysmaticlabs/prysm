@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,7 +22,8 @@ func (kv *Store) Backup(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Backup")
 	defer span.End()
 
-	backupsDir := path.Join(kv.databasePath, backupsDirectoryName)
+	dataDirEndIndex := strings.LastIndex(kv.databasePath, "/")
+	backupsDir := path.Join(kv.databasePath[:dataDirEndIndex], backupsDirectoryName)
 	head, err := kv.HeadBlock(ctx)
 	if err != nil {
 		return err
