@@ -111,6 +111,5 @@ go_test(
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
-        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
