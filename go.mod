@@ -60,6 +60,7 @@ require (
 	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/libp2p/go-libp2p-peerstore v0.2.4
 	github.com/libp2p/go-libp2p-pubsub v0.3.1
+	github.com/libp2p/go-libp2p-secio v0.2.2
 	github.com/libp2p/go-libp2p-swarm v0.2.5
 	github.com/libp2p/go-libp2p-tls v0.1.4-0.20200421131144-8a8ad624a291 // indirect
 	github.com/libp2p/go-libp2p-yamux v0.2.8 // indirect
@@ -115,6 +116,6 @@ require (
 	k8s.io/utils v0.0.0-20200520001619-278ece378a50 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200622172343-b50bad5c6f58
+replace github.com/ethereum/go-ethereum => github.com/prysmaticlabs/bazel-go-ethereum v0.0.0-20200626171358-a933315235ec
 
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b

@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -114,7 +115,7 @@ func (bs *Server) retrieveCommitteesForRoot(
 ) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, []uint64, error) {
 	requestedState, err := bs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
-		return nil, nil, status.Error(codes.Internal, "Could not get state")
+		return nil, nil, status.Error(codes.Internal, fmt.Sprintf("Could not get state: %v", err))
 	}
 	epoch := helpers.CurrentEpoch(requestedState)
 	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
@@ -149,7 +150,7 @@ func (bs *Server) retrieveCommitteesForEpochUsingOldArchival(
 	startSlot := helpers.StartSlot(epoch)
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	if helpers.SlotToEpoch(startSlot)+1 < currentEpoch {
-		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(helpers.SlotToEpoch(startSlot))
+		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(ctx, helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, nil, status.Errorf(
 				codes.Internal,
@@ -178,7 +179,7 @@ func (bs *Server) retrieveCommitteesForEpochUsingOldArchival(
 	} else if helpers.SlotToEpoch(startSlot)+1 == currentEpoch || helpers.SlotToEpoch(startSlot) == currentEpoch {
 		// Otherwise, we use current beacon state to calculate the committees.
 		requestedEpoch := helpers.SlotToEpoch(startSlot)
-		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(requestedEpoch)
+		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(ctx, requestedEpoch)
 		if err != nil {
 			return nil, nil, status.Errorf(
 				codes.Internal,
@@ -187,7 +188,7 @@ func (bs *Server) retrieveCommitteesForEpochUsingOldArchival(
 				err,
 			)
 		}
-		attesterSeed, err = bs.HeadFetcher.HeadSeed(requestedEpoch)
+		attesterSeed, err = bs.HeadFetcher.HeadSeed(ctx, requestedEpoch)
 		if err != nil {
 			return nil, nil, status.Errorf(
 				codes.Internal,
