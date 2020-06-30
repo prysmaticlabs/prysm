@@ -21,9 +21,12 @@ var log = logrus.WithField("prefix", "accounts-v2")
 type WalletType int
 
 const (
-	DirectWallet  WalletType = iota // Direct, on-disk wallet.
-	DerivedWallet                   // Derived, hierarchical-deterministic wallet.
-	RemoteWallet                    // Remote-signing wallet.
+	// DirectWallet defines an on-disk, encrypted keystore-capable wallet.
+	DirectWallet WalletType = iota
+	// DerivedWallet defines a hierarchical-deterministic wallet.
+	DerivedWallet
+	// RemoteWallet capable of remote-signing data.
+	RemoteWallet
 )
 
 const minPasswordLength = 8
