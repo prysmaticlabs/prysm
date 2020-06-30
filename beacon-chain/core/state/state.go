@@ -96,12 +96,11 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		return nil, err
 	}
 
-	for i, deposit := range deposits {
-		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
-		}
+	state, err = b.ProcessPreGenesisDeposits(context.Background(), state, deposits)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
+
 	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data())
 }
 
