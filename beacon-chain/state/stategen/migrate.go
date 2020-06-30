@@ -18,6 +18,10 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
 
+	if err := s.updateFinalizedInEpochStateCache(ctx, finalizedRoot); err != nil {
+		return err
+	}
+
 	// Verify migration is sensible. The new finalized point must increase the current split slot, and
 	// on an epoch boundary for hot state summary scheme to work.
 	currentSplitSlot := s.splitInfo.slot
@@ -65,9 +69,13 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 				lastArchivedIndex = recoveredIndex
 			}
 
-			if !s.beaconDB.HasState(ctx, r) {
+			if !s.epochStateCache.Has(r) {
 				continue
 			}
+			if err := s.beaconDB.SaveState(ctx, s.epochStateCache.Get(r), r); err != nil {
+				return err
+			}
+
 			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, archivedPointIndex); err != nil {
 				return err
 			}
@@ -79,24 +87,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 				"slot":         stateSummary.Slot,
 				"archiveIndex": archivedPointIndex,
 				"root":         hex.EncodeToString(bytesutil.Trunc(r[:])),
-			}).Info("Saved archived point during state migration")
-		} else {
-			// Do not delete the current finalized state in case user wants to
-			// switch back to old state service, deleting the recent finalized state
-			// could cause issue switching back.
-			lastArchivedIndexRoot := s.beaconDB.LastArchivedIndexRoot(ctx)
-			if s.beaconDB.HasState(ctx, r) && r != lastArchivedIndexRoot && r != finalizedRoot {
-				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
-					// For whatever reason if node is unable to delete a state due to
-					// state is finalized, it is more reasonable to continue than to exit.
-					log.Warnf("Unable to delete state during migration: %v", err)
-					continue
-				}
-				log.WithFields(logrus.Fields{
-					"slot": stateSummary.Slot,
-					"root": hex.EncodeToString(bytesutil.Trunc(r[:])),
-				}).Info("Deleted state during migration")
-			}
+			}).Info("Saved state during state migration")
 		}
 	}
 
@@ -153,4 +144,13 @@ func (s *State) recoverArchivedPoint(ctx context.Context, currentArchivedPoint u
 // This returns true if the last archived point was skipped.
 func skippedArchivedPoint(currentArchivedPoint uint64, lastArchivedPoint uint64) bool {
 	return currentArchivedPoint-lastArchivedPoint > 1
+}
+
+func (s *State) updateFinalizedInEpochStateCache(ctx context.Context, fRoot [32]byte) error {
+	fState, err := s.beaconDB.State(ctx, fRoot)
+	if err != nil {
+		return err
+	}
+	s.epochStateCache.PutFinalizedState(fRoot, fState)
+	return nil
 }
