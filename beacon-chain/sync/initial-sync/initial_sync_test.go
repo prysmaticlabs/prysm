@@ -183,7 +183,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			}()
 
 			req := &p2ppb.BeaconBlocksByRangeRequest{}
-			if err := peer.Encoding().DecodeWithLength(stream, req); err != nil {
+			if err := peer.Encoding().DecodeWithMaxLength(stream, req); err != nil {
 				t.Error(err)
 			}
 
@@ -194,7 +194,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 				if _, err := stream.Write([]byte{0x01}); err != nil {
 					t.Error(err)
 				}
-				if _, err := peer.Encoding().EncodeWithLength(stream, "bad"); err != nil {
+				if _, err := peer.Encoding().EncodeWithMaxLength(stream, "bad"); err != nil {
 					t.Error(err)
 				}
 				return
