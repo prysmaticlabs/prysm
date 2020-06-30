@@ -22,7 +22,7 @@ func BeaconFuzzDeposit(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessDeposit(st, input.Deposit)
+	post, err := blocks.ProcessDeposit(st, input.Deposit, true)
 	if err != nil {
 		return fail(err)
 	}
