@@ -9,6 +9,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
@@ -35,7 +36,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		}
 		return err
 	}
-	if _, err := s.p2p.Encoding().EncodeWithLength(stream, s.p2p.MetadataSeq()); err != nil {
+	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.MetadataSeq()); err != nil {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
 		}
@@ -81,6 +82,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	currentTime := roughtime.Now()
 	defer func() {
 		if err := stream.Reset(); err != nil {
 			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
@@ -91,13 +93,15 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	// Records the latency of the ping request for that peer.
+	s.p2p.Host().Peerstore().RecordLatency(id, roughtime.Now().Sub(currentTime))
 
 	if code != 0 {
 		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 	msg := new(uint64)
-	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())
