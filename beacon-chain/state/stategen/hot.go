@@ -25,8 +25,8 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveHotState")
 	defer span.End()
 
-	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
-	if s.hotStateCache.Has(blockRoot) {
+	// If the state is already in caches, one can be sure the state was processed.
+	if s.hotStateCache.Has(blockRoot) || s.epochStateCache.Has(blockRoot) {
 		return nil
 	}
 
@@ -57,16 +57,15 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateByRoot")
 	defer span.End()
 
-	// Load the state from hot state summary cache.
+	// Load the hot state from cache.
 	cachedState := s.hotStateCache.Get(blockRoot)
 	if cachedState != nil {
 		return cachedState, nil
 	}
 
-	// Load the state from epoch boundary cache.
-	epochBoundaryState := s.epochStateCache.Get(blockRoot)
-	if epochBoundaryState == nil {
-		return nil, errUnknownBoundaryState
+	// Load the epoch boundary state from cache.
+	if s.epochStateCache.Has(blockRoot) {
+		return s.epochStateCache.Get(blockRoot), nil
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
@@ -74,21 +73,34 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
+	// Since the hot state is not in cache nor DB, start replaying using the parent state which is
+	// retrieved using input block's parent root.
+	startState, err := s.lastAncestorState(ctx, blockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get ancestor state")
+	}
+	if startState == nil {
+		return nil, errUnknownBoundaryState
+	}
+
 	// Don't need to replay the blocks if start state is the same state for the block root.
 	var hotState *state.BeaconState
 	targetSlot := summary.Slot
-	if targetSlot == epochBoundaryState.Slot() {
-		hotState = epochBoundaryState
+	if targetSlot == startState.Slot() {
+		hotState = startState
 	} else {
-		blks, err := s.LoadBlocks(ctx, epochBoundaryState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
+		blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 		}
-		hotState, err = s.ReplayBlocks(ctx, epochBoundaryState, blks, targetSlot)
+		hotState, err = s.ReplayBlocks(ctx, startState, blks, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 		}
 	}
+
+	// Save the copied state because the reference also returned in the end.
+	s.hotStateCache.Put(blockRoot, hotState.Copy())
 
 	return hotState, nil
 }
@@ -144,8 +156,8 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 			return nil, ctx.Err()
 		}
 		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
-		if s.beaconDB.HasState(ctx, parentRoot) {
-			return s.beaconDB.State(ctx, parentRoot)
+		if s.epochStateCache.Has(parentRoot) {
+			return s.epochStateCache.Get(parentRoot), nil
 		}
 
 		b, err = s.beaconDB.Block(ctx, parentRoot)
