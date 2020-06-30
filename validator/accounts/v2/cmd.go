@@ -1,10 +1,10 @@
 package v2
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/urfave/cli/v2"
 )
 
 // Commands for accounts-v2 for Prysm validator clients.
@@ -23,7 +23,6 @@ contract in order to activate the validator client`,
 				[]cli.Flag{
 					flags.WalletDirFlag,
 					flags.WalletPasswordsDirFlag,
-					cmd.DataDirFlag, // TODO: Replace by wallet path
 				}...),
 			Action: New,
 		},
