@@ -3,15 +3,15 @@ package v2
 import (
 	"context"
 	"errors"
-	"io"
 	"os"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -108,21 +108,11 @@ func New(cliCtx *cli.Context) error {
 
 // Check if a user has an existing wallet at the specified path.
 func hasWalletDir(walletPath string) (bool, error) {
-	f, err := os.Open(walletPath)
-	if err != nil {
-		return false, err
+	_, err := os.Stat(walletPath)
+	if os.IsNotExist(err) {
+		return false, nil
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	items, err := f.Readdirnames(1)
-	if err == io.EOF {
-		return true, nil
-	}
-	// Either not empty or error, suits both cases.
-	return len(items) > 0, err
+	return true, err
 }
 
 func inputWalletDir(cliCtx *cli.Context) string {
