@@ -368,3 +368,10 @@ go_repository(
     sum = "h1:3l11YT8tm9MnwGFQ4kETwkzpAwY2Jt9lCrumCUW4+z4=",
     version = "v0.7.0",
 )
+
+go_repository(
+    name = "com_github_dustinkirkland_golang_petname",
+    importpath = "github.com/dustinkirkland/golang-petname",
+    sum = "h1:90Ly+6UfUypEF6vvvW5rQIv9opIL8CbmW9FT20LDQoY=",
+    version = "v0.0.0-20191129215211-8e5a1ed0cff0",
+)

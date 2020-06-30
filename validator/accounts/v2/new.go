@@ -69,6 +69,7 @@ func New(cliCtx *cli.Context) error {
 		walletConfig := &WalletConfig{
 			PasswordsDir: passwordsDirPath,
 			WalletDir:    walletPath,
+			WalletType:   walletType,
 		}
 		switch walletType {
 		case directWallet:
@@ -91,8 +92,9 @@ func New(cliCtx *cli.Context) error {
 	// Create a new validator account in the user's wallet.
 	// TODO(#6220): Implement by utilizing the wallet.keymanager.CreateAccount()
 	// method accordingly.
-	_ = wallet
-	_ = password
+	if err := wallet.CreateAccount(ctx, password); err != nil {
+		log.Fatalf("Could not create account in wallet: %v", err)
+	}
 	return nil
 }
 
