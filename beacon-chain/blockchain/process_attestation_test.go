@@ -27,7 +27,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	cfg := &Config{
 		BeaconDB:        db,
 		ForkChoiceStore: protoarray.New(0, 0, [32]byte{}),
-		StateGen:        stategen.New(db, sc),
+		StateGen:        stategen.New(ctx, db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -165,7 +165,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(ctx, db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -285,7 +285,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(ctx, db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {

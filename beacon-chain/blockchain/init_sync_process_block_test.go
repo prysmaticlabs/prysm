@@ -18,7 +18,7 @@ import (
 
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
-	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db, sc)}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(ctx, db, sc)}
 	service, err := NewService(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)

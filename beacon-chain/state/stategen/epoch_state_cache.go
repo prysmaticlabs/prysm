@@ -25,7 +25,7 @@ var (
 	})
 )
 
-// epochStateCache is used to store the processed beacon state after finalized check point..
+// epochStateCache is used to store the processed epoch boundary state and finalized state post finalization.
 type epochStateCache struct {
 	fRoot [32]byte
 	fState *stateTrie.BeaconState

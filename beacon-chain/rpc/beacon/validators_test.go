@@ -104,7 +104,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	}
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 	}
 
 	headState := testutil.NewBeaconState()
@@ -190,7 +190,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	}
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -231,7 +231,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -288,7 +288,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -383,7 +383,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -464,7 +464,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 
 	bs := &Server{
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
@@ -634,7 +634,7 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen: stategen.New(ctx, db, cache.NewStateSummaryCache()),
 	}
 	wanted := &ethpb.Validators{
 		ValidatorList: make([]*ethpb.Validators_ValidatorContainer, 0),
@@ -1358,7 +1358,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 	}
 	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
 		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Genesis{Genesis: true},
@@ -1891,7 +1891,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		HeadFetcher:          m,
 		ParticipationFetcher: m,
 		GenesisTimeFetcher:   &mock.ChainService{},
-		StateGen:             stategen.New(db, sc),
+		StateGen:             stategen.New(ctx, db, sc),
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
@@ -1934,7 +1934,7 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 		HeadFetcher:          m,
 		ParticipationFetcher: m,
 		GenesisTimeFetcher:   &mock.ChainService{},
-		StateGen:             stategen.New(db, sc),
+		StateGen:             stategen.New(ctx, db, sc),
 	}
 
 	wanted := "Participation information for epoch 0 is not yet available"
@@ -2423,7 +2423,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gen := stategen.New(db, sc)
+	gen := stategen.New(ctx, db, sc)
 	if err := gen.SaveState(ctx, gRoot, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -2551,7 +2551,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gen := stategen.New(db, sc)
+	gen := stategen.New(ctx, db, sc)
 	if err := gen.SaveState(ctx, gRoot, beaconState); err != nil {
 		t.Fatal(err)
 	}

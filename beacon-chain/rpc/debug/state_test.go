@@ -37,7 +37,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gen := stategen.New(db, sc)
+	gen := stategen.New(ctx, db, sc)
 	if err := gen.SaveState(ctx, gRoot, st); err != nil {
 		t.Fatal(err)
 	}

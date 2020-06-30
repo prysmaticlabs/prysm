@@ -146,7 +146,9 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	beacon.startStateGen()
+	if err := beacon.startStateGen(); err != nil {
+		return nil, err
+	}
 
 	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
@@ -312,8 +314,13 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen() {
-	b.stateGen = stategen.New(b.db, b.stateSummaryCache)
+func (b *BeaconNode) startStateGen() error {
+	var err error
+	b.stateGen, err = stategen.New(b.ctx, b.db, b.stateSummaryCache)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func readbootNodes(fileName string) ([]string, error) {

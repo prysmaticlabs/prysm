@@ -27,7 +27,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	s := &Service{
 		beaconDB: db,
 		head:     &head{root: [32]byte{'A'}},
-		stateGen: stategen.New(db, sc),
+		stateGen: stategen.New(ctx, db, sc),
 	}
 	go func() {
 		if err := s.saveHead(context.Background(), [32]byte{}); err != nil {
@@ -44,7 +44,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	s := &Service{
 		beaconDB: db,
 		head:     &head{block: &ethpb.SignedBeaconBlock{}},
-		stateGen: stategen.New(db, sc),
+		stateGen: stategen.New(ctx, db, sc),
 	}
 	go func() {
 		if err := s.saveHead(context.Background(), [32]byte{}); err != nil {
@@ -60,7 +60,7 @@ func TestHeadState_DataRace(t *testing.T) {
 	db, sc := testDB.SetupDB(t)
 	s := &Service{
 		beaconDB: db,
-		stateGen: stategen.New(db, sc),
+		stateGen: stategen.New(ctx, db, sc),
 	}
 	go func() {
 		if err := s.saveHead(context.Background(), [32]byte{}); err != nil {

@@ -17,7 +17,7 @@ func TestSaveColdState_NonArchivedPoint(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 2
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := beaconState.SetSlot(1); err != nil {
@@ -33,7 +33,7 @@ func TestSaveColdState_CanSave(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := beaconState.SetSlot(1); err != nil {
@@ -58,7 +58,7 @@ func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	if _, err := service.loadColdStateByRoot(ctx, [32]byte{'a'}); !strings.Contains(err.Error(), errUnknownStateSummary.Error()) {
 		t.Fatal("Did not get correct error")
 	}
@@ -68,7 +68,7 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -110,7 +110,7 @@ func TestLoadColdStateBySlot_CanGet(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}

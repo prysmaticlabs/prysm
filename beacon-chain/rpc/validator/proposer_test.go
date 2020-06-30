@@ -79,7 +79,7 @@ func TestGetBlock_OK(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db, sc),
+		StateGen:          stategen.New(ctx, db, sc),
 	}
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
@@ -198,7 +198,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		SlashingsPool:     slashings.NewPool(),
 		AttPool:           attestations.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db, sc),
+		StateGen:          stategen.New(ctx, db, sc),
 	}
 
 	// Generate a bunch of random attestations at slot. These would be considered double votes, but
@@ -358,7 +358,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		StateGen:          stategen.New(db, sc),
+		StateGen:          stategen.New(ctx, db, sc),
 	}
 
 	req := &ethpb.SignedBeaconBlock{

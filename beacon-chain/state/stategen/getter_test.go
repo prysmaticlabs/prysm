@@ -18,7 +18,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
@@ -68,7 +68,7 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -121,7 +121,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -145,7 +145,7 @@ func TestStateByRootInitialSync_UseDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -198,7 +198,7 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
@@ -221,7 +221,7 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -265,7 +265,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
 	service.splitInfo.slot = service.slotsPerArchivedPoint + 1
 
@@ -316,7 +316,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -348,7 +348,7 @@ func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 
 	r := [32]byte{'a'}
 	summary := &pb.StateSummary{Slot: 100}

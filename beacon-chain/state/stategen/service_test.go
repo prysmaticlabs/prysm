@@ -15,7 +15,7 @@ func TestResume(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	root := [32]byte{'A'}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {

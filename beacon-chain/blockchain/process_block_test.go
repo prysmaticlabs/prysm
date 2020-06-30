@@ -31,7 +31,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(ctx, db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -234,7 +234,7 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(ctx, db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -272,7 +272,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 
 	cfg := &Config{
 		BeaconDB: db,
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(ctx, db, sc),
 	}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
@@ -678,7 +678,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		if err := beaconState.SetCurrentJustifiedCheckpoint(test.args.stateCheckPoint); err != nil {
 			t.Fatal(err)
 		}
-		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(db, sc)})
+		service, err := NewService(ctx, &Config{BeaconDB: db, StateGen: stategen.New(ctx, db, sc)})
 		if err != nil {
 			t.Fatal(err)
 		}

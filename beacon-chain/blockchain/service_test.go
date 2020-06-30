@@ -116,7 +116,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database, sc *cache.StateSummary
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
-		StateGen:          stategen.New(beaconDB, sc),
+		StateGen:          stategen.New(ctx, beaconDB, sc),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
 		OpsService:        opsService,
 	}
@@ -329,7 +329,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	c := &Service{beaconDB: db, stateGen: stategen.New(db, sc)}
+	c := &Service{beaconDB: db, stateGen: stategen.New(ctx, db, sc)}
 	if err := c.initializeChainInfo(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -367,7 +367,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	ctx := context.Background()
 	s := &Service{
 		beaconDB: db,
-		stateGen: stategen.New(db, sc),
+		stateGen: stategen.New(ctx, db, sc),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, err := ssz.HashTreeRoot(b)

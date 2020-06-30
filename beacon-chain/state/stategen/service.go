@@ -26,6 +26,7 @@ type State struct {
 	hotStateCache           *cache.HotStateCache
 	splitInfo               *splitSlotAndRoot
 	stateSummaryCache       *cache.StateSummaryCache
+	epochStateCache         *epochStateCache
 }
 
 // This tracks the split point. The point where slot and the block root of
@@ -36,7 +37,16 @@ type splitSlotAndRoot struct {
 }
 
 // New returns a new state management object.
-func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
+func New(ctx context.Context, db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) (*State, error) {
+	f, err := db.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
+	fRoot := bytesutil.ToBytes32(f.Root)
+	fState, err := db.State(ctx, fRoot)
+	if err != nil {
+		return nil, err
+	}
 	return &State{
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
@@ -44,7 +54,8 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
-	}
+		epochStateCache: newEpochStateCache(fRoot, fState),
+	}, nil
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.

@@ -20,7 +20,7 @@ func TestMigrateToCold_NoBlock(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 1
 	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{}); err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 2
 	if err := service.MigrateToCold(ctx, 1, [32]byte{}); err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 1
 	service.slotsPerArchivedPoint = 2
 
@@ -111,7 +111,7 @@ func TestMigrateToCold_CantDeleteCurrentArchivedIndex(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.splitInfo.slot = 1
 	service.slotsPerArchivedPoint = 2
 
@@ -178,7 +178,7 @@ func TestMigrateToCold_CantDeleteCurrentArchivedIndex(t *testing.T) {
 func TestSkippedArchivedPoint_CanRecover(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(ctx, db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 32
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 31}}

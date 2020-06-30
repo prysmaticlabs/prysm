@@ -618,7 +618,7 @@ func TestServer_ListIndexedAttestations_NewStateManagnmentDisabled(t *testing.T)
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &chainMock.ChainService{State: state},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 	}
 	_, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
@@ -734,7 +734,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &chainMock.ChainService{State: state},
-		StateGen:           stategen.New(db, sc),
+		StateGen:           stategen.New(ctx, db, sc),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: targetRoot1[:],
@@ -855,7 +855,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 		GenesisTimeFetcher: &chainMock.ChainService{
 			Genesis: time.Now(),
 		},
-		StateGen: stategen.New(db, sc),
+		StateGen: stategen.New(ctx, db, sc),
 	}
 	if err := db.SaveStateSummary(ctx, &pbp2p.StateSummary{
 		Root: blockRoot[:],
@@ -1155,7 +1155,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		},
 		AttestationNotifier:         chainService.OperationNotifier(),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
-		StateGen:                    stategen.New(db, sc),
+		StateGen:                    stategen.New(ctx, db, sc),
 	}
 
 	for dataRoot, sameDataAtts := range atts {

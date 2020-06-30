@@ -186,7 +186,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(ctx, db, stateSummaryCache)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -284,7 +284,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stateGen := stategen.New(db, stateSummaryCache)
+	stateGen := stategen.New(ctx, db, stateSummaryCache)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(blkSlot*params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
