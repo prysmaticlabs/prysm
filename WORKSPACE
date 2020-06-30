@@ -354,24 +354,3 @@ load("@com_github_ethereum_go_ethereum//:deps.bzl", "geth_dependencies")
 geth_dependencies()
 
 # Do NOT add new go dependencies here! Refer to DEPENDENCIES.md!
-
-go_repository(
-    name = "com_github_juju_ansiterm",
-    importpath = "github.com/juju/ansiterm",
-    sum = "h1:FaWFmfWdAUKbSCtOU2QjDaorUexogfaMgbipgYATUMU=",
-    version = "v0.0.0-20180109212912-720a0952cc2a",
-)
-
-go_repository(
-    name = "com_github_manifoldco_promptui",
-    importpath = "github.com/manifoldco/promptui",
-    sum = "h1:3l11YT8tm9MnwGFQ4kETwkzpAwY2Jt9lCrumCUW4+z4=",
-    version = "v0.7.0",
-)
-
-go_repository(
-    name = "com_github_dustinkirkland_golang_petname",
-    importpath = "github.com/dustinkirkland/golang-petname",
-    sum = "h1:90Ly+6UfUypEF6vvvW5rQIv9opIL8CbmW9FT20LDQoY=",
-    version = "v0.0.0-20191129215211-8e5a1ed0cff0",
-)
