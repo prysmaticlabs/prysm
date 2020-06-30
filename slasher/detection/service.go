@@ -90,8 +90,7 @@ func (ds *Service) Start() {
 		// chain data since genesis.
 		ds.detectHistoricalChainData(ds.ctx)
 	}
-	logrus.Info("finished historical detection")
-	// We listen to a stream of blocks and attestations from the beacon node.
+]	// We listen to a stream of blocks and attestations from the beacon node.
 	go ds.beaconClient.ReceiveBlocks(ds.ctx)
 	go ds.beaconClient.ReceiveAttestations(ds.ctx)
 	// We subscribe to incoming blocks from the beacon node via
