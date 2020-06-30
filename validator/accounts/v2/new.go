@@ -1,15 +1,17 @@
 package v2
 
 import (
-	"bytes"
+	"context"
 	"errors"
-	"os"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
-	"github.com/prysmaticlabs/prysm/validator/flags"
+
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -24,16 +26,14 @@ const (
 	RemoteWallet                    // Remote-signing wallet.
 )
 
+const minPasswordLength = 8
+
 var walletTypeSelections = map[WalletType]string{
-	DirectWallet:  "Direct, On-Disk (Recommended)",
-	DerivedWallet: "Derived (Advanced)",
-	RemoteWallet:  "Remote (Advanced)",
+	DirectWallet:  "Direct, On-Disk Accounts (Recommended)",
+	DerivedWallet: "Derived Accounts (Advanced)",
+	RemoteWallet:  "Remote Accounts (Advanced)",
 }
 
-// Steps: ask for the path to store the validator datadir
-// Ask for the type of wallet: direct, derived, remote
-// Ask for where to store passwords: default path within datadir
-// Ask them to enter a password for the account.
 // If user already has account, instead just make a new account with a good name
 // Allow for creating more than 1 validator??
 // TODOS: mnemonic for withdrawal key, ensure they write it down.
@@ -41,38 +41,53 @@ func New(cliCtx *cli.Context) error {
 	// Read a wallet path and the desired type of wallet for a user
 	// (e.g.: Direct, Keystore, Derived).
 	walletPath := inputWalletPath(cliCtx)
-	walletType := inputWalletType(cliCtx)
-	_ = walletType
+
+	ctx := context.Background()
+	// Check if the user has a wallet at the specified path.
+	// If a user does not have a wallet, we instantiate one
+	// based on specified options.
+	if hasWallet(walletPath) {
+		// Read the wallet from the specified path.
+		// Instantiate the wallet's keymanager from the wallet's
+		// configuration file.
+	} else {
+		// We create a new account for the user given a wallet.
+		walletType := inputWalletType(cliCtx)
+
+		// Read the directory for password storage from user input.
+		passwordsDirPath := inputPasswordsDirectory(cliCtx)
+
+		// Open the wallet and password directories for writing.
+		walletConfig := &WalletConfig{
+			PasswordsDir: passwordsDirPath,
+			WalletDir:    walletPath,
+		}
+		switch walletType {
+		case DirectWallet:
+			directKeymanager := direct.NewKeymanager(ctx, direct.DefaultConfig())
+			walletConfig.Keymanager = directKeymanager
+		case DerivedWallet:
+			log.Fatal("Derived wallets are unimplemented, work in progress")
+		case RemoteWallet:
+			log.Fatal("Remote wallets are unimplemented, work in progress")
+		}
+		if err := CreateWallet(ctx, walletConfig); err != nil {
+			log.Fatalf("Could not create direct wallet: %v", err)
+		}
+	}
 
 	// Read the account password from user input.
 	password := inputAccountPassword(cliCtx)
+
+	// Create a new validator account in the user's wallet.
+	// TODO(#6220): Implement by utilizing the appropriate keymanager's
+	// CreateAccount() method accordingly.
 	_ = password
-
-	// Read the directory for password storage from user input.
-	passwordsDirPath := inputPasswordsDirectory(cliCtx)
-	_ = passwordsDirPath
-
-	// Open the wallet and password directories for writing.
-	os.MkdirAll(walletPath, os.ModeDir)
-	os.MkdirAll(passwordsDirPath, os.ModeDir)
-	switch walletType {
-	case DirectWallet:
-		if err := CreateDirectWallet(bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{}), password); err != nil {
-			log.Fatalf("Could not create direct wallet: %v", err)
-		}
-		// TODO: Create a new direct account.
-	case DerivedWallet:
-		if err := CreateDerivedWallet(bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{}), password); err != nil {
-			log.Fatalf("Could not create derived wallet: %v", err)
-		}
-		// TODO: Create a new derived account.
-	case RemoteWallet:
-		if err := CreateRemoteWallet(bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{}), password); err != nil {
-			log.Fatalf("Could not create remote wallet: %v", err)
-		}
-		// TODO: Create a new remote account.
-	}
 	return nil
+}
+
+func hasWallet(walletPath string) bool {
+	return false
 }
 
 func inputWalletPath(cliCtx *cli.Context) string {
@@ -152,7 +167,7 @@ func validatePasswordInput(input string) error {
 		hasNumber  = false
 		hasSpecial = false
 	)
-	if len(input) >= 8 {
+	if len(input) >= minPasswordLength {
 		hasMinLen = true
 	}
 	for _, char := range input {
