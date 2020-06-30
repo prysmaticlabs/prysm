@@ -36,7 +36,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 		}
 		return err
 	}
-	if _, err := s.p2p.Encoding().EncodeWithLength(stream, s.p2p.MetadataSeq()); err != nil {
+	if _, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.MetadataSeq()); err != nil {
 		if err := stream.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stream")
 		}
@@ -101,7 +101,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		return errors.New(errMsg)
 	}
 	msg := new(uint64)
-	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
 	valid, err := s.validateSequenceNum(*msg, stream.Conn().RemotePeer())

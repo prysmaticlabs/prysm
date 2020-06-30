@@ -54,7 +54,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
 			res := &ethpb.SignedBeaconBlock{}
-			if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+			if err := r.p2p.Encoding().DecodeWithMaxLength(stream, res); err != nil {
 				t.Error(err)
 			}
 			if (res.Block.Slot-req.StartSlot)%req.Step != 0 {
@@ -121,7 +121,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 		for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
 			res := &ethpb.SignedBeaconBlock{}
-			if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+			if err := r.p2p.Encoding().DecodeWithMaxLength(stream, res); err != nil {
 				t.Error(err)
 			}
 			if res.Block.Slot < prevSlot {
@@ -188,7 +188,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		// check for genesis block
 		expectSuccess(t, r, stream)
 		res := &ethpb.SignedBeaconBlock{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, res); err != nil {
 			t.Error(err)
 		}
 		if res.Block.Slot != 0 {
@@ -197,7 +197,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		for i := req.StartSlot + req.Step; i < req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
 			res := &ethpb.SignedBeaconBlock{}
-			if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+			if err := r.p2p.Encoding().DecodeWithMaxLength(stream, res); err != nil {
 				t.Error(err)
 			}
 		}
@@ -243,7 +243,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			for i := req.StartSlot; i < req.StartSlot+req.Count*req.Step; i += req.Step {
 				expectSuccess(t, r, stream)
 				res := &ethpb.SignedBeaconBlock{}
-				if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
+				if err := r.p2p.Encoding().DecodeWithMaxLength(stream, res); err != nil {
 					t.Error(err)
 				}
 				if (res.Block.Slot-req.StartSlot)%req.Step != 0 {
