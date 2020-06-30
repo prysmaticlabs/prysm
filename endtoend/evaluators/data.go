@@ -13,7 +13,7 @@ import (
 var ColdStateCheckpoint = types.Evaluator{
 	Name: "cold_state_assignments_for_epoch_5_from_epoch_%d",
 	Policy: func(currentEpoch uint64) bool {
-		return currentEpoch == 50 // must be at least 32
+		return currentEpoch == 50 // must be more than 46 (32 hot states + 16 chkpt interval)
 	},
 	Evaluation: checkColdStateCheckpoint,
 }
