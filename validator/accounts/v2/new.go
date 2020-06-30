@@ -38,7 +38,10 @@ var walletTypeSelections = map[WalletType]string{
 func New(cliCtx *cli.Context) error {
 	// Read a wallet path and the desired type of wallet for a user
 	// (e.g.: Direct, Keystore, Derived).
-	walletPath := inputWalletPath(cliCtx)
+	walletDir := inputWalletPath(cliCtx)
+
+	// Read the directory for password storage from user input.
+	passwordsDirPath := inputPasswordsDirectory(cliCtx)
 
 	ctx := context.Background()
 	// Check if the user has a wallet at the specified path.
@@ -46,29 +49,29 @@ func New(cliCtx *cli.Context) error {
 	// based on specified options.
 	var wallet *Wallet
 	var err error
-	ok, err := hasWalletDir(walletPath)
+	ok, err := hasWalletDir(walletDir)
 	if err != nil {
-		log.Fatalf("Could not check if wallet exists at %s: %v", walletPath, err)
+		log.Fatalf("Could not check if wallet exists at %s: %v", walletDir, err)
 	}
 	if ok {
 		// Read the wallet from the specified path.
 		// Instantiate the wallet's keymanager from the wallet's
 		// configuration file.
-		wallet, err = ReadWallet(ctx, walletPath)
+		wallet, err = ReadWallet(ctx, &WalletConfig{
+			PasswordsDir: passwordsDirPath,
+			WalletDir:    walletDir,
+		})
 		if err != nil {
-			log.Fatalf("Could not read wallet at specified path %s: %v", walletPath, err)
+			log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 		}
 	} else {
 		// We create a new account for the user given a wallet.
 		walletType := inputWalletType(cliCtx)
 
-		// Read the directory for password storage from user input.
-		passwordsDirPath := inputPasswordsDirectory(cliCtx)
-
 		// Open the wallet and password directories for writing.
 		walletConfig := &WalletConfig{
 			PasswordsDir: passwordsDirPath,
-			WalletDir:    walletPath,
+			WalletDir:    walletDir,
 			WalletType:   walletType,
 		}
 		switch walletType {
@@ -82,7 +85,7 @@ func New(cliCtx *cli.Context) error {
 		}
 		wallet, err = CreateWallet(ctx, walletConfig)
 		if err != nil {
-			log.Fatalf("Could not create wallet at specified path %s: %v", walletPath, err)
+			log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
 		}
 	}
 
@@ -109,12 +112,12 @@ func hasWalletDir(walletPath string) (bool, error) {
 			log.Fatal(err)
 		}
 	}()
-	_, err = f.Readdirnames(1)
+	items, err := f.Readdirnames(1)
 	if err == io.EOF {
 		return true, nil
 	}
 	// Either not empty or error, suits both cases.
-	return false, err
+	return len(items) > 0, err
 }
 
 func inputWalletPath(cliCtx *cli.Context) string {
@@ -149,7 +152,7 @@ func inputWalletType(_ *cli.Context) WalletType {
 
 func inputAccountPassword(_ *cli.Context) string {
 	prompt := promptui.Prompt{
-		Label:    "Strong password",
+		Label:    "New account password",
 		Validate: validatePasswordInput,
 		Mask:     '*',
 	}
@@ -176,7 +179,7 @@ func inputAccountPassword(_ *cli.Context) string {
 func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
 	prompt := promptui.Prompt{
-		Label:    "Enter the directory where passwords will be stored",
+		Label:    "Passwords directory",
 		Validate: validateDirectoryPath,
 		Default:  passwordsDir,
 	}

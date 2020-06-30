@@ -32,5 +32,5 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 
 // ConfigFile --
 func (dr *Keymanager) ConfigFile(ctx context.Context) ([]byte, error) {
-	return nil, errors.New("unimplemented")
+	return nil, nil
 }
