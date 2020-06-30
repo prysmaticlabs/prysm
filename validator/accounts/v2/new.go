@@ -21,24 +21,26 @@ var log = logrus.WithField("prefix", "accounts-v2")
 type WalletType int
 
 const (
-	directWallet  WalletType = iota // Direct, on-disk wallet.
-	derivedWallet                   // Derived, hierarchical-deterministic wallet.
-	remoteWallet                    // Remote-signing wallet.
+	DirectWallet  WalletType = iota // Direct, on-disk wallet.
+	DerivedWallet                   // Derived, hierarchical-deterministic wallet.
+	RemoteWallet                    // Remote-signing wallet.
 )
 
 const minPasswordLength = 8
 
 var walletTypeSelections = map[WalletType]string{
-	directWallet:  "Direct, On-Disk Accounts (Recommended)",
-	derivedWallet: "Derived Accounts (Advanced)",
-	remoteWallet:  "Remote Accounts (Advanced)",
+	DirectWallet:  "Direct, On-Disk Accounts (Recommended)",
+	DerivedWallet: "Derived Accounts (Advanced)",
+	RemoteWallet:  "Remote Accounts (Advanced)",
 }
 
-// New --
+// New creates a new validator account from user input. If a user
+// does not have an initialized wallet at the specified wallet path, this
+// method will create a new wallet and ask user for input for their new wallet's
+// available options.
 func New(cliCtx *cli.Context) error {
-	// Read a wallet path and the desired type of wallet for a user
-	// (e.g.: Direct, Keystore, Derived).
-	walletDir := inputWalletPath(cliCtx)
+	// Read a wallet's directory from user input.
+	walletDir := inputWalletDir(cliCtx)
 
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
@@ -65,22 +67,23 @@ func New(cliCtx *cli.Context) error {
 			log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 		}
 	} else {
-		// We create a new account for the user given a wallet.
+		// Determine the desired wallet type from user input.
 		walletType := inputWalletType(cliCtx)
 
-		// Open the wallet and password directories for writing.
 		walletConfig := &WalletConfig{
 			PasswordsDir: passwordsDirPath,
 			WalletDir:    walletDir,
 			WalletType:   walletType,
 		}
+		// We initialize a new keymanager depending on the user's desired
+		// wallet type accordingly.
 		switch walletType {
-		case directWallet:
+		case DirectWallet:
 			directKeymanager := direct.NewKeymanager(ctx, direct.DefaultConfig())
 			walletConfig.Keymanager = directKeymanager
-		case derivedWallet:
+		case DerivedWallet:
 			log.Fatal("Derived wallets are unimplemented, work in progress")
-		case remoteWallet:
+		case RemoteWallet:
 			log.Fatal("Remote wallets are unimplemented, work in progress")
 		}
 		wallet, err = CreateWallet(ctx, walletConfig)
@@ -89,12 +92,11 @@ func New(cliCtx *cli.Context) error {
 		}
 	}
 
-	// Read the account password from user input.
+	// Read the new account's password from user input.
 	password := inputAccountPassword(cliCtx)
 
 	// Create a new validator account in the user's wallet.
-	// TODO(#6220): Implement by utilizing the wallet.keymanager.CreateAccount()
-	// method accordingly.
+	// TODO(#6220): Implement.
 	if err := wallet.CreateAccount(ctx, password); err != nil {
 		log.Fatalf("Could not create account in wallet: %v", err)
 	}
@@ -120,7 +122,7 @@ func hasWalletDir(walletPath string) (bool, error) {
 	return len(items) > 0, err
 }
 
-func inputWalletPath(cliCtx *cli.Context) string {
+func inputWalletDir(cliCtx *cli.Context) string {
 	datadir := cliCtx.String(flags.WalletDirFlag.Name)
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
@@ -138,9 +140,9 @@ func inputWalletType(_ *cli.Context) WalletType {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			walletTypeSelections[directWallet],
-			walletTypeSelections[derivedWallet],
-			walletTypeSelections[remoteWallet],
+			walletTypeSelections[DirectWallet],
+			walletTypeSelections[DerivedWallet],
+			walletTypeSelections[RemoteWallet],
 		},
 	}
 	selection, _, err := promptSelect.Run()
@@ -190,6 +192,9 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	return passwordsPath
 }
 
+// Validate a strong password input for new accounts,
+// including a min length, at least 1 number and at least
+// 1 special character.
 func validatePasswordInput(input string) error {
 	var (
 		hasMinLen  = false

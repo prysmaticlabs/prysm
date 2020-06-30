@@ -9,7 +9,10 @@ go_library(
         "wallet.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2",
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//validator:__pkg__",
+        "//validator:__subpackages__",
+    ],
     deps = [
         "//shared/featureconfig:go_default_library",
         "//validator/flags:go_default_library",

@@ -14,12 +14,13 @@ import (
 const keymanagerConfigSuffix = "_keymanageropts.json"
 
 var keymanagerPrefixes = map[WalletType]string{
-	directWallet:  "direct",
-	derivedWallet: "derived",
-	remoteWallet:  "remoteWallet",
+	DirectWallet:  "direct",
+	DerivedWallet: "derived",
+	RemoteWallet:  "remoteWallet",
 }
 
-// WalletConfig --
+// WalletConfig for a wallet struct, containing important information
+// such as the passwords directory, the wallet's directory, and keymanager.
 type WalletConfig struct {
 	PasswordsDir string
 	WalletDir    string
@@ -27,7 +28,10 @@ type WalletConfig struct {
 	Keymanager   v2keymanager.IKeymanager
 }
 
-// Wallet --
+// Wallet is a primitive in Prysm's v2 account management which
+// has the capability of creating new accounts, reading existing accounts,
+// and providing secure access to eth2 secrets depending on an
+// associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
 	walletPath   string
 	passwordsDir string
@@ -65,7 +69,7 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 // struct from a keymanager configuration file at the wallet's path.
 func ReadWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	walletPath := path.Join(cfg.WalletDir, keymanagerPrefixes[cfg.WalletType])
-	exists, err := fileSuffixExists(path.Join(walletPath, "*_keymanageropts.json"))
+	exists, err := fileSuffixExists(path.Join(walletPath, "*"+keymanagerConfigSuffix))
 	if err != nil {
 		return nil, fmt.Errorf("could not check keymanager config file exists at path: %s", walletPath)
 	}
@@ -138,8 +142,9 @@ func (w *Wallet) writeKeymanagerConfig(ctx context.Context) error {
 	return nil
 }
 
-func fileSuffixExists(filename string) (bool, error) {
-	matches, err := filepath.Glob(filename)
+// Checks if a file suffix matches any files at a file path.
+func fileSuffixExists(filePath string) (bool, error) {
+	matches, err := filepath.Glob(filePath)
 	if err != nil {
 		return false, err
 	}
