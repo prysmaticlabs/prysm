@@ -15,11 +15,7 @@ import (
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) bool {
-	if s.hotStateCache.Has(blockRoot) {
-		return true
-	}
-
-	return s.beaconDB.HasState(ctx, blockRoot)
+	return s.hotStateCache.Has(blockRoot) || s.epochStateCache.Has(blockRoot) || s.beaconDB.HasState(ctx, blockRoot)
 }
 
 // This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,
@@ -34,14 +30,12 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 		return nil
 	}
 
-	// Only on an epoch boundary slot, saves the whole state.
+	// Only on an epoch boundary slot, saves beacon state in epoch boundary cache.
 	if helpers.IsEpochStart(state.Slot()) {
-		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
-			return err
-		}
+		s.epochStateCache.PutEpochBoundaryState(blockRoot, state)
 		log.WithFields(logrus.Fields{
 			"slot":      state.Slot(),
-			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on epoch boundary")
+			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Cached epoch boundary state")
 	}
 
 	// On an intermediate slots, save the hot state summary.
@@ -63,15 +57,16 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateByRoot")
 	defer span.End()
 
-	// Load the hot state from cache.
+	// Load the state from hot state summary cache.
 	cachedState := s.hotStateCache.Get(blockRoot)
 	if cachedState != nil {
 		return cachedState, nil
 	}
 
-	// Load the hot state from DB.
-	if s.beaconDB.HasState(ctx, blockRoot) {
-		return s.beaconDB.State(ctx, blockRoot)
+	// Load the state from epoch boundary cache.
+	epochBoundaryState := s.epochStateCache.Get(blockRoot)
+	if epochBoundaryState == nil {
+		return nil, errUnknownBoundaryState
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
@@ -79,34 +74,21 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
-	// Since the hot state is not in cache nor DB, start replaying using the parent state which is
-	// retrieved using input block's parent root.
-	startState, err := s.lastAncestorState(ctx, blockRoot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get ancestor state")
-	}
-	if startState == nil {
-		return nil, errUnknownBoundaryState
-	}
-
 	// Don't need to replay the blocks if start state is the same state for the block root.
 	var hotState *state.BeaconState
 	targetSlot := summary.Slot
-	if targetSlot == startState.Slot() {
-		hotState = startState
+	if targetSlot == epochBoundaryState.Slot() {
+		hotState = epochBoundaryState
 	} else {
-		blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
+		blks, err := s.LoadBlocks(ctx, epochBoundaryState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 		}
-		hotState, err = s.ReplayBlocks(ctx, startState, blks, targetSlot)
+		hotState, err = s.ReplayBlocks(ctx, epochBoundaryState, blks, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 		}
 	}
-
-	// Save the copied state because the reference also returned in the end.
-	s.hotStateCache.Put(blockRoot, hotState.Copy())
 
 	return hotState, nil
 }
