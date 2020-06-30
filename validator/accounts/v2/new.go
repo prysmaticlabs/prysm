@@ -48,7 +48,7 @@ func New(cliCtx *cli.Context) error {
 	var err error
 	ok, err := hasWalletDir(walletPath)
 	if err != nil {
-		log.Fatal("Could not check if wallet exists at %s: %v", walletPath, err)
+		log.Fatalf("Could not check if wallet exists at %s: %v", walletPath, err)
 	}
 	if ok {
 		// Read the wallet from the specified path.

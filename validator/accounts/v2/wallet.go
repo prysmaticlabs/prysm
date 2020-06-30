@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"errors"
 
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
@@ -27,5 +28,5 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 
 // ReadWallet --
 func ReadWallet(ctx context.Context, walletPath string) (*Wallet, error) {
-	return &Wallet{}, nil
+	return &Wallet{}, errors.New("unimplemented")
 }
