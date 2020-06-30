@@ -15,7 +15,7 @@ type DirectConfig struct{}
 // Keymanager implementation for direct keystores.
 type Keymanager struct{}
 
-// DefaultDirectConfig for a direct keymanager implementation.
+// DefaultConfig for a direct keymanager implementation.
 func DefaultConfig() *DirectConfig {
 	return &DirectConfig{}
 }
@@ -30,6 +30,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	return errors.New("unimplemented")
 }
 
+// ConfigFile --
 func (dr *Keymanager) ConfigFile(ctx context.Context) ([]byte, error) {
 	return nil, errors.New("unimplemented")
 }
