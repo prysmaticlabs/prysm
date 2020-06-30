@@ -26,7 +26,6 @@ func checkColdStateCheckpoint(conns ...*grpc.ClientConn) error {
 	client := eth.NewBeaconChainClient(conns[0])
 
 	for i := uint64(0); i < epochToCheck; i++ {
-		// This request for epoch 24 should use the cold state checkpoint from epoch 16.
 		res, err := client.ListValidatorAssignments(ctx, &eth.ListValidatorAssignmentsRequest{
 			QueryFilter: &eth.ListValidatorAssignmentsRequest_Epoch{Epoch: i},
 		})
