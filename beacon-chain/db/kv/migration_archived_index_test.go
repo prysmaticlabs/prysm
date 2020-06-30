@@ -3,18 +3,18 @@ package kv
 import (
 	"bytes"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.etcd.io/bbolt"
 )
 
 func Test_archivedIndexMigration(t *testing.T) {
 	tests := []struct {
-		name    string
-		setup   func(t *testing.T, db *bbolt.DB)
-		eval    func(t *testing.T, db *bbolt.DB)
+		name  string
+		setup func(t *testing.T, db *bbolt.DB)
+		eval  func(t *testing.T, db *bbolt.DB)
 	}{
 		{
 			name: "only runs once",
