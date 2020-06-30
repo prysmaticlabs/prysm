@@ -592,7 +592,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 
 func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
-
+	params.UseMainnetConfig()
 	genBlock := testutil.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	if err := db.SaveBlock(context.Background(), genBlock); err != nil {
@@ -607,7 +607,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	finalizedBlock := testutil.NewBeaconBlock()
-	finalizedBlock.Block.Slot = 1
+	finalizedBlock.Block.Slot = 32
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
 	if err := db.SaveBlock(context.Background(), finalizedBlock); err != nil {
 		t.Fatal(err)
@@ -618,7 +618,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	justifiedBlock := testutil.NewBeaconBlock()
-	justifiedBlock.Block.Slot = 2
+	justifiedBlock.Block.Slot = 64
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, 32)
 	if err := db.SaveBlock(context.Background(), justifiedBlock); err != nil {
 		t.Fatal(err)
@@ -629,7 +629,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	}
 
 	prevJustifiedBlock := testutil.NewBeaconBlock()
-	prevJustifiedBlock.Block.Slot = 3
+	prevJustifiedBlock.Block.Slot = 96
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, 32)
 	if err := db.SaveBlock(context.Background(), prevJustifiedBlock); err != nil {
 		t.Fatal(err)
@@ -676,13 +676,13 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			HeadSlot:                   b.Block.Slot,
 			HeadEpoch:                  helpers.SlotToEpoch(b.Block.Slot),
 			HeadBlockRoot:              hRoot[:],
-			FinalizedSlot:              1,
+			FinalizedSlot:              32,
 			FinalizedEpoch:             1,
 			FinalizedBlockRoot:         fRoot[:],
-			JustifiedSlot:              2,
+			JustifiedSlot:              64,
 			JustifiedEpoch:             2,
 			JustifiedBlockRoot:         jRoot[:],
-			PreviousJustifiedSlot:      3,
+			PreviousJustifiedSlot:      96,
 			PreviousJustifiedEpoch:     3,
 			PreviousJustifiedBlockRoot: pjRoot[:],
 		},
