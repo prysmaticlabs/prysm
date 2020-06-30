@@ -110,11 +110,13 @@ var (
 		Usage: "Filepath to a JSON file of unencrypted validator keys for easier launching of the validator client",
 		Value: "",
 	}
+	// WalletDirFlag --
 	WalletDirFlag = &cli.StringFlag{
 		Name:  "wallet-dir",
 		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
 		Value: cmd.DefaultDataDir() + "/.prysm-wallet",
 	}
+	// WalletPasswordsDirFlag --
 	WalletPasswordsDirFlag = &cli.StringFlag{
 		Name:  "passwords-dir",
 		Usage: "Path to a directory on-disk where wallet passwords are stored",

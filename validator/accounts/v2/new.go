@@ -21,17 +21,17 @@ var log = logrus.WithField("prefix", "accounts-v2")
 type WalletType int
 
 const (
-	DirectWallet  WalletType = iota // Direct, on-disk wallet.
-	DerivedWallet                   // Derived, hierarchical-deterministic wallet.
-	RemoteWallet                    // Remote-signing wallet.
+	directWallet  WalletType = iota // Direct, on-disk wallet.
+	derivedWallet                   // Derived, hierarchical-deterministic wallet.
+	remoteWallet                    // Remote-signing wallet.
 )
 
 const minPasswordLength = 8
 
 var walletTypeSelections = map[WalletType]string{
-	DirectWallet:  "Direct, On-Disk Accounts (Recommended)",
-	DerivedWallet: "Derived Accounts (Advanced)",
-	RemoteWallet:  "Remote Accounts (Advanced)",
+	directWallet:  "Direct, On-Disk Accounts (Recommended)",
+	derivedWallet: "Derived Accounts (Advanced)",
+	remoteWallet:  "Remote Accounts (Advanced)",
 }
 
 // New --
@@ -71,12 +71,12 @@ func New(cliCtx *cli.Context) error {
 			WalletDir:    walletPath,
 		}
 		switch walletType {
-		case DirectWallet:
+		case directWallet:
 			directKeymanager := direct.NewKeymanager(ctx, direct.DefaultConfig())
 			walletConfig.Keymanager = directKeymanager
-		case DerivedWallet:
+		case derivedWallet:
 			log.Fatal("Derived wallets are unimplemented, work in progress")
-		case RemoteWallet:
+		case remoteWallet:
 			log.Fatal("Remote wallets are unimplemented, work in progress")
 		}
 		wallet, err = CreateWallet(ctx, walletConfig)
@@ -133,9 +133,9 @@ func inputWalletType(_ *cli.Context) WalletType {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			walletTypeSelections[DirectWallet],
-			walletTypeSelections[DerivedWallet],
-			walletTypeSelections[RemoteWallet],
+			walletTypeSelections[directWallet],
+			walletTypeSelections[derivedWallet],
+			walletTypeSelections[remoteWallet],
 		},
 	}
 	selection, _, err := promptSelect.Run()

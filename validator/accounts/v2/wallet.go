@@ -14,6 +14,7 @@ type WalletConfig struct {
 	Keymanager   v2keymanager.IKeymanager
 }
 
+// Wallet --
 type Wallet struct {
 	keymanager v2keymanager.IKeymanager
 }
