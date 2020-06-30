@@ -25,7 +25,7 @@ func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream l
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := s.p2p.Encoding().EncodeWithLength(stream, s.p2p.Metadata())
+	_, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.Metadata())
 	return err
 }
 
@@ -54,7 +54,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 		return nil, errors.New(errMsg)
 	}
 	msg := new(pb.MetaData)
-	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil

@@ -80,7 +80,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != failureCode {
@@ -127,7 +127,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != failureCode {
