@@ -9,19 +9,19 @@ import (
 
 var log = logrus.WithField("prefix", "keymanager-v2")
 
-// DirectConfig --
-type DirectConfig struct{}
+// Config --
+type Config struct{}
 
 // Keymanager implementation for direct keystores.
 type Keymanager struct{}
 
 // DefaultConfig for a direct keymanager implementation.
-func DefaultConfig() *DirectConfig {
-	return &DirectConfig{}
+func DefaultConfig() *Config {
+	return &Config{}
 }
 
 // NewKeymanager --
-func NewKeymanager(ctx context.Context, cfg *DirectConfig) *Keymanager {
+func NewKeymanager(ctx context.Context, cfg *Config) *Keymanager {
 	return &Keymanager{}
 }
 
