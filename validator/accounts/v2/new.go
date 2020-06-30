@@ -1,17 +1,15 @@
 package v2
 
 import (
+	"bytes"
 	"errors"
-	"io"
+	"os"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-
-	logrus "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -26,6 +24,12 @@ const (
 	RemoteWallet                    // Remote-signing wallet.
 )
 
+var walletTypeSelections = map[WalletType]string{
+	DirectWallet:  "Direct, On-Disk (Recommended)",
+	DerivedWallet: "Derived (Advanced)",
+	RemoteWallet:  "Remote (Advanced)",
+}
+
 // Steps: ask for the path to store the validator datadir
 // Ask for the type of wallet: direct, derived, remote
 // Ask for where to store passwords: default path within datadir
@@ -34,10 +38,9 @@ const (
 // Allow for creating more than 1 validator??
 // TODOS: mnemonic for withdrawal key, ensure they write it down.
 func New(cliCtx *cli.Context) error {
+	// Read a wallet path and the desired type of wallet for a user
+	// (e.g.: Direct, Keystore, Derived).
 	walletPath := inputWalletPath(cliCtx)
-	_ = walletPath
-
-	// Determine the type of wallet for a user (e.g.: Direct, Keystore, Derived).
 	walletType := inputWalletType(cliCtx)
 	_ = walletType
 
@@ -46,11 +49,29 @@ func New(cliCtx *cli.Context) error {
 	_ = password
 
 	// Read the directory for password storage from user input.
-	passwordDirPath := inputPasswordsDirectory(cliCtx)
-	_ = passwordDirPath
+	passwordsDirPath := inputPasswordsDirectory(cliCtx)
+	_ = passwordsDirPath
 
 	// Open the wallet and password directories for writing.
-	//createWalletPath()
+	os.MkdirAll(walletPath, os.ModeDir)
+	os.MkdirAll(passwordsDirPath, os.ModeDir)
+	switch walletType {
+	case DirectWallet:
+		if err := CreateDirectWallet(bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{}), password); err != nil {
+			log.Fatalf("Could not create direct wallet: %v", err)
+		}
+		// TODO: Create a new direct account.
+	case DerivedWallet:
+		if err := CreateDerivedWallet(bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{}), password); err != nil {
+			log.Fatalf("Could not create derived wallet: %v", err)
+		}
+		// TODO: Create a new derived account.
+	case RemoteWallet:
+		if err := CreateRemoteWallet(bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{}), password); err != nil {
+			log.Fatalf("Could not create remote wallet: %v", err)
+		}
+		// TODO: Create a new remote account.
+	}
 	return nil
 }
 
@@ -72,9 +93,9 @@ func inputWalletType(_ *cli.Context) WalletType {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			"Direct, On-Disk (Recommended)",
-			"Derived (Advanced)",
-			"Remote (Advanced)",
+			walletTypeSelections[DirectWallet],
+			walletTypeSelections[DerivedWallet],
+			walletTypeSelections[RemoteWallet],
 		},
 	}
 	selection, _, err := promptSelect.Run()
@@ -122,17 +143,6 @@ func inputPasswordsDirectory(cliCtx *cli.Context) string {
 		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
 	}
 	return passwordsPath
-}
-
-func createWalletPath(walletWriter io.Writer, passwordsWriter io.Writer, password string) {
-	key := bls.RandKey()
-	encryptor := keystorev4.New()
-	keystore, err := encryptor.Encrypt(key.Marshal(), []byte(password))
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Info(keystore)
-	_ = keystore
 }
 
 func validatePasswordInput(input string) error {

@@ -4,7 +4,11 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cmd.go",
+        "derived_wallet.go",
+        "direct_wallet.go",
+        "doc.go",
         "new.go",
+        "remote_wallet.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2",
     visibility = ["//visibility:public"],
