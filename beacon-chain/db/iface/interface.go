@@ -104,6 +104,9 @@ type NoHeadAccessDatabase interface {
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
+
+	// Run any required database migrations.
+	RunMigrations(ctx context.Context) error
 }
 
 // HeadAccessDatabase defines a struct with access to reading chain head data.

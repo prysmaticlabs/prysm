@@ -10,13 +10,13 @@ import (
 )
 
 // SaveArchivedPointRoot saves an archived point root to the DB. This is used for cold state management.
-func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
+func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedPointRoot")
 	defer span.End()
 
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(bytesutil.Uint64ToBytes(index), blockRoot[:])
+		return bucket.Put(bytesutil.Uint64ToBytes(slot), blockRoot[:])
 	})
 }
 

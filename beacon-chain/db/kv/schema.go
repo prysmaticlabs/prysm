@@ -47,4 +47,7 @@ var (
 
 	// New state management service compatibility bucket.
 	newStateServiceCompatibleBucket = []byte("new-state-compatible")
+
+	// Migrations
+	migrationsBucket = []byte("migrations")
 )

@@ -117,6 +117,8 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 			finalizedBlockRootsIndexBucket,
 			// New State Management service bucket.
 			newStateServiceCompatibleBucket,
+			// Migrations
+			migrationsBucket,
 		)
 	}); err != nil {
 		return nil, err
