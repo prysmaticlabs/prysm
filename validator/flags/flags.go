@@ -4,6 +4,8 @@ package flags
 
 import (
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 )
 
 var (
@@ -107,5 +109,15 @@ var (
 		Name:  "unencrypted-keys",
 		Usage: "Filepath to a JSON file of unencrypted validator keys for easier launching of the validator client",
 		Value: "",
+	}
+	WalletDirFlag = &cli.StringFlag{
+		Name:  "wallet-dir",
+		Usage: "Path to a wallet directory on-disk for Prysm validator accounts",
+		Value: cmd.DefaultDataDir() + "/.prysm-wallet",
+	}
+	WalletPasswordsDirFlag = &cli.StringFlag{
+		Name:  "passwords-dir",
+		Usage: "Path to a directory on-disk where wallet passwords are stored",
+		Value: cmd.DefaultDataDir() + "/.prysm-wallet/.passwords",
 	}
 )

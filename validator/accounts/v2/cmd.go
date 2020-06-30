@@ -19,8 +19,8 @@ this command outputs a deposit data string which can be used to deposit Ether in
 contract in order to activate the validator client`,
 			Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
 				[]cli.Flag{
-					flags.KeystorePathFlag,
-					flags.PasswordFlag,
+					flags.WalletDirFlag,
+					flags.WalletPasswordsDirFlag,
 					cmd.DataDirFlag, // TODO: Replace by wallet path
 				}...),
 			Action: New,

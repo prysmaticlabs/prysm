@@ -2,17 +2,29 @@ package v2
 
 import (
 	"errors"
+	"io"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+
 	logrus "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
+
+// WalletType defines an enum for either direct, derived, or remote-signing
+// wallets as specified by a user during account creation.
+type WalletType int
+
+const (
+	DirectWallet  WalletType = iota // Direct, on-disk wallet.
+	DerivedWallet                   // Derived, hierarchical-deterministic wallet.
+	RemoteWallet                    // Remote-signing wallet.
+)
 
 // Steps: ask for the path to store the validator datadir
 // Ask for the type of wallet: direct, derived, remote
@@ -22,7 +34,28 @@ var log = logrus.WithField("prefix", "accounts-v2")
 // Allow for creating more than 1 validator??
 // TODOS: mnemonic for withdrawal key, ensure they write it down.
 func New(cliCtx *cli.Context) error {
-	datadir := cliCtx.String(cmd.DataDirFlag.Name)
+	walletPath := inputWalletPath(cliCtx)
+	_ = walletPath
+
+	// Determine the type of wallet for a user (e.g.: Direct, Keystore, Derived).
+	walletType := inputWalletType(cliCtx)
+	_ = walletType
+
+	// Read the account password from user input.
+	password := inputAccountPassword(cliCtx)
+	_ = password
+
+	// Read the directory for password storage from user input.
+	passwordDirPath := inputPasswordsDirectory(cliCtx)
+	_ = passwordDirPath
+
+	// Open the wallet and password directories for writing.
+	//createWalletPath()
+	return nil
+}
+
+func inputWalletPath(cliCtx *cli.Context) string {
+	datadir := cliCtx.String(flags.WalletDirFlag.Name)
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
 		Validate: validateDirectoryPath,
@@ -32,8 +65,10 @@ func New(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Could not determine wallet directory: %v", formatPromptError(err))
 	}
-	_ = walletPath
+	return walletPath
+}
 
+func inputWalletType(_ *cli.Context) WalletType {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
@@ -42,13 +77,15 @@ func New(cliCtx *cli.Context) error {
 			"Remote (Advanced)",
 		},
 	}
-	_, walletType, err := promptSelect.Run()
+	selection, _, err := promptSelect.Run()
 	if err != nil {
 		log.Fatalf("Could not select wallet type: %v", formatPromptError(err))
 	}
-	_ = walletType
+	return WalletType(selection)
+}
 
-	prompt = promptui.Prompt{
+func inputAccountPassword(_ *cli.Context) string {
+	prompt := promptui.Prompt{
 		Label:    "Strong password",
 		Validate: validatePasswordInput,
 		Mask:     '*',
@@ -58,7 +95,6 @@ func New(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Could not read wallet password: %v", formatPromptError(err))
 	}
-	_ = walletPassword
 
 	prompt = promptui.Prompt{
 		Label: "Confirm password",
@@ -71,25 +107,27 @@ func New(cliCtx *cli.Context) error {
 	if walletPassword != confirmPassword {
 		log.Fatal("Passwords do not match")
 	}
+	return walletPassword
+}
 
-	prompt = promptui.Prompt{
+func inputPasswordsDirectory(cliCtx *cli.Context) string {
+	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
+	prompt := promptui.Prompt{
 		Label:    "Enter the directory where passwords will be stored",
 		Validate: validateDirectoryPath,
-		Default:  datadir,
+		Default:  passwordsDir,
 	}
 	passwordsPath, err := prompt.Run()
 	if err != nil {
 		log.Fatalf("Could not determine passwords directory: %v", formatPromptError(err))
 	}
-	_ = passwordsPath
-	createWalletPath()
-	return nil
+	return passwordsPath
 }
 
-func createWalletPath() {
+func createWalletPath(walletWriter io.Writer, passwordsWriter io.Writer, password string) {
 	key := bls.RandKey()
 	encryptor := keystorev4.New()
-	keystore, err := encryptor.Encrypt(key.Marshal(), []byte("hello world"))
+	keystore, err := encryptor.Encrypt(key.Marshal(), []byte(password))
 	if err != nil {
 		log.Fatal(err)
 	}
