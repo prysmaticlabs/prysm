@@ -9,6 +9,7 @@ import (
 
 var log = logrus.WithField("prefix", "keymanager-v2")
 
+// DirectConfig --
 type DirectConfig struct{}
 
 // Keymanager implementation for direct keystores.
