@@ -3,15 +3,15 @@ package v2
 import (
 	"context"
 	"errors"
+	"io"
+	"os"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
-
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -34,9 +34,7 @@ var walletTypeSelections = map[WalletType]string{
 	RemoteWallet:  "Remote Accounts (Advanced)",
 }
 
-// If user already has account, instead just make a new account with a good name
-// Allow for creating more than 1 validator??
-// TODOS: mnemonic for withdrawal key, ensure they write it down.
+// New --
 func New(cliCtx *cli.Context) error {
 	// Read a wallet path and the desired type of wallet for a user
 	// (e.g.: Direct, Keystore, Derived).
@@ -46,10 +44,20 @@ func New(cliCtx *cli.Context) error {
 	// Check if the user has a wallet at the specified path.
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
-	if hasWallet(walletPath) {
+	var wallet *Wallet
+	var err error
+	ok, err := hasWalletDir(walletPath)
+	if err != nil {
+		log.Fatal("Could not check if wallet exists at %s: %v", walletPath, err)
+	}
+	if ok {
 		// Read the wallet from the specified path.
 		// Instantiate the wallet's keymanager from the wallet's
 		// configuration file.
+		wallet, err = ReadWallet(ctx, walletPath)
+		if err != nil {
+			log.Fatalf("Could not read wallet at specified path %s: %v", walletPath, err)
+		}
 	} else {
 		// We create a new account for the user given a wallet.
 		walletType := inputWalletType(cliCtx)
@@ -71,8 +79,9 @@ func New(cliCtx *cli.Context) error {
 		case RemoteWallet:
 			log.Fatal("Remote wallets are unimplemented, work in progress")
 		}
-		if err := CreateWallet(ctx, walletConfig); err != nil {
-			log.Fatalf("Could not create direct wallet: %v", err)
+		wallet, err = CreateWallet(ctx, walletConfig)
+		if err != nil {
+			log.Fatalf("Could not create wallet at specified path %s: %v", walletPath, err)
 		}
 	}
 
@@ -80,14 +89,30 @@ func New(cliCtx *cli.Context) error {
 	password := inputAccountPassword(cliCtx)
 
 	// Create a new validator account in the user's wallet.
-	// TODO(#6220): Implement by utilizing the appropriate keymanager's
-	// CreateAccount() method accordingly.
+	// TODO(#6220): Implement by utilizing the wallet.keymanager.CreateAccount()
+	// method accordingly.
+	_ = wallet
 	_ = password
 	return nil
 }
 
-func hasWallet(walletPath string) bool {
-	return false
+// Check if a user has an existing wallet at the specified path.
+func hasWalletDir(walletPath string) (bool, error) {
+	f, err := os.Open(walletPath)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	// Either not empty or error, suits both cases.
+	return false, err
 }
 
 func inputWalletPath(cliCtx *cli.Context) string {
