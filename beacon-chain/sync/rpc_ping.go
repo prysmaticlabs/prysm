@@ -9,6 +9,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // pingHandler reads the incoming ping rpc message from the peer.
@@ -81,6 +82,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	currentTime := roughtime.Now()
 	defer func() {
 		if err := stream.Reset(); err != nil {
 			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
@@ -91,6 +93,8 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	// Records the latency of the ping request for that peer.
+	s.p2p.Host().Peerstore().RecordLatency(id, roughtime.Now().Sub(currentTime))
 
 	if code != 0 {
 		s.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
