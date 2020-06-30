@@ -24,7 +24,7 @@ func WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := encoding.EncodeWithMaxLength(stream, msg, maxChunkSize)
+	_, err := encoding.EncodeWithMaxLength(stream, msg)
 	return err
 }
 
@@ -50,5 +50,5 @@ func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) er
 	if code != 0 {
 		return errors.New(errMsg)
 	}
-	return p2p.Encoding().DecodeWithMaxLength(stream, to, maxChunkSize)
+	return p2p.Encoding().DecodeWithMaxLength(stream, to)
 }
