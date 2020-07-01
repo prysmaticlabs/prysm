@@ -48,8 +48,6 @@ func New(cliCtx *cli.Context) error {
 	}
 	if ok {
 		// Read the wallet from the specified path.
-		// Instantiate the wallet's keymanager from the wallet's
-		// configuration file.
 		wallet, err = ReadWallet(ctx, &WalletConfig{
 			PasswordsDir: passwordsDirPath,
 			WalletDir:    walletDir,
@@ -58,7 +56,7 @@ func New(cliCtx *cli.Context) error {
 			log.Fatalf("Could not read wallet at specified path %s: %v", walletDir, err)
 		}
 	} else {
-		// Determine the desired wallet type from user input.
+		// Determine the desired keymanager kind for the wallet from user input.
 		keymanagerKind := inputKeymanagerKind(cliCtx)
 
 		walletConfig := &WalletConfig{
@@ -73,13 +71,13 @@ func New(cliCtx *cli.Context) error {
 		isNewWallet = true
 	}
 
-	// We initialize a new keymanager depending on the user's selected wallet type.
+	// We initialize a new keymanager depending on the user's selected keymanager kind.
 	keymanager := initializeWalletKeymanager(ctx, wallet, isNewWallet)
 
 	// Read the new account's password from user input.
 	password := inputAccountPassword(cliCtx)
 
-	// Create a new validator account in the user's wallet.
+	// Create a new validator account using the specified keymanager.
 	// TODO(#6220): Implement.
 	if err := keymanager.CreateAccount(ctx, password); err != nil {
 		log.Fatalf("Could not create account in wallet: %v", err)
@@ -87,6 +85,10 @@ func New(cliCtx *cli.Context) error {
 	return nil
 }
 
+// Initializes a keymanager. If a config file exists in the wallet, it
+// reads the config file and initializes the keymanager that way. Otherwise,
+// writes a new configuration file to the wallet and returns the initialized
+// keymanager for use.
 func initializeWalletKeymanager(ctx context.Context, wallet *Wallet, isNewWallet bool) v2keymanager.IKeymanager {
 	var keymanager v2keymanager.IKeymanager
 	var err error
@@ -101,7 +103,7 @@ func initializeWalletKeymanager(ctx context.Context, wallet *Wallet, isNewWallet
 		default:
 			log.Fatal("Keymanager type must be specified")
 		}
-		keymanagerConfig, err := keymanager.ConfigFile(ctx)
+		keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
 		if err != nil {
 			log.Fatalf("Could not marshal keymanager config file: %v", err)
 		}
@@ -166,27 +168,33 @@ func inputKeymanagerKind(_ *cli.Context) v2keymanager.Kind {
 }
 
 func inputAccountPassword(_ *cli.Context) string {
-	prompt := promptui.Prompt{
-		Label:    "New account password",
-		Validate: validatePasswordInput,
-		Mask:     '*',
-	}
+	var hasValidPassword bool
+	var walletPassword string
+	for !hasValidPassword {
+		prompt := promptui.Prompt{
+			Label:    "New account password",
+			Validate: validatePasswordInput,
+			Mask:     '*',
+		}
 
-	walletPassword, err := prompt.Run()
-	if err != nil {
-		log.Fatalf("Could not read wallet password: %v", formatPromptError(err))
-	}
+		walletPassword, err := prompt.Run()
+		if err != nil {
+			log.Fatalf("Could not read wallet password: %v", formatPromptError(err))
+		}
 
-	prompt = promptui.Prompt{
-		Label: "Confirm password",
-		Mask:  '*',
-	}
-	confirmPassword, err := prompt.Run()
-	if err != nil {
-		log.Fatalf("Could not read password confirmation: %v", formatPromptError(err))
-	}
-	if walletPassword != confirmPassword {
-		log.Fatal("Passwords do not match")
+		prompt = promptui.Prompt{
+			Label: "Confirm password",
+			Mask:  '*',
+		}
+		confirmPassword, err := prompt.Run()
+		if err != nil {
+			log.Fatalf("Could not read password confirmation: %v", formatPromptError(err))
+		}
+		if walletPassword != confirmPassword {
+			log.Error("Passwords do not match")
+			continue
+		}
+		hasValidPassword = true
 	}
 	return walletPassword
 }

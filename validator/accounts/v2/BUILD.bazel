@@ -36,6 +36,7 @@ go_test(
     deps = [
         "//shared/testutil:go_default_library",
         "//validator/accounts/v2/iface:go_default_library",
+        "//validator/keymanager/v2:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
     ],
 )

@@ -6,7 +6,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Commands for accounts-v2 for Prysm validator clients.
+// Commands for accounts-v2 for Prysm validators.
 var Commands = &cli.Command{
 	Name:     "accounts-v2",
 	Category: "accounts-v2",

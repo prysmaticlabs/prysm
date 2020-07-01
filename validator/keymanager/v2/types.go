@@ -2,12 +2,13 @@ package v2
 
 import (
 	"context"
+	"fmt"
 )
 
 // IKeymanager defines a general keymanager-v2 interface for Prysm wallets.
 type IKeymanager interface {
 	CreateAccount(ctx context.Context, password string) error
-	ConfigFile(ctx context.Context) ([]byte, error)
+	MarshalConfigFile(ctx context.Context) ([]byte, error)
 }
 
 // Kind defines an enum for either direct, derived, or remote-signing
@@ -17,7 +18,7 @@ type Kind int
 const (
 	// Direct keymanager defines an on-disk, encrypted keystore-capable store.
 	Direct Kind = iota
-	// Derived keymanager defines a hierarchical-deterministic store.
+	// Derived keymanager using a hierarchical-deterministic algorithm.
 	Derived
 	// Remote keymanager capable of remote-signing data.
 	Remote
@@ -33,6 +34,6 @@ func (k Kind) String() string {
 	case Remote:
 		return "remote"
 	default:
-		return ""
+		return fmt.Sprintf("%d", int(k))
 	}
 }

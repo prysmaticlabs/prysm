@@ -30,7 +30,9 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) *Keyma
 	}
 }
 
-// NewKeymanagerFromConfigFile --
+// NewKeymanagerFromConfigFile instantiates a direct keymanager instance
+// from a configuration file accesed via a wallet.
+// TODO(#6220): Implement.
 func NewKeymanagerFromConfigFile(ctx context.Context, wallet iface.Wallet) (*Keymanager, error) {
 	f, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 	if err != nil {
@@ -48,11 +50,13 @@ func NewKeymanagerFromConfigFile(ctx context.Context, wallet iface.Wallet) (*Key
 }
 
 // CreateAccount for a direct keymanager implementation.
+// TODO(#6220): Implement.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error {
 	return errors.New("unimplemented")
 }
 
-// ConfigFile returns a marshaled configuration file for a direct keymanager.
-func (dr *Keymanager) ConfigFile(ctx context.Context) ([]byte, error) {
+// MarshalConfigFile returns a marshaled configuration file for a direct keymanager.
+// TODO(#6220): Implement.
+func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 	return nil, nil
 }

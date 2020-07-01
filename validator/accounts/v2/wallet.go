@@ -52,8 +52,7 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	return w, nil
 }
 
-// ReadWallet parses configuration options to initialize a wallet
-// struct from a keymanager configuration file at the wallet's path.
+// ReadWallet instantiates a wallet from a specified path.
 func ReadWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	return &Wallet{
@@ -63,6 +62,8 @@ func ReadWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	}, nil
 }
 
+// ReadKeymanagerConfigFromFile opens a keymanager config file
+// for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error) {
 	if !fileExists(path.Join(w.walletPath, keymanagerConfigFileName)) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.walletPath)
@@ -71,27 +72,29 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 	return os.Open(configFilePath)
 }
 
-// KeymanagerKind --
+// KeymanagerKind used by the wallet.
 func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
 	return w.keymanagerKind
 }
 
-// Path --
-func (w *Wallet) Path() string {
+// AccountsPath for the wallet.
+func (w *Wallet) AccountsPath() string {
 	return w.walletPath
 }
 
-// PasswordsPath --
-func (w *Wallet) PasswordsPath() string {
+// AccountPasswordsPath for the wallet's accounts.
+func (w *Wallet) AccountPasswordsPath() string {
 	return w.passwordsDir
 }
 
-// WriteAccountToDisk -
+// WriteAccountToDisk writes an encoded account by its filename
+// within the wallet's directory.
 func (w *Wallet) WriteAccountToDisk(ctx context.Context, filename string, encoded []byte) error {
 	return nil
 }
 
-// WriteKeymanagerConfigToDisk --
+// WriteKeymanagerConfigToDisk takes an encoded keymanager config file
+// and writes it to the wallet path.
 func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error {
 	configFilePath := path.Join(w.walletPath, keymanagerConfigFileName)
 	if fileExists(configFilePath) {
@@ -122,6 +125,8 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	return nil
 }
 
+// Returns true if a file is not a directory and exists
+// at the specified path.
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {

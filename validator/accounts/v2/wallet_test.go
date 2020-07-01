@@ -12,6 +12,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,7 +31,7 @@ func (m *mockKeymanager) CreateAccount(ctx context.Context, password string) err
 	return nil
 }
 
-func (m *mockKeymanager) ConfigFile(ctx context.Context) ([]byte, error) {
+func (m *mockKeymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 	return m.configFileContents, nil
 }
 
@@ -67,15 +68,28 @@ func TestCreateAndReadWallet(t *testing.T) {
 		t.Error("Expected error when passing in empty directories, received nil")
 	}
 	walletDir, passwordsDir := setupWalletDir(t)
-	walletType := DirectWallet
-	if _, err := CreateWallet(ctx, &WalletConfig{
-		PasswordsDir: passwordsDir,
-		WalletDir:    walletDir,
-		WalletType:   walletType,
-	}); err != nil {
+	keymanagerKind := v2keymanager.Direct
+	wallet, err := CreateWallet(ctx, &WalletConfig{
+		PasswordsDir:   passwordsDir,
+		WalletDir:      walletDir,
+		KeymanagerKind: keymanagerKind,
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
-	walletPath := path.Join(walletDir, keymanagerTypes[walletType])
+
+	keymanager := &mockKeymanager{
+		configFileContents: []byte("hello-world"),
+	}
+	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
+	if err != nil {
+		t.Fatalf("Could not marshal keymanager config file: %v", err)
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		t.Fatalf("Could not write keymanager config file to disk: %v", err)
+	}
+
+	walletPath := path.Join(walletDir, keymanagerKind.String())
 	configFilePath := path.Join(walletPath, keymanagerConfigFileName)
 	if !fileExists(configFilePath) {
 		t.Fatalf("Expected config file to have been created at path: %s", configFilePath)

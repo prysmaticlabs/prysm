@@ -11,8 +11,8 @@ import (
 // to read and write important accounts-related files to the filesystem.
 // It defines an on-disk store of accounts.
 type Wallet interface {
-	Path() string
-	PasswordsPath() string
+	AccountsPath() string
+	AccountPasswordsPath() string
 	WriteAccountToDisk(ctx context.Context, filename string, encoded []byte) error
 	WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error
 	ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error)
