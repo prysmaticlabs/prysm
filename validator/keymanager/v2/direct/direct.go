@@ -2,14 +2,21 @@ package direct
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 
+	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/sirupsen/logrus"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 var log = logrus.WithField("prefix", "keymanager-v2")
+
+const (
+	keystoreFileSuffix = ".keystore.json"
+)
 
 // Wallet defines a struct which has capabilities and knowledge of how
 // to read and write important accounts-related files to the filesystem.
@@ -54,6 +61,22 @@ func NewKeymanagerFromConfigFile(ctx context.Context, wallet Wallet) (*Keymanage
 // CreateAccount for a direct keymanager implementation.
 // TODO(#6220): Implement.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error {
+	encryptor := keystorev4.New()
+	secretKey := bls.RandKey()
+	keystoreFile, err := encryptor.Encrypt(secretKey.Marshal(), []byte(password))
+	if err != nil {
+		return err
+	}
+	accountName := petname.Generate(3, "_" /* separator */)
+	accountFile := accountName + keystoreFileSuffix
+	encoded, err := json.Marshal(keystoreFile)
+	if err != nil {
+		return err
+	}
+	if err := dr.wallet.WriteAccountToDisk(ctx, accountFile, encoded); err != nil {
+		return err
+	}
+	// TODO: Generate a withdrawal key as well.
 	return errors.New("unimplemented")
 }
 
