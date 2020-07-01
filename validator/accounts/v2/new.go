@@ -2,11 +2,12 @@ package v2
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"os"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -30,7 +31,10 @@ var keymanagerKindSelections = map[v2keymanager.Kind]string{
 // available options.
 func New(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
-	walletDir := inputWalletDir(cliCtx)
+	walletDir, err := inputWalletDir(cliCtx)
+	if err != nil {
+		log.Fatalf("Could not parse wallet directory: %v", err)
+	}
 
 	// Read the directory for password storage from user input.
 	passwordsDirPath := inputPasswordsDirectory(cliCtx)
@@ -40,7 +44,6 @@ func New(cliCtx *cli.Context) error {
 	// If a user does not have a wallet, we instantiate one
 	// based on specified options.
 	var wallet *Wallet
-	var err error
 	var isNewWallet bool
 	ok, err := hasWalletDir(walletDir)
 	if err != nil {
@@ -57,7 +60,10 @@ func New(cliCtx *cli.Context) error {
 		}
 	} else {
 		// Determine the desired keymanager kind for the wallet from user input.
-		keymanagerKind := inputKeymanagerKind(cliCtx)
+		keymanagerKind, err := inputKeymanagerKind(cliCtx)
+		if err != nil {
+			log.Fatalf("Could not select keymanager kind: %v", err)
+		}
 
 		walletConfig := &WalletConfig{
 			PasswordsDir:   passwordsDirPath,
@@ -72,10 +78,21 @@ func New(cliCtx *cli.Context) error {
 	}
 
 	// We initialize a new keymanager depending on the user's selected keymanager kind.
-	keymanager := initializeWalletKeymanager(ctx, wallet, isNewWallet)
+	var keymanager v2keymanager.IKeymanager
+	if isNewWallet {
+		keymanager, err = initializeNewKeymanager(ctx, wallet)
+	} else {
+		keymanager, err = initializeExistingKeymanager(ctx, wallet)
+	}
+	if err != nil {
+		log.Fatalf("Could not initialize keymanager: %v", err)
+	}
 
 	// Read the new account's password from user input.
-	password := inputAccountPassword(cliCtx)
+	password, err := inputAccountPassword(cliCtx)
+	if err != nil {
+		log.Fatalf("Could not read password: %v", err)
+	}
 
 	// Create a new validator account using the specified keymanager.
 	// TODO(#6220): Implement.
@@ -89,43 +106,46 @@ func New(cliCtx *cli.Context) error {
 // reads the config file and initializes the keymanager that way. Otherwise,
 // writes a new configuration file to the wallet and returns the initialized
 // keymanager for use.
-func initializeWalletKeymanager(ctx context.Context, wallet *Wallet, isNewWallet bool) v2keymanager.IKeymanager {
+func initializeNewKeymanager(ctx context.Context, wallet *Wallet) (v2keymanager.IKeymanager, error) {
 	var keymanager v2keymanager.IKeymanager
 	var err error
-	if isNewWallet {
-		switch wallet.KeymanagerKind() {
-		case v2keymanager.Direct:
-			keymanager = direct.NewKeymanager(ctx, wallet, direct.DefaultConfig())
-		case v2keymanager.Derived:
-			log.Fatal("Derived keymanagers are unimplemented, work in progress")
-		case v2keymanager.Remote:
-			log.Fatal("Remote keymanagers are unimplemented, work in progress")
-		default:
-			log.Fatal("Keymanager type must be specified")
-		}
-		keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
-		if err != nil {
-			log.Fatalf("Could not marshal keymanager config file: %v", err)
-		}
-		if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-			log.Fatalf("Could not write keymanager config file to disk: %v", err)
-		}
-		return keymanager
+	switch wallet.KeymanagerKind() {
+	case v2keymanager.Direct:
+		keymanager = direct.NewKeymanager(ctx, wallet, direct.DefaultConfig())
+	case v2keymanager.Derived:
+		return nil, errors.New("derived keymanager is unimplemented, work in progress")
+	case v2keymanager.Remote:
+		return nil, errors.New("remote keymanager is unimplemented, work in progress")
+	default:
+		log.Fatal("Keymanager type must be specified")
 	}
+	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
+	if err != nil {
+		log.Fatalf("Could not marshal keymanager config file: %v", err)
+	}
+	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+		log.Fatalf("Could not write keymanager config file to disk: %v", err)
+	}
+	return keymanager, nil
+}
+
+func initializeExistingKeymanager(ctx context.Context, wallet *Wallet) (v2keymanager.IKeymanager, error) {
+	var keymanager v2keymanager.IKeymanager
+	var err error
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
 		keymanager, err = direct.NewKeymanagerFromConfigFile(ctx, wallet)
 		if err != nil {
-			log.Fatal(err)
+			return nil, errors.Wrap(err, "could not initialize direct keymanager from config")
 		}
 	case v2keymanager.Derived:
-		log.Fatal("Derived keymanagers are unimplemented, work in progress")
+		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:
-		log.Fatal("Remote keymanagers are unimplemented, work in progress")
+		return nil, errors.New("remote keymanager is unimplemented, work in progress")
 	default:
-		log.Fatal("Keymanager kind must be specified")
+		return nil, errors.New("keymanager kind must be specified")
 	}
-	return keymanager
+	return keymanager, nil
 }
 
 // Check if a user has an existing wallet at the specified path.
@@ -137,7 +157,7 @@ func hasWalletDir(walletPath string) (bool, error) {
 	return true, err
 }
 
-func inputWalletDir(cliCtx *cli.Context) string {
+func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	datadir := cliCtx.String(flags.WalletDirFlag.Name)
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
@@ -146,12 +166,12 @@ func inputWalletDir(cliCtx *cli.Context) string {
 	}
 	walletPath, err := prompt.Run()
 	if err != nil {
-		log.Fatalf("Could not determine wallet directory: %v", formatPromptError(err))
+		return "", fmt.Errorf("could not determine wallet directory: %v", formatPromptError(err))
 	}
-	return walletPath
+	return walletPath, nil
 }
 
-func inputKeymanagerKind(_ *cli.Context) v2keymanager.Kind {
+func inputKeymanagerKind(_ *cli.Context) (v2keymanager.Kind, error) {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
@@ -162,12 +182,12 @@ func inputKeymanagerKind(_ *cli.Context) v2keymanager.Kind {
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
-		log.Fatalf("Could not select wallet type: %v", formatPromptError(err))
+		return v2keymanager.Direct, fmt.Errorf("could not select wallet type: %v", formatPromptError(err))
 	}
-	return v2keymanager.Kind(selection)
+	return v2keymanager.Kind(selection), nil
 }
 
-func inputAccountPassword(_ *cli.Context) string {
+func inputAccountPassword(_ *cli.Context) (string, error) {
 	var hasValidPassword bool
 	var walletPassword string
 	for !hasValidPassword {
@@ -179,7 +199,7 @@ func inputAccountPassword(_ *cli.Context) string {
 
 		walletPassword, err := prompt.Run()
 		if err != nil {
-			log.Fatalf("Could not read wallet password: %v", formatPromptError(err))
+			return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
 		}
 
 		prompt = promptui.Prompt{
@@ -188,7 +208,7 @@ func inputAccountPassword(_ *cli.Context) string {
 		}
 		confirmPassword, err := prompt.Run()
 		if err != nil {
-			log.Fatalf("Could not read password confirmation: %v", formatPromptError(err))
+			return "", fmt.Errorf("could not read password confirmation: %v", formatPromptError(err))
 		}
 		if walletPassword != confirmPassword {
 			log.Error("Passwords do not match")
@@ -196,7 +216,7 @@ func inputAccountPassword(_ *cli.Context) string {
 		}
 		hasValidPassword = true
 	}
-	return walletPassword
+	return walletPassword, nil
 }
 
 func inputPasswordsDirectory(cliCtx *cli.Context) string {
