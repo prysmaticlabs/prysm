@@ -4,5 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = ["interface.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2/iface",
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//validator:__pkg__",
+        "//validator:__subpackages__",
+    ],
 )
