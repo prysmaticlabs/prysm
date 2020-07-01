@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "keymanager-v2")
