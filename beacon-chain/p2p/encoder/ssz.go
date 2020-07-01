@@ -15,9 +15,6 @@ import (
 
 var _ = NetworkEncoding(&SszNetworkEncoder{})
 
-// MaxChunkSize allowed for decoding messages.
-var MaxChunkSize = params.BeaconNetworkConfig().MaxChunkSize // 1Mib
-
 // MaxGossipSize allowed for gossip messages.
 var MaxGossipSize = params.BeaconNetworkConfig().GossipMaxSize // 1 Mib
 
@@ -60,30 +57,9 @@ func (e SszNetworkEncoder) EncodeGossip(w io.Writer, msg interface{}) (int, erro
 	return w.Write(b)
 }
 
-// EncodeWithLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
-// to indicate the size of the message.
-func (e SszNetworkEncoder) EncodeWithLength(w io.Writer, msg interface{}) (int, error) {
-	if msg == nil {
-		return 0, nil
-	}
-	b, err := e.doEncode(msg)
-	if err != nil {
-		return 0, err
-	}
-	// write varint first
-	_, err = w.Write(proto.EncodeVarint(uint64(len(b))))
-	if err != nil {
-		return 0, err
-	}
-	if e.UseSnappyCompression {
-		return writeSnappyBuffer(w, b)
-	}
-	return w.Write(b)
-}
-
 // EncodeWithMaxLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
 // to indicate the size of the message. This checks that the encoded message isn't larger than the provided max limit.
-func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, maxSize uint64) (int, error) {
+func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -91,8 +67,12 @@ func (e SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg interface{}, max
 	if err != nil {
 		return 0, err
 	}
-	if uint64(len(b)) > maxSize {
-		return 0, fmt.Errorf("size of encoded message is %d which is larger than the provided max limit of %d", len(b), maxSize)
+	if uint64(len(b)) > params.BeaconNetworkConfig().MaxChunkSize {
+		return 0, fmt.Errorf(
+			"size of encoded message is %d which is larger than the provided max limit of %d",
+			len(b),
+			params.BeaconNetworkConfig().MaxChunkSize,
+		)
 	}
 	// write varint first
 	_, err = w.Write(proto.EncodeVarint(uint64(len(b))))
@@ -139,23 +119,19 @@ func (e SszNetworkEncoder) DecodeGossip(b []byte, to interface{}) error {
 	return e.doDecode(b, to)
 }
 
-// DecodeWithLength the bytes from io.Reader to the protobuf message provided.
-func (e SszNetworkEncoder) DecodeWithLength(r io.Reader, to interface{}) error {
-	return e.DecodeWithMaxLength(r, to, MaxChunkSize)
-}
-
 // DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
 // This checks that the decoded message isn't larger than the provided max limit.
-func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}, maxSize uint64) error {
-	if maxSize > MaxChunkSize {
-		return fmt.Errorf("maxSize %d exceeds max chunk size %d", maxSize, MaxChunkSize)
-	}
+func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to interface{}) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err
 	}
-	if msgLen > maxSize {
-		return fmt.Errorf("remaining bytes %d goes over the provided max limit of %d", msgLen, maxSize)
+	if msgLen > params.BeaconNetworkConfig().MaxChunkSize {
+		return fmt.Errorf(
+			"remaining bytes %d goes over the provided max limit of %d",
+			msgLen,
+			params.BeaconNetworkConfig().MaxChunkSize,
+		)
 	}
 	if e.UseSnappyCompression {
 		r = newBufferedReader(r)

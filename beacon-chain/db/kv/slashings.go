@@ -21,7 +21,7 @@ func (kv *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*
 			return nil
 		}
 		slashing = &ethpb.ProposerSlashing{}
-		return decode(enc, slashing)
+		return decode(ctx, enc, slashing)
 	})
 	return slashing, err
 }
@@ -49,7 +49,7 @@ func (kv *Store) SaveProposerSlashing(ctx context.Context, slashing *ethpb.Propo
 	if err != nil {
 		return err
 	}
-	enc, err := encode(slashing)
+	enc, err := encode(ctx, slashing)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (kv *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*
 			return nil
 		}
 		slashing = &ethpb.AttesterSlashing{}
-		return decode(enc, slashing)
+		return decode(ctx, enc, slashing)
 	})
 	return slashing, err
 }
@@ -109,7 +109,7 @@ func (kv *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.Attes
 	if err != nil {
 		return err
 	}
-	enc, err := encode(slashing)
+	enc, err := encode(ctx, slashing)
 	if err != nil {
 		return err
 	}
