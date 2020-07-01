@@ -119,7 +119,7 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 	}
 
 	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
-	passwordFile, err := os.Create(passwordFilePath)
+	passwordFile, err := os.OpenFile(passwordFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
 	if err != nil {
 		return "", errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
 	}

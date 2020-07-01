@@ -200,6 +200,7 @@ func inputKeymanagerKind(_ *cli.Context) (v2keymanager.Kind, error) {
 func inputAccountPassword(_ *cli.Context) (string, error) {
 	var hasValidPassword bool
 	var walletPassword string
+	var err error
 	for !hasValidPassword {
 		prompt := promptui.Prompt{
 			Label:    "New account password",
@@ -207,7 +208,7 @@ func inputAccountPassword(_ *cli.Context) (string, error) {
 			Mask:     '*',
 		}
 
-		walletPassword, err := prompt.Run()
+		walletPassword, err = prompt.Run()
 		if err != nil {
 			return "", fmt.Errorf("could not read wallet password: %v", formatPromptError(err))
 		}
