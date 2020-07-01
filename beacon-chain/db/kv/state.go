@@ -176,38 +176,7 @@ func (kv *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
-
-		bkt = tx.Bucket(checkpointBucket)
-		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{}
-		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, checkpoint); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(blocksBucket)
-		headBlkRoot := bkt.Get(headBlockRootKey)
-
-		// Safe guard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-			return errors.New("cannot delete genesis, finalized, or head state")
-		}
-
-		slot, err := slotByBlockRoot(ctx, tx, blockRoot[:])
-		if err != nil {
-			return err
-		}
-		if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(stateBucket)
-		return bkt.Delete(blockRoot[:])
-	})
+	return kv.DeleteStates(ctx, [][32]byte{blockRoot})
 }
 
 // DeleteStates by block roots.
