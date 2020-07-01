@@ -2,16 +2,11 @@ package blockchain
 
 import (
 	"context"
-	"crypto/rand"
-	"fmt"
-	"math/big"
-	"path"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -108,40 +103,21 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 			},
 		},
 		{
-			name: "sets epochParticipation",
-			args: args{
-				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 1 /*slot*/),
-			},
-			check: func(t *testing.T, s *Service) {
-				e := s.epochParticipation[0]
-				if e == nil {
-					t.Error("epoch participation is nil")
-				}
-			},
-		},
-		{
 			name: "notifies block processed on state feed",
 			args: args{
 				block: genFullBlock(t, testutil.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
-				t.Skip("TODO: Need to add a better mock for state notifier.")
+				if recvd := len(s.stateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
+					t.Errorf("Received %d state notifications, expected at least 1", recvd)
+				}
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
-			if err != nil {
-				t.Fatalf("could not generate random file path: %v", err)
-			}
-			p := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
-			stateSummaryCache := cache.NewStateSummaryCache()
-			db, err := kv.NewKVStore(p, stateSummaryCache)
-			if err != nil {
-				t.Fatal(err)
-			}
+			db, stateSummaryCache := testDB.SetupDB(t)
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 			if err := db.SaveState(ctx, genesis, genesisBlockRoot); err != nil {
 				t.Fatal(err)

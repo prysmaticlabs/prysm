@@ -574,7 +574,6 @@ func (b *BeaconNode) registerRPCService() error {
 		HeadFetcher:             chainService,
 		ForkFetcher:             chainService,
 		FinalizationFetcher:     chainService,
-		ParticipationFetcher:    chainService,
 		BlockReceiver:           chainService,
 		AttestationReceiver:     chainService,
 		GenesisTimeFetcher:      chainService,

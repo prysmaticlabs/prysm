@@ -41,7 +41,6 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
-        "//beacon-chain/db/kv:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/bytesutil:go_default_library",
