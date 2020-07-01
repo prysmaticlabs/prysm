@@ -243,12 +243,12 @@ func (kv *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) erro
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return kv.db.Update(func(tx *bolt.Tx) error {
-			hasStateSummaryInCache := kv.stateSummaryCache.Has(blockRoot)
-			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
-			hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
-			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
-				return errors.New("no state or state summary found with head block root")
-			}
+		hasStateSummaryInCache := kv.stateSummaryCache.Has(blockRoot)
+		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
+		hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
+		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+			return errors.New("no state or state summary found with head block root")
+		}
 
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])

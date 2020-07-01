@@ -264,7 +264,6 @@ func (s *Service) Start() {
 		SlashingsPool:               s.slashingsPool,
 		HeadFetcher:                 s.headFetcher,
 		FinalizationFetcher:         s.finalizationFetcher,
-		ParticipationFetcher:        s.participationFetcher,
 		ChainStartFetcher:           s.chainStartFetcher,
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,

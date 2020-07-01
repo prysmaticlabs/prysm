@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -81,9 +81,9 @@ func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
 type MockStateNotifier struct {
 	feed *event.Feed
 
-	recv []*feed.Event
+	recv     []*feed.Event
 	recvLock sync.Mutex
-	recvCh chan *feed.Event
+	recvCh   chan *feed.Event
 }
 
 func (msn *MockStateNotifier) ReceivedEvents() []*feed.Event {

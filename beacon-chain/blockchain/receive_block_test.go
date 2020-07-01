@@ -2,8 +2,9 @@ package blockchain
 
 import (
 	"context"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"testing"
+
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
