@@ -32,11 +32,11 @@ var keymanagerKindSelections = map[v2keymanager.Kind]string{
 	v2keymanager.Remote:  "Remote Accounts (Advanced)",
 }
 
-// New creates a new validator account from user input. If a user
+// NewAccount creates a new validator account from user input. If a user
 // does not have an initialized wallet at the specified wallet path, this
 // method will create a new wallet and ask user for input for their new wallet's
 // available options.
-func New(cliCtx *cli.Context) error {
+func NewAccount(cliCtx *cli.Context) error {
 	// Read a wallet's directory from user input.
 	walletDir, err := inputWalletDir(cliCtx)
 	if err != nil {
