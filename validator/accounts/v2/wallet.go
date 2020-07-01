@@ -7,7 +7,10 @@ import (
 	"os"
 	"path"
 
+	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
@@ -15,6 +18,7 @@ const (
 	keymanagerConfigFileName = "keymanageropts.json"
 	walletDefaultDirName     = ".prysm-wallet-v2"
 	passwordsDefaultDirName  = ".passwords"
+	passwordFileSuffix       = ".pass"
 )
 
 // WalletConfig for a wallet struct, containing important information
@@ -91,10 +95,39 @@ func (w *Wallet) AccountPasswordsPath() string {
 	return w.passwordsDir
 }
 
-// WriteAccountToDisk writes an encoded account by its filename
-// within the wallet's directory.
-func (w *Wallet) WriteAccountToDisk(ctx context.Context, filename string, encoded []byte) error {
-	return errors.New("unimplemented")
+// WriteAccountToDisk creates an account directory under a unique namespace
+// within the wallet's path. It additionally writes the account's password to the
+// wallet's passwords directory. Returns the unique account name.
+func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
+	// Generates a human-readable name for an account. Checks for uniqueness in the accounts path.
+	var accountExists bool
+	var accountName string
+	for !accountExists {
+		accountName = petname.Generate(3, "-" /* separator */)
+		exists, err := hasDir(path.Join(w.accountsPath, accountName))
+		if err != nil {
+			return "", errors.Wrapf(err, "could not check if account exists in dir: %s", w.accountsPath)
+		}
+		if !exists {
+			break
+		}
+	}
+	passwordFile, err := os.Create(path.Join(w.passwordsDir, accountName+passwordFileSuffix))
+	if err != nil {
+		return "", errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
+	}
+	n, err := passwordFile.Write([]byte(password))
+	if err != nil {
+		return "", errors.Wrap(err, "could not write account password to disk")
+	}
+	if n != len(password) {
+		return "", fmt.Errorf("could only write %d/%d password bytes to disk", n, len(password))
+	}
+	log.WithFields(logrus.Fields{
+		"name": accountName,
+		"path": w.accountsPath,
+	}).Infof("Created new validator account")
+	return accountName, nil
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file

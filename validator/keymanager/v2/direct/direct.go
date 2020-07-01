@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 
-	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -15,7 +14,7 @@ import (
 var log = logrus.WithField("prefix", "keymanager-v2")
 
 const (
-	keystoreFileSuffix = ".keystore.json"
+	keystoreFileName = "keystore.json"
 )
 
 // Wallet defines a struct which has capabilities and knowledge of how
@@ -67,13 +66,11 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	if err != nil {
 		return err
 	}
-	accountName := petname.Generate(3, "_" /* separator */)
-	accountFile := accountName + keystoreFileSuffix
 	encoded, err := json.Marshal(keystoreFile)
 	if err != nil {
 		return err
 	}
-	if err := dr.wallet.WriteAccountToDisk(ctx, accountFile, encoded); err != nil {
+	if err := dr.wallet.WriteAccountToDisk(ctx, keystoreFileName, encoded); err != nil {
 		return err
 	}
 	// TODO: Generate a withdrawal key as well.
