@@ -13,14 +13,7 @@ func (kv *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary)
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
 
-	enc, err := encode(ctx, summary)
-	if err != nil {
-		return err
-	}
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateSummaryBucket)
-		return bucket.Put(summary.Root, enc)
-	})
+	return kv.SaveStateSummaries(ctx, []*pb.StateSummary{summary})
 }
 
 // SaveStateSummaries saves state summary objects to the DB.
