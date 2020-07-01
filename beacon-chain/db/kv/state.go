@@ -105,24 +105,11 @@ func (kv *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (kv *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
+func (kv *Store) SaveState(ctx context.Context, st *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	if state == nil {
-		return errors.New("nil state")
-	}
-	enc, err := encode(ctx, state.InnerStateUnsafe())
-	if err != nil {
-		return err
-	}
 
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
-		if err := bucket.Put(blockRoot[:], enc); err != nil {
-			return err
-		}
-		return kv.setStateSlotBitField(ctx, tx, state.Slot())
-	})
+	return kv.SaveStates(ctx, []*state.BeaconState{st}, [][32]byte{blockRoot})
 }
 
 // SaveStates stores multiple states to the db using the provided corresponding roots.
@@ -176,38 +163,7 @@ func (kv *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
-
-		bkt = tx.Bucket(checkpointBucket)
-		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{}
-		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, checkpoint); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(blocksBucket)
-		headBlkRoot := bkt.Get(headBlockRootKey)
-
-		// Safe guard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-			return errors.New("cannot delete genesis, finalized, or head state")
-		}
-
-		slot, err := slotByBlockRoot(ctx, tx, blockRoot[:])
-		if err != nil {
-			return err
-		}
-		if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(stateBucket)
-		return bkt.Delete(blockRoot[:])
-	})
+	return kv.DeleteStates(ctx, [][32]byte{blockRoot})
 }
 
 // DeleteStates by block roots.
