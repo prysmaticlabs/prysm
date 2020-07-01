@@ -112,11 +112,23 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 			break
 		}
 	}
-	passwordFile, err := os.Create(path.Join(w.passwordsDir, accountName+passwordFileSuffix))
+	// Generate the account name directory.
+	accountPath := path.Join(w.accountsPath, accountName)
+	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
+		return "", errors.Wrap(err, "could not create account")
+	}
+
+	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
+	passwordFile, err := os.Create(passwordFilePath)
 	if err != nil {
 		return "", errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
 	}
-	n, err := passwordFile.Write([]byte(password))
+	defer func() {
+		if err := passwordFile.Close(); err != nil {
+			log.Errorf("Could not close password file: %s", passwordFilePath)
+		}
+	}()
+	n, err := passwordFile.WriteString(password)
 	if err != nil {
 		return "", errors.Wrap(err, "could not write account password to disk")
 	}
@@ -128,6 +140,41 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 		"path": w.accountsPath,
 	}).Infof("Created new validator account")
 	return accountName, nil
+}
+
+// WriteFileForAccount stores a unique file and its data under an account namespace
+// in the wallet's directory on-disk.
+func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error {
+	accountPath := path.Join(w.accountsPath, accountName)
+	exists, err := hasDir(accountPath)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if account exists in dir: %s", w.accountsPath)
+	}
+	if !exists {
+		return errors.Wrapf(err, "account does not exist in wallet dir: %s", w.accountsPath)
+	}
+	filePath := path.Join(accountPath, fileName)
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err != nil {
+		return errors.Wrapf(err, "could not create file for account: %s", filePath)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Errorf("Could not close file after writing: %s", filePath)
+		}
+	}()
+	n, err := f.Write(data)
+	if err != nil {
+		return errors.Wrapf(err, "could not write file for account: %s", filePath)
+	}
+	if n != len(data) {
+		return fmt.Errorf("could only write %d/%d file bytes to disk", n, len(data))
+	}
+	log.WithFields(logrus.Fields{
+		"accountName": accountName,
+		"filePath":    filePath,
+	}).Debug("Wrote new file for account")
+	return nil
 }
 
 // WriteKeymanagerConfigToDisk takes an encoded keymanager config file

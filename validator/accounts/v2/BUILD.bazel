@@ -19,6 +19,7 @@ go_library(
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/direct:go_default_library",
+        "@com_github_dustinkirkland_golang_petname//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",
         "@com_github_nbutton23_zxcvbn_go//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

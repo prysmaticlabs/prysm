@@ -21,9 +21,8 @@ const (
 // to read and write important accounts-related files to the filesystem.
 // Useful for keymanager to have persistent capabilities for accounts on-disk.
 type Wallet interface {
-	AccountsPath() string
-	AccountPasswordsPath() string
-	WriteAccountToDisk(ctx context.Context, filename string, encoded []byte) error
+	WriteAccountToDisk(ctx context.Context, password string) (string, error)
+	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
 	WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error
 	ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error)
 }
@@ -60,21 +59,25 @@ func NewKeymanagerFromConfigFile(ctx context.Context, wallet Wallet) (*Keymanage
 // CreateAccount for a direct keymanager implementation.
 // TODO(#6220): Implement.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error {
+	accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
+	if err != nil {
+		return err
+	}
 	encryptor := keystorev4.New()
 	secretKey := bls.RandKey()
 	keystoreFile, err := encryptor.Encrypt(secretKey.Marshal(), []byte(password))
 	if err != nil {
 		return err
 	}
-	encoded, err := json.Marshal(keystoreFile)
+	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
 	if err != nil {
 		return err
 	}
-	if err := dr.wallet.WriteAccountToDisk(ctx, keystoreFileName, encoded); err != nil {
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
 		return err
 	}
 	// TODO: Generate a withdrawal key as well.
-	return errors.New("unimplemented")
+	return nil
 }
 
 // MarshalConfigFile returns a marshaled configuration file for a direct keymanager.
