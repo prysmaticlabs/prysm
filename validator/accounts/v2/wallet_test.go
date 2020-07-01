@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,6 +19,8 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
 }
+
+var _ = iface.Wallet(&Wallet{})
 
 type mockKeymanager struct {
 	configFileContents []byte
@@ -69,13 +72,11 @@ func TestCreateAndReadWallet(t *testing.T) {
 		PasswordsDir: passwordsDir,
 		WalletDir:    walletDir,
 		WalletType:   walletType,
-		Keymanager:   &mockKeymanager{configFileContents: []byte("hello world")},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	walletPath := path.Join(walletDir, keymanagerPrefixes[walletType])
-	keymanagerConfigFile := keymanagerPrefixes[walletType] + keymanagerConfigSuffix
-	configFilePath := path.Join(walletPath, keymanagerConfigFile)
+	walletPath := path.Join(walletDir, keymanagerTypes[walletType])
+	configFilePath := path.Join(walletPath, keymanagerConfigFileName)
 	if !fileExists(configFilePath) {
 		t.Fatalf("Expected config file to have been created at path: %s", configFilePath)
 	}

@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 )
 
 var log = logrus.WithField("prefix", "keymanager-v2")
@@ -13,7 +15,9 @@ var log = logrus.WithField("prefix", "keymanager-v2")
 type Config struct{}
 
 // Keymanager implementation for direct keystores.
-type Keymanager struct{}
+type Keymanager struct {
+	wallet iface.Wallet
+}
 
 // DefaultConfig for a direct keymanager implementation.
 func DefaultConfig() *Config {
@@ -21,8 +25,27 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, cfg *Config) *Keymanager {
-	return &Keymanager{}
+func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) *Keymanager {
+	return &Keymanager{
+		wallet: wallet,
+	}
+}
+
+// NewKeymanagerFromConfigFile --
+func NewKeymanagerFromConfigFile(ctx context.Context, wallet iface.Wallet) (*Keymanager, error) {
+	f, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
+	if err != nil {
+		log.Fatalf("Could not read keymanager config file from wallet: %v", err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Fatalf("Could not close keymanager config opts file: %v", err)
+		}
+	}()
+	_ = f
+	return &Keymanager{
+		wallet: wallet,
+	}, nil
 }
 
 // CreateAccount for a direct keymanager implementation.

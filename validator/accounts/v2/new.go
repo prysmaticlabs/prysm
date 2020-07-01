@@ -7,11 +7,11 @@ import (
 	"unicode"
 
 	"github.com/manifoldco/promptui"
+	"github.com/prysmaticlabs/prysm/validator/flags"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-
-	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
 )
 
 var log = logrus.WithField("prefix", "accounts-v2")
@@ -54,6 +54,7 @@ func New(cliCtx *cli.Context) error {
 	// based on specified options.
 	var wallet *Wallet
 	var err error
+	var isNewWallet bool
 	ok, err := hasWalletDir(walletDir)
 	if err != nil {
 		log.Fatalf("Could not check if wallet exists at %s: %v", walletDir, err)
@@ -78,32 +79,64 @@ func New(cliCtx *cli.Context) error {
 			WalletDir:    walletDir,
 			WalletType:   walletType,
 		}
-		// We initialize a new keymanager depending on the user's desired
-		// wallet type accordingly.
-		switch walletType {
-		case DirectWallet:
-			directKeymanager := direct.NewKeymanager(ctx, direct.DefaultConfig())
-			walletConfig.Keymanager = directKeymanager
-		case DerivedWallet:
-			log.Fatal("Derived wallets are unimplemented, work in progress")
-		case RemoteWallet:
-			log.Fatal("Remote wallets are unimplemented, work in progress")
-		}
 		wallet, err = CreateWallet(ctx, walletConfig)
 		if err != nil {
 			log.Fatalf("Could not create wallet at specified path %s: %v", walletDir, err)
 		}
+		isNewWallet = true
 	}
+
+	// We initialize a new keymanager depending on the user's selected wallet type.
+	keymanager := initializeWalletKeymanager(ctx, wallet, isNewWallet)
 
 	// Read the new account's password from user input.
 	password := inputAccountPassword(cliCtx)
 
 	// Create a new validator account in the user's wallet.
 	// TODO(#6220): Implement.
-	if err := wallet.CreateAccount(ctx, password); err != nil {
+	if err := keymanager.CreateAccount(ctx, password); err != nil {
 		log.Fatalf("Could not create account in wallet: %v", err)
 	}
 	return nil
+}
+
+func initializeWalletKeymanager(ctx context.Context, wallet *Wallet, isNewWallet bool) v2keymanager.IKeymanager {
+	var keymanager v2keymanager.IKeymanager
+	var err error
+	if isNewWallet {
+		switch wallet.Type() {
+		case DirectWallet:
+			keymanager = direct.NewKeymanager(ctx, wallet, direct.DefaultConfig())
+		case DerivedWallet:
+			log.Fatal("Derived wallets are unimplemented, work in progress")
+		case RemoteWallet:
+			log.Fatal("Remote wallets are unimplemented, work in progress")
+		default:
+			log.Fatal("Keymanager type must be specified")
+		}
+		keymanagerConfig, err := keymanager.ConfigFile(ctx)
+		if err != nil {
+			log.Fatalf("Could not marshal keymanager config file: %v", err)
+		}
+		if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
+			log.Fatalf("Could not write keymanager config file to disk: %v", err)
+		}
+		return keymanager
+	}
+	switch wallet.Type() {
+	case DirectWallet:
+		keymanager, err = direct.NewKeymanagerFromConfigFile(ctx, wallet)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case DerivedWallet:
+		log.Fatal("Derived wallets are unimplemented, work in progress")
+	case RemoteWallet:
+		log.Fatal("Remote wallets are unimplemented, work in progress")
+	default:
+		log.Fatal("Keymanager type must be specified")
+	}
+	return keymanager
 }
 
 // Check if a user has an existing wallet at the specified path.
