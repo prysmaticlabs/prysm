@@ -25,8 +25,13 @@ func Test_validatePasswordInput(t *testing.T) {
 		},
 		{
 			name:    "proper length and strong password",
-			input:   "%Str0ngpassword%",
+			input:   "%Str0ngpassword32kjAjsd22020$%",
 			wantErr: false,
+		},
+		{
+			name:    "password format correct but weak entropy score",
+			input:   "aaaaaaa1$",
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

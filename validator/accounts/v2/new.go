@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"github.com/manifoldco/promptui"
+	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
@@ -17,7 +18,12 @@ import (
 
 var log = logrus.WithField("prefix", "accounts-v2")
 
-const minPasswordLength = 8
+const (
+	minPasswordLength = 8
+	// Min password score of 3 out of 5 based on the https://github.com/nbutton23/zxcvbn-go
+	// library for strong-entropy password computation.
+	minPasswordScore = 3
+)
 
 var keymanagerKindSelections = map[v2keymanager.Kind]string{
 	v2keymanager.Direct:  "Direct, On-Disk Accounts (Recommended)",
@@ -259,6 +265,12 @@ func validatePasswordInput(input string) error {
 	if !(hasMinLen && hasLetter && hasNumber && hasSpecial) {
 		return errors.New(
 			"password must have more than 8 characters, at least 1 special character, and 1 number",
+		)
+	}
+	strength := strongPasswords.PasswordStrength(input, nil)
+	if strength.Score < minPasswordScore {
+		return errors.New(
+			"password is too easy to guess, try a stronger password",
 		)
 	}
 	return nil
