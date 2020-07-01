@@ -105,24 +105,11 @@ func (kv *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (kv *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
+func (kv *Store) SaveState(ctx context.Context, st *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	if state == nil {
-		return errors.New("nil state")
-	}
-	enc, err := encode(ctx, state.InnerStateUnsafe())
-	if err != nil {
-		return err
-	}
 
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
-		if err := bucket.Put(blockRoot[:], enc); err != nil {
-			return err
-		}
-		return kv.setStateSlotBitField(ctx, tx, state.Slot())
-	})
+	return kv.SaveStates(ctx, []*state.BeaconState{st}, [][32]byte{blockRoot})
 }
 
 // SaveStates stores multiple states to the db using the provided corresponding roots.
