@@ -36,7 +36,7 @@ func (kv *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBe
 			return nil
 		}
 		block = &ethpb.SignedBeaconBlock{}
-		return decode(enc, block)
+		return decode(ctx, enc, block)
 	})
 	return block, err
 }
@@ -57,7 +57,7 @@ func (kv *Store) HeadBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error
 			return nil
 		}
 		headBlock = &ethpb.SignedBeaconBlock{}
-		return decode(enc, headBlock)
+		return decode(ctx, enc, headBlock)
 	})
 	return headBlock, err
 }
@@ -78,7 +78,7 @@ func (kv *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.S
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(encoded, block); err != nil {
+			if err := decode(ctx, encoded, block); err != nil {
 				return err
 			}
 			blocks = append(blocks, block)
@@ -139,7 +139,7 @@ func (kv *Store) deleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return nil
 		}
 		block := &ethpb.SignedBeaconBlock{}
-		if err := decode(enc, block); err != nil {
+		if err := decode(ctx, enc, block); err != nil {
 			return err
 		}
 		indicesByBucket := createBlockIndicesFromBlock(ctx, block.Block)
@@ -167,7 +167,7 @@ func (kv *Store) deleteBlocks(ctx context.Context, blockRoots [][32]byte) error 
 				return nil
 			}
 			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(enc, block); err != nil {
+			if err := decode(ctx, enc, block); err != nil {
 				return err
 			}
 			indicesByBucket := createBlockIndicesFromBlock(ctx, block.Block)
@@ -206,7 +206,7 @@ func (kv *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock)
 		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 			return nil
 		}
-		enc, err := encode(signed)
+		enc, err := encode(ctx, signed)
 		if err != nil {
 			return err
 		}
@@ -238,7 +238,7 @@ func (kv *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.SignedBeaconBlo
 			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 				continue
 			}
-			enc, err := encode(block)
+			enc, err := encode(ctx, block)
 			if err != nil {
 				return err
 			}
@@ -286,7 +286,7 @@ func (kv *Store) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, er
 			return nil
 		}
 		block = &ethpb.SignedBeaconBlock{}
-		return decode(enc, block)
+		return decode(ctx, enc, block)
 	})
 	return block, err
 }
@@ -382,7 +382,7 @@ func (kv *Store) blocksAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, ind
 	for i := 0; i < len(keys); i++ {
 		encoded := bBkt.Get(keys[i])
 		block := &ethpb.SignedBeaconBlock{}
-		if err := decode(encoded, block); err != nil {
+		if err := decode(ctx, encoded, block); err != nil {
 			return nil, err
 		}
 		blocks = append(blocks, block)
