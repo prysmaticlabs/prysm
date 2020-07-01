@@ -133,48 +133,7 @@ func (kv *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) er
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestation")
 	defer span.End()
 
-	// Aggregation bits are required to store attestations within the attestation container. Missing
-	// this field may cause silent failures or unexpected results.
-	if att.AggregationBits == nil {
-		err := errors.New("attestation has nil aggregation bitlist")
-		traceutil.AnnotateError(span, err)
-		return err
-	}
-
-	attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
-	if err != nil {
-		return err
-	}
-
-	err = kv.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationsBucket)
-		ac := &dbpb.AttestationContainer{
-			Data: att.Data,
-		}
-		existingEnc := bkt.Get(attDataRoot[:])
-		if existingEnc != nil {
-			if err := decode(ctx, existingEnc, ac); err != nil {
-				return err
-			}
-		}
-
-		ac.InsertAttestation(att)
-
-		enc, err := encode(ctx, ac)
-		if err != nil {
-			return err
-		}
-
-		indicesByBucket := createAttestationIndicesFromData(ctx, att.Data)
-		if err := updateValueForIndices(ctx, indicesByBucket, attDataRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not update DB indices")
-		}
-		return bkt.Put(attDataRoot[:], enc)
-	})
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-	}
-	return err
+	return kv.SaveAttestations(ctx, []*ethpb.Attestation{att})
 }
 
 // SaveAttestations via batch updates to the db.
@@ -183,13 +142,20 @@ func (kv *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation
 	defer span.End()
 
 	err := kv.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationsBucket)
 		for _, att := range atts {
+			// Aggregation bits are required to store attestations within the attestation container. Missing
+			// this field may cause silent failures or unexpected results.
+			if att.AggregationBits == nil {
+				traceutil.AnnotateError(span, errors.New("attestation has nil aggregation bitlist"))
+				continue
+			}
+
 			attDataRoot, err := stateutil.AttestationDataRoot(att.Data)
 			if err != nil {
 				return err
 			}
 
-			bkt := tx.Bucket(attestationsBucket)
 			ac := &dbpb.AttestationContainer{
 				Data: att.Data,
 			}
