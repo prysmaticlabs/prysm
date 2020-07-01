@@ -121,6 +121,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 
 	log.Info(en.Sentence())
 	log.Infof("%#x", tx.Data())
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, "deposit_data.rlp", tx.Data()); err != nil {
+		return err
+	}
 	return nil
 }
 
