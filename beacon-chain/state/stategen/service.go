@@ -26,6 +26,7 @@ type State struct {
 	hotStateCache           *cache.HotStateCache
 	splitInfo               *splitSlotAndRoot
 	stateSummaryCache       *cache.StateSummaryCache
+	finalized               *finalized
 }
 
 // This tracks the split point. The point where slot and the block root of
@@ -33,6 +34,12 @@ type State struct {
 type splitSlotAndRoot struct {
 	slot uint64
 	root [32]byte
+}
+
+// This tracks the finalized state in memory. This is used to replay back hot state to a certain slot.
+type finalized struct {
+	state *state.BeaconState
+	lock  sync.RWMutex
 }
 
 // New returns a new state management object.
@@ -44,6 +51,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
+		finalized: &finalized{},
 	}
 }
 
@@ -58,13 +66,13 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 		return nil, err
 	}
 
+	cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if featureconfig.Get().SkipRegenHistoricalStates {
 		// If a node doesn't want to regen historical states, the node would
 		// start from last finalized check point.
-		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
-		if err != nil {
-			return nil, err
-		}
 		lastArchivedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
 		if err != nil {
 			return nil, err
@@ -78,6 +86,14 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	}
 
 	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
+
+	fState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		return nil, err
+	}
+	s.finalized.lock.Lock()
+	s.finalized.state = fState
+	s.finalized.lock.Unlock()
 
 	return lastArchivedState, nil
 }
