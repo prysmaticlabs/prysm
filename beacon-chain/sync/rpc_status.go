@@ -101,7 +101,7 @@ func (s *Service) shouldReSync() bool {
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
 func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
 	headRoot, err := s.chain.HeadRoot(ctx)
@@ -178,7 +178,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "status")
