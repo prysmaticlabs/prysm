@@ -27,14 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	ds "github.com/ipfs/go-datastore"
-	dsync "github.com/ipfs/go-datastore/sync"
-	logging "github.com/ipfs/go-log"
-	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	kaddht "github.com/libp2p/go-libp2p-kad-dht"
-	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
-	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -51,19 +44,15 @@ import (
 )
 
 var (
-	debug         = flag.Bool("debug", false, "Enable debug logging")
-	logFileName   = flag.String("log-file", "", "Specify log filename, relative or absolute")
-	privateKey    = flag.String("private", "", "Private key to use for peer ID")
-	discv5port    = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
-	kademliaPort  = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
-	metricsPort   = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP    = flag.String("external-ip", "", "External IP for the bootnode")
-	disableKad    = flag.Bool("disable-kad", false, "Disables the bootnode from running kademlia dht")
-	log           = logrus.WithField("prefix", "bootnode")
-	kadPeersCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "bootstrap_node_kaddht_peers",
-		Help: "The current number of kaddht peers of the bootstrap node",
-	})
+	debug            = flag.Bool("debug", false, "Enable debug logging")
+	logFileName      = flag.String("log-file", "", "Specify log filename, relative or absolute")
+	privateKey       = flag.String("private", "", "Private key to use for peer ID")
+	discv5port       = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
+	kademliaPort     = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
+	metricsPort      = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP       = flag.String("external-ip", "", "External IP for the bootnode")
+	disableKad       = flag.Bool("disable-kad", false, "Disables the bootnode from running kademlia dht")
+	log              = logrus.WithField("prefix", "bootnode")
 	discv5PeersCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bootstrap_node_discv5_peers",
 		Help: "The current number of discv5 peers of the bootstrap node",
@@ -98,7 +87,7 @@ func main() {
 
 		log.Debug("Debug logging enabled.")
 	}
-	privKey, interfacePrivKey := extractPrivateKey()
+	privKey := extractPrivateKey()
 	cfg := discover.Config{
 		PrivateKey: privKey,
 	}
@@ -111,9 +100,8 @@ func main() {
 	node := listener.Self()
 	log.Infof("Running bootnode: %s", node.String())
 
-	var dhtValue *kaddht.IpfsDHT
 	if !*disableKad {
-		dhtValue = startKademliaDHT(interfacePrivKey)
+		log.Warn("--disable-kad is now deprecated, kademlia has been removed from the bootnode")
 	}
 
 	handler := &handler{
@@ -129,54 +117,10 @@ func main() {
 	// Update metrics once per slot.
 	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot)
 	runutil.RunEvery(context.Background(), slotDuration*time.Second, func() {
-		updateMetrics(listener, dhtValue)
+		updateMetrics(listener)
 	})
 
 	select {}
-}
-
-func startKademliaDHT(privKey crypto.PrivKey) *kaddht.IpfsDHT {
-	if *debug {
-		logging.SetDebugLogging()
-	}
-
-	ipAddr := defaultIP
-	if *externalIP != "" {
-		ipAddr = *externalIP
-	}
-
-	listen, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, *kademliaPort))
-	if err != nil {
-		log.Fatalf("Failed to construct new multiaddress. %v", err)
-	}
-	opts := []libp2p.Option{
-		libp2p.ListenAddrs(listen),
-	}
-	opts = append(opts, libp2p.Identity(privKey))
-
-	ctx := context.Background()
-	host, err := libp2p.New(ctx, opts...)
-	if err != nil {
-		log.Fatalf("Failed to create new host. %v", err)
-	}
-
-	dopts := []dhtopts.Option{
-		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
-		dhtopts.Protocols(
-			dhtProtocol,
-		),
-	}
-
-	dht, err := kaddht.New(ctx, host, dopts...)
-	if err != nil {
-		log.Fatalf("Failed to create new dht: %v", err)
-	}
-	if err := dht.Bootstrap(context.Background()); err != nil {
-		log.Fatalf("Failed to bootstrap DHT. %v", err)
-	}
-
-	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", ipAddr, *kademliaPort, host.ID().Pretty())
-	return dht
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
@@ -256,9 +200,8 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 	return localNode, nil
 }
 
-func extractPrivateKey() (*ecdsa.PrivateKey, crypto.PrivKey) {
+func extractPrivateKey() *ecdsa.PrivateKey {
 	var privKey *ecdsa.PrivateKey
-	var interfaceKey crypto.PrivKey
 	if *privateKey != "" {
 		dst, err := hex.DecodeString(*privateKey)
 		if err != nil {
@@ -268,7 +211,6 @@ func extractPrivateKey() (*ecdsa.PrivateKey, crypto.PrivKey) {
 		if err != nil {
 			panic(err)
 		}
-		interfaceKey = unmarshalledKey
 		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey)))
 
 	} else {
@@ -276,7 +218,6 @@ func extractPrivateKey() (*ecdsa.PrivateKey, crypto.PrivKey) {
 		if err != nil {
 			panic(err)
 		}
-		interfaceKey = privInterfaceKey
 		privKey = (*ecdsa.PrivateKey)((*btcec.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey)))
 		log.Warning("No private key was provided. Using default/random private key")
 		b, err := privInterfaceKey.Raw()
@@ -286,13 +227,10 @@ func extractPrivateKey() (*ecdsa.PrivateKey, crypto.PrivKey) {
 		log.Debugf("Private key %x", b)
 	}
 
-	return privKey, interfaceKey
+	return privKey
 }
 
-func updateMetrics(listener *discover.UDPv5, dht *kaddht.IpfsDHT) {
-	if dht != nil {
-		kadPeersCount.Set(float64(len(dht.Host().Peerstore().Peers())))
-	}
+func updateMetrics(listener *discover.UDPv5) {
 	if listener != nil {
 		discv5PeersCount.Set(float64(len(listener.AllNodes())))
 	}

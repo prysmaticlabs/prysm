@@ -22,7 +22,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	r := &Service{
 		db:  d,
 		p2p: p1,
@@ -66,7 +66,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	r := &Service{
 		db:  d,
 		p2p: p1,
@@ -80,7 +80,7 @@ func TestSendGoodbye_SendsMessage(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != failureCode {
@@ -113,7 +113,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	}
 
 	// Set up a head state in the database with data we expect.
-	d := db.SetupDB(t)
+	d, _ := db.SetupDB(t)
 	r := &Service{
 		db:  d,
 		p2p: p1,
@@ -127,7 +127,7 @@ func TestSendGoodbye_DisconnectWithPeer(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != failureCode {

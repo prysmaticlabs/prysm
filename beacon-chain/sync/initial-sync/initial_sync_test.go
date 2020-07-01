@@ -53,8 +53,7 @@ func TestMain(m *testing.M) {
 	logrus.SetOutput(ioutil.Discard)
 
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{
-		EnableInitSyncWeightedRoundRobin: true,
-		NewStateMgmt:                     true,
+		NewStateMgmt: true,
 	})
 	defer resetCfg()
 
@@ -71,7 +70,7 @@ func TestMain(m *testing.M) {
 
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
 	cache.initializeRootCache(blocks, t)
-	beaconDB := dbtest.SetupDB(t)
+	beaconDB, _ := dbtest.SetupDB(t)
 
 	p := p2pt.NewTestP2P(t)
 	connectPeers(t, p, peers, p.Peers())
@@ -184,7 +183,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			}()
 
 			req := &p2ppb.BeaconBlocksByRangeRequest{}
-			if err := peer.Encoding().DecodeWithLength(stream, req); err != nil {
+			if err := peer.Encoding().DecodeWithMaxLength(stream, req); err != nil {
 				t.Error(err)
 			}
 
@@ -195,7 +194,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 				if _, err := stream.Write([]byte{0x01}); err != nil {
 					t.Error(err)
 				}
-				if _, err := peer.Encoding().EncodeWithLength(stream, "bad"); err != nil {
+				if _, err := peer.Encoding().EncodeWithMaxLength(stream, "bad"); err != nil {
 					t.Error(err)
 				}
 				return

@@ -44,6 +44,10 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
+			cmd.MinimalConfigFlag,
+			cmd.E2EConfigFlag,
+			cmd.CustomGenesisDelayFlag,
+			cmd.RPCMaxPageSizeFlag,
 			cmd.NoDiscovery,
 			cmd.BootstrapNode,
 			cmd.RelayNode,
@@ -86,7 +90,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ContractDeploymentBlock,
 			flags.RPCHost,
 			flags.RPCPort,
-			flags.RPCMaxPageSize,
 			flags.CertFlag,
 			flags.KeyFlag,
 			flags.DisableGRPCGateway,
@@ -119,7 +122,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
 			cmd.P2PEncoding,
-			cmd.P2PPubsub,
 			flags.MinSyncPeers,
 		},
 	},
@@ -140,15 +142,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropGenesisStateFlag,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
-		},
-	},
-	{
-		Name: "archive",
-		Flags: []cli.Flag{
-			flags.ArchiveEnableFlag,
-			flags.ArchiveValidatorSetChangesFlag,
-			flags.ArchiveBlocksFlag,
-			flags.ArchiveAttestationsFlag,
 		},
 	},
 }

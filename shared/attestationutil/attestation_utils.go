@@ -94,7 +94,7 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) []uint64 {
 //      domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //      signing_root = compute_signing_root(indexed_attestation.data, domain)
 //      return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
-func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []*bls.PublicKey, domain []byte) error {
+func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKeys []bls.PublicKey, domain []byte) error {
 	ctx, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
 	defer span.End()
 	indices := indexedAtt.AttestingIndices

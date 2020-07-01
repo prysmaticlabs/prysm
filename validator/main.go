@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
+	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	"github.com/prysmaticlabs/prysm/validator/client/streaming"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
@@ -66,6 +66,8 @@ var appFlags = []cli.Flag{
 	flags.MonitoringPortFlag,
 	flags.SlasherRPCProviderFlag,
 	flags.SlasherCertFlag,
+	cmd.MinimalConfigFlag,
+	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
@@ -122,12 +124,12 @@ contract in order to activate the validator client`,
 						}
 						featureconfig.ConfigureValidator(cliCtx)
 
-						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
+						keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, true /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 							return nil
 						}
-						if _, _, err := accounts.CreateValidatorAccount(keystorePath, passphrase); err != nil {
+						if _, _, err := v1.CreateValidatorAccount(keystorePath, passphrase); err != nil {
 							log.WithField("err", err.Error()).Fatalf("Could not create validator at path: %s", keystorePath)
 						}
 						return nil
@@ -141,11 +143,11 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
+						keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not list keys")
 						}
-						if err := accounts.PrintPublicAndPrivateKeys(keystorePath, passphrase); err != nil {
+						if err := v1.PrintPublicAndPrivateKeys(keystorePath, passphrase); err != nil {
 							log.WithError(err).Errorf("Could not list private and public keys in path %s", keystorePath)
 						}
 						return nil
@@ -170,11 +172,11 @@ contract in order to activate the validator client`,
 							pubKeysBytes48, success := node.ExtractPublicKeysFromKeyManager(cliCtx)
 							pubKeys, err = bytesutil.FromBytes48Array(pubKeysBytes48), success
 						} else {
-							keystorePath, passphrase, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
+							keystorePath, passphrase, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
 							if err != nil {
 								return err
 							}
-							pubKeys, err = accounts.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
+							pubKeys, err = v1.ExtractPublicKeysFromKeyStore(keystorePath, passphrase)
 						}
 						if err != nil {
 							return err
@@ -194,7 +196,7 @@ contract in order to activate the validator client`,
 							log.WithError(err).Errorf("Failed to dial beacon node endpoint at %s", endpoint)
 							return err
 						}
-						err = accounts.RunStatusCommand(pubKeys, ethpb.NewBeaconNodeValidatorClient(conn))
+						err = v1.RunStatusCommand(pubKeys, ethpb.NewBeaconNodeValidatorClient(conn))
 						if closed := conn.Close(); closed != nil {
 							log.WithError(closed).Error("Could not close connection to beacon node")
 						}
@@ -209,7 +211,7 @@ contract in order to activate the validator client`,
 						flags.PasswordFlag,
 					},
 					Action: func(cliCtx *cli.Context) error {
-						keystorePath, oldPassword, err := accounts.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
+						keystorePath, oldPassword, err := v1.HandleEmptyKeystoreFlags(cliCtx, false /*confirmPassword*/)
 						if err != nil {
 							log.WithError(err).Error("Could not read keystore path and/or the old password")
 						}
@@ -220,7 +222,7 @@ contract in order to activate the validator client`,
 							log.WithError(err).Error("Could not read the new password")
 						}
 
-						err = accounts.ChangePassword(keystorePath, oldPassword, newPassword)
+						err = v1.ChangePassword(keystorePath, oldPassword, newPassword)
 						if err != nil {
 							log.WithError(err).Error("Changing password failed")
 						} else {
@@ -242,7 +244,7 @@ contract in order to activate the validator client`,
 						sources := strings.Split(passedSources, ",")
 						target := cliCtx.String(flags.TargetDirectory.Name)
 
-						if err := accounts.Merge(context.Background(), sources, target); err != nil {
+						if err := v1.Merge(context.Background(), sources, target); err != nil {
 							log.WithError(err).Error("Merging validator data failed")
 						} else {
 							log.Info("Merge completed successfully")
@@ -262,7 +264,7 @@ contract in order to activate the validator client`,
 						source := cliCtx.String(flags.SourceDirectory.Name)
 						target := cliCtx.String(flags.TargetDirectory.Name)
 
-						if err := accounts.Split(context.Background(), source, target); err != nil {
+						if err := v1.Split(context.Background(), source, target); err != nil {
 							log.WithError(err).Error("Splitting validator data failed")
 						} else {
 							log.Info("Split completed successfully")
@@ -294,17 +296,14 @@ contract in order to activate the validator client`,
 			// the colors are ANSI codes and seen as Gibberish in the log files.
 			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
-			break
 		case "fluentd":
 			f := joonix.NewFormatter()
 			if err := joonix.DisableTimestampFormat(f); err != nil {
 				panic(err)
 			}
 			logrus.SetFormatter(f)
-			break
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
-			break
 		default:
 			return fmt.Errorf("unknown log format %s", format)
 		}

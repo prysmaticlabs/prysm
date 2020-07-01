@@ -12,11 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -57,9 +57,9 @@ func mapAttestationsByTargetRoot(atts []*ethpb.Attestation) map[[32]byte][]*ethp
 func (bs *Server) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	if int(req.PageSize) > flags.Get().MaxPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, flags.Get().MaxPageSize)
+			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 	var blocks []*ethpb.SignedBeaconBlock
 	var err error
@@ -131,9 +131,6 @@ func (bs *Server) ListIndexedAttestations(
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
-	if !featureconfig.Get().NewStateMgmt {
-		return nil, status.Error(codes.Internal, "New state management must be turned on to support historic attestation. Please run without --disable-new-state-mgmt flag")
-	}
 
 	attsArray := make([]*ethpb.Attestation, 0, params.BeaconConfig().MaxAttestations*uint64(len(blocks)))
 	for _, block := range blocks {
@@ -176,7 +173,7 @@ func (bs *Server) ListIndexedAttestations(
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
-					"Could not retrieve committees from state %v",
+					"Could not retrieve committee from state %v",
 					err,
 				)
 			}
@@ -327,7 +324,6 @@ func (bs *Server) StreamIndexedAttestations(
 	}
 }
 
-// TODO(#5031): Instead of doing aggregation here, leverage the aggregation
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
@@ -339,7 +335,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 			aggregatedAttsByTarget := make(map[[32]byte][]*ethpb.Attestation)
 			for root, atts := range attsByRoot {
 				// We aggregate the received attestations, we know they all have the same data root.
-				aggAtts, err := helpers.AggregateAttestations(atts)
+				aggAtts, err := attaggregation.Aggregate(atts)
 				if err != nil {
 					log.WithError(err).Error("Could not aggregate collected attestations")
 					continue
@@ -381,12 +377,12 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 func (bs *Server) AttestationPool(
 	ctx context.Context, req *ethpb.AttestationPoolRequest,
 ) (*ethpb.AttestationPoolResponse, error) {
-	if int(req.PageSize) > flags.Get().MaxPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Requested page size %d can not be greater than max size %d",
 			req.PageSize,
-			flags.Get().MaxPageSize,
+			cmd.Get().MaxRPCPageSize,
 		)
 	}
 	atts := bs.AttestationsPool.AggregatedAttestations()

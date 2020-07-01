@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -36,11 +36,11 @@ func keySetup() {
 	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
 	keyMap[validatorPubKey] = validatorKey
 
-	sks := make([]*bls.SecretKey, 1)
+	sks := make([]bls.SecretKey, 1)
 	sks[0] = validatorKey.SecretKey
 	testKeyManager = keymanager.NewDirect(sks)
 
-	sks = make([]*bls.SecretKey, 3)
+	sks = make([]bls.SecretKey, 3)
 	for i := 0; i < 3; i++ {
 		vKey, err := keystore.NewKey()
 		if err != nil {
@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 			log.WithError(err).Debug("Cannot remove keystore folder")
 		}
 	}()
-	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
+	if err := v1.NewValidatorAccount(dir, "1234"); err != nil {
 		log.WithError(err).Debug("Cannot create validator account")
 	}
 	keySetup()

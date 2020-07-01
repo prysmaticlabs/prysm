@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -304,7 +303,7 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
-	if runtime.NumGoroutine() > int(s.maxRoutines) {
+	if int64(runtime.NumGoroutine()) > s.maxRoutines {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
 	return nil
@@ -346,7 +345,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return errors.Wrap(err, "could not save head block root")
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could save genesis block root")
+		return errors.Wrap(err, "could not save genesis block root")
 	}
 
 	// Finalized checkpoint at genesis is a zero hash.
@@ -455,29 +454,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.New("finalized state and block can't be nil")
 	}
 	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
-
-	return nil
-}
-
-// This is called when a client starts from a non-genesis slot. It deletes the states in DB
-// from slot 1 (avoid genesis state) to `slot`.
-func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
-	if featureconfig.Get().DontPruneStateStartUp {
-		return nil
-	}
-
-	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
-	roots, err := s.beaconDB.BlockRoots(ctx, filter)
-	if err != nil {
-		return err
-	}
-	if err := s.beaconDB.DeleteStates(ctx, roots); err != nil {
-		return err
-	}
-
-	if err := s.beaconDB.SaveLastArchivedIndex(ctx, 0); err != nil {
-		return err
-	}
 
 	return nil
 }

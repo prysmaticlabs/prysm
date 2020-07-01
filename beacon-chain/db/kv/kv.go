@@ -14,6 +14,7 @@ import (
 	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -52,7 +53,7 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 		return nil, err
 	}
 	datafile := path.Join(dirPath, databaseFileName)
-	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
+	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: 1 * time.Second, InitialMmapSize: 10e6})
 	if err != nil {
 		if err == bolt.ErrTimeout {
 			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
@@ -127,26 +128,26 @@ func NewKVStore(dirPath string, stateSummaryCache *cache.StateSummaryCache) (*St
 }
 
 // ClearDB removes the previously stored database in the data directory.
-func (k *Store) ClearDB() error {
-	if _, err := os.Stat(k.databasePath); os.IsNotExist(err) {
+func (kv *Store) ClearDB() error {
+	if _, err := os.Stat(kv.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	prometheus.Unregister(createBoltCollector(k.db))
-	if err := os.Remove(path.Join(k.databasePath, databaseFileName)); err != nil {
+	prometheus.Unregister(createBoltCollector(kv.db))
+	if err := os.Remove(path.Join(kv.databasePath, databaseFileName)); err != nil {
 		return errors.Wrap(err, "could not remove database file")
 	}
 	return nil
 }
 
 // Close closes the underlying BoltDB database.
-func (k *Store) Close() error {
-	prometheus.Unregister(createBoltCollector(k.db))
-	return k.db.Close()
+func (kv *Store) Close() error {
+	prometheus.Unregister(createBoltCollector(kv.db))
+	return kv.db.Close()
 }
 
 // DatabasePath at which this database writes files.
-func (k *Store) DatabasePath() string {
-	return k.databasePath
+func (kv *Store) DatabasePath() string {
+	return kv.databasePath
 }
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {

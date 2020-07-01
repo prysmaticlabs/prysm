@@ -24,9 +24,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client/polling"
 	"github.com/prysmaticlabs/prysm/validator/client/streaming"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -75,6 +75,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		params.LoadChainConfigFile(chainConfigFileName)
 	}
 
+	cmd.ConfigureValidator(cliCtx)
 	featureconfig.ConfigureValidator(cliCtx)
 
 	keyManager, err := selectKeyManager(cliCtx)
@@ -106,6 +107,13 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		if dataDir == "" {
 			dataDir = cmd.DefaultDataDir()
+			if dataDir == "" {
+				log.Fatal(
+					"Could not determine your system's HOME path, please specify a --datadir you wish " +
+						"to use for your validator data",
+				)
+			}
+
 		}
 		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
 			return nil, err
@@ -335,12 +343,12 @@ func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
 		deniedText := "The historical actions database will not be deleted. No changes have been made."
 		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
 		if err != nil {
-			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+			return errors.Wrapf(err, "Could not clear DB in dir %s", dataDir)
 		}
 	}
 
 	if clearDBConfirmed {
-		valDB, err := db.NewKVStore(dataDir, pubkeys)
+		valDB, err := kv.NewKVStore(dataDir, pubkeys)
 		if err != nil {
 			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
 		}

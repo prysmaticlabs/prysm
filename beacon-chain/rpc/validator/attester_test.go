@@ -31,7 +31,7 @@ import (
 )
 
 func TestProposeAttestation_OK(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	attesterServer := &Server{
@@ -92,7 +92,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 }
 
 func TestProposeAttestation_IncorrectSignature(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
@@ -117,7 +117,7 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 
 func TestGetAttestationData_OK(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	block := &ethpb.BeaconBlock{
 		Slot: 3*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -234,7 +234,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
 	// This test breaks if it doesnt use mainnet config
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 	// Ensure HistoricalRootsLimit matches scenario
 	params.SetupTestConfigCleanup(t)
@@ -408,8 +408,8 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 		Slot: 1000000000000,
 	}
 	_, err := attesterServer.GetAttestationData(ctx, req)
-	if s, ok := status.FromError(err); !ok || s.Message() != msgInvalidAttestationRequest {
-		t.Fatalf("Wrong error. Wanted %v, got %v", msgInvalidAttestationRequest, err)
+	if s, ok := status.FromError(err); !ok || !strings.Contains(s.Message(), "invalid request") {
+		t.Fatalf("Wrong error. Wanted error to start with %v, got %v", "invalid request", err)
 	}
 }
 
@@ -419,7 +419,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	// attestation is referencing be less than or equal to the attestation data slot.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5164
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
+	db, sc := dbutil.SetupDB(t)
 
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	block := &ethpb.BeaconBlock{
@@ -500,7 +500,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
 		GenesisTimeFetcher:  &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*int64(slot*params.BeaconConfig().SecondsPerSlot)) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
-		StateGen:            stategen.New(db, cache.NewStateSummaryCache()),
+		StateGen:            stategen.New(db, sc),
 	}
 	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
@@ -541,7 +541,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 
 func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 	ctx := context.Background()
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	slot := uint64(5)
 	block := &ethpb.BeaconBlock{
@@ -638,7 +638,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 }
 
 func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
@@ -659,8 +659,47 @@ func TestServer_SubscribeCommitteeSubnets_NoSlots(t *testing.T) {
 	}
 }
 
+func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
+	db, _ := dbutil.SetupDB(t)
+
+	// fixed seed
+	s := rand.NewSource(10)
+	randGen := rand.New(s)
+
+	attesterServer := &Server{
+		HeadFetcher:       &mock.ChainService{},
+		P2P:               &mockp2p.MockBroadcaster{},
+		BeaconDB:          db,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           attestations.NewPool(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
+	}
+
+	var slots []uint64
+	var comIdxs []uint64
+	var isAggregator []bool
+
+	for i := uint64(100); i < 200; i++ {
+		slots = append(slots, i)
+		comIdxs = append(comIdxs, uint64(randGen.Int63n(64)))
+		boolVal := randGen.Uint64()%2 == 0
+		isAggregator = append(isAggregator, boolVal)
+	}
+
+	slots = append(slots, 321)
+
+	_, err := attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
+		Slots:        slots,
+		CommitteeIds: comIdxs,
+		IsAggregator: isAggregator,
+	})
+	if err == nil || !strings.Contains(err.Error(), "request fields are not the same length") {
+		t.Fatalf("Expected request fields are not the same length error, received: %v", err)
+	}
+}
+
 func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	// fixed seed
 	s := rand.NewSource(10)
 	randGen := rand.New(s)

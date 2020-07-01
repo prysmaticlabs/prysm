@@ -12,6 +12,6 @@ func (s *Service) processDeposit(eth1Data *ethpb.Eth1Data, deposit *ethpb.Deposi
 	if err := s.preGenesisState.SetEth1Data(eth1Data); err != nil {
 		return err
 	}
-	s.preGenesisState, err = blocks.ProcessPreGenesisDeposit(context.Background(), s.preGenesisState, deposit)
+	s.preGenesisState, err = blocks.ProcessPreGenesisDeposits(context.Background(), s.preGenesisState, []*ethpb.Deposit{deposit})
 	return err
 }

@@ -139,7 +139,7 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 //    """
 //    Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
 //    """
-//    return Epoch(epoch + 1 + MIN_SEED_LOOKAHEAD)
+//    return Epoch(epoch + 1 + MAX_SEED_LOOKAHEAD)
 func ActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 }
@@ -201,7 +201,7 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
-	if err := UpdateProposerIndicesInCache(state, CurrentEpoch(state)); err != nil {
+	if err := UpdateProposerIndicesInCache(state, e); err != nil {
 		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
@@ -243,7 +243,7 @@ func ComputeProposerIndex(bState *stateTrie.BeaconState, activeIndices []uint64,
 			return 0, err
 		}
 		candidateIndex = activeIndices[candidateIndex]
-		if int(candidateIndex) >= bState.NumValidators() {
+		if candidateIndex >= uint64(bState.NumValidators()) {
 			return 0, errors.New("active index out of range")
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
@@ -295,7 +295,7 @@ func ComputeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 			return 0, err
 		}
 		candidateIndex = activeIndices[candidateIndex]
-		if int(candidateIndex) >= len(validators) {
+		if candidateIndex >= uint64(len(validators)) {
 			return 0, errors.New("active index out of range")
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)

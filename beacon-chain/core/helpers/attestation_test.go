@@ -1,244 +1,22 @@
 package helpers_test
 
 import (
-	"bytes"
-	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestAggregateAttestation(t *testing.T) {
-	tests := []struct {
-		a1   *ethpb.Attestation
-		a2   *ethpb.Attestation
-		want *ethpb.Attestation
-	}{
-		{a1: &ethpb.Attestation{AggregationBits: []byte{}},
-			a2:   &ethpb.Attestation{AggregationBits: []byte{}},
-			want: &ethpb.Attestation{AggregationBits: []byte{}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
-			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
-			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
-			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
-			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
-	}
-	for _, tt := range tests {
-		got, err := helpers.AggregateAttestation(tt.a1, tt.a2)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !ssz.DeepEqual(got, tt.want) {
-			t.Errorf("AggregateAttestation() = %v, want %v", got, tt.want)
-		}
-	}
-}
-
-func TestAggregateAttestation_OverlapFails(t *testing.T) {
-	tests := []struct {
-		a1 *ethpb.Attestation
-		a2 *ethpb.Attestation
-	}{
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x1F}},
-			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}}},
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0xFF, 0x85}},
-			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x13, 0x8F}}},
-	}
-	for _, tt := range tests {
-		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)
-		if err != helpers.ErrAttestationAggregationBitsOverlap {
-			t.Error("Did not receive wanted error")
-		}
-	}
-}
-
-func TestAggregateAttestation_DiffLengthFails(t *testing.T) {
-	tests := []struct {
-		a1 *ethpb.Attestation
-		a2 *ethpb.Attestation
-	}{
-		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0F}},
-			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}}},
-	}
-	for _, tt := range tests {
-		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)
-		if err != helpers.ErrAttestationAggregationBitsDifferentLen {
-			t.Error("Did not receive wanted error")
-		}
-	}
-}
-
-func bitlistWithAllBitsSet(length uint64) bitfield.Bitlist {
-	b := bitfield.NewBitlist(length)
-	for i := uint64(0); i < length; i++ {
-		b.SetBitAt(i, true)
-	}
-	return b
-}
-
-func bitlistsWithSingleBitSet(length uint64) []bitfield.Bitlist {
-	lists := make([]bitfield.Bitlist, length)
-	for i := uint64(0); i < length; i++ {
-		b := bitfield.NewBitlist(length)
-		b.SetBitAt(i, true)
-		lists[i] = b
-	}
-	return lists
-}
-
-func TestAggregateAttestations(t *testing.T) {
-	// Each test defines the aggregation bitfield inputs and the wanted output result.
-	tests := []struct {
-		name   string
-		inputs []bitfield.Bitlist
-		want   []bitfield.Bitlist
-	}{
-		{
-			name: "two attestations with no overlap",
-			inputs: []bitfield.Bitlist{
-				{0b00000001, 0b1},
-				{0b00000010, 0b1},
-			},
-			want: []bitfield.Bitlist{
-				{0b00000011, 0b1},
-			},
-		},
-		{
-			name:   "256 attestations with single bit set",
-			inputs: bitlistsWithSingleBitSet(256),
-			want: []bitfield.Bitlist{
-				bitlistWithAllBitsSet(256),
-			},
-		},
-		{
-			name:   "1024 attestations with single bit set",
-			inputs: bitlistsWithSingleBitSet(1024),
-			want: []bitfield.Bitlist{
-				bitlistWithAllBitsSet(1024),
-			},
-		},
-		{
-			name: "two attestations with overlap",
-			inputs: []bitfield.Bitlist{
-				{0b00000101, 0b1},
-				{0b00000110, 0b1},
-			},
-			want: []bitfield.Bitlist{
-				{0b00000101, 0b1},
-				{0b00000110, 0b1},
-			},
-		},
-		{
-			name: "some attestations overlap",
-			inputs: []bitfield.Bitlist{
-				{0b00001001, 0b1},
-				{0b00010110, 0b1},
-				{0b00001010, 0b1},
-				{0b00110001, 0b1},
-			},
-			want: []bitfield.Bitlist{
-				{0b00111011, 0b1},
-				{0b00011111, 0b1},
-			},
-		},
-		{
-			name: "some attestations produce duplicates which are removed",
-			inputs: []bitfield.Bitlist{
-				{0b00000101, 0b1},
-				{0b00000110, 0b1},
-				{0b00001010, 0b1},
-				{0b00001001, 0b1},
-			},
-			want: []bitfield.Bitlist{
-				{0b00001111, 0b1}, // both 0&1 and 2&3 produce this bitlist
-			},
-		},
-		{
-			name: "two attestations where one is fully contained within the other",
-			inputs: []bitfield.Bitlist{
-				{0b00000001, 0b1},
-				{0b00000011, 0b1},
-			},
-			want: []bitfield.Bitlist{
-				{0b00000011, 0b1},
-			},
-		},
-		{
-			name: "two attestations where one is fully contained within the other reversed",
-			inputs: []bitfield.Bitlist{
-				{0b00000011, 0b1},
-				{0b00000001, 0b1},
-			},
-			want: []bitfield.Bitlist{
-				{0b00000011, 0b1},
-			},
-		},
-		{
-			name: "attestations with different bitlist lengths",
-			inputs: []bitfield.Bitlist{
-				{0b00000011, 0b10},
-				{0b00000111, 0b100},
-				{0b00000100, 0b1},
-			},
-			want: []bitfield.Bitlist{
-				{0b00000011, 0b10},
-				{0b00000111, 0b100},
-				{0b00000100, 0b1},
-			},
-		},
-	}
-
-	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
-		atts := make([]*ethpb.Attestation, len(bl))
-		for i, b := range bl {
-			sk := bls.RandKey()
-			sig := sk.Sign([]byte("dummy_test_data"))
-			atts[i] = &ethpb.Attestation{
-				AggregationBits: b,
-				Data:            nil,
-				Signature:       sig.Marshal(),
-			}
-		}
-		return atts
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := helpers.AggregateAttestations(makeAttestationsFromBitlists(tt.inputs))
-			if err != nil {
-				t.Fatal(err)
-			}
-			sort.Slice(got, func(i, j int) bool {
-				return got[i].AggregationBits.Bytes()[0] < got[j].AggregationBits.Bytes()[0]
-			})
-			sort.Slice(tt.want, func(i, j int) bool {
-				return tt.want[i].Bytes()[0] < tt.want[j].Bytes()[0]
-			})
-			if len(got) != len(tt.want) {
-				t.Logf("got=%v", got)
-				t.Fatalf("Wrong number of responses. Got %d, wanted %d", len(got), len(tt.want))
-			}
-			for i, w := range tt.want {
-				if !bytes.Equal(got[i].AggregationBits.Bytes(), w.Bytes()) {
-					t.Errorf("Unexpected bitlist at index %d, got %b, wanted %b", i, got[i].AggregationBits.Bytes(), w.Bytes())
-				}
-			}
-		})
-	}
-}
-
-func TestSlotSignature_Verify(t *testing.T) {
+func TestAttestation_SlotSignature(t *testing.T) {
 	priv := bls.RandKey()
 	pub := priv.PublicKey()
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
@@ -259,7 +37,8 @@ func TestSlotSignature_Verify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state),
+		params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,85 +51,88 @@ func TestSlotSignature_Verify(t *testing.T) {
 	}
 }
 
-func TestIsAggregator_True(t *testing.T) {
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+func TestAttestation_IsAggregator(t *testing.T) {
+	t.Run("aggregator", func(t *testing.T) {
+		beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+		committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sig := privKeys[0].Sign([]byte{'A'})
+		agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !agg {
+			t.Error("Wanted aggregator true, got false")
+		}
+	})
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sig := privKeys[0].Sign([]byte{'A'})
-	agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !agg {
-		t.Error("Wanted aggregator true, got false")
-	}
+	t.Run("not aggregator", func(t *testing.T) {
+		params.UseMinimalConfig()
+		defer params.UseMainnetConfig()
+		beaconState, privKeys := testutil.DeterministicGenesisState(t, 2048)
+
+		committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sig := privKeys[0].Sign([]byte{'A'})
+		agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if agg {
+			t.Error("Wanted aggregator false, got true")
+		}
+	})
 }
 
-func TestIsAggregator_False(t *testing.T) {
-	params.UseMinimalConfig()
-	defer params.UseMainnetConfig()
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 2048)
+func TestAttestation_AggregateSignature(t *testing.T) {
+	t.Run("verified", func(t *testing.T) {
+		pubkeys := make([]bls.PublicKey, 0, 100)
+		atts := make([]*ethpb.Attestation, 0, 100)
+		msg := bytesutil.ToBytes32([]byte("hello"))
+		for i := 0; i < 100; i++ {
+			priv := bls.RandKey()
+			pub := priv.PublicKey()
+			sig := priv.Sign(msg[:])
+			pubkeys = append(pubkeys, pub)
+			att := &ethpb.Attestation{Signature: sig.Marshal()}
+			atts = append(atts, att)
+		}
+		aggSig, err := helpers.AggregateSignature(atts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !aggSig.FastAggregateVerify(pubkeys, msg) {
+			t.Error("Signature did not verify")
+		}
+	})
 
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sig := privKeys[0].Sign([]byte{'A'})
-	agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if agg {
-		t.Error("Wanted aggregator false, got true")
-	}
+	t.Run("not verified", func(t *testing.T) {
+		pubkeys := make([]bls.PublicKey, 0, 100)
+		atts := make([]*ethpb.Attestation, 0, 100)
+		msg := []byte("hello")
+		for i := 0; i < 100; i++ {
+			priv := bls.RandKey()
+			pub := priv.PublicKey()
+			sig := priv.Sign(msg[:])
+			pubkeys = append(pubkeys, pub)
+			att := &ethpb.Attestation{Signature: sig.Marshal()}
+			atts = append(atts, att)
+		}
+		aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)) {
+			t.Error("Signature not suppose to verify")
+		}
+	})
 }
 
-func TestAggregateSignature_True(t *testing.T) {
-	pubkeys := make([]*bls.PublicKey, 0, 100)
-	atts := make([]*ethpb.Attestation, 0, 100)
-	msg := bytesutil.ToBytes32([]byte("hello"))
-	for i := 0; i < 100; i++ {
-		priv := bls.RandKey()
-		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:])
-		pubkeys = append(pubkeys, pub)
-		att := &ethpb.Attestation{Signature: sig.Marshal()}
-		atts = append(atts, att)
-	}
-	aggSig, err := helpers.AggregateSignature(atts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !aggSig.FastAggregateVerify(pubkeys, msg) {
-		t.Error("Signature did not verify")
-	}
-}
-
-func TestAggregateSignature_False(t *testing.T) {
-	pubkeys := make([]*bls.PublicKey, 0, 100)
-	atts := make([]*ethpb.Attestation, 0, 100)
-	msg := []byte("hello")
-	for i := 0; i < 100; i++ {
-		priv := bls.RandKey()
-		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:])
-		pubkeys = append(pubkeys, pub)
-		att := &ethpb.Attestation{Signature: sig.Marshal()}
-		atts = append(atts, att)
-	}
-	aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)) {
-		t.Error("Signature not suppose to verify")
-	}
-}
-
-func TestComputeSubnetForAttestation_ComputeForAttestation(t *testing.T) {
+func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
@@ -397,5 +179,91 @@ func TestComputeSubnetForAttestation_ComputeForAttestation(t *testing.T) {
 	sub := helpers.ComputeSubnetForAttestation(valCount, att)
 	if sub != 6 {
 		t.Errorf("Did not get correct subnet for attestation, wanted %d but got %d", 6, sub)
+	}
+}
+
+func Test_ValidateAttestationTime(t *testing.T) {
+	if params.BeaconNetworkConfig().MaximumGossipClockDisparity < 200*time.Millisecond {
+		t.Fatal("This test expects the maximum clock disparity to be at least 200ms")
+	}
+
+	type args struct {
+		attSlot     uint64
+		genesisTime time.Time
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "attestation.slot == current_slot",
+			args: args{
+				attSlot:     15,
+				genesisTime: roughtime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+			wantErr: false,
+		},
+		{
+			name: "attestation.slot == current_slot, received in middle of slot",
+			args: args{
+				attSlot: 15,
+				genesisTime: roughtime.Now().Add(
+					-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(-(time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second)),
+			},
+			wantErr: false,
+		},
+		{
+			name: "attestation.slot == current_slot, received 200ms early",
+			args: args{
+				attSlot: 16,
+				genesisTime: roughtime.Now().Add(
+					-16 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(-200 * time.Millisecond),
+			},
+			wantErr: false,
+		},
+		{
+			name: "attestation.slot > current_slot",
+			args: args{
+				attSlot:     16,
+				genesisTime: roughtime.Now().Add(-15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+			wantErr: true,
+		},
+		{
+			name: "attestation.slot < current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
+			args: args{
+				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange - 1,
+				genesisTime: roughtime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+			wantErr: true,
+		},
+		{
+			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
+			args: args{
+				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+				genesisTime: roughtime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+			wantErr: false,
+		},
+		{
+			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE, received 200ms late",
+			args: args{
+				attSlot: 100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+				genesisTime: roughtime.Now().Add(
+					-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(200 * time.Millisecond),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime); (err != nil) != tt.wantErr {
+				t.Errorf("validateAggregateAttTime() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

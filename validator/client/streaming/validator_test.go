@@ -12,17 +12,16 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	db2 "github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	dbTest "github.com/prysmaticlabs/prysm/validator/db/testing"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func init() {
@@ -526,7 +525,7 @@ func TestUpdateProtections_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
@@ -596,7 +595,7 @@ func TestSaveProtections_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-	db := db2.SetupDB(t, [][48]byte{pubKey1, pubKey2})
+	db := dbTest.SetupDB(t, [][48]byte{pubKey1, pubKey2})
 
 	cleanHistories, err := db.AttestationHistoryForPubKeys(context.Background(), [][48]byte{pubKey1, pubKey2})
 	if err != nil {
@@ -639,7 +638,7 @@ func TestRolesAt_OK(t *testing.T) {
 	v, m, finish := setup(t)
 	defer finish()
 
-	sks := make([]*bls.SecretKey, 4)
+	sks := make([]bls.SecretKey, 4)
 	sks[0] = bls.RandKey()
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()
@@ -710,7 +709,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	v, m, finish := setup(t)
 	defer finish()
 
-	sks := make([]*bls.SecretKey, 3)
+	sks := make([]bls.SecretKey, 3)
 	sks[0] = bls.RandKey()
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()

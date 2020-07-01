@@ -30,7 +30,6 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",

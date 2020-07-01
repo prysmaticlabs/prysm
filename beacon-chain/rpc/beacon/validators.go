@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -26,13 +26,9 @@ import (
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
-	if int(req.PageSize) > flags.Get().MaxPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, flags.Get().MaxPageSize)
-	}
-
-	if !featureconfig.Get().NewStateMgmt {
-		return bs.listValidatorsBalancesUsingOldArchival(ctx, req)
+			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
 	if bs.GenesisTimeFetcher == nil {
@@ -81,7 +77,7 @@ func (bs *Server) ListValidatorBalances(
 
 		filtered[index] = true
 
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -95,7 +91,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	for _, index := range req.Indices {
-		if int(index) >= len(balances) {
+		if index >= uint64(len(balances)) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
 				index, len(balances))
 		}
@@ -160,169 +156,17 @@ func (bs *Server) ListValidatorBalances(
 	}, nil
 }
 
-func (bs *Server) listValidatorsBalancesUsingOldArchival(
-	ctx context.Context,
-	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
-	res := make([]*ethpb.ValidatorBalances_Balance, 0)
-	filtered := map[uint64]bool{} // Track filtered validators to prevent duplication in the response.
-
-	if bs.HeadFetcher == nil {
-		return nil, status.Error(codes.Internal, "Nil head state")
-	}
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-
-	var requestingGenesis bool
-	var epoch uint64
-	switch q := req.QueryFilter.(type) {
-	case *ethpb.ListValidatorBalancesRequest_Epoch:
-		epoch = q.Epoch
-	case *ethpb.ListValidatorBalancesRequest_Genesis:
-		requestingGenesis = q.Genesis
-	default:
-		epoch = helpers.CurrentEpoch(headState)
-	}
-
-	var balances []uint64
-	validators := headState.Validators()
-	if requestingGenesis || epoch < helpers.CurrentEpoch(headState) {
-		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve balances for epoch %d", epoch)
-		}
-		if balances == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				0,
-			)
-		}
-	} else if epoch == helpers.CurrentEpoch(headState) {
-		balances = headState.Balances()
-	} else {
-		// Otherwise, we are requesting data from the future and we return an error.
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.CurrentEpoch(headState),
-			epoch,
-		)
-	}
-
-	balancesCount := len(balances)
-	for _, pubKey := range req.PublicKeys {
-		// Skip empty public key.
-		if len(pubKey) == 0 {
-			continue
-		}
-		pubkeyBytes := bytesutil.ToBytes48(pubKey)
-		index, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
-		if !ok {
-			return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", pubkeyBytes)
-		}
-
-		filtered[index] = true
-
-		if int(index) >= len(balances) {
-			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
-				index, len(balances))
-		}
-
-		res = append(res, &ethpb.ValidatorBalances_Balance{
-			PublicKey: pubKey,
-			Index:     index,
-			Balance:   balances[index],
-		})
-		balancesCount = len(res)
-	}
-
-	for _, index := range req.Indices {
-		if int(index) >= len(balances) {
-			if epoch <= helpers.CurrentEpoch(headState) {
-				return nil, status.Errorf(codes.OutOfRange, "Validator index %d does not exist in historical balances",
-					index)
-			}
-			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
-				index, len(balances))
-		}
-
-		if !filtered[index] {
-			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: validators[index].PublicKey,
-				Index:     index,
-				Balance:   balances[index],
-			})
-		}
-		balancesCount = len(res)
-	}
-	// Depending on the indices and public keys given, results might not be sorted.
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].Index < res[j].Index
-	})
-
-	// If there are no balances, we simply return a response specifying this.
-	// Otherwise, attempting to paginate 0 balances below would result in an error.
-	if balancesCount == 0 {
-		return &ethpb.ValidatorBalances{
-			Epoch:         epoch,
-			Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
-			TotalSize:     int32(0),
-			NextPageToken: strconv.Itoa(0),
-		}, nil
-	}
-
-	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), balancesCount)
-	if err != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not paginate results: %v",
-			err,
-		)
-	}
-
-	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
-		// Return everything.
-		for i := start; i < end; i++ {
-			pubkey := headState.PubkeyAtIndex(uint64(i))
-			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: pubkey[:],
-				Index:     uint64(i),
-				Balance:   balances[i],
-			})
-		}
-		return &ethpb.ValidatorBalances{
-			Epoch:         epoch,
-			Balances:      res,
-			TotalSize:     int32(balancesCount),
-			NextPageToken: nextPageToken,
-		}, nil
-	}
-
-	return &ethpb.ValidatorBalances{
-		Epoch:         epoch,
-		Balances:      res[start:end],
-		TotalSize:     int32(balancesCount),
-		NextPageToken: nextPageToken,
-	}, nil
-}
-
 // ListValidators retrieves the current list of active validators with an optional historical epoch flag to
 // to retrieve validator set in time.
 func (bs *Server) ListValidators(
 	ctx context.Context,
 	req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
-	if int(req.PageSize) > flags.Get().MaxPageSize {
+	if int(req.PageSize) > cmd.Get().MaxRPCPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, flags.Get().MaxPageSize)
+			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	requestedEpoch := currentEpoch
 
@@ -343,9 +187,14 @@ func (bs *Server) ListValidators(
 		requestedEpoch = q.Epoch
 	}
 
-	if helpers.StartSlot(requestedEpoch) > headState.Slot() {
-		headState = headState.Copy()
-		headState, err = state.ProcessSlots(ctx, headState, helpers.StartSlot(requestedEpoch))
+	reqState, err := bs.StateGen.StateBySlot(ctx, helpers.StartSlot(requestedEpoch))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get requested state")
+	}
+
+	if helpers.StartSlot(requestedEpoch) > reqState.Slot() {
+		reqState = reqState.Copy()
+		reqState, err = state.ProcessSlots(ctx, reqState, helpers.StartSlot(requestedEpoch))
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -359,7 +208,7 @@ func (bs *Server) ListValidators(
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
 
 	for _, index := range req.Indices {
-		val, err := headState.ValidatorAtIndex(index)
+		val, err := reqState.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get validator")
 		}
@@ -375,11 +224,11 @@ func (bs *Server) ListValidators(
 			continue
 		}
 		pubkeyBytes := bytesutil.ToBytes48(pubKey)
-		index, ok := headState.ValidatorIndexByPubkey(pubkeyBytes)
+		index, ok := reqState.ValidatorIndexByPubkey(pubkeyBytes)
 		if !ok {
 			continue
 		}
-		val, err := headState.ValidatorAtIndex(index)
+		val, err := reqState.ValidatorAtIndex(index)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get validator")
 		}
@@ -394,8 +243,8 @@ func (bs *Server) ListValidators(
 	})
 
 	if len(req.PublicKeys) == 0 && len(req.Indices) == 0 {
-		for i := 0; i < headState.NumValidators(); i++ {
-			val, err := headState.ValidatorAtIndex(uint64(i))
+		for i := 0; i < reqState.NumValidators(); i++ {
+			val, err := reqState.ValidatorAtIndex(uint64(i))
 			if err != nil {
 				return nil, status.Error(codes.Internal, "Could not get validator")
 			}
@@ -406,7 +255,7 @@ func (bs *Server) ListValidators(
 		}
 	}
 
-	if requestedEpoch < currentEpoch {
+	if !featureconfig.Get().NewStateMgmt && requestedEpoch < currentEpoch {
 		stopIdx := len(validatorList)
 		for idx, item := range validatorList {
 			// The first time we see a validator with an activation epoch > the requested epoch,
@@ -509,11 +358,6 @@ func (bs *Server) GetValidator(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-
-	if !featureconfig.Get().NewStateMgmt {
-		return bs.getValidatorActiveSetChangesUsingOldArchival(ctx, req)
-	}
-
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
 	var requestedEpoch uint64
@@ -594,122 +438,12 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	}, nil
 }
 
-func (bs *Server) getValidatorActiveSetChangesUsingOldArchival(
-	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
-) (*ethpb.ActiveSetChanges, error) {
-	if bs.HeadFetcher == nil {
-		return nil, status.Error(codes.Internal, "Nil head state")
-	}
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-	if bs.BeaconDB == nil {
-		return nil, status.Error(codes.Internal, "Nil beacon DB")
-	}
-	currentEpoch := helpers.CurrentEpoch(headState)
-	requestedEpoch := currentEpoch
-	requestingGenesis := false
-
-	switch q := req.QueryFilter.(type) {
-	case *ethpb.GetValidatorActiveSetChangesRequest_Genesis:
-		requestingGenesis = q.Genesis
-		requestedEpoch = 0
-	case *ethpb.GetValidatorActiveSetChangesRequest_Epoch:
-		requestedEpoch = q.Epoch
-	}
-
-	activatedIndices := make([]uint64, 0)
-	exitedIndices := make([]uint64, 0)
-	slashedIndices := make([]uint64, 0)
-	ejectedIndices := make([]uint64, 0)
-	if requestingGenesis || requestedEpoch < currentEpoch {
-		archivedChanges, err := bs.BeaconDB.ArchivedActiveValidatorChanges(ctx, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch archived active validator changes: %v", err)
-		}
-		if archivedChanges == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Did not find any data for epoch %d - perhaps no active set changed occurred during the epoch",
-				requestedEpoch,
-			)
-		}
-		activatedIndices = archivedChanges.Activated
-		exitedIndices = archivedChanges.Exited
-		slashedIndices = archivedChanges.Slashed
-		ejectedIndices = archivedChanges.Ejected
-	} else if requestedEpoch == currentEpoch {
-		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
-		}
-		vals := headState.Validators()
-		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), vals)
-		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), vals, activeValidatorCount)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
-		}
-		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), vals)
-		ejectedIndices, err = validators.EjectedValidatorIndices(helpers.PrevEpoch(headState), vals, activeValidatorCount)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not determine ejected validator indices: %v", err)
-		}
-	} else {
-		// We are requesting data from the future and we return an error.
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			currentEpoch,
-			requestedEpoch,
-		)
-	}
-
-	// We retrieve the public keys for the indices.
-	activatedKeys := make([][]byte, len(activatedIndices))
-	exitedKeys := make([][]byte, len(exitedIndices))
-	slashedKeys := make([][]byte, len(slashedIndices))
-	ejectedKeys := make([][]byte, len(ejectedIndices))
-	for i, idx := range activatedIndices {
-		pubkey := headState.PubkeyAtIndex(idx)
-		activatedKeys[i] = pubkey[:]
-	}
-	for i, idx := range exitedIndices {
-		pubkey := headState.PubkeyAtIndex(idx)
-		exitedKeys[i] = pubkey[:]
-	}
-	for i, idx := range slashedIndices {
-		pubkey := headState.PubkeyAtIndex(idx)
-		slashedKeys[i] = pubkey[:]
-	}
-	for i, idx := range ejectedIndices {
-		pubkey := headState.PubkeyAtIndex(idx)
-		ejectedKeys[i] = pubkey[:]
-	}
-	return &ethpb.ActiveSetChanges{
-		Epoch:               requestedEpoch,
-		ActivatedPublicKeys: activatedKeys,
-		ActivatedIndices:    activatedIndices,
-		ExitedPublicKeys:    exitedKeys,
-		ExitedIndices:       exitedIndices,
-		SlashedPublicKeys:   slashedKeys,
-		SlashedIndices:      slashedIndices,
-		EjectedPublicKeys:   ejectedKeys,
-		EjectedIndices:      ejectedIndices,
-	}, nil
-}
-
 // GetValidatorParticipation retrieves the validator participation information for a given epoch,
 // it returns the information about validator's participation rate in voting on the proof of stake
 // rules based on their balance compared to the total active validator balance.
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-
-	if !featureconfig.Get().NewStateMgmt {
-		return bs.getValidatorParticipationUsingOldArchival(ctx, req)
-	}
-
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 
 	var requestedEpoch uint64
@@ -764,87 +498,6 @@ func (bs *Server) GetValidatorParticipation(
 	}, nil
 }
 
-func (bs *Server) getValidatorParticipationUsingOldArchival(
-	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
-) (*ethpb.ValidatorParticipationResponse, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-
-	currentEpoch := helpers.CurrentEpoch(headState)
-	prevEpoch := helpers.PrevEpoch(headState)
-
-	var requestedEpoch uint64
-	var requestingGenesis bool
-	switch q := req.QueryFilter.(type) {
-	case *ethpb.GetValidatorParticipationRequest_Genesis:
-		requestingGenesis = q.Genesis
-		requestedEpoch = 0
-	case *ethpb.GetValidatorParticipationRequest_Epoch:
-		requestedEpoch = q.Epoch
-	default:
-		requestedEpoch = prevEpoch
-	}
-
-	// If the request is from genesis or another past epoch, we look into our archived
-	// data to find it and return it if it exists.
-	if requestingGenesis || requestedEpoch < prevEpoch {
-		participation, err := bs.BeaconDB.ArchivedValidatorParticipation(ctx, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch archived participation: %v", err)
-		}
-		if participation == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				0,
-			)
-		}
-		return &ethpb.ValidatorParticipationResponse{
-			Epoch:         requestedEpoch,
-			Finalized:     requestedEpoch <= headState.FinalizedCheckpointEpoch(),
-			Participation: participation,
-		}, nil
-	} else if requestedEpoch == currentEpoch {
-		// We cannot retrieve participation for an epoch currently in progress.
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch currently in progress, current epoch %d, requesting %d",
-			currentEpoch,
-			requestedEpoch,
-		)
-	} else if requestedEpoch > currentEpoch {
-		// We are requesting data from the future and we return an error.
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			currentEpoch,
-			requestedEpoch,
-		)
-	}
-
-	pBal := bs.ParticipationFetcher.Participation(requestedEpoch)
-	if pBal == nil {
-		return nil, status.Errorf(codes.Unavailable, "Participation information for epoch %d is not yet available", requestedEpoch)
-	}
-	participation := &ethpb.ValidatorParticipation{
-		EligibleEther: pBal.ActivePrevEpoch,
-		VotedEther:    pBal.PrevEpochTargetAttested,
-	}
-	participation.GlobalParticipationRate = float32(0)
-	// only divide if prevEpoch is non zero
-	if pBal.ActivePrevEpoch != 0 {
-		participation.GlobalParticipationRate = float32(float64(pBal.PrevEpochTargetAttested) / float64(pBal.ActivePrevEpoch))
-	}
-
-	return &ethpb.ValidatorParticipationResponse{
-		Epoch:         requestedEpoch,
-		Finalized:     requestedEpoch <= headState.FinalizedCheckpointEpoch(),
-		Participation: participation,
-	}, nil
-}
-
 // GetValidatorQueue retrieves the current validator queue information.
 func (bs *Server) GetValidatorQueue(
 	ctx context.Context, _ *ptypes.Empty,
@@ -878,7 +531,7 @@ func (bs *Server) GetValidatorQueue(
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
-	activationQueueChurn := len(activationQ)
+	activationQueueChurn := uint64(len(activationQ))
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
@@ -894,20 +547,20 @@ func (bs *Server) GetValidatorQueue(
 			exitQueueEpoch = i
 		}
 	}
-	exitQueueChurn := 0
+	exitQueueChurn := uint64(0)
 	for _, val := range vals {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
 		}
 	}
 	// Prevent churn limit from causing index out of bound issues.
-	if int(churnLimit) < activationQueueChurn {
-		activationQueueChurn = int(churnLimit)
+	if churnLimit < activationQueueChurn {
+		activationQueueChurn = churnLimit
 	}
-	if int(churnLimit) < exitQueueChurn {
+	if churnLimit < exitQueueChurn {
 		// If we are above the churn limit, we simply increase the churn by one.
 		exitQueueEpoch++
-		exitQueueChurn = int(churnLimit)
+		exitQueueChurn = churnLimit
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
@@ -1070,10 +723,6 @@ func (bs *Server) GetIndividualVotes(
 	ctx context.Context,
 	req *ethpb.IndividualVotesRequest,
 ) (*ethpb.IndividualVotesRespond, error) {
-	if !featureconfig.Get().NewStateMgmt {
-		return nil, status.Error(codes.FailedPrecondition, "Requires --enable-new-state-mgmt to function")
-	}
-
 	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	if req.Epoch > currentEpoch {
 		return nil, status.Errorf(
@@ -1122,7 +771,7 @@ func (bs *Server) GetIndividualVotes(
 	}
 	vals := requestedState.ValidatorsReadOnly()
 	for _, index := range filteredIndices {
-		if int(index) >= len(v) {
+		if index >= uint64(len(v)) {
 			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
 			continue
 		}

@@ -43,7 +43,7 @@ func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64) []*ethp
 			pending = append(pending, e)
 		}
 	}
-	if len(pending) > int(params.BeaconConfig().MaxVoluntaryExits) {
+	if uint64(len(pending)) > params.BeaconConfig().MaxVoluntaryExits {
 		pending = pending[:params.BeaconConfig().MaxVoluntaryExits]
 	}
 	return pending

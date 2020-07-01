@@ -9,40 +9,19 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
-	testRoundTrip(t, e)
 	testRoundTripWithLength(t, e)
 	testRoundTripWithGossip(t, e)
 }
 
 func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: true}
-	testRoundTrip(t, e)
 	testRoundTripWithLength(t, e)
 	testRoundTripWithGossip(t, e)
-}
-
-func testRoundTrip(t *testing.T, e *encoder.SszNetworkEncoder) {
-	buf := new(bytes.Buffer)
-	msg := &testpb.TestSimpleMessage{
-		Foo: []byte("fooooo"),
-		Bar: 9001,
-	}
-	_, err := e.Encode(buf, msg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	decoded := &testpb.TestSimpleMessage{}
-	if err := e.Decode(buf.Bytes(), decoded); err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(decoded, msg) {
-		t.Logf("decoded=%+v\n", decoded)
-		t.Error("Decoded message is not the same as original")
-	}
 }
 
 func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
@@ -51,12 +30,12 @@ func testRoundTripWithLength(t *testing.T, e *encoder.SszNetworkEncoder) {
 		Foo: []byte("fooooo"),
 		Bar: 9001,
 	}
-	_, err := e.EncodeWithLength(buf, msg)
+	_, err := e.EncodeWithMaxLength(buf, msg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	decoded := &testpb.TestSimpleMessage{}
-	if err := e.DecodeWithLength(buf, decoded); err != nil {
+	if err := e.DecodeWithMaxLength(buf, decoded); err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(decoded, msg) {
@@ -92,9 +71,12 @@ func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 		Bar: 9001,
 	}
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
-	maxLength := uint64(5)
-	_, err := e.EncodeWithMaxLength(buf, msg, maxLength)
-	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", maxLength)
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconNetworkConfig()
+	c.MaxChunkSize = uint64(5)
+	params.OverrideBeaconNetworkConfig(c)
+	_, err := e.EncodeWithMaxLength(buf, msg)
+	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", params.BeaconNetworkConfig().MaxChunkSize)
 	if err == nil {
 		t.Fatalf("wanted this error %s but got nothing", wanted)
 	}
@@ -110,27 +92,22 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 		Bar: 4242,
 	}
 	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
-	maxLength := uint64(5)
-	_, err := e.Encode(buf, msg)
+	params.SetupTestConfigCleanup(t)
+	c := params.BeaconNetworkConfig()
+	maxChunkSize := uint64(5)
+	c.MaxChunkSize = maxChunkSize
+	params.OverrideBeaconNetworkConfig(c)
+	_, err := e.EncodeGossip(buf, msg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	decoded := &testpb.TestSimpleMessage{}
-	err = e.DecodeWithMaxLength(buf, decoded, maxLength)
-	wanted := fmt.Sprintf("which is larger than the provided max limit of %d", maxLength)
+	err = e.DecodeWithMaxLength(buf, decoded)
+	wanted := fmt.Sprintf("goes over the provided max limit of %d", maxChunkSize)
 	if err == nil {
 		t.Fatalf("wanted this error %s but got nothing", wanted)
 	}
 	if !strings.Contains(err.Error(), wanted) {
 		t.Errorf("error did not contain wanted message. Wanted: %s but Got: %s", wanted, err.Error())
-	}
-}
-
-func TestSszNetworkEncoder_DecodeWithMaxLength_TooLarge(t *testing.T) {
-	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
-	if err := e.DecodeWithMaxLength(nil, nil, encoder.MaxChunkSize+1); err == nil {
-		t.Fatal("Nil error")
-	} else if !strings.Contains(err.Error(), "exceeds max chunk size") {
-		t.Error("Expected error to contain 'exceeds max chunk size'")
 	}
 }

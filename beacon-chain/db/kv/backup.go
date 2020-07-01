@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -16,12 +17,12 @@ const backupsDirectoryName = "backups"
 
 // Backup the database to the datadir backup directory.
 // Example for backup at slot 345: $DATADIR/backups/prysm_beacondb_at_slot_0000345.backup
-func (k *Store) Backup(ctx context.Context) error {
+func (kv *Store) Backup(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Backup")
 	defer span.End()
 
-	backupsDir := path.Join(k.databasePath, backupsDirectoryName)
-	head, err := k.HeadBlock(ctx)
+	backupsDir := path.Join(kv.databasePath, backupsDirectoryName)
+	head, err := kv.HeadBlock(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,7 +36,7 @@ func (k *Store) Backup(ctx context.Context) error {
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
 	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
 
-	copyDB, err := bolt.Open(backupPath, 0666, nil)
+	copyDB, err := bolt.Open(backupPath, params.BeaconIoConfig().ReadWritePermissions, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +46,7 @@ func (k *Store) Backup(ctx context.Context) error {
 		}
 	}()
 
-	return k.db.View(func(tx *bolt.Tx) error {
+	return kv.db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			logrus.Debugf("Copying bucket %s\n", name)
 			return copyDB.Update(func(tx2 *bolt.Tx) error {

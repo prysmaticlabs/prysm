@@ -40,6 +40,9 @@ func startSlasher(cliCtx *cli.Context) error {
 }
 
 var appFlags = []cli.Flag{
+	cmd.MinimalConfigFlag,
+	cmd.E2EConfigFlag,
+	cmd.RPCMaxPageSizeFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.EnableTracingFlag,

@@ -26,8 +26,8 @@ type head struct {
 	state *state.BeaconState       // current head state.
 }
 
-// This gets head from the fork choice service and saves head related items
-// (ie root, block, state) to the local service cache.
+// Determined the head from the fork choice service and saves its new data
+// (head root, head block, and head state) to the local service cache.
 func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	ctx, span := trace.StartSpan(ctx, "blockchain.updateHead")
 	defer span.End()
@@ -128,7 +128,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 }
 
 // This gets called to update canonical root mapping. It does not save head block
-// root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
+// root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte) error {
 	if b == nil || b.Block == nil {
@@ -210,7 +210,10 @@ func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
 
 // This returns the head state.
 // It does a full copy on head state for immutability.
-func (s *Service) headState() *state.BeaconState {
+func (s *Service) headState(ctx context.Context) *stateTrie.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "blockchain.headState")
+	defer span.End()
+
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -236,6 +239,9 @@ func (s *Service) hasHeadState() bool {
 // This updates recent canonical block mapping. It uses input head root and retrieves
 // all the canonical block roots that are ancestor of the input head block root.
 func (s *Service) updateRecentCanonicalBlocks(ctx context.Context, headRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockchain.updateRecentCanonicalBlocks")
+	defer span.End()
+
 	s.recentCanonicalBlocksLock.Lock()
 	defer s.recentCanonicalBlocksLock.Unlock()
 

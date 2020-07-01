@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"io"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -13,12 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"golang.org/x/exp/rand"
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
@@ -27,6 +28,7 @@ var processPendingAttsPeriod = slotutil.DivideSlotBy(2 /* twice per slot */)
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
 	ctx := context.Background()
+	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
 		mutex.Lock()
@@ -59,6 +61,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	}
 	s.pendingAttsLock.RUnlock()
 
+	randGen := rand.NewGenerator()
 	for _, bRoot := range roots {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]
@@ -123,10 +126,13 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer or equal to the pending attestation's target boundary slot.
+			// If there are no peer id's available, then we should exit from this function. The function will
+			// be run again periodically, and there may be peers available in future runs.
 			if len(pids) == 0 {
+				log.Debug("No peer IDs available to request missing block from for pending attestation")
 				return nil
 			}
-			pid := pids[rand.Int()%len(pids)]
+			pid := pids[randGen.Int()%len(pids)]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Message.Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
 				cs, err := s.p2p.Peers().ChainState(p)
@@ -139,10 +145,12 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				}
 			}
 
-			req := [][]byte{bRoot[:]}
-			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-				traceutil.AnnotateError(span, err)
-				log.Errorf("Could not send recent block request: %v", err)
+			req := [][32]byte{bRoot}
+			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil && err == io.EOF {
+				if err = s.sendRecentBeaconBlocksRequestFallback(ctx, req, pid); err != nil {
+					traceutil.AnnotateError(span, err)
+					log.Errorf("Could not send recent block request: %v", err)
+				}
 			}
 		}
 	}

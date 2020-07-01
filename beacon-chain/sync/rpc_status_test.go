@@ -56,7 +56,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(out.FinalizedRoot, root[:]) {
@@ -70,7 +70,7 @@ func TestStatusRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl2, func(stream network.Stream) {
 		defer wg2.Done()
 		msg := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 			t.Error(err)
 		}
 		if *msg != codeWrongNetwork {
@@ -131,7 +131,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(out.FinalizedRoot, root[:]) {
@@ -169,7 +169,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	db := testingDB.SetupDB(t)
+	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
@@ -232,7 +232,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
@@ -270,7 +270,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
-	db := testingDB.SetupDB(t)
+	db, _ := testingDB.SetupDB(t)
 
 	p1.LocalMetadata = &pb.MetaData{
 		SeqNumber: 2,
@@ -339,7 +339,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		log.WithField("status", out).Warn("received status")
@@ -349,7 +349,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			t.Fatal(err)
 		}
-		_, err := r.p2p.Encoding().EncodeWithLength(stream, resp)
+		_, err := r.p2p.Encoding().EncodeWithMaxLength(stream, resp)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -365,7 +365,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg2.Done()
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != 2 {
@@ -480,7 +480,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		digest, err := r.forkDigest()
@@ -514,7 +514,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
-	db := testingDB.SetupDB(t)
+	db, _ := testingDB.SetupDB(t)
 
 	// Set up a head state with data we expect.
 	headRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 111})
@@ -588,7 +588,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		err := r2.validateStatusMessage(context.Background(), out)
@@ -662,7 +662,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := &pb.Status{}
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		expected := &pb.Status{
@@ -675,7 +675,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 			log.WithError(err).Error("Failed to write to stream")
 		}
-		_, err := r.p2p.Encoding().EncodeWithLength(stream, expected)
+		_, err := r.p2p.Encoding().EncodeWithMaxLength(stream, expected)
 		if err != nil {
 			t.Errorf("Could not send status: %v", err)
 		}

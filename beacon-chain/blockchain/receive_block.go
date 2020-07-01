@@ -26,7 +26,7 @@ type BlockReceiver interface {
 	HasInitSyncBlock(root [32]byte) bool
 }
 
-// ReceiveBlock is a function that defines the operations that are preformed on
+// ReceiveBlock is a function that defines the operations that are performed on
 // blocks that is received from rpc service. The operations consists of:
 //   1. Gossip block to other peers
 //   2. Validate block, apply state transition and update check points
@@ -57,7 +57,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 }
 
 // ReceiveBlockNoPubsub is a function that defines the the operations (minus pubsub)
-// that are preformed on blocks that is received from regular sync service. The operations consists of:
+// that are performed on blocks that is received from regular sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info

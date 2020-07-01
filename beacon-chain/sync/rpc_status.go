@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -27,6 +29,16 @@ func (s *Service) maintainPeerStatuses() {
 	runutil.RunEvery(s.ctx, interval, func() {
 		for _, pid := range s.p2p.Peers().Connected() {
 			go func(id peer.ID) {
+				// If our peer status has not been updated correctly we disconnect over here
+				// and set the connection state over here instead.
+				if s.p2p.Host().Network().Connectedness(id) != network.Connected {
+					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
+					if err := s.p2p.Disconnect(id); err != nil {
+						log.Errorf("Error when disconnecting with peer: %v", err)
+					}
+					s.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
+					return
+				}
 				if s.p2p.Peers().IsBad(id) {
 					if err := s.sendGoodByeAndDisconnect(s.ctx, codeGenericError, id); err != nil {
 						log.Errorf("Error when disconnecting with bad peer: %v", err)
@@ -59,7 +71,7 @@ func (s *Service) resyncIfBehind() {
 	runutil.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := helpers.SlotToEpoch(s.chain.HeadSlot())
-			_, highestEpoch, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
+			highestEpoch, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > s.chain.HeadSlot() {
 				log.WithFields(logrus.Fields{
 					"currentEpoch": helpers.SlotToEpoch(s.chain.CurrentSlot()),
@@ -89,7 +101,7 @@ func (s *Service) shouldReSync() bool {
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
 func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
 	headRoot, err := s.chain.HeadRoot(ctx)
@@ -129,7 +141,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	msg := &pb.Status{}
-	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
 	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
@@ -158,10 +170,6 @@ func (s *Service) reValidatePeer(ctx context.Context, id peer.ID) error {
 	return nil
 }
 
-func (s *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
-	return nil
-}
-
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
 func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
@@ -170,9 +178,9 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "status")
 	m, ok := msg.(*pb.Status)
 	if !ok {
@@ -253,7 +261,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err = s.p2p.Encoding().EncodeWithLength(stream, resp)
+	_, err = s.p2p.Encoding().EncodeWithMaxLength(stream, resp)
 	return err
 }
 
