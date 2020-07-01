@@ -97,9 +97,12 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 		}
 		msgs[i] = ctrRoot
 	}
-	as := bls.AggregateSignatures(sigs)
-	if !as.AggregateVerify(pks, msgs) {
-		return errors.New("one or more deposit data signatures did not verify")
+	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
+	if err != nil {
+		return errors.Errorf("got error in multiple verification: %v", err)
+	}
+	if !verify {
+		return errors.New("one or more deposit signatures did not verify")
 	}
 	return nil
 }
@@ -930,8 +933,11 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 		}
 		msgs[i] = root
 	}
-	as := bls.AggregateSignatures(sigs)
-	if !as.AggregateVerify(pks, msgs) {
+	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
+	if err != nil {
+		return errors.Errorf("got error in multiple verification: %v", err)
+	}
+	if !verify {
 		return errors.New("one or more attestation signatures did not verify")
 	}
 	return nil

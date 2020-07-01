@@ -2,10 +2,14 @@ package herumi
 
 import (
 	"fmt"
+	"math"
+
+	"github.com/prysmaticlabs/prysm/shared/rand"
 
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -140,6 +144,79 @@ func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 // Deprecated: Use AggregateSignatures.
 func Aggregate(sigs []iface.Signature) iface.Signature {
 	return AggregateSignatures(sigs)
+}
+
+func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
+	if featureconfig.Get().SkipBLSVerify {
+		return true, nil
+	}
+	if len(sigs) == 0 || len(pubKeys) == 0 {
+		return false, nil
+	}
+	newGen := rand.NewGenerator()
+	randNums := make([]bls12.Fr, len(sigs))
+	for i := 0; i < len(sigs); i++ {
+		if err := randNums[i].SetLittleEndian(bytesutil.Bytes8(uint64(newGen.Int63n(math.MaxInt64)))); err != nil {
+			return false, err
+		}
+	}
+	signatures := make([]bls12.G2, len(sigs))
+	for i := 0; i < len(sigs); i++ {
+		signatures[i] = *bls12.CastFromSign(sigs[i].(*Signature).s)
+	}
+	finalSig := new(bls12.G2)
+	bls12.G2MulVec(finalSig, signatures, randNums)
+	multiKeys := make([]bls12.PublicKey, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		g1 := new(bls12.G1)
+		bls12.G1Mul(g1, bls12.CastFromPublicKey(pubKeys[i].(*PublicKey).p), &randNums[i])
+		multiKeys[i] = *bls12.CastToPublicKey(g1)
+
+	}
+	msgSlices := make([]byte, 0, 32*len(msgs))
+	for i := 0; i < len(msgs); i++ {
+		msgSlices = append(msgSlices, msgs[i][:]...)
+
+	}
+	return bls12.CastToSign(finalSig).AggregateVerifyNoCheck(multiKeys, msgSlices), nil
+}
+
+func VerifyStuff() bool {
+	secKey := &bls12.SecretKey{}
+	secKey2 := &bls12.SecretKey{}
+
+	secKey.SetByCSPRNG()
+	secKey2.SetByCSPRNG()
+	msg := bytesutil.ToBytes32([]byte("hello"))
+	msg2 := bytesutil.ToBytes32([]byte("hello2"))
+	sig := secKey.SignByte(msg[:])
+	sig2 := secKey2.SignByte(msg2[:])
+	rd1 := new(bls12.Fr)
+	rd2 := new(bls12.Fr)
+	rd1.SetInt64(127627632)
+	rd2.SetInt64(9289382392)
+	g2 := bls12.CastFromSign(sig)
+	g22 := bls12.CastFromSign(sig2)
+	newg2 := new(bls12.G2)
+	newg22 := new(bls12.G2)
+	newg1 := new(bls12.G1)
+	newg12 := new(bls12.G1)
+	bls12.G2Mul(newg2, g2, rd1)
+	bls12.G1Mul(newg1, bls12.CastFromPublicKey(secKey.GetPublicKey()), rd1)
+	bls12.G2Mul(newg22, g22, rd2)
+	bls12.G1Mul(newg12, bls12.CastFromPublicKey(secKey2.GetPublicKey()), rd2)
+	yes := bls12.CastToSign(newg2).VerifyByte(bls12.CastToPublicKey(newg1), msg[:])
+	if !yes {
+		return false
+	}
+	yes = bls12.CastToSign(newg22).VerifyByte(bls12.CastToPublicKey(newg12), msg2[:])
+	if !yes {
+		return false
+	}
+	add3 := new(bls12.G2)
+	bls12.G2Add(add3, newg2, newg22)
+	return bls12.CastToSign(add3).AggregateVerifyNoCheck([]bls12.PublicKey{*bls12.CastToPublicKey(newg1), *bls12.CastToPublicKey(newg12)},
+		append(msg[:], msg2[:]...))
 }
 
 // Marshal a signature into a LittleEndian byte slice.
