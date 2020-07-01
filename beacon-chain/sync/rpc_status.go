@@ -141,7 +141,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 
 	msg := &pb.Status{}
-	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
 	s.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
@@ -261,7 +261,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err = s.p2p.Encoding().EncodeWithLength(stream, resp)
+	_, err = s.p2p.Encoding().EncodeWithMaxLength(stream, resp)
 	return err
 }
 
