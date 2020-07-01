@@ -1,13 +1,13 @@
 package endtoend
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
 
-	e2eParams "github.com/prysmaticlabs/prysm/endtoend/params"
-
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
+	e2eParams "github.com/prysmaticlabs/prysm/endtoend/params"
 	"github.com/prysmaticlabs/prysm/endtoend/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -33,7 +33,9 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 	}
 
 	minimalConfig := &types.E2EConfig{
-		BeaconFlags:    []string{},
+		BeaconFlags: []string{
+			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
+		},
 		ValidatorFlags: []string{},
 		EpochsToRun:    uint64(epochsToRun),
 		TestSync:       false,
@@ -50,6 +52,7 @@ func TestEndToEnd_Long_MinimalConfig(t *testing.T) {
 			ev.ProposeVoluntaryExit,
 			ev.DepositedValidatorsAreActive,
 			ev.ValidatorHasExited,
+			ev.ColdStateCheckpoint,
 		},
 	}
 
