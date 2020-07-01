@@ -1,3 +1,5 @@
+// Package iface defines important interfaces for accounts functionality
+// in Prysm's validator implementation, such as a wallet.
 package iface
 
 import (
@@ -5,7 +7,9 @@ import (
 	"io"
 )
 
-// Wallet --
+// Wallet defines a struct which has capabilities and knowledge of how
+// to read and write important accounts-related files to the filesystem.
+// It defines an on-disk store of accounts.
 type Wallet interface {
 	Path() string
 	PasswordsPath() string

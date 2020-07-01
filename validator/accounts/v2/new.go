@@ -16,25 +16,12 @@ import (
 
 var log = logrus.WithField("prefix", "accounts-v2")
 
-// WalletType defines an enum for either direct, derived, or remote-signing
-// wallets as specified by a user during account creation.
-type WalletType int
-
-const (
-	// DirectWallet defines an on-disk, encrypted keystore-capable wallet.
-	DirectWallet WalletType = iota
-	// DerivedWallet defines a hierarchical-deterministic wallet.
-	DerivedWallet
-	// RemoteWallet capable of remote-signing data.
-	RemoteWallet
-)
-
 const minPasswordLength = 8
 
-var walletTypeSelections = map[WalletType]string{
-	DirectWallet:  "Direct, On-Disk Accounts (Recommended)",
-	DerivedWallet: "Derived Accounts (Advanced)",
-	RemoteWallet:  "Remote Accounts (Advanced)",
+var keymanagerKindSelections = map[v2keymanager.Kind]string{
+	v2keymanager.Direct:  "Direct, On-Disk Accounts (Recommended)",
+	v2keymanager.Derived: "Derived Accounts (Advanced)",
+	v2keymanager.Remote:  "Remote Accounts (Advanced)",
 }
 
 // New creates a new validator account from user input. If a user
@@ -72,12 +59,12 @@ func New(cliCtx *cli.Context) error {
 		}
 	} else {
 		// Determine the desired wallet type from user input.
-		walletType := inputWalletType(cliCtx)
+		keymanagerKind := inputKeymanagerKind(cliCtx)
 
 		walletConfig := &WalletConfig{
-			PasswordsDir: passwordsDirPath,
-			WalletDir:    walletDir,
-			WalletType:   walletType,
+			PasswordsDir:   passwordsDirPath,
+			WalletDir:      walletDir,
+			KeymanagerKind: keymanagerKind,
 		}
 		wallet, err = CreateWallet(ctx, walletConfig)
 		if err != nil {
@@ -104,13 +91,13 @@ func initializeWalletKeymanager(ctx context.Context, wallet *Wallet, isNewWallet
 	var keymanager v2keymanager.IKeymanager
 	var err error
 	if isNewWallet {
-		switch wallet.Type() {
-		case DirectWallet:
+		switch wallet.KeymanagerKind() {
+		case v2keymanager.Direct:
 			keymanager = direct.NewKeymanager(ctx, wallet, direct.DefaultConfig())
-		case DerivedWallet:
-			log.Fatal("Derived wallets are unimplemented, work in progress")
-		case RemoteWallet:
-			log.Fatal("Remote wallets are unimplemented, work in progress")
+		case v2keymanager.Derived:
+			log.Fatal("Derived keymanagers are unimplemented, work in progress")
+		case v2keymanager.Remote:
+			log.Fatal("Remote keymanagers are unimplemented, work in progress")
 		default:
 			log.Fatal("Keymanager type must be specified")
 		}
@@ -123,18 +110,18 @@ func initializeWalletKeymanager(ctx context.Context, wallet *Wallet, isNewWallet
 		}
 		return keymanager
 	}
-	switch wallet.Type() {
-	case DirectWallet:
+	switch wallet.KeymanagerKind() {
+	case v2keymanager.Direct:
 		keymanager, err = direct.NewKeymanagerFromConfigFile(ctx, wallet)
 		if err != nil {
 			log.Fatal(err)
 		}
-	case DerivedWallet:
-		log.Fatal("Derived wallets are unimplemented, work in progress")
-	case RemoteWallet:
-		log.Fatal("Remote wallets are unimplemented, work in progress")
+	case v2keymanager.Derived:
+		log.Fatal("Derived keymanagers are unimplemented, work in progress")
+	case v2keymanager.Remote:
+		log.Fatal("Remote keymanagers are unimplemented, work in progress")
 	default:
-		log.Fatal("Keymanager type must be specified")
+		log.Fatal("Keymanager kind must be specified")
 	}
 	return keymanager
 }
@@ -162,20 +149,20 @@ func inputWalletDir(cliCtx *cli.Context) string {
 	return walletPath
 }
 
-func inputWalletType(_ *cli.Context) WalletType {
+func inputKeymanagerKind(_ *cli.Context) v2keymanager.Kind {
 	promptSelect := promptui.Select{
 		Label: "Select a type of wallet",
 		Items: []string{
-			walletTypeSelections[DirectWallet],
-			walletTypeSelections[DerivedWallet],
-			walletTypeSelections[RemoteWallet],
+			keymanagerKindSelections[v2keymanager.Direct],
+			keymanagerKindSelections[v2keymanager.Derived],
+			keymanagerKindSelections[v2keymanager.Remote],
 		},
 	}
 	selection, _, err := promptSelect.Run()
 	if err != nil {
 		log.Fatalf("Could not select wallet type: %v", formatPromptError(err))
 	}
-	return WalletType(selection)
+	return v2keymanager.Kind(selection)
 }
 
 func inputAccountPassword(_ *cli.Context) string {

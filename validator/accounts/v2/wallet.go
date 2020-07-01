@@ -8,22 +8,17 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
+	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 )
 
 const keymanagerConfigFileName = "keymanageropts.json"
 
-var keymanagerTypes = map[WalletType]string{
-	DirectWallet:  "direct",
-	DerivedWallet: "derived",
-	RemoteWallet:  "remoteWallet",
-}
-
 // WalletConfig for a wallet struct, containing important information
 // such as the passwords directory, the wallet's directory, and keymanager.
 type WalletConfig struct {
-	PasswordsDir string
-	WalletDir    string
-	WalletType   WalletType
+	PasswordsDir   string
+	WalletDir      string
+	KeymanagerKind v2keymanager.Kind
 }
 
 // Wallet is a primitive in Prysm's v2 account management which
@@ -31,9 +26,9 @@ type WalletConfig struct {
 // and providing secure access to eth2 secrets depending on an
 // associated keymanager (either direct, derived, or remote signing enabled).
 type Wallet struct {
-	walletPath   string
-	passwordsDir string
-	walletType   WalletType
+	walletPath     string
+	passwordsDir   string
+	keymanagerKind v2keymanager.Kind
 }
 
 // CreateWallet given a set of configuration options, will leverage
@@ -42,7 +37,7 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 	if cfg.WalletDir == "" || cfg.PasswordsDir == "" {
 		return nil, errors.New("wallet dir and passwords dir cannot be nil")
 	}
-	walletPath := path.Join(cfg.WalletDir, keymanagerTypes[cfg.WalletType])
+	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	if err := os.MkdirAll(walletPath, os.ModePerm); err != nil {
 		return nil, errors.Wrap(err, "could not create wallet directory")
 	}
@@ -50,9 +45,9 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 		return nil, errors.Wrap(err, "could not create passwords directory")
 	}
 	w := &Wallet{
-		walletPath:   walletPath,
-		passwordsDir: cfg.PasswordsDir,
-		walletType:   cfg.WalletType,
+		walletPath:     walletPath,
+		passwordsDir:   cfg.PasswordsDir,
+		keymanagerKind: cfg.KeymanagerKind,
 	}
 	return w, nil
 }
@@ -60,11 +55,11 @@ func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
 // ReadWallet parses configuration options to initialize a wallet
 // struct from a keymanager configuration file at the wallet's path.
 func ReadWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {
-	walletPath := path.Join(cfg.WalletDir, keymanagerTypes[cfg.WalletType])
+	walletPath := path.Join(cfg.WalletDir, cfg.KeymanagerKind.String())
 	return &Wallet{
-		walletPath:   walletPath,
-		passwordsDir: cfg.PasswordsDir,
-		walletType:   cfg.WalletType,
+		walletPath:     walletPath,
+		passwordsDir:   cfg.PasswordsDir,
+		keymanagerKind: cfg.KeymanagerKind,
 	}, nil
 }
 
@@ -76,9 +71,9 @@ func (w *Wallet) ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadClose
 	return os.Open(configFilePath)
 }
 
-// Type --
-func (w *Wallet) Type() WalletType {
-	return w.walletType
+// KeymanagerKind --
+func (w *Wallet) KeymanagerKind() v2keymanager.Kind {
+	return w.keymanagerKind
 }
 
 // Path --
