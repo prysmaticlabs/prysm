@@ -3,12 +3,20 @@ package v2
 import (
 	"context"
 	"fmt"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 // IKeymanager defines a general keymanager-v2 interface for Prysm wallets.
 type IKeymanager interface {
+	// CreateAccount based on the keymanager's logic.
 	CreateAccount(ctx context.Context, password string) error
+	// MarshalConfigFile for the keymanager's options.
 	MarshalConfigFile(ctx context.Context) ([]byte, error)
+	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
+	FetchValidatingPublicKeys() ([][48]byte, error)
+	// Sign signs a message using a validator key.
+	Sign(context.Context, interface{}) (bls.Signature, error)
 }
 
 // Kind defines an enum for either direct, derived, or remote-signing

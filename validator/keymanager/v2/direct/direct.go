@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/sirupsen/logrus"
 )
@@ -49,4 +50,14 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 // TODO(#6220): Implement.
 func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 	return nil, nil
+}
+
+// FetchValidatingKeys fetches the list of public keys from the direct account keystores.
+func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
+	return nil, errors.New("unimplemented")
+}
+
+// Sign signs a message using a validator key.
+func (dr *Keymanager) Sign(context.Context, interface{}) (bls.Signature, error) {
+	return nil, errors.New("unimplemented")
 }
