@@ -242,7 +242,7 @@ func (b *BeaconNode) Start() {
 	// Wait for stop channel to be closed.
 	<-stop
 }
-5
+
 // Close handles graceful shutdown of the system.
 func (b *BeaconNode) Close() {
 	b.lock.Lock()

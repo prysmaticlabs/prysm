@@ -7,7 +7,7 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 )
 
-var timeoutMax = 30 * time.Second
+const timeoutMax = 30 * time.Second
 
 // ensurePeerConnections will attempt to reestablish connection to the peers
 // if there are currently no connections to that peer.
