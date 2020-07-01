@@ -21,7 +21,7 @@ func (kv *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.V
 			return nil
 		}
 		exit = &ethpb.VoluntaryExit{}
-		return decode(enc, exit)
+		return decode(ctx, enc, exit)
 	})
 	return exit, err
 }
@@ -49,7 +49,7 @@ func (kv *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExi
 	if err != nil {
 		return err
 	}
-	enc, err := encode(exit)
+	enc, err := encode(ctx, exit)
 	if err != nil {
 		return err
 	}
