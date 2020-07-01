@@ -16,16 +16,16 @@ import (
 // SubmitAggregateSelectionProof is called by a validator when its assigned to be an aggregator.
 // The aggregator submits the selection proof to obtain the aggregated attestation
 // object to sign over.
-func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
+func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregateSelectionProof")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
-	if as.SyncChecker.Syncing() {
+	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	st, err := as.HeadFetcher.HeadState(ctx)
+	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
@@ -58,14 +58,14 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	if err := as.AttPool.AggregateUnaggregatedAttestations(); err != nil {
+	if err := vs.AttPool.AggregateUnaggregatedAttestations(); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations")
 	}
-	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
+	aggregatedAtts := vs.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
 	// Filter out the best aggregated attestation (ie. the one with the most aggregated bits).
 	if len(aggregatedAtts) == 0 {
-		aggregatedAtts = as.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
+		aggregatedAtts = vs.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 		if len(aggregatedAtts) == 0 {
 			return nil, status.Errorf(codes.Internal, "Could not find attestation for slot and committee in pool")
 		}
@@ -87,13 +87,13 @@ func (as *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 
 // SubmitSignedAggregateSelectionProof is called by a validator to broadcast a signed
 // aggregated and proof object.
-func (as *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+func (vs *Server) SubmitSignedAggregateSelectionProof(ctx context.Context, req *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
 	if req.SignedAggregateAndProof == nil || req.SignedAggregateAndProof.Message == nil ||
 		req.SignedAggregateAndProof.Message.Aggregate == nil || req.SignedAggregateAndProof.Message.Aggregate.Data == nil {
 		return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
 	}
 
-	if err := as.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
+	if err := vs.P2P.Broadcast(ctx, req.SignedAggregateAndProof); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast signed aggregated attestation: %v", err)
 	}
 
