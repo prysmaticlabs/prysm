@@ -44,6 +44,14 @@ type finalized struct {
 
 // New returns a new state management object.
 func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
+	f, err := db.FinalizedCheckpoint(context.Background())
+	if err != nil {
+		log.Error("could not get state")
+	}
+	fState, err := db.State(context.Background(), bytesutil.ToBytes32(f.Root))
+	if err != nil {
+		log.Error("could not get state")
+	}
 	return &State{
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
@@ -51,7 +59,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
-		finalized: &finalized{},
+		finalized: &finalized{state: fState},
 	}
 }
 

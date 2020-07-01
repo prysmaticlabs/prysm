@@ -107,6 +107,15 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 		"root": hex.EncodeToString(bytesutil.Trunc(s.splitInfo.root[:])),
 	}).Info("Set hot and cold state split point")
 
+	// Update finalized state in memory.
+	fState, err := s.beaconDB.State(ctx, finalizedRoot)
+	if err != nil {
+		return err
+	}
+	s.finalized.lock.Lock()
+	s.finalized.state = fState
+	s.finalized.lock.Unlock()
+
 	return nil
 }
 
