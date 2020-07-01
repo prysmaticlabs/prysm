@@ -9,6 +9,7 @@ go_library(
         "//validator:__pkg__",
         "//validator:__subpackages__",
     ],
+    deps = ["//shared/bls:go_default_library"],
 )
 
 go_test(
