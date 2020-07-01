@@ -25,7 +25,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -33,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
@@ -203,11 +203,11 @@ func (s *Service) Start() {
 	}
 
 	// Periodic functions.
-	runutil.RunEvery(s.ctx, 5*time.Second, func() {
+	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
-	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
 	runutil.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
