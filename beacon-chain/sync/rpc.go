@@ -20,6 +20,9 @@ import (
 // they don't receive the first byte within 5 seconds.
 var ttfbTimeout = params.BeaconNetworkConfig().TtfbTimeout
 
+// respTimeout is the maximum time for complete response transfer.
+var respTimeout = params.BeaconNetworkConfig().RespTimeout
+
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
 // not be relayed to the peer.
