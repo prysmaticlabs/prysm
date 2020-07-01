@@ -52,7 +52,7 @@ func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 	return nil, nil
 }
 
-// FetchValidatingKeys fetches the list of public keys from the direct account keystores.
+// FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
 	return nil, errors.New("unimplemented")
 }
