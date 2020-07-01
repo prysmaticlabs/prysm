@@ -197,26 +197,8 @@ func (kv *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock)
 	if v, ok := kv.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		if err := kv.setBlockSlotBitField(ctx, tx, signed.Block.Slot); err != nil {
-			return err
-		}
 
-		bkt := tx.Bucket(blocksBucket)
-		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
-			return nil
-		}
-		enc, err := encode(ctx, signed)
-		if err != nil {
-			return err
-		}
-		indicesByBucket := createBlockIndicesFromBlock(ctx, signed.Block)
-		if err := updateValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not update DB indices")
-		}
-		kv.blockCache.Set(string(blockRoot[:]), signed, int64(len(enc)))
-		return bkt.Put(blockRoot[:], enc)
-	})
+	return kv.SaveBlocks(ctx, []*ethpb.SignedBeaconBlock{signed})
 }
 
 // SaveBlocks via bulk updates to the db.
