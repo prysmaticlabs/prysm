@@ -45,6 +45,8 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+const attestationBufferSize = 100
+
 var log logrus.FieldLogger
 
 func init() {
@@ -279,8 +281,8 @@ func (s *Service) Start() {
 		Broadcaster:                 s.p2p,
 		StateGen:                    s.stateGen,
 		SyncChecker:                 s.syncService,
-		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
-		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),
+		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, attestationBufferSize),
+		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, attestationBufferSize),
 	}
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)

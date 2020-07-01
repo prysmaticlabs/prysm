@@ -24,6 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mclockutil"
 )
 
+const waitQuotient = 10
+
 // Subscription represents a stream of events. The carrier of the events is typically a
 // channel, but isn't part of the interface.
 //
@@ -96,7 +98,7 @@ func (s *funcSub) Err() <-chan error {
 // based on the error rate, but will never exceed backoffMax.
 func Resubscribe(backoffMax time.Duration, fn ResubscribeFunc) Subscription {
 	s := &resubscribeSub{
-		waitTime:   backoffMax / 10,
+		waitTime:   backoffMax / waitQuotient,
 		backoffMax: backoffMax,
 		fn:         fn,
 		err:        make(chan error),
@@ -187,7 +189,7 @@ func (s *resubscribeSub) waitForError(sub Subscription) bool {
 
 func (s *resubscribeSub) backoffWait() bool {
 	if time.Duration(mclockutil.Now()-s.lastTry) > s.backoffMax {
-		s.waitTime = s.backoffMax / 10
+		s.waitTime = s.backoffMax / waitQuotient
 	} else {
 		s.waitTime *= 2
 		if s.waitTime > s.backoffMax {

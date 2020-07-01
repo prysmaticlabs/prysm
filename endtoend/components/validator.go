@@ -25,6 +25,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+const depositGasLimit = 500000
+
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.
 func StartValidatorClients(t *testing.T, config *types.E2EConfig, keystorePath string) []int {
@@ -125,7 +127,7 @@ func SendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num int, offset 
 	}
 	depositInGwei := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
 	txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
-	txOps.GasLimit = 4000000
+	txOps.GasLimit = depositGasLimit
 	nonce, err := web3.PendingNonceAt(context.Background(), txOps.From)
 	if err != nil {
 		return err

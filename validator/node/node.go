@@ -160,10 +160,10 @@ func (s *ValidatorClient) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Info("Already shutting down, interrupt more to panic.", "times", i-1)
+				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic.")
 			}
 		}
-		panic("Panic closing the sharding validator")
+		panic("Panic closing the validator client")
 	}()
 
 	// Wait for stop channel to be closed.

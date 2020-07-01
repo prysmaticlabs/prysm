@@ -54,6 +54,11 @@ const lookupLimit = 15
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
 
+// Exclusion list cache config values.
+const cacheNumCounters = 1000
+const cacheMaxCost = 1000
+const cacheBufferItems = 64
+
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
 	started               bool
@@ -83,9 +88,9 @@ func NewService(cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1000,
-		MaxCost:     1000,
-		BufferItems: 64,
+		NumCounters: cacheNumCounters,
+		MaxCost:     cacheMaxCost,
+		BufferItems: cacheBufferItems,
 	})
 	if err != nil {
 		return nil, err

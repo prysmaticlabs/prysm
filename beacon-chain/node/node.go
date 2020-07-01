@@ -233,7 +233,7 @@ func (b *BeaconNode) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
+				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic")
 			}
 		}
 		panic("Panic closing the beacon node")
@@ -242,7 +242,7 @@ func (b *BeaconNode) Start() {
 	// Wait for stop channel to be closed.
 	<-stop
 }
-
+5
 // Close handles graceful shutdown of the system.
 func (b *BeaconNode) Close() {
 	b.lock.Lock()

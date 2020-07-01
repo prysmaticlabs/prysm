@@ -13,6 +13,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const statusTimeout = 30 * time.Second /* Cancel if running over thirty seconds. */
+
 // ValidatorStatusMetadata holds all status information about a validator.
 type ValidatorStatusMetadata struct {
 	PublicKey []byte
@@ -39,7 +41,7 @@ func FetchAccountStatuses(
 ) ([]ValidatorStatusMetadata, error) {
 	ctx, span := trace.StartSpan(ctx, "accounts.FetchAccountStatuses")
 	defer span.End()
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second /* Cancel if running over thirty seconds. */)
+	ctx, cancel := context.WithTimeout(ctx, statusTimeout)
 	defer cancel()
 
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pubKeys}

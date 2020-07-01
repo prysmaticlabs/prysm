@@ -33,6 +33,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const connTimeout = 10 * time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */
+
 var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
@@ -181,8 +183,7 @@ contract in order to activate the validator client`,
 						if err != nil {
 							return err
 						}
-						ctx, cancel := context.WithTimeout(
-							context.Background(), 10*time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
+						ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
 						defer cancel()
 						dialOpts := streaming.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
