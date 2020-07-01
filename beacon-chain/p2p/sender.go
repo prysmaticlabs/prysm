@@ -43,7 +43,7 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 		return stream, nil
 	}
 
-	if _, err := s.Encoding().EncodeWithLength(stream, message); err != nil {
+	if _, err := s.Encoding().EncodeWithMaxLength(stream, message); err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
