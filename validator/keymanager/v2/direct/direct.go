@@ -3,20 +3,31 @@ package direct
 import (
 	"context"
 	"errors"
+	"io"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "keymanager-v2")
+
+// Wallet defines a struct which has capabilities and knowledge of how
+// to read and write important accounts-related files to the filesystem.
+// Useful for keymanager to have persistent capabilities for accounts on-disk.
+type Wallet interface {
+	AccountsPath() string
+	AccountPasswordsPath() string
+	WriteAccountToDisk(ctx context.Context, filename string, encoded []byte) error
+	WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error
+	ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error)
+}
 
 // Config for a direct keymanager.
 type Config struct{}
 
 // Keymanager implementation for direct keystores.
 type Keymanager struct {
-	wallet iface.Wallet
+	wallet Wallet
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -25,7 +36,7 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) *Keymanager {
+func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) *Keymanager {
 	return &Keymanager{
 		wallet: wallet,
 	}
@@ -34,7 +45,7 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) *Keyma
 // NewKeymanagerFromConfigFile instantiates a direct keymanager instance
 // from a configuration file accesed via a wallet.
 // TODO(#6220): Implement.
-func NewKeymanagerFromConfigFile(ctx context.Context, wallet iface.Wallet) (*Keymanager, error) {
+func NewKeymanagerFromConfigFile(ctx context.Context, wallet Wallet) (*Keymanager, error) {
 	return &Keymanager{
 		wallet: wallet,
 	}, nil

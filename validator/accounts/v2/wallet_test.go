@@ -11,8 +11,9 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts/v2/iface"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,7 +22,7 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-var _ = iface.Wallet(&Wallet{})
+var _ = direct.Wallet(&Wallet{})
 
 type mockKeymanager struct {
 	configFileContents []byte
