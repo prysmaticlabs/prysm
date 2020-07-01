@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"unicode"
 
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -57,7 +59,7 @@ func New(cliCtx *cli.Context) error {
 	}
 	if ok {
 		// Read the wallet from the specified path.
-		wallet, err = ReadWallet(ctx, &WalletConfig{
+		wallet, err = OpenWallet(ctx, &WalletConfig{
 			PasswordsDir: passwordsDirPath,
 			WalletDir:    walletDir,
 		})
@@ -164,11 +166,14 @@ func hasWalletDir(walletPath string) (bool, error) {
 }
 
 func inputWalletDir(cliCtx *cli.Context) (string, error) {
-	datadir := cliCtx.String(flags.WalletDirFlag.Name)
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	if walletDir == cmd.DefaultDataDir() {
+		walletDir = path.Join(walletDir, walletDefaultDirName)
+	}
 	prompt := promptui.Prompt{
 		Label:    "Enter a wallet directory",
 		Validate: validateDirectoryPath,
-		Default:  datadir,
+		Default:  walletDir,
 	}
 	walletPath, err := prompt.Run()
 	if err != nil {
@@ -227,6 +232,9 @@ func inputAccountPassword(_ *cli.Context) (string, error) {
 
 func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
+	if passwordsDir == cmd.DefaultDataDir() {
+		passwordsDir = path.Join(passwordsDir, walletDefaultDirName, passwordsDefaultDirName)
+	}
 	prompt := promptui.Prompt{
 		Label:    "Passwords directory",
 		Validate: validateDirectoryPath,
