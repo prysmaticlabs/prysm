@@ -99,7 +99,6 @@ type NoHeadAccessDatabase interface {
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
 	SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error
-	SaveLastArchivedIndex(ctx context.Context, index uint64) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.

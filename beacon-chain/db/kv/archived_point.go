@@ -16,17 +16,15 @@ func (kv *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, 
 
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(bytesutil.Uint64ToBytes(slot), blockRoot[:])
-	})
-}
-
-// SaveLastArchivedIndex to the db.
-func (kv *Store) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastArchivedIndex")
-	defer span.End()
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(archivedIndexRootBucket)
-		return bucket.Put(lastArchivedIndexKey, bytesutil.Uint64ToBytes(index))
+		if err := bucket.Put(bytesutil.Uint64ToBytes(slot), blockRoot[:]); err != nil {
+			return err
+		}
+		// Update last archived state, if this state is higher than the the previous.
+		last := bucket.Get(lastArchivedIndexKey)
+		if slot > bytesutil.BytesToUint64(last) {
+			return bucket.Put(lastArchivedIndexKey, bytesutil.Uint64ToBytes(slot))
+		}
+		return nil
 	})
 }
 

@@ -159,9 +159,6 @@ func TestMigrateToCold_CantDeleteCurrentArchivedIndex(t *testing.T) {
 	if err := service.beaconDB.SaveArchivedPointRoot(ctx, bRoot, 1); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveLastArchivedIndex(ctx, 1); err != nil {
-		t.Fatal(err)
-	}
 
 	if err := service.MigrateToCold(ctx, beaconState.Slot(), [32]byte{}); err != nil {
 		t.Fatal(err)
@@ -181,7 +178,7 @@ func TestSkippedArchivedPoint_CanRecover(t *testing.T) {
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 32
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 31}}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 32}}
 	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
@@ -191,14 +188,14 @@ func TestSkippedArchivedPoint_CanRecover(t *testing.T) {
 	}
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(31); err != nil {
+	if err := beaconState.SetSlot(32); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
 
-	currentArchivedPoint := uint64(2)
+	currentArchivedPoint := uint64(32)
 	lastPoint, err := service.recoverArchivedPoint(ctx, currentArchivedPoint)
 	if err != nil {
 		t.Fatal(err)

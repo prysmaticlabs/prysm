@@ -10,7 +10,7 @@ var migrationCompleted = []byte("done")
 type migration func(*bolt.Tx) error
 
 var migrations = []migration{
-	archivedIndexMigration,
+	migrateArchivedIndex,
 }
 
 func (s *Store) RunMigrations(ctx context.Context) error {

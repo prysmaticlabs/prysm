@@ -8,7 +8,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -115,8 +114,8 @@ func (kv *Store) regenHistoricalStates(ctx context.Context) error {
 
 		if len(blocks) > 0 {
 			// Save the historical root, state and highest index to the DB.
-			if helpers.IsEpochStart(currentState.Slot()) && currentState.Slot()%slotsPerArchivedPoint == 0 {
-				if err := kv.saveArchivedInfo(ctx, currentState.Copy(), blocks, i); err != nil {
+			if currentState.Slot()%slotsPerArchivedPoint == 0 {
+				if err := kv.saveArchivedInfo(ctx, currentState, blocks); err != nil {
 					return err
 				}
 				log.WithFields(log.Fields{
@@ -215,14 +214,19 @@ func (kv *Store) lastSavedBlockArchivedIndex(ctx context.Context) (uint64, error
 	return lastSavedBlockArchivedIndex, nil
 }
 
-// This saved archived info (state, root, index) into the db.
+// This saved archived info (state, root) into the db.
 func (kv *Store) saveArchivedInfo(ctx context.Context,
 	currentState *stateTrie.BeaconState,
 	blocks []*ethpb.SignedBeaconBlock,
-	archivedIndex uint64,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.saveArchivedInfo")
 	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("slot", int64(currentState.Slot())))
+
+	if len(blocks) == 0 {
+		return errors.New("no blocks provided")
+	}
+
 	lastBlocksRoot, err := stateutil.BlockRoot(blocks[len(blocks)-1].Block)
 	if err != nil {
 		return nil
@@ -230,10 +234,7 @@ func (kv *Store) saveArchivedInfo(ctx context.Context,
 	if err := kv.SaveState(ctx, currentState, lastBlocksRoot); err != nil {
 		return err
 	}
-	if err := kv.SaveArchivedPointRoot(ctx, lastBlocksRoot, archivedIndex); err != nil {
-		return err
-	}
-	if err := kv.SaveLastArchivedIndex(ctx, archivedIndex); err != nil {
+	if err := kv.SaveArchivedPointRoot(ctx, lastBlocksRoot, currentState.Slot()); err != nil {
 		return err
 	}
 	return nil

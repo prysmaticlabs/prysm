@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -14,6 +15,21 @@ import (
 // MigrateToCold advances the split point in between the cold and hot state sections.
 // It moves the recent finalized states from the hot section to the cold section and
 // only preserve the ones that's on archived point.
+//
+// This method does:
+//  - Check the split is after the finalized slot. (why?)
+//  - Save all of the state summaries from cache to db.
+//  - Clear the cache
+//  - Fetch last archived index/slot
+//  - Query all of the block roots since the last split and the current finalized slot-1 (why -1?)
+//  - For each block root:
+//    - Load the state summary from db (why not use cached and clear later?)
+//    - If no state summary for that block root, skip it. (when wouldn't there be a state summary?)
+//    - If the summary slot is within the range of lastArchivedSlot to lastArchivedPointSlot+slotsPerArchivedCheckpointInterval
+//       - If the database doesn't have a state for this slot, skip it. (Why? There shouldn't be a state in cold storage already if we are migrating to cold storage.)
+//       - Save archived point
+//    - Else delete the state from the db if not finalized (why would we have a cold storage state in the db already?)
+//  - Update split data.
 func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finalizedRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
@@ -52,13 +68,13 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 			continue
 		}
 
-		archivedPointIndex := stateSummary.Slot / s.slotsPerArchivedPoint
+		// TODO: This needs to be updated to remove use of "index" and replace with use of "slot".
 		nextArchivedPointSlot := (lastArchivedIndex + 1) * s.slotsPerArchivedPoint
 		// Only migrate if current slot is equal to or greater than next archived point slot.
 		if stateSummary.Slot >= nextArchivedPointSlot {
 			// If was a skipped archival index. The node should recover previous last archived index and state.
-			if skippedArchivedPoint(archivedPointIndex, lastArchivedIndex) {
-				recoveredIndex, err := s.recoverArchivedPoint(ctx, archivedPointIndex)
+			if skippedArchivedPoint(stateSummary.Slot, lastArchivedIndex) {
+				recoveredIndex, err := s.recoverArchivedPoint(ctx, stateSummary.Slot)
 				if err != nil {
 					return err
 				}
@@ -68,16 +84,11 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 			if !s.beaconDB.HasState(ctx, r) {
 				continue
 			}
-			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, archivedPointIndex); err != nil {
+			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, stateSummary.Slot); err != nil {
 				return err
 			}
-			if err := s.beaconDB.SaveLastArchivedIndex(ctx, archivedPointIndex); err != nil {
-				return err
-			}
-			lastArchivedIndex++
 			log.WithFields(logrus.Fields{
 				"slot":         stateSummary.Slot,
-				"archiveIndex": archivedPointIndex,
 				"root":         hex.EncodeToString(bytesutil.Trunc(r[:])),
 			}).Info("Saved archived point during state migration")
 		} else {
@@ -112,14 +123,16 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 
 // This recovers the last archived point. By passing in the current archived point, this recomputes
 // the state of last skipped archived point and save the missing state, archived point root, archived index to the DB.
-func (s *State) recoverArchivedPoint(ctx context.Context, currentArchivedPoint uint64) (uint64, error) {
-	missingIndex := currentArchivedPoint - 1
-	missingIndexSlot := missingIndex * s.slotsPerArchivedPoint
+func (s *State) recoverArchivedPoint(ctx context.Context, currentArchivedSlot uint64) (uint64, error) {
+	var missingIndexSlot uint64
+	if currentArchivedSlot > params.BeaconConfig().SlotsPerArchivedPoint {
+		missingIndexSlot = currentArchivedSlot-(currentArchivedSlot%params.BeaconConfig().SlotsPerArchivedPoint)
+	}
 	blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, missingIndexSlot)
 	if err != nil {
 		return 0, err
 	}
-	if len(blks) != 1 {
+	if len(blks) != 1 || blks[0] == nil || blks[0].Block == nil {
 		return 0, errUnknownBlock
 	}
 	missingRoot, err := ssz.HashTreeRoot(blks[0].Block)
@@ -134,20 +147,17 @@ func (s *State) recoverArchivedPoint(ctx context.Context, currentArchivedPoint u
 	if err := s.beaconDB.SaveState(ctx, missingState, missingRoot); err != nil {
 		return 0, err
 	}
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, missingRoot, missingIndex); err != nil {
-		return 0, err
-	}
-	if err := s.beaconDB.SaveLastArchivedIndex(ctx, missingIndex); err != nil {
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, missingRoot, missingIndexSlot); err != nil {
 		return 0, err
 	}
 
 	log.WithFields(logrus.Fields{
 		"slot":         blks[0].Block.Slot,
-		"archiveIndex": missingIndex,
+		"archiveIndexSlot": missingIndexSlot,
 		"root":         hex.EncodeToString(bytesutil.Trunc(missingRoot[:])),
 	}).Info("Saved recovered archived point during state migration")
 
-	return missingIndex, nil
+	return missingIndexSlot, nil
 }
 
 // This returns true if the last archived point was skipped.

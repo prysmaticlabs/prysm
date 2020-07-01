@@ -10,7 +10,7 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-func Test_archivedIndexMigration(t *testing.T) {
+func Test_migrateArchivedIndex(t *testing.T) {
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, db *bbolt.DB)
@@ -70,8 +70,8 @@ func Test_archivedIndexMigration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t).db
 			tt.setup(t, db)
-			if err := db.Update(archivedIndexMigration); err != nil {
-				t.Errorf("archivedIndexMigration(tx) error = %v", err)
+			if err := db.Update(migrateArchivedIndex); err != nil {
+				t.Errorf("migrateArchivedIndex(tx) error = %v", err)
 			}
 			tt.eval(t, db)
 		})

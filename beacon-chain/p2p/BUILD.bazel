@@ -105,7 +105,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     flaky = True,
-    tags = ["block-network"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",

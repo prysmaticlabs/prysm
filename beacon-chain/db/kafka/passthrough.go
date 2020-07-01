@@ -284,8 +284,8 @@ func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) 
 }
 
 // SaveArchivedPointRoot -- passthrough
-func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
-	return e.db.SaveArchivedPointRoot(ctx, blockRoot, index)
+func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, slot uint64) error {
+	return e.db.SaveArchivedPointRoot(ctx, blockRoot, slot)
 }
 
 // ArchivedPointRoot -- passthrough
@@ -321,11 +321,6 @@ func (e Exporter) HighestSlotStates(ctx context.Context) ([]*state.BeaconState, 
 // HighestSlotStatesBelow -- passthrough
 func (e Exporter) HighestSlotStatesBelow(ctx context.Context, slot uint64) ([]*state.BeaconState, error) {
 	return e.db.HighestSlotStatesBelow(ctx, slot)
-}
-
-// SaveLastArchivedIndex -- passthrough
-func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
-	return e.db.SaveLastArchivedIndex(ctx, index)
 }
 
 // LastArchivedIndex -- passthrough

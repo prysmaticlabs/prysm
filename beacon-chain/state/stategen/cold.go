@@ -17,20 +17,20 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveColdState")
 	defer span.End()
 
-	if state.Slot()%s.slotsPerArchivedPoint != 0 {
+	slot := state.Slot()
+	if slot%s.slotsPerArchivedPoint != 0 {
 		return nil
 	}
 
 	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 		return err
 	}
-	archivedIndex := state.Slot() / s.slotsPerArchivedPoint
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivedIndex); err != nil {
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, slot); err != nil {
 		return err
 	}
 
 	log.WithFields(logrus.Fields{
-		"slot":      state.Slot(),
+		"slot":      slot,
 		"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on archived point")
 
 	return nil
