@@ -28,7 +28,7 @@ func (kv *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byt
 			return nil
 		}
 		ac := &dbpb.AttestationContainer{}
-		if err := decode(enc, ac); err != nil {
+		if err := decode(ctx, enc, ac); err != nil {
 			return err
 		}
 		atts = ac.ToAttestations()
@@ -68,7 +68,7 @@ func (kv *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*e
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			ac := &dbpb.AttestationContainer{}
-			if err := decode(encoded, ac); err != nil {
+			if err := decode(ctx, encoded, ac); err != nil {
 				return err
 			}
 			atts = append(atts, ac.ToAttestations()...)
@@ -104,7 +104,7 @@ func (kv *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) er
 			return nil
 		}
 		ac := &dbpb.AttestationContainer{}
-		if err := decode(enc, ac); err != nil {
+		if err := decode(ctx, enc, ac); err != nil {
 			return err
 		}
 		indicesByBucket := createAttestationIndicesFromData(ctx, ac.Data)
@@ -125,7 +125,7 @@ func (kv *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte
 		for _, attDataRoot := range attDataRoots {
 			enc := bkt.Get(attDataRoot[:])
 			ac := &dbpb.AttestationContainer{}
-			if err := decode(enc, ac); err != nil {
+			if err := decode(ctx, enc, ac); err != nil {
 				return err
 			}
 			indicesByBucket := createAttestationIndicesFromData(ctx, ac.Data)
@@ -165,14 +165,14 @@ func (kv *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) er
 		}
 		existingEnc := bkt.Get(attDataRoot[:])
 		if existingEnc != nil {
-			if err := decode(existingEnc, ac); err != nil {
+			if err := decode(ctx, existingEnc, ac); err != nil {
 				return err
 			}
 		}
 
 		ac.InsertAttestation(att)
 
-		enc, err := encode(ac)
+		enc, err := encode(ctx, ac)
 		if err != nil {
 			return err
 		}
@@ -207,14 +207,14 @@ func (kv *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation
 			}
 			existingEnc := bkt.Get(attDataRoot[:])
 			if existingEnc != nil {
-				if err := decode(existingEnc, ac); err != nil {
+				if err := decode(ctx, existingEnc, ac); err != nil {
 					return err
 				}
 			}
 
 			ac.InsertAttestation(att)
 
-			enc, err := encode(ac)
+			enc, err := encode(ctx, ac)
 			if err != nil {
 				return err
 			}
