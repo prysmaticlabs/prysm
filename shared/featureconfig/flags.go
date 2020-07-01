@@ -440,6 +440,26 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedArchival = &cli.BoolFlag{
+		Name:   "archive",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveValiatorSetChanges = &cli.BoolFlag{
+		Name:   "archive-validator-set-changes",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveBlocks = &cli.BoolFlag{
+		Name:   "archive-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveAttestation = &cli.BoolFlag{
+		Name:   "archive-attestations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -498,6 +518,10 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableFieldTrie,
 	deprecateddisableInitSyncBatchSaveBlocks,
 	deprecatedEnableNoise,
+	deprecatedArchival,
+	deprecatedArchiveBlocks,
+	deprecatedArchiveValiatorSetChanges,
+	deprecatedArchiveAttestation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
