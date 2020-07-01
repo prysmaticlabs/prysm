@@ -34,16 +34,6 @@ func NewKeymanager(ctx context.Context, wallet iface.Wallet, cfg *Config) *Keyma
 // from a configuration file accesed via a wallet.
 // TODO(#6220): Implement.
 func NewKeymanagerFromConfigFile(ctx context.Context, wallet iface.Wallet) (*Keymanager, error) {
-	f, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
-	if err != nil {
-		log.Fatalf("Could not read keymanager config file from wallet: %v", err)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Fatalf("Could not close keymanager config opts file: %v", err)
-		}
-	}()
-	_ = f
 	return &Keymanager{
 		wallet: wallet,
 	}, nil
