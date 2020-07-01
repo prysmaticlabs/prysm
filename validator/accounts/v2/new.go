@@ -10,7 +10,6 @@ import (
 	"github.com/manifoldco/promptui"
 	strongPasswords "github.com/nbutton23/zxcvbn-go"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct"
@@ -167,7 +166,7 @@ func hasWalletDir(walletPath string) (bool, error) {
 
 func inputWalletDir(cliCtx *cli.Context) (string, error) {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if walletDir == cmd.DefaultDataDir() {
+	if walletDir == flags.DefaultValidatorDir() {
 		walletDir = path.Join(walletDir, walletDefaultDirName)
 	}
 	prompt := promptui.Prompt{
@@ -232,7 +231,7 @@ func inputAccountPassword(_ *cli.Context) (string, error) {
 
 func inputPasswordsDirectory(cliCtx *cli.Context) string {
 	passwordsDir := cliCtx.String(flags.WalletPasswordsDirFlag.Name)
-	if passwordsDir == cmd.DefaultDataDir() {
+	if passwordsDir == flags.DefaultValidatorDir() {
 		passwordsDir = path.Join(passwordsDir, walletDefaultDirName, passwordsDefaultDirName)
 	}
 	prompt := promptui.Prompt{
