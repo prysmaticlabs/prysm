@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -74,7 +73,7 @@ func (s *Service) pingHandler(ctx context.Context, msg interface{}, stream libp2
 }
 
 func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
 	metadataSeq := s.p2p.MetadataSeq()
