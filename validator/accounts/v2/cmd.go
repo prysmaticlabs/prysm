@@ -14,7 +14,7 @@ var Commands = &cli.Command{
 	Subcommands: []*cli.Command{
 		{
 			Name: "new",
-			Description: `creates a new validator account for eth2. creates a new wallet for a user based on
+			Description: `creates a new validator account for eth2. If no account exists at the wallet path, creates a new wallet for a user based on
 specified input, capable of creating a direct, derived, or remote wallet.
 this command outputs a deposit data string which is required to become a validator in eth2.`,
 			Flags: append(featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
