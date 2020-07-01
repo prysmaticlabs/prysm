@@ -65,6 +65,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		port:         cfg.Port,
 		detector:     cfg.Detector,
 		slasherDB:    cfg.SlasherDB,
+		withCert:     cfg.CertFlag,
+		withKey:      cfg.KeyFlag,
 		beaconclient: cfg.BeaconClient,
 	}
 }
