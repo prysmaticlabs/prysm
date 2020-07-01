@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -212,13 +211,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
 		return errors.Wrap(err, "could not save state")
-	}
-
-	if flags.Get().EnableArchive {
-		atts := signed.Block.Body.Attestations
-		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
-			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
-		}
 	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
