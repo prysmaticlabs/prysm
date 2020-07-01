@@ -30,7 +30,7 @@ func (s *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
 
@@ -58,7 +58,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code uint64, id 
 }
 
 func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
 	stream, err := s.p2p.Send(ctx, &code, p2p.RPCGoodByeTopic, id)
