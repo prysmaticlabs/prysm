@@ -86,6 +86,7 @@ type MockStateNotifier struct {
 	recvCh   chan *feed.Event
 }
 
+// ReceivedEvents returns the events received by the state feed in this mock.
 func (msn *MockStateNotifier) ReceivedEvents() []*feed.Event {
 	msn.recvLock.Lock()
 	defer msn.recvLock.Unlock()
