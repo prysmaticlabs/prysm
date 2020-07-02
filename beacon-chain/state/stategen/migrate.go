@@ -24,6 +24,9 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 
 	s.finalized.lock.RLock()
 	for i := lastFSlot; i < fSlot; i++ {
+	  if ctx.Err() != nil {
+	      return ctx.Err()
+	  }
 		if i%s.slotsPerArchivedPoint == 0 && i != 0 {
 			aIndex := i / s.slotsPerArchivedPoint
 			if err := s.beaconDB.SaveState(ctx, s.finalized.state, lastFRoot); err != nil {
