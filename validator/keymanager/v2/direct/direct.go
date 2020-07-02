@@ -8,10 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/brianium/mnemonic"
-	"github.com/brianium/mnemonic/entropy"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/manifoldco/promptui"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -28,7 +25,6 @@ const (
 	keystoreFileName           = "keystore.json"
 	depositDataFileName        = "deposit_data.ssz"
 	depositTransactionFileName = "deposit_transaction.rlp"
-	mnemonicLanguage           = mnemonic.English
 )
 
 // Wallet defines a struct which has capabilities and knowledge of how
@@ -45,10 +41,11 @@ type Config struct {
 	EIPVersion string `json:"direct_eip_version"`
 }
 
-// Keymanager implementation for direct keystores.
+// Keymanager implementation for direct keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet Wallet
-	cfg    *Config
+	wallet            Wallet
+	cfg               *Config
+	mnemonicGenerator SeedPhraseFactory
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -61,8 +58,9 @@ func DefaultConfig() *Config {
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) *Keymanager {
 	return &Keymanager{
-		wallet: wallet,
-		cfg:    cfg,
+		wallet:            wallet,
+		cfg:               cfg,
+		mnemonicGenerator: &EnglishMnemonicGenerator{},
 	}
 }
 
@@ -111,7 +109,12 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	// Generate a withdrawal key and confirm user
 	// acknowledgement of a 256-bit entropy mnemonic phrase.
 	withdrawalKey := bls.RandKey()
-	if err := dr.confirmWithdrawalMnemonic(withdrawalKey); err != nil {
+	rawWithdrawalKey := withdrawalKey.Marshal()[:]
+	seedPhrase, err := dr.mnemonicGenerator.Generate(rawWithdrawalKey)
+	if err != nil {
+		return err
+	}
+	if err := dr.mnemonicGenerator.ConfirmAcknowledgement(seedPhrase); err != nil {
 		return err
 	}
 
@@ -163,42 +166,6 @@ func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
 // Sign signs a message using a validator key.
 func (dr *Keymanager) Sign(context.Context, interface{}) (bls.Signature, error) {
 	return nil, errors.New("unimplemented")
-}
-
-func (dr *Keymanager) confirmWithdrawalMnemonic(withdrawalKey bls.SecretKey) error {
-	key := withdrawalKey.Marshal()[:]
-	ent, err := entropy.FromHex(fmt.Sprintf("%x", key))
-	if err != nil {
-		return err
-	}
-	en, err := mnemonic.New(ent, mnemonicLanguage)
-	if err != nil {
-		return err
-	}
-	log.Info(
-		"Write down the sentence below, as it is your only " +
-			"means of recovering your withdrawal key",
-	)
-	fmt.Printf(`
-=================Withdrawal Key Recovery Phrase====================
-
-%s
-
-===================================================================
-	`, en.Sentence())
-	prompt := promptui.Prompt{
-		Label:     "Confirm you have written down the words above somewhere safe (offline)",
-		IsConfirm: true,
-	}
-	expected := "y"
-	var result string
-	for result != expected {
-		result, err = prompt.Run()
-		if err != nil {
-			log.Errorf("Could not confirm acknowledgement of prompt, please enter y")
-		}
-	}
-	return nil
 }
 
 func generateDepositTransaction(

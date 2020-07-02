@@ -33,7 +33,7 @@ func DepositInput(
 ) (*ethpb.Deposit_Data, [32]byte, error) {
 	di := &ethpb.Deposit_Data{
 		PublicKey:             depositKey.PublicKey().Marshal(),
-		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
+		WithdrawalCredentials: WithdrawalCredentialsHash(withdrawalKey),
 		Amount:                amountInGwei,
 	}
 
@@ -64,14 +64,14 @@ func DepositInput(
 	return di, dr, nil
 }
 
-// withdrawalCredentialsHash forms a 32 byte hash of the withdrawal public
+// WithdrawalCredentialsHash forms a 32 byte hash of the withdrawal public
 // address.
 //
 // The specification is as follows:
 //   withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE
 //   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
 // where withdrawal_credentials is of type bytes32.
-func withdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
+func WithdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
 }

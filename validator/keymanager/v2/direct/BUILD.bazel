@@ -3,7 +3,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["direct.go"],
+    srcs = [
+        "direct.go",
+        "mnemonic.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct",
     visibility = [
         "//validator:__pkg__",
@@ -29,4 +32,12 @@ go_test(
     name = "go_default_test",
     srcs = ["direct_test.go"],
     embed = [":go_default_library"],
+    deps = [
+        "//shared/bls:go_default_library",
+        "//shared/depositutil:go_default_library",
+        "@com_github_brianium_mnemonic//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
+    ],
 )
