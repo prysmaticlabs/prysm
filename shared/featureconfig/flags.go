@@ -131,10 +131,6 @@ var (
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
-	enableStreamDuties = &cli.BoolFlag{
-		Name:  "enable-stream-duties",
-		Usage: "Enables validator duties streaming in the validator client",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -534,7 +530,6 @@ var deprecatedFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
-	enableStreamDuties,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
@@ -552,7 +547,6 @@ var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
-	// "--enable-stream-duties", // Currently disabled due to e2e flakes.
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
