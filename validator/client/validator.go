@@ -445,20 +445,20 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]va
 // UpdateProtections goes through the duties of the given slot and fetches the required validator history,
 // assigning it in validator.
 func (v *validator) UpdateProtections(ctx context.Context, slot uint64) error {
-	attestingPubKeys := make([][48]byte, 0, len(v.duties.Duties))
-	for _, duty := range v.duties.Duties {
-		if duty == nil {
+	attestingPubKeys := make([][48]byte, 0, len(v.duties.CurrentEpochDuties))
+	for _, duty := range v.duties.CurrentEpochDuties {
+		if duty == nil || duty.AttesterSlot != slot {
 			continue
 		}
-		if duty.AttesterSlot == slot {
-			attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
-		}
+		attestingPubKeys = append(attestingPubKeys, bytesutil.ToBytes48(duty.PublicKey))
 	}
 	attHistoryByPubKey, err := v.db.AttestationHistoryForPubKeys(ctx, attestingPubKeys)
 	if err != nil {
 		return errors.Wrap(err, "could not get attester history")
 	}
+	v.attesterHistoryByPubKeyLock.Lock()
 	v.attesterHistoryByPubKey = attHistoryByPubKey
+	v.attesterHistoryByPubKeyLock.Unlock()
 	return nil
 }
 

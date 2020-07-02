@@ -106,6 +106,15 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Signature:       sig,
 	}
 
+	indexedAtt.Signature = sig
+	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey); err != nil {
+		log.WithFields(logrus.Fields{
+			"sourceEpoch": indexedAtt.Data.Source.Epoch,
+			"targetEpoch": indexedAtt.Data.Target.Epoch,
+		}).WithError(err).Fatal("Failed post attestation signing updates")
+		return
+	}
+
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -132,14 +141,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
-	indexedAtt.Signature = sig
-	if err := v.postAttSignUpdate(ctx, indexedAtt, pubKey); err != nil {
-		log.WithFields(logrus.Fields{
-			"sourceEpoch": indexedAtt.Data.Source.Epoch,
-			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Fatal("Failed post attestation signing updates")
-		return
-	}
 
 	if v.emitAccountMetrics {
 		ValidatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()

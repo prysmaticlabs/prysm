@@ -78,6 +78,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
+	if err := v.postBlockSignUpdate(ctx, pubKey, blk); err != nil {
+		log.WithField("slot", blk.Block.Slot).WithError(err).Error("Failed post block signing validations")
+		return
+	}
+
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
 	if err != nil {
@@ -101,11 +106,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
 	}).Info("Submitted new block")
-
-	if err := v.postBlockSignUpdate(ctx, pubKey, blk); err != nil {
-		log.WithField("slot", blk.Block.Slot).WithError(err).Fatal("Failed post block signing validations")
-		return
-	}
 
 	if v.emitAccountMetrics {
 		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
