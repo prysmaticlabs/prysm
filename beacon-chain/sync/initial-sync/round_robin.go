@@ -58,16 +58,21 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	if err := queue.start(); err != nil {
 		return err
 	}
-	blockReceiver := s.chain.ReceiveBlockInitialSync
+	//blockReceiver := s.chain.ReceiveBlockInitialSync
+	batchReceiver := s.chain.ReceiveBlockBatch
 
 	// Step 1 - Sync to end of finalized epoch.
 	for fetchedBlocks := range queue.fetchedBlocks {
-		for _, blk := range fetchedBlocks {
-			if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-				log.WithError(err).Info("Block is not processed")
-				continue
-			}
-		}
+		if err := s.processBatchedBlocks(ctx, genesis, fetchedBlocks, batchReceiver); err != nil {
+			log.WithError(err).Info("Block is not processed")
+			continue
+		} /*
+			for _, blk := range fetchedBlocks {
+				if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+					log.WithError(err).Info("Block is not processed")
+					continue
+				}
+			}*/
 	}
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
@@ -161,6 +166,25 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, blkRoot
 	)
 }
 
+// logBatchSyncStatus and increments the block processing counter.
+func (s *Service) logBatchSyncStatus(genesis time.Time, blks []*eth.SignedBeaconBlock, blkRoot [32]byte) {
+	s.counter.Incr(int64(len(blks)))
+	rate := float64(s.counter.Rate()) / counterSeconds
+	if rate == 0 {
+		rate = 1
+	}
+	firstBlk := blks[0]
+	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-firstBlk.Block.Slot)/rate) * time.Second
+	log.WithFields(logrus.Fields{
+		"peers":           len(s.p2p.Peers().Connected()),
+		"blocksPerSecond": fmt.Sprintf("%.1f", rate),
+	}).Infof(
+		"Processing block batch of size %d starting from  %s %d/%d - estimated time remaining %s",
+		len(blks), fmt.Sprintf("0x%s...", hex.EncodeToString(blkRoot[:])[:8]),
+		firstBlk.Block.Slot, helpers.SlotsSince(genesis), timeRemaining,
+	)
+}
+
 // processBlock performs basic checks on incoming block, and triggers receiver function.
 func (s *Service) processBlock(
 	ctx context.Context,
@@ -193,20 +217,24 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return errors.New("0 blocks provided into method")
 	}
 	firstBlock := blks[0]
+	for s.lastProcessedSlot >= firstBlock.Block.Slot {
+		if len(blks) == 1 {
+			return errors.New("no good blocks in batch")
+		}
+		blks = blks[1:]
+		firstBlock = blks[0]
+	}
 	blkRoot, err := stateutil.BlockRoot(firstBlock.Block)
 	if err != nil {
 		return err
 	}
-	s.logSyncStatus(genesis, firstBlock.Block, blkRoot)
+	s.logBatchSyncStatus(genesis, blks, blkRoot)
 	parentRoot := bytesutil.ToBytes32(firstBlock.Block.ParentRoot)
 	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
 		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", firstBlock.Block.ParentRoot)
 	}
 	blockRoots := make([][32]byte, len(blks))
 	for i, b := range blks {
-		/*if b.Block.Slot <= s.lastProcessedSlot {
-			return fmt.Errorf("slot %d already processed", b.Block.Slot)
-		}*/
 		blkRoot, err := stateutil.BlockRoot(b.Block)
 		if err != nil {
 			return err

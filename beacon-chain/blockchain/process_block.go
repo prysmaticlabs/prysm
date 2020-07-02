@@ -297,6 +297,7 @@ func (s *Service) handleBlockInBatch(ctx context.Context, signed *ethpb.SignedBe
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
+	s.stateGen.SaveStateSummary(ctx, signed, blockRoot)
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
