@@ -18,7 +18,7 @@ func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, exists, err := e.get([32]byte{'b'})
+	got, exists, err := e.getByRoot([32]byte{'b'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,14 +29,36 @@ func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 		t.Error("Should not exist")
 	}
 
-	got, exists, err = e.get([32]byte{'a'})
+	got, exists, err = e.getByRoot([32]byte{'a'})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !exists {
 		t.Error("Should exist")
 	}
-	if !reflect.DeepEqual(got.InnerStateUnsafe(), s.InnerStateUnsafe()) {
+	if !reflect.DeepEqual(got.state.InnerStateUnsafe(), s.InnerStateUnsafe()) {
+		t.Error("Should have the same state")
+	}
+
+	got, exists, err = e.getBySlot(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Error("Should not exist")
+	}
+	if got != nil {
+		t.Error("Should not exist")
+	}
+
+	got, exists, err = e.getBySlot(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Should exist")
+	}
+	if !reflect.DeepEqual(got.state.InnerStateUnsafe(), s.InnerStateUnsafe()) {
 		t.Error("Should have the same state")
 	}
 }
@@ -55,11 +77,11 @@ func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 		}
 	}
 
-	if len(e.cache.ListKeys()) != int(maxCacheSize) {
+	if len(e.rootStateCache.ListKeys()) != int(maxCacheSize) {
 		t.Error("Did not trim to the correct amount")
 	}
-	for _, l := range e.cache.List() {
-		i, ok := l.(*stateInfo)
+	for _, l := range e.rootStateCache.List() {
+		i, ok := l.(*rootStateInfo)
 		if !ok {
 			t.Fatal("Bad type assertion")
 		}
@@ -69,25 +91,3 @@ func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 	}
 }
 
-func TestEpochBoundaryStateCache_CanClear(t *testing.T) {
-	e := newBoundaryStateCache()
-	offSet := uint64(10)
-	for i := uint64(0); i < maxCacheSize + offSet; i ++  {
-		s := testutil.NewBeaconState()
-		if err := s.SetSlot(i); err != nil {
-			t.Fatal(err)
-		}
-		r := [32]byte{byte(i)}
-		if err := e.put(r, s); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if err := e.clear(); err != nil {
-		t.Fatal(err)
-	}
-
-	if len(e.cache.ListKeys()) != 0 {
-		t.Error("Did not clear to the correct amount")
-	}
-}

@@ -10,8 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -25,20 +23,14 @@ type State struct {
 	epochBoundaryLock       sync.RWMutex
 	hotStateCache           *cache.HotStateCache
 	epochBoundaryStateCache *epochBoundaryState
-	splitInfo               *splitSlotAndRoot
+	finalizedInfo           *finalizedInfo
 	stateSummaryCache       *cache.StateSummaryCache
-	finalized               *finalized
 }
 
-// This tracks the split point. The point where slot and the block root of
-// cold and hot sections of the DB splits.
-type splitSlotAndRoot struct {
+// This tracks the finalized info.
+type finalizedInfo struct {
 	slot uint64
 	root [32]byte
-}
-
-// This tracks the finalized state in memory. This is used to replay back hot state to a certain slot.
-type finalized struct {
 	state *state.BeaconState
 	lock  sync.RWMutex
 }
@@ -49,10 +41,9 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		hotStateCache:           cache.NewHotStateCache(),
-		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
+		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
-		finalized:               &finalized{},
 		epochBoundaryStateCache: newBoundaryStateCache(),
 	}
 }
@@ -68,32 +59,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 		return nil, err
 	}
 
-	cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if featureconfig.Get().SkipRegenHistoricalStates {
-		// If a node doesn't want to regen historical states, the node would
-		// start from last finalized check point.
-		lastArchivedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
-		if err != nil {
-			return nil, err
-		}
-		lastArchivedRoot = bytesutil.ToBytes32(cp.Root)
-	}
-
-	// Resume as genesis state if there's no last archived state.
-	if lastArchivedState == nil {
-		return s.beaconDB.GenesisState(ctx)
-	}
-
-	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
-
-	fState, err := s.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
-	if err != nil {
-		return nil, err
-	}
-	s.SaveFinalizedState(fState)
+	s.SaveFinalizedState(lastArchivedState.Slot(), lastArchivedRoot, lastArchivedState)
 
 	return lastArchivedState, nil
 }
@@ -108,9 +74,27 @@ func verifySlotsPerArchivePoint(slotsPerArchivePoint uint64) bool {
 		slotsPerArchivePoint%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
-// SaveFinalizedState saves the finalized state to state gen memory.
-func (s *State) SaveFinalizedState(fState *state.BeaconState) {
-	s.finalized.lock.Lock()
-	defer s.finalized.lock.Unlock()
-	s.finalized.state = fState
+// SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.
+// This used for migration at the correct start slot and used for hot state play back to ensure
+// lower bound to start is always at the last finalized state.
+func (s *State) SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.BeaconState) {
+	s.finalizedInfo.lock.Lock()
+	defer s.finalizedInfo.lock.Unlock()
+	s.finalizedInfo.root = fRoot
+	s.finalizedInfo.state = fState
+	s.finalizedInfo.slot = fSlot
+}
+
+// Returns true if input root equals to cached finalized root.
+func (s *State) isFinalizedRoot(r [32]byte) bool {
+	s.finalizedInfo.lock.RLock()
+	defer s.finalizedInfo.lock.RUnlock()
+	return r == s.finalizedInfo.root
+}
+
+// Returns the cached and copied finalized state.
+func (s *State) finalizedState() *state.BeaconState {
+	s.finalizedInfo.lock.RLock()
+	defer s.finalizedInfo.lock.RUnlock()
+	return s.finalizedInfo.state.Copy()
 }

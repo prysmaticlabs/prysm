@@ -39,10 +39,10 @@ func TestResume(t *testing.T) {
 	if !proto.Equal(beaconState.InnerStateUnsafe(), resumeState.InnerStateUnsafe()) {
 		t.Error("Diff saved state")
 	}
-	if service.splitInfo.slot != params.BeaconConfig().SlotsPerEpoch {
+	if service.finalizedInfo.slot != params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Did not get watned slot")
 	}
-	if root != service.splitInfo.root {
+	if root != service.finalizedInfo.root {
 		t.Errorf("Did not get wanted root")
 	}
 }
