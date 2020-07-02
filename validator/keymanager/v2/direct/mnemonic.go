@@ -3,16 +3,11 @@ package direct
 import (
 	"fmt"
 
-	"github.com/brianium/mnemonic"
 	"github.com/manifoldco/promptui"
 	"github.com/tyler-smith/go-bip39"
 )
 
-const (
-	mnemonicLanguage = mnemonic.English
-)
-
-// MnemonicFactory defines a struct which
+// SeedPhraseFactory defines a struct which
 // can generate new seed phrases in human-readable
 // format from a source of entropy in raw bytes. It
 // also provides methods for verifying a user has successfully
