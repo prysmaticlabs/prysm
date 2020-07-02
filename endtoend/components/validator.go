@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-const depositGasLimit = 500000
+const depositGasLimit = 4000000
 
 // StartValidatorClients starts the configured amount of validators, also sending and mining their validator deposits.
 // Should only be used on initialization.

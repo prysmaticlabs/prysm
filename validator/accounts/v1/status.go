@@ -13,7 +13,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const statusTimeout = 30 * time.Second /* Cancel if running over thirty seconds. */
+// statusTimeout defines a period after which request to fetch account statuses is cancelled.
+const statusTimeout = 30 * time.Second
 
 // ValidatorStatusMetadata holds all status information about a validator.
 type ValidatorStatusMetadata struct {

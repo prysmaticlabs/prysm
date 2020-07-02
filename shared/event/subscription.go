@@ -24,6 +24,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mclockutil"
 )
 
+// waitQuotient is divided against the max backoff time, in order to have N requests based on the full
+// request backoff time.
 const waitQuotient = 10
 
 // Subscription represents a stream of events. The carrier of the events is typically a

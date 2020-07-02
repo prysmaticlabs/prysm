@@ -55,9 +55,7 @@ const lookupLimit = 15
 const maxBadResponses = 5
 
 // Exclusion list cache config values.
-const cacheNumCounters = 1000
-const cacheMaxCost = 1000
-const cacheBufferItems = 64
+const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {

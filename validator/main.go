@@ -34,7 +34,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-const connTimeout = 10 * time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */
+// connTimeout defines a period after which connection to beacon node is cancelled.
+const connTimeout = 10 * time.Second
 
 var log = logrus.WithField("prefix", "main")
 

@@ -7,8 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-const msPerSecond = 1000
-
 // SlotStartTime returns the start time in terms of its unix epoch
 // value.
 func SlotStartTime(genesis uint64, slot uint64) time.Time {
@@ -37,5 +35,5 @@ func EpochsSinceGenesis(genesis time.Time) uint64 {
 // in milliseconds, useful for dividing values such as 1 second into
 // millisecond-based durations.
 func DivideSlotBy(timesPerSlot int64) time.Duration {
-	return time.Duration(int64(params.BeaconConfig().SecondsPerSlot*msPerSecond)/timesPerSlot) * time.Millisecond
+	return time.Duration(int64(params.BeaconConfig().SecondsPerSlot*1000)/timesPerSlot) * time.Millisecond
 }
