@@ -94,9 +94,6 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	if err != nil {
 		return err
 	}
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
-		return err
-	}
 
 	// Generate a withdrawal key and confirm user
 	// acknowledgement of a 256-bit entropy mnemonic phrase.
@@ -119,8 +116,9 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositTransactionFileName, tx.Data()); err != nil {
 		return err
 	}
+
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
-	encodedDepositData, err := depositData.MarshalSSZ()
+	encodedDepositData, err := ssz.Marshal(depositData)
 	if err != nil {
 		return err
 	}
@@ -128,6 +126,11 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 		return err
 	}
 	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
+
+	// Finally, write the encoded keystore to disk.
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -162,11 +165,11 @@ func (dr *Keymanager) confirmWithdrawalMnemonic(withdrawalKey bls.SecretKey) err
 			"means of recovering your validator withdrawal key",
 	)
 	fmt.Printf(`
-	=================Withdrawal Key Recovery Phrase====================
+=================Withdrawal Key Recovery Phrase====================
 
-	%s
+%s
 
-	===================================================================
+===================================================================
 	`, en.Sentence())
 	prompt := promptui.Prompt{
 		Label:     "Confirm you have written down the words above somewhere safe (offline)",
@@ -177,7 +180,7 @@ func (dr *Keymanager) confirmWithdrawalMnemonic(withdrawalKey bls.SecretKey) err
 	for result != expected {
 		result, err = prompt.Run()
 		if err != nil {
-			return fmt.Errorf("could not confirm acknowledgement: %v", formatPromptError(err))
+			log.Errorf("Could not confirm acknowledgement of prompt, please enter y")
 		}
 	}
 	return nil
@@ -214,13 +217,13 @@ func logDepositTransaction(tx *types.Transaction) {
 		"Copy and paste the raw deposit data shown below when issuing a transaction into the " +
 			"ETH1.0 deposit contract to activate your validator client")
 	fmt.Printf(`
-	========================Deposit Data=======================
+========================Deposit Data=======================
 
-	%#x
+%#x
 
-	===================================================================
+===================================================================
+***Enter the above deposit data into step 3 on https://prylabs.net/participate***
 	`, tx.Data())
-	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
 }
 
 func depositInput(
@@ -267,17 +270,4 @@ func depositInput(
 func withdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
-}
-
-func formatPromptError(err error) error {
-	switch err {
-	case promptui.ErrAbort:
-		return errors.New("wallet creation aborted, closing")
-	case promptui.ErrInterrupt:
-		return errors.New("keyboard interrupt, closing")
-	case promptui.ErrEOF:
-		return errors.New("no input received, closing")
-	default:
-		return err
-	}
 }
