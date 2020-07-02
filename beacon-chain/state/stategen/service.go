@@ -91,9 +91,7 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.finalized.lock.Lock()
-	s.finalized.state = fState
-	s.finalized.lock.Unlock()
+	s.SaveFinalizedState(fState)
 
 	return lastArchivedState, nil
 }
