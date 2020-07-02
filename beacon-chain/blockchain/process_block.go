@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -221,13 +220,6 @@ func (s *Service) handlePostStateInSync(ctx context.Context, signed *ethpb.Signe
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if flags.Get().EnableArchive {
-		atts := signed.Block.Body.Attestations
-		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
-			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
-		}
-	}
-
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
 	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
 		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
@@ -270,12 +262,6 @@ func (s *Service) handleBlockInBatch(ctx context.Context, signed *ethpb.SignedBe
 	s.saveInitSyncBlock(blockRoot, signed)
 	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
 		return err
-	}
-	if flags.Get().EnableArchive {
-		atts := signed.Block.Body.Attestations
-		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
-			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
-		}
 	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
@@ -366,4 +352,5 @@ func (s *Service) insertAttestationsToForkChoiceStore(ctx context.Context, blk *
 		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
+	return nil
 }
