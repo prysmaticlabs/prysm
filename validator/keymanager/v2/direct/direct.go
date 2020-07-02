@@ -209,14 +209,15 @@ func generateDepositTransaction(
 
 func logDepositTransaction(tx *types.Transaction) {
 	log.Info(
-		"Copy and paste the raw deposit data shown below when issuing a transaction into the " +
-			"ETH1.0 deposit contract to activate your validator client")
+		"Copy + paste the deposit data below when using the " +
+			"eth1 deposit contract")
 	fmt.Printf(`
-========================Deposit Data=======================
+========================Deposit Data===============================
 
 %#x
 
-===================================================================
+===================================================================`, tx.Data())
+	fmt.Printf(`
 ***Enter the above deposit data into step 3 on https://prylabs.net/participate***
-	`, tx.Data())
+`)
 }
