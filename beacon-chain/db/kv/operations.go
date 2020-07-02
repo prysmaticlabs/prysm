@@ -30,15 +30,11 @@ func (kv *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.V
 func (kv *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasVoluntaryExit")
 	defer span.End()
-	exists := false
-	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(voluntaryExitsBucket)
-		exists = bkt.Get(exitRoot[:]) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+	voluntaryExit, err := kv.VoluntaryExit(ctx, exitRoot)
+	if err != nil {
 		panic(err)
 	}
-	return exists
+	return voluntaryExit != nil
 }
 
 // SaveVoluntaryExit to the db by its signing root.

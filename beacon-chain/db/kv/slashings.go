@@ -30,15 +30,11 @@ func (kv *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*
 func (kv *Store) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasProposerSlashing")
 	defer span.End()
-	exists := false
-	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(proposerSlashingsBucket)
-		exists = bkt.Get(slashingRoot[:]) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+	proposerSlashing, err := kv.ProposerSlashing(ctx, slashingRoot)
+	if err != nil {
 		panic(err)
 	}
-	return exists
+	return proposerSlashing != nil
 }
 
 // SaveProposerSlashing to the db by its hash tree root.
@@ -90,15 +86,11 @@ func (kv *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*
 func (kv *Store) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttesterSlashing")
 	defer span.End()
-	exists := false
-	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attesterSlashingsBucket)
-		exists = bkt.Get(slashingRoot[:]) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+	attesterSlashing, err := kv.AttesterSlashing(ctx, slashingRoot)
+	if err != nil {
 		panic(err)
 	}
-	return exists
+	return attesterSlashing != nil
 }
 
 // SaveAttesterSlashing to the db by its hash tree root.
