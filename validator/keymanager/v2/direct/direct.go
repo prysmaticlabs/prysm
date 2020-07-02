@@ -93,11 +93,11 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 // stores the generated keystore.json file in the wallet and additionally
 // generates a mnemonic for withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error {
+func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// Create a new, unique account name and write its password + directory to disk.
 	accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
 	if err != nil {
-		return errors.Wrap(err, "could not write account to disk")
+		return "", errors.Wrap(err, "could not write account to disk")
 	}
 	// Generates a new EIP-2335 compliant keystore file
 	// from a BLS private key and marshals it as JSON.
@@ -105,11 +105,11 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	validatingKey := bls.RandKey()
 	keystoreFile, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
 	if err != nil {
-		return errors.Wrap(err, "could not encrypt validating key into keystore")
+		return "", errors.Wrap(err, "could not encrypt validating key into keystore")
 	}
 	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
 	if err != nil {
-		return errors.Wrap(err, "could not json marshal keystore file")
+		return "", errors.Wrap(err, "could not json marshal keystore file")
 	}
 
 	// Generate a withdrawal key and confirm user
@@ -118,17 +118,17 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	rawWithdrawalKey := withdrawalKey.Marshal()[:]
 	seedPhrase, err := dr.mnemonicGenerator.Generate(rawWithdrawalKey)
 	if err != nil {
-		return errors.Wrap(err, "could not generate mnemonic for withdrawal key")
+		return "", errors.Wrap(err, "could not generate mnemonic for withdrawal key")
 	}
 	if err := dr.mnemonicGenerator.ConfirmAcknowledgement(seedPhrase); err != nil {
-		return errors.Wrap(err, "could not confirm acknowledgement of mnemonic")
+		return "", errors.Wrap(err, "could not confirm acknowledgement of mnemonic")
 	}
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
 	tx, depositData, err := generateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
-		return errors.Wrap(err, "could not generate deposit transaction data")
+		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
 	// Log the deposit transaction data to the user.
@@ -136,27 +136,27 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 
 	// We write the raw deposit transaction as an .rlp encoded file.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositTransactionFileName, tx.Data()); err != nil {
-		return errors.Wrapf(err, "could not write for account %s: %s", accountName, depositTransactionFileName)
+		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, depositTransactionFileName)
 	}
 
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
 	encodedDepositData, err := ssz.Marshal(depositData)
 	if err != nil {
-		return errors.Wrap(err, "could not marshal deposit data")
+		return "", errors.Wrap(err, "could not marshal deposit data")
 	}
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
-		return errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
+		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
 
 	// Finally, write the encoded keystore to disk.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
-		return errors.Wrapf(err, "could not write keystore file for account %s", accountName)
+		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 	log.WithFields(logrus.Fields{
 		"name": accountName,
 		"path": dr.wallet.AccountsDir(),
 	}).Info("Successfully created new validator account")
-	return nil
+	return accountName, nil
 }
 
 // MarshalConfigFile returns a marshaled configuration file for a direct keymanager.

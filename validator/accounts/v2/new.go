@@ -102,7 +102,7 @@ func NewAccount(cliCtx *cli.Context) error {
 	}
 
 	// Create a new validator account using the specified keymanager.
-	if err := keymanager.CreateAccount(ctx, password); err != nil {
+	if _, err := keymanager.CreateAccount(ctx, password); err != nil {
 		log.Fatalf("Could not create account in wallet: %v", err)
 	}
 	return nil

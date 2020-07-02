@@ -9,7 +9,7 @@ import (
 
 // MockWallet contains an in-memory, simulated wallet implementation.
 type MockWallet struct {
-	Files            map[string][]byte
+	Files            map[string]map[string][]byte
 	AccountPasswords map[string]string
 }
 
@@ -41,7 +41,10 @@ func (m *MockWallet) WriteFileForAccount(
 	fileName string,
 	data []byte,
 ) error {
-	m.Files[fileName] = data
+	if m.Files[accountName] == nil {
+		m.Files[accountName] = make(map[string][]byte)
+	}
+	m.Files[accountName][fileName] = data
 	return nil
 }
 
@@ -57,7 +60,7 @@ func (m *MockWallet) ReadPasswordForAccount(accountName string) (string, error) 
 
 // ReadFileForAccount --
 func (m *MockWallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
-	for f, v := range m.Files {
+	for f, v := range m.Files[accountName] {
 		if f == fileName {
 			return v, nil
 		}

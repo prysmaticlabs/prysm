@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"reflect"
 	"strconv"
 	"testing"
 
@@ -40,7 +39,7 @@ func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 func TestKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
 	wallet := &mock.MockWallet{
-		Files:            make(map[string][]byte),
+		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}
 	mnemonicGenerator := &mockMnemonicGenerator{
@@ -52,13 +51,14 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 	}
 	ctx := context.Background()
 	password := "secretPassw0rd$1999"
-	if err := dr.CreateAccount(ctx, password); err != nil {
+	accountName, err := dr.CreateAccount(ctx, password)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Ensure the keystore file was written to the wallet
 	// and ensure we can decrypt it using the EIP-2335 standard.
-	encodedKeystore, ok := wallet.Files[keystoreFileName]
+	encodedKeystore, ok := wallet.Files[accountName][keystoreFileName]
 	if !ok {
 		t.Fatalf("Expected to have stored %s in wallet", keystoreFileName)
 	}
@@ -83,7 +83,7 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 	// Decode the deposit_data.ssz file and confirm
 	// the public key matches the public key from the
 	// account's decrypted keystore.
-	encodedDepositData, ok := wallet.Files[depositDataFileName]
+	encodedDepositData, ok := wallet.Files[accountName][depositDataFileName]
 	if !ok {
 		t.Fatalf("Expected to have stored %s in wallet", depositDataFileName)
 	}
@@ -132,14 +132,14 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	ctx := context.Background()
 	wallet := &mock.MockWallet{
-		Files:            make(map[string][]byte),
+		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}
 	dr := &Keymanager{
 		wallet: wallet,
 	}
 	// First, generate accounts and their keystore.json files.
-	numAccounts := 2
+	numAccounts := 20
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		encryptor := keystorev4.New()
@@ -166,7 +166,15 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(wantedPublicKeys, publicKeys) {
-		t.Errorf("Wanted %v, received %v", wantedPublicKeys, publicKeys)
+	// The results are not guaranteed to be ordered, so we ensure each
+	// key we expect exists in the results via a map.
+	keysMap := make(map[[48]byte]bool)
+	for _, key := range publicKeys {
+		keysMap[key] = true
+	}
+	for _, wanted := range wantedPublicKeys {
+		if _, ok := keysMap[wanted]; !ok {
+			t.Errorf("Could not find expected public key %#x in results", wanted)
+		}
 	}
 }
