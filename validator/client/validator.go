@@ -1,4 +1,4 @@
-// Package polling represents a gRPC polling-based implementation
+// Package client represents a gRPC polling-based implementation
 // of an eth2 validator client.
 package client
 
