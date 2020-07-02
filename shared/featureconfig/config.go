@@ -33,7 +33,6 @@ type Flags struct {
 	// Testnet Flags.
 	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
-	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -251,10 +250,6 @@ func ConfigureValidator(ctx *cli.Context) {
 		params.UseAltonaConfig()
 		params.UseAltonaNetworkConfig()
 		cfg.AltonaTestnet = true
-	}
-	if ctx.Bool(enableStreamDuties.Name) {
-		log.Warn("Enabled validator duties streaming.")
-		cfg.EnableStreamDuties = true
 	}
 	if ctx.Bool(enableProtectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")

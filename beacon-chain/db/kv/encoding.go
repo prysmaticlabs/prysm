@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"context"
 	"errors"
 	"reflect"
 
@@ -9,9 +10,13 @@ import (
 	"github.com/golang/snappy"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"go.opencensus.io/trace"
 )
 
-func decode(data []byte, dst proto.Message) error {
+func decode(ctx context.Context, data []byte, dst proto.Message) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.decode")
+	defer span.End()
+
 	data, err := snappy.Decode(nil, data)
 	if err != nil {
 		return err
@@ -22,7 +27,10 @@ func decode(data []byte, dst proto.Message) error {
 	return proto.Unmarshal(data, dst)
 }
 
-func encode(msg proto.Message) ([]byte, error) {
+func encode(ctx context.Context, msg proto.Message) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.encode")
+	defer span.End()
+
 	if msg == nil || reflect.ValueOf(msg).IsNil() {
 		return nil, errors.New("cannot encode nil message")
 	}

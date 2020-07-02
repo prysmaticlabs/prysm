@@ -21,8 +21,7 @@ go_library(
         "//slasher:__subpackages__",
         "//tools/blocktree:__pkg__",
         "//tools/pcli:__pkg__",
-        "//validator/client/streaming:__pkg__",
-        "//validator/client/polling:__pkg__",
+        "//validator/client:__pkg__",
     ],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",

@@ -27,7 +27,7 @@ func (kv *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, er
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
-		return decode(enc, checkpoint)
+		return decode(ctx, enc, checkpoint)
 	})
 	return checkpoint, err
 }
@@ -47,7 +47,7 @@ func (kv *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, er
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
-		return decode(enc, checkpoint)
+		return decode(ctx, enc, checkpoint)
 	})
 	return checkpoint, err
 }
@@ -57,7 +57,7 @@ func (kv *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
 	defer span.End()
 
-	enc, err := encode(checkpoint)
+	enc, err := encode(ctx, checkpoint)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (kv *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedCheckpoint")
 	defer span.End()
 
-	enc, err := encode(checkpoint)
+	enc, err := encode(ctx, checkpoint)
 	if err != nil {
 		return err
 	}
