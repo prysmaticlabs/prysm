@@ -35,6 +35,7 @@ const (
 // to read and write important accounts-related files to the filesystem.
 // Useful for keymanager to have persistent capabilities for accounts on-disk.
 type Wallet interface {
+	AccountsDir() string
 	WriteAccountToDisk(ctx context.Context, password string) (string, error)
 	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
 }
@@ -65,7 +66,7 @@ func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) *Keymanager 
 	}
 }
 
-// UmmarshalConfigFile --
+// UnmarshalConfigFile --
 func UnmarshalConfigFile(r io.ReadCloser) (interface{}, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -142,7 +143,10 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
 		return err
 	}
-	log.Info("Account creation complete")
+	log.WithFields(logrus.Fields{
+		"name": accountName,
+		"path": dr.wallet.AccountsDir(),
+	}).Info("Successfully created new validator account")
 	return nil
 }
 
