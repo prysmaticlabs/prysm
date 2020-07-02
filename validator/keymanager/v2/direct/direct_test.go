@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/brianium/mnemonic"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/tyler-smith/go-bip39"
+	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
 type mockWallet struct {
@@ -38,26 +39,27 @@ func (m *mockWallet) WriteFileForAccount(
 }
 
 type mockMnemonicGenerator struct {
-	generatedMnemonics []*mnemonic.Mnemonic
+	generatedMnemonics []string
 }
 
-func (m *mockMnemonicGenerator) Generate(data []byte) (*mnemonic.Mnemonic, error) {
-	newMnemonic, err := mnemonic.New(data, mnemonicLanguage)
+func (m *mockMnemonicGenerator) Generate(data []byte) (string, error) {
+	newMnemonic, err := bip39.NewMnemonic(data)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	m.generatedMnemonics = append(m.generatedMnemonics, newMnemonic)
 	return newMnemonic, nil
 }
 
-func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase *mnemonic.Mnemonic) error {
+func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 	return nil
 }
 
 func TestKeymanager_CreateAccount(t *testing.T) {
+	hook := logTest.NewGlobal()
 	wallet := &mockWallet{files: make(map[string][]byte)}
 	mnemonicGenerator := &mockMnemonicGenerator{
-		generatedMnemonics: make([]*mnemonic.Mnemonic, 0),
+		generatedMnemonics: make([]string, 0),
 	}
 	dr := &Keymanager{
 		wallet:            wallet,
@@ -120,11 +122,17 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 		t.Fatal("Expected to have generated new mnemonic for private key")
 	}
 	mnemonicPhrase := mnemonicGenerator.generatedMnemonics[0]
-	seed := mnemonic.NewSeed(mnemonicPhrase.Sentence(), "")
-	validatorWithdrawalKey, err := bls.SecretKeyFromBytes(seed.Bytes)
+	rawWithdrawalBytes, err := bip39.EntropyFromMnemonic(mnemonicPhrase)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validatorWithdrawalKey, err := bls.SecretKeyFromBytes(rawWithdrawalBytes)
 	if err != nil {
 		t.Fatalf("Could not instantiate bls secret key from bytes: %v", err)
 	}
+
+	// We then verify the withdrawal hash created from the recovered withdrawal key
+	// given the mnemonic phrase does indeed verify with the deposit data that was persisted on disk.
 	withdrawalHash := depositutil.WithdrawalCredentialsHash(validatorWithdrawalKey)
 	if !bytes.Equal(withdrawalHash, depositData.WithdrawalCredentials) {
 		t.Errorf(
@@ -133,5 +141,5 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 			depositData.WithdrawalCredentials,
 		)
 	}
-
+	testutil.AssertLogsContain(t, hook, "Successfully created new validator account")
 }

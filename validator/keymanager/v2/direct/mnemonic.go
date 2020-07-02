@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/brianium/mnemonic"
-	"github.com/brianium/mnemonic/entropy"
 	"github.com/manifoldco/promptui"
+	"github.com/tyler-smith/go-bip39"
 )
 
 const (
@@ -18,8 +18,8 @@ const (
 // also provides methods for verifying a user has successfully
 // acknowledged the mnemonic phrase and written it down offline.
 type SeedPhraseFactory interface {
-	Generate(data []byte) (*mnemonic.Mnemonic, error)
-	ConfirmAcknowledgement(phrase *mnemonic.Mnemonic) error
+	Generate(data []byte) (string, error)
+	ConfirmAcknowledgement(phrase string) error
 }
 
 // EnglishMnemonicGenerator implements methods for creating
@@ -29,17 +29,13 @@ type EnglishMnemonicGenerator struct{}
 
 // Generate a mnemonic seed phrase in english using a source of
 // entropy given as raw bytes.
-func (m *EnglishMnemonicGenerator) Generate(data []byte) (*mnemonic.Mnemonic, error) {
-	ent, err := entropy.FromHex(fmt.Sprintf("%x", data))
-	if err != nil {
-		return nil, err
-	}
-	return mnemonic.New(ent, mnemonicLanguage)
+func (m *EnglishMnemonicGenerator) Generate(data []byte) (string, error) {
+	return bip39.NewMnemonic(data)
 }
 
 // ConfirmAcknowledgement displays the mnemonic phrase to the user
 // and confirms the user has written down the phrase securely offline.
-func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(mnemonic *mnemonic.Mnemonic) error {
+func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 	log.Info(
 		"Write down the sentence below, as it is your only " +
 			"means of recovering your withdrawal key",
@@ -50,7 +46,7 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(mnemonic *mnemonic.Mne
 %s
 
 ===================================================================
-	`, mnemonic.Sentence())
+	`, phrase)
 	// Confirm the user has written down the mnemonic phrase offline.
 	prompt := promptui.Prompt{
 		Label:     "Confirm you have written down the recovery words somewhere safe (offline)",
