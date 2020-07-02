@@ -44,14 +44,6 @@ type finalized struct {
 
 // New returns a new state management object.
 func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
-	f, err := db.FinalizedCheckpoint(context.Background())
-	if err != nil {
-		log.Error("could not get state")
-	}
-	fState, err := db.State(context.Background(), bytesutil.ToBytes32(f.Root))
-	if err != nil {
-		log.Error("could not get state")
-	}
 	return &State{
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
@@ -59,7 +51,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
-		finalized: &finalized{state: fState},
+		finalized:               &finalized{},
 	}
 }
 
@@ -114,4 +106,11 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 func verifySlotsPerArchivePoint(slotsPerArchivePoint uint64) bool {
 	return slotsPerArchivePoint > 0 &&
 		slotsPerArchivePoint%params.BeaconConfig().SlotsPerEpoch == 0
+}
+
+// SaveFinalizedState saves the finalized state to state gen memory.
+func (s *State) SaveFinalizedState(fState *state.BeaconState) {
+	s.finalized.lock.Lock()
+	defer s.finalized.lock.Unlock()
+	s.finalized.state = fState
 }
