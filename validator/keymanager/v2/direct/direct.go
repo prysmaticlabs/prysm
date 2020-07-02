@@ -107,13 +107,13 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, depositData, err := dr.generateDepositData(validatingKey, withdrawalKey)
+	tx, depositData, err := generateDepositData(validatingKey, withdrawalKey)
 	if err != nil {
 		return err
 	}
 
 	// Log the deposit transaction data to the user.
-	//dr.logDepositTransaction(tx)
+	logDepositTransaction(tx)
 
 	// We write the raw deposit transaction as an .rlp encoded file.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositTransactionFileName, tx.Data()); err != nil {
@@ -127,6 +127,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
 		return err
 	}
+	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
 	return nil
 }
 
@@ -182,7 +183,7 @@ func (dr *Keymanager) confirmWithdrawalMnemonic(withdrawalKey bls.SecretKey) err
 	return nil
 }
 
-func (dr *Keymanager) generateDepositData(
+func generateDepositData(
 	validatingKey bls.SecretKey,
 	withdrawalKey bls.SecretKey,
 ) (*types.Transaction, *ethpb.Deposit_Data, error) {
@@ -206,6 +207,20 @@ func (dr *Keymanager) generateDepositData(
 		depositRoot,
 	)
 	return tx, depositData, nil
+}
+
+func logDepositTransaction(tx *types.Transaction) {
+	log.Info(
+		"Copy and paste the raw deposit data shown below when issuing a transaction into the " +
+			"ETH1.0 deposit contract to activate your validator client")
+	fmt.Printf(`
+	========================Deposit Data=======================
+
+	%#x
+
+	===================================================================
+	`, tx.Data())
+	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
 }
 
 func depositInput(
