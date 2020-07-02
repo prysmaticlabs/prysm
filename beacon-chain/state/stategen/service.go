@@ -24,6 +24,7 @@ type State struct {
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
 	hotStateCache           *cache.HotStateCache
+	epochBoundaryStateCache *epochBoundaryState
 	splitInfo               *splitSlotAndRoot
 	stateSummaryCache       *cache.StateSummaryCache
 	finalized               *finalized
@@ -52,6 +53,7 @@ func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache)
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		stateSummaryCache:       stateSummaryCache,
 		finalized:               &finalized{},
+		epochBoundaryStateCache: newBoundaryStateCache(),
 	}
 }
 
@@ -87,13 +89,11 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 
 	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
 
-	fState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
+	fState, err := s.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
 		return nil, err
 	}
-	s.finalized.lock.Lock()
-	s.finalized.state = fState
-	s.finalized.lock.Unlock()
+	s.SaveFinalizedState(fState)
 
 	return lastArchivedState, nil
 }
