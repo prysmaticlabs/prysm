@@ -89,6 +89,7 @@ go_image(
         "//proto/cluster:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/depositutil:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
