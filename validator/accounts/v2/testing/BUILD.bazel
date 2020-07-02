@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["mock.go"],
+    importpath = "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_dustinkirkland_golang_petname//:go_default_library"],
+)

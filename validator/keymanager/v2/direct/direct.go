@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -35,6 +36,7 @@ type Wallet interface {
 	AccountsDir() string
 	AccountNames() ([]string, error)
 	ReadPasswordForAccount(accountName string) (string, error)
+	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
 	WriteAccountToDisk(ctx context.Context, password string) (string, error)
 	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
 }
@@ -168,8 +170,35 @@ func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return nil, errors.New("unimplemented")
+	decryptor := keystorev4.New()
+	publicKeys := make([][48]byte, len(accountNames))
+	for i, name := range accountNames {
+		password, err := dr.wallet.ReadPasswordForAccount(name)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not read password for account %s", name)
+		}
+		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
+		}
+		keystoreJSON := make(map[string]interface{})
+		if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
+		}
+		// We extract the validator signing private key from the keystore
+		// by utilizing the password and initialize a new BLS secret key from
+		// its raw bytes.
+		rawSigningKey, err := decryptor.Decrypt(keystoreJSON, []byte(password))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
+		}
+		validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not instantiate bls secret key from bytes for account: %s", name)
+		}
+		publicKeys[i] = bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())
+	}
+	return publicKeys, errors.New("unimplemented")
 }
 
 // Sign signs a message using a validator key.
