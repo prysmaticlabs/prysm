@@ -41,6 +41,10 @@ type Wallet struct {
 	keymanagerKind v2keymanager.Kind
 }
 
+func init() {
+	petname.NonDeterministicMode() // Set random account name generation.
+}
+
 // CreateWallet given a set of configuration options, will leverage
 // a keymanager to create and write a new wallet to disk for a Prysm validator.
 func CreateWallet(ctx context.Context, cfg *WalletConfig) (*Wallet, error) {

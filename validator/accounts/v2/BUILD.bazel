@@ -16,6 +16,7 @@ go_library(
     ],
     deps = [
         "//shared/featureconfig:go_default_library",
+        "//shared/rand:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager/v2:go_default_library",
         "//validator/keymanager/v2/direct:go_default_library",
