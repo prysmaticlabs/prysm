@@ -4,10 +4,9 @@ import (
 	"context"
 	"testing"
 
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
