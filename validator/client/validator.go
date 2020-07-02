@@ -236,7 +236,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", status.PublicKey)
-			metrics.ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
+			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
 		}
 		switch status.Status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
@@ -552,7 +552,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
-			metrics.ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
 		}
 
 		// Only interested in validators who are attesting/proposing.
