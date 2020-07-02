@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/client/streaming"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"

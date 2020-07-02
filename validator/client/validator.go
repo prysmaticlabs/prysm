@@ -1,6 +1,6 @@
 // Package polling represents a gRPC polling-based implementation
 // of an eth2 validator client.
-package polling
+package client
 
 import (
 	"context"
@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"

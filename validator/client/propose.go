@@ -1,4 +1,4 @@
-package polling
+package client
 
 // Validator client proposer functions.
 import (
@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	km "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
