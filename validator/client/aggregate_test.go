@@ -1,4 +1,4 @@
-package streaming
+package client
 
 import (
 	"context"
@@ -6,20 +6,18 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
-	validator.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-	validator.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
@@ -30,10 +28,11 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-	validator.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
-		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
+	validator.duties = &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				PublicKey: validatorKey.PublicKey.Marshal(),
+			},
 		},
 	}
 
