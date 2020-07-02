@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/brianium/mnemonic"
 	"github.com/brianium/mnemonic/entropy"
@@ -36,8 +35,6 @@ const (
 type Wallet interface {
 	WriteAccountToDisk(ctx context.Context, password string) (string, error)
 	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
-	WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte) error
-	ReadKeymanagerConfigFromDisk(ctx context.Context) (io.ReadCloser, error)
 }
 
 // Config for a direct keymanager.
