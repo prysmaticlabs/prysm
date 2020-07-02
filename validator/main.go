@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/client/streaming"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -187,7 +187,7 @@ contract in order to activate the validator client`,
 						}
 						ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
 						defer cancel()
-						dialOpts := streaming.ConstructDialOptions(
+						dialOpts := client.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 							cliCtx.String(flags.CertFlag.Name),
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
