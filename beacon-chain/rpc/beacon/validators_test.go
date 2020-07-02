@@ -509,104 +509,6 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	}
 }
 
-func TestServer_ListValidatorBalances_FromArchive(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
-
-	epoch := uint64(0)
-	validators, balances := setupValidators(t, db, 100)
-
-	if err := db.SaveArchivedBalances(ctx, epoch, balances); err != nil {
-		t.Fatal(err)
-	}
-
-	newerBalances := make([]uint64, len(balances))
-	for i := 0; i < len(newerBalances); i++ {
-		newerBalances[i] = balances[i] * 2
-	}
-	st := testutil.NewBeaconState()
-	if err := st.SetSlot(params.BeaconConfig().SlotsPerEpoch * 3); err != nil {
-		t.Fatal(err)
-	}
-	if err := st.SetValidators(validators); err != nil {
-		t.Fatal(err)
-	}
-	if err := st.SetBalances(newerBalances); err != nil {
-		t.Fatal(err)
-	}
-	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: st,
-		},
-		GenesisTimeFetcher: &mock.ChainService{},
-	}
-
-	req := &ethpb.ListValidatorBalancesRequest{
-		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
-		Indices:     []uint64{uint64(1)},
-	}
-	res, err := bs.ListValidatorBalances(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// We should expect a response containing the old balance from epoch 0,
-	// not the new balance from the current state.
-	want := []*ethpb.ValidatorBalances_Balance{
-		{
-			PublicKey: validators[1].PublicKey,
-			Index:     1,
-			Balance:   balances[1],
-		},
-	}
-	if !reflect.DeepEqual(want, res.Balances) {
-		t.Errorf("Wanted %v, received %v", want, res.Balances)
-	}
-}
-
-func TestServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
-
-	epoch := uint64(0)
-	_, balances := setupValidators(t, db, 100)
-
-	if err := db.SaveArchivedBalances(ctx, epoch, balances); err != nil {
-		t.Fatal(err)
-	}
-
-	newValidators, newBalances := setupValidators(t, db, 200)
-	st := testutil.NewBeaconState()
-	if err := st.SetSlot(params.BeaconConfig().SlotsPerEpoch * 3); err != nil {
-		t.Fatal(err)
-	}
-	if err := st.SetValidators(newValidators); err != nil {
-		t.Fatal(err)
-	}
-	if err := st.SetBalances(newBalances); err != nil {
-		t.Fatal(err)
-	}
-	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: st,
-		},
-	}
-
-	req := &ethpb.ListValidatorBalancesRequest{
-		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
-		Indices:     []uint64{1, 150, 161},
-	}
-	if _, err := bs.ListValidatorBalances(context.Background(), req); err == nil || !strings.Contains(err.Error(), "does not exist") {
-		t.Errorf("Wanted out of range error for including newer validators in the arguments, received %v", err)
-	}
-}
-
 func TestServer_ListValidators_NoResults(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 
@@ -659,7 +561,7 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 
 func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 	ctx := context.Background()
-
+	db, _ := dbTest.SetupDB(t)
 	count := 100
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, count)
@@ -706,6 +608,22 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
+	}
+
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, st, gRoot); err != nil {
+		t.Fatal(err)
 	}
 
 	received, err := bs.ListValidators(ctx, &ethpb.ListValidatorsRequest{
@@ -749,6 +667,7 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 				Epoch: 0,
 			},
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
@@ -797,6 +716,7 @@ func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	pubKeysWanted := make([][]byte, len(pubkeyIndicesWanted))
@@ -823,15 +743,8 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 	count := 100
 	setupValidators(t, db, count)
 
-	headState, err := db.HeadState(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
+		BeaconDB: db,
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -841,6 +754,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	tests := []struct {
@@ -983,6 +897,7 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
@@ -1032,6 +947,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 			// We are in epoch 0.
 			Genesis: time.Now(),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{}
@@ -1048,6 +964,9 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+
 	numEpochs := 30
 	validators := make([]*ethpb.Validator, numEpochs)
 	for i := 0; i < numEpochs; i++ {
@@ -1072,6 +991,20 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	if err := st.SetValidators(validators); err != nil {
 		t.Fatal(err)
 	}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, st, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
@@ -1081,6 +1014,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 			// We are in epoch 30
 			Genesis: time.Now().Add(time.Duration(-1*int64(30*secondsPerEpoch)) * time.Second),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{
@@ -1111,10 +1045,11 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 }
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-	headSlot := uint64(0)
-	numValidators := uint64(64)
+	db, _ := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	headSlot := uint64(32)
+	numValidators := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, numValidators)
 	balances := make([]uint64, numValidators)
 	for i := uint64(0); i < numValidators; i++ {
@@ -1144,27 +1079,18 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	if err := st.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = make([]byte, 32)
-		stateRoots[i] = make([]byte, 32)
-	}
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		randaoMixes[i] = make([]byte, 32)
-	}
-	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-	if err := st.SetBlockRoots(blockRoots); err != nil {
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.SetStateRoots(stateRoots); err != nil {
+	gRoot, err := stateutil.BlockRoot(b.Block)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.SetRandaoMixes(randaoMixes); err != nil {
+	if err := db.SaveState(ctx, st, gRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.SetSlashings(slashings); err != nil {
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
 		t.Fatal(err)
 	}
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -1175,6 +1101,7 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second),
 		},
+		StateGen: stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
 	req := &ethpb.ListValidatorsRequest{
@@ -1401,124 +1328,6 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
-
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	validators := make([]*ethpb.Validator, 8)
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(helpers.StartSlot(100)); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetValidators(validators); err != nil {
-		t.Fatal(err)
-	}
-	activatedIndices := make([]uint64, 0)
-	exitedIndices := make([]uint64, 0)
-	slashedIndices := make([]uint64, 0)
-	ejectedIndices := make([]uint64, 0)
-	for i := 0; i < len(validators); i++ {
-		// Mark indices divisible by two as activated.
-		if i%2 == 0 {
-			activatedIndices = append(activatedIndices, uint64(i))
-		} else if i%3 == 0 {
-			// Mark indices divisible by 3 as slashed.
-			slashedIndices = append(slashedIndices, uint64(i))
-		} else if i%5 == 0 {
-			// Mark indices divisible by 5 as exited.
-			exitedIndices = append(exitedIndices, uint64(i))
-		} else if i%7 == 0 {
-			// Mark indices divisible by 7 as ejected.
-			ejectedIndices = append(ejectedIndices, uint64(i))
-		}
-		key := make([]byte, 48)
-		copy(key, strconv.Itoa(i))
-		if err := headState.UpdateValidatorAtIndex(uint64(i), &ethpb.Validator{
-			PublicKey: key,
-		}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	archivedChanges := &pbp2p.ArchivedActiveSetChanges{
-		Activated: activatedIndices,
-		Exited:    exitedIndices,
-		Slashed:   slashedIndices,
-		Ejected:   ejectedIndices,
-	}
-	// We store the changes during the genesis epoch.
-	if err := db.SaveArchivedActiveValidatorChanges(ctx, 0, archivedChanges); err != nil {
-		t.Fatal(err)
-	}
-	// We store the same changes during epoch 5 for further testing.
-	if err := db.SaveArchivedActiveValidatorChanges(ctx, 5, archivedChanges); err != nil {
-		t.Fatal(err)
-	}
-	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
-		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Genesis{Genesis: true},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantedKeys := make([][]byte, 8)
-	for i := 0; i < len(wantedKeys); i++ {
-		k := make([]byte, 48)
-		copy(k, strconv.Itoa(i))
-		wantedKeys[i] = k
-	}
-	wantedActive := [][]byte{
-		wantedKeys[0],
-		wantedKeys[2],
-		wantedKeys[4],
-		wantedKeys[6],
-	}
-	wantedActiveIndices := []uint64{0, 2, 4, 6}
-	wantedExited := [][]byte{
-		wantedKeys[5],
-	}
-	wantedExitedIndices := []uint64{5}
-	wantedSlashed := [][]byte{
-		wantedKeys[3],
-	}
-	wantedSlashedIndices := []uint64{3}
-	wantedEjected := [][]byte{
-		wantedKeys[7],
-	}
-	wantedEjectedIndices := []uint64{7}
-	wanted := &ethpb.ActiveSetChanges{
-		Epoch:               0,
-		ActivatedPublicKeys: wantedActive,
-		ActivatedIndices:    wantedActiveIndices,
-		ExitedPublicKeys:    wantedExited,
-		ExitedIndices:       wantedExitedIndices,
-		SlashedPublicKeys:   wantedSlashed,
-		SlashedIndices:      wantedSlashedIndices,
-		EjectedPublicKeys:   wantedEjected,
-		EjectedIndices:      wantedEjectedIndices,
-	}
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
-	}
-	res, err = bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
-		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{Epoch: 5},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted.Epoch = 5
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
-	}
-}
-
 func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
@@ -1716,34 +1525,6 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidatorParticipation_CannotRequestCurrentEpoch(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(helpers.StartSlot(2)); err != nil {
-		t.Fatal(err)
-	}
-	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-
-	wanted := "Cannot retrieve information about an epoch currently in progress"
-	if _, err := bs.GetValidatorParticipation(
-		ctx,
-		&ethpb.GetValidatorParticipationRequest{
-			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-				Epoch: 2,
-			},
-		},
-	); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
-}
-
 func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
 	db, _ := dbTest.SetupDB(t)
 
@@ -1761,9 +1542,10 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 			State: headState,
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, cache.NewStateSummaryCache()),
 	}
 
-	wanted := "Cannot retrieve information about an epoch in the future"
+	wanted := "Cannot retrieve information about an epoch"
 	if _, err := bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
@@ -1773,70 +1555,6 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		},
 	); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
-}
-
-func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
-
-	epoch := uint64(4)
-	part := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate: 1.0,
-		VotedEther:              20,
-		EligibleEther:           20,
-	}
-	if err := db.SaveArchivedValidatorParticipation(ctx, epoch-2, part); err != nil {
-		t.Fatal(err)
-	}
-
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(helpers.StartSlot(epoch + 1)); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: epoch + 1}); err != nil {
-		t.Fatal(err)
-	}
-	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-			Epoch: epoch + 2,
-		},
-	}); err == nil {
-		t.Error("Expected error when requesting future epoch, received nil")
-	}
-	// We request data from epoch 0, which we didn't archive, so we should expect an error.
-	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Genesis{
-			Genesis: true,
-		},
-	}); err == nil {
-		t.Error("Expected error when data from archive is not found, received nil")
-	}
-
-	want := &ethpb.ValidatorParticipationResponse{
-		Epoch:         epoch - 2,
-		Finalized:     true,
-		Participation: part,
-	}
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-			Epoch: epoch - 2,
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(want, res) {
-		t.Errorf("Wanted %v, received %v", want, res)
 	}
 }
 
@@ -1940,57 +1658,6 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 	wanted := "Participation information for epoch 0 is not yet available"
 	if _, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}}); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
-}
-
-func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.T) {
-	db, _ := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: false})
-	defer resetCfg()
-
-	part := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate: 1.0,
-		VotedEther:              20,
-		EligibleEther:           20,
-	}
-	epoch := uint64(1)
-	// We archive data for epoch 1.
-	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
-		t.Fatal(err)
-	}
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(helpers.StartSlot(epoch + 10)); err != nil {
-		t.Fatal(err)
-	}
-	if err := headState.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: epoch + 5}); err != nil {
-		t.Fatal(err)
-	}
-
-	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			// 10 epochs into the future.
-			State: headState,
-		},
-	}
-	want := &ethpb.ValidatorParticipationResponse{
-		Epoch:         epoch,
-		Finalized:     true,
-		Participation: part,
-	}
-	// We request epoch 1.
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-			Epoch: epoch,
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(want, res) {
-		t.Errorf("Wanted %v, received %v", want, res)
 	}
 }
 
@@ -2292,57 +1959,6 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 	}
 }
 
-func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
-	b.StopTimer()
-	db, _ := dbTest.SetupDB(b)
-	ctx := context.Background()
-
-	currentNumValidators := 1000
-	numOldBalances := 50
-	validators := make([]*ethpb.Validator, currentNumValidators)
-	oldBalances := make([]uint64, numOldBalances)
-	for i := 0; i < currentNumValidators; i++ {
-		validators[i] = &ethpb.Validator{
-			PublicKey: []byte(strconv.Itoa(i)),
-		}
-	}
-	for i := 0; i < numOldBalances; i++ {
-		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-	// We archive old balances for epoch 50.
-	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
-		b.Fatal(err)
-	}
-	headState := testutil.NewBeaconState()
-	if err := headState.SetSlot(helpers.StartSlot(100 /* epoch 100 */)); err != nil {
-		b.Fatal(err)
-	}
-	if err := headState.SetValidators(validators); err != nil {
-		b.Fatal(err)
-	}
-	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		if _, err := bs.ListValidatorBalances(
-			ctx,
-			&ethpb.ListValidatorBalancesRequest{
-				QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
-					Epoch: 50,
-				},
-				PageSize: 100,
-			},
-		); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
 func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
 	ctx := context.Background()
 	balances := make([]uint64, count)
@@ -2377,6 +1993,9 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 		t.Fatal(err)
 	}
 	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	return validators, balances
@@ -2497,6 +2116,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 }
 
 func TestServer_GetIndividualVotes_Working(t *testing.T) {
+	helpers.ClearCache()
 	resetCfg := featureconfig.InitWithReset(&featureconfig.Flags{NewStateMgmt: true})
 	defer resetCfg()
 

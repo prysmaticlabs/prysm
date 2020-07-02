@@ -49,8 +49,8 @@ type blocksQueue struct {
 	blocksFetcher       *blocksFetcher
 	headFetcher         blockchain.HeadFetcher
 	highestExpectedSlot uint64
-	fetchedBlocks       chan *eth.SignedBeaconBlock // output channel for ready blocks
-	quit                chan struct{}               // termination notifier
+	fetchedBlocks       chan []*eth.SignedBeaconBlock // output channel for ready blocks
+	quit                chan struct{}                 // termination notifier
 }
 
 // newBlocksQueue creates initialized priority queue.
@@ -75,7 +75,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		highestExpectedSlot: highestExpectedSlot,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
-		fetchedBlocks:       make(chan *eth.SignedBeaconBlock, blocksFetcher.blocksPerSecond),
+		fetchedBlocks:       make(chan []*eth.SignedBeaconBlock, 1),
 		quit:                make(chan struct{}),
 	}
 
@@ -260,12 +260,10 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 		}
 
 		send := func() (stateID, error) {
-			for _, block := range m.blocks {
-				select {
-				case <-ctx.Done():
-					return m.state, ctx.Err()
-				case q.fetchedBlocks <- block:
-				}
+			select {
+			case <-ctx.Done():
+				return m.state, ctx.Err()
+			case q.fetchedBlocks <- m.blocks:
 			}
 			return stateSent, nil
 		}

@@ -28,7 +28,7 @@ func (kv *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSt
 		}
 
 		var err error
-		s, err = createState(enc)
+		s, err = createState(ctx, enc)
 		return err
 	})
 	if err != nil {
@@ -58,7 +58,7 @@ func (kv *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 		}
 
 		var err error
-		s, err = createState(enc)
+		s, err = createState(ctx, enc)
 		return err
 	})
 	if err != nil {
@@ -92,7 +92,7 @@ func (kv *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 		}
 
 		var err error
-		s, err = createState(enc)
+		s, err = createState(ctx, enc)
 		return err
 	})
 	if err != nil {
@@ -105,24 +105,11 @@ func (kv *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (kv *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
+func (kv *Store) SaveState(ctx context.Context, st *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	if state == nil {
-		return errors.New("nil state")
-	}
-	enc, err := encode(state.InnerStateUnsafe())
-	if err != nil {
-		return err
-	}
 
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
-		if err := bucket.Put(blockRoot[:], enc); err != nil {
-			return err
-		}
-		return kv.setStateSlotBitField(ctx, tx, state.Slot())
-	})
+	return kv.SaveStates(ctx, []*state.BeaconState{st}, [][32]byte{blockRoot})
 }
 
 // SaveStates stores multiple states to the db using the provided corresponding roots.
@@ -135,7 +122,7 @@ func (kv *Store) SaveStates(ctx context.Context, states []*state.BeaconState, bl
 	var err error
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
-		multipleEncs[i], err = encode(st.InnerStateUnsafe())
+		multipleEncs[i], err = encode(ctx, st.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}
@@ -176,38 +163,7 @@ func (kv *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
-
-		bkt = tx.Bucket(checkpointBucket)
-		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{}
-		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(enc, checkpoint); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(blocksBucket)
-		headBlkRoot := bkt.Get(headBlockRootKey)
-
-		// Safe guard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-			return errors.New("cannot delete genesis, finalized, or head state")
-		}
-
-		slot, err := slotByBlockRoot(ctx, tx, blockRoot[:])
-		if err != nil {
-			return err
-		}
-		if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(stateBucket)
-		return bkt.Delete(blockRoot[:])
-	})
+	return kv.DeleteStates(ctx, [][32]byte{blockRoot})
 }
 
 // DeleteStates by block roots.
@@ -234,7 +190,7 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 		checkpoint := &ethpb.Checkpoint{}
 		if enc == nil {
 			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(enc, checkpoint); err != nil {
+		} else if err := decode(ctx, enc, checkpoint); err != nil {
 			return err
 		}
 
@@ -268,9 +224,9 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 }
 
 // creates state from marshaled proto state bytes.
-func createState(enc []byte) (*pb.BeaconState, error) {
+func createState(ctx context.Context, enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
-	err := decode(enc, protoState)
+	err := decode(ctx, enc, protoState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
@@ -297,7 +253,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 			if enc == nil {
 				return 0, errors.New("state enc can't be nil")
 			}
-			s, err := createState(enc)
+			s, err := createState(ctx, enc)
 			if err != nil {
 				return 0, err
 			}
@@ -307,7 +263,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 			return s.Slot, nil
 		}
 		b := &ethpb.SignedBeaconBlock{}
-		err := decode(enc, b)
+		err := decode(ctx, enc, b)
 		if err != nil {
 			return 0, err
 		}
@@ -317,7 +273,7 @@ func slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (uint64
 		return b.Block.Slot, nil
 	}
 	stateSummary := &pb.StateSummary{}
-	if err := decode(enc, stateSummary); err != nil {
+	if err := decode(ctx, enc, stateSummary); err != nil {
 		return 0, err
 	}
 	return stateSummary.Slot, nil
@@ -424,7 +380,7 @@ func (kv *Store) statesAtSlotBitfieldIndex(ctx context.Context, tx *bolt.Tx, ind
 		if enc == nil {
 			continue
 		}
-		pbState, err := createState(enc)
+		pbState, err := createState(ctx, enc)
 		if err != nil {
 			return nil, err
 		}
