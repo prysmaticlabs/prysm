@@ -29,8 +29,8 @@ type State struct {
 
 // This tracks the finalized info.
 type finalizedInfo struct {
-	slot uint64
-	root [32]byte
+	slot  uint64
+	root  [32]byte
 	state *state.BeaconState
 	lock  sync.RWMutex
 }

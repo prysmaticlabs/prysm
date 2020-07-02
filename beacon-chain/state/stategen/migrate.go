@@ -29,9 +29,9 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 	// Start at previous finalized slot, stop at current finalized slot.
 	// If the slot is on archived point, save the state of that slot to the DB.
 	for i := oldFSlot; i < fSlot; i++ {
-	  if ctx.Err() != nil {
-	      return ctx.Err()
-	  }
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		if i%s.slotsPerArchivedPoint == 0 && i != 0 {
 			cached, exists, err := s.epochBoundaryStateCache.getBySlot(i)
 			if err != nil {
@@ -81,13 +81,12 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 			}
 			log.WithFields(
 				logrus.Fields{
-					"slot":  aState.Slot(),
+					"slot":          aState.Slot(),
 					"archivedIndex": aIndex,
-					"root":  hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
+					"root":          hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
 				}).Info("Saved state in DB")
 		}
 	}
-
 
 	// Migrate all state summary objects from state summary cache to DB.
 	if err := s.beaconDB.SaveStateSummaries(ctx, s.stateSummaryCache.GetAll()); err != nil {

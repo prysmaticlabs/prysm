@@ -66,7 +66,7 @@ func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 	e := newBoundaryStateCache()
 	offSet := uint64(10)
-	for i := uint64(0); i < maxCacheSize + offSet; i ++  {
+	for i := uint64(0); i < maxCacheSize+offSet; i++ {
 		s := testutil.NewBeaconState()
 		if err := s.SetSlot(i); err != nil {
 			t.Fatal(err)
@@ -90,4 +90,3 @@ func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 		}
 	}
 }
-

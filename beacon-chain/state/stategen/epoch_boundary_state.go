@@ -12,20 +12,20 @@ import (
 var (
 	// maxCacheSize is 8. That means 8 epochs and roughly an hour
 	// of no finality can be endured.
-	maxCacheSize = uint64(8)
-	errNotSlotRootInfo = errors.New("not slot root info type")
+	maxCacheSize        = uint64(8)
+	errNotSlotRootInfo  = errors.New("not slot root info type")
 	errNotRootStateInfo = errors.New("root state info type")
 )
 
 // rootStateInfo specifies the root state info in the epoch boundary state cache.
 type rootStateInfo struct {
-	root     [32]byte
-	state   *stateTrie.BeaconState
+	root  [32]byte
+	state *stateTrie.BeaconState
 }
 
 // slotRootInfo specifies the slot root info in the epoch boundary state cache.
 type slotRootInfo struct {
-	root     [32]byte
+	root [32]byte
 	slot uint64
 }
 
@@ -52,8 +52,8 @@ func slotKeyFn(obj interface{}) (string, error) {
 // epochBoundaryState struct with two queues by looking up by slot or root.
 type epochBoundaryState struct {
 	rootStateCache *cache.FIFO
-	slotRootCache *cache.FIFO
-	lock        sync.RWMutex
+	slotRootCache  *cache.FIFO
+	lock           sync.RWMutex
 }
 
 // newBoundaryStateCache creates a new block epochBoundaryState for storing/accessing epoch boundary states from
@@ -61,7 +61,7 @@ type epochBoundaryState struct {
 func newBoundaryStateCache() *epochBoundaryState {
 	return &epochBoundaryState{
 		rootStateCache: cache.NewFIFO(rootKeyFn),
-		slotRootCache: cache.NewFIFO(slotKeyFn),
+		slotRootCache:  cache.NewFIFO(slotKeyFn),
 	}
 }
 
@@ -121,7 +121,7 @@ func (e *epochBoundaryState) put(r [32]byte, s *stateTrie.BeaconState) error {
 		return err
 	}
 	if err := e.slotRootCache.AddIfNotPresent(&slotRootInfo{
-		root:  r,
+		root: r,
 		slot: s.Slot(),
 	}); err != nil {
 		return err
