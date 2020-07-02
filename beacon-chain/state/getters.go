@@ -596,12 +596,12 @@ func (b *BeaconState) Slashings() []uint64 {
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
-	return b.safeCopyAttestationSlice(b.state.PreviousEpochAttestations)
+	return b.safeCopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
-	return b.safeCopyAttestationSlice(b.state.CurrentEpochAttestations)
+	return b.safeCopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
@@ -670,7 +670,7 @@ func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
 	return dst
 }
 
-func (b *BeaconState) safeCopyAttestationSlice(input []*pbp2p.PendingAttestation) []*pbp2p.PendingAttestation {
+func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAttestation) []*pbp2p.PendingAttestation {
 	if !b.HasInnerState() {
 		return nil
 	}
