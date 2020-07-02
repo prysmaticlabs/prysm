@@ -9,11 +9,9 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
-        "//beacon-chain/core/helpers:go_default_library",
         "//contracts/deposit-contract:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
-        "//shared/hashutil:go_default_library",
+        "//shared/depositutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_brianium_mnemonic//:go_default_library",
         "@com_github_brianium_mnemonic//entropy:go_default_library",

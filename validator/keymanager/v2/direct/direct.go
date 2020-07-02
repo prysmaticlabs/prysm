@@ -13,11 +13,9 @@ import (
 	"github.com/manifoldco/promptui"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -104,7 +102,7 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	tx, depositData, err := generateDepositData(validatingKey, withdrawalKey)
+	tx, depositData, err := generateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
 		return err
 	}
@@ -186,11 +184,11 @@ func (dr *Keymanager) confirmWithdrawalMnemonic(withdrawalKey bls.SecretKey) err
 	return nil
 }
 
-func generateDepositData(
+func generateDepositTransaction(
 	validatingKey bls.SecretKey,
 	withdrawalKey bls.SecretKey,
 ) (*types.Transaction, *ethpb.Deposit_Data, error) {
-	depositData, depositRoot, err := depositInput(
+	depositData, depositRoot, err := depositutil.DepositInput(
 		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
 	)
 	if err != nil {
@@ -224,50 +222,4 @@ func logDepositTransaction(tx *types.Transaction) {
 ===================================================================
 ***Enter the above deposit data into step 3 on https://prylabs.net/participate***
 	`, tx.Data())
-}
-
-func depositInput(
-	depositKey bls.SecretKey,
-	withdrawalKey bls.SecretKey,
-	amountInGwei uint64,
-) (*ethpb.Deposit_Data, [32]byte, error) {
-	di := &ethpb.Deposit_Data{
-		PublicKey:             depositKey.Marshal(),
-		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
-		Amount:                amountInGwei,
-	}
-
-	sr, err := ssz.SigningRoot(di)
-	if err != nil {
-		return nil, [32]byte{}, err
-	}
-
-	domain, err := helpers.ComputeDomain(params.BeaconConfig().DomainDeposit, nil /*forkVersion*/, nil /*genesisValidatorsRoot*/)
-	if err != nil {
-		return nil, [32]byte{}, err
-	}
-	root, err := ssz.HashTreeRoot(&pb.SigningData{ObjectRoot: sr[:], Domain: domain})
-	if err != nil {
-		return nil, [32]byte{}, err
-	}
-	di.Signature = depositKey.Sign(root[:]).Marshal()
-
-	dr, err := ssz.HashTreeRoot(di)
-	if err != nil {
-		return nil, [32]byte{}, err
-	}
-
-	return di, dr, nil
-}
-
-// withdrawalCredentialsHash forms a 32 byte hash of the withdrawal public
-// address.
-//
-// The specification is as follows:
-//   withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE
-//   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
-// where withdrawal_credentials is of type bytes32.
-func withdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
-	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
-	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
 }
