@@ -348,6 +348,8 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		return errors.Wrap(err, "could not save genesis block root")
 	}
 
+	s.stateGen.SaveFinalizedState(genesisState)
+
 	// Finalized checkpoint at genesis is a zero hash.
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 
