@@ -5,12 +5,11 @@ import (
 	"sort"
 	"sync"
 
-	"go.opencensus.io/trace"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // Pool implements a struct to maintain pending and recently included voluntary exits. This pool
