@@ -32,6 +32,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 	if err := s.chain.ReceiveBlockNoPubsub(ctx, signed, root); err != nil {
 		interop.WriteBlockToDisk(signed, true /*failed*/)
+		return err
 	}
 
 	// Delete attestations from the block in the pool to avoid inclusion in future block.
