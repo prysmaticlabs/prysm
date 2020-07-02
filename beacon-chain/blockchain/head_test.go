@@ -35,6 +35,7 @@ func TestSaveHead_Same(t *testing.T) {
 }
 
 func TestSaveHead_Different(t *testing.T) {
+	ctx := context.Background()
 	db, sc := testDB.SetupDB(t)
 	service := setupBeaconChain(t, db, sc)
 
@@ -79,12 +80,13 @@ func TestSaveHead_Different(t *testing.T) {
 	if !reflect.DeepEqual(service.headBlock(), newHeadSignedBlock) {
 		t.Error("Head did not change")
 	}
-	if !reflect.DeepEqual(service.headState().CloneInnerState(), headState.CloneInnerState()) {
+	if !reflect.DeepEqual(service.headState(ctx).CloneInnerState(), headState.CloneInnerState()) {
 		t.Error("Head did not change")
 	}
 }
 
 func TestSaveHead_Different_Reorg(t *testing.T) {
+	ctx := context.Background()
 	hook := logTest.NewGlobal()
 	db, sc := testDB.SetupDB(t)
 	service := setupBeaconChain(t, db, sc)
@@ -134,7 +136,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	if !reflect.DeepEqual(service.headBlock(), newHeadSignedBlock) {
 		t.Error("Head did not change")
 	}
-	if !reflect.DeepEqual(service.headState().CloneInnerState(), headState.CloneInnerState()) {
+	if !reflect.DeepEqual(service.headState(ctx).CloneInnerState(), headState.CloneInnerState()) {
 		t.Error("Head did not change")
 	}
 	testutil.AssertLogsContain(t, hook, "Chain reorg occurred")

@@ -59,7 +59,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		for i := range blkRoots {
 			expectSuccess(t, r, stream)
 			res := &ethpb.SignedBeaconBlock{}
-			if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
+			if err := r.p2p.Encoding().DecodeWithMaxLength(stream, &res); err != nil {
 				t.Error(err)
 			}
 			if res.Block.Slot != uint64(i+1) {
@@ -135,7 +135,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := [][32]byte{}
-		if err := p2.Encoding().DecodeWithLength(stream, &out); err != nil {
+		if err := p2.Encoding().DecodeWithMaxLength(stream, &out); err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(out, expectedRoots) {
@@ -146,7 +146,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 				t.Fatalf("Failed to write to stream: %v", err)
 			}
-			_, err := p2.Encoding().EncodeWithLength(stream, blk)
+			_, err := p2.Encoding().EncodeWithMaxLength(stream, blk)
 			if err != nil {
 				t.Errorf("Could not send response back: %v ", err)
 			}

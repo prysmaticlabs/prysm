@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -456,29 +455,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.New("finalized state and block can't be nil")
 	}
 	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
-
-	return nil
-}
-
-// This is called when a client starts from a non-genesis slot. It deletes the states in DB
-// from slot 1 (avoid genesis state) to `slot`.
-func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
-	if featureconfig.Get().DontPruneStateStartUp {
-		return nil
-	}
-
-	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
-	roots, err := s.beaconDB.BlockRoots(ctx, filter)
-	if err != nil {
-		return err
-	}
-	if err := s.beaconDB.DeleteStates(ctx, roots); err != nil {
-		return err
-	}
-
-	if err := s.beaconDB.SaveLastArchivedIndex(ctx, 0); err != nil {
-		return err
-	}
 
 	return nil
 }

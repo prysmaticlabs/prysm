@@ -9,16 +9,11 @@ import (
 // GlobalFlags specifies all the global flags for the
 // beacon node.
 type GlobalFlags struct {
-	EnableArchive                     bool
-	EnableArchivedValidatorSetChanges bool
-	EnableArchivedBlocks              bool
-	EnableArchivedAttestations        bool
-	UnsafeSync                        bool
-	DisableDiscv5                     bool
-	MinimumSyncPeers                  int
-	MaxPageSize                       int
-	BlockBatchLimit                   int
-	BlockBatchLimitBurstFactor        int
+	UnsafeSync                 bool
+	DisableDiscv5              bool
+	MinimumSyncPeers           int
+	BlockBatchLimit            int
+	BlockBatchLimitBurstFactor int
 }
 
 var globalConfig *GlobalFlags
@@ -40,18 +35,6 @@ func Init(c *GlobalFlags) {
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg := &GlobalFlags{}
-	if ctx.Bool(ArchiveEnableFlag.Name) {
-		cfg.EnableArchive = true
-	}
-	if ctx.Bool(ArchiveValidatorSetChangesFlag.Name) {
-		cfg.EnableArchivedValidatorSetChanges = true
-	}
-	if ctx.Bool(ArchiveBlocksFlag.Name) {
-		cfg.EnableArchivedBlocks = true
-	}
-	if ctx.Bool(ArchiveAttestationsFlag.Name) {
-		cfg.EnableArchivedAttestations = true
-	}
 	if ctx.Bool(UnsafeSync.Name) {
 		cfg.UnsafeSync = true
 	}
@@ -60,7 +43,6 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	}
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
-	cfg.MaxPageSize = ctx.Int(RPCMaxPageSize.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)

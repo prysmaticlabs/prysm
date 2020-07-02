@@ -27,8 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/client/metrics"
-	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	vdb "github.com/prysmaticlabs/prysm/validator/db"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -46,7 +46,7 @@ const (
 type validator struct {
 	genesisTime                        uint64
 	ticker                             *slotutil.SlotTicker
-	db                                 *db.Store
+	db                                 vdb.Database
 	duties                             *ethpb.DutiesResponse
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	beaconClient                       ethpb.BeaconChainClient

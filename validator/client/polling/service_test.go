@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
+	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 			log.WithError(err).Debug("Cannot remove keystore folder")
 		}
 	}()
-	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
+	if err := v1.NewValidatorAccount(dir, "1234"); err != nil {
 		log.WithError(err).Debug("Cannot create validator account")
 	}
 	keySetup()

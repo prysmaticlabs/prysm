@@ -6,6 +6,11 @@ import (
 	"github.com/mohae/deepcopy"
 )
 
+func init() {
+	// Using onyx as the default configuration for now.
+	UseOnyxNetworkConfig()
+}
+
 // NetworkConfig defines the spec based network parameters.
 type NetworkConfig struct {
 	GossipMaxSize                     uint64        `yaml:"GOSSIP_MAX_SIZE"`                       // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
@@ -29,50 +34,25 @@ type NetworkConfig struct {
 	BootstrapNodes          []string // BootstrapNodes are the addresses of the bootnodes.
 }
 
-var defaultNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                     1 << 20, // 1 MiB
-	MaxChunkSize:                      1 << 20, // 1 MiB
-	AttestationSubnetCount:            64,
-	AttestationPropagationSlotRange:   32,
-	RandomSubnetsPerValidator:         1 << 0,
-	EpochsPerRandomSubnetSubscription: 1 << 8,
-	MaxRequestBlocks:                  1 << 10, // 1024
-	TtfbTimeout:                       5 * time.Second,
-	RespTimeout:                       10 * time.Second,
-	MaximumGossipClockDisparity:       500 * time.Millisecond,
-	ETH2Key:                           "eth2",
-	AttSubnetKey:                      "attnets",
-	ContractDeploymentBlock:           2844925,
-	DepositContractAddress:            "0x0F0F0fc0530007361933EaB5DB97d09aCDD6C1c8",
-	BootstrapNodes:                    []string{"enr:-Ku4QMKVC_MowDsmEa20d5uGjrChI0h8_KsKXDmgVQbIbngZV0idV6_RL7fEtZGo-kTNZ5o7_EJI_vCPJ6scrhwX0Z4Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQJxCnE6v_x2ekgY_uoE1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A"},
-}
+var networkConfig = mainnetNetworkConfig
 
 // BeaconNetworkConfig returns the current network config for
 // the beacon chain.
 func BeaconNetworkConfig() *NetworkConfig {
-	return defaultNetworkConfig
-}
-
-// UseAltonaNetworkConfig uses the Altona specific
-// network config.
-func UseAltonaNetworkConfig() {
-	cfg := BeaconNetworkConfig()
-	cfg.ContractDeploymentBlock = 2917810
-	cfg.DepositContractAddress = "0x16e82D77882A663454Ef92806b7DeCa1D394810f"
-	OverrideBeaconNetworkConfig(cfg)
+	return networkConfig
 }
 
 // OverrideBeaconNetworkConfig will override the network
 // config with the added argument.
 func OverrideBeaconNetworkConfig(cfg *NetworkConfig) {
-	defaultNetworkConfig = cfg
+	networkConfig = cfg.Copy()
 }
 
 // Copy returns Copy of the config object.
 func (c *NetworkConfig) Copy() *NetworkConfig {
 	config, ok := deepcopy.Copy(*c).(NetworkConfig)
 	if !ok {
-		config = *defaultNetworkConfig
+		config = *networkConfig
 	}
 	return &config
 }
