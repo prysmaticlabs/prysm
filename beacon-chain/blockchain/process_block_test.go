@@ -392,7 +392,8 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	block := &ethpb.BeaconBlock{Slot: 9, ParentRoot: roots[8], Body: &ethpb.BeaconBlockBody{Graffiti: []byte{}}}
-	if err := service.fillInForkChoiceMissingBlocks(context.Background(), block, beaconState); err != nil {
+	if err := service.fillInForkChoiceMissingBlocks(context.Background(), block,
+		beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint()); err != nil {
 		t.Fatal(err)
 	}
 

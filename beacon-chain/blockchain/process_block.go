@@ -85,7 +85,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock, 
 		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 
-	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
@@ -203,15 +203,22 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
+	return s.handlePostStateInSync(ctx, signed, blockRoot, postState)
+}
+
+func (s *Service) handlePostStateInSync(ctx context.Context, signed *ethpb.SignedBeaconBlock,
+	blockRoot [32]byte, postState *stateTrie.BeaconState) error {
+
+	b := signed.Block
 
 	s.saveInitSyncBlock(blockRoot, signed)
 
-	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
-		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
-	}
-
 	if err := s.stateGen.SaveState(ctx, blockRoot, postState); err != nil {
 		return errors.Wrap(err, "could not save state")
+	}
+
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b, blockRoot, postState); err != nil {
+		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
 	if flags.Get().EnableArchive {
@@ -253,6 +260,59 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		}
 	}
 
+	return s.handleEpochBoundary(postState)
+}
+
+func (s *Service) handleBlockInBatch(ctx context.Context, signed *ethpb.SignedBeaconBlock,
+	blockRoot [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	b := signed.Block
+
+	s.saveInitSyncBlock(blockRoot, signed)
+	if err := s.insertBlockToForkChoiceStore(ctx, b, blockRoot, fCheckpoint, jCheckpoint); err != nil {
+		return err
+	}
+	if flags.Get().EnableArchive {
+		atts := signed.Block.Body.Attestations
+		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
+			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
+		}
+	}
+
+	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
+	if uint64(len(s.getInitSyncBlocks())) > initialSyncBlockCacheSize {
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return err
+		}
+		s.clearInitSyncBlocks()
+	}
+
+	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
+	if fCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+		if err := s.beaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return err
+		}
+		s.clearInitSyncBlocks()
+
+		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, fCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save finalized checkpoint")
+		}
+
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = fCheckpoint
+
+		fRoot := bytesutil.ToBytes32(fCheckpoint.Root)
+		fBlock, err := s.beaconDB.Block(ctx, fRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized block to migrate")
+		}
+		if err := s.stateGen.MigrateToCold(ctx, fBlock.Block.Slot, fRoot); err != nil {
+			return errors.Wrap(err, "could not migrate to cold")
+		}
+	}
+	return nil
+}
+
+func (s *Service) handleEpochBoundary(postState *stateTrie.BeaconState) error {
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		reportEpochMetrics(postState)
@@ -266,25 +326,37 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return err
 		}
 	}
-
 	return nil
 }
 
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte, state *stateTrie.BeaconState) error {
-	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, state); err != nil {
+func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte,
+	state *stateTrie.BeaconState) error {
+	fCheckpoint := state.FinalizedCheckpoint()
+	jCheckpoint := state.CurrentJustifiedCheckpoint()
+	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
+	return s.insertAttestationsToForkChoiceStore(ctx, blk, state)
+}
 
+func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock,
+	root [32]byte, fCheckpoint *ethpb.Checkpoint, jCheckpoint *ethpb.Checkpoint) error {
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
+		return err
+	}
 	// Feed in block to fork choice store.
 	if err := s.forkChoiceStore.ProcessBlock(ctx,
 		blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot), bytesutil.ToBytes32(blk.Body.Graffiti),
-		state.CurrentJustifiedCheckpoint().Epoch,
-		state.FinalizedCheckpointEpoch()); err != nil {
+		jCheckpoint.Epoch,
+		fCheckpoint.Epoch); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")
 	}
+	return nil
+}
 
+func (s *Service) insertAttestationsToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body.Attestations {
 		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
@@ -294,6 +366,4 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 		indices := attestationutil.AttestingIndices(a.AggregationBits, committee)
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
-
-	return nil
 }

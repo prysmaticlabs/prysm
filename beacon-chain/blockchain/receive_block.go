@@ -173,6 +173,56 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 	return nil
 }
 
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceivePostTransition")
+	defer span.End()
+	blockCopy := stateTrie.CopySignedBeaconBlock(block)
+
+	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
+	if err := s.handlePostStateInSync(ctx, blockCopy, blockRoot, postState); err != nil {
+		err := errors.Wrap(err, "could not process block")
+		traceutil.AnnotateError(span, err)
+		return err
+	}
+
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+
+	if !bytes.Equal(blockRoot[:], cachedHeadRoot) {
+		if err := s.saveHeadNoDB(ctx, blockCopy, blockRoot); err != nil {
+			err := errors.Wrap(err, "could not save head")
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+	}
+
+	// Send notification of the processed block to the state feed.
+	s.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
+			BlockRoot: blockRoot,
+			Verified:  false,
+		},
+	})
+
+	// Reports on blockCopy and fork choice metrics.
+	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+
+	// Log state transition data.
+	log.WithFields(logrus.Fields{
+		"slot":         blockCopy.Block.Slot,
+		"attestations": len(blockCopy.Block.Body.Attestations),
+		"deposits":     len(blockCopy.Block.Body.Deposits),
+	}).Debug("Finished applying state transition")
+
+	s.epochParticipationLock.Lock()
+	defer s.epochParticipationLock.Unlock()
+	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
+}
+
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
 func (s *Service) HasInitSyncBlock(root [32]byte) bool {
 	return s.hasInitSyncBlock(root)
