@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 
 	"github.com/brianium/mnemonic"
 	"github.com/brianium/mnemonic/entropy"
@@ -38,32 +40,47 @@ type Wallet interface {
 }
 
 // Config for a direct keymanager.
-type Config struct{}
+type Config struct {
+	EIPVersion string `json:"direct_eip_version"`
+}
 
 // Keymanager implementation for direct keystores.
 type Keymanager struct {
 	wallet Wallet
+	cfg    *Config
 }
 
 // DefaultConfig for a direct keymanager implementation.
 func DefaultConfig() *Config {
-	return &Config{}
+	return &Config{
+		EIPVersion: "EIP-2335",
+	}
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) *Keymanager {
 	return &Keymanager{
 		wallet: wallet,
+		cfg:    cfg,
 	}
 }
 
-// NewKeymanagerFromConfigFile instantiates a direct keymanager instance
-// from a configuration file accesed via a wallet.
-// TODO(#6220): Implement.
-func NewKeymanagerFromConfigFile(ctx context.Context, wallet Wallet) (*Keymanager, error) {
-	return &Keymanager{
-		wallet: wallet,
-	}, nil
+// UmmarshalConfigFile --
+func UnmarshalConfigFile(r io.ReadCloser) (interface{}, error) {
+	enc, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			log.Errorf("Could not close keymanager config file: %v", err)
+		}
+	}()
+	cfg := &Config{}
+	if err := json.Unmarshal(enc, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 // CreateAccount for a direct keymanager implementation. This utilizes
@@ -130,9 +147,8 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 }
 
 // MarshalConfigFile returns a marshaled configuration file for a direct keymanager.
-// TODO(#6220): Implement.
 func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
-	return nil, nil
+	return json.MarshalIndent(dr.cfg, "", "\t")
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.

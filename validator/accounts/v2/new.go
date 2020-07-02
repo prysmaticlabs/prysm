@@ -135,15 +135,21 @@ func initializeNewKeymanager(ctx context.Context, wallet *Wallet) (v2keymanager.
 	return keymanager, nil
 }
 
-func initializeExistingKeymanager(ctx context.Context, wallet *Wallet) (v2keymanager.IKeymanager, error) {
+func initializeExistingKeymanager(
+	ctx context.Context, wallet *Wallet,
+) (v2keymanager.IKeymanager, error) {
 	var keymanager v2keymanager.IKeymanager
-	var err error
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
-		keymanager, err = direct.NewKeymanagerFromConfigFile(ctx, wallet)
+		configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not initialize direct keymanager from config")
+			return nil, err
 		}
+		cfg, err := direct.UnmarshalConfigFile(configFile)
+		if err != nil {
+			return nil, err
+		}
+		keymanager = direct.NewKeymanager(ctx, wallet, cfg.(*direct.Config))
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:
