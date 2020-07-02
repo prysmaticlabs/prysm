@@ -9,6 +9,8 @@ import (
 
 	"github.com/brianium/mnemonic"
 	"github.com/brianium/mnemonic/entropy"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/manifoldco/promptui"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -24,7 +26,10 @@ import (
 var log = logrus.WithField("prefix", "keymanager-v2")
 
 const (
-	keystoreFileName = "keystore.json"
+	keystoreFileName           = "keystore.json"
+	depositDataFileName        = "deposit_data.ssz"
+	depositTransactionFileName = "deposit_transaction.rlp"
+	mnemonicLanguage           = mnemonic.English
 )
 
 // Wallet defines a struct which has capabilities and knowledge of how
@@ -66,13 +71,19 @@ func NewKeymanagerFromConfigFile(ctx context.Context, wallet Wallet) (*Keymanage
 	}, nil
 }
 
-// CreateAccount for a direct keymanager implementation.
-// TODO(#6220): Implement.
+// CreateAccount for a direct keymanager implementation. This utilizes
+// the EIP-2335 keystore standard for BLS12-381 keystores. It
+// stores the generated keystore.json file in the wallet and additionally
+// generates a mnemonic for withdrawal credentials. At the end, it logs
+// the raw deposit data hex string for users to copy.
 func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error {
+	// Create a new, unique account name and write its password + directory to disk.
 	accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
 	if err != nil {
 		return err
 	}
+	// Generates a new EIP-2335 compliant keystore file
+	// from a BLS private key and marshals it as JSON.
 	encryptor := keystorev4.New()
 	validatingKey := bls.RandKey()
 	keystoreFile, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
@@ -86,42 +97,34 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
 		return err
 	}
-	// Generate a withdrawal key.
-	withdrawalKey := bls.RandKey()
-	key := withdrawalKey.Marshal()[:]
 
-	// Generate some entropy from a hex string
-	ent, err := entropy.FromHex(fmt.Sprintf("%x", key))
-	if err != nil {
-		return err
-	}
-	en, err := mnemonic.New(ent, mnemonic.English)
-	if err != nil {
+	// Generate a withdrawal key and confirm user
+	// acknowledgement of a 256-bit entropy mnemonic phrase.
+	withdrawalKey := bls.RandKey()
+	if err := dr.confirmWithdrawalMnemonic(withdrawalKey); err != nil {
 		return err
 	}
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
-	data, depositRoot, err := DepositInput(
-		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
-	)
-	if err != nil {
-		return err
-	}
-	testAcc, err := contract.Setup()
-	if err != nil {
-		return err
-	}
-	testAcc.TxOpts.GasLimit = 1000000
-
-	tx, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoot)
+	tx, depositData, err := dr.generateDepositData(validatingKey, withdrawalKey)
 	if err != nil {
 		return err
 	}
 
-	log.Info(en.Sentence())
-	log.Infof("%#x", tx.Data())
-	if err := dr.wallet.WriteFileForAccount(ctx, accountName, "deposit_data.rlp", tx.Data()); err != nil {
+	// Log the deposit transaction data to the user.
+	//dr.logDepositTransaction(tx)
+
+	// We write the raw deposit transaction as an .rlp encoded file.
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositTransactionFileName, tx.Data()); err != nil {
+		return err
+	}
+	// We write the ssz-encoded deposit data to disk as a .ssz file.
+	encodedDepositData, err := depositData.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
 		return err
 	}
 	return nil
@@ -143,7 +146,73 @@ func (dr *Keymanager) Sign(context.Context, interface{}) (bls.Signature, error) 
 	return nil, errors.New("unimplemented")
 }
 
-func DepositInput(depositKey bls.SecretKey, withdrawalKey bls.SecretKey, amountInGwei uint64) (*ethpb.Deposit_Data, [32]byte, error) {
+func (dr *Keymanager) confirmWithdrawalMnemonic(withdrawalKey bls.SecretKey) error {
+	key := withdrawalKey.Marshal()[:]
+	ent, err := entropy.FromHex(fmt.Sprintf("%x", key))
+	if err != nil {
+		return err
+	}
+	en, err := mnemonic.New(ent, mnemonicLanguage)
+	if err != nil {
+		return err
+	}
+	log.Info(
+		"Write down the following sentence somewhere safe, as it is your only " +
+			"means of recovering your validator withdrawal key",
+	)
+	fmt.Printf(`
+	=================Withdrawal Key Recovery Phrase====================
+
+	%s
+
+	===================================================================
+	`, en.Sentence())
+	prompt := promptui.Prompt{
+		Label:     "Confirm you have written down the words above somewhere safe (offline)",
+		IsConfirm: true,
+	}
+	expected := "y"
+	var result string
+	for result != expected {
+		result, err = prompt.Run()
+		if err != nil {
+			return fmt.Errorf("could not confirm acknowledgement: %v", formatPromptError(err))
+		}
+	}
+	return nil
+}
+
+func (dr *Keymanager) generateDepositData(
+	validatingKey bls.SecretKey,
+	withdrawalKey bls.SecretKey,
+) (*types.Transaction, *ethpb.Deposit_Data, error) {
+	depositData, depositRoot, err := depositInput(
+		validatingKey, withdrawalKey, params.BeaconConfig().MaxEffectiveBalance,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	testAcc, err := contract.Setup()
+	if err != nil {
+		return nil, nil, err
+	}
+	testAcc.TxOpts.GasLimit = 1000000
+
+	tx, err := testAcc.Contract.Deposit(
+		testAcc.TxOpts,
+		depositData.PublicKey,
+		depositData.WithdrawalCredentials,
+		depositData.Signature,
+		depositRoot,
+	)
+	return tx, depositData, nil
+}
+
+func depositInput(
+	depositKey bls.SecretKey,
+	withdrawalKey bls.SecretKey,
+	amountInGwei uint64,
+) (*ethpb.Deposit_Data, [32]byte, error) {
 	di := &ethpb.Deposit_Data{
 		PublicKey:             depositKey.Marshal(),
 		WithdrawalCredentials: withdrawalCredentialsHash(withdrawalKey),
@@ -183,4 +252,17 @@ func DepositInput(depositKey bls.SecretKey, withdrawalKey bls.SecretKey, amountI
 func withdrawalCredentialsHash(withdrawalKey bls.SecretKey) []byte {
 	h := hashutil.Hash(withdrawalKey.PublicKey().Marshal())
 	return append([]byte{params.BeaconConfig().BLSWithdrawalPrefixByte}, h[1:]...)[:32]
+}
+
+func formatPromptError(err error) error {
+	switch err {
+	case promptui.ErrAbort:
+		return errors.New("wallet creation aborted, closing")
+	case promptui.ErrInterrupt:
+		return errors.New("keyboard interrupt, closing")
+	case promptui.ErrEOF:
+		return errors.New("no input received, closing")
+	default:
+		return err
+	}
 }

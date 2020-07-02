@@ -9,9 +9,8 @@ import (
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-
 	v2keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v2"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -19,6 +18,7 @@ const (
 	walletDefaultDirName     = ".prysm-wallet-v2"
 	passwordsDefaultDirName  = ".passwords"
 	passwordFileSuffix       = ".pass"
+	numAccountWords          = 3 // Number of words in account human-readable names.
 )
 
 // WalletConfig for a wallet struct, containing important information
@@ -99,41 +99,18 @@ func (w *Wallet) AccountPasswordsPath() string {
 // within the wallet's path. It additionally writes the account's password to the
 // wallet's passwords directory. Returns the unique account name.
 func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
-	// Generates a human-readable name for an account. Checks for uniqueness in the accounts path.
-	var accountExists bool
-	var accountName string
-	for !accountExists {
-		accountName = petname.Generate(3, "-" /* separator */)
-		exists, err := hasDir(path.Join(w.accountsPath, accountName))
-		if err != nil {
-			return "", errors.Wrapf(err, "could not check if account exists in dir: %s", w.accountsPath)
-		}
-		if !exists {
-			break
-		}
+	accountName, err := w.generateAccountName()
+	if err != nil {
+		return "", errors.Wrap(err, "could not generate unique account name")
 	}
-	// Generate the account name directory.
+	// Generate a directory for the new account name and
+	// write its associated password to disk.
 	accountPath := path.Join(w.accountsPath, accountName)
 	if err := os.MkdirAll(accountPath, os.ModePerm); err != nil {
 		return "", errors.Wrap(err, "could not create account")
 	}
-
-	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
-	passwordFile, err := os.OpenFile(passwordFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
-	if err != nil {
-		return "", errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
-	}
-	defer func() {
-		if err := passwordFile.Close(); err != nil {
-			log.Errorf("Could not close password file: %s", passwordFilePath)
-		}
-	}()
-	n, err := passwordFile.WriteString(password)
-	if err != nil {
-		return "", errors.Wrap(err, "could not write account password to disk")
-	}
-	if n != len(password) {
-		return "", fmt.Errorf("could only write %d/%d password bytes to disk", n, len(password))
+	if err := w.writePasswordToFile(accountName, password); err != nil {
+		return "", errors.Wrap(err, "could not write password to disk")
 	}
 	log.WithFields(logrus.Fields{
 		"name": accountName,
@@ -207,6 +184,45 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	}
 	log.WithField("configFile", configFilePath).Debug("Wrote keymanager config file to disk")
 	return nil
+}
+
+// Writes the password file for an account namespace in the wallet's passwords directory.
+func (w *Wallet) writePasswordToFile(accountName string, password string) error {
+	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
+	passwordFile, err := os.OpenFile(passwordFilePath, os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err != nil {
+		return errors.Wrapf(err, "could not create password file in directory: %s", w.passwordsDir)
+	}
+	defer func() {
+		if err := passwordFile.Close(); err != nil {
+			log.Errorf("Could not close password file: %s", passwordFilePath)
+		}
+	}()
+	n, err := passwordFile.WriteString(password)
+	if err != nil {
+		return errors.Wrap(err, "could not write account password to disk")
+	}
+	if n != len(password) {
+		return fmt.Errorf("could only write %d/%d password bytes to disk", n, len(password))
+	}
+	return nil
+}
+
+// Generates a human-readable name for an account. Checks for uniqueness in the accounts path.
+func (w *Wallet) generateAccountName() (string, error) {
+	var accountExists bool
+	var accountName string
+	for !accountExists {
+		accountName = petname.Generate(numAccountWords, "-" /* separator */)
+		exists, err := hasDir(path.Join(w.accountsPath, accountName))
+		if err != nil {
+			return "", errors.Wrapf(err, "could not check if account exists in dir: %s", w.accountsPath)
+		}
+		if !exists {
+			break
+		}
+	}
+	return accountName, nil
 }
 
 // Returns true if a file is not a directory and exists
