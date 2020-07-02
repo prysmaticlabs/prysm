@@ -38,7 +38,7 @@ func (m *mockMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 
 func TestKeymanager_CreateAccount(t *testing.T) {
 	hook := logTest.NewGlobal()
-	wallet := &mock.MockWallet{
+	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}
@@ -130,7 +130,7 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 }
 
 func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
-	wallet := &mock.MockWallet{
+	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}
@@ -159,7 +159,7 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 
 func BenchmarkKeymanager_FetchValidatingPublicKeys(b *testing.B) {
 	b.StopTimer()
-	wallet := &mock.MockWallet{
+	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
 	}

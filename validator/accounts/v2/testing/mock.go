@@ -7,14 +7,14 @@ import (
 	petname "github.com/dustinkirkland/golang-petname"
 )
 
-// MockWallet contains an in-memory, simulated wallet implementation.
-type MockWallet struct {
+// Wallet contains an in-memory, simulated wallet implementation.
+type Wallet struct {
 	Files            map[string]map[string][]byte
 	AccountPasswords map[string]string
 }
 
 // AccountNames --
-func (m *MockWallet) AccountNames() ([]string, error) {
+func (m *Wallet) AccountNames() ([]string, error) {
 	names := make([]string, 0)
 	for name := range m.AccountPasswords {
 		names = append(names, name)
@@ -23,19 +23,19 @@ func (m *MockWallet) AccountNames() ([]string, error) {
 }
 
 // AccountsDir --
-func (m *MockWallet) AccountsDir() string {
+func (m *Wallet) AccountsDir() string {
 	return ""
 }
 
 // WriteAccountToDisk --
-func (m *MockWallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
+func (m *Wallet) WriteAccountToDisk(ctx context.Context, password string) (string, error) {
 	accountName := petname.Generate(3, "-")
 	m.AccountPasswords[accountName] = password
 	return accountName, nil
 }
 
 // WriteFileForAccount --
-func (m *MockWallet) WriteFileForAccount(
+func (m *Wallet) WriteFileForAccount(
 	ctx context.Context,
 	accountName string,
 	fileName string,
@@ -49,7 +49,7 @@ func (m *MockWallet) WriteFileForAccount(
 }
 
 // ReadPasswordForAccount --
-func (m *MockWallet) ReadPasswordForAccount(accountName string) (string, error) {
+func (m *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
 	for name, password := range m.AccountPasswords {
 		if name == accountName {
 			return password, nil
@@ -59,7 +59,7 @@ func (m *MockWallet) ReadPasswordForAccount(accountName string) (string, error) 
 }
 
 // ReadFileForAccount --
-func (m *MockWallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
+func (m *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
 	for f, v := range m.Files[accountName] {
 		if f == fileName {
 			return v, nil
