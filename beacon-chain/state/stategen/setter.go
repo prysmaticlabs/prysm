@@ -27,20 +27,18 @@ func (s *State) DeleteHotStateInCache(root [32]byte) {
 	s.hotStateCache.Delete(root)
 }
 
-// ForceCheckpoint initates a cold state save of the given state.
-func (s *State) ForceCheckpoint(ctx context.Context, state *state.BeaconState) error {
+// ForceCheckpoint initiates a cold state save of the given state. This method does not update the
+// "last archived state" but simply saves the specified state from the root argument into the DB.
+func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
 	defer span.End()
 
-	finalizedStateRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint().Root)
-	fs, err := s.loadHotStateByRoot(ctx, finalizedStateRoot)
+	root32 := bytesutil.ToBytes32(root)
+	fs, err := s.loadHotStateByRoot(ctx, root32)
 	if err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveState(ctx, fs, finalizedStateRoot); err != nil {
-		return err
-	}
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, finalizedStateRoot, fs.Slot()/s.slotsPerArchivedPoint); err != nil {
+	if err := s.beaconDB.SaveState(ctx, fs, root32); err != nil {
 		return err
 	}
 

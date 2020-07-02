@@ -298,7 +298,7 @@ func (s *Service) initializeBeaconChain(
 func (s *Service) Stop() error {
 	defer s.cancel()
 
-	return s.stateGen.ForceCheckpoint(s.ctx, s.head.state)
+	return s.stateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root)
 }
 
 // Status always returns nil unless there is an error condition that causes

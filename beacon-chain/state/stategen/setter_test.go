@@ -2,13 +2,10 @@ package stategen
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -103,44 +100,26 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 }
 
-func TestState_ForceCheckpoint(t *testing.T) {
-	t.Fail() // TODO!
+func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
+	ctx := context.Background()
+	db, ssc := testDB.SetupDB(t)
 
-	type fields struct {
-		beaconDB                db.NoHeadAccessDatabase
-		slotsPerArchivedPoint   uint64
-		epochBoundarySlotToRoot map[uint64][32]byte
-		epochBoundaryLock       sync.RWMutex
-		hotStateCache           *cache.HotStateCache
-		splitInfo               *splitSlotAndRoot
-		stateSummaryCache       *cache.StateSummaryCache
+	svc := New(db, ssc)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
 	}
-	type args struct {
-		ctx   context.Context
-		state *state.BeaconState
+
+	r := [32]byte{'a'}
+	svc.hotStateCache.Put(r, beaconState)
+
+	if db.HasState(ctx, r) {
+		t.Fatal("Database has state stored already")
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	if err := svc.ForceCheckpoint(ctx, r[:]); err != nil {
+		t.Error(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &State{
-				beaconDB:                tt.fields.beaconDB,
-				slotsPerArchivedPoint:   tt.fields.slotsPerArchivedPoint,
-				epochBoundarySlotToRoot: tt.fields.epochBoundarySlotToRoot,
-				epochBoundaryLock:       tt.fields.epochBoundaryLock,
-				hotStateCache:           tt.fields.hotStateCache,
-				splitInfo:               tt.fields.splitInfo,
-				stateSummaryCache:       tt.fields.stateSummaryCache,
-			}
-			if err := s.ForceCheckpoint(tt.args.ctx, tt.args.state); (err != nil) != tt.wantErr {
-				t.Errorf("ForceCheckpoint() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+	if !db.HasState(ctx, r) {
+		t.Error("Did not save checkpoint to database")
 	}
 }
