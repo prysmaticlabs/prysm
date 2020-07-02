@@ -33,6 +33,8 @@ const (
 // Useful for keymanager to have persistent capabilities for accounts on-disk.
 type Wallet interface {
 	AccountsDir() string
+	AccountNames() ([]string, error)
+	ReadPasswordForAccount(accountName string) (string, error)
 	WriteAccountToDisk(ctx context.Context, password string) (string, error)
 	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
 }
@@ -162,6 +164,11 @@ func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
+	accountNames, err := dr.wallet.AccountNames()
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, errors.New("unimplemented")
 }
 
