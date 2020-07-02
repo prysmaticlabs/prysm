@@ -1,4 +1,4 @@
-package streaming
+package client
 
 import (
 	"context"
@@ -22,11 +22,11 @@ type Validator interface {
 	WaitForSync(ctx context.Context) error
 	WaitForSynced(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
-	CurrentSlot() uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
-	StreamDuties(ctx context.Context) error
+	UpdateDuties(ctx context.Context, slot uint64) error
 	UpdateProtections(ctx context.Context, slot uint64) error
 	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]validatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
@@ -43,8 +43,8 @@ type Validator interface {
 // Order of operations:
 // 1 - Initialize validator data
 // 2 - Wait for validator activation
-// 3 - Listen to a server-side stream of validator duties
-// 4 - Wait for the next slot start
+// 3 - Wait for the next slot start
+// 4 - Update assignments
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
@@ -64,13 +64,13 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
-	// We listen to a server-side stream of validator duties in the
-	// background of the validator client.
-	go func() {
-		if err := v.StreamDuties(ctx); err != nil {
-			handleAssignmentError(err, v.CurrentSlot())
-		}
-	}()
+	headSlot, err := v.CanonicalHeadSlot(ctx)
+	if err != nil {
+		log.Fatalf("Could not get current canonical head slot: %v", err)
+	}
+	if err := v.UpdateDuties(ctx, headSlot); err != nil {
+		handleAssignmentError(err, headSlot)
+	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
@@ -81,12 +81,21 @@ func run(ctx context.Context, v Validator) {
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 			deadline := v.SlotDeadline(slot)
-			slotCtx, _ := context.WithDeadline(ctx, deadline)
+			slotCtx, cancel := context.WithDeadline(ctx, deadline)
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.WithError(err).Error("Could not report validator's rewards/penalties")
+			}
+
+			// Keep trying to update assignments if they are nil or if we are past an
+			// epoch transition in the beacon node's state.
+			if err := v.UpdateDuties(ctx, slot); err != nil {
+				handleAssignmentError(err, slot)
+				cancel()
+				span.End()
+				continue
 			}
 
 			if featureconfig.Get().ProtectAttester {
@@ -107,24 +116,24 @@ func run(ctx context.Context, v Validator) {
 				log.WithError(err).Error("Could not get validator roles")
 				continue
 			}
-			for id, roles := range allRoles {
+			for pubKey, roles := range allRoles {
 				wg.Add(len(roles))
 				for _, role := range roles {
-					go func(role validatorRole, id [48]byte) {
+					go func(role validatorRole, pubKey [48]byte) {
 						defer wg.Done()
 						switch role {
 						case roleAttester:
-							v.SubmitAttestation(slotCtx, slot, id)
+							v.SubmitAttestation(slotCtx, slot, pubKey)
 						case roleProposer:
-							v.ProposeBlock(slotCtx, slot, id)
+							v.ProposeBlock(slotCtx, slot, pubKey)
 						case roleAggregator:
-							v.SubmitAggregateAndProof(slotCtx, slot, id)
+							v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
 						case roleUnknown:
-							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(id[:]))).Trace("No active roles, doing nothing")
+							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
 						default:
 							log.Warnf("Unhandled role %v", role)
 						}
-					}(role, id)
+					}(role, pubKey)
 				}
 			}
 			// Wait for all processes to complete, then report span complete.
