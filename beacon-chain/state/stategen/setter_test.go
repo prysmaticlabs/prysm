@@ -117,7 +117,6 @@ func TestState_ForceCheckpoint(t *testing.T) {
 	}
 	type args struct {
 		ctx   context.Context
-		root  [32]byte
 		state *state.BeaconState
 	}
 	tests := []struct {
@@ -139,7 +138,7 @@ func TestState_ForceCheckpoint(t *testing.T) {
 				splitInfo:               tt.fields.splitInfo,
 				stateSummaryCache:       tt.fields.stateSummaryCache,
 			}
-			if err := s.ForceCheckpoint(tt.args.ctx, tt.args.root, tt.args.state); (err != nil) != tt.wantErr {
+			if err := s.ForceCheckpoint(tt.args.ctx, tt.args.state); (err != nil) != tt.wantErr {
 				t.Errorf("ForceCheckpoint() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

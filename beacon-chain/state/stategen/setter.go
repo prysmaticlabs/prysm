@@ -28,7 +28,7 @@ func (s *State) DeleteHotStateInCache(root [32]byte) {
 }
 
 // ForceCheckpoint initates a cold state save of the given state.
-func (s *State) ForceCheckpoint(ctx context.Context, root [32]byte, state *state.BeaconState) error {
+func (s *State) ForceCheckpoint(ctx context.Context, state *state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
 	defer span.End()
 
