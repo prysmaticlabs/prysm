@@ -130,7 +130,6 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 }
 
 func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
-	ctx := context.Background()
 	wallet := &mock.MockWallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -140,6 +139,46 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 	// First, generate accounts and their keystore.json files.
 	numAccounts := 20
+	wantedPublicKeys := generateAccounts(t, numAccounts, dr)
+	publicKeys, err := dr.FetchValidatingPublicKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The results are not guaranteed to be ordered, so we ensure each
+	// key we expect exists in the results via a map.
+	keysMap := make(map[[48]byte]bool)
+	for _, key := range publicKeys {
+		keysMap[key] = true
+	}
+	for _, wanted := range wantedPublicKeys {
+		if _, ok := keysMap[wanted]; !ok {
+			t.Errorf("Could not find expected public key %#x in results", wanted)
+		}
+	}
+}
+
+func BenchmarkKeymanager_FetchValidatingPublicKeys(b *testing.B) {
+	b.StopTimer()
+	wallet := &mock.MockWallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+	}
+	dr := &Keymanager{
+		wallet: wallet,
+	}
+	// First, generate accounts and their keystore.json files.
+	numAccounts := 1000
+	generateAccounts(b, numAccounts, dr)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := dr.FetchValidatingPublicKeys(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func generateAccounts(t testing.TB, numAccounts int, dr *Keymanager) [][48]byte {
+	ctx := context.Background()
 	wantedPublicKeys := make([][48]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
 		encryptor := keystorev4.New()
@@ -162,19 +201,5 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	publicKeys, err := dr.FetchValidatingPublicKeys()
-	if err != nil {
-		t.Fatal(err)
-	}
-	// The results are not guaranteed to be ordered, so we ensure each
-	// key we expect exists in the results via a map.
-	keysMap := make(map[[48]byte]bool)
-	for _, key := range publicKeys {
-		keysMap[key] = true
-	}
-	for _, wanted := range wantedPublicKeys {
-		if _, ok := keysMap[wanted]; !ok {
-			t.Errorf("Could not find expected public key %#x in results", wanted)
-		}
-	}
+	return wantedPublicKeys
 }
