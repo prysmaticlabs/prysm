@@ -23,6 +23,7 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockInitialSync(ctx context.Context, block *ethpb.SignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasInitSyncBlock(root [32]byte) bool
 }
 
@@ -174,53 +175,73 @@ func (s *Service) ReceiveBlockInitialSync(ctx context.Context, block *ethpb.Sign
 }
 
 func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []*ethpb.SignedBeaconBlock, blkRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceivePostTransition")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockBatch")
 	defer span.End()
-	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	if err := s.handlePostStateInSync(ctx, blockCopy, blockRoot, postState); err != nil {
+	postState, fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
+	if err != nil {
 		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
+
+	for i, b := range blocks {
+		log.Infof("post processing block %d", b.Block.Slot)
+		blockCopy := stateTrie.CopySignedBeaconBlock(b)
+		if err = s.handleBlockInBatch(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+
+		if err = s.insertAttestationsToForkChoiceStore(ctx, b.Block, postState); err != nil {
+			traceutil.AnnotateError(span, err)
+			return err
+		}
+		// Send notification of the processed block to the state feed.
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{
+				Slot:      blockCopy.Block.Slot,
+				BlockRoot: blkRoots[i],
+				Verified:  false,
+			},
+		})
+
+		// Reports on blockCopy and fork choice metrics.
+		reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
+
+		// Log state transition data.
+		log.WithFields(logrus.Fields{
+			"slot":         blockCopy.Block.Slot,
+			"attestations": len(blockCopy.Block.Body.Attestations),
+			"deposits":     len(blockCopy.Block.Body.Deposits),
+		}).Debug("Finished applying state transition")
+
+		s.epochParticipationLock.Lock()
+		s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
+		s.epochParticipationLock.Unlock()
+	}
+	lastBlk := blocks[len(blocks)-1]
+	lastRoot := blkRoots[len(blkRoots)-1]
 
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
 
-	if !bytes.Equal(blockRoot[:], cachedHeadRoot) {
-		if err := s.saveHeadNoDB(ctx, blockCopy, blockRoot); err != nil {
+	if !bytes.Equal(lastRoot[:], cachedHeadRoot) {
+		if err := s.saveHeadNoDB(ctx, lastBlk, lastRoot); err != nil {
 			err := errors.Wrap(err, "could not save head")
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 	}
+	if err := s.stateGen.SaveState(ctx, lastRoot, postState); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
+	return s.handleEpochBoundary(postState)
 
-	// Send notification of the processed block to the state feed.
-	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockProcessed,
-		Data: &statefeed.BlockProcessedData{
-			Slot:      blockCopy.Block.Slot,
-			BlockRoot: blockRoot,
-			Verified:  false,
-		},
-	})
-
-	// Reports on blockCopy and fork choice metrics.
-	reportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.CurrentSlot(), s.finalizedCheckpt)
-
-	// Log state transition data.
-	log.WithFields(logrus.Fields{
-		"slot":         blockCopy.Block.Slot,
-		"attestations": len(blockCopy.Block.Body.Attestations),
-		"deposits":     len(blockCopy.Block.Body.Deposits),
-	}).Debug("Finished applying state transition")
-
-	s.epochParticipationLock.Lock()
-	defer s.epochParticipationLock.Unlock()
-	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 }
 
 // HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.

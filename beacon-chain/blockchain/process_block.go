@@ -205,6 +205,40 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	return s.handlePostStateInSync(ctx, signed, blockRoot, postState)
 }
 
+func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBlock,
+	blockRoots [][32]byte) (*stateTrie.BeaconState, []*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
+	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
+	defer span.End()
+
+	if len(blks) == 0 || len(blockRoots) == 0 {
+		return nil, nil, nil, errors.New("no blocks provided")
+	}
+	if blks[0] == nil || blks[0].Block == nil {
+		return nil, nil, nil, errors.New("nil block")
+	}
+	b := blks[0].Block
+
+	// Retrieve incoming block's pre state.
+	preState, err := s.verifyBlkPreState(ctx, b)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	// To invalidate cache for parent root because pre state will get mutated.
+	s.stateGen.DeleteHotStateInCache(bytesutil.ToBytes32(b.ParentRoot))
+
+	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
+	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
+	for i, b := range blks {
+		preState, err = state.ExecuteStateTransition(ctx, preState, b)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
+		fCheckpoints[i] = preState.FinalizedCheckpoint()
+	}
+	return preState, fCheckpoints, jCheckpoints, nil
+}
+
 func (s *Service) handlePostStateInSync(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	blockRoot [32]byte, postState *stateTrie.BeaconState) error {
 

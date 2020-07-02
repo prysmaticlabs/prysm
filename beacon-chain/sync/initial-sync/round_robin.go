@@ -3,6 +3,7 @@ package initialsync
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,6 +27,8 @@ const (
 
 // blockReceiverFn defines block receiving function.
 type blockReceiverFn func(ctx context.Context, block *eth.SignedBeaconBlock, blockRoot [32]byte) error
+
+type batchBlockReceiverFn func(ctx context.Context, blks []*eth.SignedBeaconBlock, roots [][32]byte) error
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
@@ -179,5 +182,39 @@ func (s *Service) processBlock(
 		return err
 	}
 	s.lastProcessedSlot = blk.Block.Slot
+	return nil
+}
+
+func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
+	blks []*eth.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	if len(blks) == 0 {
+		return errors.New("0 blocks provided into method")
+	}
+	firstBlock := blks[0]
+	blkRoot, err := stateutil.BlockRoot(firstBlock.Block)
+	if err != nil {
+		return err
+	}
+	s.logSyncStatus(genesis, firstBlock.Block, blkRoot)
+	parentRoot := bytesutil.ToBytes32(firstBlock.Block.ParentRoot)
+	if !s.db.HasBlock(ctx, parentRoot) && !s.chain.HasInitSyncBlock(parentRoot) {
+		return fmt.Errorf("beacon node doesn't have a block in db with root %#x", firstBlock.Block.ParentRoot)
+	}
+	blockRoots := make([][32]byte, len(blks))
+	for i, b := range blks {
+		/*if b.Block.Slot <= s.lastProcessedSlot {
+			return fmt.Errorf("slot %d already processed", b.Block.Slot)
+		}*/
+		blkRoot, err := stateutil.BlockRoot(b.Block)
+		if err != nil {
+			return err
+		}
+		blockRoots[i] = blkRoot
+	}
+	if err := bFunc(ctx, blks, blockRoots); err != nil {
+		return err
+	}
+	lastBlk := blks[len(blks)-1]
+	s.lastProcessedSlot = lastBlk.Block.Slot
 	return nil
 }
