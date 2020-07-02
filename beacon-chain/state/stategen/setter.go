@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
@@ -39,7 +40,7 @@ func (s *State) ForceCheckpoint(ctx context.Context, root [32]byte, state *state
 	if err := s.beaconDB.SaveState(ctx, fs, finalizedStateRoot); err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, finalizedStateRoot, fs.Slot() / s.slotsPerArchivedPoint); err != nil {
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, finalizedStateRoot, fs.Slot()/s.slotsPerArchivedPoint); err != nil {
 		return err
 	}
 
