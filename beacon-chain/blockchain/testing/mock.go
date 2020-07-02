@@ -84,6 +84,8 @@ type MockStateNotifier struct {
 	recv     []*feed.Event
 	recvLock sync.Mutex
 	recvCh   chan *feed.Event
+
+	RecordEvents bool
 }
 
 // ReceivedEvents returns the events received by the state feed in this mock.
@@ -97,19 +99,21 @@ func (msn *MockStateNotifier) ReceivedEvents() []*feed.Event {
 func (msn *MockStateNotifier) StateFeed() *event.Feed {
 	if msn.feed == nil && msn.recvCh == nil {
 		msn.feed = new(event.Feed)
-		msn.recvCh = make(chan *feed.Event)
-		sub := msn.feed.Subscribe(msn.recvCh)
+		if msn.RecordEvents {
+			msn.recvCh = make(chan *feed.Event)
+			sub := msn.feed.Subscribe(msn.recvCh)
 
-		go func() {
-			select {
-			case evt := <-msn.recvCh:
-				msn.recvLock.Lock()
-				msn.recv = append(msn.recv, evt)
-				msn.recvLock.Unlock()
-			case <-sub.Err():
-				sub.Unsubscribe()
-			}
-		}()
+			go func() {
+				select {
+				case evt := <-msn.recvCh:
+					msn.recvLock.Lock()
+					msn.recv = append(msn.recv, evt)
+					msn.recvLock.Unlock()
+				case <-sub.Err():
+					sub.Unsubscribe()
+				}
+			}()
+		}
 	}
 	return msn.feed
 }

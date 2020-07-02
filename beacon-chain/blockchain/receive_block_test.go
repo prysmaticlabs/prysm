@@ -132,7 +132,7 @@ func TestService_ReceiveBlockNoPubsub(t *testing.T) {
 				),
 				AttPool:       attestations.NewPool(),
 				ExitPool:      voluntaryexits.NewPool(),
-				StateNotifier: &blockchainTesting.MockStateNotifier{},
+				StateNotifier: &blockchainTesting.MockStateNotifier{RecordEvents: true},
 				StateGen:      stategen.New(db, stateSummaryCache),
 			}
 			s, err := NewService(ctx, cfg)
