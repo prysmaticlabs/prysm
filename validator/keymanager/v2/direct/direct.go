@@ -64,7 +64,8 @@ func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) *Keymanager 
 	}
 }
 
-// UnmarshalConfigFile --
+// UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
+// configuration file into the *Config{} struct.
 func UnmarshalConfigFile(r io.ReadCloser) (interface{}, error) {
 	enc, err := ioutil.ReadAll(r)
 	if err != nil {
