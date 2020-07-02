@@ -1,6 +1,6 @@
-// Package polling represents a gRPC polling-based implementation
+// Package client represents a gRPC polling-based implementation
 // of an eth2 validator client.
-package polling
+package client
 
 import (
 	"context"
@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/prysmaticlabs/prysm/validator/client/metrics"
 	vdb "github.com/prysmaticlabs/prysm/validator/db"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
@@ -237,7 +236,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", status.PublicKey)
-			metrics.ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
+			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
 		}
 		switch status.Status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
@@ -553,7 +552,7 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 	for _, duty := range duties {
 		if v.emitAccountMetrics {
 			fmtKey := fmt.Sprintf("%#x", duty.PublicKey)
-			metrics.ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
+			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
 		}
 
 		// Only interested in validators who are attesting/proposing.

@@ -6,7 +6,6 @@ go_library(
     srcs = [
         "aggregate.go",
         "attest.go",
-        "duties.go",
         "log.go",
         "metrics.go",
         "propose.go",
@@ -14,7 +13,7 @@ go_library(
         "service.go",
         "validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/client/streaming",
+    importpath = "github.com/prysmaticlabs/prysm/validator/client",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
@@ -29,7 +28,6 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/slotutil:go_default_library",
-        "//validator/client/metrics:go_default_library",
         "//validator/db:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/keymanager/v1:go_default_library",
@@ -43,6 +41,8 @@ go_library(
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
@@ -63,7 +63,6 @@ go_test(
     srcs = [
         "aggregate_test.go",
         "attest_test.go",
-        "duties_test.go",
         "fake_validator_test.go",
         "propose_test.go",
         "runner_test.go",
