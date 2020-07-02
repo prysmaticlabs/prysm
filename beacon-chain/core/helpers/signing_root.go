@@ -83,25 +83,42 @@ func VerifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []b
 
 // VerifyBlockSigningRoot verifies the signing root of a block given it's public key, signature and domain.
 func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte, domain []byte) error {
+	set, err := RetrieveBlockSignatureSet(blk, pub, signature, domain)
+	if err != nil {
+		return err
+	}
+	// We assume only one signature set is returned here.
+	sig := set.Signatures[0]
+	publicKey := set.PublicKeys[0]
+	root := set.Messages[0]
+
+	if !sig.Verify(publicKey, root[:]) {
+		return ErrSigFailedToVerify
+	}
+	return nil
+}
+
+func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []byte, domain []byte) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
+		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
 	sig, err := bls.SignatureFromBytes(signature)
 	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
+		return nil, errors.Wrap(err, "could not convert bytes to signature")
 	}
 	root, err := signingData(func() ([32]byte, error) {
 		// utilize custom block hashing function
 		return stateutil.BlockRoot(blk)
 	}, domain)
 	if err != nil {
-		return errors.Wrap(err, "could not compute signing root")
+		return nil, errors.Wrap(err, "could not compute signing root")
 	}
-	if !sig.Verify(publicKey, root[:]) {
-		return ErrSigFailedToVerify
-	}
-	return nil
+	return &bls.SignatureSet{
+		Signatures: []bls.Signature{sig},
+		PublicKeys: []bls.PublicKey{publicKey},
+		Messages:   [][32]byte{root},
+	}, nil
 }
 
 // VerifyBlockHeaderSigningRoot verifies the signing root of a block header given it's public key, signature and domain.

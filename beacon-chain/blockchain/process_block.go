@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -228,13 +230,27 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []*ethpb.SignedBeaconBl
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
+	sigSet := &bls.SignatureSet{
+		Signatures: []bls.Signature{},
+		PublicKeys: []bls.PublicKey{},
+		Messages:   [][32]byte{},
+	}
+	set := new(bls.SignatureSet)
 	for i, b := range blks {
-		preState, err = state.ExecuteStateTransition(ctx, preState, b)
+		set, preState, err = state.ExecuteStateTransitionNoVerify(ctx, preState, b)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
+		sigSet.Join(set)
+	}
+	verify, err := bls.VerifyMultipleSignatures(sigSet.Signatures, sigSet.Messages, sigSet.PublicKeys)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if !verify {
+		return nil, nil, nil, errors.New("Batch block signature verification failed")
 	}
 	return preState, fCheckpoints, jCheckpoints, nil
 }
