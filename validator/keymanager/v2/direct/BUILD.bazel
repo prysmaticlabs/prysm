@@ -38,6 +38,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
         "//shared/testutil:go_default_library",
         "//validator/accounts/v2/testing:go_default_library",

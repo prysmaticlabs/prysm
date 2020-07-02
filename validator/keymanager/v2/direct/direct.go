@@ -170,7 +170,6 @@ func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	decryptor := keystorev4.New()
 	publicKeys := make([][48]byte, len(accountNames))
 	for i, name := range accountNames {
 		password, err := dr.wallet.ReadPasswordForAccount(name)
@@ -188,6 +187,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
 		// We extract the validator signing private key from the keystore
 		// by utilizing the password and initialize a new BLS secret key from
 		// its raw bytes.
+		decryptor := keystorev4.New()
 		rawSigningKey, err := decryptor.Decrypt(keystoreJSON, []byte(password))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
@@ -198,7 +198,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
 		}
 		publicKeys[i] = bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())
 	}
-	return publicKeys, errors.New("unimplemented")
+	return publicKeys, nil
 }
 
 // Sign signs a message using a validator key.

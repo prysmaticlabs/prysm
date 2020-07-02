@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"reflect"
+	"strconv"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	mock "github.com/prysmaticlabs/prysm/validator/accounts/v2/testing"
-
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -128,5 +130,43 @@ func TestKeymanager_CreateAccount(t *testing.T) {
 }
 
 func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
-
+	ctx := context.Background()
+	wallet := &mock.MockWallet{
+		Files:            make(map[string][]byte),
+		AccountPasswords: make(map[string]string),
+	}
+	dr := &Keymanager{
+		wallet: wallet,
+	}
+	// First, generate accounts and their keystore.json files.
+	numAccounts := 2
+	wantedPublicKeys := make([][48]byte, numAccounts)
+	for i := 0; i < numAccounts; i++ {
+		encryptor := keystorev4.New()
+		validatingKey := bls.RandKey()
+		wantedPublicKeys[i] = bytesutil.ToBytes48(validatingKey.PublicKey().Marshal())
+		password := strconv.Itoa(i)
+		keystoreFile, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
+		if err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
+			t.Fatal(err)
+		}
+	}
+	publicKeys, err := dr.FetchValidatingPublicKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wantedPublicKeys, publicKeys) {
+		t.Errorf("Wanted %v, received %v", wantedPublicKeys, publicKeys)
+	}
 }
