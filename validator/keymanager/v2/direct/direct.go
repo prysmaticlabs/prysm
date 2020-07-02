@@ -120,12 +120,12 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
 		return err
 	}
-	fmt.Println("***Enter the above deposit data into step 3 on https://prylabs.net/participate***")
 
 	// Finally, write the encoded keystore to disk.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
 		return err
 	}
+	log.Info("Account creation complete")
 	return nil
 }
 
@@ -156,8 +156,8 @@ func (dr *Keymanager) confirmWithdrawalMnemonic(withdrawalKey bls.SecretKey) err
 		return err
 	}
 	log.Info(
-		"Write down the following sentence somewhere safe, as it is your only " +
-			"means of recovering your validator withdrawal key",
+		"Write down the sentence below, as it is your only " +
+			"means of recovering your withdrawal key",
 	)
 	fmt.Printf(`
 =================Withdrawal Key Recovery Phrase====================
