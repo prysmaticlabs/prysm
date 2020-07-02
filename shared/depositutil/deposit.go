@@ -1,4 +1,4 @@
-// Package deposit contains useful functions for dealing
+// Package depositutil contains useful functions for dealing
 // with eth2 deposit inputs.
 package depositutil
 
