@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "data.go",
         "finality.go",
         "metrics.go",
         "node.go",

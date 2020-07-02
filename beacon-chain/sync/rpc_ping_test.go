@@ -50,7 +50,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 		defer wg.Done()
 		expectSuccess(t, r, stream)
 		out := new(uint64)
-		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != 2 {
@@ -119,7 +119,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		out := new(uint64)
-		if err := r2.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
+		if err := r2.p2p.Encoding().DecodeWithMaxLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
 		if *out != 2 {
