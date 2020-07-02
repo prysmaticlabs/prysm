@@ -75,7 +75,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 		highestExpectedSlot: highestExpectedSlot,
 		blocksFetcher:       blocksFetcher,
 		headFetcher:         cfg.headFetcher,
-		fetchedBlocks:       make(chan []*eth.SignedBeaconBlock, lookaheadSteps),
+		fetchedBlocks:       make(chan []*eth.SignedBeaconBlock),
 		quit:                make(chan struct{}),
 	}
 
