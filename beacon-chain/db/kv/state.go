@@ -25,14 +25,15 @@ func (kv *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSt
 		return nil, err
 	}
 
-	if len(enc) > 0 {
+	if enc != nil {
 		s, err = createState(ctx, enc)
 		if err != nil {
 			return nil, err
 		}
-		if s == nil {
-			return nil, nil
-		}
+	}
+
+	if s == nil {
+		return nil, nil
 	}
 	return state.InitializeFromProtoUnsafe(s)
 }
@@ -192,23 +193,24 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 		c := bkt.Cursor()
 
 		for blockRoot, _ := c.First(); blockRoot != nil; blockRoot, _ = c.Next() {
-			if rootMap[bytesutil.ToBytes32(blockRoot)] {
-				// Safe guard against deleting genesis, finalized, head state.
-				if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-					return errors.New("cannot delete genesis, finalized, or head state")
-				}
+			if !rootMap[bytesutil.ToBytes32(blockRoot)] {
+				continue
+			}
+			// Safe guard against deleting genesis, finalized, head state.
+			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+				return errors.New("cannot delete genesis, finalized, or head state")
+			}
 
-				slot, err := slotByBlockRoot(ctx, tx, blockRoot)
-				if err != nil {
-					return err
-				}
-				if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
-					return err
-				}
+			slot, err := slotByBlockRoot(ctx, tx, blockRoot)
+			if err != nil {
+				return err
+			}
+			if err := kv.clearStateSlotBitField(ctx, tx, slot); err != nil {
+				return err
+			}
 
-				if err := c.Delete(); err != nil {
-					return err
-				}
+			if err := c.Delete(); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -218,8 +220,7 @@ func (kv *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error 
 // creates state from marshaled proto state bytes.
 func createState(ctx context.Context, enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
-	err := decode(ctx, enc, protoState)
-	if err != nil {
+	if err := decode(ctx, enc, protoState); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoState, nil
