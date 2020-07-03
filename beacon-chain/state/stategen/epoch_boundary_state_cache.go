@@ -17,26 +17,10 @@ var (
 	errNotRootStateInfo = errors.New("not root state info type")
 )
 
-// rootStateInfo specifies the root state info in the epoch boundary state cache.
-type rootStateInfo struct {
-	root  [32]byte
-	state *stateTrie.BeaconState
-}
-
 // slotRootInfo specifies the slot root info in the epoch boundary state cache.
 type slotRootInfo struct {
-	root [32]byte
 	slot uint64
-}
-
-// rootKeyFn takes the string representation of the block root to be used as key
-// to retrieve epoch boundary state.
-func rootKeyFn(obj interface{}) (string, error) {
-	s, ok := obj.(*rootStateInfo)
-	if !ok {
-		return "", errNotRootStateInfo
-	}
-	return string(s.root[:]), nil
+	root [32]byte
 }
 
 // slotKeyFn takes the string representation of the slot to be used as key
@@ -49,14 +33,30 @@ func slotKeyFn(obj interface{}) (string, error) {
 	return slotToString(s.slot), nil
 }
 
-// epochBoundaryState struct with two queues by looking up by slot or root.
+// rootStateInfo specifies the root state info in the epoch boundary state cache.
+type rootStateInfo struct {
+	root  [32]byte
+	state *stateTrie.BeaconState
+}
+
+// rootKeyFn takes the string representation of the block root to be used as key
+// to retrieve epoch boundary state.
+func rootKeyFn(obj interface{}) (string, error) {
+	s, ok := obj.(*rootStateInfo)
+	if !ok {
+		return "", errNotRootStateInfo
+	}
+	return string(s.root[:]), nil
+}
+
+// epochBoundaryState struct with two queues by looking up beacon state by slot or root.
 type epochBoundaryState struct {
 	rootStateCache *cache.FIFO
 	slotRootCache  *cache.FIFO
 	lock           sync.RWMutex
 }
 
-// newBoundaryStateCache creates a new block epochBoundaryState for storing/accessing epoch boundary states from
+// newBoundaryStateCache creates a new block newBoundaryStateCache for storing and accessing epoch boundary states from
 // memory.
 func newBoundaryStateCache() *epochBoundaryState {
 	return &epochBoundaryState{
@@ -113,21 +113,20 @@ func (e *epochBoundaryState) getBySlot(s uint64) (*rootStateInfo, bool, error) {
 // size limit.
 func (e *epochBoundaryState) put(r [32]byte, s *stateTrie.BeaconState) error {
 	e.lock.Lock()
+	defer e.lock.Unlock()
 
+	if err := e.slotRootCache.AddIfNotPresent(&slotRootInfo{
+		slot: s.Slot(),
+		root: r,
+	}); err != nil {
+		return err
+	}
 	if err := e.rootStateCache.AddIfNotPresent(&rootStateInfo{
 		root:  r,
 		state: s.Copy(),
 	}); err != nil {
 		return err
 	}
-	if err := e.slotRootCache.AddIfNotPresent(&slotRootInfo{
-		root: r,
-		slot: s.Slot(),
-	}); err != nil {
-		return err
-	}
-
-	e.lock.Unlock()
 
 	trim(e.rootStateCache, maxCacheSize)
 	trim(e.slotRootCache, maxCacheSize)
