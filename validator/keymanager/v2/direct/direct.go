@@ -225,8 +225,8 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
-	rawPubKey := signReq.PublicKey
+func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	rawPubKey := req.PublicKey
 	if rawPubKey == nil {
 		return nil, errors.New("nil public key in request")
 	}
@@ -236,7 +236,7 @@ func (dr *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
-	return secretKey.Sign(signReq.Data), nil
+	return secretKey.Sign(req.Data), nil
 }
 
 func generateDepositTransaction(
