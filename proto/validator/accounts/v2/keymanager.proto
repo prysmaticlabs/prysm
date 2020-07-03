@@ -2,17 +2,13 @@ syntax = "proto3";
 
 package ethereum.validator.accounts.v2;
 
-import "eth/v1alpha1/beacon_block.proto";
-import "eth/v1alpha1/attestation.proto";
-
+// SignRequest is a message type used by a keymanager
+// as part of Prysm's accounts v2 implementation.
 message SignRequest {
+    // 48 byte public key corresponding to an associated private key
+    // being requested to sign data.
     bytes public_key = 1;
-    bytes data = 2;
-    bytes signature_domain = 3;
 
-    oneof object {
-        ethereum.eth.v1alpha1.BeaconBlock block = 4;
-        ethereum.eth.v1alpha1.AttestationData attestation_data = 5;
-//        ethereum.eth.v1alpha1.VoluntaryExit exit = 6;
-    }
+    // Raw bytes data the client is requesting to sign.
+    bytes data = 2;
 }

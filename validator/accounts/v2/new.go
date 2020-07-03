@@ -117,20 +117,23 @@ func initializeNewKeymanager(ctx context.Context, wallet *Wallet) (v2keymanager.
 	var err error
 	switch wallet.KeymanagerKind() {
 	case v2keymanager.Direct:
-		keymanager = direct.NewKeymanager(ctx, wallet, direct.DefaultConfig())
+		keymanager, err = direct.NewKeymanager(ctx, wallet, direct.DefaultConfig())
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read keymanager")
+		}
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:
 		return nil, errors.New("remote keymanager is unimplemented, work in progress")
 	default:
-		log.Fatal("Keymanager type must be specified")
+		return nil, errors.New("keymanager type must be specified")
 	}
 	keymanagerConfig, err := keymanager.MarshalConfigFile(ctx)
 	if err != nil {
-		log.Fatalf("Could not marshal keymanager config file: %v", err)
+		return nil, errors.Wrap(err, "could not marshal keymanager config file")
 	}
 	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		log.Fatalf("Could not write keymanager config file to disk: %v", err)
+		return nil, errors.Wrap(err, "could not write keymanager config file to disk")
 	}
 	return keymanager, nil
 }
@@ -143,13 +146,16 @@ func initializeExistingKeymanager(
 	case v2keymanager.Direct:
 		configFile, err := wallet.ReadKeymanagerConfigFromDisk(ctx)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not read keymanager config")
 		}
 		cfg, err := direct.UnmarshalConfigFile(configFile)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal keymanager config file")
 		}
-		keymanager = direct.NewKeymanager(ctx, wallet, cfg)
+		keymanager, err = direct.NewKeymanager(ctx, wallet, cfg)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize keymanager")
+		}
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:

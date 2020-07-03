@@ -9,6 +9,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
@@ -135,12 +136,14 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 		AccountPasswords: make(map[string]string),
 	}
 	dr := &Keymanager{
-		wallet: wallet,
+		wallet:    wallet,
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// First, generate accounts and their keystore.json files.
+	ctx := context.Background()
 	numAccounts := 20
 	wantedPublicKeys := generateAccounts(t, numAccounts, dr)
-	publicKeys, err := dr.FetchValidatingPublicKeys()
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,6 +160,51 @@ func TestKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	}
 }
 
+func TestKeymanager_Sign(t *testing.T) {
+	wallet := &mock.Wallet{
+		Files:            make(map[string]map[string][]byte),
+		AccountPasswords: make(map[string]string),
+	}
+	dr := &Keymanager{
+		wallet:    wallet,
+		keysCache: make(map[[48]byte]bls.SecretKey),
+	}
+
+	// First, generate accounts and their keystore.json files.
+	numAccounts := 2
+	generateAccounts(t, numAccounts, dr)
+	ctx := context.Background()
+	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We prepare naive data to sign.
+	data := []byte("hello world")
+	signRequest := &validatorpb.SignRequest{
+		PublicKey: publicKeys[0][:],
+		Data:      data,
+	}
+	sig, err := dr.Sign(ctx, signRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey, err := bls.PublicKeyFromBytes(publicKeys[0][:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongPubKey, err := bls.PublicKeyFromBytes(publicKeys[1][:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sig.Verify(pubKey, data) {
+		t.Fatalf("Expected sig to verify for pubkey %#x and data %v", pubKey.Marshal(), data)
+	}
+	if sig.Verify(wrongPubKey, data) {
+		t.Fatalf("Expected sig not to verify for pubkey %#x and data %v", wrongPubKey.Marshal(), data)
+	}
+}
+
 func BenchmarkKeymanager_FetchValidatingPublicKeys(b *testing.B) {
 	b.StopTimer()
 	wallet := &mock.Wallet{
@@ -164,14 +212,16 @@ func BenchmarkKeymanager_FetchValidatingPublicKeys(b *testing.B) {
 		AccountPasswords: make(map[string]string),
 	}
 	dr := &Keymanager{
-		wallet: wallet,
+		wallet:    wallet,
+		keysCache: make(map[[48]byte]bls.SecretKey),
 	}
 	// First, generate accounts and their keystore.json files.
 	numAccounts := 1000
 	generateAccounts(b, numAccounts, dr)
+	ctx := context.Background()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := dr.FetchValidatingPublicKeys(); err != nil {
+		if _, err := dr.FetchValidatingPublicKeys(ctx); err != nil {
 			b.Fatal(err)
 		}
 	}
