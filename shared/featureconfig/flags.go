@@ -458,14 +458,14 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableProtectProposerFlag = &cli.BoolFlag{
-		Name: "enable-protect-proposer",
-		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
+		Name:   "enable-protect-proposer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 	deprecatedEnableProtectAttesterFlag = &cli.BoolFlag{
-		Name: "enable-protect-attester",
-		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting 2 any slashable attestations.",
+		Name:   "enable-protect-attester",
+		Usage:  deprecatedUsage,
+		Hidden: true,
 	}
 )
 
