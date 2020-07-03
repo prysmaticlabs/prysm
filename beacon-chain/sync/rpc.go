@@ -7,6 +7,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -71,7 +72,7 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer func() {
-			if err := helpers.FullClose(stream); err != nil {
+			if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
 				log.WithError(err).Debug("Failed to reset stream")
 			}
 		}()
