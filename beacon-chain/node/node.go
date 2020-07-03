@@ -369,7 +369,6 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DenyListCIDR:      sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
-		Encoding:          cliCtx.String(cmd.P2PEncoding.Name),
 		StateNotifier:     b,
 	})
 	if err != nil {
@@ -574,7 +573,6 @@ func (b *BeaconNode) registerRPCService() error {
 		HeadFetcher:             chainService,
 		ForkFetcher:             chainService,
 		FinalizationFetcher:     chainService,
-		ParticipationFetcher:    chainService,
 		BlockReceiver:           chainService,
 		AttestationReceiver:     chainService,
 		GenesisTimeFetcher:      chainService,
