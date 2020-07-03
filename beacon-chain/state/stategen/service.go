@@ -5,13 +5,10 @@ package stategen
 
 import (
 	"context"
-	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -19,18 +16,16 @@ import (
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
-	beaconDB                db.NoHeadAccessDatabase
-	slotsPerArchivedPoint   uint64
-	epochBoundarySlotToRoot map[uint64][32]byte
-	epochBoundaryLock       sync.RWMutex
-	hotStateCache           *cache.HotStateCache
-	splitInfo               *splitSlotAndRoot
-	stateSummaryCache       *cache.StateSummaryCache
+	beaconDB              db.NoHeadAccessDatabase
+	slotsPerArchivedPoint uint64
+	hotStateCache         *cache.HotStateCache
+	finalizedInfo         *finalizedSlotRoot
+	stateSummaryCache     *cache.StateSummaryCache
 }
 
-// This tracks the split point. The point where slot and the block root of
+// This tracks the finalized point. It's also the point where slot and the block root of
 // cold and hot sections of the DB splits.
-type splitSlotAndRoot struct {
+type finalizedSlotRoot struct {
 	slot uint64
 	root [32]byte
 }
@@ -38,12 +33,11 @@ type splitSlotAndRoot struct {
 // New returns a new state management object.
 func New(db db.NoHeadAccessDatabase, stateSummaryCache *cache.StateSummaryCache) *State {
 	return &State{
-		beaconDB:                db,
-		epochBoundarySlotToRoot: make(map[uint64][32]byte),
-		hotStateCache:           cache.NewHotStateCache(),
-		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
-		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
-		stateSummaryCache:       stateSummaryCache,
+		beaconDB:              db,
+		hotStateCache:         cache.NewHotStateCache(),
+		finalizedInfo:         &finalizedSlotRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
+		slotsPerArchivedPoint: params.BeaconConfig().SlotsPerArchivedPoint,
+		stateSummaryCache:     stateSummaryCache,
 	}
 }
 
@@ -58,36 +52,12 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 		return nil, err
 	}
 
-	if featureconfig.Get().SkipRegenHistoricalStates {
-		// If a node doesn't want to regen historical states, the node would
-		// start from last finalized check point.
-		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
-		if err != nil {
-			return nil, err
-		}
-		lastArchivedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
-		if err != nil {
-			return nil, err
-		}
-		lastArchivedRoot = bytesutil.ToBytes32(cp.Root)
-	}
-
 	// Resume as genesis state if there's no last archived state.
 	if lastArchivedState == nil {
 		return s.beaconDB.GenesisState(ctx)
 	}
 
-	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
+	s.finalizedInfo = &finalizedSlotRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
 
 	return lastArchivedState, nil
-}
-
-// This verifies the archive point frequency is valid. It checks the interval
-// is a divisor of the number of slots per epoch. This ensures we have at least one
-// archive point within range of our state root history when iterating
-// backwards. It also ensures the archive points align with hot state summaries
-// which makes it quicker to migrate hot to cold.
-func verifySlotsPerArchivePoint(slotsPerArchivePoint uint64) bool {
-	return slotsPerArchivePoint > 0 &&
-		slotsPerArchivePoint%params.BeaconConfig().SlotsPerEpoch == 0
 }
