@@ -41,7 +41,6 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 		cfg := &Config{
 			BootstrapNodeAddr:   []string{bootNode.String()},
 			Discv5BootStrapAddr: []string{bootNode.String()},
-			Encoding:            "ssz",
 			MaxPeers:            30,
 			UDPPort:             uint(port),
 		}
@@ -74,7 +73,6 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	cfg := &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
-		Encoding:            "ssz",
 		MaxPeers:            30,
 		UDPPort:             uint(port),
 	}

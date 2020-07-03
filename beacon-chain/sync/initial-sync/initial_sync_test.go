@@ -167,7 +167,7 @@ func TestMakeSequence(t *testing.T) {
 // Connect peers with local host. This method sets up peer statuses and the appropriate handlers
 // for each test peer.
 func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus *peers.Status) {
-	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz"
+	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz_snappy"
 
 	for _, d := range data {
 		peer := p2pt.NewTestP2P(t)

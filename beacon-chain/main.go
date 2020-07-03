@@ -67,7 +67,6 @@ var appFlags = []cli.Flag{
 	cmd.P2PMetadata,
 	cmd.P2PAllowList,
 	cmd.P2PDenyList,
-	cmd.P2PEncoding,
 	cmd.DataDirFlag,
 	cmd.VerbosityFlag,
 	cmd.EnableTracingFlag,
