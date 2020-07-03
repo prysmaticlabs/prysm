@@ -25,6 +25,7 @@ const (
 	keystoreFileName           = "keystore.json"
 	depositDataFileName        = "deposit_data.ssz"
 	depositTransactionFileName = "deposit_transaction.rlp"
+	eipVersion                 = "EIP-2335"
 )
 
 // Wallet defines a struct which has capabilities and knowledge of how
@@ -51,7 +52,7 @@ type Keymanager struct {
 // DefaultConfig for a direct keymanager implementation.
 func DefaultConfig() *Config {
 	return &Config{
-		EIPVersion: "EIP-2335",
+		EIPVersion: eipVersion,
 	}
 }
 

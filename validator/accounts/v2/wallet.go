@@ -116,8 +116,9 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 	return accountName, nil
 }
 
-// WriteFileForAccount stores a unique file and its data under an account namespace
-// in the wallet's directory on-disk.
+// WriteFileForAccount stores a unique ficle and its data under an account namespace
+// in the wallet's directory on-disk. Creates the file if it does not exist
+// and writes over it otherwise.
 func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error {
 	accountPath := path.Join(w.accountsPath, accountName)
 	exists, err := hasDir(accountPath)
@@ -130,11 +131,11 @@ func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fi
 	filePath := path.Join(accountPath, fileName)
 	f, err := os.OpenFile(filePath, accountFilePermissions, directoryPermissions)
 	if err != nil {
-		return errors.Wrapf(err, "could not create file for account: %s", filePath)
+		return errors.Wrapf(err, "could not open file for account: %s", filePath)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.Errorf("Could not close file after writing: %s", filePath)
+			log.WithError(err).Error("Could not close file after writing")
 		}
 	}()
 	n, err := f.Write(data)
@@ -165,7 +166,7 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.Fatalf("Could not close keymanager opts file: %v", err)
+			log.WithError(err).Error("Could not close keymanager opts file")
 		}
 	}()
 	n, err := f.Write(encoded)
@@ -192,7 +193,7 @@ func (w *Wallet) writePasswordToFile(accountName string, password string) error 
 	}
 	defer func() {
 		if err := passwordFile.Close(); err != nil {
-			log.Errorf("Could not close password file: %s", passwordFilePath)
+			log.WithError(err).Error("Could not close password file")
 		}
 	}()
 	n, err := passwordFile.WriteString(password)
