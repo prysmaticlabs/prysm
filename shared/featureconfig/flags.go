@@ -65,7 +65,7 @@ var (
 	enableLocalProtectionFlag = &cli.BoolFlag{
 		Name: "enable-local-protection",
 		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting any messages that could be considered slashable according to it's own history.",
+			"broadcasting any messages that could be considered slashable according to its own history.",
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
