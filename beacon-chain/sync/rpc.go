@@ -4,9 +4,9 @@ import (
 	"context"
 	"reflect"
 	"strings"
-	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -71,10 +71,7 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer func() {
-			// Allow the contents of the stream to be relayed
-			// to the other peer before resetting it.
-			time.Sleep(50 * time.Millisecond)
-			if err := stream.Reset(); err != nil {
+			if err := helpers.FullClose(stream); err != nil {
 				log.WithError(err).Error("Failed to reset stream")
 			}
 		}()

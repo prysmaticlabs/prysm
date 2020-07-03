@@ -3,9 +3,9 @@ package sync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/sirupsen/logrus"
@@ -66,15 +66,12 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.I
 		return err
 	}
 	defer func() {
-		if err := stream.Reset(); err != nil {
+		if err := helpers.FullClose(stream); err != nil {
 			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 	log := log.WithField("Reason", goodbyeMessage(code))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Sending Goodbye message to peer")
-	// Add a short delay to allow the stream to flush before resetting it.
-	// There is still a chance that the peer won't receive the message.
-	time.Sleep(50 * time.Millisecond)
 	return nil
 }
 
