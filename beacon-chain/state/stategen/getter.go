@@ -28,7 +28,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
-	if summary.Slot < s.splitInfo.slot {
+	if summary.Slot < s.finalizedInfo.slot {
 		return s.loadColdStateByRoot(ctx, blockRoot)
 	}
 
@@ -89,7 +89,7 @@ func (s *State) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconStat
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateBySlot")
 	defer span.End()
 
-	if slot < s.splitInfo.slot {
+	if slot < s.finalizedInfo.slot {
 		return s.loadColdStateBySlot(ctx, slot)
 	}
 
