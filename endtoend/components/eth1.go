@@ -25,6 +25,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+const timeGapPerTX = 100 * time.Millisecond
+const timeGapPerMiningTX = 250 * time.Millisecond
+
 // StartEth1Node starts an eth1 local dev chain and deploys a deposit contract.
 func StartEth1Node(t *testing.T) (string, int) {
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
@@ -117,7 +120,7 @@ func StartEth1Node(t *testing.T) (string, int) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(timeGapPerTX)
 	}
 
 	// Advancing the blocks another eth1follow distance to prevent issues reading the chain.
@@ -153,7 +156,7 @@ func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uin
 			return err
 		}
 		nonce++
-		time.Sleep(250 * time.Microsecond)
+		time.Sleep(timeGapPerMiningTX)
 		block, err = web3.BlockByNumber(context.Background(), nil)
 		if err != nil {
 			return err
