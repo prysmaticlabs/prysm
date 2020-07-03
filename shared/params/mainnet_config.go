@@ -1,8 +1,9 @@
 package params
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
