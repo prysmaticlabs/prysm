@@ -61,7 +61,6 @@ type Service struct {
 	headFetcher             blockchain.HeadFetcher
 	forkFetcher             blockchain.ForkFetcher
 	finalizationFetcher     blockchain.FinalizationFetcher
-	participationFetcher    blockchain.ParticipationFetcher
 	genesisTimeFetcher      blockchain.TimeFetcher
 	genesisFetcher          blockchain.GenesisFetcher
 	attestationReceiver     blockchain.AttestationReceiver
@@ -111,7 +110,6 @@ type Config struct {
 	HeadFetcher             blockchain.HeadFetcher
 	ForkFetcher             blockchain.ForkFetcher
 	FinalizationFetcher     blockchain.FinalizationFetcher
-	ParticipationFetcher    blockchain.ParticipationFetcher
 	AttestationReceiver     blockchain.AttestationReceiver
 	BlockReceiver           blockchain.BlockReceiver
 	POWChainService         powchain.Chain
@@ -148,7 +146,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		headFetcher:             cfg.HeadFetcher,
 		forkFetcher:             cfg.ForkFetcher,
 		finalizationFetcher:     cfg.FinalizationFetcher,
-		participationFetcher:    cfg.ParticipationFetcher,
 		genesisTimeFetcher:      cfg.GenesisTimeFetcher,
 		genesisFetcher:          cfg.GenesisFetcher,
 		attestationReceiver:     cfg.AttestationReceiver,
@@ -269,7 +266,6 @@ func (s *Service) Start() {
 		SlashingsPool:               s.slashingsPool,
 		HeadFetcher:                 s.headFetcher,
 		FinalizationFetcher:         s.finalizationFetcher,
-		ParticipationFetcher:        s.participationFetcher,
 		ChainStartFetcher:           s.chainStartFetcher,
 		DepositFetcher:              s.depositFetcher,
 		BlockFetcher:                s.powChainService,
