@@ -20,12 +20,6 @@ func TestSignVerify(t *testing.T) {
 	}
 }
 
-func TestVerifyStuff2(t *testing.T) {
-	if !herumi.VerifyStuff() {
-		t.Error("does not work")
-	}
-}
-
 func TestAggregateVerify(t *testing.T) {
 	pubkeys := make([]iface.PublicKey, 0, 100)
 	sigs := make([]iface.Signature, 0, 100)
@@ -39,10 +33,10 @@ func TestAggregateVerify(t *testing.T) {
 		sigs = append(sigs, sig)
 		msgs = append(msgs, msg)
 	}
-	//aggSig := herumi.Aggregate(sigs)
-	//if !aggSig.AggregateVerify(pubkeys, msgs) {
-	//	t.Error("Signature did not verify")
-	//}
+	aggSig := herumi.Aggregate(sigs)
+	if !aggSig.AggregateVerify(pubkeys, msgs) {
+		t.Error("Signature did not verify")
+	}
 	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); !verify || err != nil {
 		t.Errorf("Signature did not verify: %v and err %v", verify, err)
 	}

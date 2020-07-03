@@ -180,44 +180,6 @@ func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys [
 	return bls12.CastToSign(finalSig).AggregateVerifyNoCheck(multiKeys, msgSlices), nil
 }
 
-func VerifyStuff() bool {
-	secKey := &bls12.SecretKey{}
-	secKey2 := &bls12.SecretKey{}
-
-	secKey.SetByCSPRNG()
-	secKey2.SetByCSPRNG()
-	msg := bytesutil.ToBytes32([]byte("hello"))
-	msg2 := bytesutil.ToBytes32([]byte("hello2"))
-	sig := secKey.SignByte(msg[:])
-	sig2 := secKey2.SignByte(msg2[:])
-	rd1 := new(bls12.Fr)
-	rd2 := new(bls12.Fr)
-	rd1.SetInt64(127627632)
-	rd2.SetInt64(9289382392)
-	g2 := bls12.CastFromSign(sig)
-	g22 := bls12.CastFromSign(sig2)
-	newg2 := new(bls12.G2)
-	newg22 := new(bls12.G2)
-	newg1 := new(bls12.G1)
-	newg12 := new(bls12.G1)
-	bls12.G2Mul(newg2, g2, rd1)
-	bls12.G1Mul(newg1, bls12.CastFromPublicKey(secKey.GetPublicKey()), rd1)
-	bls12.G2Mul(newg22, g22, rd2)
-	bls12.G1Mul(newg12, bls12.CastFromPublicKey(secKey2.GetPublicKey()), rd2)
-	yes := bls12.CastToSign(newg2).VerifyByte(bls12.CastToPublicKey(newg1), msg[:])
-	if !yes {
-		return false
-	}
-	yes = bls12.CastToSign(newg22).VerifyByte(bls12.CastToPublicKey(newg12), msg2[:])
-	if !yes {
-		return false
-	}
-	add3 := new(bls12.G2)
-	bls12.G2Add(add3, newg2, newg22)
-	return bls12.CastToSign(add3).AggregateVerifyNoCheck([]bls12.PublicKey{*bls12.CastToPublicKey(newg1), *bls12.CastToPublicKey(newg12)},
-		append(msg[:], msg2[:]...))
-}
-
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
 	if featureconfig.Get().SkipBLSVerify {
