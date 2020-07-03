@@ -29,7 +29,6 @@ func init() {
 	var err error
 	p, err = p2p.NewService(&p2p.Config{
 		NoDiscovery: true,
-		Encoding:    "ssz",
 	})
 	if err != nil {
 		panic(errors.Wrap(err, "could not create new p2p service"))
@@ -68,7 +67,7 @@ func init() {
 
 // BeaconFuzzP2PRPCStatus implements libfuzzer and beacon fuzz interface.
 func BeaconFuzzP2PRPCStatus(b []byte) {
-	s, err := h.NewStream(context.Background(), p.PeerID(), "/eth2/beacon_chain/req/status/1/ssz")
+	s, err := h.NewStream(context.Background(), p.PeerID(), "/eth2/beacon_chain/req/status/1/ssz_snappy")
 	if err != nil {
 		// libp2p ¯\_(ツ)_/¯
 		if strings.Contains(err.Error(), "stream reset") || strings.Contains(err.Error(), "connection reset by peer") || strings.Contains(err.Error(), "max dial attempts exceeded") {

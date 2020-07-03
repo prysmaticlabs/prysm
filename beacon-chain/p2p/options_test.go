@@ -40,7 +40,6 @@ func TestPrivateKeyLoading(t *testing.T) {
 	log.WithField("file", file.Name()).WithField("key", out).Info("Wrote key to file")
 	cfg := &Config{
 		PrivateKey: file.Name(),
-		Encoding:   "ssz",
 	}
 	pKey, err := privKey(cfg)
 	if err != nil {
