@@ -14,7 +14,7 @@ var (
 	// of no finality can be endured.
 	maxCacheSize        = uint64(8)
 	errNotSlotRootInfo  = errors.New("not slot root info type")
-	errNotRootStateInfo = errors.New("root state info type")
+	errNotRootStateInfo = errors.New("not root state info type")
 )
 
 // rootStateInfo specifies the root state info in the epoch boundary state cache.
