@@ -7,6 +7,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+func TestEpochBoundaryStateCache_BadSlotKey(t *testing.T) {
+	if _, err := slotKeyFn("sushi"); err == nil || err.Error() != errNotSlotRootInfo.Error() {
+		t.Error("Did not get wanted error")
+	}
+}
+
+func TestEpochBoundaryStateCache_BadRootKey(t *testing.T) {
+	if _, err := rootKeyFn("noodle"); err == nil || err.Error() != errNotRootStateInfo.Error() {
+		t.Error("Did not get wanted error")
+	}
+}
+
 func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	e := newBoundaryStateCache()
 	s := testutil.NewBeaconState()
@@ -78,6 +90,9 @@ func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 	}
 
 	if len(e.rootStateCache.ListKeys()) != int(maxCacheSize) {
+		t.Error("Did not trim to the correct amount")
+	}
+	if len(e.slotRootCache.ListKeys()) != int(maxCacheSize) {
 		t.Error("Did not trim to the correct amount")
 	}
 	for _, l := range e.rootStateCache.List() {
