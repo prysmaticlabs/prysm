@@ -121,7 +121,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.P2PDenyList,
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
-			cmd.P2PEncoding,
 			flags.MinSyncPeers,
 		},
 	},
