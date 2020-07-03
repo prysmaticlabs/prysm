@@ -22,7 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
-	"github.com/prysmaticlabs/prysm/validator/client/streaming"
+	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -101,6 +102,7 @@ func main() {
 	app.Version = version.GetVersion()
 	app.Action = startNode
 	app.Commands = []*cli.Command{
+		v2.Commands,
 		{
 			Name:     "accounts",
 			Category: "accounts",
@@ -184,7 +186,7 @@ contract in order to activate the validator client`,
 						ctx, cancel := context.WithTimeout(
 							context.Background(), 10*time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
 						defer cancel()
-						dialOpts := streaming.ConstructDialOptions(
+						dialOpts := client.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 							cliCtx.String(flags.CertFlag.Name),
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),

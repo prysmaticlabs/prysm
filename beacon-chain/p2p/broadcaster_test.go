@@ -25,11 +25,9 @@ func TestService_Broadcast(t *testing.T) {
 	}
 
 	p := &Service{
-		host:   p1.BHost,
-		pubsub: p1.PubSub(),
-		cfg: &Config{
-			Encoding: "ssz",
-		},
+		host:                  p1.BHost,
+		pubsub:                p1.PubSub(),
+		cfg:                   &Config{},
 		genesisTime:           time.Now(),
 		genesisValidatorsRoot: []byte{'A'},
 	}
