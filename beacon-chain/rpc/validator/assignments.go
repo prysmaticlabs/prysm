@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/rand"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc/codes"
@@ -200,12 +200,14 @@ func assignValidatorToSubnet(pubkey []byte, status ethpb.ValidatorStatus) {
 	}
 	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 	assignedIdxs := []uint64{}
+	randGen := rand.NewGenerator()
 	for i := uint64(0); i < params.BeaconNetworkConfig().RandomSubnetsPerValidator; i++ {
-		assignedIndex := rand.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
-		assignedIdxs = append(assignedIdxs, uint64(assignedIndex))
+		assignedIdx := randGen.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
+		assignedIdxs = append(assignedIdxs, uint64(assignedIdx))
 	}
-	assignedDuration := rand.Intn(int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription))
-	assignedDuration += int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)
+
+	assignedDuration := uint64(randGen.Intn(int(params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription)))
+	assignedDuration += params.BeaconNetworkConfig().EpochsPerRandomSubnetSubscription
 
 	totalDuration := epochDuration * time.Duration(assignedDuration)
 	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)

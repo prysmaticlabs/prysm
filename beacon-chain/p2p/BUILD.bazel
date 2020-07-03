@@ -73,6 +73,7 @@ go_library(
         "@com_github_libp2p_go_libp2p_peerstore//:go_default_library",
         "@com_github_libp2p_go_libp2p_pubsub//:go_default_library",
         "@com_github_libp2p_go_libp2p_pubsub//pb:go_default_library",
+        "@com_github_libp2p_go_libp2p_secio//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
         "@com_github_multiformats_go_multiaddr_net//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

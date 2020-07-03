@@ -19,6 +19,8 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/aggregation"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -834,7 +836,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	sig0 := privKeys[0].Sign(signingRoot[:])
 	sig1 := privKeys[1].Sign(signingRoot[:])
-	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
 	att2 := &ethpb.IndexedAttestation{
@@ -850,7 +852,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	sig0 = privKeys[0].Sign(signingRoot[:])
 	sig1 = privKeys[1].Sign(signingRoot[:])
-	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att2.Signature = aggregateSig.Marshal()[:]
 
 	slashings := []*ethpb.AttesterSlashing{
@@ -1146,7 +1148,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := make([]*bls.Signature, len(attestingIndices))
+	sigs := make([]bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1210,7 +1212,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := make([]*bls.Signature, len(attestingIndices1))
+	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1238,14 +1240,14 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs = make([]*bls.Signature, len(attestingIndices2))
+	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	if _, err = helpers.AggregateAttestation(att1, att2); err != helpers.ErrAttestationAggregationBitsOverlap {
+	if _, err = attaggregation.AggregatePair(att1, att2); err != aggregation.ErrBitsOverlap {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -1292,7 +1294,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := make([]*bls.Signature, len(attestingIndices1))
+	sigs := make([]bls.Signature, len(attestingIndices1))
 	for i, indice := range attestingIndices1 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
@@ -1319,14 +1321,14 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs = make([]*bls.Signature, len(attestingIndices2))
+	sigs = make([]bls.Signature, len(attestingIndices2))
 	for i, indice := range attestingIndices2 {
 		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att2.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	aggregatedAtt, err := helpers.AggregateAttestation(att1, att2)
+	aggregatedAtt, err := attaggregation.AggregatePair(att1, att2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1538,7 +1540,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		var sig []*bls.Signature
+		var sig []bls.Signature
 		for _, idx := range tt.attestation.AttestingIndices {
 			validatorSig := keys[idx].Sign(root[:])
 			sig = append(sig, validatorSig)
@@ -1612,7 +1614,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
@@ -1660,7 +1662,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := "deposit root did not verify"
-	_, err = blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	_, err = blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -1700,7 +1702,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
@@ -1770,7 +1772,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body.Deposits)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
@@ -1809,10 +1811,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	newState, err := blocks.ProcessDeposit(
-		beaconState,
-		dep[0],
-	)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
@@ -1866,10 +1865,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newState, err := blocks.ProcessDeposit(
-		beaconState,
-		dep[0],
-	)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}
@@ -2105,7 +2101,7 @@ func TestVerifyAttestations_VerifiesMultipleAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var sigs []*bls.Signature
+	var sigs []bls.Signature
 	for i, u := range comm1 {
 		att1.AggregationBits.SetBitAt(uint64(i), true)
 		sigs = append(sigs, keys[u].Sign(root[:]))
@@ -2187,7 +2183,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var sigs []*bls.Signature
+	var sigs []bls.Signature
 	for i, u := range comm1 {
 		att1.AggregationBits.SetBitAt(uint64(i), true)
 		sigs = append(sigs, keys[u].Sign(root[:]))
@@ -2220,5 +2216,77 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 	if err := blocks.VerifyAttestations(ctx, st, []*ethpb.Attestation{att1, att2}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestAreEth1DataEqual(t *testing.T) {
+	type args struct {
+		a *ethpb.Eth1Data
+		b *ethpb.Eth1Data
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "true when both are nil",
+			args: args{
+				a: nil,
+				b: nil,
+			},
+			want: true,
+		},
+		{
+			name: "false when only one is nil",
+			args: args{
+				a: nil,
+				b: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "true when real equality",
+			args: args{
+				a: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+				b: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "false is field value differs",
+			args: args{
+				a: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 0,
+					BlockHash:    make([]byte, 32),
+				},
+				b: &ethpb.Eth1Data{
+					DepositRoot:  make([]byte, 32),
+					DepositCount: 64,
+					BlockHash:    make([]byte, 32),
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := blocks.AreEth1DataEqual(tt.args.a, tt.args.b); got != tt.want {
+				t.Errorf("AreEth1DataEqual() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

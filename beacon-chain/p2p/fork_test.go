@@ -38,7 +38,6 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 	bootNode := bootListener.Self()
 	cfg := &Config{
 		Discv5BootStrapAddr: []string{bootNode.String()},
-		Encoding:            "ssz",
 		UDPPort:             uint(port),
 	}
 
@@ -132,7 +131,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	bootNode := bootListener.Self()
 	cfg := &Config{
 		Discv5BootStrapAddr: []string{bootNode.String()},
-		Encoding:            "ssz",
 		UDPPort:             uint(port),
 	}
 
@@ -250,7 +248,7 @@ func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	if err := os.Mkdir(tempPath, 0700); err != nil {
 		t.Fatal(err)
 	}
-	pkey, err := privKey(&Config{Encoding: "ssz", DataDir: tempPath})
+	pkey, err := privKey(&Config{DataDir: tempPath})
 	if err != nil {
 		t.Fatalf("Could not get private key: %v", err)
 	}
@@ -288,7 +286,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	if err := os.Mkdir(tempPath, 0700); err != nil {
 		t.Fatal(err)
 	}
-	pkey, err := privKey(&Config{Encoding: "ssz", DataDir: tempPath})
+	pkey, err := privKey(&Config{DataDir: tempPath})
 	if err != nil {
 		t.Fatalf("Could not get private key: %v", err)
 	}

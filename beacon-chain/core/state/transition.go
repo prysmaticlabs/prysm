@@ -28,13 +28,17 @@ import (
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
-//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
+//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> BeaconState:
+//    block = signed_block.message
 //    # Process slots (including those with no blocks) since block
 //    process_slots(state, block.slot)
+//    # Verify signature
+//    if validate_result:
+//        assert verify_block_signature(state, signed_block)
 //    # Process block
 //    process_block(state, block)
-//    # Validate state root (`validate_state_root == True` in production)
-//    if validate_state_root:
+//    # Verify state root
+//    if validate_result:
 //        assert block.state_root == hash_tree_root(state)
 //    # Return post-state
 //    return state
@@ -191,7 +195,7 @@ func CalculateStateRoot(
 //        state.latest_block_header.state_root = previous_state_root
 //
 //    # Cache block root
-//    previous_block_root = signing_root(state.latest_block_header)
+//    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
@@ -233,7 +237,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	return state, nil
 }
 
-// ProcessSlots process through skip skips and apply epoch transition when it's needed
+// ProcessSlots process through skip slots and apply epoch transition when it's needed
 //
 // Spec pseudocode definition:
 //  def process_slots(state: BeaconState, slot: Slot) -> None:
@@ -471,7 +475,7 @@ func ProcessOperations(
 	if err := b.VerifyAttestations(ctx, state, body.Attestations); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, body)
+	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
@@ -531,7 +535,7 @@ func ProcessOperationsNoVerify(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, body)
+	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
@@ -584,7 +588,7 @@ func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBloc
 	}
 	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
 	// Verify outstanding deposits are processed up to max number of deposits
-	if len(body.Deposits) != int(maxDeposits) {
+	if uint64(len(body.Deposits)) != maxDeposits {
 		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
 			maxDeposits, len(body.Deposits))
 	}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,10 +21,8 @@ import (
 // they don't receive the first byte within 5 seconds.
 var ttfbTimeout = params.BeaconNetworkConfig().TtfbTimeout
 
-// maxChunkSize would be the maximum allowed size that a request/response chunk can be.
-// any size beyond that would be rejected and the corresponding stream reset. This would
-// be 1048576 bytes or 1 MiB.
-var maxChunkSize = params.BeaconNetworkConfig().MaxChunkSize
+// respTimeout is the maximum time for complete response transfer.
+var respTimeout = params.BeaconNetworkConfig().RespTimeout
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
@@ -49,7 +48,7 @@ func (s *Service) registerRPCHandlers() {
 	)
 	s.registerRPC(
 		p2p.RPCBlocksByRootTopic,
-		&pb.BeaconBlocksByRootRequest{},
+		[][32]byte{},
 		s.beaconBlocksRootRPCHandler,
 	)
 	s.registerRPC(
@@ -72,8 +71,8 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer func() {
-			if err := stream.Close(); err != nil {
-				log.WithError(err).Error("Failed to close stream")
+			if err := helpers.FullClose(stream); err != nil {
+				log.WithError(err).Debug("Failed to reset stream")
 			}
 		}()
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
@@ -109,7 +108,7 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		t := reflect.TypeOf(base)
 		if t.Kind() == reflect.Ptr {
 			msg := reflect.New(t.Elem())
-			if err := s.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+			if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
 				// Debug logs for goodbye/status errors
 				if strings.Contains(topic, p2p.RPCGoodByeTopic) || strings.Contains(topic, p2p.RPCStatusTopic) {
 					log.WithError(err).Debug("Failed to decode goodbye stream message")
@@ -129,7 +128,7 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 			}
 		} else {
 			msg := reflect.New(t)
-			if err := s.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
+			if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg.Interface()); err != nil {
 				log.WithError(err).Warn("Failed to decode stream message")
 				traceutil.AnnotateError(span, err)
 				return

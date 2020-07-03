@@ -1,6 +1,15 @@
 package params
 
-import "time"
+import (
+	"time"
+
+	"github.com/mohae/deepcopy"
+)
+
+func init() {
+	// Using onyx as the default configuration for now.
+	UseOnyxNetworkConfig()
+}
 
 // NetworkConfig defines the spec based network parameters.
 type NetworkConfig struct {
@@ -18,25 +27,32 @@ type NetworkConfig struct {
 	// DiscoveryV5 Config
 	ETH2Key      string // ETH2Key is the ENR key of the eth2 object in an enr.
 	AttSubnetKey string // AttSubnetKey is the ENR key of the subnet bitfield in the enr.
+
+	// Chain Network Config
+	ContractDeploymentBlock uint64   // ContractDeploymentBlock is the eth1 block in which the deposit contract is deployed.
+	DepositContractAddress  string   // DepositContractAddress is the address of the deposit contract.
+	BootstrapNodes          []string // BootstrapNodes are the addresses of the bootnodes.
 }
 
-var defaultNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                     1 << 20, // 1 MiB
-	MaxChunkSize:                      1 << 20, // 1 MiB
-	AttestationSubnetCount:            64,
-	AttestationPropagationSlotRange:   32,
-	RandomSubnetsPerValidator:         1 << 0,
-	EpochsPerRandomSubnetSubscription: 1 << 8,
-	MaxRequestBlocks:                  1 << 10, // 1024
-	TtfbTimeout:                       5 * time.Second,
-	RespTimeout:                       10 * time.Second,
-	MaximumGossipClockDisparity:       500 * time.Millisecond,
-	ETH2Key:                           "eth2",
-	AttSubnetKey:                      "attnets",
-}
+var networkConfig = mainnetNetworkConfig
 
 // BeaconNetworkConfig returns the current network config for
 // the beacon chain.
 func BeaconNetworkConfig() *NetworkConfig {
-	return defaultNetworkConfig
+	return networkConfig
+}
+
+// OverrideBeaconNetworkConfig will override the network
+// config with the added argument.
+func OverrideBeaconNetworkConfig(cfg *NetworkConfig) {
+	networkConfig = cfg.Copy()
+}
+
+// Copy returns Copy of the config object.
+func (c *NetworkConfig) Copy() *NetworkConfig {
+	config, ok := deepcopy.Copy(*c).(NetworkConfig)
+	if !ok {
+		config = *networkConfig
+	}
+	return &config
 }

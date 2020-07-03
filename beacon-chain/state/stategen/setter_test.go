@@ -15,7 +15,7 @@ import (
 func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
@@ -26,7 +26,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	if err := beaconState.SetSlot(slot); err != nil {
 		t.Fatal(err)
 	}
-	service.splitInfo.slot = slot + 1
+	service.finalizedInfo.slot = slot + 1
 
 	r := [32]byte{'a'}
 	if err := service.SaveState(ctx, r, beaconState); err != nil {
@@ -47,7 +47,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1
@@ -75,7 +75,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 func TestSaveState_HotStateCached(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 1

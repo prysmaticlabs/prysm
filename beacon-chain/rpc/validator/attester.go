@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -21,8 +22,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const msgInvalidAttestationRequest = "Attestation request must be within current or previous epoch"
-
 // GetAttestationData requests that the beacon node produce an attestation data object,
 // which the validator acting as an attester will then sign.
 func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
@@ -37,9 +36,8 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	currentEpoch := helpers.SlotToEpoch(vs.GenesisTimeFetcher.CurrentSlot())
-	if currentEpoch > 0 && currentEpoch-1 != helpers.SlotToEpoch(req.Slot) && currentEpoch != helpers.SlotToEpoch(req.Slot) {
-		return nil, status.Error(codes.InvalidArgument, msgInvalidAttestationRequest)
+	if err := helpers.ValidateAttestationTime(req.Slot, vs.GenesisTimeFetcher.GenesisTime()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid request: %v", err))
 	}
 
 	res, err := vs.AttestationCache.Get(ctx, req)
@@ -164,7 +162,7 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 
 	// Determine subnet to broadcast attestation to
 	wantedEpoch := helpers.SlotToEpoch(att.Data.Slot)
-	vals, err := vs.HeadFetcher.HeadValidatorsIndices(wantedEpoch)
+	vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +201,7 @@ func (vs *Server) SubscribeCommitteeSubnets(ctx context.Context, req *ethpb.Comm
 
 	fetchValsLen := func(slot uint64) (uint64, error) {
 		wantedEpoch := helpers.SlotToEpoch(slot)
-		vals, err := vs.HeadFetcher.HeadValidatorsIndices(wantedEpoch)
+		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
 			return 0, err
 		}

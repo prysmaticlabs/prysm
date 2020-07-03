@@ -25,7 +25,7 @@ import (
 //    \- b3
 // Test b1 was missing then received and we can process b0 -> b1 -> b2
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 
 	p1 := p2ptest.NewTestP2P(t)
 	r := &Service{
@@ -100,14 +100,14 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 //    \- b3 - b4
 // Test b2 and b3 were missed, after receiving them we can process 2 chains.
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -230,7 +230,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 }
 
 func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
-	db := dbtest.SetupDB(t)
+	db, _ := dbtest.SetupDB(t)
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)

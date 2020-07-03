@@ -113,7 +113,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 	sort.Sort(sortableIndices{indices: activationQ, validators: vals})
 
 	// Only activate just enough validators according to the activation churn limit.
-	limit := len(activationQ)
+	limit := uint64(len(activationQ))
 	activeValidatorCount, err := helpers.ActiveValidatorCount(state, currentEpoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active validator count")
@@ -125,8 +125,8 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 	}
 
 	// Prevent churn limit cause index out of bound.
-	if int(churnLimit) < limit {
-		limit = int(churnLimit)
+	if churnLimit < limit {
+		limit = churnLimit
 	}
 
 	activationExitEpoch := helpers.ActivationExitEpoch(currentEpoch)
@@ -209,6 +209,7 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 //            balance + DOWNWARD_THRESHOLD < validator.effective_balance
 //            or validator.effective_balance + UPWARD_THRESHOLD < balance
 //        ):
+//        validator.effective_balance = min(balance - balance % EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE)
 //    index_epoch = Epoch(next_epoch + ACTIVATION_EXIT_DELAY)
 //    index_root_position = index_epoch % EPOCHS_PER_HISTORICAL_VECTOR
 //    indices_list = List[ValidatorIndex, VALIDATOR_REGISTRY_LIMIT](get_active_validator_indices(state, index_epoch))
@@ -273,22 +274,22 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	slashedEpoch := int(nextEpoch % slashedExitLength)
+	slashedEpoch := nextEpoch % slashedExitLength
 	slashings := state.Slashings()
-	if len(slashings) != int(slashedExitLength) {
+	if uint64(len(slashings)) != slashedExitLength {
 		return nil, fmt.Errorf(
 			"state slashing length %d different than EpochsPerHistoricalVector %d",
 			len(slashings),
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(uint64(slashedEpoch) /* index */, 0 /* value */); err != nil {
+	if err := state.UpdateSlashingsAtIndex(slashedEpoch /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	if state.RandaoMixesLength() != int(randaoMixLength) {
+	if uint64(state.RandaoMixesLength()) != randaoMixLength {
 		return nil, fmt.Errorf(
 			"state randao length %d different than EpochsPerHistoricalVector %d",
 			state.RandaoMixesLength(),

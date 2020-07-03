@@ -21,6 +21,7 @@ package featureconfig
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -29,8 +30,9 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	// Testnet Flags.
+	AltonaTestnet bool // AltonaTestnet defines the flag through which we can enable the node to run on the altona testnet.
 	// Feature related flags.
-	EnableStreamDuties                         bool // Enable streaming of validator duties instead of a polling-based approach.
 	WriteSSZStateTransitions                   bool // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify                           bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	DisableDynamicCommitteeSubnets             bool // Disables dynamic attestation committee subnets via p2p.
@@ -49,11 +51,8 @@ type Flags struct {
 	EnableNoise                                bool // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	DontPruneStateStartUp                      bool // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	NewStateMgmt                               bool // NewStateMgmt enables the new state mgmt service.
-	NoInitSyncBatchSaveBlocks                  bool // NoInitSyncBatchSaveBlocks disables batch save blocks mode during initial syncing.
-	EnableStateRefCopy                         bool // EnableStateRefCopy copies the references to objects instead of the objects themselves when copying state fields.
 	WaitForSynced                              bool // WaitForSynced uses WaitForSynced in validator startup to ensure it can communicate with the beacon node as soon as possible.
 	SkipRegenHistoricalStates                  bool // SkipRegenHistoricalState skips regenerating historical states from genesis to last finalized. This enables a quick switch over to using new-state-mgmt.
-	EnableInitSyncWeightedRoundRobin           bool // EnableInitSyncWeightedRoundRobin enables weighted round robin fetching optimization in initial syncing.
 	ReduceAttesterStateCopy                    bool // ReduceAttesterStateCopy reduces head state copies for attester rpc.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -109,6 +108,12 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
+	}
+	if ctx.Bool(altonaTestnet.Name) {
+		log.Warn("Running Node on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
 	}
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -169,9 +174,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling check head state for chainservice")
 		cfg.CheckHeadState = true
 	}
-	if ctx.Bool(enableNoiseHandshake.Name) {
-		log.Warn("Enabling noise handshake for peer")
-		cfg.EnableNoise = true
+	cfg.EnableNoise = true
+	if ctx.Bool(disableNoiseHandshake.Name) {
+		log.Warn("Disabling noise handshake for peer")
+		cfg.EnableNoise = false
 	}
 	if ctx.Bool(dontPruneStateStartUp.Name) {
 		log.Warn("Not enabling state pruning upon start up")
@@ -182,10 +188,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Disabling new state management service")
 		cfg.NewStateMgmt = false
 	}
-	if ctx.Bool(disableInitSyncBatchSaveBlocks.Name) {
-		log.Warn("Disabling init sync batch save blocks mode")
-		cfg.NoInitSyncBatchSaveBlocks = true
-	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		log.Warn("Disabling slashing broadcasting to p2p network")
 		cfg.DisableBroadcastSlashings = true
@@ -193,16 +195,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(skipRegenHistoricalStates.Name) {
 		log.Warn("Enabling skipping of historical states regen")
 		cfg.SkipRegenHistoricalStates = true
-	}
-	cfg.EnableInitSyncWeightedRoundRobin = true
-	if ctx.Bool(disableInitSyncWeightedRoundRobin.Name) {
-		log.Warn("Disabling weighted round robin in initial syncing")
-		cfg.EnableInitSyncWeightedRoundRobin = false
-	}
-	cfg.EnableStateRefCopy = true
-	if ctx.Bool(disableStateRefCopy.Name) {
-		log.Warn("Disabling state reference copy")
-		cfg.EnableStateRefCopy = false
 	}
 	if ctx.IsSet(deprecatedP2PWhitelist.Name) {
 		log.Warnf("--%s is deprecated, please use --%s", deprecatedP2PWhitelist.Name, cmd.P2PAllowList.Name)
@@ -225,6 +217,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 	cfg.AttestationAggregationStrategy = ctx.String(attestationAggregationStrategy.Name)
+	if ctx.Bool(forceMaxCoverAttestationAggregation.Name) {
+		log.Warn("Forcing max_cover strategy on attestation aggregation")
+		cfg.AttestationAggregationStrategy = "max_cover"
+	}
 	Init(cfg)
 }
 
@@ -249,9 +245,11 @@ func ConfigureSlasher(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(enableStreamDuties.Name) {
-		log.Warn("Enabled validator duties streaming.")
-		cfg.EnableStreamDuties = true
+	if ctx.Bool(altonaTestnet.Name) {
+		log.Warn("Running Validator on Altona Testnet")
+		params.UseAltonaConfig()
+		params.UseAltonaNetworkConfig()
+		cfg.AltonaTestnet = true
 	}
 	if ctx.Bool(enableProtectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")

@@ -98,9 +98,9 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
-	enableNoiseHandshake = &cli.BoolFlag{
-		Name: "enable-noise",
-		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
+	disableNoiseHandshake = &cli.BoolFlag{
+		Name: "disable-noise",
+		Usage: "This disables the beacon node from using NOISE and instead uses SECIO instead for performing handshakes between peers and " +
 			"securing transports between peers",
 	}
 	dontPruneStateStartUp = &cli.BoolFlag{
@@ -110,14 +110,6 @@ var (
 	disableNewStateMgmt = &cli.BoolFlag{
 		Name:  "disable-new-state-mgmt",
 		Usage: "This disables the usage of state mgmt service across Prysm",
-	}
-	disableInitSyncBatchSaveBlocks = &cli.BoolFlag{
-		Name:  "disable-init-sync-batch-save-blocks",
-		Usage: "Instead of saving batch blocks to the DB during initial syncing, this disables batch saving of blocks",
-	}
-	disableStateRefCopy = &cli.BoolFlag{
-		Name:  "disable-state-ref-copy",
-		Usage: "Disables the usage of a new copying method for our state fields.",
 	}
 	waitForSyncedFlag = &cli.BoolFlag{
 		Name:  "wait-for-synced",
@@ -139,14 +131,6 @@ var (
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
-	enableStreamDuties = &cli.BoolFlag{
-		Name:  "enable-stream-duties",
-		Usage: "Enables validator duties streaming in the validator client",
-	}
-	disableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:  "disable-init-sync-wrr",
-		Usage: "Disables weighted round robin fetching optimization",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -156,17 +140,36 @@ var (
 		Usage: "Which strategy to use when aggregating attestations, one of: naive, max_cover.",
 		Value: "naive",
 	}
+	forceMaxCoverAttestationAggregation = &cli.BoolFlag{
+		Name:  "attestation-aggregation-force-maxcover",
+		Usage: "When enabled, forces --attestation-aggregation-strategy=max_cover setting.",
+	}
+	altonaTestnet = &cli.BoolFlag{
+		Name:  "altona",
+		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	initSyncVerifyEverythingFlag,
+	forceMaxCoverAttestationAggregation,
 }
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedP2PEncoding = &cli.StringFlag{
+		Name:   "p2p-encoding",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedP2PPubsub = &cli.StringFlag{
+		Name:   "p2p-pubsub",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableKadDht = &cli.BoolFlag{
 		Name:   "enable-kad-dht",
 		Usage:  deprecatedUsage,
@@ -413,8 +416,8 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableInitSyncWeightedRoundRobin = &cli.BoolFlag{
-		Name:   "enable-init-sync-wrr",
+	deprecatedDisableStateRefCopy = &cli.BoolFlag{
+		Name:   "disable-state-ref-copy",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -423,9 +426,46 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecateddisableInitSyncBatchSaveBlocks = &cli.BoolFlag{
+		Name:   "disable-init-sync-batch-save-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableInitSyncWeightedRoundRobin = &cli.BoolFlag{
+		Name:   "disable-init-sync-wrr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableNoise = &cli.BoolFlag{
+		Name:   "enable-noise",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchival = &cli.BoolFlag{
+		Name:   "archive",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveValiatorSetChanges = &cli.BoolFlag{
+		Name:   "archive-validator-set-changes",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveBlocks = &cli.BoolFlag{
+		Name:   "archive-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveAttestation = &cli.BoolFlag{
+		Name:   "archive-attestations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedP2PEncoding,
+	deprecatedP2PPubsub,
 	deprecatedEnableKadDht,
 	deprecatedWeb3ProviderFlag,
 	deprecatedEnableDynamicCommitteeSubnets,
@@ -475,18 +515,25 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedP2PBlacklist,
 	deprecatedSchlesiTestnetFlag,
 	deprecateReduceAttesterStateCopies,
-	deprecatedEnableInitSyncWeightedRoundRobin,
+	deprecatedDisableInitSyncWeightedRoundRobin,
+	deprecatedDisableStateRefCopy,
 	deprecatedDisableFieldTrie,
+	deprecateddisableInitSyncBatchSaveBlocks,
+	deprecatedEnableNoise,
+	deprecatedArchival,
+	deprecatedArchiveBlocks,
+	deprecatedArchiveValiatorSetChanges,
+	deprecatedArchiveAttestation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
-	enableStreamDuties,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
+	altonaTestnet,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -500,7 +547,6 @@ var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
-	"--enable-stream-duties",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -520,18 +566,17 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableUpdateHeadPerAttestation,
 	enableStateGenSigVerify,
 	checkHeadState,
-	enableNoiseHandshake,
+	disableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
-	disableInitSyncBatchSaveBlocks,
 	waitForSyncedFlag,
 	skipRegenHistoricalStates,
-	disableInitSyncWeightedRoundRobin,
-	disableStateRefCopy,
 	disableNewStateMgmt,
 	disableReduceAttesterStateCopy,
 	disableGRPCConnectionLogging,
 	attestationAggregationStrategy,
+	forceMaxCoverAttestationAggregation,
+	altonaTestnet,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

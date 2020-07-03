@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"log"
 	"os"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
 )

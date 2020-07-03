@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
 	noise "github.com/libp2p/go-libp2p-noise"
+	secio "github.com/libp2p/go-libp2p-secio"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -33,20 +34,22 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	options := []libp2p.Option{
 		privKeyOption(priKey),
-		libp2p.EnableRelay(),
 		libp2p.ListenAddrs(listen),
 		libp2p.UserAgent(version.GetBuildData()),
 		libp2p.ConnectionGater(s),
 	}
 	if featureconfig.Get().EnableNoise {
-		// Enable NOISE for the beacon node
-		options = append(options, libp2p.Security(noise.ID, noise.New))
+		// Enable NOISE for the beacon node with secio as a fallback.
+		options = append(options, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
+	} else {
+		options = append(options, libp2p.Security(secio.ID, secio.New))
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
 	}
 	if cfg.RelayNodeAddr != "" {
 		options = append(options, libp2p.AddrsFactory(withRelayAddrs(cfg.RelayNodeAddr)))
+		options = append(options, libp2p.EnableRelay())
 	}
 	if cfg.HostAddress != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {

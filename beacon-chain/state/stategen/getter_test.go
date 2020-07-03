@@ -16,10 +16,10 @@ import (
 
 func TestStateByRoot_ColdState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-	service.splitInfo.slot = 2
+	service.finalizedInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
@@ -66,7 +66,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 
 func TestStateByRoot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -119,7 +119,7 @@ func TestStateByRoot_HotStateDB(t *testing.T) {
 
 func TestStateByRoot_HotStateCached(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -143,7 +143,7 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 
 func TestStateByRootInitialSync_UseDB(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -196,7 +196,7 @@ func TestStateByRootInitialSync_UseDB(t *testing.T) {
 
 func TestStateByRootInitialSync_UseCache(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -220,7 +220,7 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 
 func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -263,11 +263,11 @@ func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 
 func TestStateBySlot_ColdState(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
-	service.splitInfo.slot = service.slotsPerArchivedPoint + 1
+	service.finalizedInfo.slot = service.slotsPerArchivedPoint + 1
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := beaconState.SetSlot(1); err != nil {
@@ -314,7 +314,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 
 func TestStateBySlot_HotStateDB(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 
@@ -346,7 +346,7 @@ func TestStateBySlot_HotStateDB(t *testing.T) {
 
 func TestStateSummary_CanGetFromCacheOrDB(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
 

@@ -2,9 +2,9 @@ package sync
 
 import (
 	"context"
-	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -18,19 +18,19 @@ func (s *Service) metaDataHandler(ctx context.Context, msg interface{}, stream l
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := s.p2p.Encoding().EncodeWithLength(stream, s.p2p.Metadata())
+	_, err := s.p2p.Encoding().EncodeWithMaxLength(stream, s.p2p.Metadata())
 	return err
 }
 
 func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.MetaData, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
 	stream, err := s.p2p.Send(ctx, new(interface{}), p2p.RPCMetaDataTopic, id)
@@ -41,8 +41,8 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 	// metadata requests send no payload, so closing the
 	// stream early leads it to a reset.
 	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.WithError(err).Errorf("Failed to reset stream for protocol %s", stream.Protocol())
+		if err := helpers.FullClose(stream); err != nil {
+			log.WithError(err).Debugf("Failed to reset stream for protocol %s", stream.Protocol())
 		}
 	}()
 	code, errMsg, err := ReadStatusCode(stream, s.p2p.Encoding())
@@ -54,7 +54,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (*pb.Meta
 		return nil, errors.New(errMsg)
 	}
 	msg := new(pb.MetaData)
-	if err := s.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
+	if err := s.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil

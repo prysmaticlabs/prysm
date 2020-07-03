@@ -6,8 +6,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -29,7 +27,7 @@ func (kv *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, er
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
-		return decode(enc, checkpoint)
+		return decode(ctx, enc, checkpoint)
 	})
 	return checkpoint, err
 }
@@ -49,7 +47,7 @@ func (kv *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, er
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
-		return decode(enc, checkpoint)
+		return decode(ctx, enc, checkpoint)
 	})
 	return checkpoint, err
 }
@@ -59,27 +57,17 @@ func (kv *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
 	defer span.End()
 
-	enc, err := encode(checkpoint)
+	enc, err := encode(ctx, checkpoint)
 	if err != nil {
 		return err
 	}
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
-			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
-			hasStateSummaryInCache := kv.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
-			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
-				return errors.New("missing state summary for finalized root")
-			}
-		} else {
-			// The corresponding state must exist or there is a risk that the beacondb enters a state
-			// where the justified beaconState is missing. This may be a fatal condition requiring
-			// a new sync from genesis.
-			if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
-				traceutil.AnnotateError(span, errMissingStateForCheckpoint)
-				return errMissingStateForCheckpoint
-			}
+		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
+		hasStateSummaryInCache := kv.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+			return errMissingStateForCheckpoint
 		}
 		return bucket.Put(justifiedCheckpointKey, enc)
 	})
@@ -90,29 +78,18 @@ func (kv *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedCheckpoint")
 	defer span.End()
 
-	enc, err := encode(checkpoint)
+	enc, err := encode(ctx, checkpoint)
 	if err != nil {
 		return err
 	}
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		if featureconfig.Get().NewStateMgmt {
-			hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
-			hasStateSummaryInCache := kv.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
-			hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-			if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
-				return errors.New("missing state summary for finalized root")
-			}
-		} else {
-			// The corresponding state must exist or there is a risk that the beacondb enters a state
-			// where the finalized beaconState is missing. This would be a fatal condition requiring
-			// a new sync from genesis.
-			if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
-				traceutil.AnnotateError(span, errMissingStateForCheckpoint)
-				return errMissingStateForCheckpoint
-			}
+		hasStateSummaryInDB := tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) != nil
+		hasStateSummaryInCache := kv.stateSummaryCache.Has(bytesutil.ToBytes32(checkpoint.Root))
+		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
+		if !(hasStateInDB || hasStateSummaryInDB || hasStateSummaryInCache) {
+			return errMissingStateForCheckpoint
 		}
-
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {
 			return err
 		}

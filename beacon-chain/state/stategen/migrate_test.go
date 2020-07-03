@@ -18,10 +18,10 @@ import (
 func TestMigrateToCold_NoBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-	service.splitInfo.slot = 1
+	service.finalizedInfo.slot = 1
 	if err := service.MigrateToCold(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
@@ -32,10 +32,10 @@ func TestMigrateToCold_NoBlock(t *testing.T) {
 func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-	service.splitInfo.slot = 2
+	service.finalizedInfo.slot = 2
 	if err := service.MigrateToCold(ctx, 1, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
@@ -46,10 +46,10 @@ func TestMigrateToCold_HigherSplitSlot(t *testing.T) {
 func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-	service.splitInfo.slot = 1
+	service.finalizedInfo.slot = 1
 	service.slotsPerArchivedPoint = 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -109,10 +109,10 @@ func TestMigrateToCold_MigrationCompletes(t *testing.T) {
 
 func TestMigrateToCold_CantDeleteCurrentArchivedIndex(t *testing.T) {
 	ctx := context.Background()
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-	service.splitInfo.slot = 1
+	service.finalizedInfo.slot = 1
 	service.slotsPerArchivedPoint = 2
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -176,7 +176,7 @@ func TestMigrateToCold_CantDeleteCurrentArchivedIndex(t *testing.T) {
 }
 
 func TestSkippedArchivedPoint_CanRecover(t *testing.T) {
-	db := testDB.SetupDB(t)
+	db, _ := testDB.SetupDB(t)
 	ctx := context.Background()
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = 32

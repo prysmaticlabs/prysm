@@ -78,16 +78,6 @@ func (e Exporter) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.HasBlock(ctx, blockRoot)
 }
 
-// DeleteBlock -- passthrough.
-func (e Exporter) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	return e.db.DeleteBlock(ctx, blockRoot)
-}
-
-// DeleteBlocks -- passthrough.
-func (e Exporter) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	return e.db.DeleteBlocks(ctx, blockRoots)
-}
-
 // State -- passthrough.
 func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	return e.db.State(ctx, blockRoot)
@@ -128,16 +118,6 @@ func (e Exporter) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte
 	return e.db.HasAttesterSlashing(ctx, slashingRoot)
 }
 
-// DeleteProposerSlashing -- passthrough.
-func (e Exporter) DeleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error {
-	return e.db.DeleteProposerSlashing(ctx, slashingRoot)
-}
-
-// DeleteAttesterSlashing -- passthrough.
-func (e Exporter) DeleteAttesterSlashing(ctx context.Context, slashingRoot [32]byte) error {
-	return e.db.DeleteAttesterSlashing(ctx, slashingRoot)
-}
-
 // VoluntaryExit -- passthrough.
 func (e Exporter) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*eth.VoluntaryExit, error) {
 	return e.db.VoluntaryExit(ctx, exitRoot)
@@ -146,11 +126,6 @@ func (e Exporter) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*eth.Vo
 // HasVoluntaryExit -- passthrough.
 func (e Exporter) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 	return e.db.HasVoluntaryExit(ctx, exitRoot)
-}
-
-// DeleteVoluntaryExit -- passthrough.
-func (e Exporter) DeleteVoluntaryExit(ctx context.Context, exitRoot [32]byte) error {
-	return e.db.DeleteVoluntaryExit(ctx, exitRoot)
 }
 
 // JustifiedCheckpoint -- passthrough.

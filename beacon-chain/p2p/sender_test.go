@@ -20,7 +20,7 @@ func TestService_Send(t *testing.T) {
 
 	svc := &Service{
 		host: p1.BHost,
-		cfg:  &Config{Encoding: "ssz"},
+		cfg:  &Config{},
 	}
 
 	msg := &testpb.TestSimpleMessage{
@@ -32,12 +32,12 @@ func TestService_Send(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	p2.SetStreamHandler("/testing/1/ssz", func(stream network.Stream) {
+	p2.SetStreamHandler("/testing/1/ssz_snappy", func(stream network.Stream) {
 		rcvd := &testpb.TestSimpleMessage{}
-		if err := svc.Encoding().DecodeWithLength(stream, rcvd); err != nil {
+		if err := svc.Encoding().DecodeWithMaxLength(stream, rcvd); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := svc.Encoding().EncodeWithLength(stream, rcvd); err != nil {
+		if _, err := svc.Encoding().EncodeWithMaxLength(stream, rcvd); err != nil {
 			t.Fatal(err)
 		}
 		if err := stream.Close(); err != nil {
@@ -54,7 +54,7 @@ func TestService_Send(t *testing.T) {
 	testutil.WaitTimeout(&wg, 1*time.Second)
 
 	rcvd := &testpb.TestSimpleMessage{}
-	if err := svc.Encoding().DecodeWithLength(stream, rcvd); err != nil {
+	if err := svc.Encoding().DecodeWithMaxLength(stream, rcvd); err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(rcvd, msg) {

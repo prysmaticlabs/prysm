@@ -16,6 +16,7 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	attaggregation "github.com/prysmaticlabs/prysm/shared/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,7 +24,7 @@ import (
 )
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	s := &beaconstate.BeaconState{}
@@ -42,7 +43,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -68,7 +69,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	s, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
@@ -109,7 +110,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -153,7 +154,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
@@ -200,7 +201,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	}
 
 	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
-	wanted, err := helpers.AggregateAttestation(att0, att1)
+	wanted, err := attaggregation.AggregatePair(att0, att1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +216,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
-	db := dbutil.SetupDB(t)
+	db, _ := dbutil.SetupDB(t)
 	ctx := context.Background()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
@@ -250,7 +251,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 }
 
-func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) (*ethpb.Attestation, error) {
+func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	aggBits.SetBitAt(index+1, true)
@@ -272,7 +273,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 		return nil, err
 	}
 
-	sigs := make([]*bls.Signature, len(attestingIndices))
+	sigs := make([]bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 
@@ -290,7 +291,7 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 	return att, nil
 }
 
-func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) (*ethpb.Attestation, error) {
+func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privKeys []bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
@@ -311,7 +312,7 @@ func generateUnaggregatedAtt(state *beaconstate.BeaconState, index uint64, privK
 		return nil, err
 	}
 
-	sigs := make([]*bls.Signature, len(attestingIndices))
+	sigs := make([]bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 

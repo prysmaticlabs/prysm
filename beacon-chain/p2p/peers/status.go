@@ -34,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
@@ -427,42 +426,38 @@ func (p *Status) Decay() {
 // Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their own latency, or because of
 // their finalized epoch at the time we queried them.
 // Returns the best finalized root, epoch number, and list of peers that are at or beyond that epoch.
-func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, uint64, []peer.ID) {
+func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) (uint64, []peer.ID) {
 	connected := p.Connected()
-	finalized := make(map[[32]byte]uint64)
-	rootToEpoch := make(map[[32]byte]uint64)
-	pidEpochs := make(map[peer.ID]uint64)
+	finalizedEpochVotes := make(map[uint64]uint64)
+	pidEpoch := make(map[peer.ID]uint64)
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= ourFinalizedEpoch {
-			root := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
-			finalized[root]++
-			rootToEpoch[root] = peerChainState.FinalizedEpoch
-			pidEpochs[pid] = peerChainState.FinalizedEpoch
+			finalizedEpochVotes[peerChainState.FinalizedEpoch]++
+			pidEpoch[pid] = peerChainState.FinalizedEpoch
 			potentialPIDs = append(potentialPIDs, pid)
 		}
 	}
 
 	// Select the target epoch, which is the epoch most peers agree upon.
-	var targetRoot [32]byte
+	var targetEpoch uint64
 	var mostVotes uint64
-	for root, count := range finalized {
+	for epoch, count := range finalizedEpochVotes {
 		if count > mostVotes {
 			mostVotes = count
-			targetRoot = root
+			targetEpoch = epoch
 		}
 	}
-	targetEpoch := rootToEpoch[targetRoot]
 
 	// Sort PIDs by finalized epoch, in decreasing order.
 	sort.Slice(potentialPIDs, func(i, j int) bool {
-		return pidEpochs[potentialPIDs[i]] > pidEpochs[potentialPIDs[j]]
+		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]]
 	})
 
 	// Trim potential peers to those on or after target epoch.
 	for i, pid := range potentialPIDs {
-		if pidEpochs[pid] < targetEpoch {
+		if pidEpoch[pid] < targetEpoch {
 			potentialPIDs = potentialPIDs[:i]
 			break
 		}
@@ -473,7 +468,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, 
 		potentialPIDs = potentialPIDs[:maxPeers]
 	}
 
-	return targetRoot[:], targetEpoch, potentialPIDs
+	return targetEpoch, potentialPIDs
 }
 
 // fetch is a helper function that fetches a peer status, possibly creating it.
@@ -484,8 +479,8 @@ func (p *Status) fetch(pid peer.ID) *peerStatus {
 	return p.status[pid]
 }
 
-// CurrentEpoch returns the highest reported epoch amongst peers.
-func (p *Status) CurrentEpoch() uint64 {
+// HighestEpoch returns the highest epoch reported epoch amongst peers.
+func (p *Status) HighestEpoch() uint64 {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	var highestSlot uint64

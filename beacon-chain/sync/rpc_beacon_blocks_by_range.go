@@ -25,9 +25,9 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			log.WithError(err).Error("Failed to close stream")
 		}
 	}()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
-	setRPCStreamDeadlines(stream)
+	SetRPCStreamDeadlines(stream)
 	log := log.WithField("handler", "beacon_blocks_by_range")
 
 	// Ticker to stagger out large requests.
@@ -78,7 +78,6 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			return errors.New(rateLimitedError)
 		}
 
-		// TODO(3147): Update this with reasonable constraints.
 		if endSlot-startSlot > rangeLimit || m.Step == 0 || m.Count > maxRequestBlocks {
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, stepError, stream)
 			err := errors.New(stepError)
