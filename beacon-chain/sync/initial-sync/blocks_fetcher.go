@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
+	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -321,7 +323,7 @@ func (f *blocksFetcher) requestBlocks(
 		return nil, err
 	}
 	defer func() {
-		if err := stream.Reset(); err != nil {
+		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
 			log.WithError(err).Errorf("Failed to close stream with protocol %s", stream.Protocol())
 		}
 	}()

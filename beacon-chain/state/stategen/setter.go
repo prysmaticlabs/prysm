@@ -15,7 +15,7 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.Beaco
 	defer span.End()
 
 	// The state belongs to the cold section if it's below the split slot threshold.
-	if state.Slot() < s.splitInfo.slot {
+	if state.Slot() < s.finalizedInfo.slot {
 		return s.saveColdState(ctx, root, state)
 	}
 

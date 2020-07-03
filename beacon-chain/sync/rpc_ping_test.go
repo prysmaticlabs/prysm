@@ -113,7 +113,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 		p2p: p2,
 	}
 	// Setup streams
-	pcl := protocol.ID("/eth2/beacon_chain/req/ping/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/ping/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {

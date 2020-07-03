@@ -327,7 +327,7 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	totalBlocks := make([]*ethpb.SignedBeaconBlock, slots)
 	for i := uint64(0); i < slots; i++ {
 		b := testutil.NewBeaconBlock()
-		b.Block.Slot = uint64(i)
+		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
 		totalBlocks[i] = b
 	}

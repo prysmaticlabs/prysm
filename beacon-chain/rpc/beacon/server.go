@@ -32,7 +32,6 @@ type Server struct {
 	ChainStartFetcher           powchain.ChainStartFetcher
 	HeadFetcher                 blockchain.HeadFetcher
 	FinalizationFetcher         blockchain.FinalizationFetcher
-	ParticipationFetcher        blockchain.ParticipationFetcher
 	DepositFetcher              depositcache.DepositFetcher
 	BlockFetcher                powchain.POWBlockFetcher
 	GenesisTimeFetcher          blockchain.TimeFetcher

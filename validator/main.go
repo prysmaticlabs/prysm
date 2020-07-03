@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	v1 "github.com/prysmaticlabs/prysm/validator/accounts/v1"
 	v2 "github.com/prysmaticlabs/prysm/validator/accounts/v2"
-	"github.com/prysmaticlabs/prysm/validator/client/streaming"
+	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -33,6 +33,9 @@ import (
 	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
 )
+
+// connTimeout defines a period after which connection to beacon node is cancelled.
+const connTimeout = 10 * time.Second
 
 var log = logrus.WithField("prefix", "main")
 
@@ -183,10 +186,9 @@ contract in order to activate the validator client`,
 						if err != nil {
 							return err
 						}
-						ctx, cancel := context.WithTimeout(
-							context.Background(), 10*time.Second /* Cancel if cannot connect to beacon node in 10 seconds. */)
+						ctx, cancel := context.WithTimeout(context.Background(), connTimeout)
 						defer cancel()
-						dialOpts := streaming.ConstructDialOptions(
+						dialOpts := client.ConstructDialOptions(
 							cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 							cliCtx.String(flags.CertFlag.Name),
 							strings.Split(cliCtx.String(flags.GrpcHeadersFlag.Name), ","),

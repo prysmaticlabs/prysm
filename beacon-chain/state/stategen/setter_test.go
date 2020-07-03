@@ -25,7 +25,7 @@ func TestSaveState_ColdStateCanBeSaved(t *testing.T) {
 	if err := beaconState.SetSlot(slot); err != nil {
 		t.Fatal(err)
 	}
-	service.splitInfo.slot = slot + 1
+	service.finalizedInfo.slot = slot + 1
 
 	r := [32]byte{'a'}
 	if err := service.SaveState(ctx, r, beaconState); err != nil {

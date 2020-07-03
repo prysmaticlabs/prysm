@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["deposit.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/depositutil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/hashutil:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["deposit_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)

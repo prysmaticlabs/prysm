@@ -30,6 +30,9 @@ var ipCounter = make(map[string]int)
 var fundingLock sync.Mutex
 var pruneDuration = time.Hour * 4
 
+const txGasLimit = 40000
+const fundingAmountWei = "32500000000000000000" // 32.5 ETH in Wei.
+
 type faucetServer struct {
 	r        recaptcha.Recaptcha
 	client   *ethclient.Client
@@ -40,7 +43,7 @@ type faucetServer struct {
 
 func init() {
 	var ok bool
-	fundingAmount, ok = new(big.Int).SetString("32500000000000000000", 10)
+	fundingAmount, ok = new(big.Int).SetString(fundingAmountWei, 10)
 	if !ok {
 		log.Fatal("could not set funding amount")
 	}
@@ -157,7 +160,7 @@ func (s *faucetServer) fundAndWait(to common.Address) (string, error) {
 		return "", err
 	}
 
-	tx := types.NewTransaction(nonce, to, fundingAmount, 40000, big.NewInt(1*params.GWei), nil /*data*/)
+	tx := types.NewTransaction(nonce, to, fundingAmount, txGasLimit, big.NewInt(1*params.GWei), nil /*data*/)
 
 	tx, err = types.SignTx(tx, types.NewEIP155Signer(big.NewInt(5)), s.pk)
 	if err != nil {
