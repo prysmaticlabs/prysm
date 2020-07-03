@@ -9,7 +9,7 @@ import (
 
 // IKeymanager defines a general keymanager-v2 interface for Prysm wallets.
 type IKeymanager interface {
-	// CreateAccount based on the keymanager's logic.
+	// CreateAccount based on the keymanager's logic. Returns the account name.
 	CreateAccount(ctx context.Context, password string) (string, error)
 	// MarshalConfigFile for the keymanager's options.
 	MarshalConfigFile(ctx context.Context) ([]byte, error)
