@@ -41,7 +41,7 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkey, err := privKey(&Config{Encoding: "ssz", DataDir: tempPath})
+	pkey, err := privKey(&Config{DataDir: tempPath})
 	if err != nil {
 		t.Fatalf("Could not get private key: %v", err)
 	}
@@ -95,7 +95,6 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		port = 3000 + i
 		cfg := &Config{
 			Discv5BootStrapAddr: []string{bootNode.String()},
-			Encoding:            "ssz",
 			UDPPort:             uint(port),
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
@@ -167,7 +166,7 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	cfg := &Config{
-		Encoding: "ssz", MaxPeers: 30,
+		MaxPeers: 30,
 	}
 	port := 6000
 	var staticPeers []string
