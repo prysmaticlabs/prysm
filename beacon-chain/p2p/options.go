@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
@@ -13,15 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/version"
-)
-
-const (
-	// Period that we allocate each new peer before we mark them as valid
-	// for trimming.
-	gracePeriod = 2 * time.Minute
-	// Buffer for the number of peers allowed to connect above max peers before the
-	// connection manager begins trimming them.
-	peerBuffer = 5
 )
 
 // buildOptions for the libp2p host.
