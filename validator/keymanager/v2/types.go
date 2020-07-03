@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
@@ -14,9 +15,9 @@ type IKeymanager interface {
 	// MarshalConfigFile for the keymanager's options.
 	MarshalConfigFile(ctx context.Context) ([]byte, error)
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
-	FetchValidatingPublicKeys() ([][48]byte, error)
+	FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error)
 	// Sign signs a message using a validator key.
-	Sign(context.Context, interface{}) (bls.Signature, error)
+	Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
 // Kind defines an enum for either direct, derived, or remote-signing

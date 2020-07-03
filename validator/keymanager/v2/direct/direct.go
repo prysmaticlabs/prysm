@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/validator/accounts/v2"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
@@ -51,6 +53,8 @@ type Keymanager struct {
 	wallet            Wallet
 	cfg               *Config
 	mnemonicGenerator SeedPhraseFactory
+	keysCache         map[[48]byte]bls.SecretKey
+	lock              sync.RWMutex
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -61,12 +65,13 @@ func DefaultConfig() *Config {
 }
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
-func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) *Keymanager {
+func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager, error) {
 	return &Keymanager{
 		wallet:            wallet,
 		cfg:               cfg,
 		mnemonicGenerator: &EnglishMnemonicGenerator{},
-	}
+		keysCache:         make(map[[48]byte]bls.SecretKey),
+	}, nil
 }
 
 // UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager
@@ -165,12 +170,26 @@ func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 }
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
-func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
+func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte, error) {
 	accountNames, err := dr.wallet.AccountNames()
 	if err != nil {
 		return nil, err
 	}
+
+	// Return the public keys from the cache if they match the
+	// number of accounts from the wallet.
 	publicKeys := make([][48]byte, len(accountNames))
+	dr.lock.Lock()
+	defer dr.lock.Unlock()
+	if dr.keysCache != nil && len(dr.keysCache) == len(accountNames) {
+		var i int
+		for k := range dr.keysCache {
+			publicKeys[i] = k
+			i++
+		}
+		return publicKeys, nil
+	}
+
 	for i, name := range accountNames {
 		password, err := dr.wallet.ReadPasswordForAccount(name)
 		if err != nil {
@@ -197,13 +216,27 @@ func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
 			return nil, errors.Wrapf(err, "could not instantiate bls secret key from bytes for account: %s", name)
 		}
 		publicKeys[i] = bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())
+
+		// Update a simple cache of public key -> secret key utilized
+		// for fast signing access in the direct keymanager.
+		dr.keysCache[publicKeys[i]] = validatorSigningKey
 	}
 	return publicKeys, nil
 }
 
 // Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(context.Context, interface{}) (bls.Signature, error) {
-	return nil, errors.New("unimplemented")
+func (dr *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	rawPubKey := req.PublicKey
+	if rawPubKey == nil {
+		return nil, errors.New("nil public key in request")
+	}
+	dr.lock.RLock()
+	defer dr.lock.RUnlock()
+	secretKey, ok := dr.keysCache[bytesutil.ToBytes48(rawPubKey)]
+	if !ok {
+		return nil, errors.New("no signing key found in keys cache")
+	}
+	return secretKey.Sign(req.Data), nil
 }
 
 func generateDepositTransaction(

@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "direct.go",
+        "doc.go",
         "mnemonic.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct",
@@ -14,6 +15,7 @@ go_library(
     ],
     deps = [
         "//contracts/deposit-contract:go_default_library",
+        "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
@@ -37,6 +39,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
