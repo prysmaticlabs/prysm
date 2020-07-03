@@ -13,13 +13,13 @@ import (
 )
 
 func TestSszNetworkEncoder_RoundTrip(t *testing.T) {
-	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
+	e := &encoder.SszNetworkEncoder{}
 	testRoundTripWithLength(t, e)
 	testRoundTripWithGossip(t, e)
 }
 
 func TestSszNetworkEncoder_RoundTrip_Snappy(t *testing.T) {
-	e := &encoder.SszNetworkEncoder{UseSnappyCompression: true}
+	e := &encoder.SszNetworkEncoder{}
 	testRoundTripWithLength(t, e)
 	testRoundTripWithGossip(t, e)
 }
@@ -70,7 +70,7 @@ func TestSszNetworkEncoder_EncodeWithMaxLength(t *testing.T) {
 		Foo: []byte("fooooo"),
 		Bar: 9001,
 	}
-	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
+	e := &encoder.SszNetworkEncoder{}
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconNetworkConfig()
 	c.MaxChunkSize = uint64(5)
@@ -91,7 +91,7 @@ func TestSszNetworkEncoder_DecodeWithMaxLength(t *testing.T) {
 		Foo: []byte("fooooo"),
 		Bar: 4242,
 	}
-	e := &encoder.SszNetworkEncoder{UseSnappyCompression: false}
+	e := &encoder.SszNetworkEncoder{}
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconNetworkConfig()
 	maxChunkSize := uint64(5)
