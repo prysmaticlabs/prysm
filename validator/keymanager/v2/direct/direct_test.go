@@ -205,19 +205,6 @@ func TestKeymanager_Sign(t *testing.T) {
 		t.Fatalf("Expected sig not to verify for pubkey %#x and data %v", wrongPubKey.Marshal(), data)
 	}
 }
-
-func TestKeymanager_Sign_WrongRequestType(t *testing.T) {
-	type badSignReq struct{}
-	dr := &Keymanager{}
-	_, err := dr.Sign(context.Background(), &badSignReq{})
-	if err == nil {
-		t.Error("Expected error, received nil")
-	}
-	if !strings.Contains(err.Error(), "received wrong type") {
-		t.Errorf("Unexpected error: %v", err)
-	}
-}
-
 func TestKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: nil,

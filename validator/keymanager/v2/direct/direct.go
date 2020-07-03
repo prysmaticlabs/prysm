@@ -225,11 +225,7 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 }
 
 // Sign signs a message using a validator key.
-func (dr *Keymanager) Sign(ctx context.Context, request interface{}) (bls.Signature, error) {
-	signReq, ok := request.(*validatorpb.SignRequest)
-	if !ok {
-		return nil, fmt.Errorf("received wrong type for SignRequest: %T", request)
-	}
+func (dr *Keymanager) Sign(ctx context.Context, request *validatorpb.SignRequest) (bls.Signature, error) {
 	rawPubKey := signReq.PublicKey
 	if rawPubKey == nil {
 		return nil, errors.New("nil public key in request")
