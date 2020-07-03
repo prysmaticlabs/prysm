@@ -216,8 +216,9 @@ func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slo
 		return state, nil
 	}
 
+	var err error
 	for state.Slot() < slot {
-		state, err := transition.ProcessSlot(ctx, state)
+		state, err = transition.ProcessSlot(ctx, state)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process slot")
 		}
