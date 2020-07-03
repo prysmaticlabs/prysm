@@ -22,7 +22,6 @@ account namespaces as directories:
      keystore.json
      deposit_data.ssz
      deposit_transaction.rlp
-     account.lock
    shy-extroverted-robin/
      keystore.json
      deposit_data.ssz
@@ -34,11 +33,8 @@ account namespaces as directories:
 EIP-2335 keystores are stored alongside deposit data credentials for the
 created validator accounts. An additional deposit_transaction.rlp file is stored under the account,
 containing a raw bytes eth1 transaction data ready to be used to submit a 32ETH deposit to the
-eth2 deposit contract for a validator.
-
-Passwords are stored in a separate directory for easy unlocking
-of the associated keystores by an account namespace. If an account is in-use by a process, it
-will have an associated account.lock file within its directory, removed upon process release.
+eth2 deposit contract for a validator. Passwords are stored in a separate directory for easy unlocking
+of the associated keystores by an account namespace.
 
 This direct keymanager can be customized via a keymanageropts.json file, which has the following
 JSON schema as its options:
