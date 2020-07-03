@@ -264,15 +264,7 @@ func (s *Service) Started() bool {
 
 // Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
-	encoding := s.cfg.Encoding
-	switch encoding {
-	case encoder.SSZ:
-		return &encoder.SszNetworkEncoder{}
-	case encoder.SSZSnappy:
-		return &encoder.SszNetworkEncoder{UseSnappyCompression: true}
-	default:
-		panic("Invalid Network Encoding Flag Provided")
-	}
+	return &encoder.SszNetworkEncoder{}
 }
 
 // PubSub returns the p2p pubsub framework.
