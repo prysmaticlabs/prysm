@@ -282,7 +282,7 @@ func (s *Service) cacheJustifiedStateBalances(ctx context.Context, justifiedRoot
 		justifiedState, err = s.stateGen.StateByRoot(ctx, justifiedRoot)
 		if err != nil {
 			return err
-		}	
+		}
 	}
 
 	epoch := helpers.CurrentEpoch(justifiedState)

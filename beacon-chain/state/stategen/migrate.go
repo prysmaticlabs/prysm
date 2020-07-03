@@ -70,6 +70,9 @@ func (s *State) MigrateToCold(ctx context.Context, fSlot uint64, fRoot [32]byte)
 				aRoot = missingRoot
 				aState = missingState
 			}
+			if s.beaconDB.HasState(ctx, aRoot) {
+				continue
+			}
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
 				return err
 			}
