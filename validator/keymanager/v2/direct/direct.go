@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
@@ -53,6 +54,7 @@ type Keymanager struct {
 	cfg               *Config
 	mnemonicGenerator SeedPhraseFactory
 	keysCache         map[[48]byte]bls.SecretKey
+	lock              sync.RWMutex
 }
 
 // DefaultConfig for a direct keymanager implementation.
@@ -183,6 +185,8 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	// Return the public keys from the cache if they match the
 	// number of accounts from the wallet.
 	publicKeys := make([][48]byte, len(accountNames))
+	dr.lock.Lock()
+	defer dr.lock.Unlock()
 	if dr.keysCache != nil && len(dr.keysCache) == len(accountNames) {
 		var i int
 		for k := range dr.keysCache {
@@ -236,6 +240,8 @@ func (dr *Keymanager) Sign(ctx context.Context, request interface{}) (bls.Signat
 	if rawPubKey == nil {
 		return nil, errors.New("nil public key in request")
 	}
+	dr.lock.RLock()
+	defer dr.lock.RUnlock()
 	secretKey, ok := dr.keysCache[bytesutil.ToBytes48(rawPubKey)]
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
