@@ -58,6 +58,12 @@ func (s *State) Resume(ctx context.Context) (*state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
+	if lastArchivedRoot == params.BeaconConfig().ZeroHash {
+		lastArchivedState, err = s.beaconDB.GenesisState(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	s.SaveFinalizedState(lastArchivedState.Slot(), lastArchivedRoot, lastArchivedState)
 

@@ -144,7 +144,6 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Could not fetch finalized cp: %v", err)
 	}
-
 	if beaconState == nil {
 		beaconState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(cp.Root))
 		if err != nil {
@@ -331,7 +330,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
+	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{

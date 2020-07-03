@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -135,7 +136,7 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 	ctx, span := trace.StartSpan(ctx, "stateGen.lastAncestorState")
 	defer span.End()
 
-	if s.isFinalizedRoot(s.finalizedInfo.root) {
+	if s.isFinalizedRoot(s.finalizedInfo.root) && s.finalizedState() != nil {
 		return s.finalizedState(), nil
 	}
 
@@ -156,6 +157,9 @@ func (s *State) lastAncestorState(ctx context.Context, root [32]byte) (*state.Be
 		// 2.) block parent state is the epoch boundary state and exists in epoch boundary cache.
 		// 3.) block parent state is in DB.
 		parentRoot := bytesutil.ToBytes32(b.Block.ParentRoot)
+		if parentRoot == params.BeaconConfig().ZeroHash {
+			return s.beaconDB.GenesisState(ctx)
+		}
 		if s.isFinalizedRoot(parentRoot) {
 			return s.finalizedState(), nil
 		}
