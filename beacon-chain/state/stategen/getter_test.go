@@ -19,7 +19,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	db, _ := testDB.SetupDB(t)
 
 	service := New(db, cache.NewStateSummaryCache())
-	service.splitInfo.slot = 2
+	service.finalizedInfo.slot = 2
 	service.slotsPerArchivedPoint = 1
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
@@ -267,7 +267,7 @@ func TestStateBySlot_ColdState(t *testing.T) {
 
 	service := New(db, cache.NewStateSummaryCache())
 	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
-	service.splitInfo.slot = service.slotsPerArchivedPoint + 1
+	service.finalizedInfo.slot = service.slotsPerArchivedPoint + 1
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	if err := beaconState.SetSlot(1); err != nil {
