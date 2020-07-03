@@ -2,15 +2,12 @@ package herumi
 
 import (
 	"fmt"
-	"math"
 
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls/iface"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/rand"
 )
 
 // Signature used in the BLS signature scheme.
@@ -143,41 +140,6 @@ func AggregateSignatures(sigs []iface.Signature) iface.Signature {
 // Deprecated: Use AggregateSignatures.
 func Aggregate(sigs []iface.Signature) iface.Signature {
 	return AggregateSignatures(sigs)
-}
-
-func VerifyMultipleSignatures(sigs []iface.Signature, msgs [][32]byte, pubKeys []iface.PublicKey) (bool, error) {
-	if featureconfig.Get().SkipBLSVerify {
-		return true, nil
-	}
-	if len(sigs) == 0 || len(pubKeys) == 0 {
-		return false, nil
-	}
-	newGen := rand.NewGenerator()
-	randNums := make([]bls12.Fr, len(sigs))
-	for i := 0; i < len(sigs); i++ {
-		if err := randNums[i].SetLittleEndian(bytesutil.Bytes8(uint64(newGen.Int63n(math.MaxInt64)))); err != nil {
-			return false, err
-		}
-	}
-	signatures := make([]bls12.G2, len(sigs))
-	for i := 0; i < len(sigs); i++ {
-		signatures[i] = *bls12.CastFromSign(sigs[i].(*Signature).s)
-	}
-	finalSig := new(bls12.G2)
-	bls12.G2MulVec(finalSig, signatures, randNums)
-	multiKeys := make([]bls12.PublicKey, len(pubKeys))
-	for i := 0; i < len(pubKeys); i++ {
-		g1 := new(bls12.G1)
-		bls12.G1Mul(g1, bls12.CastFromPublicKey(pubKeys[i].(*PublicKey).p), &randNums[i])
-		multiKeys[i] = *bls12.CastToPublicKey(g1)
-
-	}
-	msgSlices := make([]byte, 0, 32*len(msgs))
-	for i := 0; i < len(msgs); i++ {
-		msgSlices = append(msgSlices, msgs[i][:]...)
-
-	}
-	return bls12.CastToSign(finalSig).AggregateVerifyNoCheck(multiKeys, msgSlices), nil
 }
 
 // Marshal a signature into a LittleEndian byte slice.

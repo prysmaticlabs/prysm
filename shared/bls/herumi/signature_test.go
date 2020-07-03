@@ -24,7 +24,7 @@ func TestAggregateVerify(t *testing.T) {
 	pubkeys := make([]iface.PublicKey, 0, 100)
 	sigs := make([]iface.Signature, 0, 100)
 	var msgs [][32]byte
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
 		priv := herumi.RandKey()
 		pub := priv.PublicKey()
@@ -36,9 +36,6 @@ func TestAggregateVerify(t *testing.T) {
 	aggSig := herumi.Aggregate(sigs)
 	if !aggSig.AggregateVerify(pubkeys, msgs) {
 		t.Error("Signature did not verify")
-	}
-	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); !verify || err != nil {
-		t.Errorf("Signature did not verify: %v and err %v", verify, err)
 	}
 }
 
