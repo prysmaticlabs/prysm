@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "direct.go",
+        "doc.go",
         "mnemonic.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct",
@@ -14,7 +15,9 @@ go_library(
     ],
     deps = [
         "//contracts/deposit-contract:go_default_library",
+        "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
@@ -36,9 +39,12 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//proto/validator/accounts/v2:go_default_library",
         "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/depositutil:go_default_library",
         "//shared/testutil:go_default_library",
+        "//validator/accounts/v2/testing:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
