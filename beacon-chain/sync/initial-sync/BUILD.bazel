@@ -34,6 +34,7 @@ go_library(
         "//shared/roughtime:go_default_library",
         "@com_github_kevinms_leakybucket_go//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//helpers:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//mux:go_default_library",
         "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
         "@com_github_paulbellamy_ratecounter//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
