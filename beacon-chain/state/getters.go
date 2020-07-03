@@ -247,6 +247,9 @@ func (b *BeaconState) ParentRoot() [32]byte {
 
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopy2DByteSlice(b.state.BlockRoots)
 }
 
@@ -686,9 +689,6 @@ func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
 }
 
 func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAttestation) []*pbp2p.PendingAttestation {
-	if !b.HasInnerState() {
-		return nil
-	}
 	if input == nil {
 		return nil
 	}
@@ -704,9 +704,6 @@ func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAtte
 }
 
 func (b *BeaconState) safeCopyCheckpoint(input *ethpb.Checkpoint) *ethpb.Checkpoint {
-	if !b.HasInnerState() {
-		return nil
-	}
 	if input == nil {
 		return nil
 	}
