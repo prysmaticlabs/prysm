@@ -1605,11 +1605,10 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 
 	m := &mock.ChainService{State: headState}
 	bs := &Server{
-		BeaconDB:             db,
-		HeadFetcher:          m,
-		ParticipationFetcher: m,
-		GenesisTimeFetcher:   &mock.ChainService{},
-		StateGen:             stategen.New(db, sc),
+		BeaconDB:           db,
+		HeadFetcher:        m,
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, sc),
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{Epoch: 0}})
@@ -1648,11 +1647,10 @@ func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
 
 	m := &mock.ChainService{State: headState}
 	bs := &Server{
-		BeaconDB:             db,
-		HeadFetcher:          m,
-		ParticipationFetcher: m,
-		GenesisTimeFetcher:   &mock.ChainService{},
-		StateGen:             stategen.New(db, sc),
+		BeaconDB:           db,
+		HeadFetcher:        m,
+		GenesisTimeFetcher: &mock.ChainService{},
+		StateGen:           stategen.New(db, sc),
 	}
 
 	wanted := "Participation information for epoch 0 is not yet available"
