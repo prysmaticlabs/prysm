@@ -48,7 +48,6 @@ var (
 	logFileName      = flag.String("log-file", "", "Specify log filename, relative or absolute")
 	privateKey       = flag.String("private", "", "Private key to use for peer ID")
 	discv5port       = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
-	kademliaPort     = flag.Int("kad-port", 4500, "Port to listen for connections to kad DHT")
 	metricsPort      = flag.Int("metrics-port", 5000, "Port to listen for connections")
 	externalIP       = flag.String("external-ip", "", "External IP for the bootnode")
 	disableKad       = flag.Bool("disable-kad", false, "Disables the bootnode from running kademlia dht")
@@ -58,9 +57,6 @@ var (
 		Help: "The current number of discv5 peers of the bootstrap node",
 	})
 )
-
-const dhtProtocol = "/prysm/0.0.0/dht"
-const defaultIP = "127.0.0.1"
 
 type handler struct {
 	listener *discover.UDPv5
