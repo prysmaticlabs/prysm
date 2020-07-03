@@ -9,4 +9,5 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = ["@com_github_dustinkirkland_golang_petname//:go_default_library"],
+    testonly = 1,
 )
