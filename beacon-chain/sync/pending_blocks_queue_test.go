@@ -107,7 +107,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	if len(p1.BHost.Network().Peers()) != 1 {
 		t.Error("Expected peers to be connected")
 	}
-	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz")
+	pcl := protocol.ID("/eth2/beacon_chain/req/hello/1/ssz_snappy")
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
