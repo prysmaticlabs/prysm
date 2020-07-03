@@ -233,8 +233,12 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	var spanMap *types.EpochStore
 	epoch := source - 1
 	lookbackEpoch := epoch - epochLookback
+	// prevent underflow
+	if epoch < epochLookback {
+		lookbackEpoch = 0
+	}
 	untilEpoch := lookbackEpoch
-	if int(untilEpoch) < 0 || featureconfig.Get().DisableLookback {
+	if featureconfig.Get().DisableLookback {
 		untilEpoch = 0
 	}
 	var err error
@@ -268,7 +272,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				indices = append(indices, idx)
 			}
 		}
-		if epoch < untilEpoch && dbOrCache == dbTypes.UseCache {
+		if epoch < lookbackEpoch && dbOrCache == dbTypes.UseCache {
 			dbOrCache = dbTypes.UseDB
 		}
 		if err := s.slasherDB.SaveEpochSpans(ctx, epoch, spanMap, dbOrCache); err != nil {
