@@ -30,7 +30,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["direct_test.go"],
+    srcs = [
+        "direct_test.go",
+        "mnemonic_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/bls:go_default_library",

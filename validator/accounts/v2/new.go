@@ -149,7 +149,7 @@ func initializeExistingKeymanager(
 		if err != nil {
 			return nil, err
 		}
-		keymanager = direct.NewKeymanager(ctx, wallet, cfg.(*direct.Config))
+		keymanager = direct.NewKeymanager(ctx, wallet, cfg)
 	case v2keymanager.Derived:
 		return nil, errors.New("derived keymanager is unimplemented, work in progress")
 	case v2keymanager.Remote:

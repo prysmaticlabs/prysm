@@ -146,8 +146,8 @@ func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fi
 		return fmt.Errorf("could only write %d/%d file bytes to disk", n, len(data))
 	}
 	log.WithFields(logrus.Fields{
-		"accountName": accountName,
-		"filePath":    filePath,
+		"name": accountName,
+		"path": filePath,
 	}).Debug("Wrote new file for account")
 	return nil
 }
