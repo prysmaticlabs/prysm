@@ -101,6 +101,7 @@ func run(ctx context.Context, v Validator) {
 			if featureconfig.Get().ProtectAttester {
 				if err := v.UpdateProtections(ctx, slot); err != nil {
 					log.WithError(err).Error("Could not update validator protection")
+					continue
 				}
 			}
 
