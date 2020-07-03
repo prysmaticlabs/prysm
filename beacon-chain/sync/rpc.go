@@ -72,7 +72,7 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer func() {
-			if err := helpers.FullClose(stream); err != nil && err != mux.ErrReset {
+			if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
 				log.WithError(err).Debug("Failed to reset stream")
 			}
 		}()

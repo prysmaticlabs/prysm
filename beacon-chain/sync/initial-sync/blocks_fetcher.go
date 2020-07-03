@@ -323,7 +323,7 @@ func (f *blocksFetcher) requestBlocks(
 		return nil, err
 	}
 	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil && err != mux.ErrReset {
+		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
 			log.WithError(err).Errorf("Failed to close stream with protocol %s", stream.Protocol())
 		}
 	}()

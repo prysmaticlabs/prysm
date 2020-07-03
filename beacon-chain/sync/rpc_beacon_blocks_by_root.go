@@ -74,7 +74,7 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 		return err
 	}
 	defer func() {
-		if err := helpers.FullClose(stream); err != nil && err != mux.ErrReset {
+		if err := helpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
 			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
