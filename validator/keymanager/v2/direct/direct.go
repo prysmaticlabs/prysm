@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -33,6 +34,9 @@ const (
 // Useful for keymanager to have persistent capabilities for accounts on-disk.
 type Wallet interface {
 	AccountsDir() string
+	AccountNames() ([]string, error)
+	ReadPasswordForAccount(accountName string) (string, error)
+	ReadFileForAccount(accountName string, fileName string) ([]byte, error)
 	WriteAccountToDisk(ctx context.Context, password string) (string, error)
 	WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error
 }
@@ -89,11 +93,11 @@ func UnmarshalConfigFile(r io.ReadCloser) (*Config, error) {
 // stores the generated keystore.json file in the wallet and additionally
 // generates a mnemonic for withdrawal credentials. At the end, it logs
 // the raw deposit data hex string for users to copy.
-func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error {
+func (dr *Keymanager) CreateAccount(ctx context.Context, password string) (string, error) {
 	// Create a new, unique account name and write its password + directory to disk.
 	accountName, err := dr.wallet.WriteAccountToDisk(ctx, password)
 	if err != nil {
-		return errors.Wrap(err, "could not write account to disk")
+		return "", errors.Wrap(err, "could not write account to disk")
 	}
 	// Generates a new EIP-2335 compliant keystore file
 	// from a BLS private key and marshals it as JSON.
@@ -101,11 +105,11 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	validatingKey := bls.RandKey()
 	keystoreFile, err := encryptor.Encrypt(validatingKey.Marshal(), []byte(password))
 	if err != nil {
-		return errors.Wrap(err, "could not encrypt validating key into keystore")
+		return "", errors.Wrap(err, "could not encrypt validating key into keystore")
 	}
 	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
 	if err != nil {
-		return errors.Wrap(err, "could not json marshal keystore file")
+		return "", errors.Wrap(err, "could not json marshal keystore file")
 	}
 
 	// Generate a withdrawal key and confirm user
@@ -114,17 +118,17 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 	rawWithdrawalKey := withdrawalKey.Marshal()[:]
 	seedPhrase, err := dr.mnemonicGenerator.Generate(rawWithdrawalKey)
 	if err != nil {
-		return errors.Wrap(err, "could not generate mnemonic for withdrawal key")
+		return "", errors.Wrap(err, "could not generate mnemonic for withdrawal key")
 	}
 	if err := dr.mnemonicGenerator.ConfirmAcknowledgement(seedPhrase); err != nil {
-		return errors.Wrap(err, "could not confirm acknowledgement of mnemonic")
+		return "", errors.Wrap(err, "could not confirm acknowledgement of mnemonic")
 	}
 
 	// Upon confirmation of the withdrawal key, proceed to display
 	// and write associated deposit data to disk.
 	tx, depositData, err := generateDepositTransaction(validatingKey, withdrawalKey)
 	if err != nil {
-		return errors.Wrap(err, "could not generate deposit transaction data")
+		return "", errors.Wrap(err, "could not generate deposit transaction data")
 	}
 
 	// Log the deposit transaction data to the user.
@@ -132,27 +136,27 @@ func (dr *Keymanager) CreateAccount(ctx context.Context, password string) error 
 
 	// We write the raw deposit transaction as an .rlp encoded file.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositTransactionFileName, tx.Data()); err != nil {
-		return errors.Wrapf(err, "could not write for account %s: %s", accountName, depositTransactionFileName)
+		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, depositTransactionFileName)
 	}
 
 	// We write the ssz-encoded deposit data to disk as a .ssz file.
 	encodedDepositData, err := ssz.Marshal(depositData)
 	if err != nil {
-		return errors.Wrap(err, "could not marshal deposit data")
+		return "", errors.Wrap(err, "could not marshal deposit data")
 	}
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, depositDataFileName, encodedDepositData); err != nil {
-		return errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
+		return "", errors.Wrapf(err, "could not write for account %s: %s", accountName, encodedDepositData)
 	}
 
 	// Finally, write the encoded keystore to disk.
 	if err := dr.wallet.WriteFileForAccount(ctx, accountName, keystoreFileName, encoded); err != nil {
-		return errors.Wrapf(err, "could not write keystore file for account %s", accountName)
+		return "", errors.Wrapf(err, "could not write keystore file for account %s", accountName)
 	}
 	log.WithFields(logrus.Fields{
 		"name": accountName,
 		"path": dr.wallet.AccountsDir(),
 	}).Info("Successfully created new validator account")
-	return nil
+	return accountName, nil
 }
 
 // MarshalConfigFile returns a marshaled configuration file for a direct keymanager.
@@ -162,7 +166,39 @@ func (dr *Keymanager) MarshalConfigFile(ctx context.Context) ([]byte, error) {
 
 // FetchValidatingPublicKeys fetches the list of public keys from the direct account keystores.
 func (dr *Keymanager) FetchValidatingPublicKeys() ([][48]byte, error) {
-	return nil, errors.New("unimplemented")
+	accountNames, err := dr.wallet.AccountNames()
+	if err != nil {
+		return nil, err
+	}
+	publicKeys := make([][48]byte, len(accountNames))
+	for i, name := range accountNames {
+		password, err := dr.wallet.ReadPasswordForAccount(name)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not read password for account %s", name)
+		}
+		encoded, err := dr.wallet.ReadFileForAccount(name, keystoreFileName)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not read keystore file for account %s", name)
+		}
+		keystoreJSON := make(map[string]interface{})
+		if err := json.Unmarshal(encoded, &keystoreJSON); err != nil {
+			return nil, errors.Wrapf(err, "could not decode keystore json for account: %s", name)
+		}
+		// We extract the validator signing private key from the keystore
+		// by utilizing the password and initialize a new BLS secret key from
+		// its raw bytes.
+		decryptor := keystorev4.New()
+		rawSigningKey, err := decryptor.Decrypt(keystoreJSON, []byte(password))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not decrypt validator signing key for account: %s", name)
+		}
+		validatorSigningKey, err := bls.SecretKeyFromBytes(rawSigningKey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not instantiate bls secret key from bytes for account: %s", name)
+		}
+		publicKeys[i] = bytesutil.ToBytes48(validatorSigningKey.PublicKey().Marshal())
+	}
+	return publicKeys, nil
 }
 
 // Sign signs a message using a validator key.
