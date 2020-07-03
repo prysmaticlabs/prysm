@@ -287,11 +287,13 @@ func TestBlocksQueueLoop(t *testing.T) {
 			}
 
 			var blocks []*eth.SignedBeaconBlock
-			for block := range queue.fetchedBlocks {
-				if err := processBlock(block); err != nil {
-					continue
+			for fetchedBlocks := range queue.fetchedBlocks {
+				for _, block := range fetchedBlocks {
+					if err := processBlock(block); err != nil {
+						continue
+					}
+					blocks = append(blocks, block)
 				}
-				blocks = append(blocks, block)
 			}
 
 			if err := queue.stop(); err != nil {

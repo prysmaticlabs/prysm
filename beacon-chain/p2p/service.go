@@ -25,7 +25,6 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -33,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
@@ -53,6 +53,9 @@ const lookupLimit = 15
 
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
+
+// Exclusion list cache config values.
+const cacheNumCounters, cacheMaxCost, cacheBufferItems = 1000, 1000, 64
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -83,9 +86,9 @@ func NewService(cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1000,
-		MaxCost:     1000,
-		BufferItems: 64,
+		NumCounters: cacheNumCounters,
+		MaxCost:     cacheMaxCost,
+		BufferItems: cacheBufferItems,
 	})
 	if err != nil {
 		return nil, err
@@ -203,11 +206,11 @@ func (s *Service) Start() {
 	}
 
 	// Periodic functions.
-	runutil.RunEvery(s.ctx, 5*time.Second, func() {
+	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
 		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
 	})
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
-	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+	runutil.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
 	runutil.RunEvery(s.ctx, refreshRate, func() {
 		s.RefreshENR()
 	})
@@ -261,15 +264,7 @@ func (s *Service) Started() bool {
 
 // Encoding returns the configured networking encoding.
 func (s *Service) Encoding() encoder.NetworkEncoding {
-	encoding := s.cfg.Encoding
-	switch encoding {
-	case encoder.SSZ:
-		return &encoder.SszNetworkEncoder{}
-	case encoder.SSZSnappy:
-		return &encoder.SszNetworkEncoder{UseSnappyCompression: true}
-	default:
-		panic("Invalid Network Encoding Flag Provided")
-	}
+	return &encoder.SszNetworkEncoder{}
 }
 
 // PubSub returns the p2p pubsub framework.

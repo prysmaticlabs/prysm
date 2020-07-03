@@ -22,6 +22,12 @@ var (
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
 			"This flag should be used for local development and testing only.",
 	}
+	// RPCMaxPageSizeFlag defines the maximum numbers per page returned in RPC responses from this
+	// beacon node (default: 500).
+	RPCMaxPageSizeFlag = &cli.IntFlag{
+		Name:  "rpc-max-page-size",
+		Usage: "Max number of items returned per page in RPC responses for paginated endpoints.",
+	}
 	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = &cli.StringFlag{
 		Name:  "verbosity",
@@ -153,12 +159,6 @@ var (
 		Usage: "The CIDR subnets for denying certainy peer connections. Example: " +
 			"192.168.0.0/16 would deny connections from peers on your local network only. The " +
 			"default is to accept all connections.",
-	}
-	// P2PEncoding defines the encoding format for p2p messages.
-	P2PEncoding = &cli.StringFlag{
-		Name:  "p2p-encoding",
-		Usage: "The encoding format of messages sent over the wire. The default is 0, which represents ssz",
-		Value: "ssz-snappy",
 	}
 	// ForceClearDB removes any previously stored data at the data directory.
 	ForceClearDB = &cli.BoolFlag{

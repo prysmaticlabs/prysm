@@ -4,23 +4,14 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/libp2p/go-libp2p"
 	noise "github.com/libp2p/go-libp2p-noise"
+	secio "github.com/libp2p/go-libp2p-secio"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/version"
-)
-
-const (
-	// Period that we allocate each new peer before we mark them as valid
-	// for trimming.
-	gracePeriod = 2 * time.Minute
-	// Buffer for the number of peers allowed to connect above max peers before the
-	// connection manager begins trimming them.
-	peerBuffer = 5
 )
 
 // buildOptions for the libp2p host.
@@ -37,8 +28,10 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.ConnectionGater(s),
 	}
 	if featureconfig.Get().EnableNoise {
-		// Enable NOISE for the beacon node
-		options = append(options, libp2p.Security(noise.ID, noise.New))
+		// Enable NOISE for the beacon node with secio as a fallback.
+		options = append(options, libp2p.Security(noise.ID, noise.New), libp2p.Security(secio.ID, secio.New))
+	} else {
+		options = append(options, libp2p.Security(secio.ID, secio.New))
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP

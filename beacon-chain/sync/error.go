@@ -27,7 +27,7 @@ func (s *Service) generateErrorResponse(code byte, reason string) ([]byte, error
 	resp := &pb.ErrorResponse{
 		Message: []byte(reason),
 	}
-	if _, err := s.p2p.Encoding().EncodeWithLength(buf, resp); err != nil {
+	if _, err := s.p2p.Encoding().EncodeWithMaxLength(buf, resp); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, 
 	msg := &pb.ErrorResponse{
 		Message: []byte{},
 	}
-	if err := encoding.DecodeWithLength(stream, msg); err != nil {
+	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
 		return 0, "", err
 	}
 

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -66,12 +65,6 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
-}
-
-// ParticipationFetcher defines a common interface for methods in blockchain service which
-// directly retrieves validator participation related data.
-type ParticipationFetcher interface {
-	Participation(epoch uint64) *precompute.Balance
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from head state.
@@ -223,14 +216,6 @@ func (s *Service) CurrentFork() *pb.Fork {
 		}
 	}
 	return s.head.state.Fork()
-}
-
-// Participation returns the participation stats of a given epoch.
-func (s *Service) Participation(epoch uint64) *precompute.Balance {
-	s.epochParticipationLock.RLock()
-	defer s.epochParticipationLock.RUnlock()
-
-	return s.epochParticipation[epoch]
 }
 
 // IsCanonical returns true if the input block root is part of the canonical chain.

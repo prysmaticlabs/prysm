@@ -17,7 +17,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -186,10 +185,6 @@ func NewBeaconNode(cliCtx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerArchiverService(); err != nil {
-		return nil, err
-	}
-
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
 		if err := beacon.registerPrometheusService(); err != nil {
 			return nil, err
@@ -238,7 +233,7 @@ func (b *BeaconNode) Start() {
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
-				log.Info("Already shutting down, interrupt more to panic", "times", i-1)
+				log.WithField("times", i-1).Info("Already shutting down, interrupt more to panic")
 			}
 		}
 		panic("Panic closing the beacon node")
@@ -374,7 +369,6 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DenyListCIDR:      sliceutil.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
-		Encoding:          cliCtx.String(cmd.P2PEncoding.Name),
 		StateNotifier:     b,
 	})
 	if err != nil {
@@ -579,7 +573,6 @@ func (b *BeaconNode) registerRPCService() error {
 		HeadFetcher:             chainService,
 		ForkFetcher:             chainService,
 		FinalizationFetcher:     chainService,
-		ParticipationFetcher:    chainService,
 		BlockReceiver:           chainService,
 		AttestationReceiver:     chainService,
 		GenesisTimeFetcher:      chainService,
@@ -675,21 +668,4 @@ func (b *BeaconNode) registerInteropServices() error {
 		return b.services.RegisterService(svc)
 	}
 	return nil
-}
-
-func (b *BeaconNode) registerArchiverService() error {
-	if !flags.Get().EnableArchive {
-		return nil
-	}
-	var chainService *blockchain.Service
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-	svc := archiver.NewArchiverService(b.ctx, &archiver.Config{
-		BeaconDB:             b.db,
-		HeadFetcher:          chainService,
-		ParticipationFetcher: chainService,
-		StateNotifier:        b,
-	})
-	return b.services.RegisterService(svc)
 }

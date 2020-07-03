@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bls/iface"
-
+	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/prysm/shared/bls/herumi"
+	"github.com/prysmaticlabs/prysm/shared/bls/iface"
 )
 
 func TestSignVerify(t *testing.T) {
@@ -53,6 +53,100 @@ func TestFastAggregateVerify(t *testing.T) {
 	aggSig := herumi.AggregateSignatures(sigs)
 	if !aggSig.FastAggregateVerify(pubkeys, msg) {
 		t.Error("Signature did not verify")
+	}
+}
+
+func TestMultipleSignatureVerification(t *testing.T) {
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
+	var msgs [][32]byte
+	for i := 0; i < 100; i++ {
+		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
+		priv := herumi.RandKey()
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:])
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
+		msgs = append(msgs, msg)
+	}
+	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); !verify || err != nil {
+		t.Errorf("Signature did not verify: %v and err %v", verify, err)
+	}
+}
+
+func TestMultipleSignatureVerification_FailsCorrectly(t *testing.T) {
+	pubkeys := make([]iface.PublicKey, 0, 100)
+	sigs := make([]iface.Signature, 0, 100)
+	var msgs [][32]byte
+	for i := 0; i < 100; i++ {
+		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
+		priv := herumi.RandKey()
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:])
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
+		msgs = append(msgs, msg)
+	}
+	// We mess with the last 2 signatures, where we modify their values
+	// such that they wqould not fail in aggregate signature verification.
+	lastSig := sigs[len(sigs)-1]
+	secondLastSig := sigs[len(sigs)-2]
+	// Convert to bls object
+	rawSig := new(bls12.Sign)
+	if err := rawSig.Deserialize(secondLastSig.Marshal()); err != nil {
+		t.Fatal(err)
+	}
+
+	rawSig2 := new(bls12.Sign)
+	if err := rawSig2.Deserialize(lastSig.Marshal()); err != nil {
+		t.Fatal(err)
+	}
+
+	// set random field prime value
+	fprime := new(bls12.Fp)
+	fprime.SetInt64(100)
+
+	// set random field prime value.
+	fprime2 := new(bls12.Fp)
+	fprime2.SetInt64(50)
+
+	// make a combined fp2 object.
+	fp2 := new(bls12.Fp2)
+	fp2.D = [2]bls12.Fp{*fprime, *fprime2}
+
+	g2Point := new(bls12.G2)
+	if err := bls12.MapToG2(g2Point, fp2); err != nil {
+		t.Fatal(err)
+	}
+
+	// We now add/subtract the respective g2 points by a fixed
+	// value. This would cause singluar verification to fail but
+	// not aggregate verification.
+	firstG2 := bls12.CastFromSign(rawSig)
+	secondG2 := bls12.CastFromSign(rawSig2)
+	bls12.G2Add(firstG2, firstG2, g2Point)
+	bls12.G2Sub(secondG2, secondG2, g2Point)
+
+	lastSig, err := herumi.SignatureFromBytes(rawSig.Serialize())
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondLastSig, err = herumi.SignatureFromBytes(rawSig2.Serialize())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigs[len(sigs)-1] = lastSig
+	sigs[len(sigs)-2] = secondLastSig
+
+	// This method is expected to pass, as it would not
+	// be able to detect bad signatures
+	aggSig := herumi.AggregateSignatures(sigs)
+	if !aggSig.AggregateVerify(pubkeys, msgs) {
+		t.Error("Signature did not verify")
+	}
+	// This method would be expected to fail.
+	if verify, err := herumi.VerifyMultipleSignatures(sigs, msgs, pubkeys); verify || err != nil {
+		t.Errorf("Signature verified when it was not supposed to: %v and err %v", verify, err)
 	}
 }
 

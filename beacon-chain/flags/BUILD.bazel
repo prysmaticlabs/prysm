@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "archive.go",
         "base.go",
         "config.go",
         "interop.go",

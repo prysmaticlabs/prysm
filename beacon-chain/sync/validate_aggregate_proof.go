@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -17,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -87,7 +85,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	defer span.End()
 
 	attSlot := signed.Message.Aggregate.Data.Slot
-	if err := validateAggregateAttTime(attSlot, s.chain.GenesisTime()); err != nil {
+	if err := helpers.ValidateAttestationTime(attSlot, s.chain.GenesisTime()); err != nil {
 		traceutil.AnnotateError(span, err)
 		return pubsub.ValidationIgnore
 	}
@@ -187,50 +185,6 @@ func validateIndexInCommittee(ctx context.Context, bs *stateTrie.BeaconState, a 
 	if !withinCommittee {
 		return fmt.Errorf("validator index %d is not within the committee: %v",
 			validatorIndex, committee)
-	}
-	return nil
-}
-
-// Validates that the incoming aggregate attestation is in the desired time range. An attestation
-// is valid only if received within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
-//
-// Example:
-//   ATTESTATION_PROPAGATION_SLOT_RANGE = 5
-//   current_slot = 100
-//   invalid_attestation_slot = 92
-//   invalid_attestation_slot = 101
-//   valid_attestation_slot = 98
-// In the attestation must be within the range of 95 to 100 in the example above.
-func validateAggregateAttTime(attSlot uint64, genesisTime time.Time) error {
-	attTime := genesisTime.Add(time.Duration(attSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
-	currentSlot := helpers.SlotsSince(genesisTime)
-
-	// A clock disparity allows for minor tolerances outside of the expected range. This value is
-	// usually small, less than 1 second.
-	clockDisparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
-
-	// An attestation cannot be from the future, so the upper bounds is set to now, with a minor
-	// tolerance for peer clock disparity.
-	upperBounds := roughtime.Now().Add(clockDisparity)
-
-	// An attestation cannot be older than the current slot - attestation propagation slot range
-	// with a minor tolerance for peer clock disparity.
-	lowerBoundsSlot := uint64(0)
-	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
-		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
-	}
-	lowerBounds := genesisTime.Add(
-		time.Duration(lowerBoundsSlot*params.BeaconConfig().SecondsPerSlot) * time.Second,
-	).Add(-clockDisparity)
-
-	// Verify attestation slot within the time range.
-	if attTime.Before(lowerBounds) || attTime.After(upperBounds) {
-		return fmt.Errorf(
-			"attestation slot %d not within attestation propagation range of %d to %d (current slot)",
-			attSlot,
-			currentSlot-params.BeaconNetworkConfig().AttestationPropagationSlotRange,
-			currentSlot,
-		)
 	}
 	return nil
 }

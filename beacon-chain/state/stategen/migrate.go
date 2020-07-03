@@ -20,7 +20,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 
 	// Verify migration is sensible. The new finalized point must increase the current split slot, and
 	// on an epoch boundary for hot state summary scheme to work.
-	currentSplitSlot := s.splitInfo.slot
+	currentSplitSlot := s.finalizedInfo.slot
 	if currentSplitSlot > finalizedSlot {
 		return nil
 	}
@@ -101,10 +101,10 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedSlot uint64, finaliz
 	}
 
 	// Update the split slot and root.
-	s.splitInfo = &splitSlotAndRoot{slot: finalizedSlot, root: finalizedRoot}
+	s.finalizedInfo = &finalizedSlotRoot{slot: finalizedSlot, root: finalizedRoot}
 	log.WithFields(logrus.Fields{
-		"slot": s.splitInfo.slot,
-		"root": hex.EncodeToString(bytesutil.Trunc(s.splitInfo.root[:])),
+		"slot": s.finalizedInfo.slot,
+		"root": hex.EncodeToString(bytesutil.Trunc(s.finalizedInfo.root[:])),
 	}).Info("Set hot and cold state split point")
 
 	return nil
