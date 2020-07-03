@@ -5,6 +5,7 @@ import (
 	"io"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	"github.com/libp2p/go-libp2p-core/helpers"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -24,8 +25,8 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		return err
 	}
 	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+		if err := helpers.FullClose(stream); err != nil {
+			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {
@@ -72,8 +73,8 @@ func (s *Service) sendRecentBeaconBlocksRequestFallback(ctx context.Context, blo
 		return err
 	}
 	defer func() {
-		if err := stream.Reset(); err != nil {
-			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+		if err := helpers.FullClose(stream); err != nil {
+			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 	for i := 0; i < len(blockRoots); i++ {

@@ -19,6 +19,10 @@ const (
 	timeForStatus = 10 * time.Second
 )
 
+func peerMultiaddrString(conn network.Conn) string {
+	return fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
+}
+
 // AddConnectionHandler adds a callback function which handles the connection with a
 // newly added peer. It performs a handshake with that peer by sending a hello request
 // and validating the response from the peer.
@@ -54,7 +58,6 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
-			log := log.WithField("peer", conn.RemotePeer().Pretty())
 			remotePeer := conn.RemotePeer()
 			disconnectFromPeer := func() {
 				s.peers.SetConnectionState(remotePeer, peers.PeerDisconnecting)
@@ -86,12 +89,11 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				validPeerConnection := func() {
 					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
 					// Go through the handshake process.
-					multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
 					log.WithFields(logrus.Fields{
 						"direction":   conn.Stat().Direction,
-						"multiAddr":   multiAddr,
+						"multiAddr":   peerMultiaddrString(conn),
 						"activePeers": len(s.peers.Active()),
-					}).Info("Peer Connected")
+					}).Info("Peer connected")
 				}
 
 				// Do not perform handshake on inbound dials.
@@ -154,7 +156,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		DisconnectedF: func(net network.Network, conn network.Conn) {
-			log := log.WithField("peer", conn.RemotePeer().Pretty())
+			log := log.WithField("multiAddr", peerMultiaddrString(conn))
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
 				// Exit early if we are still connected to the peer.
@@ -174,7 +176,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 				// Only log disconnections if we were fully connected.
 				if priorState == peers.PeerConnected {
-					log.WithField("activePeers", len(s.peers.Active())).Info("Peer Disconnected")
+					log.WithField("activePeers", len(s.peers.Active())).Info("Peer disconnected")
 				}
 			}()
 		},
