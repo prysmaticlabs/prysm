@@ -5,6 +5,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "direct.go",
+        "doc.go",
         "mnemonic.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/v2/direct",

@@ -179,7 +179,19 @@ func (dr *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][48]byte
 	if err != nil {
 		return nil, err
 	}
+
+	// Return the public keys from the cache if they match the
+	// number of accounts from the wallet.
 	publicKeys := make([][48]byte, len(accountNames))
+	if dr.keysCache != nil && len(dr.keysCache) == len(accountNames) {
+		var i int
+		for k := range dr.keysCache {
+			publicKeys[i] = k
+			i++
+		}
+		return publicKeys, nil
+	}
+
 	for i, name := range accountNames {
 		password, err := dr.wallet.ReadPasswordForAccount(name)
 		if err != nil {
