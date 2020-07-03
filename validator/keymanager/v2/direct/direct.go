@@ -66,18 +66,12 @@ func DefaultConfig() *Config {
 
 // NewKeymanager instantiates a new direct keymanager from configuration options.
 func NewKeymanager(ctx context.Context, wallet Wallet, cfg *Config) (*Keymanager, error) {
-	km := &Keymanager{
+	return &Keymanager{
 		wallet:            wallet,
 		cfg:               cfg,
 		mnemonicGenerator: &EnglishMnemonicGenerator{},
 		keysCache:         make(map[[48]byte]bls.SecretKey),
-	}
-	// Initialize the public key -> secret key cache by reading
-	// all accounts for the keymanager.
-	if _, err := km.FetchValidatingPublicKeys(ctx); err != nil {
-		return nil, errors.Wrap(err, "could not retrieve validating public keys")
-	}
-	return km, nil
+	}, nil
 }
 
 // UnmarshalConfigFile attempts to JSON unmarshal a direct keymanager

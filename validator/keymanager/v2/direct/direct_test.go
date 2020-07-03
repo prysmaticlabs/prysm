@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -202,6 +203,48 @@ func TestKeymanager_Sign(t *testing.T) {
 	}
 	if sig.Verify(wrongPubKey, data) {
 		t.Fatalf("Expected sig not to verify for pubkey %#x and data %v", wrongPubKey.Marshal(), data)
+	}
+}
+
+func TestKeymanager_Sign_WrongRequestType(t *testing.T) {
+	type badSignReq struct{}
+	dr := &Keymanager{}
+	_, err := dr.Sign(context.Background(), &badSignReq{})
+	if err == nil {
+		t.Error("Expected error, received nil")
+	}
+	if !strings.Contains(err.Error(), "received wrong type") {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
+	req := &validatorpb.SignRequest{
+		PublicKey: nil,
+	}
+	dr := &Keymanager{}
+	_, err := dr.Sign(context.Background(), req)
+	if err == nil {
+		t.Error("Expected error, received nil")
+	}
+	if !strings.Contains(err.Error(), "nil public key") {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
+	req := &validatorpb.SignRequest{
+		PublicKey: []byte("hello world"),
+	}
+	dr := &Keymanager{
+		keysCache: make(map[[48]byte]bls.SecretKey),
+	}
+	_, err := dr.Sign(context.Background(), req)
+	if err == nil {
+		t.Error("Expected error, received nil")
+	}
+	if !strings.Contains(err.Error(), "no signing key found in keys cache") {
+		t.Errorf("Unexpected error: %v", err)
 	}
 }
 
