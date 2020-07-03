@@ -20,22 +20,19 @@ func (kv *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSt
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	var s *pb.BeaconState
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
-		enc := bucket.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-
-		var err error
-		s, err = createState(ctx, enc)
-		return err
-	})
+	enc, err := kv.stateBytes(ctx, blockRoot)
 	if err != nil {
 		return nil, err
 	}
-	if s == nil {
-		return nil, nil
+
+	if len(enc) > 0 {
+		s, err = createState(ctx, enc)
+		if err != nil {
+			return nil, err
+		}
+		if s == nil {
+			return nil, nil
+		}
 	}
 	return state.InitializeFromProtoUnsafe(s)
 }
@@ -147,22 +144,17 @@ func (kv *Store) SaveStates(ctx context.Context, states []*state.BeaconState, bl
 func (kv *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
-	var exists bool
-	if err := kv.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
-		exists = bucket.Get(blockRoot[:]) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
+	enc, err := kv.stateBytes(ctx, blockRoot)
+	if err != nil {
 		panic(err)
 	}
-	return exists
+	return len(enc) > 0
 }
 
 // DeleteState by block root.
 func (kv *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
-
 	return kv.DeleteStates(ctx, [][32]byte{blockRoot})
 }
 
@@ -231,6 +223,19 @@ func createState(ctx context.Context, enc []byte) (*pb.BeaconState, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoState, nil
+}
+
+// HasState checks if a state by root exists in the db.
+func (kv *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
+	defer span.End()
+	var dst []byte
+	err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(stateBucket)
+		dst = bkt.Get(blockRoot[:])
+		return nil
+	})
+	return dst, err
 }
 
 // slotByBlockRoot retrieves the corresponding slot of the input block root.

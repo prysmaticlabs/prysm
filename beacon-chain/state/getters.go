@@ -259,19 +259,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.BlockRoots == nil {
-		return nil, nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	if uint64(len(b.state.BlockRoots)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
-	root := make([]byte, 32)
-	copy(root, b.state.BlockRoots[idx])
-	return root, nil
+	return b.safeCopyBytesAtIndex(b.state.BlockRoots, idx)
 }
 
 // StateRoots kept track of in the beacon state.
@@ -553,19 +541,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
-	if b.state.RandaoMixes == nil {
-		return nil, nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	if uint64(len(b.state.RandaoMixes)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
-	root := make([]byte, 32)
-	copy(root, b.state.RandaoMixes[idx])
-	return root, nil
+	return b.safeCopyBytesAtIndex(b.state.RandaoMixes, idx)
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
@@ -686,6 +662,22 @@ func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
 		dst[i] = tmp
 	}
 	return dst
+}
+
+func (b *BeaconState) safeCopyBytesAtIndex(input [][]byte, idx uint64) ([]byte, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	if uint64(len(input)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	root := make([]byte, 32)
+	copy(root, input[idx])
+	return root, nil
 }
 
 func (b *BeaconState) safeCopyPendingAttestationSlice(input []*pbp2p.PendingAttestation) []*pbp2p.PendingAttestation {
