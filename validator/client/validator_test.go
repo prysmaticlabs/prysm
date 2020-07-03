@@ -1,4 +1,4 @@
-package streaming
+package client
 
 import (
 	"context"
@@ -388,6 +388,45 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
+func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconChainClient(ctrl)
+	v := validator{
+		keyManager:   testKeyManager,
+		beaconClient: client,
+		genesisTime:  1,
+	}
+	client.EXPECT().GetChainHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, errors.New("failed"))
+	if _, err := v.CanonicalHeadSlot(context.Background()); !strings.Contains(err.Error(), "failed") {
+		t.Errorf("Wanted: %v, received: %v", "failed", err)
+	}
+}
+
+func TestCanonicalHeadSlot_OK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconChainClient(ctrl)
+	v := validator{
+		keyManager:   testKeyManager,
+		beaconClient: client,
+	}
+	client.EXPECT().GetChainHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
+	headSlot, err := v.CanonicalHeadSlot(context.Background())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if headSlot != 0 {
+		t.Errorf("Mismatch slots, wanted: %v, received: %v", 0, headSlot)
+	}
+}
+
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
@@ -519,6 +558,137 @@ func TestWaitSync_Syncing(t *testing.T) {
 	}
 }
 
+func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	slot := uint64(1)
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+		duties: &ethpb.DutiesResponse{
+			Duties: []*ethpb.DutiesResponse_Duty{
+				{
+					Committee:      []uint64{},
+					AttesterSlot:   10,
+					CommitteeIndex: 20,
+				},
+			},
+		},
+	}
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Times(0)
+
+	if err := v.UpdateDuties(context.Background(), slot); err != nil {
+		t.Errorf("Could not update assignments: %v", err)
+	}
+}
+
+func TestUpdateDuties_ReturnsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+		duties: &ethpb.DutiesResponse{
+			Duties: []*ethpb.DutiesResponse_Duty{
+				{
+					CommitteeIndex: 1,
+				},
+			},
+		},
+	}
+
+	expected := errors.New("bad")
+
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, expected)
+
+	if err := v.UpdateDuties(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
+		t.Errorf("Bad error; want=%v got=%v", expected, err)
+	}
+	if v.duties != nil {
+		t.Error("Assignments should have been cleared on failure")
+	}
+}
+
+func TestUpdateDuties_OK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+
+	slot := params.BeaconConfig().SlotsPerEpoch
+	resp := &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      []byte("testPubKey_1"),
+				ProposerSlots:  []uint64{params.BeaconConfig().SlotsPerEpoch + 1},
+			},
+		},
+	}
+	v := validator{
+		keyManager:      testKeyManager,
+		validatorClient: client,
+	}
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
+
+	if err := v.UpdateDuties(context.Background(), slot); err != nil {
+		t.Fatalf("Could not update assignments: %v", err)
+	}
+	if v.duties.Duties[0].ProposerSlots[0] != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Errorf(
+			"Unexpected validator assignments. want=%v got=%v",
+			params.BeaconConfig().SlotsPerEpoch+1,
+			v.duties.Duties[0].ProposerSlots[0],
+		)
+	}
+	if v.duties.Duties[0].AttesterSlot != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf(
+			"Unexpected validator assignments. want=%v got=%v",
+			params.BeaconConfig().SlotsPerEpoch,
+			v.duties.Duties[0].AttesterSlot,
+		)
+	}
+	if v.duties.Duties[0].CommitteeIndex != resp.Duties[0].CommitteeIndex {
+		t.Errorf(
+			"Unexpected validator assignments. want=%v got=%v",
+			resp.Duties[0].CommitteeIndex,
+			v.duties.Duties[0].CommitteeIndex,
+		)
+	}
+	if v.duties.Duties[0].ValidatorIndex != resp.Duties[0].ValidatorIndex {
+		t.Errorf(
+			"Unexpected validator assignments. want=%v got=%v",
+			resp.Duties[0].ValidatorIndex,
+			v.duties.Duties[0].ValidatorIndex,
+		)
+	}
+}
+
 func TestUpdateProtections_OK(t *testing.T) {
 	pubKey1 := [48]byte{1}
 	pubKey2 := [48]byte{2}
@@ -554,28 +724,29 @@ func TestUpdateProtections_OK(t *testing.T) {
 	}
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	duties := &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   slot,
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      pubKey1[:],
+			},
+			{
+				AttesterSlot:   slot,
+				ValidatorIndex: 201,
+				CommitteeIndex: 100,
+				Committee:      []uint64{0, 1, 2, 3},
+				PublicKey:      pubKey2[:],
+			},
+		},
+	}
 	v := validator{
 		db:              db,
 		keyManager:      testKeyManager,
 		validatorClient: client,
-	}
-	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-	v.dutiesByEpoch[epoch] = []*ethpb.DutiesResponse_Duty{
-		{
-			AttesterSlot:   slot,
-			ValidatorIndex: 200,
-			CommitteeIndex: 100,
-			Committee:      []uint64{0, 1, 2, 3},
-			PublicKey:      pubKey1[:],
-		},
-		{
-			AttesterSlot:   slot,
-			ValidatorIndex: 201,
-			CommitteeIndex: 100,
-			Committee:      []uint64{0, 1, 2, 3},
-			PublicKey:      pubKey2[:],
-		},
+		duties:          duties,
 	}
 
 	if err := v.UpdateProtections(context.Background(), slot); err != nil {
@@ -644,29 +815,29 @@ func TestRolesAt_OK(t *testing.T) {
 	sks[2] = bls.RandKey()
 	sks[3] = bls.RandKey()
 	v.keyManager = keymanager.NewDirect(sks)
-
-	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-	v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
-		{
-			CommitteeIndex: 1,
-			AttesterSlot:   1,
-			PublicKey:      sks[0].PublicKey().Marshal(),
-		},
-		{
-			CommitteeIndex: 2,
-			ProposerSlots:  []uint64{1},
-			PublicKey:      sks[1].PublicKey().Marshal(),
-		},
-		{
-			CommitteeIndex: 1,
-			AttesterSlot:   2,
-			PublicKey:      sks[2].PublicKey().Marshal(),
-		},
-		{
-			CommitteeIndex: 2,
-			AttesterSlot:   1,
-			ProposerSlots:  []uint64{1, 5},
-			PublicKey:      sks[3].PublicKey().Marshal(),
+	v.duties = &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   1,
+				PublicKey:      sks[0].PublicKey().Marshal(),
+			},
+			{
+				CommitteeIndex: 2,
+				ProposerSlots:  []uint64{1},
+				PublicKey:      sks[1].PublicKey().Marshal(),
+			},
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   2,
+				PublicKey:      sks[2].PublicKey().Marshal(),
+			},
+			{
+				CommitteeIndex: 2,
+				AttesterSlot:   1,
+				ProposerSlots:  []uint64{1, 5},
+				PublicKey:      sks[3].PublicKey().Marshal(),
+			},
 		},
 	}
 
@@ -714,26 +885,26 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	sks[1] = bls.RandKey()
 	sks[2] = bls.RandKey()
 	v.keyManager = keymanager.NewDirect(sks)
-
-	v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-	v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
-		{
-			CommitteeIndex: 1,
-			AttesterSlot:   0,
-			ProposerSlots:  []uint64{0},
-			PublicKey:      sks[0].PublicKey().Marshal(),
-		},
-		{
-			CommitteeIndex: 2,
-			AttesterSlot:   4,
-			ProposerSlots:  nil,
-			PublicKey:      sks[1].PublicKey().Marshal(),
-		},
-		{
-			CommitteeIndex: 1,
-			AttesterSlot:   3,
-			ProposerSlots:  nil,
-			PublicKey:      sks[2].PublicKey().Marshal(),
+	v.duties = &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   0,
+				ProposerSlots:  []uint64{0},
+				PublicKey:      sks[0].PublicKey().Marshal(),
+			},
+			{
+				CommitteeIndex: 2,
+				AttesterSlot:   4,
+				ProposerSlots:  nil,
+				PublicKey:      sks[1].PublicKey().Marshal(),
+			},
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   3,
+				ProposerSlots:  nil,
+				PublicKey:      sks[2].PublicKey().Marshal(),
+			},
 		},
 	}
 
@@ -855,11 +1026,12 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			v := validator{
 				keyManager:      testKeyManager,
 				validatorClient: client,
-			}
-			v.dutiesByEpoch = make(map[uint64][]*ethpb.DutiesResponse_Duty)
-			v.dutiesByEpoch[0] = []*ethpb.DutiesResponse_Duty{
-				{
-					CommitteeIndex: 1,
+				duties: &ethpb.DutiesResponse{
+					Duties: []*ethpb.DutiesResponse_Duty{
+						{
+							CommitteeIndex: 1,
+						},
+					},
 				},
 			}
 
