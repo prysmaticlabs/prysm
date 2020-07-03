@@ -5,11 +5,13 @@ package testing
 import (
 	"bytes"
 	"context"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -78,12 +80,40 @@ func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
 // MockStateNotifier mocks the state notifier.
 type MockStateNotifier struct {
 	feed *event.Feed
+
+	recv     []*feed.Event
+	recvLock sync.Mutex
+	recvCh   chan *feed.Event
+
+	RecordEvents bool
+}
+
+// ReceivedEvents returns the events received by the state feed in this mock.
+func (msn *MockStateNotifier) ReceivedEvents() []*feed.Event {
+	msn.recvLock.Lock()
+	defer msn.recvLock.Unlock()
+	return msn.recv
 }
 
 // StateFeed returns a state feed.
 func (msn *MockStateNotifier) StateFeed() *event.Feed {
-	if msn.feed == nil {
+	if msn.feed == nil && msn.recvCh == nil {
 		msn.feed = new(event.Feed)
+		if msn.RecordEvents {
+			msn.recvCh = make(chan *feed.Event)
+			sub := msn.feed.Subscribe(msn.recvCh)
+
+			go func() {
+				select {
+				case evt := <-msn.recvCh:
+					msn.recvLock.Lock()
+					msn.recv = append(msn.recv, evt)
+					msn.recvLock.Unlock()
+				case <-sub.Err():
+					sub.Unsubscribe()
+				}
+			}()
+		}
 	}
 	return msn.feed
 }
