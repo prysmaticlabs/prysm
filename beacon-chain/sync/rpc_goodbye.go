@@ -6,6 +6,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/sirupsen/logrus"
@@ -66,7 +67,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.I
 		return err
 	}
 	defer func() {
-		if err := helpers.FullClose(stream); err != nil {
+		if err := helpers.FullClose(stream); err != nil && err != mux.ErrReset {
 			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
