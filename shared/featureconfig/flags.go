@@ -61,15 +61,11 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-	enableProtectProposerFlag = &cli.BoolFlag{
-		Name: "enable-protect-proposer",
+
+	enableLocalProtectionFlag = &cli.BoolFlag{
+		Name: "enable-local-protection",
 		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
-	}
-	enableProtectAttesterFlag = &cli.BoolFlag{
-		Name: "enable-protect-attester",
-		Usage: "Enables functionality to prevent the validator client from signing and " +
-			"broadcasting 2 any slashable attestations.",
+			"broadcasting any messages that could be considered slashable according to it's own history.",
 	}
 	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
 		Name: "enable-external-slasher-protection",
@@ -461,6 +457,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableProtectProposerFlag = &cli.BoolFlag{
+		Name: "enable-protect-proposer",
+		Usage: "Enables functionality to prevent the validator client from signing and " +
+			"broadcasting 2 different block proposals in the same epoch. Protects from slashing.",
+	}
+	deprecatedEnableProtectAttesterFlag = &cli.BoolFlag{
+		Name: "enable-protect-attester",
+		Usage: "Enables functionality to prevent the validator client from signing and " +
+			"broadcasting 2 any slashable attestations.",
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -524,12 +530,13 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedArchiveBlocks,
 	deprecatedArchiveValiatorSetChanges,
 	deprecatedArchiveAttestation,
+	deprecatedEnableProtectProposerFlag,
+	deprecatedEnableProtectAttesterFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
-	enableProtectAttesterFlag,
-	enableProtectProposerFlag,
+	enableLocalProtectionFlag,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
@@ -545,8 +552,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--wait-for-synced",
-	"--enable-protect-attester",
-	"--enable-protect-proposer",
+	"--enable-local-protection",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
