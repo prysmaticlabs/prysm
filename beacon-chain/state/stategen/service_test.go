@@ -46,4 +46,3 @@ func TestResume(t *testing.T) {
 		t.Errorf("Did not get wanted root")
 	}
 }
-
