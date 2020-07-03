@@ -228,9 +228,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		if err := stream.Close(); err != nil { // Close before disconnecting.
 			log.WithError(err).Error("Failed to close stream")
 		}
-		// Add a short delay to allow the stream to flush before closing the connection.
-		// There is still a chance that the peer won't receive the message.
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(flushDelay)
 		if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
 			log.WithError(err).Error("Failed to disconnect from peer")
 		}
