@@ -13,28 +13,23 @@ import (
 func (kv *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.ProposerSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ProposerSlashing")
 	defer span.End()
-	var slashing *ethpb.ProposerSlashing
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(proposerSlashingsBucket)
-		enc := bkt.Get(slashingRoot[:])
-		if enc == nil {
-			return nil
-		}
-		slashing = &ethpb.ProposerSlashing{}
-		return decode(ctx, enc, slashing)
-	})
-	return slashing, err
+	enc, err := kv.proposerSlashingBytes(ctx, slashingRoot)
+	if err != nil {
+		return nil, err
+	}
+	proposerSlashing := &ethpb.ProposerSlashing{}
+	return proposerSlashing, decode(ctx, enc, proposerSlashing)
 }
 
 // HasProposerSlashing verifies if a slashing is stored in the db.
 func (kv *Store) HasProposerSlashing(ctx context.Context, slashingRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasProposerSlashing")
 	defer span.End()
-	proposerSlashing, err := kv.ProposerSlashing(ctx, slashingRoot)
+	enc, err := kv.proposerSlashingBytes(ctx, slashingRoot)
 	if err != nil {
 		panic(err)
 	}
-	return proposerSlashing != nil
+	return len(enc) > 0
 }
 
 // SaveProposerSlashing to the db by its hash tree root.
@@ -55,6 +50,18 @@ func (kv *Store) SaveProposerSlashing(ctx context.Context, slashing *ethpb.Propo
 	})
 }
 
+func (kv *Store) proposerSlashingBytes(ctx context.Context, slashingRoot [32]byte) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.proposerSlashingBytes")
+	defer span.End()
+	var dst []byte
+	err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(proposerSlashingsBucket)
+		dst = bkt.Get(slashingRoot[:])
+		return nil
+	})
+	return dst, err
+}
+
 // deleteProposerSlashing clears a proposer slashing from the db by its hash tree root.
 func (kv *Store) deleteProposerSlashing(ctx context.Context, slashingRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteProposerSlashing")
@@ -69,28 +76,23 @@ func (kv *Store) deleteProposerSlashing(ctx context.Context, slashingRoot [32]by
 func (kv *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttesterSlashing")
 	defer span.End()
-	var slashing *ethpb.AttesterSlashing
-	err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attesterSlashingsBucket)
-		enc := bkt.Get(slashingRoot[:])
-		if enc == nil {
-			return nil
-		}
-		slashing = &ethpb.AttesterSlashing{}
-		return decode(ctx, enc, slashing)
-	})
-	return slashing, err
+	enc, err := kv.attesterSlashingBytes(ctx, slashingRoot)
+	if err != nil {
+		return nil, err
+	}
+	attSlashing := &ethpb.AttesterSlashing{}
+	return attSlashing, decode(ctx, enc, attSlashing)
 }
 
 // HasAttesterSlashing verifies if a slashing is stored in the db.
 func (kv *Store) HasAttesterSlashing(ctx context.Context, slashingRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasAttesterSlashing")
 	defer span.End()
-	attesterSlashing, err := kv.AttesterSlashing(ctx, slashingRoot)
+	enc, err := kv.attesterSlashingBytes(ctx, slashingRoot)
 	if err != nil {
 		panic(err)
 	}
-	return attesterSlashing != nil
+	return len(enc) > 0
 }
 
 // SaveAttesterSlashing to the db by its hash tree root.
@@ -109,6 +111,18 @@ func (kv *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.Attes
 		bucket := tx.Bucket(attesterSlashingsBucket)
 		return bucket.Put(slashingRoot[:], enc)
 	})
+}
+
+func (kv *Store) attesterSlashingBytes(ctx context.Context, exitRoot [32]byte) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.voluntaryExitBytes")
+	defer span.End()
+	var dst []byte
+	err := kv.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(voluntaryExitsBucket)
+		dst := bkt.Get(exitRoot[:])
+		return nil
+	})
+	return dst, err
 }
 
 // deleteAttesterSlashing clears an attester slashing from the db by its hash tree root.

@@ -538,6 +538,9 @@ func (b *BeaconState) BalancesLength() int {
 
 // RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopy2DByteSlice(b.state.RandaoMixes)
 }
 
@@ -596,11 +599,17 @@ func (b *BeaconState) Slashings() []uint64 {
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopyPendingAttestationSlice(b.state.PreviousEpochAttestations)
 }
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopyPendingAttestationSlice(b.state.CurrentEpochAttestations)
 }
 
@@ -623,16 +632,25 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 
 // PreviousJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // FinalizedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
@@ -651,9 +669,6 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 }
 
 func (b *BeaconState) safeCopy2DByteSlice(input [][]byte) [][]byte {
-	if !b.HasInnerState() {
-		return nil
-	}
 	if input == nil {
 		return nil
 	}
