@@ -58,10 +58,12 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	blockReceiver := s.chain.ReceiveBlockInitialSync
 
 	// Step 1 - Sync to end of finalized epoch.
-	for blk := range queue.fetchedBlocks {
-		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
-			log.WithError(err).Info("Block is not processed")
-			continue
+	for fetchedBlocks := range queue.fetchedBlocks {
+		for _, blk := range fetchedBlocks {
+			if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+				log.WithError(err).Info("Block is not processed")
+				continue
+			}
 		}
 	}
 
