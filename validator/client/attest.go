@@ -111,7 +111,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.WithFields(logrus.Fields{
 			"sourceEpoch": indexedAtt.Data.Source.Epoch,
 			"targetEpoch": indexedAtt.Data.Target.Epoch,
-		}).WithError(err).Fatal("Failed post attestation signing updates")
+		}).WithError(err).Error("Failed post attestation signing updates")
 		return
 	}
 
