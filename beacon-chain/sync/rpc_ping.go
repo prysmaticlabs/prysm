@@ -85,7 +85,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	currentTime := roughtime.Now()
 	defer func() {
 		if err := helpers.FullClose(stream); err != nil {
-			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 

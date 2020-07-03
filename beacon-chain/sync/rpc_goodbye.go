@@ -67,7 +67,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code uint64, id peer.I
 	}
 	defer func() {
 		if err := helpers.FullClose(stream); err != nil {
-			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 	log := log.WithField("Reason", goodbyeMessage(code))

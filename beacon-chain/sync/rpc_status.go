@@ -126,7 +126,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 	defer func() {
 		if err := streamhelpers.FullClose(stream); err != nil {
-			log.WithError(err).Errorf("Failed to reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
 

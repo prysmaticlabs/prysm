@@ -72,7 +72,7 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		defer cancel()
 		defer func() {
 			if err := helpers.FullClose(stream); err != nil {
-				log.WithError(err).Error("Failed to reset stream")
+				log.WithError(err).Debug("Failed to reset stream")
 			}
 		}()
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
