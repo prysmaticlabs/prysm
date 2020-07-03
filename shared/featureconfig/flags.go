@@ -98,9 +98,9 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
-	enableNoiseHandshake = &cli.BoolFlag{
-		Name: "enable-noise",
-		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
+	disableNoiseHandshake = &cli.BoolFlag{
+		Name: "disable-noise",
+		Usage: "This disables the beacon node from using NOISE and instead uses SECIO instead for performing handshakes between peers and " +
 			"securing transports between peers",
 	}
 	dontPruneStateStartUp = &cli.BoolFlag{
@@ -131,10 +131,6 @@ var (
 		Name:  "disable-reduce-attester-state-copy",
 		Usage: "Disables the feature to reduce the amount of state copies for attester rpc",
 	}
-	enableStreamDuties = &cli.BoolFlag{
-		Name:  "enable-stream-duties",
-		Usage: "Enables validator duties streaming in the validator client",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -164,6 +160,11 @@ var devModeFlags = []cli.Flag{
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
+	deprecatedP2PEncoding = &cli.StringFlag{
+		Name:   "p2p-encoding",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedP2PPubsub = &cli.StringFlag{
 		Name:   "p2p-pubsub",
 		Usage:  deprecatedUsage,
@@ -435,9 +436,35 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableNoise = &cli.BoolFlag{
+		Name:   "enable-noise",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchival = &cli.BoolFlag{
+		Name:   "archive",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveValiatorSetChanges = &cli.BoolFlag{
+		Name:   "archive-validator-set-changes",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveBlocks = &cli.BoolFlag{
+		Name:   "archive-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedArchiveAttestation = &cli.BoolFlag{
+		Name:   "archive-attestations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
+	deprecatedP2PEncoding,
 	deprecatedP2PPubsub,
 	deprecatedEnableKadDht,
 	deprecatedWeb3ProviderFlag,
@@ -492,13 +519,17 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableStateRefCopy,
 	deprecatedDisableFieldTrie,
 	deprecateddisableInitSyncBatchSaveBlocks,
+	deprecatedEnableNoise,
+	deprecatedArchival,
+	deprecatedArchiveBlocks,
+	deprecatedArchiveValiatorSetChanges,
+	deprecatedArchiveAttestation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableProtectAttesterFlag,
 	enableProtectProposerFlag,
-	enableStreamDuties,
 	enableExternalSlasherProtectionFlag,
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
@@ -516,7 +547,6 @@ var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-protect-attester",
 	"--enable-protect-proposer",
-	// "--enable-stream-duties", // Currently disabled due to e2e flakes.
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -536,7 +566,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableUpdateHeadPerAttestation,
 	enableStateGenSigVerify,
 	checkHeadState,
-	enableNoiseHandshake,
+	disableNoiseHandshake,
 	dontPruneStateStartUp,
 	disableBroadcastSlashingFlag,
 	waitForSyncedFlag,

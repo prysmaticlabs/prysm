@@ -13,8 +13,7 @@
   },
   "lostcancel": {
     "exclude_files": {
-      "validator/client/streaming/runner.go": "No need to cancel right when goroutines begin",
-      "validator/client/polling/runner.go": "No need to cancel right when goroutines begin",
+      "validator/client/runner.go": "No need to cancel right when goroutines begin",
       "external/.*": "Third party code"
     }
   },

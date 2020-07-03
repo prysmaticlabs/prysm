@@ -4,7 +4,7 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"go.opencensus.io/trace"
 )
 
@@ -30,7 +30,7 @@ func (bs *Service) RequestHistoricalAttestations(
 			QueryFilter: &ethpb.ListIndexedAttestationsRequest_Epoch{
 				Epoch: epoch,
 			},
-			PageSize:  int32(params.BeaconConfig().DefaultPageSize),
+			PageSize:  int32(cmd.Get().MaxRPCPageSize),
 			PageToken: res.NextPageToken,
 		})
 		if err != nil {

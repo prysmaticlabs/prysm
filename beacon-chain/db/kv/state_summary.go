@@ -13,14 +13,7 @@ func (kv *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary)
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
 
-	enc, err := encode(summary)
-	if err != nil {
-		return err
-	}
-	return kv.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateSummaryBucket)
-		return bucket.Put(summary.Root, enc)
-	})
+	return kv.SaveStateSummaries(ctx, []*pb.StateSummary{summary})
 }
 
 // SaveStateSummaries saves state summary objects to the DB.
@@ -31,7 +24,7 @@ func (kv *Store) SaveStateSummaries(ctx context.Context, summaries []*pb.StateSu
 	return kv.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSummaryBucket)
 		for _, summary := range summaries {
-			enc, err := encode(summary)
+			enc, err := encode(ctx, summary)
 			if err != nil {
 				return err
 			}
@@ -56,7 +49,7 @@ func (kv *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Stat
 			return nil
 		}
 		summary = &pb.StateSummary{}
-		return decode(enc, summary)
+		return decode(ctx, enc, summary)
 	})
 
 	return summary, err

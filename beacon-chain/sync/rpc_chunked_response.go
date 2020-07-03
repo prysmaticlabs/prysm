@@ -2,7 +2,6 @@ package sync
 
 import (
 	"errors"
-	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -24,7 +23,7 @@ func WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	_, err := encoding.EncodeWithMaxLength(stream, msg, maxChunkSize)
+	_, err := encoding.EncodeWithMaxLength(stream, msg)
 	return err
 }
 
@@ -41,7 +40,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.SignedBeaconB
 // readResponseChunk reads the response from the stream and decodes it into the
 // provided message type.
 func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) error {
-	SetStreamReadDeadline(stream, 10*time.Second)
+	SetStreamReadDeadline(stream, respTimeout)
 	code, errMsg, err := ReadStatusCode(stream, p2p.Encoding())
 	if err != nil {
 		return err
@@ -50,5 +49,5 @@ func readResponseChunk(stream libp2pcore.Stream, p2p p2p.P2P, to interface{}) er
 	if code != 0 {
 		return errors.New(errMsg)
 	}
-	return p2p.Encoding().DecodeWithMaxLength(stream, to, maxChunkSize)
+	return p2p.Encoding().DecodeWithMaxLength(stream, to)
 }

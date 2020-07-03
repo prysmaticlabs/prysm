@@ -65,6 +65,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		port:         cfg.Port,
 		detector:     cfg.Detector,
 		slasherDB:    cfg.SlasherDB,
+		withCert:     cfg.CertFlag,
+		withKey:      cfg.KeyFlag,
 		beaconclient: cfg.BeaconClient,
 	}
 }
@@ -106,6 +108,10 @@ func (s *Service) Start() {
 			s.credentialError = err
 		}
 		opts = append(opts, grpc.Creds(creds))
+	} else {
+		log.Warn("You are using an insecure gRPC server. If you are running your slasher and " +
+			"validator on the same machines, you can ignore this message. If you want to know " +
+			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 

@@ -570,11 +570,22 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "Two peers available",
+			name: "Two peers available, excluded first",
 			args: args{
 				excludedPID: "abc",
 				peers: []peer.ID{
 					"abc", "cde",
+				},
+			},
+			want:    "cde",
+			wantErr: nil,
+		},
+		{
+			name: "Two peers available, excluded second",
+			args: args{
+				excludedPID: "abc",
+				peers: []peer.ID{
+					"cde", "abc",
 				},
 			},
 			want:    "cde",

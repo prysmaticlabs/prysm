@@ -475,7 +475,7 @@ func ProcessOperations(
 	if err := b.VerifyAttestations(ctx, state, body.Attestations); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, body)
+	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
@@ -535,7 +535,7 @@ func ProcessOperationsNoVerify(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, body)
+	state, err = b.ProcessDeposits(ctx, state, body.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block validator deposits")
 	}
