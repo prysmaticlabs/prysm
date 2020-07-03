@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -96,6 +97,27 @@ func (w *Wallet) AccountsDir() string {
 	return w.accountsPath
 }
 
+// AccountNames reads all account names at the wallet's path.
+func (w *Wallet) AccountNames() ([]string, error) {
+	accountsDir, err := os.Open(w.accountsPath)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := accountsDir.Close(); err != nil {
+			log.WithField(
+				"directory", w.accountsPath,
+			).Errorf("Could not close accounts directory: %v", err)
+		}
+	}()
+
+	list, err := accountsDir.Readdirnames(0) // 0 to read all files and folders.
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read files in directory: %s", w.accountsPath)
+	}
+	return list, err
+}
+
 // WriteAccountToDisk creates an account directory under a unique namespace
 // within the wallet's path. It additionally writes the account's password to the
 // wallet's passwords directory. Returns the unique account name.
@@ -182,6 +204,48 @@ func (w *Wallet) WriteKeymanagerConfigToDisk(ctx context.Context, encoded []byte
 	}
 	log.WithField("configFile", configFilePath).Debug("Wrote keymanager config file to disk")
 	return nil
+}
+
+// ReadPasswordForAccount when given an account name from the wallet's passwords' path.
+func (w *Wallet) ReadPasswordForAccount(accountName string) (string, error) {
+	passwordFilePath := path.Join(w.passwordsDir, accountName+passwordFileSuffix)
+	passwordFile, err := os.Open(passwordFilePath)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not read password file from directory: %s", w.passwordsDir)
+	}
+	defer func() {
+		if err := passwordFile.Close(); err != nil {
+			log.Errorf("Could not close password file: %s", passwordFilePath)
+		}
+	}()
+	password, err := ioutil.ReadAll(passwordFile)
+	if err != nil {
+		return "", errors.Wrapf(err, "could not read data from password file: %s", passwordFilePath)
+	}
+	return string(password), nil
+}
+
+// ReadFileForAccount from the wallet's accounts directory.
+func (w *Wallet) ReadFileForAccount(accountName string, fileName string) ([]byte, error) {
+	accountPath := path.Join(w.accountsPath, accountName)
+	exists, err := hasDir(accountPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if account exists in directory: %s", w.accountsPath)
+	}
+	if !exists {
+		return nil, errors.Wrapf(err, "account does not exist in wallet directory: %s", w.accountsPath)
+	}
+	filePath := path.Join(accountPath, fileName)
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read file for account: %s", filePath)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Errorf("Could not close file after writing: %s", filePath)
+		}
+	}()
+	return ioutil.ReadAll(f)
 }
 
 // Writes the password file for an account namespace in the wallet's passwords directory.
