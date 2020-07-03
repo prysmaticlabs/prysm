@@ -119,7 +119,7 @@ func (kv *Store) attesterSlashingBytes(ctx context.Context, exitRoot [32]byte) (
 	var dst []byte
 	err := kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(voluntaryExitsBucket)
-		dst := bkt.Get(exitRoot[:])
+		dst = bkt.Get(exitRoot[:])
 		return nil
 	})
 	return dst, err
