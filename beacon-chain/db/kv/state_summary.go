@@ -45,7 +45,10 @@ func (kv *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Stat
 		return nil, err
 	}
 	summary := &pb.StateSummary{}
-	return summary, decode(ctx, enc, summary)
+	if err := decode(ctx, enc, summary); err != nil {
+		return nil, err
+	}
+	return summary, nil
 }
 
 // HasStateSummary returns true if a state summary exists in DB.

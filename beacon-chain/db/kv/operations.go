@@ -18,7 +18,10 @@ func (kv *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.V
 		return nil, err
 	}
 	exit := &ethpb.VoluntaryExit{}
-	return exit, decode(ctx, enc, exit)
+	if err := decode(ctx, enc, exit); err != nil {
+		return nil, err
+	}
+	return exit, nil
 }
 
 // HasVoluntaryExit verifies if a voluntary exit is stored in the db by its signing root.

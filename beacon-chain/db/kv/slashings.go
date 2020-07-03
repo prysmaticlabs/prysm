@@ -18,7 +18,10 @@ func (kv *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*
 		return nil, err
 	}
 	proposerSlashing := &ethpb.ProposerSlashing{}
-	return proposerSlashing, decode(ctx, enc, proposerSlashing)
+	if err := decode(ctx, enc, proposerSlashing); err != nil {
+		return nil, err
+	}
+	return proposerSlashing, nil
 }
 
 // HasProposerSlashing verifies if a slashing is stored in the db.
@@ -81,7 +84,10 @@ func (kv *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*
 		return nil, err
 	}
 	attSlashing := &ethpb.AttesterSlashing{}
-	return attSlashing, decode(ctx, enc, attSlashing)
+	if err := decode(ctx, enc, attSlashing); err != nil {
+		return nil, err
+	}
+	return attSlashing, nil
 }
 
 // HasAttesterSlashing verifies if a slashing is stored in the db.
