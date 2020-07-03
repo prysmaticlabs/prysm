@@ -116,7 +116,7 @@ func (w *Wallet) WriteAccountToDisk(ctx context.Context, password string) (strin
 	return accountName, nil
 }
 
-// WriteFileForAccount stores a unique ficle and its data under an account namespace
+// WriteFileForAccount stores a unique file and its data under an account namespace
 // in the wallet's directory on-disk. Creates the file if it does not exist
 // and writes over it otherwise.
 func (w *Wallet) WriteFileForAccount(ctx context.Context, accountName string, fileName string, data []byte) error {
