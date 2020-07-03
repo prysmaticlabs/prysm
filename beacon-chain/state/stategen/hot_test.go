@@ -48,7 +48,6 @@ func TestSaveHotState_AlreadyHas(t *testing.T) {
 }
 
 func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
@@ -64,13 +63,16 @@ func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
 	}
 
 	// Should save both state and state summary.
-	if !service.beaconDB.HasState(ctx, r) {
-		t.Error("Should have saved the state")
+	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("Did not save epoch boundary state")
 	}
 	if !service.stateSummaryCache.Has(r) {
 		t.Error("Should have saved the state summary")
 	}
-	testutil.AssertLogsContain(t, hook, "Saved full state on epoch boundary")
 }
 
 func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
@@ -130,46 +132,43 @@ func TestLoadHoteStateByRoot_Cached(t *testing.T) {
 	}
 }
 
-func TestLoadHoteStateByRoot_FromDBCanProcess(t *testing.T) {
+func TestLoadHoteStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 	service := New(db, cache.NewStateSummaryCache())
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gBlkRoot, err := stateutil.BlockRoot(gBlk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.epochBoundaryStateCache.put(gBlkRoot, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 11, ParentRoot: gBlkRoot[:], ProposerIndex: 8}}
+	if err := service.beaconDB.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
 	blkRoot, err := stateutil.BlockRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	targetSlot := uint64(10)
-	targetRoot := [32]byte{'a'}
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
-		Slot: targetSlot,
-		Root: targetRoot[:],
+		Slot: 10,
+		Root: blkRoot[:],
 	}); err != nil {
-		t.Fatal(err)
-	}
-	beaconState, _ = testutil.DeterministicGenesisState(t, 32)
-	if err := beaconState.SetSlot(10); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveState(ctx, beaconState, targetRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	// This tests where hot state was not cached and needs processing.
-	loadedState, err := service.loadHotStateByRoot(ctx, targetRoot)
+	loadedState, err := service.loadHotStateByRoot(ctx, blkRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if loadedState.Slot() != targetSlot {
+	if loadedState.Slot() != 10 {
 		t.Error("Did not correctly load state")
 	}
 }
@@ -185,10 +184,7 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := service.beaconDB.SaveState(ctx, beaconState, blkRoot); err != nil {
+	if err := service.epochBoundaryStateCache.put(blkRoot, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	targetSlot := uint64(0)
@@ -205,7 +201,6 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if loadedState.Slot() != targetSlot {
 		t.Error("Did not correctly load state")
 	}
