@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"strings"
+	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -70,8 +71,11 @@ func (s *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		ctx, cancel := context.WithTimeout(context.Background(), ttfbTimeout)
 		defer cancel()
 		defer func() {
-			if err := stream.Close(); err != nil {
-				log.WithError(err).Error("Failed to close stream")
+			// Allow the contents of the stream to be relayed
+			// to the other peer before resetting it.
+			time.Sleep(50 * time.Millisecond)
+			if err := stream.Reset(); err != nil {
+				log.WithError(err).Error("Failed to reset stream")
 			}
 		}()
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
