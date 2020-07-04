@@ -126,7 +126,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
@@ -156,15 +156,15 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch*5 + 2
 	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), slot, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
@@ -194,15 +194,15 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 
 	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
@@ -215,10 +215,14 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
+	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Times(2).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
+	).Return(&ethpb.BeaconBlock{
+		Slot: farAhead,
+		Body: &ethpb.BeaconBlockBody{},
+	}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -230,18 +234,24 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
-	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farAhead, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 
 	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
+	m.validatorClient.EXPECT().GetBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&ethpb.BeaconBlock{
+		Slot: past,
+		Body: &ethpb.BeaconBlockBody{},
+	}, nil /*err*/)
 	validator.ProposeBlock(context.Background(), past, validatorPubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
@@ -254,10 +264,14 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 		gomock.Any(), //epoch
 	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
+	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	m.validatorClient.EXPECT().GetBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Times(2).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
+	).Return(&ethpb.BeaconBlock{
+		Slot: farAhead,
+		Body: &ethpb.BeaconBlockBody{},
+	}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -270,12 +284,19 @@ func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
 	pubKey := validatorPubKey
-	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farAhead, pubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
+
+	m.validatorClient.EXPECT().GetBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(&ethpb.BeaconBlock{
+		Slot: farAhead - 4,
+		Body: &ethpb.BeaconBlockBody{},
+	}, nil /*err*/)
 
 	validator.ProposeBlock(context.Background(), farAhead-4, pubKey)
-	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+	testutil.AssertLogsDoNotContain(t, hook, failedPreBlockSignLocalErr)
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {

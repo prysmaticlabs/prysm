@@ -1,6 +1,7 @@
 package aggregation
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -194,4 +195,9 @@ func (cl *MaxCoverCandidates) validate() error {
 		}
 	}
 	return nil
+}
+
+// String provides string representation of a candidate.
+func (c *MaxCoverCandidate) String() string {
+	return fmt.Sprintf("{%v, %#b, s%d, %t}", c.key, c.bits, c.score, c.processed)
 }

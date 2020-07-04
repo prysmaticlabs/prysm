@@ -7,6 +7,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	streamhelpers "github.com/libp2p/go-libp2p-core/helpers"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
@@ -125,7 +126,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 	defer func() {
-		if err := streamhelpers.FullClose(stream); err != nil {
+		if err := streamhelpers.FullClose(stream); err != nil && err.Error() != mux.ErrReset.Error() {
 			log.WithError(err).Debugf("Failed to reset stream with protocol %s", stream.Protocol())
 		}
 	}()
@@ -227,9 +228,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 		if err := stream.Close(); err != nil { // Close before disconnecting.
 			log.WithError(err).Error("Failed to close stream")
 		}
-		// Add a short delay to allow the stream to flush before closing the connection.
-		// There is still a chance that the peer won't receive the message.
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(flushDelay)
 		if err := s.p2p.Disconnect(stream.Conn().RemotePeer()); err != nil {
 			log.WithError(err).Error("Failed to disconnect from peer")
 		}

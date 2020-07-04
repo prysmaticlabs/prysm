@@ -26,11 +26,11 @@ func TestService_VerifyAttestation(t *testing.T) {
 			},
 		},
 	}
-	if s.VerifyAttestation(context.Background(), att) {
+	if s.CheckAttestationSafety(context.Background(), att) {
 		t.Error("Expected verify attestation to fail verification")
 	}
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashAttestation: false}}
-	if !s.VerifyAttestation(context.Background(), att) {
+	if !s.CheckAttestationSafety(context.Background(), att) {
 		t.Error("Expected verify attestation to pass verification")
 	}
 }
@@ -91,11 +91,11 @@ func TestService_VerifyBlock(t *testing.T) {
 		StateRoot:     []byte("state"),
 		BodyRoot:      []byte("body"),
 	}
-	if s.VerifyBlock(context.Background(), blk) {
+	if s.CheckBlockSafety(context.Background(), blk) {
 		t.Error("Expected verify block to fail verification")
 	}
 	s = &Service{slasherClient: mockSlasher.MockSlasher{SlashBlock: false}}
-	if !s.VerifyBlock(context.Background(), blk) {
+	if !s.CheckBlockSafety(context.Background(), blk) {
 		t.Error("Expected verify block to pass verification")
 	}
 }
