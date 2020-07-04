@@ -14,9 +14,6 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
-
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -30,13 +27,14 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	keymanager "github.com/prysmaticlabs/prysm/validator/keymanager/v1"
 	slashing_protection "github.com/prysmaticlabs/prysm/validator/slashing-protection"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logrus.WithField("prefix", "node")
 
-// ValidatorClient defines an instance of a sharding validator that manages
-// the entire lifecycle of services attached to it participating in
-// Ethereum Serenity.
+// ValidatorClient defines an instance of an eth2 validator that manages
+// the entire lifecycle of services attached to it participating in eth2.
 type ValidatorClient struct {
 	cliCtx   *cli.Context
 	services *shared.ServiceRegistry // Lifecycle and service store.
@@ -44,7 +42,7 @@ type ValidatorClient struct {
 	stop     chan struct{} // Channel to wait for termination notifications.
 }
 
-// NewValidatorClient creates a new, Ethereum Serenity validator client.
+// NewValidatorClient creates a new, Prysm validator client.
 func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
@@ -176,7 +174,7 @@ func (s *ValidatorClient) Close() {
 	defer s.lock.Unlock()
 
 	s.services.StopAll()
-	log.Info("Stopping sharding validator")
+	log.Info("Stopping Prysm validator")
 
 	close(s.stop)
 }

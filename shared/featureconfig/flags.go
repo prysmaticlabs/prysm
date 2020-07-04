@@ -144,6 +144,10 @@ var (
 		Name:  "altona",
 		Usage: "This defines the flag through which we can run on the Altona Multiclient Testnet",
 	}
+	enableAccountsV2 = &cli.BoolFlag{
+		Name:  "enable-accounts-v2",
+		Usage: "Enables usage of v2 for Prysm validator accounts",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -541,6 +545,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableDomainDataCacheFlag,
 	waitForSyncedFlag,
 	altonaTestnet,
+	enableAccountsV2,
 }...)
 
 // SlasherFlags contains a list of all the feature flags that apply to the slasher client.
@@ -553,6 +558,7 @@ var SlasherFlags = append(deprecatedFlags, []cli.Flag{
 var E2EValidatorFlags = []string{
 	"--wait-for-synced",
 	"--enable-local-protection",
+	"--enable-accounts-v2",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
