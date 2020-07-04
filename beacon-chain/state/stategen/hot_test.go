@@ -134,8 +134,8 @@ func TestLoadHoteStateByRoot_Cached(t *testing.T) {
 
 func TestLoadHoteStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
-	service := New(db, cache.NewStateSummaryCache())
+	db, ssc := testDB.SetupDB(t)
+	service := New(db, ssc)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}

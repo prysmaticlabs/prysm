@@ -74,7 +74,7 @@ func (s *State) SaveFinalizedState(fSlot uint64, fRoot [32]byte, fState *state.B
 	s.finalizedInfo.lock.Lock()
 	defer s.finalizedInfo.lock.Unlock()
 	s.finalizedInfo.root = fRoot
-	s.finalizedInfo.state = fState
+	s.finalizedInfo.state = fState.Copy()
 	s.finalizedInfo.slot = fSlot
 }
 
