@@ -212,7 +212,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	return nil
 }
 
-//UpdateLogAggregateStats updates and logs the summaryStats struct of a validator using RPC response obtained during LogValidatorGainsAndLosses
+//UpdateLogAggregateStats updates and logs the summaryStats struct of a validator using the RPC response obtained during LogValidatorGainsAndLosses
 func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
 	summary := &v.summaryStats
 	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
@@ -256,16 +256,15 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		totalStartBal += val
 		totalPrevBal += v.prevBalance[i]
 	}
-	pctChangeComboBal := (float64(totalPrevBal) - float64(totalStartBal)) / float64(totalStartBal) * 100
 
 	log.WithFields(logrus.Fields{
-		//+1 to adjust for original startEpoch calc
+		//+1 to adjust for the original startEpoch calculation
 		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch+1),
 		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttests)/float64(summary.totalAttestSlots))*100),
-		"averageInclusionDistance": fmt.Sprintf("%.1f slots", float64(summary.totalDistance)/float64(summary.includedAttests)),
+		"averageInclusionDistance": fmt.Sprintf("%.2f slots", float64(summary.totalDistance)/float64(summary.includedAttests)),
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
 		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.correctTargets)/float64(summary.totalTargets))*100),
 		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.correctHeads)/float64(summary.totalHeads))*100),
-		"pctChangeCombinedBalance": fmt.Sprintf("%.5f%%", pctChangeComboBal),
+		"pctChangeCombinedBalance": fmt.Sprintf("%.5f%%", (float64(totalPrevBal)-float64(totalStartBal))/float64(totalStartBal)*100),
 	}).Info("Aggregate summary since start of node")
 }
