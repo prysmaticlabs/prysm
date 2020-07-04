@@ -65,7 +65,7 @@ func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
 	}
 }
 
-func TestLoadColdStateByRoot_CanGet(t *testing.T) {
+func TestLoadStateByRoot_CanGet(t *testing.T) {
 	ctx := context.Background()
 	db, _ := testDB.SetupDB(t)
 

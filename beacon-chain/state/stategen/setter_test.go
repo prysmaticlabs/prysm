@@ -62,11 +62,11 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	}
 
 	// Should save both state and state summary.
-	_, e, err := service.epochBoundaryStateCache.getByRoot(r)
+	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !e {
+	if !ok {
 		t.Error("Should have saved the state")
 	}
 	if !service.stateSummaryCache.Has(r) {

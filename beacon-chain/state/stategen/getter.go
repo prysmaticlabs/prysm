@@ -18,19 +18,32 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
-	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
+	// Genesis case. If block root is zero hash, short circuit to use genesis cachedState stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
-	// Short cut if the state is already in the DB.
+	// Short cut if the state is already in the caches.
+	cachedState := s.hotStateCache.Get(blockRoot)
+	if cachedState != nil {
+		return cachedState, nil
+	}
+	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return cachedInfo.state, nil
+	}
+
+	// Short cut if the cachedState is already in the DB.
 	if s.beaconDB.HasState(ctx, blockRoot) {
 		return s.beaconDB.State(ctx, blockRoot)
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get state summary")
+		return nil, errors.Wrap(err, "could not get cachedState summary")
 	}
 
 	if summary.Slot < s.finalizedInfo.slot {
