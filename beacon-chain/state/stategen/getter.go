@@ -26,14 +26,14 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	// Short cut if the state is already in the caches.
 	cachedState := s.hotStateCache.Get(blockRoot)
 	if cachedState != nil {
-		return cachedState, nil
+		return cachedState.Copy(), nil
 	}
 	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
 	if err != nil {
 		return nil, err
 	}
 	if ok {
-		return cachedInfo.state, nil
+		return cachedInfo.state.Copy(), nil
 	}
 
 	// Short cut if the cachedState is already in the DB.
