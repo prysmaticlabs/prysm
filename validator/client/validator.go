@@ -52,7 +52,9 @@ type validator struct {
 	graffiti                           []byte
 	node                               ethpb.NodeClient
 	keyManager                         keymanager.KeyManager
+	startBalance                       map[[48]byte]uint64
 	prevBalance                        map[[48]byte]uint64
+	summaryStats                       aggregateStats
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
 	attLogs                            map[[32]byte]*attSubmitted
@@ -598,4 +600,18 @@ func (v *validator) logDuties(slot uint64, duties []*ethpb.DutiesResponse_Duty) 
 // which subnet has already been pending requested.
 func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
 	return bytesutil.ToBytes64(append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...))
+}
+
+//This will keep account of all pubkeys' attestations
+type aggregateStats struct {
+	startEpoch       uint64
+	includedAttests  uint64
+	totalAttests     uint64
+	totalDistance    uint64
+	correctSource    uint64
+	totalVotedSource uint64
+	correctTarget    uint64
+	totalVotedTarget uint64
+	correctHead      uint64
+	totalVotedHead   uint64
 }

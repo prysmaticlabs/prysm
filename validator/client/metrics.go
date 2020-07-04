@@ -166,8 +166,12 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	votedTarget := 0
 	votedHead := 0
 	prevEpoch := uint64(0)
+	summary := &v.summaryStats // struct to be used for stat aggregation
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
 		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
+		if summary.startEpoch == 0 {
+			summary.startEpoch = prevEpoch + 1 //allows us to use 0 as 'unset' value as prevEpoch may be 0, will account for later
+		}
 	}
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
 	for i, pubKey := range resp.PublicKeys {
@@ -181,18 +185,25 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if v.prevBalance[pubKeyBytes] > 0 {
 			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / gweiPerEth
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / gweiPerEth
+			if _, ok := v.startBalance[pubKeyBytes]; ok == false {
+				v.startBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
+			}
+			startBalance := float64(v.startBalance[pubKeyBytes]) / gweiPerEth
 			percentNet := (newBalance - prevBalance) / prevBalance
+			percentSinceStart := (newBalance - startBalance) / startBalance
 			log.WithFields(logrus.Fields{
-				"pubKey":               truncatedKey,
-				"epoch":                prevEpoch,
-				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
-				"correctlyVotedTarget": resp.CorrectlyVotedTarget[i],
-				"correctlyVotedHead":   resp.CorrectlyVotedHead[i],
-				"inclusionSlot":        resp.InclusionSlots[i],
-				"inclusionDistance":    resp.InclusionDistances[i],
-				"oldBalance":           prevBalance,
-				"newBalance":           newBalance,
-				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
+				"pubKey":                  truncatedKey,
+				"epoch":                   prevEpoch,
+				"correctlyVotedSource":    resp.CorrectlyVotedSource[i],
+				"correctlyVotedTarget":    resp.CorrectlyVotedTarget[i],
+				"correctlyVotedHead":      resp.CorrectlyVotedHead[i],
+				"inclusionSlot":           resp.InclusionSlots[i],
+				"inclusionDistance":       resp.InclusionDistances[i],
+				"startBalance":            startBalance,
+				"oldBalance":              prevBalance,
+				"newBalance":              newBalance,
+				"percentChange":           fmt.Sprintf("%.5f%%", percentNet*100),
+				"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
@@ -201,18 +212,29 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 
 		if resp.InclusionSlots[i] != ^uint64(0) {
 			included++
+			summary.includedAttests++
+			summary.totalDistance += resp.InclusionDistances[i]
+
 		}
 		if resp.CorrectlyVotedSource[i] {
 			votedSource++
+			summary.correctSource++
 		}
 		if resp.CorrectlyVotedTarget[i] {
 			votedTarget++
+			summary.correctTarget++
 		}
 		if resp.CorrectlyVotedHead[i] {
 			votedHead++
+			summary.correctHead++
 		}
 		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
 	}
+
+	summary.totalAttests += uint64(len(resp.InclusionSlots))
+	summary.totalVotedHead += uint64(len(resp.CorrectlyVotedHead))
+	summary.totalVotedSource += uint64(len(resp.CorrectlyVotedSource))
+	summary.totalVotedTarget += uint64(len(resp.CorrectlyVotedTarget))
 
 	log.WithFields(logrus.Fields{
 		"epoch":                          prevEpoch,
@@ -221,6 +243,16 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		"correctlyVotedTargetPercentage": fmt.Sprintf("%.0f%%", (float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
 		"correctlyVotedHeadPercentage":   fmt.Sprintf("%.0f%%", (float64(votedHead)/float64(len(resp.CorrectlyVotedHead)))*100),
 	}).Info("Previous epoch aggregated voting summary")
+
+	log.WithFields(logrus.Fields{
+		//+2 for numberOfEpochs because:  +1 to adjust for original startEpoch calc, +1 as prevEpoch subtracts 1
+		"numberOfEpochs":                  fmt.Sprintf("%d", prevEpoch-summary.startEpoch+2),
+		"attestationsInclusionPercentage": fmt.Sprintf("%.0f%%", (float64(summary.includedAttests)/float64(summary.totalAttests))*100),
+		"averageInclusionDistance":        fmt.Sprintf("%.1f slots", float64(summary.totalDistance)/float64(summary.includedAttests)),
+		"correctlyVotedSourcePercentage":  fmt.Sprintf("%.0f%%", (float64(summary.correctSource)/float64(summary.totalVotedSource))*100),
+		"correctlyVotedTargetPercentage":  fmt.Sprintf("%.0f%%", (float64(summary.correctTarget)/float64(summary.totalVotedTarget))*100),
+		"correctlyVotedHeadPercentage":    fmt.Sprintf("%.0f%%", (float64(summary.correctHead)/float64(summary.totalVotedHead))*100),
+	}).Info("Aggregate voting summary since start of node")
 
 	return nil
 }
