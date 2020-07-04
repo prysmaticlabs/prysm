@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -101,7 +102,7 @@ func TestLoadColdStateByRoot_CanGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if loadedState.Slot() != 100 {
+	if !reflect.DeepEqual(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
 		t.Error("Did not correctly save state")
 	}
 }

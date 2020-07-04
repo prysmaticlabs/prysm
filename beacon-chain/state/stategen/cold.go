@@ -41,6 +41,10 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateByRoot")
 	defer span.End()
 
+	if s.beaconDB.HasState(ctx, blockRoot) {
+		return s.beaconDB.State(ctx, blockRoot)
+	}
+
 	summary, err := s.stateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state summary")
