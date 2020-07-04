@@ -602,16 +602,16 @@ func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
 	return bytesutil.ToBytes64(append(bytesutil.Bytes32(slot), bytesutil.Bytes32(committeeID)...))
 }
 
-//This will keep account of all pubkeys' attestations
+//This will keep account of all pubkeys' attestations.  The total variables other than totalDistance include missed attestations.
 type aggregateStats struct {
 	startEpoch       uint64
 	includedAttests  uint64
 	totalAttestSlots uint64
 	totalDistance    uint64
-	correctSource    uint64
+	correctSources   uint64
 	totalSources     uint64
-	correctTarget    uint64
+	correctTargets   uint64
 	totalTargets     uint64
-	correctHead      uint64
+	correctHeads     uint64
 	totalHeads       uint64
 }

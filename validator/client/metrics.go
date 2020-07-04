@@ -161,15 +161,12 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}
 	}
 
-	included := 0
-	votedSource := 0
-	votedTarget := 0
-	votedHead := 0
 	prevEpoch := uint64(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
 		prevEpoch = (slot / params.BeaconConfig().SlotsPerEpoch) - 1
 		if v.summaryStats.startEpoch == 0 {
-			v.summaryStats.startEpoch = prevEpoch + 1 //allows us to use 0 as 'unset' value as prevEpoch may be 0, will account for later
+			//prevEpoch may be 0 so we store startEpoch (+1). Thus a value of 0 tells us it is not set (default)
+			v.summaryStats.startEpoch = prevEpoch + 1
 		}
 	}
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
@@ -208,29 +205,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
 			}
 		}
-
-		if resp.InclusionSlots[i] != ^uint64(0) {
-			included++
-		}
-		if resp.CorrectlyVotedSource[i] {
-			votedSource++
-		}
-		if resp.CorrectlyVotedTarget[i] {
-			votedTarget++
-		}
-		if resp.CorrectlyVotedHead[i] {
-			votedHead++
-		}
 		v.prevBalance[pubKeyBytes] = resp.BalancesBeforeEpochTransition[i]
 	}
-
-	log.WithFields(logrus.Fields{
-		"epoch":                          prevEpoch,
-		"attestationInclusionPercentage": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
-		"correctlyVotedSourcePercentage": fmt.Sprintf("%.0f%%", (float64(votedSource)/float64(len(resp.CorrectlyVotedSource)))*100),
-		"correctlyVotedTargetPercentage": fmt.Sprintf("%.0f%%", (float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
-		"correctlyVotedHeadPercentage":   fmt.Sprintf("%.0f%%", (float64(votedHead)/float64(len(resp.CorrectlyVotedHead)))*100),
-	}).Info("Previous epoch aggregated voting summary")
 
 	v.UpdateLogAggregateStats(resp, slot)
 	return nil
@@ -239,57 +215,70 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 //UpdateLogAggregateStats updates and logs the summaryStats struct of a validator using RPC response obtained during LogValidatorGainsAndLosses
 func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot uint64) {
 	summary := &v.summaryStats
+	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
+	var included, votedSource, votedTarget, votedHead int
 
 	for i, _ := range resp.PublicKeys {
 		if resp.InclusionSlots[i] != ^uint64(0) {
+			included++
 			summary.includedAttests++
 			summary.totalDistance += resp.InclusionDistances[i]
 		}
 		if resp.CorrectlyVotedSource[i] {
-			summary.correctSource++
+			votedSource++
+			summary.correctSources++
 		}
 		if resp.CorrectlyVotedTarget[i] {
-			summary.correctTarget++
+			votedTarget++
+			summary.correctTargets++
 		}
 		if resp.CorrectlyVotedHead[i] {
-			summary.correctHead++
+			votedHead++
+			summary.correctHeads++
 		}
 	}
 
 	summary.totalAttestSlots += uint64(len(resp.InclusionSlots))
-	summary.totalHeads += uint64(len(resp.CorrectlyVotedHead))
 	summary.totalSources += uint64(len(resp.CorrectlyVotedSource))
 	summary.totalTargets += uint64(len(resp.CorrectlyVotedTarget))
+	summary.totalHeads += uint64(len(resp.CorrectlyVotedHead))
+
+	log.WithFields(logrus.Fields{
+		"epoch":                   currentEpoch - 1,
+		"attestationInclusionPct": fmt.Sprintf("%.0f%%", (float64(included)/float64(len(resp.InclusionSlots)))*100),
+		"correctlyVotedSourcePct": fmt.Sprintf("%.0f%%", (float64(votedSource)/float64(len(resp.CorrectlyVotedSource)))*100),
+		"correctlyVotedTargetPct": fmt.Sprintf("%.0f%%", (float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget)))*100),
+		"correctlyVotedHeadPct":   fmt.Sprintf("%.0f%%", (float64(votedHead)/float64(len(resp.CorrectlyVotedHead)))*100),
+	}).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
 	for i, val := range v.startBalance {
 		totalStartBal += val
 		totalPrevBal += v.prevBalance[i]
 	}
-
-	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
+	pctChangeAllBalances := (float64(totalPrevBal) - float64(totalStartBal)) / float64(totalStartBal) * 100
 
 	log.WithFields(logrus.Fields{
-		//+2 for numberOfEpochs because:  +1 to adjust for original startEpoch calc
-		"numberOfEpochs":                  fmt.Sprintf("%d", currentEpoch-summary.startEpoch+1),
-		"attestationsInclusionPercentage": fmt.Sprintf("%.0f%%", (float64(summary.includedAttests)/float64(summary.totalAttestSlots))*100),
-		"averageInclusionDistance":        fmt.Sprintf("%.1f slots", float64(summary.totalDistance)/float64(summary.includedAttests)),
-		"correctlyVotedSourcePercentage":  fmt.Sprintf("%.0f%%", (float64(summary.correctSource)/float64(summary.totalSources))*100),
-		"correctlyVotedTargetPercentage":  fmt.Sprintf("%.0f%%", (float64(summary.correctTarget)/float64(summary.totalTargets))*100),
-		"correctlyVotedHeadPercentage":    fmt.Sprintf("%.0f%%", (float64(summary.correctHead)/float64(summary.totalHeads))*100),
-		"percentChangeAllBalances":        fmt.Sprintf("%.0f%%", (float64(totalPrevBal)/float64(totalStartBal))*100),
+		//+1 to adjust for original startEpoch calc
+		"numberOfEpochs":           fmt.Sprintf("%d", currentEpoch-summary.startEpoch+1),
+		"attestationsInclusionPct": fmt.Sprintf("%.0f%%", (float64(summary.includedAttests)/float64(summary.totalAttestSlots))*100),
+		"averageInclusionDistance": fmt.Sprintf("%.1f slots", float64(summary.totalDistance)/float64(summary.includedAttests)),
+		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
+		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.correctTargets)/float64(summary.totalTargets))*100),
+		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.correctHeads)/float64(summary.totalHeads))*100),
+		"pctChangeAllBalances":     fmt.Sprintf("%.5f%%", pctChangeAllBalances),
 	}).Info("Aggregate summary since start of node")
 
 	//Delete the following
 	log.WithFields(logrus.Fields{
 		"includedAttests":  summary.includedAttests,
-		"totalAttests":     summary.totalAttestSlots,
+		"totalAttestSlots": summary.totalAttestSlots,
 		"totalDistance":    summary.totalDistance,
-		"correctSource":    summary.correctSource,
-		"totalVotedSource": summary.totalSources,
-		"correctHead":      summary.correctHead,
-		"totalVotedHead":   summary.totalHeads,
-		"correctTarget":    summary.correctTarget,
-		"totalVotedTarget": summary.totalTargets,
+		"correctSources":   summary.correctSources,
+		"totalSources":     summary.totalSources,
+		"correctHeads":     summary.correctHeads,
+		"totalHeads":       summary.totalHeads,
+		"correctTargets":   summary.correctTargets,
+		"totalTargets":     summary.totalTargets,
 	}).Warn("DEBUG ONLY FIELDS")
 }
