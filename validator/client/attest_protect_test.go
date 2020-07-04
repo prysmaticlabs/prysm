@@ -14,7 +14,7 @@ import (
 
 func TestPreSignatureValidation(t *testing.T) {
 	config := &featureconfig.Flags{
-		ProtectAttester:   false,
+		LocalProtection:   false,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
@@ -52,7 +52,7 @@ func TestPreSignatureValidation(t *testing.T) {
 
 func TestPostSignatureUpdate(t *testing.T) {
 	config := &featureconfig.Flags{
-		ProtectAttester:   false,
+		LocalProtection:   false,
 		SlasherProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)

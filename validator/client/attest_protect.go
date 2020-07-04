@@ -17,7 +17,7 @@ var failedPostAttSignExternalErr = "external slasher service detected a submitte
 
 func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().ProtectAttester {
+	if featureconfig.Get().LocalProtection {
 		v.attesterHistoryByPubKeyLock.RLock()
 		attesterHistory := v.attesterHistoryByPubKey[pubKey]
 		v.attesterHistoryByPubKeyLock.RUnlock()
@@ -42,7 +42,7 @@ func (v *validator) preAttSignValidations(ctx context.Context, indexedAtt *ethpb
 
 func (v *validator) postAttSignUpdate(ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [48]byte) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	if featureconfig.Get().ProtectAttester {
+	if featureconfig.Get().LocalProtection {
 		v.attesterHistoryByPubKeyLock.Lock()
 		attesterHistory := v.attesterHistoryByPubKey[pubKey]
 		attesterHistory = markAttestationForTargetEpoch(attesterHistory, indexedAtt.Data.Source.Epoch, indexedAtt.Data.Target.Epoch)
