@@ -543,10 +543,6 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	if !b.HasInnerState() {
 		return nil
 	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	if b.state.Eth1Data == nil {
 		return nil
 	}
@@ -576,10 +572,6 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	if !b.HasInnerState() {
 		return nil
 	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	if b.state.Eth1DataVotes == nil {
 		return nil
 	}
@@ -694,17 +686,16 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if !b.HasInnerState() {
 		return nil, ErrNilInnerState
 	}
+	if b.state.Validators == nil {
+		return &ethpb.Validator{}, nil
+	}
+	if uint64(len(b.state.Validators)) <= idx {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	if b.state.Validators == nil {
-		return &ethpb.Validator{}, nil
-	}
-
-	if uint64(len(b.state.Validators)) <= idx {
-		return nil, fmt.Errorf("index %d out of range", idx)
-	}
 	val := b.state.Validators[idx]
 	return CopyValidator(val), nil
 }
@@ -1199,6 +1190,7 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 }
 
 // finalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
+// This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) finalizedCheckpointEpoch() uint64 {
 	if !b.HasInnerState() {
 		return 0

@@ -172,6 +172,8 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		b.lock.RUnlock()
 		return errors.Errorf("invalid index provided %d", idx)
 	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
