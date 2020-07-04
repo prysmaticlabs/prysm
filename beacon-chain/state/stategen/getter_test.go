@@ -157,9 +157,9 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 
 func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
 	ctx := context.Background()
-	db, _ := testDB.SetupDB(t)
+	db, ssc := testDB.SetupDB(t)
 
-	service := New(db, cache.NewStateSummaryCache())
+	service := New(db, ssc)
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	targetSlot := uint64(10)
