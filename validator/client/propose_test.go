@@ -126,7 +126,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
@@ -164,7 +164,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
@@ -202,7 +202,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()
@@ -251,7 +251,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 
 func TestProposeBlock_AllowsSameEpoch(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		ProtectProposer: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(cfg)
 	defer reset()

@@ -19,7 +19,7 @@ var failedPostBlockSignErr = "made a double proposal, considered slashable by re
 func (v *validator) preBlockSignValidations(ctx context.Context, pubKey [48]byte, block *ethpb.BeaconBlock) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	epoch := helpers.SlotToEpoch(block.Slot)
-	if featureconfig.Get().ProtectProposer {
+	if featureconfig.Get().LocalProtection {
 		slotBits, err := v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
 		if err != nil {
 			if v.emitAccountMetrics {
@@ -69,7 +69,7 @@ func (v *validator) postBlockSignUpdate(ctx context.Context, pubKey [48]byte, bl
 		}
 	}
 
-	if featureconfig.Get().ProtectProposer {
+	if featureconfig.Get().LocalProtection {
 		slotBits, err := v.db.ProposalHistoryForEpoch(ctx, pubKey[:], epoch)
 		if err != nil {
 			if v.emitAccountMetrics {

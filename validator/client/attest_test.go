@@ -81,7 +81,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	config := &featureconfig.Flags{
-		ProtectAttester: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -157,7 +157,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	config := &featureconfig.Flags{
-		ProtectAttester: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -203,7 +203,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	config := &featureconfig.Flags{
-		ProtectAttester: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
@@ -250,7 +250,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	config := &featureconfig.Flags{
-		ProtectAttester: true,
+		LocalProtection: true,
 	}
 	reset := featureconfig.InitWithReset(config)
 	defer reset()
