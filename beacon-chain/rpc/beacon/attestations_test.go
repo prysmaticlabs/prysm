@@ -714,6 +714,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	if err := db.SaveState(ctx, state, bytesutil.ToBytes32(targetRoot2[:])); err != nil {
 		t.Fatal(err)
 	}
+	// Since db state is only used for cold state, we set finalized state ahead of db states to satisfy this case.
+	bs.StateGen.SaveFinalizedState(3, [32]byte{}, nil)
 	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
