@@ -44,6 +44,9 @@ func (kv *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Stat
 	if err != nil {
 		return nil, err
 	}
+	if len(enc) == 0 {
+		return nil, nil
+	}
 	summary := &pb.StateSummary{}
 	if err := decode(ctx, enc, summary); err != nil {
 		return nil, err
