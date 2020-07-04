@@ -37,7 +37,7 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	service.stateGen.SaveFinalizedState(params.BeaconConfig().SlotsPerEpoch*2, [32]byte{}, nil)
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	if err := db.SaveBlock(ctx, genesis); err != nil {
@@ -682,6 +682,7 @@ func TestFinalizedImpliesNewJustified(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		service.stateGen.SaveFinalizedState(params.BeaconConfig().SlotsPerEpoch, [32]byte{}, nil)
 		service.justifiedCheckpt = test.args.cachedCheckPoint
 		if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo(test.want.Root, 32)}); err != nil {
 			t.Fatal(err)

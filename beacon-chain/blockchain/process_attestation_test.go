@@ -120,7 +120,7 @@ func TestStore_OnAttestation(t *testing.T) {
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{Slot: 100 * params.BeaconConfig().SlotsPerEpoch},
 			wantErr:       true,
-			wantErrString: "does not match current epoch",
+			wantErrString: "unknown boundary state",
 		},
 		{
 			name:          "process nil field (a.Target) in attestation",
@@ -209,6 +209,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}); err != nil {
 		t.Fatal(err)
 	}
+	service.stateGen.SaveFinalizedState(cp1.Epoch*params.BeaconConfig().SlotsPerEpoch+1, [32]byte{}, nil)
 	s1, err := service.getAttPreState(ctx, cp1)
 	if err != nil {
 		t.Fatal(err)
