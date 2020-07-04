@@ -125,7 +125,6 @@ func TestGetBlock_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	proposerServer.StateGen.SaveFinalizedState(params.BeaconConfig().SlotsPerEpoch, [32]byte{}, nil)
 	block, err := proposerServer.GetBlock(ctx, req)
 	if err != nil {
 		t.Fatal(err)
@@ -248,7 +247,6 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		RandaoReveal: randaoReveal,
 		Graffiti:     graffiti[:],
 	}
-	proposerServer.StateGen.SaveFinalizedState(params.BeaconConfig().SlotsPerEpoch, [32]byte{}, nil)
 	block, err := proposerServer.GetBlock(ctx, req)
 	if err != nil {
 		t.Fatal(err)
@@ -360,7 +358,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
 		StateGen:          stategen.New(db, sc),
 	}
-	proposerServer.StateGen.SaveFinalizedState(params.BeaconConfig().SlotsPerEpoch, [32]byte{}, nil)
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ProposerIndex: 21,

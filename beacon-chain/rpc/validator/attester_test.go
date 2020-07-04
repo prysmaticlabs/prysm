@@ -502,7 +502,6 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		StateNotifier:       chainService.StateNotifier(),
 		StateGen:            stategen.New(db, sc),
 	}
-	attesterServer.StateGen.SaveFinalizedState(params.BeaconConfig().SlotsPerEpoch*4, [32]byte{}, nil)
 	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}

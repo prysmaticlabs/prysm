@@ -209,7 +209,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: bytesutil.PadTo([]byte{'A'}, 32)}); err != nil {
 		t.Fatal(err)
 	}
-	service.stateGen.SaveFinalizedState(cp1.Epoch*params.BeaconConfig().SlotsPerEpoch+1, [32]byte{}, nil)
+
 	s1, err := service.getAttPreState(ctx, cp1)
 	if err != nil {
 		t.Fatal(err)

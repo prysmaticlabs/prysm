@@ -62,7 +62,6 @@ func TestSaveHead_Different(t *testing.T) {
 	if err := service.beaconDB.SaveState(context.Background(), headState, newRoot); err != nil {
 		t.Fatal(err)
 	}
-	service.stateGen.SaveFinalizedState(newHeadBlock.Slot+1, [32]byte{}, nil)
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +118,6 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	if err := service.beaconDB.SaveState(context.Background(), headState, newRoot); err != nil {
 		t.Fatal(err)
 	}
-	service.stateGen.SaveFinalizedState(newHeadBlock.Slot+1, [32]byte{}, nil)
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +213,6 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	if err := service.beaconDB.SaveState(context.Background(), state, r); err != nil {
 		t.Fatal(err)
 	}
-	service.stateGen.SaveFinalizedState(1, [32]byte{}, nil)
 	if err := service.cacheJustifiedStateBalances(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
