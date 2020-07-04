@@ -18,6 +18,9 @@ func (kv *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.V
 		return nil, err
 	}
 	exit := &ethpb.VoluntaryExit{}
+	if len(enc) == 0 {
+		return nil, nil
+	}
 	if err := decode(ctx, enc, exit); err != nil {
 		return nil, err
 	}

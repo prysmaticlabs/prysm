@@ -18,6 +18,9 @@ func (kv *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*
 		return nil, err
 	}
 	proposerSlashing := &ethpb.ProposerSlashing{}
+	if len(enc) == 0 {
+		return nil, nil
+	}
 	if err := decode(ctx, enc, proposerSlashing); err != nil {
 		return nil, err
 	}
@@ -84,6 +87,9 @@ func (kv *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*
 		return nil, err
 	}
 	attSlashing := &ethpb.AttesterSlashing{}
+	if len(enc) == 0 {
+		return nil, nil
+	}
 	if err := decode(ctx, enc, attSlashing); err != nil {
 		return nil, err
 	}
@@ -119,13 +125,13 @@ func (kv *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.Attes
 	})
 }
 
-func (kv *Store) attesterSlashingBytes(ctx context.Context, exitRoot [32]byte) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.voluntaryExitBytes")
+func (kv *Store) attesterSlashingBytes(ctx context.Context, slashingRoot [32]byte) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.attesterSlashingBytes")
 	defer span.End()
 	var dst []byte
 	err := kv.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(voluntaryExitsBucket)
-		dst = bkt.Get(exitRoot[:])
+		bkt := tx.Bucket(attesterSlashingsBucket)
+		dst = bkt.Get(slashingRoot[:])
 		return nil
 	})
 	return dst, err
