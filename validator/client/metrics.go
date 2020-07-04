@@ -256,7 +256,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		totalStartBal += val
 		totalPrevBal += v.prevBalance[i]
 	}
-	pctChangeAllBalances := (float64(totalPrevBal) - float64(totalStartBal)) / float64(totalStartBal) * 100
+	pctChangeComboBal := (float64(totalPrevBal) - float64(totalStartBal)) / float64(totalStartBal) * 100
 
 	log.WithFields(logrus.Fields{
 		//+1 to adjust for original startEpoch calc
@@ -266,19 +266,6 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 		"correctlyVotedSourcePct":  fmt.Sprintf("%.0f%%", (float64(summary.correctSources)/float64(summary.totalSources))*100),
 		"correctlyVotedTargetPct":  fmt.Sprintf("%.0f%%", (float64(summary.correctTargets)/float64(summary.totalTargets))*100),
 		"correctlyVotedHeadPct":    fmt.Sprintf("%.0f%%", (float64(summary.correctHeads)/float64(summary.totalHeads))*100),
-		"pctChangeAllBalances":     fmt.Sprintf("%.5f%%", pctChangeAllBalances),
+		"pctChangeCombinedBalance": fmt.Sprintf("%.5f%%", pctChangeComboBal),
 	}).Info("Aggregate summary since start of node")
-
-	//Delete the following
-	log.WithFields(logrus.Fields{
-		"includedAttests":  summary.includedAttests,
-		"totalAttestSlots": summary.totalAttestSlots,
-		"totalDistance":    summary.totalDistance,
-		"correctSources":   summary.correctSources,
-		"totalSources":     summary.totalSources,
-		"correctHeads":     summary.correctHeads,
-		"totalHeads":       summary.totalHeads,
-		"correctTargets":   summary.correctTargets,
-		"totalTargets":     summary.totalTargets,
-	}).Warn("DEBUG ONLY FIELDS")
 }
