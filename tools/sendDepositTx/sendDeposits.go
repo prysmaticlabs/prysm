@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/depositutil"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -185,7 +186,7 @@ func main() {
 
 		keyCounter := int64(0)
 		for _, validatorKey := range validatorKeys {
-			data, depositRoot, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
+			data, depositRoot, err := depositutil.DepositInput(validatorKey.SecretKey, validatorKey.SecretKey, depositAmountInGwei)
 			if err != nil {
 				log.Errorf("Could not generate deposit input data: %v", err)
 				continue
