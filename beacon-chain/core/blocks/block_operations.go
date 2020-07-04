@@ -107,6 +107,7 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 	return nil
 }
 
+// retrieves the signature set from the raw data, public key,signature and domain provided.
 func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domain []byte) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
@@ -131,6 +132,7 @@ func retrieveSignatureSet(signedData []byte, pub []byte, signature []byte, domai
 	}, nil
 }
 
+// verifies the signature  from the raw data, public key and domain provided.
 func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
 	set, err := retrieveSignatureSet(signedData, pub, signature, domain)
 	if err != nil {
@@ -267,6 +269,7 @@ func VerifyBlockSignature(beaconState *stateTrie.BeaconState, block *ethpb.Signe
 	return helpers.VerifyBlockSigningRoot(block.Block, proposerPubKey[:], block.Signature, domain)
 }
 
+// BlockSignatureSet retrieves the block signature set from the provided block and its corresponding state.
 func BlockSignatureSet(beaconState *stateTrie.BeaconState, block *ethpb.SignedBeaconBlock) (*bls.SignatureSet, error) {
 	proposer, err := beaconState.ValidatorAtIndex(block.Block.ProposerIndex)
 	if err != nil {
@@ -396,6 +399,8 @@ func ProcessRandao(
 	return beaconState, nil
 }
 
+// RandaoSignatureSet retrieves the relevant randao specific signature set object
+// from a block and its corresponding state.
 func RandaoSignatureSet(beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*bls.SignatureSet, *stateTrie.BeaconState, error) {
@@ -410,6 +415,7 @@ func RandaoSignatureSet(beaconState *stateTrie.BeaconState,
 	return set, beaconState, nil
 }
 
+// retrieves the randao related signing data from the state.
 func randaoSigningData(beaconState *stateTrie.BeaconState) ([]byte, []byte, []byte, error) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -943,13 +949,11 @@ func VerifyAttestations(ctx context.Context, beaconState *stateTrie.BeaconState,
 	return verifyAttestationsWithDomain(ctx, beaconState, postForkAtts, currDomain)
 }
 
+// RetrieveAttestationSignatureSet retrieves all the related attestation signature data such as the relevant pubkeys
+// signatures and attestation signing data and collate it into a signature set object.
 func RetrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation) (*bls.SignatureSet, error) {
 	if len(atts) == 0 {
-		return &bls.SignatureSet{
-			Signatures: []bls.Signature{},
-			PublicKeys: []bls.PublicKey{},
-			Messages:   [][32]byte{},
-		}, nil
+		return bls.NewSet(), nil
 	}
 
 	fork := beaconState.Fork()
@@ -966,11 +970,7 @@ func RetrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie
 			postForkAtts = append(postForkAtts, a)
 		}
 	}
-	set := &bls.SignatureSet{
-		Signatures: []bls.Signature{},
-		PublicKeys: []bls.PublicKey{},
-		Messages:   [][32]byte{},
-	}
+	set := bls.NewSet()
 
 	// Check attestations from before the fork.
 	if fork.Epoch > 0 { // Check to prevent underflow.
@@ -978,7 +978,7 @@ func RetrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie
 		if err != nil {
 			return nil, err
 		}
-		aSet, err := retrieveAttestationSignatureSet(ctx, beaconState, preForkAtts, prevDomain)
+		aSet, err := createAttestationSignatureSet(ctx, beaconState, preForkAtts, prevDomain)
 		if err != nil {
 			return nil, err
 		}
@@ -995,12 +995,11 @@ func RetrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie
 		return nil, err
 	}
 
-	aSet, err := retrieveAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
+	aSet, err := createAttestationSignatureSet(ctx, beaconState, postForkAtts, currDomain)
 	if err != nil {
 		return nil, err
 	}
-	set.Join(aSet)
-	return set, nil
+	return set.Join(aSet), nil
 }
 
 // Inner method to verify attestations. This abstraction allows for the domain to be provided as an
@@ -1009,7 +1008,7 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 	if len(atts) == 0 {
 		return nil
 	}
-	set, err := retrieveAttestationSignatureSet(ctx, beaconState, atts, domain)
+	set, err := createAttestationSignatureSet(ctx, beaconState, atts, domain)
 	if err != nil {
 		return err
 	}
@@ -1023,7 +1022,8 @@ func verifyAttestationsWithDomain(ctx context.Context, beaconState *stateTrie.Be
 	return nil
 }
 
-func retrieveAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) (*bls.SignatureSet, error) {
+// Method to break down attestations of the same domain and collect them into a single signature set.
+func createAttestationSignatureSet(ctx context.Context, beaconState *stateTrie.BeaconState, atts []*ethpb.Attestation, domain []byte) (*bls.SignatureSet, error) {
 	if len(atts) == 0 {
 		return nil, nil
 	}

@@ -131,10 +131,10 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 	return state, nil
 }
 
-// ExecuteStateTransitionNoVerifyAttSigs defines the procedure for a state transition function.
-// This does not validate any BLS signatures of attestations in a block, it is used for performing a state transition as quickly
-// as possible. This function should only be used when we can trust the data we're receiving entirely, such as
-// initial sync or for processing past accepted blocks.
+// ExecuteStateTransitionNoVerify defines the procedure for a state transition function.
+// This does not validate any BLS signatures of attestations, block proposer signature, randao signature,
+// it is used for performing a state transition as quickly as possible. This function also returns a signature
+// set of all signatures not verified, so that they can be stored and verified later.
 //
 // WARNING: This method does not validate any signatures in a block. This method also modifies the passed in state.
 //
@@ -495,6 +495,9 @@ func ProcessBlockNoVerify(
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
+	// Empty Signature Set
+	set := bls.NewSet()
+
 	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
@@ -527,10 +530,11 @@ func ProcessBlockNoVerify(
 		traceutil.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not process block operation")
 	}
-	bSet.Join(rSet)
-	bSet.Join(aSet)
 
-	return bSet, state, nil
+	// Merge all signature sets
+	set.Join(bSet).Join(rSet).Join(aSet)
+
+	return set, state, nil
 }
 
 // ProcessOperations processes the operations in the beacon block and updates beacon state
@@ -654,10 +658,10 @@ func ProcessOperationsNoVerify(
 }
 
 // ProcessOperationsNoVerifySignatureSet processes the operations in the beacon block and updates beacon state
-// with the operations in block. It does not verify attestation signatures or voluntary exit signatures. It instead
+// with the operations in block. It does not verify attestation signatures. It instead
 // returns the relevant signature set for each of the operations
 //
-// WARNING: This method does not verify attestation signatures or voluntary exit signatures.
+// WARNING: This method does not verify attestation signatures.
 // This is used to perform the block operations as fast as possible.
 //
 // Spec pseudocode definition:
@@ -710,7 +714,7 @@ func ProcessOperationsNoVerifySignatureSet(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
+	state, err = b.ProcessVoluntaryExits(ctx, state, body)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process validator exits")
 	}

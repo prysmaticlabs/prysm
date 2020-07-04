@@ -9,9 +9,19 @@ type SignatureSet struct {
 	Messages   [][32]byte
 }
 
+// NewSet constructs an empty signature set object.
+func NewSet() *SignatureSet {
+	return &SignatureSet{
+		Signatures: []Signature{},
+		PublicKeys: []PublicKey{},
+		Messages:   [][32]byte{},
+	}
+}
+
 // Join merges the provided signature set to out current one.
-func (s *SignatureSet) Join(set *SignatureSet) {
+func (s *SignatureSet) Join(set *SignatureSet) *SignatureSet {
 	s.Signatures = append(s.Signatures, set.Signatures...)
 	s.PublicKeys = append(s.PublicKeys, set.PublicKeys...)
 	s.Messages = append(s.Messages, set.Messages...)
+	return s
 }

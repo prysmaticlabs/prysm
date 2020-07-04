@@ -98,6 +98,8 @@ func VerifyBlockSigningRoot(blk *ethpb.BeaconBlock, pub []byte, signature []byte
 	return nil
 }
 
+// RetrieveBlockSignatureSet retrieves the relevant signature, message and pubkey data from a block and collating it
+// into a signature set object.
 func RetrieveBlockSignatureSet(blk *ethpb.BeaconBlock, pub []byte, signature []byte, domain []byte) (*bls.SignatureSet, error) {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
