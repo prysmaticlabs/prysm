@@ -264,11 +264,17 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 
 // StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopy2DByteSlice(b.state.StateRoots)
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
 func (b *BeaconState) HistoricalRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	return b.safeCopy2DByteSlice(b.state.HistoricalRoots)
 }
 
