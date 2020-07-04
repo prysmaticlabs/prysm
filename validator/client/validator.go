@@ -606,12 +606,12 @@ func validatorSubscribeKey(slot uint64, committeeID uint64) [64]byte {
 type aggregateStats struct {
 	startEpoch       uint64
 	includedAttests  uint64
-	totalAttests     uint64
+	totalAttestSlots uint64
 	totalDistance    uint64
 	correctSource    uint64
-	totalVotedSource uint64
+	totalSources     uint64
 	correctTarget    uint64
-	totalVotedTarget uint64
+	totalTargets     uint64
 	correctHead      uint64
-	totalVotedHead   uint64
+	totalHeads       uint64
 }
