@@ -218,7 +218,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	currentEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	var included, correctSource, correctTarget, correctHead int
 
-	for i, _ := range resp.PublicKeys {
+	for i := range resp.PublicKeys {
 		if resp.InclusionSlots[i] != ^uint64(0) {
 			included++
 			summary.includedAttests++
